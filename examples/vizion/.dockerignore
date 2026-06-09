@@ -1,0 +1,6 @@
+**/node_modules
+.git
+.github
+**/dist
+# vendor is baked into the app image via the composer stage; skip local vendor from build context
+src/vendor

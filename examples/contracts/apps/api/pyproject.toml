@@ -1,0 +1,81 @@
+[project]
+name = "macro-contracts-api"
+version = "0.1.0"
+description = "MACRO Contract Generator API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt==4.0.1",
+    "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.12",
+    "jinja2>=3.1.4",
+    "pyyaml>=6.0.2",
+    "docxtpl>=0.19.0",
+    "python-docx>=1.1.2",
+    "aiogram>=3.13.0",
+    "google-api-python-client>=2.151.0",
+    "google-auth>=2.36.0",
+    "httpx>=0.27.2",
+    "num2words>=0.5.13",
+    "python-dateutil>=2.9.0",
+    "openpyxl>=3.1.5",
+    "aiosmtplib>=3.0.2",
+    # Epic 16 — Security: 2FA TOTP + SSO + rate limit.
+    # pyotp/qrcode — RFC 6238 TOTP + QR PNG. cryptography уже есть транзитивно
+    # (через passlib/python-jose), но фиксируем явно для Fernet API.
+    # redis (asyncio) — token-bucket rate limit для Bearer-токенов с graceful
+    # fallback на noop, если REDIS_URL не задан.
+    "pyotp>=2.9.0",
+    "qrcode[pil]>=7.4.0",
+    "cryptography>=42.0.0",
+    "redis>=5.0.0",
+    # Эпик 18 — AI Features: Anthropic Claude SDK (contract analysis, deal prefill).
+    # Если ANTHROPIC_API_KEY не задан — клиент не инициализируется и эндпоинты
+    # возвращают 503 (graceful fallback). См. app/services/anthropic_client.py.
+    "anthropic>=0.40.0",
+    # Эпик 18 hotfix — robust JSON parsing для LLM responses. Claude иногда
+    # возвращает JSON с неэкранированными кавычками внутри string-значений
+    # (особенно для русского текста с цитатами «…»). json-repair умеет лечить
+    # такие случаи через caskad стратегий. См. parse_json_response в
+    # app/services/anthropic_client.py.
+    "json-repair>=0.30.0",
+    # Error-tracking (SaaS). Полный no-op, если SENTRY_DSN не задан — init
+    # пропускается, а sentry_sdk.capture_exception в best-effort блоках сам
+    # становится no-op без инициализированного клиента. Скрабинг секретов/PII
+    # обязателен (before_send=scrub_sentry_event). См. app/services/sentry_setup.py.
+    "sentry-sdk[fastapi]>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.27.2",
+]
+
+# Явная область пакетов: только app. Без этого setuptools flat-layout падает на
+# "multiple top-level packages (app, alembic)" когда код уже рядом с pyproject
+# (CI/локально). В Docker на момент pip install есть только pyproject — find не
+# находит ничего и ставит лишь зависимости (как и раньше).
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]

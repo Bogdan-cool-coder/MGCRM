@@ -1,0 +1,62 @@
+{
+  "title": "Документы",
+  "empty": "Нет доступных шаблонов",
+  "sections": {
+    "system": "Системные",
+    "published": "Опубликованные",
+    "personal": "Личные"
+  },
+  "filter": {
+    "label": "Фильтр по типу",
+    "all": "Все",
+    "html": "КП (HTML)",
+    "docx": "Word"
+  },
+  "errors": {
+    "loadFailed": "Не удалось загрузить шаблоны документов"
+  },
+  "create": {
+    "button": "Создать",
+    "title": "Новый шаблон документа",
+    "type_label": "Тип шаблона",
+    "type_docx": "Word (docx)",
+    "type_html": "КП (HTML)",
+    "type_hint_docx": "Создайте шаблон, затем загрузите свой docx-файл и настройте подстановку полей.",
+    "type_hint_html": "Откроется редактор коммерческого предложения.",
+    "ai_generate": "Сгенерировать через AI",
+    "ai_generate_hint": "Опишите КП словами — ассистент соберёт HTML-шаблон за вас.",
+    "name_ru_label": "Название (рус.)",
+    "name_ru_placeholder": "Например: Договор бронирования",
+    "name_en_label": "Название (англ.)",
+    "name_en_placeholder": "Например: Booking agreement",
+    "description_ru_label": "Описание (рус.)",
+    "description_ru_placeholder": "Краткое описание шаблона",
+    "description_en_label": "Описание (англ.)",
+    "description_en_placeholder": "Short template description",
+    "name_required": "Укажите название на русском",
+    "cancel": "Отмена",
+    "submit": "Создать",
+    "success": "Шаблон создан",
+    "error": "Не удалось создать шаблон"
+  },
+  "actionsMenu": {
+    "title": "Действия",
+    "info_section": "Информация",
+    "author": "Автор",
+    "created_at": "Создан",
+    "status": "Статус",
+    "status_published": "Опубликован",
+    "status_draft": "Черновик",
+    "status_system": "Системный шаблон",
+    "edit": "Редактировать",
+    "publish": "Опубликовать",
+    "unpublish": "Скрыть из публикации",
+    "delete": "Удалить шаблон",
+    "delete_confirm_title": "Удалить шаблон?",
+    "delete_confirm_message": "Шаблон документа будет удалён безвозвратно.",
+    "toast_published": "Шаблон опубликован",
+    "toast_unpublished": "Публикация скрыта",
+    "toast_deleted": "Шаблон удалён",
+    "toast_error": "Не удалось выполнить действие"
+  }
+}

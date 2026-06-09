@@ -1,0 +1,16 @@
+// App theme typography backed by --app-* custom properties
+
+$font-family-sans: var(--app-font-family-sans);
+$font-size-base: var(--app-font-size-base);
+$font-size-xs: var(--app-font-size-xs);
+$font-size-sm: var(--app-font-size-sm);
+$font-size-md: var(--app-font-size-md);
+$font-size-lg: var(--app-font-size-lg);
+$font-size-xl: var(--app-font-size-xl);
+$font-size-2xl: var(--app-font-size-2xl);
+$font-size-4xl: var(--app-font-size-4xl);
+
+$font-weight-medium: var(--app-font-weight-medium);
+$font-weight-semibold: var(--app-font-weight-semibold);
+
+$line-height-relaxed: var(--app-line-height-relaxed);

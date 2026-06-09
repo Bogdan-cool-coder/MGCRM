@@ -1,0 +1,12 @@
+{
+  "selectMultiplePlaceholder": "Select values",
+  "selectSinglePlaceholder": "Select value",
+  "searchPlaceholder": "Search",
+  "dateFrom": "From",
+  "dateTo": "To",
+  "numberFrom": "From",
+  "numberTo": "To",
+  "textPlaceholder": "Enter value",
+  "loadingOptions": "Loading...",
+  "noOptions": "No available options"
+}

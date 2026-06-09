@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Сделки · Kanban (v2)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{
+  colors:{
+    primary:{DEFAULT:'#172747',dark:'#0E172B',light:'#2B4987'},
+    success:{50:'#ECFDF3',500:'#12B76A',600:'#039855',700:'#027A48'},
+    warning:{50:'#FFFAEB',500:'#F79009',600:'#DC6803',700:'#B54708'},
+    danger:{50:'#FEF3F2',500:'#F04438',600:'#D92D20',700:'#B42318'},
+    info:{50:'#EFF8FF',500:'#2E90FA',600:'#1570EF',700:'#175CD3'},
+  },
+  fontFamily:{ sans:['Inter','sans-serif'] },
+  boxShadow:{ 'elev-1':'0 1px 2px rgba(16,24,40,.06)','elev-2':'0 6px 14px -4px rgba(16,24,40,.16)','elev-3':'0 16px 28px -8px rgba(16,24,40,.22)' }
+}}}
+</script>
+<style>
+  body{font-family:Inter,sans-serif}
+  .nav-item.active{background:rgba(43,73,135,.10);color:#2B4987;font-weight:600;position:relative}
+  .dark .nav-item.active{background:rgba(79,134,255,.14);color:#9cc2ff}
+  .nav-item.active::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);height:60%;width:3px;border-radius:9999px;background:#2B4987}
+  .dark .nav-item.active::before{background:#9cc2ff}
+  .kcard{transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s;cursor:grab}
+  .kcard:hover{transform:translateY(-2px)}
+  .kcard:active{cursor:grabbing;transform:scale(.99) rotate(-.5deg);box-shadow:0 16px 28px -8px rgba(16,24,40,.30)}
+  .col{scrollbar-width:thin}
+  .fade-up{animation:fadeUp .45s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .placeholder{border:2px dashed #94a3b8;background:rgba(148,163,184,.08)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="bg-gray-100 dark:bg-[#0B1220] text-primary dark:text-gray-100">
+<div class="flex min-h-screen">
+  <!-- SIDEBAR -->
+  <aside class="w-[240px] shrink-0 sticky top-0 h-screen flex flex-col bg-white dark:bg-gray-900/70 dark:backdrop-blur border-r border-gray-200 dark:border-white/10">
+    <div class="p-5 flex items-center gap-2.5 border-b border-gray-100 dark:border-white/10">
+      <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-[#2B4987] to-[#172747] grid place-items-center font-extrabold text-white">M</div>
+      <span class="font-bold tracking-tight">MACRO CRM</span>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto text-sm">
+      <a href="dashboard.html" class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-speedometer2"></i>Дашборд</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-person-workspace"></i>Кабинет</a>
+      <a class="nav-item active flex items-center gap-3 rounded-lg px-3 py-2"><i class="bi bi-kanban"></i>Сделки</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-person-rolodex"></i>Контакты</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-clipboard-check"></i>Задачи</a>
+      <div class="px-3 pt-4 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">CS</div>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-clipboard-data"></i>Реестр клиентов</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-inbox-fill"></i>Входящие</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-file-earmark-text"></i>Договоры</a>
+    </nav>
+    <div class="p-3 border-t border-gray-100 dark:border-white/10">
+      <div class="flex items-center gap-2.5 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-white/5 transition cursor-pointer">
+        <div class="relative"><div class="h-9 w-9 rounded-full bg-primary text-white grid place-items-center text-xs font-semibold">БЯ</div><span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success-500 border-2 border-white dark:border-gray-900"></span></div>
+        <div class="min-w-0"><div class="text-sm font-medium truncate">Богдан Ядыкин</div><div class="text-xs text-gray-500">Директор</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 min-w-0 flex flex-col h-screen">
+    <div class="bg-white/80 dark:bg-[#0B1220]/80 backdrop-blur border-b border-gray-200 dark:border-white/10 px-8 h-[68px] flex items-center justify-between shrink-0">
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Воронка продаж</div>
+        <h1 class="text-xl font-bold leading-tight flex items-center gap-2">Сделки <span class="text-sm font-normal text-gray-400">· 47 в работе</span></h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden text-sm">
+          <button class="px-3 py-1.5 bg-primary text-white inline-flex items-center gap-1.5"><i class="bi bi-kanban"></i>Канбан</button>
+          <button class="px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-white/5 inline-flex items-center gap-1.5 text-gray-500"><i class="bi bi-list-ul"></i>Список</button>
+        </div>
+        <button class="h-9 w-9 grid place-items-center rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition"><i class="bi bi-funnel"></i></button>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="h-9 w-9 grid place-items-center rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition"><i class="bi bi-circle-half"></i></button>
+        <button class="rounded-xl bg-primary hover:bg-primary-light text-white text-sm font-medium px-4 py-2 shadow-elev-1 hover:shadow-elev-2 hover:-translate-y-0.5 transition inline-flex items-center gap-2"><i class="bi bi-plus-lg"></i>Сделка</button>
+      </div>
+    </div>
+
+    <!-- BOARD -->
+    <div class="flex-1 overflow-x-auto overflow-y-hidden p-6">
+      <div class="flex gap-4 h-full min-w-max">
+
+        <!-- COLUMN: Квалификация (info) -->
+        <div class="w-[300px] flex flex-col rounded-2xl bg-gray-50 dark:bg-white/[.03] border border-gray-200 dark:border-white/10">
+          <div class="sticky top-0 px-4 py-3 border-b border-gray-200 dark:border-white/10 rounded-t-2xl bg-gray-50/90 dark:bg-white/[.03] backdrop-blur">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-info-500"></span><span class="font-semibold text-sm">Квалификация</span><span class="text-xs text-gray-400">14</span></div>
+              <button class="text-gray-400 hover:text-gray-600"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="mt-1 text-xs text-gray-500 tabular-nums">Σ 4,1 млн ₽</div>
+          </div>
+          <div class="col flex-1 overflow-y-auto p-2.5 space-y-2.5">
+            <div class="kcard fade-up relative rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-elev-1 p-3 pl-4 overflow-hidden">
+              <span class="absolute left-0 top-0 bottom-0 w-1 bg-info-500"></span>
+              <div class="font-medium text-sm">Внедрение CRM «Сигма»</div>
+              <div class="text-xs text-gray-500 mt-0.5">ООО «Сигма Трейд»</div>
+              <div class="text-sm font-semibold tabular-nums mt-1.5">850 000 ₽</div>
+              <div class="flex items-center justify-between mt-2.5">
+                <div class="h-6 w-6 rounded-full bg-primary-light text-white grid place-items-center text-[10px] font-semibold">АП</div>
+                <span class="text-[11px] text-gray-400 inline-flex items-center gap-1"><i class="bi bi-calendar3"></i>18 июн</span>
+              </div>
+            </div>
+            <div class="kcard fade-up relative rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-elev-1 p-3 pl-4 overflow-hidden" style="animation-delay:.05s">
+              <span class="absolute left-0 top-0 bottom-0 w-1 bg-info-500"></span>
+              <div class="font-medium text-sm">Лицензия MACRO Auto</div>
+              <div class="text-xs text-gray-500 mt-0.5">ИП Каримов</div>
+              <div class="text-sm font-semibold tabular-nums mt-1.5">320 000 ₽</div>
+              <div class="flex items-center justify-between mt-2.5">
+                <div class="h-6 w-6 rounded-full bg-success-600 text-white grid place-items-center text-[10px] font-semibold">МС</div>
+                <span class="text-[11px] text-gray-400 inline-flex items-center gap-1"><i class="bi bi-calendar3"></i>25 июн</span>
+              </div>
+            </div>
+            <div class="placeholder rounded-xl h-[92px] grid place-items-center text-xs text-gray-400">отпустите здесь</div>
+          </div>
+        </div>
+
+        <!-- COLUMN: Встреча (primary) -->
+        <div class="w-[300px] flex flex-col rounded-2xl bg-gray-50 dark:bg-white/[.03] border border-gray-200 dark:border-white/10">
+          <div class="sticky top-0 px-4 py-3 border-b border-gray-200 dark:border-white/10 rounded-t-2xl bg-gray-50/90 dark:bg-white/[.03] backdrop-blur">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-primary-light"></span><span class="font-semibold text-sm">Встреча</span><span class="text-xs text-gray-400">9</span></div>
+              <button class="text-gray-400 hover:text-gray-600"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="mt-1 text-xs text-gray-500 tabular-nums">Σ 5,6 млн ₽</div>
+          </div>
+          <div class="col flex-1 overflow-y-auto p-2.5 space-y-2.5">
+            <div class="kcard fade-up relative rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-elev-1 p-3 pl-4 overflow-hidden">
+              <span class="absolute left-0 top-0 bottom-0 w-1 bg-primary-light"></span>
+              <div class="font-medium text-sm">Корп. лицензия (50 мест)</div>
+              <div class="text-xs text-gray-500 mt-0.5">ООО «МедТех Групп»</div>
+              <div class="text-sm font-semibold tabular-nums mt-1.5">2 400 000 ₽</div>
+              <div class="mt-2"><div class="flex justify-between text-[10px] text-gray-400 mb-1"><span>этап 3/5</span><span>60%</span></div><div class="h-1 rounded-full bg-gray-100 dark:bg-white/10"><div class="h-full rounded-full bg-primary-light" style="width:60%"></div></div></div>
+              <div class="flex items-center justify-between mt-2.5">
+                <div class="h-6 w-6 rounded-full bg-info-600 text-white grid place-items-center text-[10px] font-semibold">ДВ</div>
+                <span class="text-[11px] text-gray-400 inline-flex items-center gap-1"><i class="bi bi-calendar3"></i>12 июн</span>
+              </div>
+            </div>
+            <div class="kcard fade-up relative rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-elev-1 p-3 pl-4 overflow-hidden" style="animation-delay:.05s">
+              <span class="absolute left-0 top-0 bottom-0 w-1 bg-primary-light"></span>
+              <div class="font-medium text-sm">Пилот для филиалов</div>
+              <div class="text-xs text-gray-500 mt-0.5">АО «Северсталь-Сервис»</div>
+              <div class="text-sm font-semibold tabular-nums mt-1.5">1 150 000 ₽</div>
+              <div class="flex items-center justify-between mt-2.5">
+                <div class="h-6 w-6 rounded-full bg-primary-light text-white grid place-items-center text-[10px] font-semibold">АП</div>
+                <span class="text-[11px] text-warning-600 font-medium inline-flex items-center gap-1"><i class="bi bi-calendar3"></i>3 дня</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMN: HOT (warning) -->
+        <div class="w-[300px] flex flex-col rounded-2xl bg-warning-50/50 dark:bg-warning-500/[.05] border border-warning-500/30">
+          <div class="sticky top-0 px-4 py-3 border-b border-warning-500/20 rounded-t-2xl bg-warning-50/80 dark:bg-warning-500/[.06] backdrop-blur">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2"><i class="bi bi-fire text-warning-600"></i><span class="font-semibold text-sm">HOT deals</span><span class="text-xs text-warning-700/60">6</span></div>
+              <button class="text-warning-600/70 hover:text-warning-700"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="mt-1 text-xs text-warning-700/80 tabular-nums font-medium">Σ 7,4 млн ₽</div>
+          </div>
+          <div class="col flex-1 overflow-y-auto p-2.5 space-y-2.5">
+            <div class="kcard fade-up relative rounded-xl bg-white dark:bg-gray-800 border border-warning-500/40 shadow-elev-1 p-3 pl-4 overflow-hidden ring-1 ring-warning-500/20">
+              <span class="absolute left-0 top-0 bottom-0 w-1 bg-warning-500"></span>
+              <div class="font-medium text-sm">Годовая подписка Enterprise</div>
+              <div class="text-xs text-gray-500 mt-0.5">ООО «Альфа Капитал»</div>
+              <div class="text-sm font-semibold tabular-nums mt-1.5">3 200 000 ₽</div>
+              <div class="flex items-center justify-between mt-2.5">
+                <div class="h-6 w-6 rounded-full bg-primary text-white grid place-items-center text-[10px] font-semibold">БЯ</div>
+                <span class="text-[11px] text-danger-600 font-semibold inline-flex items-center gap-1"><i class="bi bi-clock-history"></i>2 дня</span>
+              </div>
+            </div>
+            <div class="kcard fade-up relative rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-elev-1 p-3 pl-4 overflow-hidden" style="animation-delay:.05s">
+              <span class="absolute left-0 top-0 bottom-0 w-1 bg-danger-500"></span>
+              <div class="flex items-center gap-1.5"><span class="text-[10px] font-semibold bg-danger-50 text-danger-700 dark:bg-danger-500/15 dark:text-danger-500 rounded px-1.5 py-0.5">просрочено</span></div>
+              <div class="font-medium text-sm mt-1">Расширение лицензий</div>
+              <div class="text-xs text-gray-500 mt-0.5">ТД «Восток»</div>
+              <div class="text-sm font-semibold tabular-nums mt-1.5">1 800 000 ₽</div>
+              <div class="flex items-center justify-between mt-2.5">
+                <div class="h-6 w-6 rounded-full bg-success-600 text-white grid place-items-center text-[10px] font-semibold">МС</div>
+                <span class="text-[11px] text-danger-600 font-semibold inline-flex items-center gap-1"><i class="bi bi-exclamation-circle"></i>−1 день</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMN: Успешно (success) -->
+        <div class="w-[300px] flex flex-col rounded-2xl bg-success-50/40 dark:bg-success-500/[.04] border border-success-500/25">
+          <div class="sticky top-0 px-4 py-3 border-b border-success-500/20 rounded-t-2xl bg-success-50/70 dark:bg-success-500/[.05] backdrop-blur">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2"><i class="bi bi-check-circle-fill text-success-600"></i><span class="font-semibold text-sm">Успешно</span><span class="text-xs text-success-700/60">61</span></div>
+              <button class="text-success-600/70 hover:text-success-700"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="mt-1 text-xs text-success-700/80 tabular-nums font-medium">Σ 24,8 млн ₽</div>
+          </div>
+          <div class="col flex-1 overflow-y-auto p-2.5 space-y-2.5">
+            <div class="kcard fade-up relative rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 shadow-elev-1 p-3 pl-4 overflow-hidden">
+              <span class="absolute left-0 top-0 bottom-0 w-1 bg-success-500"></span>
+              <div class="font-medium text-sm">Подписка Pro · год</div>
+              <div class="text-xs text-gray-500 mt-0.5">ООО «Гранд»</div>
+              <div class="text-sm font-semibold tabular-nums mt-1.5">980 000 ₽</div>
+              <div class="flex items-center justify-between mt-2.5">
+                <div class="h-6 w-6 rounded-full bg-info-600 text-white grid place-items-center text-[10px] font-semibold">ДВ</div>
+                <span class="text-[11px] text-success-600 inline-flex items-center gap-1"><i class="bi bi-check2"></i>оплачено</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<a href="index.html" class="fixed bottom-4 left-4 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-full px-3 py-1.5 shadow-elev-1"><i class="bi bi-grid"></i> прототипы</a>
+</body>
+</html>

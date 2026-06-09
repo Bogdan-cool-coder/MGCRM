@@ -1,0 +1,6 @@
+{
+  "deleteTitle": "Delete confirmation",
+  "deletePrompt": "Are you sure you want to delete",
+  "deleteFallbackItem": "this item",
+  "deleteWarning": "This action cannot be undone."
+}

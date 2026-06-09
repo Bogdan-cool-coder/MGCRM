@@ -1,0 +1,12 @@
+{
+  "badge": {
+    "system": "System",
+    "published": "Published",
+    "personal": "Personal"
+  },
+  "type": {
+    "html": "Proposal",
+    "docx": "Word"
+  },
+  "noDescription": "No description"
+}

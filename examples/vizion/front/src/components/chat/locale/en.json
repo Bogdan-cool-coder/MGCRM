@@ -1,0 +1,169 @@
+{
+  "sidebar": {
+    "defaultTitle": "Chats",
+    "defaultCreateLabel": "New",
+    "empty": "No chats yet",
+    "newChatFallback": "New chat"
+  },
+  "reportBanner": {
+    "created": "Report created",
+    "open": "Open report"
+  },
+  "reportGenerationModal": {
+    "title": {
+      "create": "Create a report",
+      "edit": "Edit report with AI"
+    },
+    "placeholder": "Describe the report you need…",
+    "previewCreate": "Describe the report you need and the assistant will build it",
+    "previewEdit": "Describe what to change in this report",
+    "openReport": "Open report"
+  },
+  "widgetGenerationModal": {
+    "title": {
+      "create": "Create a widget",
+      "edit": "Edit widget with AI"
+    },
+    "placeholder": "Describe the widget you need…",
+    "previewCreate": "Describe the widget you need and the assistant will build it",
+    "previewEdit": "Describe what to change in this widget",
+    "addToDashboard": "Add to dashboard",
+    "addedToDashboard": "Widget added to the dashboard",
+    "addFailed": "Failed to add the widget to the dashboard",
+    "done": "Done",
+    "goToDashboards": "Go to dashboards",
+    "presets": {
+      "greeting": "Describe the chart in one phrase or pick an example below — I'll clarify the metric and chart type and return a widget you can add to a dashboard.",
+      "items": {
+        "dealsByManager": "Deals by manager this month",
+        "salesAmountByComplex": "Sales amount by complex",
+        "dealsByStatus": "Deals by status",
+        "salesDynamics": "Sales dynamics by month",
+        "paymentsByObject": "Payments by property"
+      }
+    },
+    "variants": {
+      "hint": "Pick the option that fits — I'll build a widget from it. You can also refine your request in a message.",
+      "pick": "Pick this one",
+      "selectMessage": "Create variant {index}: {label}"
+    }
+  },
+  "documentGenerationModal": {
+    "title": {
+      "create": "Create a document",
+      "edit": "Edit template with AI"
+    },
+    "placeholder": "Describe the commercial proposal you need…",
+    "previewCreate": "Describe the proposal you need and the assistant will build an HTML template",
+    "previewEdit": "Describe what to change in this template",
+    "openDocument": "Open template",
+    "done": "Done"
+  },
+  "errors": {
+    "loadChatFailed": "Failed to load chat",
+    "createChatFailed": "Failed to create chat",
+    "networkFailed": "Network error. Please try again",
+    "messageUndelivered": "Connection lost. The message was not delivered. Please try again.",
+    "aiTurnFailed": "Failed to process the request. Please try again."
+  },
+  "miniChat": {
+    "title": "AI Chat",
+    "tooltip": "AI chat",
+    "openInFullScreen": "Open in full screen",
+    "expandDisabled": "Send a message first",
+    "close": "Close",
+    "loading": "Loading chat…",
+    "loadingHistory": "Loading history…",
+    "empty": "Send a message to start chatting",
+    "emptyOnReport": "Ask something about this report",
+    "emptyOnDashboard": "Ask something about this dashboard",
+    "emptyOnDocument": "Ask something about this document",
+    "previewPlaceholder": "Start a new conversation",
+    "previewPlaceholderOnReport": "Ask anything about this report",
+    "previewPlaceholderOnDashboard": "Ask anything about this dashboard",
+    "previewPlaceholderOnDocument": "Ask anything about this document",
+    "placeholder": "Message AI…",
+    "placeholderOnReport": "Ask about this report…",
+    "placeholderOnDashboard": "Ask about this dashboard…",
+    "placeholderOnDocument": "Ask about this document…",
+    "contextBadge": "Context: {title}",
+    "contextHint": "The current report config will be attached to your first message",
+    "dashboardContextHint": "The current dashboard's widgets will be attached to your first message",
+    "documentContextHint": "The current document's context will be attached to your first message",
+    "newChat": "New chat",
+    "recentChats": "Recent chats",
+    "noRecentChats": "No recent chats",
+    "triggerFallback": "AI chat",
+    "errors": {
+      "initFailed": "Failed to open the chat",
+      "loadHistoryFailed": "Failed to load chat history"
+    },
+    "common": {
+      "error": "Error"
+    }
+  },
+  "thinkingTimeline": {
+    "headerThinking": "Thinking…",
+    "headerUsingTools": "Using tools…",
+    "headerDone": "Done",
+    "headerError": "Error",
+    "headerThoughtSeconds": "Thought for {count} second | Thought for {count} seconds",
+    "headerThoughtMinutes": "Thought for {count} minute | Thought for {count} minutes",
+    "headerThoughtLessThanSecond": "Thought for less than a second",
+    "toggleOpen": "Expand reasoning",
+    "toggleClose": "Collapse reasoning",
+    "regionLabel": "Reasoning steps",
+    "thinkingDetails": "Reasoning",
+    "interimLabel": "Draft response",
+    "steps": {
+      "started": "Request received",
+      "connecting": "Connecting to model…",
+      "dryRunStart": "Validating report",
+      "dryRunOk": "Report passed validation",
+      "dryRunFailed": "Report validation failed",
+      "retry": "Retrying",
+      "finalMessage": "Response ready"
+    },
+    "tools": {
+      "probe_data": "Probing data structure",
+      "query_data": "Querying data",
+      "create_report": "Creating report",
+      "update_report": "Updating report",
+      "create_widget": "Creating widget",
+      "update_widget": "Updating widget"
+    },
+    "args": {
+      "model": "{model}",
+      "modelWithFieldsCount": "{model} · {count} field | {model} · {count} fields",
+      "modelWithFieldsList": "{model} · fields: {fields}",
+      "queryAggregate": "{model} · {aggregate}",
+      "queryAggregateNoFilters": "{model} · {aggregate}",
+      "queryAggregateFilters": "{model} · {aggregate} · {count} filter | {model} · {aggregate} · {count} filters",
+      "queryGroupedBy": "by {field}",
+      "createReportArgs": "“{title}” · {model}",
+      "createReportArgsColumns": "“{title}” · {model} · {columns} column | “{title}” · {model} · {columns} columns",
+      "createReportArgsColumnsWidgets": "“{title}” · {model} · {columnsLabel} · {widgetsLabel}",
+      "updateReportArgs": "#{reportId} · {model}",
+      "updateReportArgsColumns": "#{reportId} · {model} · {columns} column | #{reportId} · {model} · {columns} columns",
+      "columnsPlural": "{count} column | {count} columns",
+      "widgetsPlural": "{count} widget | {count} widgets",
+      "createWidgetArgs": "“{title}” · {model} · {chartType}",
+      "updateWidgetArgs": "#{widgetId} · {model} · {chartType}"
+    },
+    "details": {
+      "rowCount": "{count} row received | {count} rows received",
+      "probeSummary": "{rows} of {total} · {fields} field | {rows} of {total} · {fields} fields",
+      "probeNoTotal": "{rows} row, {fields} field | {rows} rows, {fields} fields",
+      "aggregateValue": "= {value}",
+      "groupRowsCount": "{count} group | {count} groups",
+      "reportCreated": "report #{id} created",
+      "reportUpdated": "report #{id} updated",
+      "widgetCreated": "widget #{id} created",
+      "widgetUpdated": "widget #{id} updated"
+    },
+    "errors": {
+      "toolFailed": "Error: {error}",
+      "toolFailedGeneric": "Failed"
+    }
+  }
+}

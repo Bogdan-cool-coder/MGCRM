@@ -1,0 +1,13 @@
+{
+  "title": "Company",
+  "users": "Users",
+  "settings": "Settings",
+  "brandingTab": "Branding",
+  "promotionsTab": "Promotions",
+  "mapping": "MacroData mapping",
+  "nameColumn": "Name",
+  "emailColumn": "Email",
+  "roleColumn": "Role",
+  "currencyInvalid": "Enter three uppercase Latin letters (ISO 4217).",
+  "forbiddenError": "You don't have permission to change these settings."
+}

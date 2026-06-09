@@ -1,0 +1,62 @@
+# Конфиг среды
+.env
+
+# Локальные файлы (не для репозитория)
+PROJECT.md
+MIGRATIONS.md
+MODELS.md
+MEMORY.md
+MEMORY.md.lnk
+
+# Внутренние инструменты разработки (конфиденциально, не для репозитория)
+CLAUDE.md
+.claude/
+
+# Данные (бэкапы, PostgreSQL)
+data/backups/*
+!data/backups/.gitkeep
+
+# Frontend
+front/node_modules/
+front/dist/
+front/dist-check*/
+front/.vite/
+
+# Laravel
+src/vendor/
+src/node_modules/
+# Runtime Laravel storage (logs, sessions, cache, compiled views, app files).
+# Initialised by docker/php/entrypoint.sh + named volumes in docker-compose.yml.
+/src/storage/
+src/.phpunit.cache
+src/bootstrap/cache/*
+!src/bootstrap/cache/.gitkeep
+
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+*:Zone.Identifier
+
+# OpenCode (local)
+opencode.json
+.opencode/
+.codex
+.codex/
+.agents/
+.reference/
+AGENTS.md
+HANDOFF.md
+temp/
+
+# Browser-MCP / QA artifacts
+.playwright-mcp/
+/*.png
+screens/
+.qa-reports/

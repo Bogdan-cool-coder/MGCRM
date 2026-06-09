@@ -1,0 +1,62 @@
+{
+  "title": "Documents",
+  "empty": "No templates available",
+  "sections": {
+    "system": "System",
+    "published": "Published",
+    "personal": "Personal"
+  },
+  "filter": {
+    "label": "Filter by type",
+    "all": "All",
+    "html": "Proposal (HTML)",
+    "docx": "Word"
+  },
+  "errors": {
+    "loadFailed": "Failed to load document templates"
+  },
+  "create": {
+    "button": "Create",
+    "title": "New document template",
+    "type_label": "Template type",
+    "type_docx": "Word (docx)",
+    "type_html": "Proposal (HTML)",
+    "type_hint_docx": "Create the template, then upload your docx file and map fields.",
+    "type_hint_html": "The commercial proposal editor will open.",
+    "ai_generate": "Generate with AI",
+    "ai_generate_hint": "Describe the proposal in words — the assistant will build an HTML template for you.",
+    "name_ru_label": "Name (RU)",
+    "name_ru_placeholder": "e.g. Booking agreement",
+    "name_en_label": "Name (EN)",
+    "name_en_placeholder": "e.g. Booking agreement",
+    "description_ru_label": "Description (RU)",
+    "description_ru_placeholder": "Short template description",
+    "description_en_label": "Description (EN)",
+    "description_en_placeholder": "Short template description",
+    "name_required": "Enter a name in Russian",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "success": "Template created",
+    "error": "Failed to create template"
+  },
+  "actionsMenu": {
+    "title": "Actions",
+    "info_section": "Info",
+    "author": "Author",
+    "created_at": "Created",
+    "status": "Status",
+    "status_published": "Published",
+    "status_draft": "Draft",
+    "status_system": "System template",
+    "edit": "Edit",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "delete": "Delete template",
+    "delete_confirm_title": "Delete template?",
+    "delete_confirm_message": "This document template will be permanently deleted.",
+    "toast_published": "Template published",
+    "toast_unpublished": "Template unpublished",
+    "toast_deleted": "Template deleted",
+    "toast_error": "Could not complete the action"
+  }
+}

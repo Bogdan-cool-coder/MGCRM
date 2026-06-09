@@ -1,0 +1,1 @@
+export { iframeTokenStorage } from './iframeTokenStorage'

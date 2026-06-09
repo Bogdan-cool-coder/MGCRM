@@ -1,0 +1,137 @@
+# Источник импорта реестра CS (Ф4e). Фактический список Богдана 2026-05-29.
+# platform	status	name	city	country
+# platform: macrosales | macroerp ; status: A1..A6 / B0..B6 / C0 / C1 (C1→C0 при импорте) / "" нет
+# Блок 1 — MacroSales ЦА (сопровождение)
+macrosales	A1	GOLDEN HOUSE	Ташкент	uz
+macrosales	A1	Capital Invest Construction	Алматы	kz
+macrosales	A1	Tau Development	Алматы	kz
+macrosales	A1	Шар-Құрылыс	Астана	kz
+macrosales	A1	OKS Development	Шымкент	kz
+macrosales	A1	Imperial Club City	Ташкент	uz
+macrosales	A1	Celebrity	Ташкент	uz
+macrosales		Oqtosh Avenue Resort	Ташкент	uz
+macrosales	A1	SDN Construction	Шымкент	kz
+macrosales	A1	OTAU Group	Шымкент	kz
+macrosales	A1	Baqyt Group	Астана	kz
+macrosales	A1	Elit Stroy group	Усть-Каменогорск	kz
+macrosales	A1	Elit Qurylys group	Талдыкорган	kz
+macrosales	A1	AULET Development Group	Шымкент	kz
+macrosales	A1	KazSMU	Алматы	kz
+macrosales	A1	Элитстрой	Алматы	kz
+macrosales	A1	ЖК Баласагун	Тараз	kz
+macrosales	A1	Assalom Estate	Ташкент	uz
+macrosales	A1	Tushlar Vodiysi	Ташкент	uz
+macrosales	A1	Human2Human	Ташкент	uz
+macrosales	A1	Golden Lake	Ташкент	uz
+macrosales	A1	ЖК Arkon	Ташкент	uz
+macrosales	A1	JBA (Fazo Avenue)	Наманган	uz
+macrosales	A1	DN STROY	Ташкент	uz
+macrosales	A1	Нурзаман	Бишкек	kg
+macrosales	A1	Beles Holding	Астана	kz
+macrosales	A1	Saba Group	Алматы	kz
+macrosales	A1	TUMAR Group	Астана	kz
+macrosales	A1	Eman Development	Ташкент	uz
+macrosales	A1	Salom Nurafshon	Ташкент	uz
+macrosales	A1	Ulkan Development	Ташкент	uz
+macrosales	A1	MIRVA GROUP	Алматы	kz
+macrosales	A1	BINO Group	Ташкент	uz
+macrosales	A1	SemeyCement Development	Семей	kz
+macrosales	A1	Kerege Group	Шымкент	kz
+macrosales	A1	Барыс Строй 2001	Алматы	kz
+macrosales	A2	Dream Level	Ташкент	uz
+macrosales	A2	Ferrum Co.	Астана	kz
+macrosales	A2	El Invest	Астана	kz
+macrosales	A2	Uzbegim Development	Ташкент	uz
+macrosales	A2	SMR-EURASIA	Алматы	kz
+macrosales	A2	MARSALES	Алматы	kz
+macrosales	A3	Centris Towers (Metro Plaza)	Ташкент	uz
+macrosales	A3	BOMI UZBEKISTAN FE	Ташкент	uz
+macrosales	A3	Immeuble Moderns	Ташкент	uz
+macrosales	A3	Darkhan Avenue	Ташкент	uz
+macrosales	A3	Фидокор	Ташкент	uz
+macrosales	A3	BT Group	Алматы	kz
+macrosales	A4	Newmon Residence	Ташкент	uz
+# Блок 1 — MacroSales ЦА (внедрение)
+macrosales	B0	Arkenon Group	Астана	kz
+macrosales	B0	MANAR GROUP	Ташкент	uz
+macrosales	B0	SAROSIYO CITY	Ташкент	uz
+macrosales	B1	Mediva Resort	Ташкент	uz
+macrosales	B1	TT INVEST GROUP	Астана	kz
+macrosales	B1	BAQ BUILDING GROUP	Шымкент	kz
+macrosales	B2	NiAgara	Ташкент	uz
+macrosales	B2	Себистон	Душанбе	tj
+macrosales	B2	Heng Tai	Фергана	uz
+macrosales	B2	Buta group (Qala Development)	Алматы	kz
+macrosales	B2	AXE Estate	Ташкент	uz
+macrosales	B5	Elbrus residence	Ташкент	uz
+macrosales	B5	Shohsaroy	Ташкент	uz
+# Блок 1 — MacroSales ЦА (расторжения)
+macrosales	C0	PEARL BUILD	Ташкент	uz
+macrosales	C0	ЖК Ofiyat	Ташкент	uz
+macrosales	C0	Скай Билдинг Инжиниринг	Бишкек	kg
+macrosales	C0	Имарат Прогресс	Бишкек	kg
+macrosales	C0	AMAN RESIDENCE	Ташкент	uz
+macrosales	C0	The ULTIMATE VISIONARY Group	Алматы	kz
+macrosales	C0	Marokand's Sky	Ташкент	uz
+macrosales	C0	Wellcommerce	Караганда	kz
+macrosales	C0	The Akan Building	Астана	kz
+macrosales	C0	АН AISI №1	Астана	kz
+macrosales	C0	АН Проверти	Ташкент	uz
+macrosales	C0	Памир Строй	Бишкек	kg
+macrosales	C0	JETISU	Астана	kz
+macrosales	C0	Burana Grand (Эмарк Групп)	Бишкек	kg
+macrosales	C0	Wonder Promo	Алматы	kz
+macrosales	C0	Shefer Group	Астана	kz
+macrosales	C0	Азия Дом (Mo'jiza Group)	Ташкент	uz
+macrosales	C0	NovaStroy	Ташкент	uz
+macrosales	C0	FLORA CITY STROY	Алматы	kz
+macrosales	C0	Nef & Ram	Алматы	kz
+macrosales	C0	ТОО «Ключевые решения»	Астана	kz
+macrosales	C0	ГлавСтрой	Алматы	kz
+macrosales	C0	Новек/NOVEC	Алматы	kz
+macrosales	C0	Береке Билдинг	Бишкек	kg
+macrosales	C0	ИП Хамидуллаев Т.Э.	Ташкент	uz
+macrosales	C0	HomeEx Global (Times Group)	Алматы	kz
+macrosales	C0	Garnet House (Alihan Buildings)	Коканд	uz
+macrosales	C0	Батыс Сити Групп	Актобе	kz
+macrosales	C0	TETRIS Construction Group	Алматы	kz
+macrosales	C0	KAPPAS Group	Астана	kz
+macrosales	C0	JBA (Dream Residence)	Фергана	uz
+macrosales	C0	SQB Capital	Ташкент	uz
+# Блок 2 — MacroSales GCC/Кавказ
+macrosales	A1	Apart Development	Tbilisi	ge
+macrosales	A1	Emerald Residence	Бар	me
+macrosales	A2	Evera Development	Dubai	ae
+macrosales	A2	Азбука Девелопмент РА	Yerevan	am
+macrosales	A2	Nexus Holding	Tbilisi	ge
+macrosales	A2	IN HAUS DEVELOPMENT	Tbilisi	ge
+macrosales	A4	ANKO	Tbilisi	ge
+macrosales	A4	IPG (Gumbati)	Tbilisi	ge
+macrosales	B0	MAUDI	Kutaisi	ge
+macrosales	B3	Legacy Homes	Dubai	ae
+macrosales	B3	R.Evolution	Dubai	ae
+macrosales	B5	REAL HOMES UK ESTATE LTD	Wolverhampton	gb
+macrosales	B5	Mada'in Properties	Dubai	ae
+macrosales	B5	Dugasta	Dubai	ae
+macrosales	B5	FAKHRUDDIN	Business Bay	ae
+macrosales	C0	Kronung Real Estate	Dubai	ae
+# Блок 3 — MacroERP
+macroerp	A1	Sensata Group Astana	Астана	kz
+macroerp	A1	Sensata Group Almaty	Алматы	kz
+macroerp	A4	INTEGRA Engineering Group	Бишкек	kg
+macroerp	B2	Emerald Residence	Будва	me
+macroerp	C1	Жетысу Жол Құрылыс	Алматы	kz
+macroerp	C0	PEARL BUILD	Ташкент	uz
+macroerp	C0	TETRIS Construction Group	Алматы	kz
+macroerp	C0	FDG	Ташкент	uz
+macroerp	C0	Tau Development	Алматы	kz
+macroerp	C0	OKS Development	Шымкент	kz
+macroerp	C0	Батыс Сити Групп	Актобе	kz
+macroerp	C1	SDN	Шымкент	kz
+macroerp	C1	AV Capital (MIRVA GROUP)	Алматы	kz
+macroerp	C0	Ellington Hills (ТОО KEMELDEN)	Астана	kz
+macroerp	C0	JETISU	Астана	kz
+macroerp	C0	UV Group	Алматы	kz
+macroerp	C0	The Akan Building	Астана	kz
+macroerp	C0	Davlatov Industries	Ташкент	uz
+macroerp	C0	Shinam House (Mo'jiza Group)	Ташкент	uz

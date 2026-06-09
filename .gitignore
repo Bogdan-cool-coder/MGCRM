@@ -1,0 +1,30 @@
+# === Проект (Laravel API в src/, Vue SPA во front/) ===
+/src/vendor/
+/src/node_modules/
+/src/.env
+/src/.env.backup
+/src/.phpunit.result.cache
+/src/storage/*.key
+/src/storage/framework/cache/*
+/src/storage/framework/sessions/*
+/src/storage/framework/views/*
+/src/storage/logs/*
+/src/public/build/
+/src/public/hot
+
+/front/node_modules/
+/front/dist/
+/front/.vite/
+
+# === examples/ — ПОЛНЫЕ КОПИИ-ЭТАЛОНЫ, КОММИТЯТСЯ В РЕПО (нелокальная работа). ===
+# Игнорируем только тяжёлые артефакты сборки внутри них, исходники — трекаем.
+/examples/**/vendor/
+/examples/**/node_modules/
+/examples/**/dist/
+/examples/**/.env
+
+# === OS / IDE ===
+.DS_Store
+*.log
+.idea/
+.vscode/

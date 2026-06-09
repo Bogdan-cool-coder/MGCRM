@@ -1,0 +1,423 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Magic UI: @property регистрации и @keyframes
+   Живут здесь (не в компонентах) чтобы избежать SSR hydration mismatch:
+   инлайновый <style> в JSX экранируется при SSR и отличается от клиентского.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* @property нужно объявлять вне @layer, на верхнем уровне */
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes beam-spin {
+  to { --beam-angle: 360deg; }
+}
+
+@keyframes shimmer-slide {
+  to { background-position: -220% 0; }
+}
+
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(40px, -30px) scale(1.08); }
+  66%       { transform: translate(-30px, 25px) scale(0.95); }
+}
+
+/* ── BorderBeam ──────────────────────────────────────────────────────────── */
+.border-beam-inner {
+  animation: beam-spin var(--beam-duration, 6s) linear infinite;
+}
+
+/* ── ShimmerButton ───────────────────────────────────────────────────────── */
+.shimmer-btn {
+  background: linear-gradient(
+    110deg,
+    #172747 0%,
+    #2B4987 45%,
+    #3b6fd4 50%,
+    #2B4987 55%,
+    #172747 100%
+  );
+  background-size: 220% 100%;
+  animation: shimmer-slide var(--shimmer-duration, 3.5s) linear infinite;
+}
+.shimmer-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── BrandBlobs (login page) ─────────────────────────────────────────────── */
+.blob-drift {
+  animation: blob-drift var(--blob-duration, 18s) ease-in-out infinite;
+}
+.blob-drift-2 { animation-delay: -6s; }
+.blob-drift-3 { animation-delay: -11s; }
+
+/* ── Magic Card spotlight ────────────────────────────────────────────────── */
+/* Spotlight следует за курсором через CSS-переменные --x / --y (JSX mousemove).
+   Сам pseudo-overlay живёт в .kpi-magic-spotlight (DOM-элемент, не ::before)
+   чтобы избежать проблем с SSR-гидрацией псевдоэлементов. */
+.kpi-magic:hover .kpi-magic-spotlight {
+  opacity: 1 !important;
+  background: radial-gradient(
+    420px circle at var(--x, 50%) var(--y, 50%),
+    rgba(43, 73, 135, 0.10),
+    transparent 60%
+  );
+}
+.dark .kpi-magic:hover .kpi-magic-spotlight {
+  background: radial-gradient(
+    420px circle at var(--x, 50%) var(--y, 50%),
+    rgba(120, 160, 255, 0.12),
+    transparent 60%
+  );
+}
+
+/* ── Kanban card drag & hover ────────────────────────────────────────────── */
+/* .kcard даёт grab-курсор, hover-lift и drag-rotate через CSS transitions.
+   data-dragging="true" проставляется в onDragStart / снимается в onDragEnd.
+   prefers-reduced-motion: глобальное правило ниже обнуляет transition-duration,
+   поэтому эффекты визуально исчезают без дополнительных @media. */
+.kcard {
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s;
+  cursor: grab;
+}
+.kcard:hover {
+  transform: translateY(-2px);
+}
+.kcard:active {
+  cursor: grabbing;
+}
+.kcard[data-dragging="true"] {
+  transform: scale(.99) rotate(-.5deg);
+  box-shadow: 0 16px 28px -8px rgba(16, 24, 40, .30);
+  cursor: grabbing;
+  z-index: 50;
+}
+
+/* ── BlurFade ────────────────────────────────────────────────────────────── */
+/* CSS-анимация вместо motion/react — надёжно работает при SSR/гидрации.
+   fill-mode: both гарантирует:
+     • до старта (во время delay) элемент держит начальное состояние (opacity:0)
+     • ПОСЛЕ анимации остаётся в конечном состоянии (opacity:1, visible)
+   prefers-reduced-motion: глобальное правило ниже ставит duration:0.01ms —
+   с fill-mode:both это мгновенно доводит элемент до opacity:1 (видимый). */
+@keyframes blur-fade-in {
+  from { opacity: 0; filter: blur(4px); transform: translateY(10px); }
+  to   { opacity: 1; filter: blur(0);   transform: none; }
+}
+.blur-fade {
+  animation: blur-fade-in var(--blur-fade-duration, 0.5s) cubic-bezier(.2,.8,.2,1) both;
+}
+
+/* prefers-reduced-motion: глобальное правило ниже уже гасит все анимации
+   через animation-duration: 0.01ms !important — новые классы покрываются им же. */
+
+/* ── Radix Toast анимации ────────────────────────────────────────────────────
+   data-state управляется Radix (SSR-safe, нет FOUC).
+   swipe-out: translate задаётся через --radix-toast-swipe-end-x. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(calc(100% + 16px)); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(calc(100% + 16px)); }
+}
+@keyframes toast-swipe-out {
+  from { transform: translateX(var(--radix-toast-swipe-end-x)); }
+  to   { opacity: 0; transform: translateX(calc(100% + 16px)); }
+}
+.animate-toast-in   { animation: toast-in   250ms cubic-bezier(.2,.8,.2,1) both; }
+.animate-toast-out  { animation: toast-out  200ms cubic-bezier(.2,.8,.2,1) both; }
+.animate-toast-swipe-out { animation: toast-swipe-out 150ms ease-out both; }
+
+/* ── Radix Dialog анимации ───────────────────────────────────────────────────
+   overlay + content управляются data-state (open/closed). */
+@keyframes dialog-overlay-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes dialog-content-in  {
+  from { opacity: 0; transform: scale(.97) translateY(4px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+@keyframes dialog-content-out {
+  from { opacity: 1; transform: scale(1)   translateY(0); }
+  to   { opacity: 0; transform: scale(.97) translateY(4px); }
+}
+.dialog-overlay-in   { animation: dialog-overlay-in   200ms cubic-bezier(.2,.8,.2,1) both; }
+.dialog-overlay-out  { animation: dialog-overlay-out  160ms cubic-bezier(.2,.8,.2,1) both; }
+.dialog-content-in   { animation: dialog-content-in   220ms cubic-bezier(.2,.8,.2,1) both; }
+.dialog-content-out  { animation: dialog-content-out  180ms cubic-bezier(.2,.8,.2,1) both; }
+
+/* ── Radix Popover / Dropdown анимации ───────────────────────────────────── */
+@keyframes popover-in  {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes popover-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(.96); }
+}
+.popover-in   { animation: popover-in   160ms cubic-bezier(.2,.8,.2,1) both; }
+.popover-out  { animation: popover-out  120ms cubic-bezier(.2,.8,.2,1) both; }
+
+:root {
+  --color-primary: #172747;
+  --color-primary-light: #2b4987;
+  --color-bg: #f1f2f3;
+}
+
+html,
+body {
+  @apply bg-gray-100 text-primary;
+  font-feature-settings: "cv11", "ss01", "ss03";
+}
+
+* {
+  @apply box-border;
+}
+
+/* Убрать стрелочки спиннера у number inputs во всём приложении */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ── DataTable v2 — универсальный sticky thead shadow ────────────────────── */
+/* Используется компонентом DataTable<T> (components/ui/DataTable.tsx).
+   Базовая тень — тонкая линия. При скролле (JS добавляет .scrolled) — elevation. */
+.dt-thead-shadow {
+  box-shadow: 0 1px 0 0 var(--color-gray-200, #e5e7eb);
+  transition: box-shadow 0.15s ease;
+}
+.dt-table-wrap.scrolled .dt-thead-shadow {
+  box-shadow: 0 2px 8px 0 rgba(23, 39, 71, 0.08);
+}
+
+/* ── Registry table sticky thead shadow ──────────────────────────────────── */
+/* Базовая тень — тонкая линия. При скролле (JS добавляет .scrolled) — elevation. */
+.registry-thead-shadow {
+  box-shadow: 0 1px 0 0 var(--color-gray-200, #e5e7eb);
+  transition: box-shadow 0.15s ease;
+}
+.registry-table-wrap.scrolled .registry-thead-shadow {
+  box-shadow: 0 2px 8px 0 rgba(23, 39, 71, 0.08);
+}
+
+/* ── Finance table sticky thead shadow ───────────────────────────────────── */
+.fin-thead-shadow {
+  box-shadow: 0 1px 0 0 var(--color-gray-200, #e5e7eb);
+  transition: box-shadow 0.15s ease;
+}
+.fin-table-wrap.scrolled .fin-thead-shadow {
+  box-shadow: 0 2px 8px 0 rgba(23, 39, 71, 0.08);
+}
+
+/* prefers-reduced-motion: глобально отключаем transform-анимации и transitions */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Явный fallback для BlurFade: гарантируем что элемент ВСЕГДА видим,
+     даже если браузер нестандартно обрабатывает animation-duration:0.01ms */
+  .blur-fade {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+@layer components {
+  /* ─── Базовый btn ─────────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-medium
+           rounded-md transition-[colors,box-shadow,transform]
+           duration-base ease-standard
+           disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  /* ─── btn-primary ────────────────────────────────────────────────────── */
+  /* hover: лёгкий подъём + shadow-elev-2; фон meняется на primary-light */
+  .btn-primary {
+    @apply btn bg-primary text-white px-4 py-2
+           shadow-elev-1
+           hover:bg-primary-light hover:shadow-elev-2 hover:-translate-y-px
+           active:translate-y-0 active:shadow-elev-1;
+  }
+
+  /* ─── btn-secondary ──────────────────────────────────────────────────── */
+  .btn-secondary {
+    @apply btn bg-white text-primary border border-gray-300 px-4 py-2
+           hover:bg-gray-100 hover:shadow-elev-1
+           dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-700;
+  }
+
+  /* ─── btn-danger ─────────────────────────────────────────────────────── */
+  .btn-danger {
+    @apply btn bg-danger text-white px-4 py-2
+           shadow-elev-1
+           hover:bg-danger-600 hover:shadow-elev-2 hover:-translate-y-px
+           active:translate-y-0 active:shadow-elev-1;
+  }
+
+  /* ─── btn-ghost ──────────────────────────────────────────────────────── */
+  .btn-ghost {
+    @apply btn text-primary hover:bg-gray-200 px-3 py-1.5
+           dark:text-gray-300 dark:hover:bg-gray-700;
+  }
+
+  /* ─── input ──────────────────────────────────────────────────────────── */
+  /* v2: скруглён до md(10px), focus-ring расширен до ring-4 с opacity/15 */
+  .input {
+    @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[16px]
+           transition-[border-color,box-shadow] duration-base ease-standard
+           focus:border-primary focus:outline-none
+           focus:ring-4 focus:ring-primary/15
+           dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100
+           dark:placeholder-gray-400 dark:focus:border-primary-light
+           dark:focus:ring-primary-light/20;
+  }
+
+  /* Нативный select в dark mode: option-элементы берут цвет от ОС,
+     явно задаём фон/текст чтобы опции не были невидимы на тёмном фоне. */
+  .input option {
+    @apply bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100;
+  }
+
+  /* Утилита для ссылок внутри таблиц — читаема в light и dark. */
+  .link-table {
+    @apply text-primary hover:underline dark:text-blue-300;
+  }
+
+  .label {
+    @apply text-sm font-medium text-gray-700 mb-1 block dark:text-gray-300;
+  }
+
+  /* ─── card ───────────────────────────────────────────────────────────── */
+  /* v2: скруглён до lg(12px), shadow-elev-1 вместо shadow-sm */
+  .card {
+    @apply rounded-lg bg-white border border-gray-200 shadow-elev-1
+           dark:bg-gray-800 dark:border-gray-700;
+  }
+
+  /* ─── badge ──────────────────────────────────────────────────────────── */
+  /* v2: форма сохранена; дефолтные семантические варианты используют
+     soft-схему (фон *-50, текст *-700) через модификаторы ниже.
+     Примечание: StatusBadge и HealthBadge используют собственные Tailwind-классы
+     из types.ts — их перевод на шкалы вынесен в отдельную фазу D0.1. */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  /* Soft-вариант badge для семантических статусов */
+  .badge-success {
+    @apply badge bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-500;
+  }
+  .badge-warning {
+    @apply badge bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-500;
+  }
+  .badge-danger {
+    @apply badge bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-500;
+  }
+  .badge-info {
+    @apply badge bg-info-50 text-info-700 dark:bg-info-500/10 dark:text-info-500;
+  }
+  .badge-neutral {
+    @apply badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300;
+  }
+
+  /* ─── lift ───────────────────────────────────────────────────────────── */
+  /* Утилита для hover-подъёма (карточки, виджеты). Использовать точечно —
+     не добавлять на все элементы, только там где ощущение «кликабельности» нужно. */
+  .lift {
+    @apply transition-[transform,box-shadow] duration-base ease-standard;
+  }
+  .lift:hover {
+    @apply -translate-y-0.5 shadow-elev-2;
+  }
+  .lift:active {
+    @apply translate-y-0 shadow-elev-1;
+  }
+}
+
+/* ── react-grid-layout: виджеты дашборда ─────────────────────────────────────
+   Стили для GridDashboard.tsx.
+   rgl-widget-wrapper — обёртка каждого виджета в grid.
+   В режиме редактирования (rgl-edit-mode) добавляем визуальные подсказки. */
+
+/* Обёртка виджета */
+.rgl-widget-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  /* Виджеты сами уже имеют .card стиль, добавляем только контейнер */
+}
+
+/* В режиме просмотра — убираем RGL-курсоры */
+.rgl-view-mode .react-grid-item {
+  cursor: default;
+}
+
+/* В режиме редактирования: виджеты выглядят перетаскиваемыми */
+.rgl-edit-mode .react-grid-item {
+  cursor: default; /* drag-handle даёт grab-курсор */
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 2px rgba(23, 39, 71, 0.15);
+  transition: box-shadow 0.15s ease;
+}
+.dark .rgl-edit-mode .react-grid-item {
+  box-shadow: 0 0 0 2px rgba(120, 160, 255, 0.2);
+}
+
+/* Перетаскиваемый виджет */
+.rgl-edit-mode .react-grid-item.react-draggable-dragging {
+  box-shadow: 0 12px 24px -4px rgba(23, 39, 71, 0.2);
+  z-index: 100;
+  opacity: 0.92;
+}
+
+/* Placeholder пока тащим */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(23, 39, 71, 0.06);
+  border: 2px dashed rgba(23, 39, 71, 0.2);
+  border-radius: 0.75rem;
+}
+.dark .react-grid-item.react-grid-placeholder {
+  background: rgba(120, 160, 255, 0.06);
+  border-color: rgba(120, 160, 255, 0.2);
+}
+
+/* Ресайз-хендл — делаем чуть крупнее для удобства */
+.rgl-edit-mode .react-resizable-handle {
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+.rgl-edit-mode .react-grid-item:hover .react-resizable-handle {
+  opacity: 1;
+}
+
+/* prefers-reduced-motion: отключаем transition у RGL элементов */
+@media (prefers-reduced-motion: reduce) {
+  .react-grid-item {
+    transition: none !important;
+  }
+}

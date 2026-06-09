@@ -1,0 +1,20 @@
+# /etc/cron.d/macro-monitor — MACRO CRM monitoring cron jobs
+# Copy to /etc/cron.d/macro-monitor on the VPS (chmod 644).
+# Logs go to /var/lib/macro-monitor/monitor.log (rotated manually or via logrotate).
+#
+# State files (dedup hashes) live in /var/lib/macro-monitor/ — create with:
+#   mkdir -p /var/lib/macro-monitor
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Log monitor — every 15 min
+*/15 * * * * root /opt/macro-contracts/deploy/scripts/log-monitor.sh >> /var/lib/macro-monitor/monitor.log 2>&1
+
+# Health check — every 30 min
+*/30 * * * * root /opt/macro-contracts/deploy/scripts/health-check.sh >> /var/lib/macro-monitor/monitor.log 2>&1
+
+# Docker prune — daily at 04:30 (before FinFamily's weekly host-wide prune at Sun 05:00)
+# Caps build cache at 3GB + removes unused images. NEVER touches volumes.
+# Logs go to prune.log (separate from monitor.log to keep signal:noise high).
+30 4 * * * root /opt/macro-contracts/deploy/scripts/docker-prune.sh >> /var/lib/macro-monitor/prune.log 2>&1

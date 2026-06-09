@@ -1,0 +1,12 @@
+{
+  "badge": {
+    "system": "Системный",
+    "published": "Опубликован",
+    "personal": "Личный"
+  },
+  "type": {
+    "html": "КП",
+    "docx": "Word"
+  },
+  "noDescription": "Без описания"
+}

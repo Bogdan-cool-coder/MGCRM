@@ -1,0 +1,79 @@
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+service_account*.json
+google_credentials*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+.pnpm-store/
+*.tsbuildinfo
+# Next.js generated type declarations (auto-regenerated on every dev/build)
+apps/web/next-env.d.ts
+
+# Storage / generated docs
+storage/
+generated/
+*.docx.bak
+*.pdf.bak
+
+# Исходники шаблонов от юриста (для регенерации reference.docx локально)
+templates/contracts_master/_source_*.docx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Claude Code agent runtime
+.claude/agent-memory/
+.claude/scheduled_tasks.lock
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Logs (only root-level app logs, NOT Next.js page directories named "logs")
+/logs/
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# DB dumps
+*.sql.gz
+*.dump
+
+# Agent memory artifacts (auto-created by claude subagents)
+apps/api/.claude/
+apps/web/.claude/
+
+# Google OAuth client_secret JSONs (downloaded from Google Cloud Console)
+for google secret/
+client_secret_*.json
+
+# backup runtime config (real values live on VPS)
+backup/backup.conf

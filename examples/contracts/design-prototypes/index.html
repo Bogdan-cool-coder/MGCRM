@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Design v2 · Прототипы</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{
+  colors:{
+    primary:{DEFAULT:'#172747',dark:'#0E172B',light:'#2B4987'},
+    success:{50:'#ECFDF3',500:'#12B76A',700:'#027A48'},
+    info:{50:'#EFF8FF',500:'#2E90FA',700:'#175CD3'},
+  },
+  fontFamily:{ sans:['Inter','sans-serif'] },
+  boxShadow:{ 'elev-2':'0 4px 8px -2px rgba(16,24,40,.10)','elev-3':'0 12px 16px -4px rgba(16,24,40,.14)' }
+}}}
+</script>
+<style>body{font-family:Inter,sans-serif}</style>
+</head>
+<body class="bg-[#0B1220] text-white min-h-screen antialiased">
+  <div class="max-w-5xl mx-auto px-6 py-16">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-[#2B4987] to-[#172747] grid place-items-center font-extrabold">M</div>
+      <span class="text-xl font-bold tracking-tight">MACRO CRM</span>
+      <span class="ml-2 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-info/15 text-info">Design v2 · прототипы</span>
+    </div>
+    <p class="text-white/50 mb-10">Интерактивные примеры экранов нового визуала. Это статичный прототип вне кода системы — для согласования направления.</p>
+
+    <div class="grid sm:grid-cols-3 gap-5">
+      <a href="login.html" class="group rounded-2xl bg-white/[.04] border border-white/10 p-5 hover:bg-white/[.07] hover:-translate-y-1 transition shadow-elev-2">
+        <div class="h-28 rounded-xl mb-4 bg-gradient-to-br from-[#172747] to-[#2B4987] grid place-items-center overflow-hidden relative">
+          <i class="bi bi-box-arrow-in-right text-4xl text-white/90"></i>
+        </div>
+        <div class="font-semibold flex items-center gap-2">Login <i class="bi bi-arrow-right opacity-0 group-hover:opacity-100 transition"></i></div>
+        <div class="text-sm text-white/50 mt-1">Split-screen, брендовый анимированный фон, Border Beam</div>
+      </a>
+      <a href="dashboard.html" class="group rounded-2xl bg-white/[.04] border border-white/10 p-5 hover:bg-white/[.07] hover:-translate-y-1 transition shadow-elev-2">
+        <div class="h-28 rounded-xl mb-4 bg-white/5 grid grid-cols-3 grid-rows-2 gap-1.5 p-2">
+          <div class="rounded-lg bg-success/20 col-span-1 row-span-1"></div>
+          <div class="rounded-lg bg-info/20"></div>
+          <div class="rounded-lg bg-white/10"></div>
+          <div class="rounded-lg bg-white/10 col-span-2"></div>
+          <div class="rounded-lg bg-white/10"></div>
+        </div>
+        <div class="font-semibold flex items-center gap-2">Дашборд <i class="bi bi-arrow-right opacity-0 group-hover:opacity-100 transition"></i></div>
+        <div class="text-sm text-white/50 mt-1">Bento-сетка, Number Ticker, Magic Card, спарклайны</div>
+      </a>
+      <a href="kanban.html" class="group rounded-2xl bg-white/[.04] border border-white/10 p-5 hover:bg-white/[.07] hover:-translate-y-1 transition shadow-elev-2">
+        <div class="h-28 rounded-xl mb-4 bg-white/5 grid grid-cols-3 gap-1.5 p-2">
+          <div class="space-y-1.5"><div class="h-3 rounded bg-white/10"></div><div class="h-6 rounded-lg bg-info/20"></div><div class="h-6 rounded-lg bg-white/10"></div></div>
+          <div class="space-y-1.5"><div class="h-3 rounded bg-white/10"></div><div class="h-6 rounded-lg bg-warning/20"></div></div>
+          <div class="space-y-1.5"><div class="h-3 rounded bg-white/10"></div><div class="h-6 rounded-lg bg-danger/20"></div><div class="h-6 rounded-lg bg-white/10"></div></div>
+        </div>
+        <div class="font-semibold flex items-center gap-2">Сделки · Kanban <i class="bi bi-arrow-right opacity-0 group-hover:opacity-100 transition"></i></div>
+        <div class="text-sm text-white/50 mt-1">Hover-lift, accent по температуре, sticky-итоги колонок</div>
+      </a>
+    </div>
+
+    <div class="mt-10 text-xs text-white/30">Подсказка: на экранах есть переключатель светлой/тёмной темы (☀︎/☾ в правом верхнем углу). Анимации настоящие — наведи курсор на карточки и кнопки.</div>
+  </div>
+  <script>tailwind.config.theme.extend.colors.warning={500:'#F79009'};tailwind.config.theme.extend.colors.danger={500:'#F04438'};</script>
+</body>
+</html>

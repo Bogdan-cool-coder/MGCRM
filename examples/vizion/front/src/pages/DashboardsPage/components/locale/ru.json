@@ -1,0 +1,8 @@
+{
+  "badge": {
+    "system": "Системный",
+    "published": "Опубликован",
+    "personal": "Личный"
+  },
+  "widgetsCount": "{count} виджет | {count} виджета | {count} виджетов"
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Dashboards",
+  "empty": "No dashboards available",
+  "newDashboard": "New dashboard",
+  "sections": {
+    "system": "System",
+    "published": "Published",
+    "personal": "Personal"
+  },
+  "errors": {
+    "loadFailed": "Failed to load dashboards",
+    "createFailed": "Failed to create the dashboard"
+  }
+}

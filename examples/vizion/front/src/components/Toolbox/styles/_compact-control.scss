@@ -1,0 +1,33 @@
+@use '@/theme/scss/index' as *;
+@use './tokens' as toolbox;
+
+@mixin compact-control-button($size: toolbox.$toolbox-control-size) {
+  width: $size;
+  min-width: $size;
+  height: $size;
+  min-height: $size;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0 !important;
+  border-radius: $radius-md;
+  line-height: 1;
+}
+
+@mixin compact-control-icon($font-size: 1rem) {
+  display: block;
+  font-size: $font-size;
+  margin: 0;
+  line-height: 1;
+}
+
+@mixin compact-control-avatar($size, $font-size) {
+  width: $size;
+  height: $size;
+  min-width: $size;
+  min-height: $size;
+  flex-shrink: 0;
+  aspect-ratio: 1;
+  font-size: $font-size;
+}

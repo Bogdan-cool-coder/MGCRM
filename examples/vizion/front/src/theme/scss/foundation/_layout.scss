@@ -1,0 +1,11 @@
+// App theme layout, motion, and elevation backed by --app-* custom properties
+
+$z-menu: var(--app-z-menu);
+$z-overlay: var(--app-z-overlay);
+$z-toolbox: var(--app-z-toolbox);
+$z-tooltip: var(--app-z-tooltip);
+$z-top: var(--app-z-top);
+
+$transition-fast: var(--app-transition-fast);
+$shadow-md: var(--app-shadow-md);
+$shadow-lg: var(--app-shadow-lg);

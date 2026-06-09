@@ -1,0 +1,169 @@
+{
+  "sidebar": {
+    "defaultTitle": "Чаты",
+    "defaultCreateLabel": "Новый",
+    "empty": "Чатов пока нет",
+    "newChatFallback": "Новый чат"
+  },
+  "reportBanner": {
+    "created": "Отчет создан",
+    "open": "Открыть отчет"
+  },
+  "reportGenerationModal": {
+    "title": {
+      "create": "Создание отчёта",
+      "edit": "Редактирование отчёта с AI"
+    },
+    "placeholder": "Опишите, какой отчёт нужен…",
+    "previewCreate": "Опишите, какой отчёт нужен, и ассистент его соберёт",
+    "previewEdit": "Опишите, что изменить в этом отчёте",
+    "openReport": "Открыть отчёт"
+  },
+  "widgetGenerationModal": {
+    "title": {
+      "create": "Создание виджета",
+      "edit": "Редактирование виджета с AI"
+    },
+    "placeholder": "Опишите, какой виджет нужен…",
+    "previewCreate": "Опишите, какой виджет нужен, и ассистент его соберёт",
+    "previewEdit": "Опишите, что изменить в этом виджете",
+    "addToDashboard": "Добавить на дашборд",
+    "addedToDashboard": "Виджет добавлен на дашборд",
+    "addFailed": "Не удалось добавить виджет на дашборд",
+    "done": "Готово",
+    "goToDashboards": "Перейти к дашбордам",
+    "presets": {
+      "greeting": "Опишите график одной фразой или выберите пример ниже — я уточню метрику и тип чарта и верну виджет, который можно добавить на дашборд.",
+      "items": {
+        "dealsByManager": "Сделки по менеджерам за месяц",
+        "salesAmountByComplex": "Сумма сделок по ЖК",
+        "dealsByStatus": "Сделки по статусам",
+        "salesDynamics": "Динамика продаж по месяцам",
+        "paymentsByObject": "Платежи по объектам"
+      }
+    },
+    "variants": {
+      "hint": "Выберите подходящий вариант — я создам виджет на его основе. Можно также уточнить запрос сообщением.",
+      "pick": "Выбрать этот",
+      "selectMessage": "Создай вариант {index}: {label}"
+    }
+  },
+  "documentGenerationModal": {
+    "title": {
+      "create": "Создание документа",
+      "edit": "Редактирование шаблона с AI"
+    },
+    "placeholder": "Опишите, какое коммерческое предложение нужно…",
+    "previewCreate": "Опишите, какое КП нужно, и ассистент соберёт HTML-шаблон",
+    "previewEdit": "Опишите, что изменить в этом шаблоне",
+    "openDocument": "Открыть шаблон",
+    "done": "Готово"
+  },
+  "errors": {
+    "loadChatFailed": "Не удалось загрузить чат",
+    "createChatFailed": "Не удалось создать чат",
+    "networkFailed": "Ошибка сети. Попробуйте еще раз",
+    "messageUndelivered": "Нет связи с сервером. Сообщение не доставлено, попробуйте еще раз.",
+    "aiTurnFailed": "Не удалось обработать запрос. Попробуйте ещё раз."
+  },
+  "miniChat": {
+    "title": "AI Чат",
+    "tooltip": "AI-чат",
+    "openInFullScreen": "Открыть на весь экран",
+    "expandDisabled": "Сначала отправьте сообщение",
+    "close": "Закрыть",
+    "loading": "Загрузка чата…",
+    "loadingHistory": "Загрузка истории…",
+    "empty": "Напишите сообщение, чтобы начать чат",
+    "emptyOnReport": "Спросите что-нибудь про этот отчёт",
+    "emptyOnDashboard": "Спросите что-нибудь про этот дашборд",
+    "emptyOnDocument": "Спросите что-нибудь про этот документ",
+    "previewPlaceholder": "Начните новый диалог",
+    "previewPlaceholderOnReport": "Спросите что угодно про этот отчёт",
+    "previewPlaceholderOnDashboard": "Спросите что угодно про этот дашборд",
+    "previewPlaceholderOnDocument": "Спросите что угодно про этот документ",
+    "placeholder": "Сообщение AI…",
+    "placeholderOnReport": "Спросите про этот отчёт…",
+    "placeholderOnDashboard": "Спросите про этот дашборд…",
+    "placeholderOnDocument": "Спросите про этот документ…",
+    "contextBadge": "Контекст: {title}",
+    "contextHint": "К первому сообщению будет добавлен конфиг текущего отчёта",
+    "dashboardContextHint": "К первому сообщению будут добавлены виджеты текущего дашборда",
+    "documentContextHint": "К первому сообщению будет добавлен контекст текущего документа",
+    "newChat": "Новый диалог",
+    "recentChats": "Недавние диалоги",
+    "noRecentChats": "Нет недавних диалогов",
+    "triggerFallback": "AI-чат",
+    "errors": {
+      "initFailed": "Не удалось открыть чат",
+      "loadHistoryFailed": "Не удалось загрузить историю чатов"
+    },
+    "common": {
+      "error": "Ошибка"
+    }
+  },
+  "thinkingTimeline": {
+    "headerThinking": "Думаю…",
+    "headerUsingTools": "Использую инструменты…",
+    "headerDone": "Готово",
+    "headerError": "Ошибка",
+    "headerThoughtSeconds": "Думал {count} секунду | Думал {count} секунды | Думал {count} секунд",
+    "headerThoughtMinutes": "Думал {count} минуту | Думал {count} минуты | Думал {count} минут",
+    "headerThoughtLessThanSecond": "Думал меньше секунды",
+    "toggleOpen": "Раскрыть размышления",
+    "toggleClose": "Свернуть размышления",
+    "regionLabel": "Шаги размышления",
+    "thinkingDetails": "Размышления",
+    "interimLabel": "Черновик ответа",
+    "steps": {
+      "started": "Запрос принят",
+      "connecting": "Подключаюсь к модели…",
+      "dryRunStart": "Проверка отчёта",
+      "dryRunOk": "Отчёт прошёл проверку",
+      "dryRunFailed": "Проверка отчёта не прошла",
+      "retry": "Повторная попытка",
+      "finalMessage": "Ответ собран"
+    },
+    "tools": {
+      "probe_data": "Изучаю структуру данных",
+      "query_data": "Запрашиваю данные",
+      "create_report": "Создаю отчёт",
+      "update_report": "Обновляю отчёт",
+      "create_widget": "Создаю виджет",
+      "update_widget": "Обновляю виджет"
+    },
+    "args": {
+      "model": "{model}",
+      "modelWithFieldsCount": "{model} · {count} поле | {model} · {count} поля | {model} · {count} полей",
+      "modelWithFieldsList": "{model} · поля: {fields}",
+      "queryAggregate": "{model} · {aggregate}",
+      "queryAggregateNoFilters": "{model} · {aggregate}",
+      "queryAggregateFilters": "{model} · {aggregate} · {count} фильтр | {model} · {aggregate} · {count} фильтра | {model} · {aggregate} · {count} фильтров",
+      "queryGroupedBy": "по {field}",
+      "createReportArgs": "«{title}» · {model}",
+      "createReportArgsColumns": "«{title}» · {model} · {columns} колонка | «{title}» · {model} · {columns} колонки | «{title}» · {model} · {columns} колонок",
+      "createReportArgsColumnsWidgets": "«{title}» · {model} · {columnsLabel} · {widgetsLabel}",
+      "updateReportArgs": "#{reportId} · {model}",
+      "updateReportArgsColumns": "#{reportId} · {model} · {columns} колонка | #{reportId} · {model} · {columns} колонки | #{reportId} · {model} · {columns} колонок",
+      "columnsPlural": "{count} колонка | {count} колонки | {count} колонок",
+      "widgetsPlural": "{count} виджет | {count} виджета | {count} виджетов",
+      "createWidgetArgs": "«{title}» · {model} · {chartType}",
+      "updateWidgetArgs": "#{widgetId} · {model} · {chartType}"
+    },
+    "details": {
+      "rowCount": "получено {count} строка | получено {count} строки | получено {count} строк",
+      "probeSummary": "{rows} из {total} · {fields} поле | {rows} из {total} · {fields} поля | {rows} из {total} · {fields} полей",
+      "probeNoTotal": "{rows} строка, {fields} поле | {rows} строки, {fields} поля | {rows} строк, {fields} полей",
+      "aggregateValue": "= {value}",
+      "groupRowsCount": "{count} группа | {count} группы | {count} групп",
+      "reportCreated": "отчёт #{id} создан",
+      "reportUpdated": "отчёт #{id} обновлён",
+      "widgetCreated": "виджет #{id} создан",
+      "widgetUpdated": "виджет #{id} обновлён"
+    },
+    "errors": {
+      "toolFailed": "Ошибка: {error}",
+      "toolFailedGeneric": "Не удалось"
+    }
+  }
+}

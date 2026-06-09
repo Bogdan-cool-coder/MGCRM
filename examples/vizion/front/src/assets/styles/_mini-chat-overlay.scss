@@ -1,0 +1,54 @@
+@use '@/theme/scss/index' as *;
+
+// ==========================================================================
+// MINI CHAT OVERLAY (unscoped global, selector-only)
+// ==========================================================================
+//
+// Why unscoped / global?
+// ----------------------
+// `MiniChatWidget.vue` uses `<Popover append-to="body">` (PrimeVue), which
+// teleports the overlay root out of the component's DOM subtree and into
+// <body>. As a result the teleported node has NO `data-v-XXX` scope-id from
+// the component — Vue's scoped `:deep(.mini-chat__overlay)` compiles to
+// `[data-v-XXX] .mini-chat__overlay`, which never matches a body-mounted
+// element. Previous attempts to cap the popover width via the scoped block
+// silently failed in production.
+//
+// The selectors below are intentionally specific (`.p-popover.mini-chat__overlay`)
+// to override PrimeVue's default `.p-popover` rules without bleeding to
+// unrelated popovers.
+//
+// Used by: front/src/components/chat/MiniChatWidget.vue
+// ==========================================================================
+
+// Hard cap the overlay width: AI replies can contain wide tables / <pre>
+// blocks; without an enforced max-width the descendant table inherits the
+// auto layout and pushes the overlay past 400px. `!important` is required
+// because PrimeVue's default `.p-popover` ships an inline-style `min-width`
+// in some scenarios and a base stylesheet rule with equal specificity.
+.p-popover.mini-chat__overlay {
+  width: min(400px, calc(100vw - 1.5rem)) !important;
+  max-width: 400px !important;
+  // PrimeVue applies `min-width` on `.p-popover` by default — zero it out so
+  // the cap above is unconditional.
+  min-width: 0 !important;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md;
+  // The inner panel has overflow:hidden + border-radius:inherit, but the
+  // overlay root itself needs to clip too — otherwise wide rendered HTML
+  // (tables, <pre> blocks) momentarily escape the rounded corners before
+  // the inner wrapper clips them on next layout pass.
+  overflow: hidden;
+}
+
+.p-popover.mini-chat__overlay .mini-chat__content {
+  padding: 0;
+}
+
+@media (max-width: 560px) {
+  .p-popover.mini-chat__overlay {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+  }
+}

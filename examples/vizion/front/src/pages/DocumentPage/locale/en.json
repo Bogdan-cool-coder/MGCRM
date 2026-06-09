@@ -1,0 +1,158 @@
+{
+  "settings": {
+    "openPromotions": "Configure promotions"
+  },
+  "edit": {
+    "title": "Edit template",
+    "editWithAi": "Edit with AI",
+    "editWithAiHint": "Describe the changes and the assistant updates the template for you.",
+    "name_ru_label": "Name (RU)",
+    "name_ru_placeholder": "e.g. Коммерческое предложение",
+    "name_en_label": "Name (EN)",
+    "name_en_placeholder": "e.g. Commercial Proposal",
+    "description_ru_label": "Description (RU)",
+    "description_ru_placeholder": "Short template description",
+    "description_en_label": "Description (EN)",
+    "description_en_placeholder": "Short template description",
+    "source_label": "Source file",
+    "source_has_html": "HTML template uploaded. You can replace the file.",
+    "source_has_docx": "Word template uploaded. You can replace the file.",
+    "source_none_html": "Upload an HTML file with {'$'}{'{'}field{'}'} or {'{'}{'{'}field{'}'}{'}'}-style placeholders.",
+    "source_none_docx": "Upload a .docx file with {'$'}{'{'}field{'}'}-style placeholders.",
+    "source_choose": "Upload file",
+    "source_replace": "Replace file",
+    "source_uploading": "Uploading...",
+    "source_uploaded": "File uploaded",
+    "source_limit_html": "Format: .html / .htm, up to 10 MB",
+    "source_limit_docx": "Format: .docx, up to 10 MB",
+    "placeholders_found": "Placeholders found",
+    "placeholders_none": "No placeholders found",
+    "placeholder_known": "known field",
+    "placeholder_unknown": "not in catalogue",
+    "cancel": "Cancel",
+    "save": "Save",
+    "name_required": "Name is required",
+    "success": "Template saved",
+    "errors": {
+      "loadCatalog": "Failed to load the field catalogue",
+      "loadPlaceholders": "Failed to load placeholders",
+      "upload": "Failed to upload the file",
+      "save": "Failed to save the template"
+    }
+  },
+  "object": {
+    "label": "Property object",
+    "placeholder": "Select an object",
+    "search": "Search by flat number",
+    "loading": "Loading...",
+    "noResults": "Nothing found"
+  },
+  "promotion": {
+    "label": "Promotion",
+    "placeholder": "No promotion",
+    "empty": "No active promotions"
+  },
+  "discount": {
+    "label": "Discount"
+  },
+  "preview": {
+    "title": "Preview"
+  },
+  "generation": {
+    "export": "Generate PDF",
+    "generating": "Generating...",
+    "ready": "Document ready and downloaded",
+    "downloaded": "PDF downloaded",
+    "downloadedDocx": "DOCX downloaded",
+    "downloadAgain": "Download again",
+    "error": "Failed to generate the document"
+  },
+  "docx": {
+    "generate": "Generate document",
+    "ready": "Document ready — pick a format",
+    "notReady": "No template uploaded yet. The document can be generated once a .docx file is uploaded.",
+    "downloadDocx": "Download DOCX",
+    "downloadPdf": "Download PDF",
+    "groups": {
+      "object": "Object",
+      "deal": "Deal",
+      "buyer": "Buyer",
+      "finances": "Finances",
+      "discount": "Discount",
+      "common": "Common",
+      "branding": "Branding"
+    },
+    "upload": {
+      "title": "Word template",
+      "choose": "Upload .docx",
+      "replace": "Replace .docx",
+      "uploading": "Uploading...",
+      "uploaded": "Template uploaded",
+      "hasSource": "Template uploaded. You can replace the file.",
+      "noSource": "Upload a .docx template with {'$'}{'{'}field{'}'}-style placeholders.",
+      "limit": "Format: .docx, up to 10 MB"
+    },
+    "placeholders": {
+      "title": "Template placeholders",
+      "noPlaceholders": "No {'$'}{'{'}...{'}'} placeholders found in the template",
+      "unknownWarning": "Not in catalogue:",
+      "known": "known field",
+      "unknown": "not in catalogue",
+      "hint": "Placeholders are substituted by field name. Check the reference via \"?\"."
+    },
+    "mapping": {
+      "saved": "Fields saved"
+    },
+    "catalog": {
+      "title": "Available fields",
+      "intro": "Use these placeholders in your template. Copy the key you need (or a variant with a filter) and paste it into the document.",
+      "copy": "Copy",
+      "copyWithFilter": "Copy with filter",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Failed to copy",
+      "empty": "The field catalogue is empty",
+      "pii": "PII",
+      "example": "Example"
+    },
+    "errors": {
+      "upload": "Failed to upload the template",
+      "loadPlaceholders": "Failed to load placeholders",
+      "loadCatalog": "Failed to load the field catalogue",
+      "saveMapping": "Failed to save the fields"
+    },
+    "ai": {
+      "autoMap": "AI: map fields",
+      "autoMapHint": "The assistant reads the template and suggests which field to substitute for each placeholder.",
+      "running": "Analyzing the template…",
+      "prompt": "Read the uploaded template and propose a mapping of placeholders to the available fields.",
+      "proposalsHint": "The assistant proposed mappings. Accept the ones that fit — they'll be saved to the template.",
+      "accept": "Accept",
+      "dismiss": "Dismiss",
+      "acceptAll": "Accept all",
+      "dismissAll": "Dismiss all",
+      "confidence": "{percent}% confidence",
+      "source": {
+        "catalog": "Catalog",
+        "macrodata": "MacroData"
+      },
+      "errors": {
+        "title": "Error",
+        "turnFailed": "Failed to process the request. Please try again.",
+        "loadChat": "Failed to load chat",
+        "createChat": "Failed to create chat",
+        "network": "Network error. Please try again"
+      }
+    }
+  },
+  "errors": {
+    "loadTemplate": "Failed to load the template",
+    "notFound": "Template not found",
+    "unsupportedType": "This template type is not supported yet",
+    "searchObjects": "Failed to load objects",
+    "loadPromotions": "Failed to load promotions",
+    "preview": "Failed to refresh the preview",
+    "generate": "Failed to generate the document",
+    "download": "Failed to download the file",
+    "timeout": "Generation timed out"
+  }
+}

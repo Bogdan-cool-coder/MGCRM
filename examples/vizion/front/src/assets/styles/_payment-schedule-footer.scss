@@ -1,0 +1,78 @@
+@use '@/theme/scss/index' as *;
+
+// ==========================================================================
+// PAYMENT SCHEDULE FOOTER (unscoped global, selector-only)
+// ==========================================================================
+//
+// Why no parent-class flag?
+// -------------------------
+// Previous iterations relied on a `footer-with-absolute-labels` class on
+// `<DataTable>` to gate a `td { padding-top }` rule and to scope the inner
+// `.ps-footer-*` rules. In PrimeVue v4, the `class` prop on `<DataTable>`
+// does NOT reliably land on the rendered root node (the user confirmed via
+// a DOM snapshot — `footer-with-absolute-labels` is absent from the DOM,
+// while `.ps-footer-row` / `.ps-footer-pair` / `.ps-footer-label` /
+// `.ps-footer-value` are present).
+//
+// New approach: style the `.ps-footer-*` selectors directly, and use a
+// `:has()` selector to pad EVERY <td> in the footer row whenever a
+// `.ps-footer-row` is present. This keeps the rule scoped to the
+// payment_schedule footer only (no leakage to other report tables) while
+// guaranteeing visual symmetry across all footer cells in that row.
+//
+// Used by: front/src/pages/ReportPage/index.vue
+// ==========================================================================
+
+// Pad every <td> in the tfoot row that contains a payment_schedule footer cell.
+// Scoped via `:has(.ps-footer-row)` — only matches the specific row where the
+// payment_schedule footer slot renders. Other report footers are unaffected.
+.p-datatable-tfoot tr:has(.ps-footer-row) > td {
+  padding-top: 1.4rem;
+  padding-bottom: 1rem;
+  vertical-align: middle;
+}
+
+// Two pairs side-by-side inside a payment_schedule footer cell.
+.ps-footer-row {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+// Each label/value pair — relative container that anchors the absolute label.
+// padding-top is no longer needed here; the parent <td> reserves the room
+// via the `:has()` rule above.
+.ps-footer-pair {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// Muted label (paid / due) — lifted into the td's padding-top zone so it
+// sits ABOVE the numeric value instead of overlapping it. The negative `top`
+// matches the `padding-top: 1.4rem` reserved by the `:has()` rule above.
+// Color uses `$surface-500` (one step lighter than `--app-text-muted` which
+// maps to `$surface-600`) to make the label visually quieter while still
+// readable on close inspection. No `--app-text-disabled` token exists in
+// `theme/scss/foundation/_colors.scss`, so we step down the surface palette.
+.ps-footer-label {
+  position: absolute;
+  top: -0.9rem;
+  left: 0;
+  right: 0;
+  font-size: $font-size-sm;
+  color: $surface-500;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  text-align: left;
+}
+
+// Numeric value — bold to match adjacent footer cells.
+.ps-footer-value {
+  font-weight: $font-weight-semibold;
+  line-height: 1.2;
+}

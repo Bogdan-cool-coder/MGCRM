@@ -1,0 +1,35 @@
+// App theme colors backed by --app-* custom properties
+
+// Brand and status
+$primary: var(--app-primary);
+$primary-color: var(--app-primary-color);
+$danger: var(--app-danger);
+$monochrome-white: var(--app-monochrome-white);
+$blue-100: var(--app-blue-100);
+$orange-500: var(--app-orange-500);
+
+// Surfaces and borders
+$surface-0: var(--app-surface-0);
+$surface-50: var(--app-surface-50);
+$surface-100: var(--app-surface-100);
+$surface-200: var(--app-surface-200);
+$surface-300: var(--app-surface-300);
+$surface-400: var(--app-surface-400);
+$surface-500: var(--app-surface-500);
+$surface-600: var(--app-surface-600);
+$surface-700: var(--app-surface-700);
+$surface-800: var(--app-surface-800);
+$surface-900: var(--app-surface-900);
+$border-radius: var(--app-border-radius);
+$card-border-radius: var(--app-card-border-radius);
+
+// Feedback helpers
+$errorBg: var(--app-error-bg);
+$errorBorder: var(--app-error-border);
+$red-50: var(--app-red-50);
+$red-200: var(--app-red-200);
+$red-500: var(--app-red-500);
+$red-700: var(--app-red-700);
+
+// Compatibility aliases
+$background-color: $surface-100;

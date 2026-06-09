@@ -1,0 +1,119 @@
+name: CI
+
+# Runs on push and PR to dev and master.
+# Both jobs (backend + frontend) must pass before merging to master.
+
+on:
+  push:
+    branches: [dev, master]
+  pull_request:
+    branches: [dev, master]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend (PHP tests)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: vizion_test
+          POSTGRES_USER: vizion
+          POSTGRES_PASSWORD: testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, pdo_mysql, zip, intl, mbstring
+          coverage: none
+
+      - name: Initialise Laravel runtime directories
+        working-directory: ./src
+        run: |
+          mkdir -p \
+            storage/app/public \
+            storage/app/private \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/framework/testing \
+            storage/framework/views \
+            storage/logs \
+            bootstrap/cache
+
+      - name: Install dependencies
+        working-directory: ./src
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Copy env
+        working-directory: ./src
+        run: cp .env.example .env
+
+      - name: Generate key
+        working-directory: ./src
+        run: php artisan key:generate
+
+      - name: Run migrations
+        working-directory: ./src
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: vizion_test
+          DB_USERNAME: vizion
+          DB_PASSWORD: testing
+        run: php artisan migrate --force
+
+      - name: Run tests
+        working-directory: ./src
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: vizion_test
+          DB_USERNAME: vizion
+          DB_PASSWORD: testing
+        run: php artisan test
+
+  frontend:
+    name: Frontend (type-check + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./front
+        run: npm ci
+
+      - name: Type check
+        working-directory: ./front
+        run: npm run type-check
+
+      - name: Build (smoke)
+        working-directory: ./front
+        run: npm run build
+
+      - name: Lint
+        working-directory: ./front
+        run: npm run lint
+        continue-on-error: true

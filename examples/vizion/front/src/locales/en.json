@@ -1,0 +1,52 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "search": "Search",
+    "filter": "Filter",
+    "apply": "Apply",
+    "reset": "Reset",
+    "actions": "Actions"
+  },
+  "roles": {
+    "superadmin": "Super Admin",
+    "admin": "Admin",
+    "analyst": "Analyst",
+    "viewer": "Viewer"
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Please enter a valid email",
+    "password": "Password must be at least 8 characters",
+    "passwordMatch": "Passwords do not match",
+    "minLength": "Must be at least {min} characters"
+  },
+  "errors": {
+    "notFound": "Not found",
+    "forbidden": "Access denied",
+    "unauthorized": "Please log in to continue",
+    "serverError": "Server error. Please try again later",
+    "networkError": "Network error. Check your connection",
+    "localeSyncFailed": "Could not save the language on the server, but it will stay selected in this browser",
+    "reorderFailed": "Could not save the report order"
+  },
+  "states": {
+    "empty": "No data available",
+    "loading": "Loading...",
+    "notFound": "Nothing found"
+  },
+  "companies": {
+    "switchForbidden": "You do not have access to this company",
+    "switchNotFound": "Company not found",
+    "switchFailed": "Failed to switch the active company"
+  }
+}

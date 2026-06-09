@@ -1,0 +1,94 @@
+{
+  "back": "Назад",
+  "filters": "Фильтры",
+  "collapse": "Свернуть",
+  "emptyData": "Нет данных для отображения",
+  "pagination": "Пагинация",
+  "hide": "Скрыть",
+  "paginationInfo": "{page} из {lastPage}",
+  "notFoundTitle": "Отчёт не найден",
+  "notFoundDescription": "Запрашиваемый отчёт не существует или был удалён",
+  "backToList": "Вернуться к списку",
+  "totals": "Итого",
+  "openInCrm": "Открыть в CRM",
+  "headerFilters": {
+    "dateRange": "С {from} ПО {to}",
+    "dateFrom": "С {from}",
+    "dateTo": "ПО {to}"
+  },
+  "paymentSchedule": {
+    "total": "Сверка",
+    "empty": "Нет финок",
+    "headers": {
+      "date": "Дата оплаты",
+      "paid": "Оплачено",
+      "due": "К оплате"
+    },
+    "footer": {
+      "paidLabel": "Оплачено",
+      "dueLabel": "К оплате"
+    }
+  },
+  "columnManager": {
+    "tooltip": "Колонки",
+    "header": "Управление колонками",
+    "hint": "Перетащите строки, чтобы поменять порядок. Чекбокс скрывает колонку.",
+    "reset": "Сбросить",
+    "bulkLabel": "Показать все колонки",
+    "dragHandle": "Перетащить",
+    "toggleColumn": "Переключить видимость колонки {name}"
+  },
+  "widgetGroups": {
+    "tooltip": "Группы виджетов",
+    "header": "Показать группы виджетов",
+    "reset": "Сбросить",
+    "ungroupedLabel": "Прочее",
+    "collapse": "Свернуть группу",
+    "expand": "Развернуть группу"
+  },
+  "actionsMenu": {
+    "title": "Действия",
+    "info_section": "Информация",
+    "author": "Автор",
+    "created_at": "Создан",
+    "status": "Статус",
+    "status_published": "Опубликован",
+    "status_draft": "Черновик",
+    "status_system": "Системный отчёт",
+    "editWithAi": "Редактировать с AI",
+    "publish": "Опубликовать",
+    "unpublish": "Скрыть из публикации",
+    "delete": "Удалить отчёт",
+    "delete_confirm_title": "Удалить отчёт?",
+    "delete_confirm_message": "Отчёт и связанный AI-чат будут удалены безвозвратно.",
+    "toast_published": "Отчёт опубликован",
+    "toast_unpublished": "Публикация скрыта",
+    "toast_deleted": "Отчёт удалён",
+    "toast_error": "Не удалось выполнить действие"
+  },
+  "dashboard": {
+    "toolbar": {
+      "widgetsPlaceholder": "Виджеты",
+      "widgetsSelected": "Виджетов: {count}",
+      "widgetsHeader": "Показать виджеты",
+      "reset": "Сбросить вид",
+      "resetTooltip": "Сбросить положение и видимость виджетов"
+    },
+    "banner": {
+      "limited": "Показаны первые {limit} строк. Уточните фильтры для полного среза.",
+      "limitedWithTotal": "Показаны первые {limit} строк из ~{total}. Уточните фильтры для полного среза."
+    },
+    "body": {
+      "loading": "Загрузка данных дашборда…",
+      "error": "Не удалось загрузить данные дашборда",
+      "retry": "Повторить",
+      "noWidgets": "На этом отчёте пока нет виджетов",
+      "noWidgetsHint": "Добавьте виджеты через AI-чат — попросите AI «добавь виджет с …»",
+      "allHidden": "Все виджеты скрыты. Включите их в меню «Виджеты»."
+    },
+    "widget": {
+      "hide": "Скрыть виджет",
+      "empty": "Нет данных для отображения"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "back": "Back",
+  "systemBadge": "System",
+  "makeItMine": "Make it mine",
+  "addWidget": "Add widget",
+  "emptyDashboard": "This dashboard has no widgets yet. Add one to get started.",
+  "notFound": "Dashboard not found",
+  "errors": {
+    "loadFailed": "Failed to load the dashboard",
+    "loadDataFailed": "Failed to load the dashboard data",
+    "cloneFailed": "Failed to clone the dashboard",
+    "detachFailed": "Failed to remove the widget",
+    "attachFailed": "Failed to add the widget",
+    "layoutFailed": "Failed to save the layout"
+  }
+}

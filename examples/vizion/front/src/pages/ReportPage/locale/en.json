@@ -1,0 +1,94 @@
+{
+  "back": "Back",
+  "filters": "Filters",
+  "collapse": "Collapse",
+  "emptyData": "No data to display",
+  "pagination": "Pagination",
+  "hide": "Hide",
+  "paginationInfo": "{page} of {lastPage}",
+  "notFoundTitle": "Report not found",
+  "notFoundDescription": "The requested report does not exist or has been removed",
+  "backToList": "Back to list",
+  "totals": "Total",
+  "openInCrm": "Open in CRM",
+  "headerFilters": {
+    "dateRange": "From {from} to {to}",
+    "dateFrom": "From {from}",
+    "dateTo": "Until {to}"
+  },
+  "paymentSchedule": {
+    "total": "Total",
+    "empty": "No items",
+    "headers": {
+      "date": "Payment date",
+      "paid": "Paid",
+      "due": "Due"
+    },
+    "footer": {
+      "paidLabel": "Paid",
+      "dueLabel": "Due"
+    }
+  },
+  "columnManager": {
+    "tooltip": "Columns",
+    "header": "Manage columns",
+    "hint": "Drag rows to reorder. Toggle the checkbox to hide a column.",
+    "reset": "Reset",
+    "bulkLabel": "Show all columns",
+    "dragHandle": "Drag to reorder",
+    "toggleColumn": "Toggle visibility of {name}"
+  },
+  "widgetGroups": {
+    "tooltip": "Widget groups",
+    "header": "Show widget groups",
+    "reset": "Reset",
+    "ungroupedLabel": "Other",
+    "collapse": "Collapse group",
+    "expand": "Expand group"
+  },
+  "actionsMenu": {
+    "title": "Actions",
+    "info_section": "Info",
+    "author": "Author",
+    "created_at": "Created",
+    "status": "Status",
+    "status_published": "Published",
+    "status_draft": "Draft",
+    "status_system": "System report",
+    "editWithAi": "Edit with AI",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "delete": "Delete report",
+    "delete_confirm_title": "Delete report?",
+    "delete_confirm_message": "The report and the related AI chat will be permanently deleted.",
+    "toast_published": "Report published",
+    "toast_unpublished": "Report unpublished",
+    "toast_deleted": "Report deleted",
+    "toast_error": "Action failed"
+  },
+  "dashboard": {
+    "toolbar": {
+      "widgetsPlaceholder": "Widgets",
+      "widgetsSelected": "{count} widgets",
+      "widgetsHeader": "Show widgets",
+      "reset": "Reset view",
+      "resetTooltip": "Reset widget positions and visibility"
+    },
+    "banner": {
+      "limited": "Showing the first {limit} rows. Narrow the filters for the full slice.",
+      "limitedWithTotal": "Showing the first {limit} rows out of ~{total}. Narrow the filters for the full slice."
+    },
+    "body": {
+      "loading": "Loading dashboard data…",
+      "error": "Failed to load dashboard data",
+      "retry": "Retry",
+      "noWidgets": "This report has no widgets yet",
+      "noWidgetsHint": "Add widgets through the AI chat — ask the AI to “add a widget with …”",
+      "allHidden": "All widgets are hidden. Enable them via the “Widgets” menu."
+    },
+    "widget": {
+      "hide": "Hide widget",
+      "empty": "No data to display"
+    }
+  }
+}

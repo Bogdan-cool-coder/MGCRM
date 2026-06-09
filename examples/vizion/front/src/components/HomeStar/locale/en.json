@@ -1,0 +1,8 @@
+{
+  "homeStar": {
+    "isHome": "This is your home page",
+    "makeHome": "Set as home page",
+    "saved": "Home page saved",
+    "saveError": "Couldn't save your home page"
+  }
+}

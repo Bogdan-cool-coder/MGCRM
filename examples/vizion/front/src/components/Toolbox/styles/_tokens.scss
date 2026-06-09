@@ -1,0 +1,10 @@
+@use '@/theme/scss/index' as *;
+
+$toolbox-toggle-overlap: 0.25rem;
+$toolbox-surface-border: 1px solid rgba($surface-900, 0.08);
+$toolbox-surface-bg: $surface-0;
+$toolbox-surface-border-hover: rgba($surface-900, 0.16);
+$toolbox-control-size: 2.75rem;
+$toolbox-toggle-main-size: 2rem;
+$toolbox-grip-size: 1rem;
+$toolbox-divider-inset: 0.35rem;

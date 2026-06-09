@@ -1,0 +1,6 @@
+{
+  "loginError": "Неверный email или пароль",
+  "iframeReauthOr": "или",
+  "iframeReauthButton": "Продолжить через токен сессии",
+  "iframeReauthError": "Не удалось войти через токен сессии"
+}

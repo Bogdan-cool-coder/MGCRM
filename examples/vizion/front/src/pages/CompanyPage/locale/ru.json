@@ -1,0 +1,13 @@
+{
+  "title": "Компания",
+  "users": "Пользователи",
+  "settings": "Настройки",
+  "brandingTab": "Брендинг",
+  "promotionsTab": "Акции",
+  "mapping": "Маппинг MacroData",
+  "nameColumn": "Имя",
+  "emailColumn": "Email",
+  "roleColumn": "Роль",
+  "currencyInvalid": "Введите три заглавных латинских буквы (ISO 4217).",
+  "forbiddenError": "Недостаточно прав для изменения этих настроек."
+}

@@ -1,0 +1,63 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: SSH deploy
+        # v1.2.5 = composite action (no Node runtime) — снимает Node 20 deprecation
+        # warning, который GitHub отключает 2026-06-16. Composite shell-based.
+        # env: кладёт Sentry-секреты в окружение раннера, чтобы appleboy `envs:`
+        # их прокинул в SSH-сессию (иначе они пустые и source-map upload пропускается).
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          # appleboy ssh-action defaults command_timeout to 10m — too short for a
+          # COLD build (empty cache after docker-prune): the api image re-installs
+          # LibreOffice via apt (~10-12m). 25m covers a full cold api+web rebuild.
+          command_timeout: 25m
+          # Sentry source-map upload (опционально). Прокидываем секреты в SSH-сессию
+          # как env. Если в GHA secrets их нет — переменные пустые, аплоад на VPS
+          # пропускается (см. next.config.mjs gating), билд не падает.
+          envs: SENTRY_AUTH_TOKEN,SENTRY_ORG,SENTRY_PROJECT
+          script: |
+            set -e
+            cd /opt/macro-contracts
+            git fetch origin main
+            git reset --hard origin/main
+            # Если заданы все три Sentry-секрета (GHA secrets) — экспортируем их для
+            # `docker compose build web`, чтобы плагин загрузил source-map. Иначе —
+            # ничего не делаем, билд использует значения из .env (обычно пустые) и
+            # аплоад пропускается. Build-arg'и для web берутся из .env/окружения compose.
+            if [ -n "${SENTRY_AUTH_TOKEN:-}" ] && [ -n "${SENTRY_ORG:-}" ] && [ -n "${SENTRY_PROJECT:-}" ]; then
+              export SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT
+              echo "Sentry source-map upload: enabled"
+            else
+              echo "Sentry source-map upload: skipped (secrets not set)"
+            fi
+            # Rolling-рестарт: новые api-реплики поднимаются и становятся healthy
+            # до гашения старых → нет окна 404 на /api (см. deploy/rolling-restart.sh).
+            bash deploy/rolling-restart.sh
+            echo "--- api logs (last 40 lines) ---"
+            docker compose logs --tail=40 api || true
+            echo "--- bot logs (last 20 lines) ---"
+            docker compose logs --tail=20 bot || true

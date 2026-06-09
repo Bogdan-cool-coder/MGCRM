@@ -1,0 +1,38 @@
+# MACRO CRM — local development compose (только Postgres).
+#
+# Цель: дать разработчику локальную БД одной командой, без необходимости
+# поднимать api/web/onlyoffice контейнерами. uvicorn и npm run dev запускаются
+# нативно на хосте (быстрее iteration, не нужен docker rebuild при коде).
+#
+# Использование:
+#   docker compose -f docker-compose.dev.yml up -d db
+#   cp .env.dev.example apps/api/.env     # либо использовать DATABASE_URL inline
+#   cd apps/api && .venv/bin/alembic upgrade head
+#   cd apps/api && .venv/bin/uvicorn app.main:app --reload --port 8000
+#   cd apps/web && npm run dev
+#
+# НЕ используется в проде — основной docker-compose.yml. Этот файл и dev-данные
+# никогда не пересекаются с прод-volume `pgdata` (тут отдельный `dev-postgres-data`).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: macro-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: macro
+      POSTGRES_PASSWORD: macro
+      POSTGRES_DB: macro_dev
+    ports:
+      # 5432 на хосте; если занят (например, локальный brew postgres), поменяй на 5433.
+      - "5432:5432"
+    volumes:
+      - dev-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U macro -d macro_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dev-postgres-data:

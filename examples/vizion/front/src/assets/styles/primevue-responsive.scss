@@ -1,0 +1,97 @@
+// ==========================================
+// PRIMEVUE RESPONSIVE STYLES
+// Глобальные стили для мобильных устройств
+// ==========================================
+
+@media (max-width: 767px) {
+  // Buttons
+  .p-button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    
+    &.p-button-sm {
+      padding: 0.375rem 0.5rem !important;
+      font-size: 0.75rem !important;
+      
+      .p-button-icon {
+        font-size: 0.875rem !important;
+      }
+    }
+    
+    .p-button-label {
+      @media (max-width: 400px) {
+        // Скрывать текст на очень маленьких экранах
+        // если есть иконка
+        .p-button-icon-only & {
+          display: none;
+        }
+      }
+    }
+  }
+  
+  // DataTable
+  .p-datatable {
+    font-size: 0.875rem !important;
+    
+    .p-datatable-header {
+      padding: 0.75rem 0.5rem !important;
+    }
+    
+    .p-datatable-column-header {
+      padding: 0.75rem 0.5rem !important;
+      font-size: 0.875rem !important;
+    }
+    
+    .p-datatable-cell {
+      padding: 0.75rem 0.5rem !important;
+    }
+  }
+  
+  // InputText
+  .p-inputtext {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  // Dialog
+  .p-dialog {
+    width: 90vw !important;
+    max-width: 90vw !important;
+    
+    .p-dialog-header {
+      padding: 1rem !important;
+      font-size: 1rem !important;
+    }
+    
+    .p-dialog-content {
+      padding: 1rem !important;
+    }
+    
+    .p-dialog-footer {
+      padding: 1rem !important;
+    }
+  }
+  
+  // Tag
+  .p-tag {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+  
+  // Dropdown
+  .p-dropdown {
+    font-size: 0.875rem !important;
+    
+    .p-dropdown-label {
+      padding: 0.5rem 0.75rem !important;
+    }
+  }
+}
+
+// Very small screens
+@media (max-width: 400px) {
+  // Buttons with icons only - hide labels
+  .p-button:not(.p-button-icon-only) .p-button-label {
+    display: inline;
+  }
+}

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Дашборд (v2)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{
+  colors:{
+    primary:{DEFAULT:'#172747',dark:'#0E172B',light:'#2B4987'},
+    success:{50:'#ECFDF3',100:'#D1FADF',500:'#12B76A',600:'#039855',700:'#027A48'},
+    warning:{50:'#FFFAEB',100:'#FEF0C7',500:'#F79009',600:'#DC6803',700:'#B54708'},
+    danger:{50:'#FEF3F2',100:'#FEE4E2',500:'#F04438',600:'#D92D20',700:'#B42318'},
+    info:{50:'#EFF8FF',100:'#D1E9FF',500:'#2E90FA',600:'#1570EF',700:'#175CD3'},
+  },
+  fontFamily:{ sans:['Inter','sans-serif'] },
+  borderRadius:{ xl:'14px','2xl':'18px' },
+  boxShadow:{
+    'elev-1':'0 1px 2px rgba(16,24,40,.06)',
+    'elev-2':'0 4px 10px -2px rgba(16,24,40,.10)',
+    'elev-3':'0 14px 24px -8px rgba(16,24,40,.16)',
+  }
+}}}
+</script>
+<style>
+  body{font-family:Inter,sans-serif}
+  .nav-item{position:relative}
+  .nav-item.active{background:rgba(43,73,135,.10);color:#2B4987;font-weight:600}
+  .dark .nav-item.active{background:rgba(79,134,255,.14);color:#9cc2ff}
+  .nav-item.active::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);height:60%;width:3px;border-radius:9999px;background:#2B4987}
+  .dark .nav-item.active::before{background:#9cc2ff}
+  .lift{transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s}
+  .lift:hover{transform:translateY(-3px)}
+  /* magic card spotlight */
+  .magic{position:relative;overflow:hidden}
+  .magic::before{content:"";position:absolute;inset:0;opacity:0;transition:opacity .3s;
+    background:radial-gradient(420px circle at var(--x,50%) var(--y,50%), rgba(43,73,135,.10), transparent 60%);pointer-events:none}
+  .dark .magic::before{background:radial-gradient(420px circle at var(--x,50%) var(--y,50%), rgba(120,160,255,.12), transparent 60%)}
+  .magic:hover::before{opacity:1}
+  .beam{position:relative}
+  .beam::after{content:"";position:absolute;inset:0;border-radius:18px;padding:1.5px;
+    background:conic-gradient(from var(--a,0deg), transparent 0 72%, #F79009 86%, #fec84b 92%, transparent 100%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spin 5s linear infinite;pointer-events:none}
+  @keyframes spin{to{--a:360deg}} @property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+  .fade-up{animation:fadeUp .5s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="bg-gray-100 dark:bg-[#0B1220] text-primary dark:text-gray-100">
+<div class="flex min-h-screen">
+  <!-- SIDEBAR -->
+  <aside class="w-[240px] shrink-0 sticky top-0 h-screen flex flex-col bg-white dark:bg-gray-900/70 dark:backdrop-blur border-r border-gray-200 dark:border-white/10">
+    <div class="p-5 flex items-center gap-2.5 border-b border-gray-100 dark:border-white/10">
+      <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-[#2B4987] to-[#172747] grid place-items-center font-extrabold text-white">M</div>
+      <span class="font-bold tracking-tight">MACRO CRM</span>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto text-sm">
+      <a class="nav-item active flex items-center gap-3 rounded-lg px-3 py-2"><i class="bi bi-speedometer2"></i>Дашборд</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-person-workspace"></i>Кабинет</a>
+      <a href="kanban.html" class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-kanban"></i>Сделки <span class="ml-auto text-[10px] font-bold bg-warning/20 text-warning-700 dark:text-warning-500 rounded-full px-1.5">12</span></a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-person-rolodex"></i>Контакты</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-clipboard-check"></i>Задачи <span class="ml-auto text-[10px] font-bold bg-info/20 text-info-700 dark:text-info-500 rounded-full px-1.5">5</span></a>
+      <div class="px-3 pt-4 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">CS</div>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-clipboard-data"></i>Реестр клиентов</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-inbox-fill"></i>Входящие</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-file-earmark-text"></i>Договоры</a>
+      <div class="px-3 pt-4 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Финансы</div>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-cash-coin"></i>Финансы</a>
+      <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"><i class="bi bi-grid-3x3"></i>Аналитика</a>
+    </nav>
+    <div class="p-3 border-t border-gray-100 dark:border-white/10">
+      <div class="flex items-center gap-2.5 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-white/5 transition cursor-pointer">
+        <div class="relative"><div class="h-9 w-9 rounded-full bg-primary text-white grid place-items-center text-xs font-semibold">БЯ</div><span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success-500 border-2 border-white dark:border-gray-900"></span></div>
+        <div class="min-w-0"><div class="text-sm font-medium truncate">Богдан Ядыкин</div><div class="text-xs text-gray-500">Директор</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 min-w-0">
+    <!-- header -->
+    <div class="sticky top-0 z-10 bg-white/80 dark:bg-[#0B1220]/80 backdrop-blur border-b border-gray-200 dark:border-white/10 px-8 h-[68px] flex items-center justify-between">
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Обзор</div>
+        <h1 class="text-xl font-bold leading-tight">Дашборд</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="hidden md:flex items-center gap-2 rounded-xl border border-gray-200 dark:border-white/10 px-3 py-2 text-sm text-gray-400 cursor-text hover:bg-gray-50 dark:hover:bg-white/5 transition"><i class="bi bi-search"></i>Поиск…<kbd class="ml-6 text-[11px] border border-gray-200 dark:border-white/10 rounded px-1">⌘K</kbd></div>
+        <button class="h-9 w-9 grid place-items-center rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition relative"><i class="bi bi-bell"></i><span class="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-danger-500"></span></button>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="h-9 w-9 grid place-items-center rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition"><i class="bi bi-circle-half"></i></button>
+        <button class="rounded-xl bg-primary hover:bg-primary-light text-white text-sm font-medium px-4 py-2 shadow-elev-1 hover:shadow-elev-2 hover:-translate-y-0.5 transition inline-flex items-center gap-2"><i class="bi bi-plus-lg"></i>Новая сделка</button>
+      </div>
+    </div>
+
+    <div class="p-8 space-y-6">
+      <!-- KPI row (bento top) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="magic lift rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-1 hover:shadow-elev-2 p-5 fade-up">
+          <div class="flex items-center justify-between"><span class="text-sm text-gray-500">Выручка, месяц</span><span class="h-8 w-8 grid place-items-center rounded-lg bg-success-50 dark:bg-success-500/10 text-success-600"><i class="bi bi-graph-up-arrow"></i></span></div>
+          <div class="mt-3 text-3xl font-bold tabular-nums tick" data-to="2480000" data-suffix=" ₽">0</div>
+          <div class="mt-1 text-xs text-success-600 font-medium inline-flex items-center gap-1"><i class="bi bi-arrow-up-short"></i>+18% к прошлому</div>
+          <svg class="mt-3 w-full h-8" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,24 14,20 28,22 42,14 56,16 70,9 84,11 100,4" fill="none" stroke="#039855" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+        </div>
+        <div class="magic lift rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-1 hover:shadow-elev-2 p-5 fade-up" style="animation-delay:.05s">
+          <div class="flex items-center justify-between"><span class="text-sm text-gray-500">Сделок в работе</span><span class="h-8 w-8 grid place-items-center rounded-lg bg-info-50 dark:bg-info-500/10 text-info-600"><i class="bi bi-kanban"></i></span></div>
+          <div class="mt-3 text-3xl font-bold tabular-nums tick" data-to="47">0</div>
+          <div class="mt-1 text-xs text-gray-500">на сумму <span class="font-semibold text-primary dark:text-gray-200">14,2 млн ₽</span></div>
+          <svg class="mt-3 w-full h-8" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,18 14,16 28,20 42,18 56,12 70,14 84,10 100,12" fill="none" stroke="#1570EF" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+        </div>
+        <div class="magic lift rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-1 hover:shadow-elev-2 p-5 fade-up" style="animation-delay:.1s">
+          <div class="flex items-center justify-between"><span class="text-sm text-gray-500">Конверсия в оплату</span><span class="h-8 w-8 grid place-items-center rounded-lg bg-primary/5 dark:bg-white/5 text-primary dark:text-gray-200"><i class="bi bi-funnel"></i></span></div>
+          <div class="mt-3 text-3xl font-bold tabular-nums tick" data-to="32" data-suffix="%">0</div>
+          <div class="mt-1 text-xs text-danger-600 font-medium inline-flex items-center gap-1"><i class="bi bi-arrow-down-short"></i>−3% к плану</div>
+          <svg class="mt-3 w-full h-8" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,8 14,10 28,9 42,14 56,13 70,18 84,16 100,20" fill="none" stroke="#D92D20" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+        </div>
+        <div class="magic lift rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-1 hover:shadow-elev-2 p-5 fade-up" style="animation-delay:.15s">
+          <div class="flex items-center justify-between"><span class="text-sm text-gray-500">Ждут оплаты</span><span class="h-8 w-8 grid place-items-center rounded-lg bg-warning-50 dark:bg-warning-500/10 text-warning-600"><i class="bi bi-hourglass-split"></i></span></div>
+          <div class="mt-3 text-3xl font-bold tabular-nums tick" data-to="8">0</div>
+          <div class="mt-1 text-xs text-gray-500">просрочено <span class="font-semibold text-danger-600">2</span></div>
+          <svg class="mt-3 w-full h-8" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,16 14,18 28,15 42,17 56,16 70,19 84,15 100,17" fill="none" stroke="#DC6803" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+        </div>
+      </div>
+
+      <!-- Bento middle -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- funnel (col span 2) -->
+        <div class="lg:col-span-2 lift rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-1 p-6 fade-up">
+          <div class="flex items-center justify-between mb-5">
+            <div><div class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Воронка продаж</div><h3 class="font-semibold text-lg">Конверсия по этапам</h3></div>
+            <select class="text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-transparent px-2.5 py-1.5"><option>Этот квартал</option><option>Этот месяц</option></select>
+          </div>
+          <div class="space-y-3">
+            <!-- bars -->
+            <div><div class="flex justify-between text-sm mb-1"><span>Новые лиды</span><span class="tabular-nums text-gray-500">320</span></div><div class="h-2.5 rounded-full bg-gray-100 dark:bg-white/5"><div class="h-full rounded-full bg-info-500" style="width:100%"></div></div></div>
+            <div><div class="flex justify-between text-sm mb-1"><span>Квалификация</span><span class="tabular-nums text-gray-500">214</span></div><div class="h-2.5 rounded-full bg-gray-100 dark:bg-white/5"><div class="h-full rounded-full bg-info-500" style="width:67%"></div></div></div>
+            <div><div class="flex justify-between text-sm mb-1"><span>Встреча</span><span class="tabular-nums text-gray-500">138</span></div><div class="h-2.5 rounded-full bg-gray-100 dark:bg-white/5"><div class="h-full rounded-full bg-primary-light" style="width:43%"></div></div></div>
+            <div><div class="flex justify-between text-sm mb-1"><span>Trial / HOT</span><span class="tabular-nums text-gray-500">92</span></div><div class="h-2.5 rounded-full bg-gray-100 dark:bg-white/5"><div class="h-full rounded-full bg-warning-500" style="width:29%"></div></div></div>
+            <div><div class="flex justify-between text-sm mb-1"><span class="font-medium">Успешно (оплата)</span><span class="tabular-nums font-semibold text-success-600">61</span></div><div class="h-2.5 rounded-full bg-gray-100 dark:bg-white/5"><div class="h-full rounded-full bg-success-500" style="width:19%"></div></div></div>
+          </div>
+        </div>
+
+        <!-- HOT deals card with border beam -->
+        <div class="beam rounded-[18px] bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-2 p-6 fade-up" style="animation-delay:.05s">
+          <div class="flex items-center gap-2 mb-4"><span class="h-7 w-7 grid place-items-center rounded-lg bg-warning-50 dark:bg-warning-500/10 text-warning-600"><i class="bi bi-fire"></i></span><h3 class="font-semibold">HOT-сделки</h3></div>
+          <ul class="space-y-3">
+            <li class="flex items-center justify-between"><div><div class="text-sm font-medium">ООО «Альфа Капитал»</div><div class="text-xs text-gray-500">закрытие через 2 дня</div></div><div class="text-sm font-semibold tabular-nums">3,2 млн</div></li>
+            <li class="flex items-center justify-between"><div><div class="text-sm font-medium">ТД «Восток»</div><div class="text-xs text-warning-600">просрочено · 1 день</div></div><div class="text-sm font-semibold tabular-nums">1,8 млн</div></li>
+            <li class="flex items-center justify-between"><div><div class="text-sm font-medium">«МедТех Групп»</div><div class="text-xs text-gray-500">закрытие 12 июн</div></div><div class="text-sm font-semibold tabular-nums">2,4 млн</div></li>
+          </ul>
+          <button class="mt-4 w-full text-sm text-primary dark:text-blue-300 hover:underline inline-flex items-center justify-center gap-1">Все HOT-сделки <i class="bi bi-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- Bento bottom -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- tasks (animated list) -->
+        <div class="lift rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-1 p-6 fade-up">
+          <div class="flex items-center justify-between mb-4"><h3 class="font-semibold">Мои задачи на сегодня</h3><span class="text-xs bg-info-50 text-info-700 dark:bg-info-500/10 dark:text-info-500 rounded-full px-2 py-0.5 font-medium">5</span></div>
+          <ul class="space-y-2.5">
+            <li class="flex items-center gap-3 fade-up"><span class="h-5 w-5 rounded-md border-2 border-gray-300 dark:border-white/20"></span><div class="flex-1 text-sm">Позвонить «Альфа Капитал»</div><span class="text-xs text-danger-600 font-medium">10:00</span></li>
+            <li class="flex items-center gap-3 fade-up" style="animation-delay:.05s"><span class="h-5 w-5 rounded-md border-2 border-gray-300 dark:border-white/20"></span><div class="flex-1 text-sm">Отправить КП «Восток»</div><span class="text-xs text-gray-500">13:30</span></li>
+            <li class="flex items-center gap-3 fade-up" style="animation-delay:.1s"><span class="h-5 w-5 rounded-md bg-success-500 grid place-items-center text-white text-[10px]"><i class="bi bi-check-lg"></i></span><div class="flex-1 text-sm line-through text-gray-400">Согласовать договор</div></li>
+            <li class="flex items-center gap-3 fade-up" style="animation-delay:.15s"><span class="h-5 w-5 rounded-md border-2 border-gray-300 dark:border-white/20"></span><div class="flex-1 text-sm">Встреча с «МедТех»</div><span class="text-xs text-gray-500">16:00</span></li>
+          </ul>
+        </div>
+        <!-- status tiles -->
+        <div class="lift rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-white/10 shadow-elev-1 p-6 fade-up" style="animation-delay:.05s">
+          <h3 class="font-semibold mb-4">Договоры по статусу</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl bg-gray-50 dark:bg-white/5 p-3"><div class="text-2xl font-bold tabular-nums">34</div><div class="text-xs text-gray-500 mt-0.5">Черновики</div></div>
+            <div class="rounded-xl bg-warning-50 dark:bg-warning-500/10 p-3"><div class="text-2xl font-bold tabular-nums text-warning-700 dark:text-warning-500">12</div><div class="text-xs text-warning-700/70 dark:text-warning-500/70 mt-0.5">На согласовании</div></div>
+            <div class="rounded-xl bg-info-50 dark:bg-info-500/10 p-3"><div class="text-2xl font-bold tabular-nums text-info-700 dark:text-info-500">9</div><div class="text-xs text-info-700/70 dark:text-info-500/70 mt-0.5">Подписание</div></div>
+            <div class="rounded-xl bg-success-50 dark:bg-success-500/10 p-3"><div class="text-2xl font-bold tabular-nums text-success-700 dark:text-success-500">61</div><div class="text-xs text-success-700/70 dark:text-success-500/70 mt-0.5">Активные</div></div>
+          </div>
+        </div>
+        <!-- AI assistant teaser -->
+        <div class="lift rounded-2xl p-6 fade-up text-white relative overflow-hidden" style="animation-delay:.1s;background:linear-gradient(135deg,#172747,#2B4987 60%,#3b6fd4)">
+          <div class="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10 blur-xl"></div>
+          <div class="flex items-center gap-2 mb-3"><span class="h-8 w-8 grid place-items-center rounded-lg bg-white/15 backdrop-blur"><i class="bi bi-stars"></i></span><h3 class="font-semibold">AI-ассистент</h3></div>
+          <p class="text-sm text-white/80">«Покажи сделки без задач за неделю» — спроси на естественном языке, создавай сделки, задачи и договоры в диалоге.</p>
+          <button class="mt-4 w-full rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur py-2 text-sm font-medium transition inline-flex items-center justify-center gap-2"><i class="bi bi-chat-dots"></i>Открыть ассистента</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a href="index.html" class="fixed bottom-4 left-4 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-full px-3 py-1.5 shadow-elev-1"><i class="bi bi-grid"></i> прототипы</a>
+
+<script>
+// Number ticker
+function animateTicks(){document.querySelectorAll('.tick').forEach(el=>{
+  const to=+el.dataset.to, suf=el.dataset.suffix||'', dur=1100, t0=performance.now();
+  function step(t){const p=Math.min((t-t0)/dur,1);const e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(to*e).toLocaleString('ru-RU')+suf; if(p<1)requestAnimationFrame(step)}
+  requestAnimationFrame(step)})}
+animateTicks();
+// magic spotlight
+document.querySelectorAll('.magic').forEach(c=>c.addEventListener('mousemove',e=>{
+  const r=c.getBoundingClientRect();c.style.setProperty('--x',(e.clientX-r.left)+'px');c.style.setProperty('--y',(e.clientY-r.top)+'px')}));
+</script>
+</body>
+</html>

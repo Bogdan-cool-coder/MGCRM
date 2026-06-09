@@ -1,0 +1,8 @@
+{
+  "badge": {
+    "system": "System",
+    "published": "Published",
+    "personal": "Personal"
+  },
+  "widgetsCount": "{count} widget | {count} widgets"
+}

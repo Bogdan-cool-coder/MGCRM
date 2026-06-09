@@ -1,0 +1,235 @@
+# MACRO Contracts — production compose
+# Подключается к общему Traefik (network "proxy") на VPS.
+# DOMAIN задаётся через .env (например contracts.macroglobaltech.com).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: macro-contracts-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Epic 16 — Security: Redis для Bearer rate-limit (token-bucket) и debounce
+  # обновления last_used_at на APIToken. Без него приложение работает (Noop
+  # fallback в app/services/redis_client.py), но rate-limit не enforced.
+  redis:
+    image: redis:7-alpine
+    container_name: macro-contracts-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - redis-data:/data
+    networks:
+      - default
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  api:
+    build: ./apps/api
+    # image тегируется явно, чтобы bot-сервис переиспользовал тот же образ без второй сборки
+    image: macro-contracts-api:latest
+    # container_name убран намеренно: сервис масштабируется (replicas:2),
+    # docker даёт имена macro-contracts-api-1 / -2. Rolling-рестарт — deploy/rolling-restart.sh.
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      APP_ENV: production
+      STORAGE_PATH: /data/storage
+      TEMPLATES_PATH: /app/templates/contracts_master
+      # Поллер вынесен в bot-сервис; api-реплики НЕ поллят (иначе Telegram 409)
+      RUN_TELEGRAM_POLLING: "false"
+      # Google SA JSON грузится через UI /admin/integrations в writable storage volume
+      GOOGLE_SERVICE_ACCOUNT_JSON_PATH: /data/storage/secrets/google_sa.json
+      # Epic 16 — Security: Redis для rate-limit/debounce.
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - storage:/data/storage
+      - ./templates/contracts_master:/app/templates/contracts_master:ro
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.macro-contracts-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.macro-contracts-api.entrypoints=websecure"
+      - "traefik.http.routers.macro-contracts-api.priority=10"
+      - "traefik.http.routers.macro-contracts-api.tls=true"
+      - "traefik.http.routers.macro-contracts-api.tls.certresolver=letsencrypt"
+      # retry смягчает короткий разрыв stop→start при пересоздании контейнера
+      - "traefik.http.routers.macro-contracts-api.middlewares=macro-api-retry"
+      - "traefik.http.middlewares.macro-api-retry.retry.attempts=4"
+      - "traefik.http.middlewares.macro-api-retry.retry.initialinterval=300ms"
+      - "traefik.http.services.macro-contracts-api.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      # start_interval (Docker 25+): частые пробы при старте → контейнер становится
+      # healthy через ~2с после готовности uvicorn, а не ждёт полный interval.
+      # Traefik исключает starting/unhealthy контейнеры из роутинга, поэтому это
+      # резко сокращает окно, когда /api проваливается на web (404) после деплоя.
+      start_period: 40s
+      start_interval: 2s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Telegram long-polling в единственном экземпляре (тот же образ, что api, но command —
+  # поллер вместо uvicorn; alembic/сиды НЕ запускает). Так api можно масштабировать без
+  # конфликта getUpdates. Нет traefik-лейблов и proxy-сети: HTTP-ингресса у бота нет.
+  bot:
+    image: macro-contracts-api:latest
+    container_name: macro-contracts-bot
+    restart: unless-stopped
+    command: ["python", "-m", "app.run_bot"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      APP_ENV: production
+      STORAGE_PATH: /data/storage
+      GOOGLE_SERVICE_ACCOUNT_JSON_PATH: /data/storage/secrets/google_sa.json
+      # Epic 16 — Security: Redis для rate-limit/debounce (если bot шлёт через api).
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - storage:/data/storage
+    networks:
+      - default
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        # Sentry (опционально). Значения берутся из .env на VPS. Если пусты —
+        # Sentry полностью no-op, сборка не меняется. NEXT_PUBLIC_* инлайнятся
+        # в бандл на этапе build (публичны). SENTRY_AUTH_TOKEN/ORG/PROJECT нужны
+        # только для аплоада source-map (если не заданы — аплоад пропускается).
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENV: ${NEXT_PUBLIC_SENTRY_ENV:-production}
+        SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+        SENTRY_ORG: ${SENTRY_ORG:-}
+        SENTRY_PROJECT: ${SENTRY_PROJECT:-}
+    container_name: macro-contracts-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.macro-contracts-web.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.macro-contracts-web.entrypoints=websecure"
+      - "traefik.http.routers.macro-contracts-web.tls=true"
+      - "traefik.http.routers.macro-contracts-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.macro-contracts-web.priority=1"
+      - "traefik.http.services.macro-contracts-web.loadbalancer.server.port=3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # OnlyOffice Document Server — WYSIWYG-редактор master_skeleton.docx в браузере.
+  # Профиль "onlyoffice": сервис НЕ стартует, пока в .env не задан COMPOSE_PROFILES=onlyoffice.
+  # rolling-restart.sh трогает только api/web/bot/db, поэтому DS поднимается отдельно/вручную:
+  #   docker compose --profile onlyoffice pull onlyoffice
+  #   docker compose --profile onlyoffice up -d onlyoffice
+  # Предпосылки на VPS: DNS A-record ${ONLYOFFICE_DOMAIN} → IP сервера (для TLS Let's Encrypt),
+  # ONLYOFFICE_JWT_SECRET в .env (общий с api), ~2 ГБ RAM под контейнер.
+  onlyoffice:
+    image: ${ONLYOFFICE_IMAGE:-onlyoffice/documentserver:latest}
+    container_name: macro-contracts-onlyoffice
+    restart: unless-stopped
+    profiles: ["onlyoffice"]
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-}
+      JWT_HEADER: "Authorization"
+    volumes:
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_log:/var/log/onlyoffice
+      - onlyoffice_cache:/var/lib/onlyoffice
+      - onlyoffice_db:/var/lib/postgresql
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.macro-onlyoffice.rule=Host(`${ONLYOFFICE_DOMAIN:-office.localhost}`)"
+      - "traefik.http.routers.macro-onlyoffice.entrypoints=websecure"
+      - "traefik.http.routers.macro-onlyoffice.tls=true"
+      - "traefik.http.routers.macro-onlyoffice.tls.certresolver=letsencrypt"
+      - "traefik.http.services.macro-onlyoffice.loadbalancer.server.port=80"
+      # WebSocket support (DocServer needs upgrade for collaborative editing)
+      - "traefik.http.middlewares.macro-onlyoffice-ws.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.macro-onlyoffice-ws.headers.customrequestheaders.X-Forwarded-Host=${ONLYOFFICE_DOMAIN:-office.localhost}"
+      - "traefik.http.routers.macro-onlyoffice.middlewares=macro-onlyoffice-ws@docker"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  default:
+    name: macro-contracts_default
+  proxy:
+    external: true
+
+volumes:
+  pgdata:
+  storage:
+  redis-data:  # Epic 16 — Security: AOF/RDB снапшоты Redis
+  onlyoffice_data:
+  onlyoffice_log:
+  onlyoffice_cache:
+  onlyoffice_db:

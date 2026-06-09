@@ -1,0 +1,58 @@
+{
+  "menu": "Widget actions",
+  "hidden": "Hidden widget",
+  "noData": "No data for this period",
+  "rangePlaceholder": "Select a period",
+  "presets": {
+    "last12": "12 mo",
+    "thisYear": "This year",
+    "last3": "3 mo",
+    "currentMonth": "Current month"
+  },
+  "actions": {
+    "edit": "Edit with AI",
+    "hide": "Hide",
+    "show": "Show",
+    "detach": "Remove from dashboard"
+  },
+  "library": {
+    "title": "Add widget",
+    "empty": "No widgets in the library yet",
+    "createWidget": "Create widget",
+    "sections": {
+      "system": "System",
+      "published": "Published",
+      "personal": "Personal"
+    },
+    "usedInDashboards": "in {count} dashboard | in {count} dashboards",
+    "attachFailed": "Failed to add the widget",
+    "loadFailed": "Failed to load the widget library",
+    "cardMenu": "Widget actions",
+    "delete": "Delete widget",
+    "delete_confirm_title": "Delete widget?",
+    "delete_confirm_message": "The widget and its linked AI chat will be deleted permanently.",
+    "delete_confirm_message_in_use": "This widget is used in {count} dashboard. Delete it everywhere and remove? | This widget is used in {count} dashboards. Delete it everywhere and remove?",
+    "toast_deleted": "Widget deleted",
+    "toast_error": "Something went wrong"
+  },
+  "actionsMenu": {
+    "title": "Actions",
+    "info_section": "Information",
+    "author": "Author",
+    "created_at": "Created",
+    "status": "Status",
+    "status_published": "Published",
+    "status_draft": "Private",
+    "status_system": "System dashboard",
+    "addWidget": "Add widget",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "delete": "Delete dashboard",
+    "delete_confirm_title": "Delete dashboard?",
+    "delete_confirm_message": "The dashboard and its linked AI chat will be deleted permanently. The widgets stay in the library.",
+    "toast_published": "Dashboard published",
+    "toast_unpublished": "Dashboard unpublished",
+    "toast_deleted": "Dashboard deleted",
+    "toast_error": "Something went wrong"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "newChat": "New Chat",
+  "showChats": "Show chats",
+  "hideChats": "Hide chats",
+  "placeholder": "Ask a question about your data...",
+  "emptyChat": "Ask a question to start",
+  "errors": {
+    "loadListFailed": "Failed to load chats",
+    "sendFailed": "Failed to send message"
+  }
+}

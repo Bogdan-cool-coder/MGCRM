@@ -1,0 +1,12 @@
+{
+  "selectMultiplePlaceholder": "Выберите значения",
+  "selectSinglePlaceholder": "Выберите значение",
+  "searchPlaceholder": "Поиск",
+  "dateFrom": "От",
+  "dateTo": "До",
+  "numberFrom": "От",
+  "numberTo": "До",
+  "textPlaceholder": "Введите значение",
+  "loadingOptions": "Загрузка...",
+  "noOptions": "Нет доступных опций"
+}

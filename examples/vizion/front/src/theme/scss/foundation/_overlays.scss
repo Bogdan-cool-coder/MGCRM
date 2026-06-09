@@ -1,0 +1,31 @@
+@use './layout' as *;
+
+// Global portal overlays rendered outside component scope.
+//
+// PrimeVue Tooltip is appended to <body> and assigns its z-index at runtime via
+// the @primeuix ZIndex util — which auto-increments from the base value passed
+// in PrimeVue config (our `zIndex.tooltip` token).
+//
+// 2026-05-22: tooltip base raised to 2500 (above Toolbox 1200 and Popover
+// baseZIndex 1250). Observation showed tooltips still rendering UNDER the
+// Toolbox when no Popover had primed the global ZIndex counter — the per-key
+// counter occasionally fails to lift tooltip above the configured base.
+//
+// 2026-05-23: added hard CSS clamp `.p-tooltip { z-index: $z-tooltip !important }`
+// to remove dependency on PrimeUix ZIndex runtime behaviour. Worked for the
+// closed-MiniChat case.
+//
+// 2026-05-24: re-broke when MiniChat Popover is OPEN. PrimeVue increments
+// Popover z-index from its baseZIndex (toolbox+50 = 1250) and in practice
+// runtime values reach ~3251 — above the previous tooltip clamp of 2500, so
+// tooltip rendered UNDER the open MiniChat. Fix: raise `zIndex.tooltip` token
+// to 11000 (Z_BASE + 10000). The hard clamp below now keeps tooltip above any
+// realistic Popover/Modal layer with significant headroom for future overlays.
+//
+// Invariant: tooltip is the topmost UI layer (UX semantics of a hint). If a
+// surface ever legitimately needs to sit ABOVE a tooltip (very rare), do not
+// remove this clamp — re-think whether it's really a tooltip or a different
+// floating element.
+.p-tooltip {
+  z-index: $z-tooltip !important;
+}

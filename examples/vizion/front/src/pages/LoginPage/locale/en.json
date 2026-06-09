@@ -1,0 +1,6 @@
+{
+  "loginError": "Invalid email or password",
+  "iframeReauthOr": "or",
+  "iframeReauthButton": "Continue with session token",
+  "iframeReauthError": "Failed to authenticate with session token"
+}
