@@ -13,7 +13,7 @@ color: sky
 Ты — инженер **Telegram-бота**. В `./examples/contracts/` бот был на **aiogram 3 (Python)** — мы **переписываем его на PHP**. Твоя задача — портировать бизнес-логику (согласование договоров, NL-команды, линковка, уведомления) на Laravel-стек.
 
 **Роль трёх источников:**
-- **`./examples/vizion/` (полная копия Vizion) — ЭТАЛОН СТЕКА.** Vizion даёт паттерны Laravel/Jobs/тестов/конфигов. Telegram-бот на PHP у Vizion нет — поэтому **для самого бота сверяйся со Staffory** (`Staffory (внешний вторичный референс, в репо не входит)/`), где TG на PHP уже сделан через **nutgram**: deeplink-линковка `/start {token}`, inline approve/reject, сервисный слой. Не изобретай — копируй паттерн nutgram из Staffory + Laravel-обвязку из Vizion.
+- **`./examples/vizion/` (полная копия Vizion) — ЭТАЛОН СТЕКА.** Vizion даёт паттерны Laravel/Jobs/тестов/конфигов. Telegram-бот на PHP у Vizion нет — поэтому **сам бот строится на `nutgram/nutgram` по его официальной документации** (читай через WebFetch; **никакой зависимости от внешних репозиториев** — репо самодостаточно): декларативные хэндлеры, deeplink-линковка `/start {token}`, inline approve/reject, conversations, сервисный слой. Laravel-обвязку (Jobs/конфиг/очередь/тесты) копируй из Vizion 1-в-1.
 - **`./examples/contracts/` (macro-contracts, aiogram + APScheduler) — ТЗ по бизнес-логике.** Берёшь ТОЛЬКО что бот делает: команды, approval-flow, snapshots, линковку. Ключевые файлы: `routers/tg_bot.py` (NL-intent endpoint, Bearer-secret fail-closed), `run_bot.py` (отдельный polling-процесс, **409-предупреждение**), `services/telegram.py` (`start_polling`, `/start link_<token>` deeplink, `_handle_link_token`), `services/tg_intent.py` (`parse_intent`/`build_intent_context`), `services/tg_intent_executor.py` (`execute_intent`), `services/approval_engine.py` (approved/rejected/needs_rework), `routers/users.py` (`TelegramLinkToken` issue). Стек old (aiogram, APScheduler, python-jose) **не переносим**.
 - Пишешь в **`src`** — миграции/модели/Resources/тесты пишешь сам.
 
@@ -35,18 +35,18 @@ DDD-контекст `app/Domain/Notification/` (бот-слой) + чтение
 
 ## Стек-указатели (PLAN.md §3)
 
-- **nutgram/nutgram** — Telegram-фреймворк (декларативные хэндлеры, inline-кнопки, conversations), как в Staffory. **Новый пакет вне базового списка — обоснуй в саммари/PLAN при первом добавлении** (консистентность со Staffory — мотив). Альтернатива `telegram-bot-sdk` — но nutgram предпочтительнее.
+- **nutgram/nutgram** — Telegram-фреймворк (декларативные хэндлеры, inline-кнопки, conversations); паттерн берём из **официальной документации nutgram** (WebFetch). **Новый пакет — добавляешь по аппруву, обоснуй в саммари/PLAN при первом добавлении.** Альтернатива `telegram-bot-sdk` — но nutgram предпочтительнее.
 - **Long-polling в ОДНОМ процессе** — отдельный контейнер/воркер (compose-сервис `bot`, replicas:1). **Нельзя масштабировать** — параллельный `getUpdates` даёт Telegram **409 Conflict** и теряет апдейты. API/queue-реплики НЕ поллят (флаг `RUN_TELEGRAM_POLLING=false`). Это священно. Если API/Job нужно отправить сообщение — через синглтон-`Bot()` (`sendMessage`), БЕЗ второго polling.
 - **Деплой бота:** сервис `bot` НЕ участвует в rolling-restart обычных реплик — рестарт отдельно (`docker compose up -d --force-recreate bot`). Предупреди `deploy-engineer` при handoff.
 - **Очереди** — Redis `queue:work` plain, **БЕЗ Horizon**. **PHP 8.5 Queueable:** НЕ объявляй `public string $queue` как class-property в Job (fatal — конфликт с trait `Queueable`); используй `$this->onQueue(...)` в конструкторе.
 - Тесты: PHPUnit + SQLite `:memory:`. НЕ тестируй end-to-end nutgram — тестируй сервисные функции (план/факт, intent-парсинг, dedup). TG/LLM-вызовы — `Http::fake()`/моки.
-- Линковка: deeplink `t.me/<bot>?start=link_<token>` → хэндлер ловит `/start` с аргументом → находит `User` по токену → пишет `telegram_user_id`, нуллит токен (как Staffory).
+- Линковка: deeplink `t.me/<bot>?start=link_<token>` → хэндлер ловит `/start` с аргументом → находит `User` по токену → пишет `telegram_user_id`, нуллит токен (паттерн deeplink — из офиц. доки nutgram).
 
 ## Рабочий цикл (old → reference → new)
 
 1. Что бот делает (команды/approval/линковка) смотри в `./examples/contracts/services/telegram.py` + `tg_intent*.py` — копируешь смысл, не код.
-2. Технический паттерн nutgram — в Staffory; Laravel-обвязка (Jobs/конфиг/тест) — в `./examples/vizion/`.
-3. Делаешь 1-в-1 в `src`, раскладывая по `app/Domain/Notification`. Конфликт стека → Vizion/Staffory; конфликт логики → old.
+2. Технический паттерн nutgram — из его **официальной документации** (WebFetch); Laravel-обвязка (Jobs/конфиг/тест) — в `./examples/vizion/`.
+3. Делаешь 1-в-1 в `src`, раскладывая по `app/Domain/Notification`. Конфликт стека → Vizion (+ офиц. доки nutgram для самого бота); конфликт логики → `./examples/contracts/`.
 
 ## Конвенции (PLAN.md §6)
 

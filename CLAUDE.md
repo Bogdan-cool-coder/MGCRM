@@ -37,7 +37,7 @@ macroglobalcrm/          ← git-репозиторий Bogdan-cool-coder/MGCRM.
 
 ## Целевой стек (жёсткий — см. PLAN.md §3)
 
-**Backend:** Laravel **13** / PHP **8.5** · PostgreSQL 16 · **Sanctum** (SPA cookie+CSRF) · **TOTP 2FA** + **spatie/laravel-permission** (6 ролей + финправа — 2 точечных исключения к минимализму Vizion) · spatie/translatable · spatie/backup · **Prism** (AI-каскады, `config/ai.php` как Vizion) · **PHPWord + Gotenberg** (договоры→PDF) · Redis (очереди, **БЕЗ Horizon**) · **PHPUnit + SQLite :memory:**.
+**Backend:** Laravel **13** / PHP **8.5** · PostgreSQL 16 · **Sanctum** (Bearer personal access token, как Vizion; фронт хранит токен) · **TOTP 2FA** + **spatie/laravel-permission** (6 ролей + финправа — 2 точечных исключения к минимализму Vizion) · spatie/translatable · spatie/backup · **Prism** (AI-каскады, `config/ai.php` как Vizion) · **PHPWord + Gotenberg** (договоры→PDF) · Redis (очереди, **БЕЗ Horizon**) · **PHPUnit + SQLite :memory:**.
 
 **Frontend:** Vue **3.5** + TS strict · Vite · Pinia · Vue Router · **PrimeVue 4.5** + **Bootstrap-grid + SCSS** · PrimeIcons · **ECharts** · vue-i18n · axios.
 
@@ -53,7 +53,7 @@ Strangler, вертикальными срезами, домен за домен
 
 > **Все агенты — `bypassPermissions`** (рутина — docker/artisan/npm/git/Edit/Write/MCP, включая браузерные MCP-действия qa-tester'а — выполняется молча). Единственный жёсткий ограничитель — PreToolUse-хук `guard-destructive.sh` на критичный деструктив (работает и под bypass). Поведенческие правила (`frontend-specialist` и push у `deploy-engineer` — только по явной просьбе) остаются в силе как инструкции, не как пермишен-промпты.
 
-**Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-specialist` (Laravel-ядро: auth/Sanctum/2FA, базовые модели, миграции, тесты — для всех) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**, как у Vizion) · `qa-tester` (Playwright) · `product-manager` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — **только по явной просьбе**).
+**Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-specialist` (Laravel-ядро: auth/Sanctum/2FA, базовые модели, миграции, тесты — для всех) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**, как у Vizion) · `qa-tester` (Chrome MCP, fallback Playwright) · `product-manager` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — **только по явной просьбе**).
 
 **Доменные (8):** `contract-specialist` · `sales-specialist` · `cs-specialist` · `finance-specialist` · `automation-specialist` · `integration-specialist` · `analytics-specialist` · `bot-specialist`.
 
@@ -62,7 +62,8 @@ Strangler, вертикальными срезами, домен за домен
 ## Workflow (как у Vizion)
 
 ```
-[задача] → [main определяет агента и порядок] → [рабочий агент(ы): миграция→backend→domain→frontend]
+[задача] → [main определяет агента и порядок] → [рабочий агент(ы): backend→domain→frontend→qa→PM]
+        → [migration-specialist — перенос данных в КОНЦЕ домена, не в начале]
         → [если был UI у frontend-specialist → qa-tester] → [product-manager: саммари+ревью+verify+sync PLAN.md]
         → [апрув юзера] → [ТОЛЬКО по явной просьбе: deploy-engineer push/deploy]
 ```

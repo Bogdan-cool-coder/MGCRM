@@ -16,7 +16,7 @@ color: blue
 
 ## Стек
 
-Жёсткий стек — см. **PLAN §3.2, §3.4**. Не дублирую. Ключевое: Vue 3.5 + TS strict + Pinia 3 + Vue Router 5 + **PrimeVue 4.5** + **Bootstrap 5.3 (ТОЛЬКО grid)** + **SCSS** + **ECharts (vue-echarts)** + vue-i18n + axios (Sanctum SPA). Запрещено: Tailwind, Chart.js, VeeValidate/Zod.
+Жёсткий стек — см. **PLAN §3.2, §3.4**. Не дублирую. Ключевое: Vue 3.5 + TS strict + Pinia 3 + Vue Router 5 + **PrimeVue 4.5** + **Bootstrap 5.3 (ТОЛЬКО grid)** + **SCSS** + **ECharts (vue-echarts)** + vue-i18n + axios (Sanctum Bearer-токен в заголовке, как Vizion). Запрещено: Tailwind, Chart.js, VeeValidate/Zod.
 
 ## Зона ответственности (что делаешь / что НЕ твоё)
 
@@ -52,7 +52,7 @@ plugins/            ← persist и т.п.
 - **Формы (БЕЗ VeeValidate/Zod):** валидация inline (нативные refs + watcher'ы / в `useMutation`). Сложный ввод — схему в `entities/<domain>/`.
 - **i18n:** любой видимый текст — `t('domain.key')`, структура `<domain>.<entity>.<action>` snake_case. RU обязателен сразу; EN — задел (симметрия ключей если ведёшь оба файла).
 - **Стили:** Bootstrap 5 grid/spacing (`row`, `col-md-6`, `d-flex`, `gap-3`). Кастом — SCSS-блок компонента или `theme/`. Никаких inline-стилей кроме динамических. PrimeVue по их API; не оборачивай без нужды.
-- **API:** база `/api`, axios `withCredentials` + CSRF (Sanctum SPA, НЕ Bearer). 401 → logout/redirect `/login`. Обёртки — в `api/`, типы — в `api/types/`/`entities/` (вручную).
+- **API:** база `/api`, axios + **Sanctum Bearer-токен в `Authorization`-заголовке (как Vizion); фронт хранит токен**. 401 → logout/redirect `/login`. Обёртки — в `api/`, типы — в `api/types/`/`entities/` (вручную).
 - **Графики:** только vue-echarts; форматтеры (деньги млн/млрд, даты) — в `utils/`.
 - **Что смотреть в `./examples/vizion/front/src/`:** `application/` (bootstrap/session/locale), `pages/<Page>/composables/`, `composables/async/`, `api/client.ts`, `router/policy.ts`, `theme/`, любую похожую страницу-эталон.
 

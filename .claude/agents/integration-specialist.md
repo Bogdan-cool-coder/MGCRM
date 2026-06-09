@@ -21,7 +21,10 @@ color: magenta
 
 ## Зона и сущности (реальные из `./examples/contracts/`)
 
-DDD-контекст `app/Domain/Integration/` (+ часть `Domain/Iam` для токенов/SSO, `Domain/Inbox` для каналов, диспетч в `Domain/Notification`).
+DDD-контекст `app/Domain/Integration/` (+ часть `Domain/Iam` для токенов/SSO, `Domain/Inbox` для каналов, **весь `Domain/Notification` модельный слой**).
+
+- **`Domain/Notification` — твой модельный слой целиком (не только dispatch):** модели `Notification`/`Preference`/`Template`/`Broadcast` + их миграции + Broadcast-UI, плюс fan-out-диспетч.
+- **Inbox-split (граница с sales-specialist):** `Lead` + конверсия Lead→Deal — зона **sales-specialist**; `Channel`/`Form`/`InboundMessage`/авто-роутинг входящих — твоя зона.
 
 | Сущность | Поля (из old) | Milestone |
 |---|---|---|
@@ -36,7 +39,7 @@ DDD-контекст `app/Domain/Integration/` (+ часть `Domain/Iam` для
 
 ## Стек-указатели (PLAN.md §3)
 
-- **Sanctum** (SPA cookie+CSRF) для internal API. Public API v1 — отдельный гард по `X-API-Token` header (НЕ cookie, НЕ Bearer): middleware валидирует SHA-256 hash в БД + scope-check + expiry/revoke.
+- **Sanctum** (Bearer personal access token, как Vizion; фронт хранит токен) для internal API. Public API v1 — отдельный гард по `X-API-Token` header (НЕ Sanctum-токен): middleware валидирует SHA-256 hash в БД + scope-check + expiry/revoke.
 - **Google API** — пакет `google/apiclient` (новый пакет вне базового списка — обоснуй в саммари при первом добавлении). Per-user OAuth (Calendar+Drive), refresh-токены `encrypted`. Cron-job синка — через scheduler (`schedule:run`), **НЕ Horizon**.
 - **Redis token-bucket** rate-limit на APIToken (per-token bucket, `rate_limit_per_hour`). **Debounce `last_used_at`**: не пишем в БД на каждый запрос — апдейт раз в N секунд (иначе write-storm). При INCR > limit → 429.
 - **HMAC-SHA256** — подпись outbound (`X-MACRO-Signature: sha256=<hex>`), верификация inbound через **`hash_equals`** (constant-time, аналог `hmac.compare_digest`). SSRF-guard на outbound URL (порт-частной-сети ban — паттерн `ssrf_guard.py`).

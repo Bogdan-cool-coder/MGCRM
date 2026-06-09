@@ -52,7 +52,7 @@
 | Laravel | **13** | как Staffory; конвенции — Vizion |
 | PHP | **8.5-fpm** | strict_types, enums, readonly, match |
 | PostgreSQL | **16** | как `./examples/contracts/` (упрощает импорт данных + FTS) |
-| Laravel Sanctum | 4.x | SPA-auth: cookie + CSRF (НЕ Bearer-only), как Vizion |
+| Laravel Sanctum | 4.x | **Bearer personal access token (как Vizion)**; SPA хранит токен (как Vizion). 2FA-флоу: login → temp-токен → verify TOTP → полный токен |
 | **TOTP 2FA** | — | `pragmarx/google2fa` + QR. **Точечное исключение** (есть в old) |
 | **spatie/laravel-permission** | 7.x | роли admin/director/lawyer/manager/accountant/cfo + фин-права. **Точечное исключение** |
 | spatie/laravel-translatable | 6.x | jsonb-поля (на будущее EN; old RU-only) |
@@ -60,8 +60,10 @@
 | **Prism** (prism-php) | ^0.100 | AI-каскады (контракт-аналитика, чат) — конфиг `config/ai.php` 1-в-1 с Vizion |
 | **PHPWord** + **Gotenberg** | 1.x / 8 | генерация договоров docx→PDF (замена docxtpl+LibreOffice old) — паттерн Vizion |
 | Symfony ExpressionLanguage | 7.x | если нужны вычисляемые правила (как Vizion) |
-| Redis | 7 | очереди/кэш/rate-limit. **БЕЗ Horizon** (`queue:work` как Vizion) |
-| num2words-аналог | — | сумма прописью (RU) для договоров/счетов |
+| Redis | 7 | очереди/кэш/rate-limit. **NET-NEW** (у Vizion нет — он на database queue/cache). **БЕЗ Horizon** (`queue:work` как Vizion) |
+| **PhpSpreadsheet** | 1.x | Excel-экспорт (CS/аналитика/финотчёты). Эталона у Vizion нет — паттерн из `./examples/contracts/` (бизнес-референс — `openpyxl`) + офиц. доки |
+| **nutgram/nutgram** | — | Telegram-бот (PHP, замена aiogram). Эталона у Vizion нет — бизнес-референс `./examples/contracts/` (`aiogram`) + офиц. доки nutgram |
+| **wapmorgan/morphos** | — | склонение RU (есть у Vizion). ⚠️ для «суммы прописью» morphos недостаточно (склонение ≠ запись числа словами) — нужен отдельный маленький helper/либа |
 
 ### 3.2 Frontend
 | Компонент | Версия | Примечание |
@@ -76,7 +78,9 @@
 | PrimeIcons | 7 | `pi pi-*` |
 | **ECharts** + vue-echarts | 6 / 8 | аналитика, финотчёты, дашборды |
 | vue-i18n | 10 | RU (+ EN на будущее) |
-| axios | — | клиент + Sanctum-middleware |
+| **vuedraggable** | — | Kanban drag-n-drop (library-first, уже есть у Vizion) |
+| **grid-layout-plus** | — | drag-drop кастом-дашборды (library-first, уже есть у Vizion) |
+| axios | — | клиент + Sanctum Bearer-токен в заголовке |
 
 ### 3.3 Сознательно НЕ используем
 Tailwind · Inertia · Livewire · Filament · Chart.js · Horizon · VeeValidate/Zod (валидация — inline + `useMutation`) · spatie/laravel-data (ручные API Resources как Vizion) · Fortify (Sanctum достаточно) · Pest (тесты на **PHPUnit**, как Vizion).
@@ -88,9 +92,9 @@ PHPUnit + **SQLite :memory:** (force-override в `phpunit.xml` + guard в `TestC
 
 ## §4. Архитектура
 
-### 4.1 Монорепо (как Vizion: `src/` + `front/`)
+### 4.1 Монорепо (как Vizion: `src/` + `front/`; пишем в КОРНЕ репо, не в `new/`)
 ```
-new/
+macroglobalcrm/              ← корень репо (сам проект здесь)
 ├── src/                     ← Laravel API (PHP)
 │   ├── app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies}
 │   ├── app/Http/{Controllers,Middleware,Requests,Resources}
@@ -103,6 +107,7 @@ new/
 │   └── src/{application,pages,components,stores,api,composables,entities,router,theme,locales,plugins}
 ├── docker/                  ← php/nginx/frontend Dockerfiles + confs
 ├── docker-compose.yml / docker-compose.dev.yml
+├── examples/                ← {vizion/, contracts/} — эталоны (сносятся на M12)
 └── .github/workflows/
 ```
 
@@ -149,37 +154,46 @@ new/
 **Ведущие:** `backend-specialist` (бэк/инфра) + `frontend-specialist` (фронт) + `designer` (layout/токены) + `deploy-engineer` (docker/CI).
 
 #### M0.1 — Скелет монорепо и Docker (backend-specialist + deploy-engineer)
+> **Стартовая точка:** у Vizion `docker-compose.yml` уже содержит **6 сервисов** (app, nginx, frontend, queue-worker, gotenberg, postgres) и **БЕЗ redis**. → `gotenberg` + `queue-worker` копируемы 1-в-1; **redis — NET-NEW** (эталона у Vizion нет). `docker-compose.dev.yml` у Vizion **НЕ существует** — авторим его сами.
 - [ ] Скопировать структуру каталогов и docker-конфиги из `./examples/vizion/` (`src/`, `front/`, `docker/php`, `docker/nginx`, `docker/frontend.Dockerfile`), переименовать (`macro-crm-*`).
-- [ ] `docker-compose.dev.yml`: сервис `db` (postgres:16-alpine, volume `pgdata`), `redis` (redis:7-alpine). API/web — на хосте или в контейнере (как Vizion `composer run dev`).
-- [ ] `docker-compose.yml` (prod-болванка): db, redis, app(php-fpm+nginx), web(node build), gotenberg:8, queue-worker. Без Horizon.
+- [ ] **redis (NET-NEW, нет эталона у Vizion):** `redis:7-alpine`, bind `127.0.0.1`, в ОБА compose-файла; `depends_on: redis` на `app` и `queue-worker`.
+- [ ] `docker-compose.dev.yml` (авторим сами — у Vizion нет): сервис `db` (postgres:16-alpine, volume `pgdata`), `redis` (redis:7-alpine, 127.0.0.1). API/web — на хосте или в контейнере (как Vizion `composer run dev`).
+- [ ] `docker-compose.yml` (prod): app(php-fpm), nginx, frontend(node build), queue-worker, gotenberg:8, postgres:16 — 6 копируемых из Vizion + redis (NET-NEW). Без Horizon. **Решить build-context vs готовый image:** prod-compose Vizion тянет prebuilt-образы из GHCR — у нас на старте `build:`-контекст; registry-путь переименовать под MGCRM (не оставлять vizion-GHCR-пути).
 - [ ] `.env.example` с категориями: DB, SANCTUM, ADMIN seed, REDIS, ANTHROPIC (Prism), GOOGLE, SMTP, TELEGRAM, GOTENBERG_URL.
-- **DoD:** `docker compose -f docker-compose.dev.yml up -d db redis` поднимает БД; `pg_isready` ок.
+- **DoD:** `docker compose -f docker-compose.dev.yml up -d db redis` поднимает БД + redis; `pg_isready` ок.
 
 #### M0.2 — Laravel 13 bootstrap (backend-specialist)
-- [ ] `composer create-project laravel/laravel src` (LV13, PHP 8.5) через `docker run --rm -v "$(pwd):/app" -w /app composer:latest`.
+> **НЕ копировать `composer.json` require-блок Vizion 1-в-1** — у Vizion LV12/PHP8.2/PHPUnit11, у нас LV13/PHP8.5 → конфликт версий. `composer create-project` даёт LV13-корректный скелет (phpunit/collision уже под LV13), пакеты §3.1 ставим ПОВЕРХ. Vizion-конфиги — LV12-формы (`bootstrap/app.php`, `config/*`) → **адаптируем, не 1-в-1**.
+- [ ] `composer create-project laravel/laravel src` (LV13) через `docker run --rm -v "$(pwd):/app" -w /app composer:latest`. **PHP запинить на 8.5** в `docker/php/Dockerfile`.
 - [ ] `config/database.php` — pgsql основной. **НО** `phpunit.xml` — SQLite :memory: с `force="true"` + guard в `tests/TestCase.php` (паттерн Vizion: тест падает, если `database.default !== sqlite`).
-- [ ] Установить пакеты §3.1: sanctum, spatie/permission, spatie/translatable, spatie/backup, prism, phpoffice/phpword, pragmarx/google2fa, predis.
-- [ ] `config/ai.php` — скопировать из `./examples/vizion/`, модели/каскады под актуальные ключи (Anthropic + резерв).
+- [ ] Установить пакеты §3.1 ПОВЕРХ скелета: sanctum, spatie/permission, spatie/translatable, spatie/backup, prism, phpoffice/phpword, phpoffice/phpspreadsheet, pragmarx/google2fa, wapmorgan/morphos, **predis/predis** (драйвер redis).
+- [ ] **Redis-драйвер:** в `.env.example` — `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis`, `REDIS_HOST=redis`.
+- [ ] **Очистить/адаптировать** sqlite-ориентированные composer-скрипты Vizion `post-create-project-cmd` (под наш pgsql+dev-флоу).
+- [ ] **Явный порядок dev-старта:** скопировать `.env` из `.env.example` → `php artisan key:generate` → убедиться, что pgsql-env указывает на compose-сервис `db` → ТОЛЬКО ПОТОМ `php artisan migrate`.
+- [ ] `config/ai.php` — скопировать из `./examples/vizion/`. ⚠️ у Vizion он **GLM-primary (Z.AI) + Anthropic-fallback**; наш §3 — Anthropic → **вырезать Z.AI/GLM, оставить каскад Anthropic**, убрать `Z_API_KEY`.
 - [ ] `config/crm.php` — проектные значения (роли, валюты, storage paths).
 - **DoD:** `php artisan migrate` (на pgsql) проходит; `php artisan test` (sqlite) зелёный на дефолтном тесте.
 
 #### M0.3 — Аутентификация: Sanctum + 2FA (backend-specialist)
+> **Auth = Bearer personal access token (как Vizion реально):** `createToken('api')->plainTextToken`, фронт хранит токен. ⚠️ Vizion-`AuthController` написан ДО правил ARCHITECTURE.md (inline `$request->validate` + сырой `response()->json`) — **НЕ копировать verbatim**, переписать через `LoginRequest` (FormRequest) + `UserResource`. 2FA-флоу **эталона у Vizion нет** — реплицируем документированный флоу `./examples/contracts/apps/api/app/routers/auth_2fa.py` (setup → verify-setup → validate → backup codes → temp-токен), на `pragmarx/google2fa`.
 - [ ] `User` в `app/Domain/Iam/Models/User.php`: поля из old (email, password_hash, full_name, **role enum**, telegram_user_id, avatar_path, department_id, manager_id, is_active, **totp_enabled, totp_secret, backup_codes**).
-- [ ] Sanctum SPA: cookie+CSRF (`/sanctum/csrf-cookie`, `auth:sanctum`). Эндпоинты: `POST /api/login`, `/logout`, `GET /api/me`.
-- [ ] 2FA-флоу как old: `login` (success) → temp-токен → `POST /api/2fa/validate` → полный доступ. Setup: `POST /api/2fa/setup` (QR) → `/2fa/verify-setup`. Backup-коды (8, hashed).
+- [ ] Sanctum **Bearer**: `POST /api/login` (→ `plainTextToken` или temp-токен при 2FA), `/logout`, `GET /api/me`, защита `auth:sanctum`. Контроллер — через `LoginRequest` + `UserResource` (НЕ verbatim Vizion).
+- [ ] 2FA-флоу (по `auth_2fa.py`): `login` (success) → temp-токен → `POST /api/2fa/validate` → полный токен. Setup: `POST /api/2fa/setup` (QR) → `/2fa/verify-setup`. Backup-коды (8, hashed). Реализация — `pragmarx/google2fa`.
+- [ ] Фронт-`vite.config.ts` Vizion проксирует на Vizion `nginx:80` + Vizion-домены в `allowedHosts` → **перенацелить на наш стек** (наш backend/nginx + наши домены).
 - **DoD:** Feature-тесты login/logout/me/2fa-флоу зелёные.
 
 #### M0.4 — Роли и доступы (backend-specialist)
-- [ ] spatie/permission: сидер 6 ролей (admin/director/lawyer/manager/accountant/cfo) + базовые permissions.
-- [ ] Middleware `SetLocale` (RU/EN из заголовка/query, как Vizion), задел `ResolveVisibility` (scope all/department/personal — реализация в M1).
+> ⚠️ **`spatie/laravel-permission` — эталона у Vizion НЕТ** (Vizion использует простую строковую колонку `role` — это явно НЕ наш паттерн по ARCHITECTURE.md). Помечаем как **NEW-пакет**; 6 ролей выводим из `./examples/contracts/`, не из Vizion. **`SetLocale` middleware — копируем у Vizion** (`routes/api.php`, locale middleware).
+- [ ] spatie/permission (NEW): сидер 6 ролей (admin/director/lawyer/manager/accountant/cfo) + базовые permissions. Роли — из `./examples/contracts/`.
+- [ ] Middleware `SetLocale` (RU/EN из заголовка/query, **копируется у Vizion**), задел `ResolveVisibility` (scope all/department/personal — реализация в M1).
 - **DoD:** тест проверки роли на защищённом эндпоинте.
 
 #### M0.5 — Frontend bootstrap (frontend-specialist + designer)
-- [ ] `npm create vite front` (Vue+TS), скопировать структуру `front/src/*` из `./examples/vizion/`.
-- [ ] `main.ts`: Pinia + persist + Router + i18n + **PrimeVue preset** + axios-middleware + bootstrap-приложения (паттерн Vizion: `bootstrapPromise.then() → router.isReady() → mount`).
+- [ ] `npm create vite front` (Vue+TS), скопировать структуру `front/src/*` из `./examples/vizion/`. ⚠️ `vite.config.ts` Vizion проксирует на Vizion `nginx:80` + Vizion-домены в `allowedHosts` → **перенацелить proxy/allowedHosts на наш стек**.
+- [ ] `main.ts`: Pinia + persist + Router + i18n + **PrimeVue preset** + axios-middleware + bootstrap-приложения (паттерн Vizion: `bootstrapPromise.then() → router.isReady() → mount`). Хранение токена — Bearer (консистентно с auth-решением M0.3).
 - [ ] PrimeVue: тема-preset + CSS-переменные в `theme/`. Подключить **bootstrap-grid** (только сетка) + PrimeIcons. **БЕЗ Tailwind.**
 - [ ] `designer`: дизайн-токены (цвета, типографика, радиусы, тени) в **SCSS/PrimeVue-preset**, НЕ Tailwind. Палитра из old как референс цветов: primary `#172747`, semantic success/warning/danger/info — реализация на SCSS-переменных.
-- [ ] `api/client.ts`: axios + Sanctum (`withCredentials`, CSRF), обработка 401 → logout.
+- [ ] `api/client.ts`: axios + Sanctum **Bearer** (токен в `Authorization`-заголовке, как Vizion), обработка 401 → logout.
 - [ ] `composables/async/{useAsyncResource,useMutation}` — копия из `./examples/vizion/`.
 - **DoD:** `npm run build` + `vue-tsc` без ошибок.
 
@@ -191,8 +205,9 @@ new/
 - **DoD:** логин в браузере проходит (qa-tester), редирект на dashboard, sidebar рендерится.
 
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
-- [ ] `.github/workflows/ci.yml`: backend job (Pint + `php artisan test` на sqlite) + frontend job (vue-tsc + eslint + build). Паттерн Vizion.
-- [ ] `deploy.yml` — болванка rolling-restart (по образцу old/Vizion, без активации до прод-готовности).
+> **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.
+- [ ] `.github/workflows/ci.yml`: backend job = **(а)** `php artisan test` на sqlite (force) + **(б)** pgsql migrate-smoke (сервис `postgres:16-alpine`, `migrate --force`) + **(в) явный Pint-шаг (БЛОКИРУЮЩИЙ)**; frontend job = vue-tsc + **eslint (БЛОКИРУЮЩИЙ — наш DoD = зелёный CI)** + build. PHP **8.5**.
+- [ ] `deploy.yml` — болванка rolling-restart (по образцу `./examples/contracts/`/Vizion, без активации до прод-готовности).
 - [ ] `qa-tester`: Playwright smoke — открыть `/login`, залогиниться, увидеть dashboard. PASS/FAIL.
 - **DoD:** CI зелёный на первом PR.
 
@@ -377,13 +392,13 @@ new/
 
 - [ ] **Onboarding:** Курсы (модули/уроки/квизы), назначения, прогресс, обязательные курсы.
 - [ ] Финальная полировка UI, i18n-аудит (RU полный, EN-задел).
-- [ ] **Перенос данных old→new** (`migration-specialist`): дамп PG old → трансформация (маппинг legacy Counterparty → Contact+Company и т.п.) → импорт в new.
+- [ ] **Перенос данных contracts→MGCRM** (`migration-specialist`): дамп исходной PG → трансформация (маппинг legacy Counterparty → Contact+Company и т.п.) → импорт в `src`.
 - [ ] Финальная сверка паритета фич с `./examples/contracts/` (`product-manager`).
-- [ ] **Cutover:** снести `./examples/` (`vizion/` + `contracts/`) из репозитория — **проект уже в корне** (`src/`+`front/`), переезд не нужен (до этого момента `examples/` — рабочий контекст). Обновить пути в CLAUDE.md/PLAN.md/ARCHITECTURE.md.
+- [ ] **Cutover:** снести **только `./examples/`** (`vizion/` + `contracts/`) из репозитория — **проект уже в корне** (`src/`+`front/`), переезд НЕ нужен (до этого момента `examples/` — рабочий контекст). Обновить пути в CLAUDE.md/PLAN.md/ARCHITECTURE.md.
 - [ ] Активировать прод-деплой (`deploy-engineer`, по явной просьбе).
 - [ ] Тесты: импорт-маппинг на семпле, прогресс курсов, обязательные курсы.
 
-**Acceptance M12:** курсы с квизами и прогрессом; данные old перенесены и сверены; паритет фич подтверждён; **`old/` и `examples/vizion/` удалены, `new/` переехал в корень**; прод-деплой проходит. CI зелёный.
+**Acceptance M12:** курсы с квизами и прогрессом; данные перенесены и сверены; паритет фич подтверждён; **`examples/` (`vizion/`+`contracts/`) удалён — проект уже в корне репо, переезд не нужен**; прод-деплой проходит. CI зелёный.
 
 ---
 
@@ -403,7 +418,7 @@ new/
 - [ ] **Финмодуль:** сбалансированные проводки, Trial Balance сходится, счёт/акт, **НДС-отчёт**, закрытие периода, P&L в ECharts (M9)
 - [ ] **Воронка/KPI/когорты в ECharts** + кастом-дашборд + Excel-экспорт (M10)
 - [ ] Google OAuth + **GCal 2-way-sync** + webhook с HMAC+retry + **Telegram-бот** аппрувит (M11)
-- [ ] Курсы с квизами + **перенос данных old→new** сверен + **cutover выполнен** (`old/`+`examples/vizion/` снесены, `new/` в корне) (M12)
+- [ ] Курсы с квизами + **перенос данных сверен** + **cutover выполнен** (`examples/` снесён; проект уже в корне репо) (M12)
 - [ ] CI зелёный на каждом milestone (PHPUnit + vue-tsc + build + Pint/ESLint)
 - [ ] qa-tester smoke PASS на ключевых экранах
 - [ ] Нет пакетов вне §3 без явной просьбы
@@ -434,9 +449,9 @@ new/
 ---
 
 ## §8. CI/CD и Docker
-- GitHub Actions: backend (Pint + test) + frontend (vue-tsc + eslint + build), раздельные jobs.
-- Docker Compose: db(PG16)+redis+app(php-fpm+nginx)+web+gotenberg+queue-worker. Без Horizon.
-- Деплой — rolling-restart по образцу old/Vizion, активируется `deploy-engineer` по явной просьбе (на M12 cutover).
+- GitHub Actions: backend (sqlite-тесты `force` + pgsql migrate-smoke на `postgres:16-alpine` + **Pint блокирующий**) + frontend (vue-tsc + **eslint блокирующий** + build), раздельные jobs, PHP **8.5**. (У Vizion: Pint-шага нет, lint `continue-on-error`, PHP 8.3 — мы осознанно строже.)
+- Docker Compose: postgres(PG16)+app(php-fpm)+nginx+frontend+gotenberg+queue-worker (6 как у Vizion) + **redis (NET-NEW)**. Без Horizon.
+- Деплой — rolling-restart по образцу `./examples/contracts/`/Vizion, активируется `deploy-engineer` по явной просьбе (на M12 cutover).
 
 ---
 
@@ -450,6 +465,6 @@ new/
 - **Финмодуль (M9)** — отдельный крупный подпроект (4-6 недель), может потребовать вынести в свой суб-план (M9.1–M9.6).
 - **OnlyOffice/Gotenberg** — внешние сервисы; PHPWord-рендер сложных docx требует проверки на реальных шаблонах old.
 - **Telegram-бот** — на PHP вместо aiogram; long-polling в одном процессе (нельзя масштабировать — как в old).
-- **Перенос данных (M12)** — схемы old↔new не 1-в-1 (legacy Counterparty vs Contact+Company); маппинг — отдельная работа migration-specialist.
+- **Перенос данных (M12)** — схемы исходной CRM ↔ MGCRM не 1-в-1 (legacy Counterparty vs Contact+Company); маппинг — отдельная работа migration-specialist.
 - **Tailwind→Bootstrap+SCSS** — дизайн old не переносится 1-в-1, designer пересобирает на SCSS-токенах.
-- **Cutover (M12)** — снос `old/`/`examples/vizion/` необратим; делать только после подтверждённого паритета + бэкапа.
+- **Cutover (M12)** — снос `./examples/` (`vizion/`+`contracts/`) необратим; делать только после подтверждённого паритета + бэкапа.
