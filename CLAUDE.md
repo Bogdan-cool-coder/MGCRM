@@ -49,13 +49,13 @@ macroglobalcrm/          ← git-репозиторий Bogdan-cool-coder/MGCRM.
 
 Strangler, вертикальными срезами, домен за доменом. **Темп — milestone-стиль как Staffory/cloud-terminal:** M0 Bootstrap → … каждый milestone с day/week-оценкой, «копируем Vizion 1-в-1», vertical slice и Acceptance-чеклистом. M9 (финмодуль) — самый большой. M12 — перенос данных + cutover (снос `examples/`). Детали — PLAN.md.
 
-## 15 агентов (`.claude/agents/`) — база описаний/правил взята с агентов Vizion
+## 17 агентов (`.claude/agents/`)
 
 > **Все агенты — `bypassPermissions`** (рутина — docker/artisan/npm/git/Edit/Write/MCP, включая браузерные MCP-действия qa-tester'а — выполняется молча). Единственный жёсткий ограничитель — PreToolUse-хук `guard-destructive.sh` на критичный деструктив (работает и под bypass). Поведенческие правила (`frontend-specialist` и push у `deploy-engineer` — только по явной просьбе) остаются в силе как инструкции, не как пермишен-промпты.
 
 **Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-specialist` (Laravel-ядро: auth/Sanctum/2FA, базовые модели, миграции, тесты — для всех) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**, как у Vizion) · `qa-tester` (Chrome MCP, fallback Playwright) · `product-manager` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — **только по явной просьбе**).
 
-**Доменные (8):** `contract-specialist` · `sales-specialist` · `cs-specialist` · `finance-specialist` · `automation-specialist` · `integration-specialist` · `analytics-specialist` · `bot-specialist`.
+**Доменные (10):** `crm-specialist` (M2: Contact/Company/Catalog/CustomFields/дедуп) · `sales-specialist` (M3+M4+M6: Pipeline/Deal/Kanban/KPI/Lead/Activity) · `contract-specialist` · `cs-specialist` · `finance-specialist` · `automation-specialist` · `integration-specialist` · `analytics-specialist` · `bot-specialist` · `onboarding-specialist` (M12: курсы/квизы/прогресс/AI-тьютор).
 
 **Миграция (1):** `migration-specialist` (паритет old↔new, перенос схемы/данных, cutover).
 

@@ -15,6 +15,33 @@ color: yellow
 - **Эталон стека — Vizion** (`./examples/vizion/`). ECharts-отчёты, Excel (PhpSpreadsheet), очереди (`queue:work`, БЕЗ Horizon), агрегаты/группировки (`examples/vizion/src/app/Services/MacroData/ReportDataService`) — смотри Vizion.
 - **`./examples/contracts/` (FastAPI) — ТОЛЬКО бизнес-логика и АРХИТЕКТУРА double-entry.** Читаешь `examples/contracts/apps/api/app/models.py` (все `Fin*` модели), сервисы `services/finance/*` (posting/fx/balance/numbering/cashflow/access/vat/recognition), роутер `routers/finance.py`, архитектурные доки `examples/contracts/docs/` (J_phase0_LOCKED / G_revised_design — single source of truth по плану счетов, дереву ДДС, posting-правилам). Стек old (asyncpg/Next.js) НЕ переносишь.
 
+## Delegation payload (от main при вызове)
+
+Main передаёт в первом сообщении:
+1. Конкретную фазу M9.x из PLAN.md (а0–а6, что именно делаем)
+2. Результат `grep -r "Domain/Finance" src/app/Domain/` — что уже создано
+3. «Уже проверено/найдено» — main уже искал перед вызовом (не дублируй grep)
+4. Дословные требования пользователя
+5. Opt: путь к `agent_resume/finance-specialist.md` если M9 прерывалась
+
+**Без payload — попроси:** «Дай payload: фаза M9.x из PLAN.md и что уже создано в Domain/Finance.»
+
+## Self-state (ОБЯЗАТЕЛЬНО для M9 — 4–6 недель)
+
+M9 — самый длинный milestone. При сжатии контекста агент теряет накопленный прогресс.
+
+1. **Начало фазы:** проверь `4_active/agent_resume/finance-specialist.md`.
+   - status=in_progress → восстанови state (фаза, изменённые файлы, решения).
+   - Иначе → создай файл: `{agent, phase, status, steps_done[], files_modified[], decisions[]}`.
+2. **Каждые 5 шагов:** обновляй resume-файл. Особенно важно сохранять:
+   - Posting-шаблоны Дт/Кт которые уже решил
+   - Invariant-защиты которые уже написал
+   - FK и UNIQUE constraints которые уже в миграциях
+3. **Перед остановкой:** финальное обновление (status=done|paused + summary изменений).
+4. **После handoff main'у** — main удалит файл.
+
+Это защита от потери контекста при длинных задачах.
+
 ## СВЯЩЕННЫЕ ИНВАРИАНТЫ (не нарушать без явного решения владельца)
 
 1. **Double-entry GL — единственный источник истины.** Любое движение = `FinJournalEntry` + ≥2 `FinLedgerLine` (знаковые суммы Дт>0/Кт<0). Все отчёты (ДДС, P&L, AR/AP, НДС, остатки) — **проекции** этой таблицы, НИКАКИХ параллельных таблиц-агрегатов истины.
