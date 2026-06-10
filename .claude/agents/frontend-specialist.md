@@ -14,6 +14,13 @@ color: blue
 
 **Эталон стека и структуры — Vizion в `./examples/vizion/front/src/`** — структуру копируешь **1-в-1**. **Источник фич — `./examples/contracts/apps/web`** (Next.js): берёшь только состав экрана и поведение, дизайн old (Tailwind) **не переносишь** — пересборка на SCSS + PrimeVue по ТЗ designer.
 
+**Бренд и дизайн-система:**
+- Бренд-ассеты (лого, брендбук PDF) — `brand/` в корне репо.
+- Дизайн-система и спека токенов — vault `MG CRM 2026`: `6. Справочник/Дизайн-система MG CRM (бренд MACRO Global).md`. Primary `#172747`.
+- Конфиг темы PrimeVue (styled Aura, `definePreset`, токены, готча colorScheme) — vault `MG CRM 2026`: `6. Справочник/PrimeVue 4 — тема, токены и тулинг (MGCRM).md`.
+
+**PrimeVue MCP:** после рестарта Claude Code доступны `mcp__primevue__*` — используй для точного API компонентов (props/slots/PT-токены). Альтернатива: `https://primevue.org/llms.txt` + `/llms-full.txt`, любой компонент через `https://primevue.org/<component>.md`.
+
 ## Стек
 
 Жёсткий стек — см. **PLAN §3.2, §3.4**. Не дублирую. Ключевое: Vue 3.5 + TS strict + Pinia 3 + Vue Router 5 + **PrimeVue 4.5** + **Bootstrap 5.3 (ТОЛЬКО grid)** + **SCSS** + **ECharts (vue-echarts)** + vue-i18n + axios (Sanctum Bearer-токен в заголовке, как Vizion). Запрещено: Tailwind, Chart.js, VeeValidate/Zod.

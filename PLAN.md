@@ -36,7 +36,7 @@
 2. **Паритет по поведению, не по коду.** Сверяем, что фича делает то же, что в `./examples/contracts/`. Код пишем заново по-вижновски.
 3. **Жёсткий стек.** Любой пакет вне §3 — только по явной просьбе.
 4. **Эталон прежде изобретения.** Перед новым паттерном — `grep` по `./examples/vizion/`.
-5. **Перенос данных — в конце соответствующего домена** (`migration-specialist`), не на ходу.
+5. **Перенос данных не нужен** (тестовые данные). `migration-specialist` — cutover + per-domain parity-чеклисты.
 6. **Каждый milestone заканчивается зелёным CI** (PHPUnit + vue-tsc + build + lint) — это per-milestone DoD.
 
 ---
@@ -66,6 +66,9 @@
 | **wapmorgan/morphos** | — | склонение RU (есть у Vizion). ⚠️ для «суммы прописью» morphos недостаточно (склонение ≠ запись числа словами) — нужен отдельный маленький helper/либа |
 
 ### 3.2 Frontend
+
+> **Бренд-ассеты** хранятся в `brand/` (логотип, брендбук MACRO Global). Дизайн-система и конфиг темы PrimeVue описаны в vault `MG CRM 2026` (`6. Справочник/Дизайн-система MG CRM (бренд MACRO Global).md` и `6. Справочник/PrimeVue 4 — тема, токены и тулинг (MGCRM).md`). Тема: styled mode Aura, `definePreset` из `@primeuix/themes`, primary `#172747`, prefix `p`, darkModeSelector `.app-dark`, cssLayer true — токены доступны в SCSS как `var(--p-*)`.
+
 | Компонент | Версия | Примечание |
 |---|---|---|
 | Vue | 3.5 | Composition API, `<script setup>` |
@@ -120,8 +123,8 @@ macroglobalcrm/              ← корень репо (сам проект зд
 | `Org` | Department, графики, отпуска, производственный календарь | M1 |
 | `Crm` | Contact, Company, ContactPosition, дедуп, кастом-поля, справочники гео | M2 |
 | `Sales` | Pipeline, Deal, DealProduct, lost-reasons | M3 |
-| `Inbox` | InboundMessage, Channel, Form, Lead | M4 |
-| `Contracts` | Template, Contract, Approval, ContractRevision, OnlyOffice | M5 |
+| `Inbox` | InboundMessage, Channel, Form | M4 |
+| `Contracts` | Template, Contract, Approval, ContractRevision | M5 |
 | `Activity` | Activity (call/meeting/task/note), задачи | M6 |
 | `Notification` | Notification, Preference, Template, Broadcast | M6 |
 | `Automation` | PipelineAutomation, Sequence, BulkTask | M7 |
@@ -138,6 +141,27 @@ macroglobalcrm/              ← корень репо (сам проект зд
 ---
 
 ## §5. Поэтапная реализация (milestones)
+
+### Порядок исполнения — спринтами
+
+**Фундамент → Продажи → Документы → Онбординг → CS → Финансы**
+
+| Спринт | Milestones | Контексты |
+|---|---|---|
+| 0 — Фундамент | M0 + M1 ядро | Iam, Org |
+| 1 — Продажи | M2+M3+M4+M6 | Crm, Catalog, Sales, Inbox, Activity |
+| 2 — Документы | M5 | Contracts, Notification(TG) |
+| 3 — Онбординг | M12(Onboarding-часть) | Onboarding |
+| 4 — CS | M8 | CustomerSuccess |
+| 5 — Финансы | M9+M10 | Finance, Analytics |
+| Сквозные | M7+M11 | Automation, Integration, Bot |
+| Cutover | M12(финал) | — (снос examples/) |
+
+Онбординг — отдельный спринт между Документами и CS (по решению владельца 2026-06-11).
+
+> Детальный спринт-роадмап ведётся в vault **`MG CRM 2026`** (`5. Планы/MGCRM (Laravel) — Master Roadmap.md`). Каждый спринт детализируется в отдельном плане перед стартом.
+
+---
 
 > **Темп — milestone-стиль как Staffory/cloud-terminal.** Каждый milestone — вертикальный срез: миграции → модели/сервисы → API → UI → тесты. **M0 расписан детально по шагам** (M0.1–M0.7) — это фундамент. M1–M12 — крупными блоками с ключевыми сущностями и Acceptance; детализируются перед стартом каждого силами `product-manager` + профильного агента.
 >
@@ -261,18 +285,19 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
-### M4. Лиды + Inbox / Формы / Каналы (1-2 недели)
+### M4. Inbox / Каналы / Формы (1-2 недели)
 
-**Ведущие:** `sales-specialist` + `integration-specialist`. Контекст `Inbox` (+ Lead).
+**Ведущие:** `sales-specialist` + `integration-specialist`. Контекст `Inbox`.
 
-- [ ] Lead-воронка (new→processing→qualified→in_work→archived), конвертация в сделку.
+> **DEALS 2.0: отдельной сущности Lead нет.** Входящий трафик → сразу создаёт **Компанию + Сделку в стадии «Новые лиды»** (воронка строится вокруг Компании). Сущности `Lead` и `Counterparty` из старого проекта — deprecated, в MGCRM НЕ воскрешаем.
+
 - [ ] InboundMessage (TG/WA/Email/Form), Channel-конфиги.
 - [ ] Конструктор форм + публичная сабмит-страница.
-- [ ] Авто-роутинг входящих сообщений в лиды.
-- [ ] UI: воронка лидов, inbox-список, билдер форм.
-- [ ] Тесты: статус-машина лида, конвертация, сабмит формы → lead.
+- [ ] Авто-роутинг входящих сообщений: сабмит/сообщение → **Компания + Сделка** (стадия «Новые лиды»).
+- [ ] UI: inbox-список, билдер форм.
+- [ ] Тесты: сабмит формы → создание Company+Deal, конфиги каналов.
 
-**Acceptance M4:** входящее сообщение/сабмит формы создаёт лид; лид проходит воронку и конвертируется в сделку; публичная форма принимает заявки. CI зелёный.
+**Acceptance M4:** входящее сообщение/сабмит формы создаёт Компанию+Сделку в «Новые лиды»; публичная форма принимает заявки; Channel-конфиги работают. CI зелёный.
 
 ---
 
@@ -285,7 +310,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [ ] Версии/ревизии (ContractRevision), ремарки юристов, вложения (подписанные копии).
 - [ ] **Статус-машина** draft→submitted→in_review→approved→signed→uploaded→archived.
 - [ ] Маршруты согласования (ApprovalRoute, Approval).
-- [ ] OnlyOffice DocServer (WYSIWYG master_skeleton) — если в зоне; иначе отложить.
+- [ ] **WYSIWYG-редактор (договоров) не делаем**; генерация PHPWord→Gotenberg→PDF; на будущее — возможна онлайн-правка через Google Docs — прорабатываем ближе к делу.
 - [ ] Сумма прописью (RU) в шаблонах.
 - [ ] Тесты: генерация PDF (мок Gotenberg), статус-переходы, маршрут согласования.
 
@@ -386,19 +411,18 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
-### 🧹 M12. Онбординг + перенос данных + cutover (1-2 недели)
+### 🧹 M12. Cutover (1 неделя)
 
-**Ведущие:** `migration-specialist` + `product-manager` + все доменные по своим зонам. Контекст `Onboarding`.
+**Ведущие:** `migration-specialist` (cutover) + `product-manager` (финальный паритет).
 
-- [ ] **Onboarding:** Курсы (модули/уроки/квизы), назначения, прогресс, обязательные курсы.
+> **Перенос данных НЕ нужен** (в старой базе только тестовые данные — будут залиты новые). `migration-specialist` сосредоточен на cutover + per-domain parity-чеклисты. Если в будущем понадобится перенос production-данных — отдельная задача вне этого milestone.
+
+- [ ] Финальная сверка паритета фич с `./examples/contracts/` (`product-manager`): per-domain parity-чеклисты (все доменные агенты).
 - [ ] Финальная полировка UI, i18n-аудит (RU полный, EN-задел).
-- [ ] **Перенос данных contracts→MGCRM** (`migration-specialist`): дамп исходной PG → трансформация (маппинг legacy Counterparty → Contact+Company и т.п.) → импорт в `src`.
-- [ ] Финальная сверка паритета фич с `./examples/contracts/` (`product-manager`).
 - [ ] **Cutover:** снести **только `./examples/`** (`vizion/` + `contracts/`) из репозитория — **проект уже в корне** (`src/`+`front/`), переезд НЕ нужен (до этого момента `examples/` — рабочий контекст). Обновить пути в CLAUDE.md/PLAN.md/ARCHITECTURE.md.
 - [ ] Активировать прод-деплой (`deploy-engineer`, по явной просьбе).
-- [ ] Тесты: импорт-маппинг на семпле, прогресс курсов, обязательные курсы.
 
-**Acceptance M12:** курсы с квизами и прогрессом; данные перенесены и сверены; паритет фич подтверждён; **`examples/` (`vizion/`+`contracts/`) удалён — проект уже в корне репо, переезд не нужен**; прод-деплой проходит. CI зелёный.
+**Acceptance M12:** паритет фич подтверждён per-domain чек-листами; **`examples/` (`vizion/`+`contracts/`) удалён — проект уже в корне репо, переезд не нужен**; прод-деплой проходит. CI зелёный.
 
 ---
 
@@ -418,7 +442,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [ ] **Финмодуль:** сбалансированные проводки, Trial Balance сходится, счёт/акт, **НДС-отчёт**, закрытие периода, P&L в ECharts (M9)
 - [ ] **Воронка/KPI/когорты в ECharts** + кастом-дашборд + Excel-экспорт (M10)
 - [ ] Google OAuth + **GCal 2-way-sync** + webhook с HMAC+retry + **Telegram-бот** аппрувит (M11)
-- [ ] Курсы с квизами + **перенос данных сверен** + **cutover выполнен** (`examples/` снесён; проект уже в корне репо) (M12)
+- [ ] **Паритет фич подтверждён** per-domain чек-листами + **cutover выполнен** (`examples/` снесён; проект уже в корне репо) (M12)
 - [ ] CI зелёный на каждом milestone (PHPUnit + vue-tsc + build + Pint/ESLint)
 - [ ] qa-tester smoke PASS на ключевых экранах
 - [ ] Нет пакетов вне §3 без явной просьбы
@@ -463,8 +487,8 @@ macroglobalcrm/              ← корень репо (сам проект зд
 ## §10. Риски
 - **Объём.** 140 таблиц — реалистично только поэтапно; не обещать сроки целиком.
 - **Финмодуль (M9)** — отдельный крупный подпроект (4-6 недель), может потребовать вынести в свой суб-план (M9.1–M9.6).
-- **OnlyOffice/Gotenberg** — внешние сервисы; PHPWord-рендер сложных docx требует проверки на реальных шаблонах old.
+- **Gotenberg** — внешний сервис; PHPWord-рендер сложных docx требует проверки на реальных шаблонах old.
 - **Telegram-бот** — на PHP вместо aiogram; long-polling в одном процессе (нельзя масштабировать — как в old).
-- **Перенос данных (M12)** — схемы исходной CRM ↔ MGCRM не 1-в-1 (legacy Counterparty vs Contact+Company); маппинг — отдельная работа migration-specialist.
+- **Перенос данных** — не нужен (тестовые данные; заливаем новые). Если в будущем понадобится перенос production-данных — отдельная задача `migration-specialist` вне основного плана.
 - **Tailwind→Bootstrap+SCSS** — дизайн old не переносится 1-в-1, designer пересобирает на SCSS-токенах.
 - **Cutover (M12)** — снос `./examples/` (`vizion/`+`contracts/`) необратим; делать только после подтверждённого паритета + бэкапа.

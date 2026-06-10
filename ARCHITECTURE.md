@@ -102,6 +102,31 @@ api/<domain>.ts            (axios-клиент + типизированные ф
 - **PHPUnit + SQLite `:memory:`**, тройная изоляция как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`). Тесты НИКОГДА не ходят в живую БД.
 - **Feature-тест на каждый endpoint**, **Unit-тест на каждый Service**. AI/HTTP — мокать. Pest запрещён (только PHPUnit).
 
+## 6.1 Frontend — PrimeVue тема (конвенции)
+
+**Движок темы:** `@primeuix/themes` + `definePreset(Aura, { ... })`. Конфиг подключения в `main.ts`:
+
+```ts
+app.use(PrimeVue, { theme: {
+  preset: MgCrmPreset,
+  options: { prefix: 'p', darkModeSelector: '.app-dark', cssLayer: true },
+}})
+```
+
+**Трёхуровневые токены:** primitive → semantic → component. Переопределяем только нужное поверх Aura.
+
+**Токены в SCSS:** CSS-переменные `--p-*` (prefixed как `p`) — мост между PrimeVue и SCSS/Bootstrap-grid без Tailwind. Пример: `var(--p-primary-color)`, `var(--p-surface-500)`.
+
+**Готча colorScheme:** если в исходном пресете токен задан через `colorScheme` (light/dark), плоское переопределение **игнорируется**. Оверрайды **зеркалят структуру** `colorScheme.light` / `colorScheme.dark`.
+
+**Тёмная тема:** через класс `.app-dark` на `<html>` (тоггл в Toolbox), не через media-query.
+
+**Бренд-ассеты:** `brand/` — логотип и брендбук MACRO Global (источник истины по цветам). Primary `#172747` (brand-primary = совпадает с Vizion). Дизайн-система и полная спека токенов — vault `MG CRM 2026` (`6. Справочник/Дизайн-система MG CRM…`, `6. Справочник/PrimeVue 4 — тема…`).
+
+**PrimeVue MCP:** инструменты `mcp__primevue__*` доступны после рестарта Claude Code (подключён через `~/.local/primevue-mcp`). `llms.txt`: `https://primevue.org/llms.txt`.
+
+---
+
 ## 7. ⛔ Чёрный список (никогда, без явной отдельной просьбы)
 
 - Обход слоёв: Controller → Model напрямую (без Service); компонент → axios напрямую (без composable).
