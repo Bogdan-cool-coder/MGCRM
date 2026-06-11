@@ -90,4 +90,28 @@ abstract class TestCase extends BaseTestCase
             );
         }
     }
+
+    /**
+     * Forget all resolved auth guards so the next request re-authenticates from
+     * scratch.
+     *
+     * Why this exists: Laravel boots the application ONCE per test method, so
+     * every sub-request ($this->getJson(...), $this->postJson(...)) shares the
+     * same `auth` manager. Illuminate\Auth\RequestGuard (which backs the
+     * `sanctum` guard) memoizes the resolved user on first use and returns it
+     * for every later request in the method — it never re-runs Sanctum's
+     * findToken(). So if one test changes the Bearer mid-method (e.g. swaps a
+     * full token for the limited 2FA temp token), the guard keeps returning the
+     * FIRST request's user + access token, and per-token ability checks
+     * (Verify2FA) test the wrong token.
+     *
+     * In production this never happens: PHP-FPM gives each HTTP request a fresh
+     * process, app, and guard. forgetGuards() reproduces that per-request
+     * isolation inside a single test method. Call it whenever a test switches
+     * the Bearer token between sub-requests.
+     */
+    protected function flushAuth(): void
+    {
+        $this->app['auth']->forgetGuards();
+    }
 }

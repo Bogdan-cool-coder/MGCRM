@@ -195,19 +195,20 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `config/ai.php` — Anthropic-only каскад (Z.AI/GLM полностью вырезан); `config/crm.php` (роли, валюты RUB/USD/EUR/KZT/UZS/AED, VAT 2000bps); `config/2fa.php`.
 - **DoD (PASS 2026-06-11):** `php artisan migrate` на pgsql = «Nothing to migrate»; `vendor/bin/phpunit` (sqlite :memory:) = 2 tests, 2 assertions — OK; `config:cache` — OK.
 
-#### M0.3 — Аутентификация: Sanctum + 2FA (backend-specialist)
+#### M0.3 — Аутентификация: Sanctum + 2FA (backend-specialist) ✅ DONE 2026-06-11
 > **Auth = Bearer personal access token (как Vizion реально):** `createToken('api')->plainTextToken`, фронт хранит токен. ⚠️ Vizion-`AuthController` написан ДО правил ARCHITECTURE.md (inline `$request->validate` + сырой `response()->json`) — **НЕ копировать verbatim**, переписать через `LoginRequest` (FormRequest) + `UserResource`. 2FA-флоу **эталона у Vizion нет** — реплицируем документированный флоу `./examples/contracts/apps/api/app/routers/auth_2fa.py` (setup → verify-setup → validate → backup codes → temp-токен), на `pragmarx/google2fa`.
-- [ ] `User` в `app/Domain/Iam/Models/User.php`: поля из old (email, password_hash, full_name, **role enum**, telegram_user_id, avatar_path, department_id, manager_id, is_active, **totp_enabled, totp_secret, backup_codes**).
-- [ ] Sanctum **Bearer**: `POST /api/login` (→ `plainTextToken` или temp-токен при 2FA), `/logout`, `GET /api/me`, защита `auth:sanctum`. Контроллер — через `LoginRequest` + `UserResource` (НЕ verbatim Vizion).
-- [ ] 2FA-флоу (по `auth_2fa.py`): `login` (success) → temp-токен → `POST /api/2fa/validate` → полный токен. Setup: `POST /api/2fa/setup` (QR) → `/2fa/verify-setup`. Backup-коды (8, hashed). Реализация — `pragmarx/google2fa`.
-- [ ] Фронт-`vite.config.ts` Vizion проксирует на Vizion `nginx:80` + Vizion-домены в `allowedHosts` → **перенацелить на наш стек** (наш backend/nginx + наши домены).
-- **DoD:** Feature-тесты login/logout/me/2fa-флоу зелёные.
+- [x] `User` в `app/Domain/Iam/Models/User.php`: поля из old (email, password_hash, full_name, **role enum**, telegram_user_id, avatar_path, department_id, manager_id, is_active, **totp_enabled, totp_secret, backup_codes**).
+- [x] Sanctum **Bearer**: `POST /api/login` (→ `plainTextToken` или temp-токен при 2FA), `/logout`, `GET /api/me`, защита `auth:sanctum`. Контроллер — через `LoginRequest` + `UserResource` (НЕ verbatim Vizion).
+- [x] 2FA-флоу (по `auth_2fa.py`): `login` (success) → temp-токен → `POST /api/2fa/validate` → полный токен. Setup: `POST /api/2fa/setup` (QR) → `/2fa/verify-setup`. Backup-коды (8, hashed). Реализация — `pragmarx/google2fa`.
+- [x] Фронт-`vite.config.ts` — задел до M0.5 (frontend-specialist перенацелит proxy).
+- **DoD PASS:** Feature-тесты login/logout/me/2fa-флоу зелёные (42/42).
 
-#### M0.4 — Роли и доступы (backend-specialist)
+#### M0.4 — Роли и доступы (backend-specialist) ✅ DONE 2026-06-11
 > ⚠️ **`spatie/laravel-permission` — эталона у Vizion НЕТ** (Vizion использует простую строковую колонку `role` — это явно НЕ наш паттерн по ARCHITECTURE.md). Помечаем как **NEW-пакет**; 6 ролей выводим из `./examples/contracts/`, не из Vizion. **`SetLocale` middleware — копируем у Vizion** (`routes/api.php`, locale middleware).
-- [ ] spatie/permission (NEW): сидер 6 ролей (admin/director/lawyer/manager/accountant/cfo) + базовые permissions. Роли — из `./examples/contracts/`.
-- [ ] Middleware `SetLocale` (RU/EN из заголовка/query, **копируется у Vizion**), задел `ResolveVisibility` (scope all/department/personal — реализация в M1).
-- **DoD:** тест проверки роли на защищённом эндпоинте.
+- [x] spatie/permission (NEW): `RolePermissionSeeder` — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + 18 permissions (BASE + FINANCE split accountant vs cfo), idempotent. Роли — из `./examples/contracts/`. `AdminSeeder` (admin@mgcrm.test/password, 2FA off).
+- [x] Middleware `SetLocale` (копия Vizion), `Verify2FA` (ability-positive fail-closed), `ResolveVisibility` (fail-closed, scope all/own; Department scaffold для M1). `config/sanctum.php` guard:[] (web-session fallback убит).
+- [x] `Department` model (Org context) — дерево + manager + members; FK split-миграция (циклическая зависимость users↔departments разрешена).
+- **DoD PASS:** `migrate:fresh --seed` → 6 ролей + dev-admin; `login→(2FA)→token`; `ResolveVisibility` all/own; temp-токен 403 на /me; 42/42 green.
 
 #### M0.5 — Frontend bootstrap (frontend-specialist + designer)
 - [ ] `npm create vite front` (Vue+TS), скопировать структуру `front/src/*` из `./examples/vizion/`. ⚠️ `vite.config.ts` Vizion проксирует на Vizion `nginx:80` + Vizion-домены в `allowedHosts` → **перенацелить proxy/allowedHosts на наш стек**.
