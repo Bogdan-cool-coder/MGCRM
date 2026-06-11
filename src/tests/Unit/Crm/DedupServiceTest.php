@@ -8,6 +8,7 @@ use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Crm\Services\DedupService;
+use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
@@ -114,5 +115,134 @@ class DedupServiceTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $this->service->scan('deal', 1);
+    }
+
+    // =========================================================================
+    // BUG-4: scanAll must not return the same entity in two groups
+    // =========================================================================
+
+    /**
+     * 3 contacts share BOTH email and phone.
+     * scanAll must return exactly 1 group containing all three, not two separate
+     * groups (one per criterion) that both list the same contacts.
+     */
+    public function test_scan_all_contacts_three_share_email_and_phone_yields_single_group(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $c1 = Contact::factory()->create([
+            'email' => 'ivan@example.com',
+            'phone' => '+77001234567',
+            'full_name' => 'Иван Петров',
+            'owner_id' => $admin->id,
+        ]);
+        $c2 = Contact::factory()->create([
+            'email' => 'ivan@example.com',
+            'phone' => '+77001234567',
+            'full_name' => 'Иван Петров',
+            'owner_id' => $admin->id,
+        ]);
+        $c3 = Contact::factory()->create([
+            'email' => 'ivan@example.com',
+            'phone' => '+77001234567',
+            'full_name' => 'Иван Петров',
+            'owner_id' => $admin->id,
+        ]);
+
+        $groups = $this->service->scanAll('contact', $admin);
+
+        $this->assertCount(1, $groups, 'Expected exactly 1 merged group, not multiple per-criterion groups');
+
+        $groupIds = collect($groups->first()['entities'])->pluck('id')->sort()->values()->all();
+        $expectedIds = collect([$c1->id, $c2->id, $c3->id])->sort()->values()->all();
+
+        $this->assertSame($expectedIds, $groupIds, 'The single group must contain all three contacts');
+    }
+
+    /**
+     * 3 contacts share same name AND phone but different emails — still 1 group.
+     * Contact A and B share phone. Contact B and C share name.
+     * A↔B (phone) and B↔C (name) → connected component {A, B, C} = 1 group.
+     */
+    public function test_scan_all_contacts_chain_overlap_yields_single_group(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        // A and B share phone
+        $cA = Contact::factory()->create([
+            'email' => 'contactA@example.com',
+            'phone' => '+77009999999',
+            'full_name' => 'Shared Name',
+            'owner_id' => $admin->id,
+        ]);
+        $cB = Contact::factory()->create([
+            'email' => 'contactB@example.com',
+            'phone' => '+77009999999', // same phone as A
+            'full_name' => 'Shared Name', // same name as C
+            'owner_id' => $admin->id,
+        ]);
+        $cC = Contact::factory()->create([
+            'email' => 'contactC@example.com',
+            'phone' => '+77008888888', // different phone
+            'full_name' => 'Shared Name', // same name as B
+            'owner_id' => $admin->id,
+        ]);
+
+        $groups = $this->service->scanAll('contact', $admin);
+
+        // All three are reachable from each other: A↔B via phone, B↔C via name
+        // so they must be in one connected component.
+        $this->assertCount(1, $groups, 'Chain-overlap contacts must collapse into a single group');
+
+        $groupIds = collect($groups->first()['entities'])->pluck('id')->sort()->values()->all();
+        $expectedIds = collect([$cA->id, $cB->id, $cC->id])->sort()->values()->all();
+
+        $this->assertSame($expectedIds, $groupIds);
+    }
+
+    /**
+     * Two independent duplicate pairs must remain as two separate groups.
+     */
+    public function test_scan_all_contacts_disjoint_pairs_remain_separate_groups(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        // Pair 1: share email
+        $p1a = Contact::factory()->create(['email' => 'pair1@example.com', 'full_name' => 'Alpha One', 'owner_id' => $admin->id]);
+        $p1b = Contact::factory()->create(['email' => 'pair1@example.com', 'full_name' => 'Alpha Two', 'owner_id' => $admin->id]);
+
+        // Pair 2: share phone (different email, different name)
+        $p2a = Contact::factory()->create(['email' => 'beta1@example.com', 'phone' => '+77005556677', 'full_name' => 'Beta One', 'owner_id' => $admin->id]);
+        $p2b = Contact::factory()->create(['email' => 'beta2@example.com', 'phone' => '+77005556677', 'full_name' => 'Beta Two', 'owner_id' => $admin->id]);
+
+        $groups = $this->service->scanAll('contact', $admin);
+
+        $this->assertCount(2, $groups, 'Two disjoint duplicate pairs must produce exactly 2 groups');
+
+        $allGroupIds = $groups->map(fn ($g) => collect($g['entities'])->pluck('id')->sort()->values()->all())->all();
+
+        $pair1Ids = collect([$p1a->id, $p1b->id])->sort()->values()->all();
+        $pair2Ids = collect([$p2a->id, $p2b->id])->sort()->values()->all();
+
+        $this->assertTrue(
+            in_array($pair1Ids, $allGroupIds, false) || $this->groupContainsIds($allGroupIds, $pair1Ids),
+            'Pair 1 must be in one group'
+        );
+        $this->assertTrue(
+            $this->groupContainsIds($allGroupIds, $pair2Ids),
+            'Pair 2 must be in one group'
+        );
+    }
+
+    /** Helper: checks whether any group in $allGroupIds contains exactly the $ids. */
+    private function groupContainsIds(array $allGroupIds, array $ids): bool
+    {
+        foreach ($allGroupIds as $groupIds) {
+            if ($groupIds === $ids) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

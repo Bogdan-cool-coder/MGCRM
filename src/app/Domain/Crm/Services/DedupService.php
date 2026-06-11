@@ -296,6 +296,10 @@ class DedupService
      * Global contact scan: groups contacts by shared normalized email / phone / name.
      * Visibility-scoped: non-admin/director users see only their own contacts.
      *
+     * After collecting raw per-criterion groups, overlapping groups (groups that
+     * share at least one entity ID) are merged via connected-component union so
+     * each entity appears in at most one output group.
+     *
      * @return SupportCollection<int, array{key: string, entities: Collection<int, Contact>}>
      */
     private function scanAllContacts(User $user): SupportCollection
@@ -311,36 +315,37 @@ class DedupService
         /** @var Collection<int, Contact> $all */
         $all = $base->get();
 
-        $groups = collect();
+        // Build keyed map: id → model for fast lookup
+        $byId = $all->keyBy('id');
+
+        // Collect raw per-criterion groups: [['key'=>..., 'ids'=>[...]]]
+        $raw = [];
 
         // Group by normalized email
-        $groups = $groups->merge(
-            $all->filter(fn (Contact $c): bool => (bool) $c->email)
-                ->groupBy(fn (Contact $c): string => mb_strtolower(trim($c->email)))
-                ->filter(fn ($g): bool => $g->count() > 1)
-                ->map(fn ($g, string $key): array => ['key' => 'email:'.$key, 'entities' => $g->values()])
-                ->values()
-        );
+        $all->filter(fn (Contact $c): bool => (bool) $c->email)
+            ->groupBy(fn (Contact $c): string => mb_strtolower(trim($c->email)))
+            ->filter(fn ($g): bool => $g->count() > 1)
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'email:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
 
         // Group by normalized phone
-        $groups = $groups->merge(
-            $all->filter(fn (Contact $c): bool => (bool) $c->phone)
-                ->groupBy(fn (Contact $c): string => $this->normalizePhone($c->phone))
-                ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
-                ->map(fn ($g, string $key): array => ['key' => 'phone:'.$key, 'entities' => $g->values()])
-                ->values()
-        );
+        $all->filter(fn (Contact $c): bool => (bool) $c->phone)
+            ->groupBy(fn (Contact $c): string => $this->normalizePhone($c->phone))
+            ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'phone:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
 
         // Group by normalized full_name
-        $groups = $groups->merge(
-            $all->filter(fn (Contact $c): bool => (bool) $c->full_name)
-                ->groupBy(fn (Contact $c): string => $this->normalizeName($c->full_name))
-                ->filter(fn ($g): bool => $g->count() > 1)
-                ->map(fn ($g, string $key): array => ['key' => 'name:'.$key, 'entities' => $g->values()])
-                ->values()
-        );
+        $all->filter(fn (Contact $c): bool => (bool) $c->full_name)
+            ->groupBy(fn (Contact $c): string => $this->normalizeName($c->full_name))
+            ->filter(fn ($g): bool => $g->count() > 1)
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'name:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
 
-        return $groups;
+        return $this->mergeOverlappingGroups($raw, $byId);
     }
 
     /**
@@ -364,45 +369,125 @@ class DedupService
         /** @var Collection<int, Company> $all */
         $all = $base->get();
 
-        $groups = collect();
+        $byId = $all->keyBy('id');
+
+        $raw = [];
 
         // Group by normalized email
-        $groups = $groups->merge(
-            $all->filter(fn (Company $c): bool => (bool) $c->email)
-                ->groupBy(fn (Company $c): string => mb_strtolower(trim($c->email)))
-                ->filter(fn ($g): bool => $g->count() > 1)
-                ->map(fn ($g, string $key): array => ['key' => 'email:'.$key, 'entities' => $g->values()])
-                ->values()
-        );
+        $all->filter(fn (Company $c): bool => (bool) $c->email)
+            ->groupBy(fn (Company $c): string => mb_strtolower(trim($c->email)))
+            ->filter(fn ($g): bool => $g->count() > 1)
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'email:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
 
         // Group by normalized phone
-        $groups = $groups->merge(
-            $all->filter(fn (Company $c): bool => (bool) $c->phone)
-                ->groupBy(fn (Company $c): string => $this->normalizePhone($c->phone))
-                ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
-                ->map(fn ($g, string $key): array => ['key' => 'phone:'.$key, 'entities' => $g->values()])
-                ->values()
-        );
+        $all->filter(fn (Company $c): bool => (bool) $c->phone)
+            ->groupBy(fn (Company $c): string => $this->normalizePhone($c->phone))
+            ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'phone:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
 
         // Group by normalized tax_id
-        $groups = $groups->merge(
-            $all->filter(fn (Company $c): bool => (bool) $c->tax_id)
-                ->groupBy(fn (Company $c): string => trim($c->tax_id))
-                ->filter(fn ($g): bool => $g->count() > 1)
-                ->map(fn ($g, string $key): array => ['key' => 'tax_id:'.$key, 'entities' => $g->values()])
-                ->values()
-        );
+        $all->filter(fn (Company $c): bool => (bool) $c->tax_id)
+            ->groupBy(fn (Company $c): string => trim($c->tax_id))
+            ->filter(fn ($g): bool => $g->count() > 1)
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'tax_id:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
 
         // Group by normalized name
-        $groups = $groups->merge(
-            $all->filter(fn (Company $c): bool => (bool) $c->name)
-                ->groupBy(fn (Company $c): string => $this->normalizeName($c->name))
-                ->filter(fn ($g): bool => $g->count() > 1)
-                ->map(fn ($g, string $key): array => ['key' => 'name:'.$key, 'entities' => $g->values()])
-                ->values()
-        );
+        $all->filter(fn (Company $c): bool => (bool) $c->name)
+            ->groupBy(fn (Company $c): string => $this->normalizeName($c->name))
+            ->filter(fn ($g): bool => $g->count() > 1)
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'name:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
 
-        return $groups;
+        return $this->mergeOverlappingGroups($raw, $byId);
+    }
+
+    /**
+     * Union-find: merge raw per-criterion groups whose entity-ID sets overlap.
+     *
+     * Input $raw is an array of ['key'=>string, 'ids'=>int[]] tuples.
+     * Any two groups sharing at least one ID are collapsed into a single
+     * output group; their keys are concatenated with '|'.
+     *
+     * This guarantees each entity ID appears in exactly one output group.
+     *
+     * @param  array<int, array{key: string, ids: int[]}>  $raw
+     * @param  SupportCollection<int, Model>  $byId
+     * @return SupportCollection<int, array{key: string, entities: Collection<int, Model>}>
+     */
+    private function mergeOverlappingGroups(array $raw, SupportCollection $byId): SupportCollection
+    {
+        // parent[i] = representative index for group i
+        $n = count($raw);
+        $parent = range(0, $n - 1);
+
+        $find = function (int $x) use (&$parent, &$find): int {
+            if ($parent[$x] !== $x) {
+                $parent[$x] = $find($parent[$x]); // path compression
+            }
+
+            return $parent[$x];
+        };
+
+        $union = function (int $a, int $b) use (&$parent, &$find): void {
+            $ra = $find($a);
+            $rb = $find($b);
+            if ($ra !== $rb) {
+                $parent[$rb] = $ra;
+            }
+        };
+
+        // For each entity ID track which group indices contain it
+        // so we can union groups that share an ID.
+        $idToGroups = [];
+        for ($i = 0; $i < $n; $i++) {
+            foreach ($raw[$i]['ids'] as $id) {
+                $idToGroups[$id][] = $i;
+            }
+        }
+
+        // Union all groups that share an ID
+        foreach ($idToGroups as $groupIndices) {
+            $first = $groupIndices[0];
+            for ($j = 1; $j < count($groupIndices); $j++) {
+                $union($first, $groupIndices[$j]);
+            }
+        }
+
+        // Aggregate: root → merged group data
+        $merged = [];
+        for ($i = 0; $i < $n; $i++) {
+            $root = $find($i);
+            if (! isset($merged[$root])) {
+                $merged[$root] = ['keys' => [], 'ids' => []];
+            }
+
+            $merged[$root]['keys'][] = $raw[$i]['key'];
+            foreach ($raw[$i]['ids'] as $id) {
+                $merged[$root]['ids'][$id] = true; // use map to deduplicate IDs
+            }
+        }
+
+        return collect(array_values($merged))
+            ->map(function (array $group) use ($byId): array {
+                $ids = array_keys($group['ids']);
+                $entities = collect($ids)
+                    ->map(fn (int $id) => $byId->get($id))
+                    ->filter()
+                    ->values();
+
+                return [
+                    'key' => implode('|', $group['keys']),
+                    'entities' => $entities,
+                ];
+            })
+            ->values();
     }
 
     /**
