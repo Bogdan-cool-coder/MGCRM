@@ -32,27 +32,48 @@ class DedupController extends Controller
     ) {}
 
     /**
-     * GET /crm/dedup/scan?scope=contact|company&entity_id=X
-     * Returns potential duplicate candidates for the given entity.
+     * GET /crm/dedup/scan?scope=contact|company[&entity_id=X]
+     *
+     * Without entity_id  → global scan: returns duplicate groups across the
+     *                       whole database (visibility-scoped per user role).
+     *                       Response: { data: [ { key, entities: [...] }, ... ] }
+     *
+     * With entity_id     → per-entity scan: returns flat list of candidates
+     *                       for the given record (legacy / UI detail view).
+     *                       Response: { data: [ DedupCandidate, ... ] }
      */
-    public function scan(Request $request): AnonymousResourceCollection
+    public function scan(Request $request): JsonResponse|AnonymousResourceCollection
     {
         $request->validate([
             'scope' => ['required', 'string', 'in:contact,company'],
-            'entity_id' => ['required', 'integer', 'min:1'],
+            'entity_id' => ['sometimes', 'integer', 'min:1'],
         ]);
 
-        $entity = $this->resolveEntity(
-            $request->query('scope'),
-            (int) $request->query('entity_id'),
-        );
+        $scope = $request->query('scope');
+        $entityIdRaw = $request->query('entity_id');
+
+        // ---- Global scan (no entity_id) ----
+        if ($entityIdRaw === null) {
+            $groups = $this->service->scanAll($scope, $request->user());
+
+            $data = $groups->map(function (array $group): array {
+                return [
+                    'key' => $group['key'],
+                    'entities' => DedupCandidateResource::collection($group['entities'])->resolve(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        }
+
+        // ---- Per-entity scan (entity_id present) ----
+        $entityId = (int) $entityIdRaw;
+
+        $entity = $this->resolveEntity($scope, $entityId);
 
         $this->authorize('view', $entity);
 
-        $candidates = $this->service->scan(
-            $request->query('scope'),
-            (int) $request->query('entity_id'),
-        );
+        $candidates = $this->service->scan($scope, $entityId);
 
         return DedupCandidateResource::collection($candidates);
     }

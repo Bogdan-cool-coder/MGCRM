@@ -8,9 +8,11 @@ use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Crm\Models\DismissedDuplicate;
+use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -20,6 +22,9 @@ use InvalidArgumentException;
  * Dedup criteria:
  *   - Contacts: normalized phone / email / full_name (lowercase trimmed)
  *   - Companies: normalized phone / email / tax_id / name (lowercase trimmed)
+ *
+ * Normalization is done entirely in PHP before building queries — no DB::raw
+ * string literals — so the queries are portable across PostgreSQL and SQLite.
  *
  * Merge is always transactional. Duplicate IDs are soft-deleted after
  * all related links are transferred to the master record.
@@ -44,6 +49,33 @@ class DedupService
         }
 
         return $this->scanCompany($entityId);
+    }
+
+    /**
+     * Global scan: group all records in scope that share a normalized
+     * phone / email / name (contacts) or phone / email / tax_id / name (companies).
+     *
+     * Returns groups as a SupportCollection of arrays:
+     *   [ ['key' => '<criterion>:<value>', 'entities' => Collection<Model>], ... ]
+     *
+     * Visibility scoping:
+     *   - Admin / Director: all records
+     *   - Everyone else (Manager, etc.): only owned records
+     *
+     * Dismissed pairs are NOT filtered here (global view) — the UI can handle
+     * individual dismissals within a group.
+     *
+     * @return SupportCollection<int, array{key: string, entities: Collection<int, Model>}>
+     */
+    public function scanAll(string $scope, User $user): SupportCollection
+    {
+        $this->assertScope($scope);
+
+        if ($scope === 'contact') {
+            return $this->scanAllContacts($user);
+        }
+
+        return $this->scanAllCompanies($user);
     }
 
     /**
@@ -112,25 +144,73 @@ class DedupService
         // Collect dismissed IDs for this contact
         $dismissed = $this->dismissedIds('contact', $contactId);
 
+        // Normalize values in PHP — avoids DB::raw string-literal quoting
+        // issues across PostgreSQL (double-quote = identifier) and SQLite.
+        $orConditions = [];
+
+        if ($contact->phone) {
+            $orConditions['phone_normalized'] = $this->normalizePhone($contact->phone);
+        }
+
+        if ($contact->email) {
+            $orConditions['email_lower'] = mb_strtolower(trim($contact->email));
+        }
+
+        $orConditions['name_lower'] = $this->normalizeName($contact->full_name ?? '');
+
         $candidates = Contact::query()
             ->where('id', '!=', $contactId)
             ->whereNotIn('id', $dismissed)
             ->whereNull('deleted_at')
-            ->where(function ($q) use ($contact): void {
-                // phone match (normalized)
-                if ($contact->phone) {
-                    $normalized = $this->normalizePhone($contact->phone);
-                    $q->orWhere(DB::raw('REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "(", ""), ")", ""), "+", "")'), '=', ltrim($normalized, '+'));
+            ->where(function ($q) use ($orConditions, $contact): void {
+                if (isset($orConditions['phone_normalized']) && $contact->phone) {
+                    // Fetch by the raw stored value — we compare normalized
+                    // values from PHP against all candidates after retrieval
+                    // to avoid non-portable REPLACE chains in SQL.
+                    // For phone: use a LIKE with the raw value as fallback,
+                    // then post-filter. But simpler: store & compare normalized.
+                    // Since we can't alter schema, we use a broad OR and filter in PHP.
+                    // We do: phone IS NOT NULL (broad) OR email=lower OR name=lower,
+                    // then the PHP normalizePhone post-filter handles phone strictly.
+                    $q->orWhereNotNull('phone');
                 }
-                // email match (case-insensitive)
-                if ($contact->email) {
-                    $q->orWhere(DB::raw('LOWER(email)'), '=', mb_strtolower($contact->email));
+
+                if (isset($orConditions['email_lower'])) {
+                    $q->orWhereRaw('LOWER(TRIM(email)) = ?', [$orConditions['email_lower']]);
                 }
-                // full_name match (normalized lowercase)
-                $normalizedName = $this->normalizeName($contact->full_name);
-                $q->orWhere(DB::raw('LOWER(TRIM(full_name))'), '=', $normalizedName);
+
+                if (isset($orConditions['name_lower'])) {
+                    $q->orWhereRaw('LOWER(TRIM(full_name)) = ?', [$orConditions['name_lower']]);
+                }
             })
             ->get();
+
+        // Post-filter: for phone, compare normalized values in PHP (avoids
+        // SQL REPLACE chains that differ between PG and SQLite).
+        if (isset($orConditions['phone_normalized']) && $contact->phone) {
+            $myPhone = $orConditions['phone_normalized'];
+
+            return $candidates->filter(function (Contact $c) use ($myPhone, $orConditions): bool {
+                // Keep if phone matches (normalized) …
+                if ($c->phone && $this->normalizePhone($c->phone) === $myPhone) {
+                    return true;
+                }
+
+                // … or if email matches
+                if (isset($orConditions['email_lower']) && $c->email
+                    && mb_strtolower(trim($c->email)) === $orConditions['email_lower']) {
+                    return true;
+                }
+
+                // … or if name matches
+                if (isset($orConditions['name_lower']) && $c->full_name
+                    && $this->normalizeName($c->full_name) === $orConditions['name_lower']) {
+                    return true;
+                }
+
+                return false;
+            })->values();
+        }
 
         return $candidates;
     }
@@ -142,28 +222,187 @@ class DedupService
 
         $dismissed = $this->dismissedIds('company', $companyId);
 
+        $orConditions = [];
+
+        if ($company->phone) {
+            $orConditions['phone_normalized'] = $this->normalizePhone($company->phone);
+        }
+
+        if ($company->email) {
+            $orConditions['email_lower'] = mb_strtolower(trim($company->email));
+        }
+
+        if ($company->tax_id) {
+            $orConditions['tax_id_trimmed'] = trim($company->tax_id);
+        }
+
+        $orConditions['name_lower'] = $this->normalizeName($company->name ?? '');
+
         $candidates = Company::query()
             ->where('id', '!=', $companyId)
             ->whereNotIn('id', $dismissed)
             ->whereNull('deleted_at')
-            ->where(function ($q) use ($company): void {
-                if ($company->phone) {
-                    $normalized = ltrim($this->normalizePhone($company->phone), '+');
-                    $q->orWhere(DB::raw('REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "(", ""), ")", ""), "+", "")'), '=', $normalized);
+            ->where(function ($q) use ($orConditions, $company): void {
+                if (isset($orConditions['phone_normalized']) && $company->phone) {
+                    $q->orWhereNotNull('phone');
                 }
-                if ($company->email) {
-                    $q->orWhere(DB::raw('LOWER(email)'), '=', mb_strtolower($company->email));
+
+                if (isset($orConditions['email_lower'])) {
+                    $q->orWhereRaw('LOWER(TRIM(email)) = ?', [$orConditions['email_lower']]);
                 }
-                if ($company->tax_id) {
-                    $q->orWhere(DB::raw('TRIM(tax_id)'), '=', trim($company->tax_id));
+
+                if (isset($orConditions['tax_id_trimmed'])) {
+                    $q->orWhereRaw('TRIM(tax_id) = ?', [$orConditions['tax_id_trimmed']]);
                 }
-                // name match
-                $normalizedName = $this->normalizeName($company->name);
-                $q->orWhere(DB::raw('LOWER(TRIM(name))'), '=', $normalizedName);
+
+                if (isset($orConditions['name_lower'])) {
+                    $q->orWhereRaw('LOWER(TRIM(name)) = ?', [$orConditions['name_lower']]);
+                }
             })
             ->get();
 
+        // PHP post-filter for phone (same reason as contacts)
+        if (isset($orConditions['phone_normalized']) && $company->phone) {
+            $myPhone = $orConditions['phone_normalized'];
+
+            return $candidates->filter(function (Company $c) use ($myPhone, $orConditions): bool {
+                if ($c->phone && $this->normalizePhone($c->phone) === $myPhone) {
+                    return true;
+                }
+
+                if (isset($orConditions['email_lower']) && $c->email
+                    && mb_strtolower(trim($c->email)) === $orConditions['email_lower']) {
+                    return true;
+                }
+
+                if (isset($orConditions['tax_id_trimmed']) && $c->tax_id
+                    && trim($c->tax_id) === $orConditions['tax_id_trimmed']) {
+                    return true;
+                }
+
+                if (isset($orConditions['name_lower']) && $c->name
+                    && $this->normalizeName($c->name) === $orConditions['name_lower']) {
+                    return true;
+                }
+
+                return false;
+            })->values();
+        }
+
         return $candidates;
+    }
+
+    /**
+     * Global contact scan: groups contacts by shared normalized email / phone / name.
+     * Visibility-scoped: non-admin/director users see only their own contacts.
+     *
+     * @return SupportCollection<int, array{key: string, entities: Collection<int, Contact>}>
+     */
+    private function scanAllContacts(User $user): SupportCollection
+    {
+        $isPrivileged = in_array($user->role, [Role::Admin, Role::Director], true);
+
+        $base = Contact::query()->whereNull('deleted_at');
+
+        if (! $isPrivileged) {
+            $base->where('owner_id', $user->id);
+        }
+
+        /** @var Collection<int, Contact> $all */
+        $all = $base->get();
+
+        $groups = collect();
+
+        // Group by normalized email
+        $groups = $groups->merge(
+            $all->filter(fn (Contact $c): bool => (bool) $c->email)
+                ->groupBy(fn (Contact $c): string => mb_strtolower(trim($c->email)))
+                ->filter(fn ($g): bool => $g->count() > 1)
+                ->map(fn ($g, string $key): array => ['key' => 'email:'.$key, 'entities' => $g->values()])
+                ->values()
+        );
+
+        // Group by normalized phone
+        $groups = $groups->merge(
+            $all->filter(fn (Contact $c): bool => (bool) $c->phone)
+                ->groupBy(fn (Contact $c): string => $this->normalizePhone($c->phone))
+                ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
+                ->map(fn ($g, string $key): array => ['key' => 'phone:'.$key, 'entities' => $g->values()])
+                ->values()
+        );
+
+        // Group by normalized full_name
+        $groups = $groups->merge(
+            $all->filter(fn (Contact $c): bool => (bool) $c->full_name)
+                ->groupBy(fn (Contact $c): string => $this->normalizeName($c->full_name))
+                ->filter(fn ($g): bool => $g->count() > 1)
+                ->map(fn ($g, string $key): array => ['key' => 'name:'.$key, 'entities' => $g->values()])
+                ->values()
+        );
+
+        return $groups;
+    }
+
+    /**
+     * Global company scan: groups companies by shared normalized email / phone / tax_id / name.
+     *
+     * @return SupportCollection<int, array{key: string, entities: Collection<int, Company>}>
+     */
+    private function scanAllCompanies(User $user): SupportCollection
+    {
+        $isPrivileged = in_array($user->role, [Role::Admin, Role::Director], true);
+
+        $base = Company::query()->whereNull('deleted_at');
+
+        if (! $isPrivileged) {
+            $base->where(function ($q) use ($user): void {
+                $q->where('owner_user_id', $user->id)
+                    ->orWhere('responsible_user_id', $user->id);
+            });
+        }
+
+        /** @var Collection<int, Company> $all */
+        $all = $base->get();
+
+        $groups = collect();
+
+        // Group by normalized email
+        $groups = $groups->merge(
+            $all->filter(fn (Company $c): bool => (bool) $c->email)
+                ->groupBy(fn (Company $c): string => mb_strtolower(trim($c->email)))
+                ->filter(fn ($g): bool => $g->count() > 1)
+                ->map(fn ($g, string $key): array => ['key' => 'email:'.$key, 'entities' => $g->values()])
+                ->values()
+        );
+
+        // Group by normalized phone
+        $groups = $groups->merge(
+            $all->filter(fn (Company $c): bool => (bool) $c->phone)
+                ->groupBy(fn (Company $c): string => $this->normalizePhone($c->phone))
+                ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
+                ->map(fn ($g, string $key): array => ['key' => 'phone:'.$key, 'entities' => $g->values()])
+                ->values()
+        );
+
+        // Group by normalized tax_id
+        $groups = $groups->merge(
+            $all->filter(fn (Company $c): bool => (bool) $c->tax_id)
+                ->groupBy(fn (Company $c): string => trim($c->tax_id))
+                ->filter(fn ($g): bool => $g->count() > 1)
+                ->map(fn ($g, string $key): array => ['key' => 'tax_id:'.$key, 'entities' => $g->values()])
+                ->values()
+        );
+
+        // Group by normalized name
+        $groups = $groups->merge(
+            $all->filter(fn (Company $c): bool => (bool) $c->name)
+                ->groupBy(fn (Company $c): string => $this->normalizeName($c->name))
+                ->filter(fn ($g): bool => $g->count() > 1)
+                ->map(fn ($g, string $key): array => ['key' => 'name:'.$key, 'entities' => $g->values()])
+                ->values()
+        );
+
+        return $groups;
     }
 
     /**

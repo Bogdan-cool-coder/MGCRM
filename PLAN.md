@@ -91,6 +91,8 @@ Tailwind · Inertia · Livewire · Filament · Chart.js · Horizon · VeeValidat
 ### 3.4 Тулинг
 PHPUnit + **SQLite :memory:** (force-override в `phpunit.xml` + guard в `TestCase`, как Vizion; финмодуль/FTS-тесты — отдельный PG-профиль при необходимости) · Laravel Pint · ESLint 10 + Prettier 3 · vue-tsc · GitHub Actions.
 
+> **Системный урок (BUG-1, S1.1, 2026-06-11):** SQLite-тесты пропустили PG-баг — `DB::raw` с `LOWER("field")` двойными кавычками (`"` = identifier в PG, `TRIM("field")` ломалось). Исправление: нормализация телефона/имени вынесена в PHP, SQL использует `?`-биндинг (`LOWER(TRIM(field)) = ?`). **Follow-up todo (backlog, не блокер):** для критичного raw-SQL / дедуп-логики рассмотреть PG-профиль тестов (отдельный `phpunit.pg.xml` на postgres:16 как second-pass CI) — особенно актуально для M9 (FTS) и любых `DB::raw` с PG-специфичным синтаксисом.
+
 ---
 
 ## §4. Архитектура
@@ -264,9 +266,10 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] Миграции/модели: Contact v2, Company v2 (юрформа/реквизиты/категории-кэш), ContactPosition, M2M ContactCompanyLink. *(S1.1 backend, 2026-06-11)*
 - [x] Справочники: CompanyType, ContactPosition, Source, Country (ISO2), City. *(S1.1 backend, 2026-06-11)*
 - [x] **CustomFieldDef** — scope company/contact (deal-scope зарезервирован, в S1.3). *(S1.1 backend, 2026-06-11)*
-- [x] Дедуп + merge контактов/компаний (DedupService: scan/merge/dismiss, DB::transaction, min/max-нормализация). *(S1.1 backend, 2026-06-11)*
-- [x] Тесты: CRUD, дедуп-логика, кастом-поля — 89/89 PHPUnit green. *(S1.1 backend, 2026-06-11)*
-- [ ] UI: списки (DataTable + фильтры), карточки контакта/компании, формы, merge-диалог. *(S1.1 UI — следующий шаг)*
+- [x] Дедуп + merge контактов/компаний (DedupService: scan/merge/dismiss, DB::transaction, нормализация телефона в PHP — PG-совместимо). *(S1.1 backend, 2026-06-11)*
+- [x] DedupService PG-фикс (BUG-1): двойные кавычки в raw SQL убраны; нормализация телефона/имени перенесена в PHP (LOWER/TRIM через `?`-биндинг), добавлен `scanAll` (global scan, visibility-scoped). *(S1.1 backend-fix, 2026-06-11)*
+- [x] Тесты: CRUD, дедуп-логика (unit+feature), global scan, `?search` — **150/150 PHPUnit green**, Pint PASS. *(S1.1 backend-fix+search-test, 2026-06-11)*
+- [x] UI: список Контакты/Компании (DataTable + type-switch + фильтры + пагинация + quick-create), карточка контакта (tabs + inline-edit + M2M компании), карточка компании (tabs + AutoComplete сотрудников + inline-edit + holding-stub + deals/tasks/files-stub), MergeDialog (3-step: scan→groups→merge с preview), directoriesStore, i18n RU+EN. *(S1.1 UI, 2026-06-11)*
 
 **Acceptance M2:** CRUD контактов и компаний с ИНН/КПП; кастом-поля видны в карточке; дедуп находит дубли и сливает; гео-справочники подключены. CI зелёный.
 
