@@ -60,6 +60,26 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
 
+  // ─── Catalog ──────────────────────────────────────────────────────────────────
+  {
+    path: '/admin/products',
+    name: 'Products',
+    component: () => import('@/pages/ProductsPage'),
+    meta: { requiresAuth: true, title: 'catalog.products.page.title' },
+  },
+  {
+    path: '/admin/products/:id',
+    name: 'ProductDetail',
+    component: () => import('@/pages/ProductPage'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/exchange-rates',
+    name: 'ExchangeRates',
+    component: () => import('@/pages/ExchangeRatesPage'),
+    meta: { requiresAuth: true, title: 'catalog.exchangeRates.page.title' },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

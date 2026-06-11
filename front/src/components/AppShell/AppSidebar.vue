@@ -83,6 +83,7 @@ const navItems = [
   { name: 'contacts', to: '/contacts', icon: 'pi pi-users', labelKey: 'nav.contacts' },
   { name: 'companies', to: '/companies', icon: 'pi pi-building', labelKey: 'nav.companies' },
   { name: 'deals', to: '/deals', icon: 'pi pi-chart-bar', labelKey: 'nav.deals' },
+  { name: 'products', to: '/admin/products', icon: 'pi pi-box', labelKey: 'nav.catalog' },
   { name: 'documents', to: '/documents', icon: 'pi pi-file', labelKey: 'nav.documents' },
   { name: 'tasks', to: '/tasks', icon: 'pi pi-check-square', labelKey: 'nav.tasks' },
   { name: 'finance', to: '/finance', icon: 'pi pi-wallet', labelKey: 'nav.finance' },

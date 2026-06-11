@@ -95,6 +95,78 @@ export const primeVueFoundationSemantic = {
         borderColor: '{surface.200}',
         color: '{surface.900}',
       },
+      // DARK OVERLAY/MODAL (BUG-A Drawer + BUG-B Dialog).
+      //
+      // Aura: Dialog + Drawer оба используют {overlay.modal.background}.
+      // Aura dark-default: overlay.modal.background = {surface.900}.
+      // Наша dark-палитра ИНВЕРТИРОВАНА → dark.surface.900 = surfacePalette[50] = #F9FAFB (светло!).
+      // Результат: Drawer/Dialog получали белый фон в dark-режиме.
+      //
+      // Фикс: явно задаём dark colorScheme overlay, используя {surface.X} ссылки, которые
+      // через нашу инвертированную dark.surface резолвятся в нужные тёмные hex-значения:
+      //   {surface.100} → surfacePalette[800] = #444547 (Card/Panel bg — канон §5.2)
+      //   {surface.200} → surfacePalette[700] = #616263 (Border — канон §5.2)
+      //   {surface.900} → surfacePalette[50]  = #F9FAFB (читабельный текст)
+      //
+      // То же самое для overlay.select (Select-дропдаун внутри Drawer/Dialog).
+      overlay: {
+        select: {
+          background: '{surface.100}',
+          borderColor: '{surface.200}',
+          color: '{surface.900}',
+        },
+        popover: {
+          background: '{surface.100}',
+          borderColor: '{surface.200}',
+          color: '{surface.900}',
+        },
+        modal: {
+          background: '{surface.100}',
+          borderColor: '{surface.200}',
+          color: '{surface.900}',
+        },
+        navigation: {
+          shadow: '0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3)',
+        },
+      },
+      // DARK FORM FIELDS (BUG-3: инпуты белые в dark-режиме).
+      //
+      // Причина: Aura dark использует {surface.950} для background формполей.
+      // Наша dark-палитра ИНВЕРТИРОВАНА → dark.surface.950 = surfacePalette[0] = #FFFFFF (белый!).
+      // Результат: InputText/Textarea/Select/InputNumber получали белый фон в dark.
+      //
+      // Фикс: явно переопределяем все formField-токены, используя {surface.X} ссылки,
+      // которые через нашу инвертированную dark.surface резолвятся в нужные тёмные значения:
+      //   {surface.0}   → #000000 (глубокий фон)
+      //   {surface.50}  → #272829 (disabled bg — чуть светлее)
+      //   {surface.100} → #444547 (Card/Panel bg — канон §5.2; основной фон инпута)
+      //   {surface.200} → #616263 (border default)
+      //   {surface.300} → #7E7F82 (hover border)
+      //   {surface.400} → #9B9C9F (placeholder/icon/muted)
+      //   {surface.900} → #F9FAFB (читабельный текст)
+      //
+      // Токены соответствуют семантике Aura dark, но через нашу инвертированную палитру.
+      formField: {
+        background: '{surface.100}',           // #444547 — card bg (вместо Aura {surface.950}=white)
+        disabledBackground: '{surface.50}',    // #272829 — темнее основного
+        filledBackground: '{surface.100}',     // #444547
+        filledHoverBackground: '{surface.100}',
+        filledFocusBackground: '{surface.100}',
+        borderColor: '{surface.200}',          // #616263 — border default
+        hoverBorderColor: '{surface.300}',     // #7E7F82
+        focusBorderColor: '{primary.color}',   // brand-primary
+        invalidBorderColor: '{red.300}',
+        color: '{surface.900}',                // #F9FAFB — основной текст
+        disabledColor: '{surface.400}',        // #9B9C9F — мuted
+        placeholderColor: '{surface.400}',     // #9B9C9F
+        invalidPlaceholderColor: '{red.400}',
+        floatLabelColor: '{surface.400}',
+        floatLabelFocusColor: '{primary.color}',
+        floatLabelActiveColor: '{surface.400}',
+        floatLabelInvalidColor: '{form.field.invalid.placeholder.color}',
+        iconColor: '{surface.400}',            // #9B9C9F
+        shadow: '0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+      },
     },
   },
   secondary: {

@@ -4,6 +4,7 @@
     "contacts": "Contacts",
     "companies": "Companies",
     "deals": "Deals",
+    "catalog": "Catalog",
     "documents": "Documents",
     "tasks": "Tasks",
     "finance": "Finance",
@@ -149,7 +150,8 @@
     "or": "or",
     "coming_soon": "Coming soon",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "total": "Total: {count}"
   },
   "contacts": {
     "page": {
@@ -212,6 +214,42 @@
       },
       "stub": { "tasks": "Tasks coming in next sprint", "files": "Files coming in next sprint" },
       "errors": { "notFound": "Contact not found", "load": "Failed to load" }
+    }
+  },
+  "catalog": {
+    "products": {
+      "page": {
+        "title": "Product Catalog",
+        "subtitle": "Products and pricing plans",
+        "create": "New product",
+        "import": "Import Excel",
+        "importMenu": { "upload": "Upload price list", "template": "Download template" },
+        "columns": { "code": "Code", "name": "Name", "group": "Group", "pricingType": "Pricing", "isActive": "Active", "actions": "Actions" },
+        "filters": { "search": "Search by name or code", "group": "Group", "pricingType": "Pricing type", "status": "Status", "statusAll": "All", "statusActive": "Active", "statusArchived": "Archived", "reset": "Reset" },
+        "empty": { "title": "Catalog is empty", "subtitle": "Create a product or import a price list", "filtered": "Nothing found", "filteredSubtitle": "Try adjusting the filters", "resetFilters": "Clear filters" },
+        "actions": { "edit": "Edit", "delete": "Delete", "deleteConfirm": "Delete product?", "deleteDetail": "This action cannot be undone.", "deleteAccept": "Delete", "deleteReject": "Cancel", "deleteSuccess": "Product deleted", "deleteUsed": "Product is used in deals and cannot be deleted", "toggleSuccess": "Status updated" }
+      },
+      "pricingType": { "fixed": "Fixed", "tiered": "Tiered", "per_minute": "Per minute", "package": "Package", "custom": "Custom" },
+      "unit": { "year": "Per year", "one_time": "One-time", "minute": "Per minute", "package": "Package" }
+    },
+    "product": {
+      "page": {
+        "back": "Back", "edit": "Edit",
+        "tabs": { "prices": "Prices", "deals": "Deals" },
+        "rail": { "isActive": "Active", "pricingType": "Pricing type", "templateCode": "Contract template", "createdAt": "Created", "updatedAt": "Updated" },
+        "prices": { "addPlan": "Add pricing plan", "basePriceRow": "Base", "emptyPlans": "No pricing plans added", "inlineEditHint": "Double-click to edit price", "save": "Save", "cancel": "Cancel", "saved": "Price updated", "saveError": "Failed to save price" },
+        "plan": { "createTitle": "New pricing plan", "editTitle": "Edit plan", "fields": { "name": "Name", "code": "Plan code", "unit": "Unit", "sortOrder": "Sort order", "isActive": "Active" }, "hint": "Prices are set in the product card table", "save": "Save plan", "cancel": "Cancel", "deleteConfirm": "Delete pricing plan?", "deleteUsed": "Plan is used in deals and cannot be deleted", "deleteSuccess": "Plan deleted" },
+        "stub": { "deals": "Deals section will appear in S1.3" },
+        "errors": { "notFound": "Product not found", "load": "Failed to load product" }
+      },
+      "form": { "createTitle": "New product", "editTitle": "Edit product", "fields": { "name": "Name", "code": "Code (slug)", "codeHint": "Lowercase letters, digits and underscores.", "description": "Description", "group": "Group", "pricingType": "Pricing type", "templateCode": "Contract template code", "sortOrder": "Sort order", "isActive": "Active" }, "save": "Create product", "update": "Save", "cancel": "Cancel", "createSuccess": "Product created", "updateSuccess": "Product updated", "errors": { "nameRequired": "Name is required", "codeRequired": "Code is required", "codeInvalid": "Only a-z, 0-9 and underscores", "codeTaken": "This code is already taken", "pricingTypeRequired": "Pricing type is required" } }
+    },
+    "import": {
+      "dialog": { "title": "Import price list from Excel", "step1": "Upload file", "step2": "Preview", "uploadHint": "Drag .xlsx / .xls or click to select", "uploadMax": "Max 10 MB", "downloadTemplate": "Download template", "preview": { "title": "Check results", "wouldInsert": "To create: {n}", "wouldUpdate": "To update: {n}", "skipped": "Skipped: {n}", "errors": "Errors: {n}", "errorsColumns": { "row": "Row", "message": "Error" }, "warningWithErrors": "Rows with errors will be skipped during import" }, "previewing": "Analysing file...", "importing": "Importing...", "submit": "Import", "submitWithErrors": "Import (skip errors)", "changeFile": "Change file", "cancel": "Cancel", "successToast": "Import complete: {inserted} created, {updated} updated", "errorToast": "Import failed. Please try again." }
+    },
+    "exchangeRates": {
+      "page": { "title": "Exchange Rates", "subtitle": "Current and historical rates", "refresh": "Refresh rates", "addManual": "Enter manually", "columns": { "from": "From", "to": "To", "rate": "Rate", "date": "Date", "source": "Source", "actions": "Actions" }, "source": { "api": "API", "manual": "Manual" }, "filters": { "from": "From currency", "to": "To currency", "dateFrom": "Date from", "dateTo": "Date to", "reset": "Reset" }, "ageWarning": { "message": "Rates were last updated more than 24 hours ago.", "refreshNow": "Refresh now" }, "actions": { "edit": "Edit", "delete": "Delete", "deleteConfirm": "Delete rate?", "deleteSuccess": "Rate deleted", "refreshSuccess": "Rates refreshed", "refreshError": "Failed to refresh rates" }, "empty": { "title": "No rates loaded", "subtitle": "Click «Refresh rates» to load automatically" } },
+      "manual": { "title": "Enter rate manually", "fields": { "from": "From currency", "to": "To currency", "rate": "Rate", "date": "Date" }, "save": "Save rate", "cancel": "Cancel", "success": "Rate saved" }
     }
   },
   "notes": {

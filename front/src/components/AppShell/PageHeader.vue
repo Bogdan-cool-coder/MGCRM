@@ -4,7 +4,7 @@
       <i v-if="icon" :class="['page-header__icon', icon]" />
       <div class="page-header__titles">
         <h1 class="page-header__title">{{ title }}</h1>
-        <p v-if="subtitle" class="page-header__subtitle">{{ subtitle }}</p>
+        <slot name="subtitle"><p v-if="subtitle" class="page-header__subtitle">{{ subtitle }}</p></slot>
       </div>
     </div>
     <div v-if="$slots.actions" class="page-header__actions">

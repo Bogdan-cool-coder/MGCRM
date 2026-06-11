@@ -4,6 +4,7 @@
     "contacts": "Контакты",
     "companies": "Компании",
     "deals": "Сделки",
+    "catalog": "Каталог",
     "documents": "Документы",
     "tasks": "Задачи",
     "finance": "Финансы",
@@ -149,7 +150,8 @@
     "or": "или",
     "coming_soon": "Скоро",
     "expand": "Развернуть",
-    "collapse": "Свернуть"
+    "collapse": "Свернуть",
+    "total": "Итого: {count}"
   },
   "contacts": {
     "page": {
@@ -360,6 +362,232 @@
       "errors": {
         "notFound": "Контакт не найден",
         "load": "Ошибка загрузки"
+      }
+    }
+  },
+  "catalog": {
+    "products": {
+      "page": {
+        "title": "Каталог продуктов",
+        "subtitle": "Продукты и тарифные планы",
+        "create": "Создать продукт",
+        "import": "Импорт Excel",
+        "importMenu": {
+          "upload": "Загрузить прайс",
+          "template": "Скачать шаблон"
+        },
+        "columns": {
+          "code": "Код",
+          "name": "Название",
+          "group": "Группа",
+          "pricingType": "Тип цены",
+          "isActive": "Активен",
+          "actions": "Действия"
+        },
+        "filters": {
+          "search": "Поиск по названию или коду",
+          "group": "Группа",
+          "pricingType": "Тип цены",
+          "status": "Статус",
+          "statusAll": "Все",
+          "statusActive": "Активные",
+          "statusArchived": "Архивные",
+          "reset": "Сбросить"
+        },
+        "empty": {
+          "title": "Каталог пуст",
+          "subtitle": "Добавьте первый продукт или импортируйте прайс",
+          "filtered": "Ничего не найдено",
+          "filteredSubtitle": "Попробуйте изменить фильтры",
+          "resetFilters": "Сбросить фильтры"
+        },
+        "actions": {
+          "edit": "Редактировать",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить продукт?",
+          "deleteDetail": "Это действие нельзя отменить.",
+          "deleteAccept": "Удалить",
+          "deleteReject": "Отмена",
+          "deleteSuccess": "Продукт удалён",
+          "deleteUsed": "Продукт используется в сделках и не может быть удалён",
+          "toggleSuccess": "Статус обновлён"
+        }
+      },
+      "pricingType": {
+        "fixed": "Фиксированная",
+        "tiered": "По тарифу",
+        "per_minute": "По минутам",
+        "package": "Пакет",
+        "custom": "Индивидуальная"
+      },
+      "unit": {
+        "year": "В год",
+        "one_time": "Единоразово",
+        "minute": "В минуту",
+        "package": "Пакет"
+      }
+    },
+    "product": {
+      "page": {
+        "back": "Назад",
+        "edit": "Редактировать",
+        "tabs": {
+          "prices": "Цены",
+          "deals": "Сделки"
+        },
+        "rail": {
+          "isActive": "Активен",
+          "pricingType": "Тип цены",
+          "templateCode": "Шаблон договора",
+          "createdAt": "Создано",
+          "updatedAt": "Обновлено"
+        },
+        "prices": {
+          "addPlan": "Добавить тарифный план",
+          "basePriceRow": "Базовая",
+          "emptyPlans": "Тарифные планы не добавлены",
+          "inlineEditHint": "Двойной клик для изменения цены",
+          "save": "Сохранить",
+          "cancel": "Отмена",
+          "saved": "Цена обновлена",
+          "saveError": "Не удалось сохранить цену"
+        },
+        "plan": {
+          "createTitle": "Новый тарифный план",
+          "editTitle": "Редактировать план",
+          "fields": {
+            "name": "Название",
+            "code": "Код плана",
+            "unit": "Единица",
+            "sortOrder": "Порядок",
+            "isActive": "Активен"
+          },
+          "hint": "Цены задаются в таблице карточки продукта",
+          "save": "Сохранить план",
+          "cancel": "Отмена",
+          "deleteConfirm": "Удалить тарифный план?",
+          "deleteUsed": "План используется в сделках и не может быть удалён",
+          "deleteSuccess": "План удалён"
+        },
+        "stub": {
+          "deals": "Раздел «Сделки» появится в S1.3"
+        },
+        "errors": {
+          "notFound": "Продукт не найден",
+          "load": "Ошибка загрузки продукта"
+        }
+      },
+      "form": {
+        "createTitle": "Новый продукт",
+        "editTitle": "Редактировать продукт",
+        "fields": {
+          "name": "Название",
+          "code": "Код (slug)",
+          "codeHint": "Латиница, цифры и подчёркивания. Используется как ID продукта.",
+          "description": "Описание",
+          "group": "Группа",
+          "pricingType": "Тип цены",
+          "templateCode": "Код шаблона договора",
+          "sortOrder": "Порядок сортировки",
+          "isActive": "Активен"
+        },
+        "save": "Создать продукт",
+        "update": "Сохранить",
+        "cancel": "Отмена",
+        "createSuccess": "Продукт создан",
+        "updateSuccess": "Продукт обновлён",
+        "errors": {
+          "nameRequired": "Название обязательно",
+          "codeRequired": "Код обязателен",
+          "codeInvalid": "Только a-z, 0-9 и подчёркивания",
+          "codeTaken": "Этот код уже занят",
+          "pricingTypeRequired": "Тип цены обязателен"
+        }
+      }
+    },
+    "import": {
+      "dialog": {
+        "title": "Импорт прайса из Excel",
+        "step1": "Загрузка файла",
+        "step2": "Предпросмотр",
+        "uploadHint": "Перетащите .xlsx / .xls или нажмите для выбора",
+        "uploadMax": "Максимум 10 МБ",
+        "downloadTemplate": "Скачать шаблон",
+        "preview": {
+          "title": "Результат проверки",
+          "wouldInsert": "Создаётся: {n}",
+          "wouldUpdate": "Обновляется: {n}",
+          "skipped": "Пропущено: {n}",
+          "errors": "Ошибки: {n}",
+          "errorsColumns": {
+            "row": "Строка",
+            "message": "Ошибка"
+          },
+          "warningWithErrors": "Строки с ошибками будут пропущены при импорте"
+        },
+        "previewing": "Анализ файла...",
+        "importing": "Импорт...",
+        "submit": "Импортировать",
+        "submitWithErrors": "Импортировать (без ошибок)",
+        "changeFile": "Изменить файл",
+        "cancel": "Отмена",
+        "successToast": "Импорт завершён: создано {inserted}, обновлено {updated}",
+        "errorToast": "Ошибка импорта. Попробуйте ещё раз."
+      }
+    },
+    "exchangeRates": {
+      "page": {
+        "title": "Курсы валют",
+        "subtitle": "Актуальные и исторические курсы",
+        "refresh": "Обновить курсы",
+        "addManual": "Ввести вручную",
+        "columns": {
+          "from": "Из",
+          "to": "В",
+          "rate": "Курс",
+          "date": "Дата",
+          "source": "Источник",
+          "actions": "Действия"
+        },
+        "source": {
+          "api": "API",
+          "manual": "Вручную"
+        },
+        "filters": {
+          "from": "Из валюты",
+          "to": "В валюту",
+          "dateFrom": "Дата с",
+          "dateTo": "Дата по",
+          "reset": "Сбросить"
+        },
+        "ageWarning": {
+          "message": "Последнее обновление более 24 часов назад.",
+          "refreshNow": "Обновить сейчас"
+        },
+        "actions": {
+          "edit": "Изменить",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить курс?",
+          "deleteSuccess": "Курс удалён",
+          "refreshSuccess": "Курсы обновлены",
+          "refreshError": "Не удалось обновить курсы"
+        },
+        "empty": {
+          "title": "Курсы не загружены",
+          "subtitle": "Нажмите «Обновить курсы» для автоматической загрузки"
+        }
+      },
+      "manual": {
+        "title": "Ввести курс вручную",
+        "fields": {
+          "from": "Из валюты",
+          "to": "В валюту",
+          "rate": "Курс",
+          "date": "Дата"
+        },
+        "save": "Сохранить курс",
+        "cancel": "Отмена",
+        "success": "Курс сохранён"
       }
     }
   },
