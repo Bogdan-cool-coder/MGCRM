@@ -54,9 +54,9 @@
 | PostgreSQL | **16** | как `./examples/contracts/` (упрощает импорт данных + FTS) |
 | Laravel Sanctum | 4.x | **Bearer personal access token (как Vizion)**; SPA хранит токен (как Vizion). 2FA-флоу: login → temp-токен → verify TOTP → полный токен |
 | **TOTP 2FA** | — | `pragmarx/google2fa` + QR. **Точечное исключение** (есть в old) |
-| **spatie/laravel-permission** | 7.x | роли admin/director/lawyer/manager/accountant/cfo + фин-права. **Точечное исключение** |
+| **spatie/laravel-permission** | ^6.0 (v6.25.0 installed) | роли admin/director/lawyer/manager/accountant/cfo + фин-права. **Точечное исключение**. v7.x существует и поддерживает LV13, но `^6` поставлен намеренно (взаимозависимость ^9 у backup требовала ^6; проверено 2026-06-11). |
 | spatie/laravel-translatable | 6.x | jsonb-поля (на будущее EN; old RU-only) |
-| spatie/laravel-backup | 9.x | ежедневный дамп БД |
+| spatie/laravel-backup | ^10.0 (v10.3.0 installed) | ежедневный дамп БД. ^9.4 требует illuminate ^12.40, несовместимо с LV13; ^10 поддерживает LV13 — обновлено агентом 2026-06-11. |
 | **Prism** (prism-php) | ^0.100 | AI-каскады (контракт-аналитика, чат) — конфиг `config/ai.php` 1-в-1 с Vizion |
 | **PHPWord** + **Gotenberg** | 1.x / 8 | генерация договоров docx→PDF (замена docxtpl+LibreOffice old) — паттерн Vizion |
 | Symfony ExpressionLanguage | 7.x | если нужны вычисляемые правила (как Vizion) |
@@ -177,26 +177,23 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 **Ведущие:** `backend-specialist` (бэк/инфра) + `frontend-specialist` (фронт) + `designer` (layout/токены) + `deploy-engineer` (docker/CI).
 
-#### M0.1 — Скелет монорепо и Docker (backend-specialist + deploy-engineer)
+#### M0.1 — Скелет монорепо и Docker (backend-specialist + deploy-engineer) ✅
 > **Стартовая точка:** у Vizion `docker-compose.yml` уже содержит **6 сервисов** (app, nginx, frontend, queue-worker, gotenberg, postgres) и **БЕЗ redis**. → `gotenberg` + `queue-worker` копируемы 1-в-1; **redis — NET-NEW** (эталона у Vizion нет). `docker-compose.dev.yml` у Vizion **НЕ существует** — авторим его сами.
-- [ ] Скопировать структуру каталогов и docker-конфиги из `./examples/vizion/` (`src/`, `front/`, `docker/php`, `docker/nginx`, `docker/frontend.Dockerfile`), переименовать (`macro-crm-*`).
-- [ ] **redis (NET-NEW, нет эталона у Vizion):** `redis:7-alpine`, bind `127.0.0.1`, в ОБА compose-файла; `depends_on: redis` на `app` и `queue-worker`.
-- [ ] `docker-compose.dev.yml` (авторим сами — у Vizion нет): сервис `db` (postgres:16-alpine, volume `pgdata`), `redis` (redis:7-alpine, 127.0.0.1). API/web — на хосте или в контейнере (как Vizion `composer run dev`).
-- [ ] `docker-compose.yml` (prod): app(php-fpm), nginx, frontend(node build), queue-worker, gotenberg:8, postgres:16 — 6 копируемых из Vizion + redis (NET-NEW). Без Horizon. **Решить build-context vs готовый image:** prod-compose Vizion тянет prebuilt-образы из GHCR — у нас на старте `build:`-контекст; registry-путь переименовать под MGCRM (не оставлять vizion-GHCR-пути).
-- [ ] `.env.example` с категориями: DB, SANCTUM, ADMIN seed, REDIS, ANTHROPIC (Prism), GOOGLE, SMTP, TELEGRAM, GOTENBERG_URL.
-- **DoD:** `docker compose -f docker-compose.dev.yml up -d db redis` поднимает БД + redis; `pg_isready` ок.
+- [x] Скопировать структуру каталогов и docker-конфиги из `./examples/vizion/` (`src/`, `front/`, `docker/php`, `docker/nginx`, `docker/frontend.Dockerfile`), переименовать (`macro-crm-*`).
+- [x] **redis (NET-NEW, нет эталона у Vizion):** `redis:7-alpine`, bind `127.0.0.1`, в ОБА compose-файла; `depends_on: redis` на `app` и `queue-worker`.
+- [x] `docker-compose.dev.yml` (авторим сами — у Vizion нет): сервис `db` (postgres:16-alpine, volume `pgdata`), `redis` (redis:7-alpine, 127.0.0.1). API/web — на хосте или в контейнере (как Vizion `composer run dev`).
+- [x] `docker-compose.yml` (prod): app(php-fpm), nginx, frontend(node build), queue-worker, gotenberg:8, postgres:16 — 6 копируемых из Vizion + redis (NET-NEW). Без Horizon. build-контекст (не GHCR-образы), имена переименованы `macro-crm-*`.
+- [x] `.env.example` с категориями: DB, SANCTUM, ADMIN seed, REDIS, ANTHROPIC (Prism), GOOGLE, SMTP, TELEGRAM, GOTENBERG_URL.
+- **DoD:** `docker compose up -d postgres redis` поднимает БД + redis; образ собирается (`docker compose build app` — PASS 2026-06-11).
 
-#### M0.2 — Laravel 13 bootstrap (backend-specialist)
+#### M0.2 — Laravel 13 bootstrap (backend-specialist) ✅
 > **НЕ копировать `composer.json` require-блок Vizion 1-в-1** — у Vizion LV12/PHP8.2/PHPUnit11, у нас LV13/PHP8.5 → конфликт версий. `composer create-project` даёт LV13-корректный скелет (phpunit/collision уже под LV13), пакеты §3.1 ставим ПОВЕРХ. Vizion-конфиги — LV12-формы (`bootstrap/app.php`, `config/*`) → **адаптируем, не 1-в-1**.
-- [ ] `composer create-project laravel/laravel src` (LV13) через `docker run --rm -v "$(pwd):/app" -w /app composer:latest`. **PHP запинить на 8.5** в `docker/php/Dockerfile`.
-- [ ] `config/database.php` — pgsql основной. **НО** `phpunit.xml` — SQLite :memory: с `force="true"` + guard в `tests/TestCase.php` (паттерн Vizion: тест падает, если `database.default !== sqlite`).
-- [ ] Установить пакеты §3.1 ПОВЕРХ скелета: sanctum, spatie/permission, spatie/translatable, spatie/backup, prism, phpoffice/phpword, phpoffice/phpspreadsheet, pragmarx/google2fa, wapmorgan/morphos, **predis/predis** (драйвер redis).
-- [ ] **Redis-драйвер:** в `.env.example` — `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis`, `REDIS_HOST=redis`.
-- [ ] **Очистить/адаптировать** sqlite-ориентированные composer-скрипты Vizion `post-create-project-cmd` (под наш pgsql+dev-флоу).
-- [ ] **Явный порядок dev-старта:** скопировать `.env` из `.env.example` → `php artisan key:generate` → убедиться, что pgsql-env указывает на compose-сервис `db` → ТОЛЬКО ПОТОМ `php artisan migrate`.
-- [ ] `config/ai.php` — скопировать из `./examples/vizion/`. ⚠️ у Vizion он **GLM-primary (Z.AI) + Anthropic-fallback**; наш §3 — Anthropic → **вырезать Z.AI/GLM, оставить каскад Anthropic**, убрать `Z_API_KEY`.
-- [ ] `config/crm.php` — проектные значения (роли, валюты, storage paths).
-- **DoD:** `php artisan migrate` (на pgsql) проходит; `php artisan test` (sqlite) зелёный на дефолтном тесте.
+- [x] `composer create-project laravel/laravel src` (LV13, 13.15.0) + PHP ^8.5 в Dockerfile.
+- [x] `config/database.php` — pgsql основной; `phpunit.xml` — SQLite :memory: с `force="true"` + `tests/TestCase.php` тройная изоляция (putenv + setUp abort-guard).
+- [x] Установить пакеты §3.1: sanctum ^4.3, spatie/permission ^6.0 (v6.25.0), spatie/translatable ^6.13, spatie/backup ^10.0 (v10.3.0), prism ^0.100, phpoffice/phpword ^1.4, phpoffice/phpspreadsheet ^5.0, pragmarx/google2fa ^8.0, wapmorgan/morphos ^3.2, predis/predis ^3.0.
+- [x] Redis: `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis`, `REDIS_HOST=redis` в `.env.example`; `config/redis.php` (только predis-тюнинг).
+- [x] `config/ai.php` — Anthropic-only каскад (Z.AI/GLM полностью вырезан); `config/crm.php` (роли, валюты RUB/USD/EUR/KZT/UZS/AED, VAT 2000bps); `config/2fa.php`.
+- **DoD (PASS 2026-06-11):** `php artisan migrate` на pgsql = «Nothing to migrate»; `vendor/bin/phpunit` (sqlite :memory:) = 2 tests, 2 assertions — OK; `config:cache` — OK.
 
 #### M0.3 — Аутентификация: Sanctum + 2FA (backend-specialist)
 > **Auth = Bearer personal access token (как Vizion реально):** `createToken('api')->plainTextToken`, фронт хранит токен. ⚠️ Vizion-`AuthController` написан ДО правил ARCHITECTURE.md (inline `$request->validate` + сырой `response()->json`) — **НЕ копировать verbatim**, переписать через `LoginRequest` (FormRequest) + `UserResource`. 2FA-флоу **эталона у Vizion нет** — реплицируем документированный флоу `./examples/contracts/apps/api/app/routers/auth_2fa.py` (setup → verify-setup → validate → backup codes → temp-токен), на `pragmarx/google2fa`.

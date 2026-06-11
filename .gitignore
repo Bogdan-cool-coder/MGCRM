@@ -22,6 +22,10 @@
 # исходники, конфиги, lang/vendor (Laravel-переводы пакетов), .env.example и т.д.
 # (если когда-то внутри examples появится тяжёлый build — добавить точечный ignore вручную)
 
+# === Docker / Compose (корневой .env с секретами compose + runtime-данные) ===
+/.env
+/data/
+
 # === Agent-private memory (машинная, локальная — не коммитим) ===
 .claude/agent-memory/
 

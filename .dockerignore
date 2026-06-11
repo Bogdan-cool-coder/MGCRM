@@ -1,0 +1,11 @@
+**/node_modules
+.git
+.github
+**/dist
+# vendor is baked into the app image via the composer stage; skip local vendor from build context
+src/vendor
+# examples/ are reference copies only — never part of any image build context
+examples
+# brand assets and docs are not needed in images
+brand
+*.md
