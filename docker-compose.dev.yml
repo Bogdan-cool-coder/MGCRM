@@ -152,6 +152,11 @@ services:
     # install if node_modules is missing/stale, then start vite with --host so
     # the dev server binds to 0.0.0.0 and is reachable from the host.
     command: sh -c "npm ci && npm run dev -- --host"
+    environment:
+      # Enable chokidar polling so Vite detects file changes from macOS host
+      # bind-mounts on colima/virtiofs where inotify events are not delivered.
+      # 300 ms interval is set in vite.config.ts when this flag is present.
+      CHOKIDAR_USEPOLLING: "1"
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
     volumes:
