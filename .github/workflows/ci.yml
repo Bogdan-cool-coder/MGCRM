@@ -1,0 +1,154 @@
+name: CI
+
+# Runs on every push and every pull_request (all branches).
+# Both jobs (backend + frontend) must be green before merging.
+#
+# Differences from Vizion ci.yml (intentional — see PLAN.md §8):
+#   - PHP 8.5 (Vizion uses 8.3)
+#   - Pint step is BLOCKING — `pint --test` fails the job (Vizion has no Pint step)
+#   - ESLint step is BLOCKING — no `continue-on-error` (Vizion lint has continue-on-error: true)
+#   - PHPUnit runs on sqlite :memory: (force-guarded via phpunit.xml + TestCase)
+#   - pgsql migrate-smoke is a SEPARATE step (same job, different env)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend: Pint + PHPUnit (sqlite :memory:) + pgsql migrate-smoke
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (Pint + tests + migrate-smoke)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: macro_crm_ci
+          POSTGRES_USER: macro_crm
+          POSTGRES_PASSWORD: testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, pdo_sqlite, zip, intl, mbstring, bcmath, gd, redis
+          coverage: none
+
+      # Runtime directories that git ignores (storage/ is in .gitignore)
+      - name: Initialise Laravel runtime directories
+        working-directory: ./src
+        run: |
+          mkdir -p \
+            storage/app/public \
+            storage/app/private \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/framework/testing \
+            storage/framework/views \
+            storage/logs \
+            bootstrap/cache
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: src/vendor
+          key: composer-${{ hashFiles('src/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        working-directory: ./src
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Copy .env
+        working-directory: ./src
+        run: cp .env.example .env
+
+      - name: Generate application key
+        working-directory: ./src
+        run: php artisan key:generate
+
+      # -----------------------------------------------------------------------
+      # (a) Laravel Pint — BLOCKING. Fails CI if any file needs reformatting.
+      # -----------------------------------------------------------------------
+      - name: Pint (code style check)
+        working-directory: ./src
+        run: ./vendor/bin/pint --test
+
+      # -----------------------------------------------------------------------
+      # (b) PHPUnit on sqlite :memory:
+      # DB_CONNECTION override is redundant (phpunit.xml force="true" already
+      # locks it to sqlite), but explicit env makes the intent crystal-clear.
+      # -----------------------------------------------------------------------
+      - name: PHPUnit (sqlite :memory:)
+        working-directory: ./src
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: php artisan test
+
+      # -----------------------------------------------------------------------
+      # (c) pgsql migrate-smoke — runs migrations against the postgres service.
+      # Proves the migration chain is valid on the real DB engine.
+      # Tests are NOT re-run here (they already passed in step b on sqlite).
+      # -----------------------------------------------------------------------
+      - name: Migrate smoke (pgsql)
+        working-directory: ./src
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: macro_crm_ci
+          DB_USERNAME: macro_crm
+          DB_PASSWORD: testing
+        run: php artisan migrate --force
+
+  # ---------------------------------------------------------------------------
+  # Frontend: vue-tsc + ESLint (BLOCKING) + Vite build
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (type-check + lint + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # package.json engines: "^20.19.0 || >=22.12.0" — use 22 LTS
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install npm dependencies
+        working-directory: ./front
+        run: npm ci
+
+      # vue-tsc strict — 0 errors required
+      - name: Type check (vue-tsc)
+        working-directory: ./front
+        run: npm run type-check
+
+      # BLOCKING — no continue-on-error (intentionally stricter than Vizion)
+      - name: Lint (ESLint)
+        working-directory: ./front
+        run: npm run lint
+
+      # Vite production build smoke
+      - name: Build
+        working-directory: ./front
+        run: npm run build-only

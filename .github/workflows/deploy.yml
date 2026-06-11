@@ -1,0 +1,64 @@
+name: Deploy
+
+# STUB — rolling-restart template. NOT activated until M12 cutover.
+#
+# Activation checklist (deploy-engineer, M12):
+#   1. Set GitHub repository secrets:
+#        SSH_HOST          — VPS IP / hostname
+#        SSH_USER          — deploy user (e.g. macro-crm)
+#        SSH_PRIVATE_KEY   — contents of ~/.ssh/id_ed25519 (private key)
+#        SSH_PORT          — SSH port (default 22)
+#   2. Change `on:` to include `push: branches: [main]` (remove workflow_dispatch-only gate).
+#   3. Confirm CI is green on main before first activation.
+#   4. Run a manual dry-run via `workflow_dispatch` first.
+#
+# Rolling-restart strategy (like contracts/deploy/rolling-restart.sh):
+#   - New containers are brought up before old ones are stopped.
+#   - Nginx/traefik only routes to healthy containers → zero-downtime window.
+#   - Migrations run once after deploy (idempotent, Laravel migrate --force).
+#
+# Requires: appleboy/ssh-action@v1.2.5 on the runner side.
+
+on:
+  # Only manual trigger until M12 — prevents accidental prod deployment.
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Rolling-restart (prod)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH rolling-restart
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          # 25m covers a full cold rebuild (PHP ext compile, composer install).
+          command_timeout: 25m
+          script: |
+            set -euo pipefail
+
+            cd /opt/macro-crm
+
+            # Pull latest source
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Rolling-restart — see deploy/rolling-restart.sh for strategy notes.
+            bash deploy/rolling-restart.sh
+
+            # Tail recent logs for CI visibility
+            echo "--- app logs (last 40 lines) ---"
+            docker compose logs --tail=40 app || true
+            echo "--- queue-worker logs (last 20 lines) ---"
+            docker compose logs --tail=20 queue-worker || true
