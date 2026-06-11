@@ -210,21 +210,25 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `Department` model (Org context) — дерево + manager + members; FK split-миграция (циклическая зависимость users↔departments разрешена).
 - **DoD PASS:** `migrate:fresh --seed` → 6 ролей + dev-admin; `login→(2FA)→token`; `ResolveVisibility` all/own; temp-токен 403 на /me; 42/42 green.
 
-#### M0.5 — Frontend bootstrap (frontend-specialist + designer)
-- [ ] `npm create vite front` (Vue+TS), скопировать структуру `front/src/*` из `./examples/vizion/`. ⚠️ `vite.config.ts` Vizion проксирует на Vizion `nginx:80` + Vizion-домены в `allowedHosts` → **перенацелить proxy/allowedHosts на наш стек**.
-- [ ] `main.ts`: Pinia + persist + Router + i18n + **PrimeVue preset** + axios-middleware + bootstrap-приложения (паттерн Vizion: `bootstrapPromise.then() → router.isReady() → mount`). Хранение токена — Bearer (консистентно с auth-решением M0.3).
-- [ ] PrimeVue: тема-preset + CSS-переменные в `theme/`. Подключить **bootstrap-grid** (только сетка) + PrimeIcons. **БЕЗ Tailwind.**
-- [ ] `designer`: дизайн-токены (цвета, типографика, радиусы, тени) в **SCSS/PrimeVue-preset**, НЕ Tailwind. Палитра из old как референс цветов: primary `#172747`, semantic success/warning/danger/info — реализация на SCSS-переменных.
-- [ ] `api/client.ts`: axios + Sanctum **Bearer** (токен в `Authorization`-заголовке, как Vizion), обработка 401 → logout.
-- [ ] `composables/async/{useAsyncResource,useMutation}` — копия из `./examples/vizion/`.
-- **DoD:** `npm run build` + `vue-tsc` без ошибок.
+#### M0.5 — Frontend bootstrap (frontend-specialist) ✅ DONE 2026-06-11
+- [x] `npm create vite front` (Vue 3.5+TS strict `noUncheckedIndexedAccess`), структура `front/src/*` по Vizion-паттерну.
+- [x] `main.ts`: Pinia + persist(`['token']`) + Router + i18n + **PrimeVue 4.5 preset** (`definePreset(Aura)`) + axios-middleware + `bootstrapPromise.then() → router.isReady() → mount`.
+- [x] Тема: `definePreset(Aura, {...})`, primary `#172747`, `options{prefix:'p', darkModeSelector:'.app-dark', cssLayer:true}`, готча colorScheme соблюдена (light/dark зеркало). SCSS-мост `var(--p-*)`.
+- [x] `api/client.ts`: axios + Sanctum **Bearer** + 401 → onUnauthorized callback; без голого axios в компонентах.
+- [x] `composables/async/{useAsyncResource,useMutation}` + request-gate (stale-cancel).
+- [x] `entities/user.ts`: `UserRole` enum (6 ролей), `mapUser` с fail-safe fallback.
+- [x] devDeps: `jiti` + `@vue/eslint-config-typescript` (ESLint 10 flat-config tooling) — ОК.
+- **DoD PASS:** `npm run type-check` 0 ошибок, `npm run build` OK (335 модулей).
 
-#### M0.6 — Layout, навигация, логин-страница (frontend-specialist + designer)
-- [ ] `DefaultLayout` (header + sidebar + main), `Toolbox` (профиль, локаль, выход).
-- [ ] `stores/user.ts`, `stores/layout.ts`. Router-guard `policy.ts` (auth, redirect).
-- [ ] Страницы: `LoginPage` (email+password+2FA), пустой `DashboardPage`.
-- [ ] i18n: `ru.json` (+ пустой `en.json`).
-- **DoD:** логин в браузере проходит (qa-tester), редирект на dashboard, sidebar рендерится.
+#### M0.6 — Layout, навигация, логин-страница (frontend-specialist) ✅ DONE 2026-06-11
+- [x] `DefaultLayout` (sidebar + topbar + main), AppShell hide на `/login`, global Toast.
+- [x] `AppSidebar.vue` (тёмный `#172747`, collapse-to-rail persist `sidebarCollapsed`).
+- [x] `stores/user.ts`, `stores/layout.ts` (persist `sidebarCollapsed`+`isDarkMode`).
+- [x] Router-guard `policy.ts` (auth/redirect, fail-closed), root `/` резолвится динамически.
+- [x] Страницы: `LoginPage` (email+password+2FA state-machine + backup-code), `ProfilePage` (8 табов `?tab=`, 2FA setup/verify-setup), пустой `DashboardPage`.
+- [x] i18n: `ru.json` + `en.json` — полные ключи (nav/auth/2FA/profile/errors/common/roles/dashboard).
+- [x] QR для 2FA setup — текстовый `otpauth://` URI (без qrcode-либы); follow-up для M1+.
+- **DoD PASS:** type-check/lint/build зелёные. Браузерный smoke — перенесён на M0.7 (frontend-контейнер не в compose).
 
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
 > **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.

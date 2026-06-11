@@ -1,0 +1,152 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "contacts": "Contacts",
+    "companies": "Companies",
+    "deals": "Deals",
+    "documents": "Documents",
+    "tasks": "Tasks",
+    "finance": "Finance",
+    "team": "Team",
+    "settings": "Settings",
+    "analytics": "Analytics",
+    "profile": "Profile",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "email": "Email",
+      "email_placeholder": "example@company.com",
+      "password": "Password",
+      "password_placeholder": "Enter password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "error": "Invalid email or password",
+      "required_email": "Enter email",
+      "required_password": "Enter password",
+      "invalid_email": "Enter a valid email"
+    },
+    "two_factor": {
+      "title": "Two-factor authentication",
+      "subtitle": "Enter the code from your authenticator app",
+      "code_label": "TOTP code",
+      "code_placeholder": "000000",
+      "backup_label": "Backup code",
+      "backup_placeholder": "xxxxxxxx",
+      "submit": "Confirm",
+      "submitting": "Verifying...",
+      "error": "Invalid code. Please try again.",
+      "use_backup": "Use backup code",
+      "use_totp": "Use TOTP code",
+      "back_to_login": "Back to login",
+      "required_code": "Enter code"
+    },
+    "logout": {
+      "confirm": "Sign out?",
+      "success": "You have signed out"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "notifications": "Notifications",
+      "locale": "Language",
+      "theme": "Theme",
+      "calendar": "Calendar",
+      "signature": "Signature",
+      "segments": "Segments"
+    },
+    "fields": {
+      "full_name": "Full name",
+      "email": "Email",
+      "role": "Role",
+      "department": "Department",
+      "telegram": "Telegram ID",
+      "avatar": "Profile photo"
+    },
+    "avatar": {
+      "upload": "Upload photo",
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "hint": "JPG, PNG up to 5 MB"
+    },
+    "security": {
+      "title": "Security",
+      "password_section": "Change password",
+      "current_password": "Current password",
+      "new_password": "New password",
+      "confirm_password": "Confirm password",
+      "change_password": "Change password",
+      "totp_section": "Two-factor authentication",
+      "totp_enabled": "2FA enabled",
+      "totp_disabled": "2FA disabled",
+      "enable_totp": "Enable 2FA",
+      "disable_totp": "Disable 2FA",
+      "totp_setup_title": "Set up 2FA",
+      "totp_scan_qr": "Scan the QR code with your authenticator app",
+      "totp_enter_code": "Enter code to confirm",
+      "totp_verify": "Verify",
+      "totp_backup_codes": "Backup codes",
+      "totp_backup_hint": "Save these codes in a safe place. Each code can only be used once.",
+      "totp_setup_success": "Two-factor authentication successfully configured"
+    },
+    "locale": {
+      "title": "Interface language",
+      "ru": "Russian",
+      "en": "English"
+    },
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "coming_soon": "Coming soon",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Changes saved"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome",
+    "coming_soon": "Widgets and analytics will appear here"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "director": "Director",
+    "lawyer": "Lawyer",
+    "manager": "Manager",
+    "accountant": "Accountant",
+    "cfo": "CFO"
+  },
+  "errors": {
+    "unauthorized": "Session expired. Please sign in again.",
+    "server_error": "Server error. Please try again.",
+    "network_error": "Cannot connect to server.",
+    "not_found": "Page not found.",
+    "forbidden": "Access denied.",
+    "validation": "Please check the form fields.",
+    "unknown": "An unknown error occurred."
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "back": "Back",
+    "next": "Next",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "coming_soon": "Coming soon"
+  }
+}

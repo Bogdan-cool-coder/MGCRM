@@ -1,0 +1,15 @@
+// App theme layout, motion backed by --app-* custom properties
+// Note: shadows ($shadow-*) and border-radius ($radius-*) defined in _overlays.scss
+
+$z-menu: var(--app-z-menu);
+$z-overlay: var(--app-z-overlay);
+$z-toolbox: var(--app-z-toolbox);
+$z-tooltip: var(--app-z-tooltip);
+$z-top: var(--app-z-top);
+
+$transition-fast: var(--app-transition-fast);
+$transition-normal: var(--app-transition-normal);
+
+$header-height: var(--app-header-height);
+$sidebar-width: var(--app-sidebar-width);
+$sidebar-rail-width: var(--app-sidebar-rail-width);

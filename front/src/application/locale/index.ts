@@ -1,0 +1,1 @@
+export { localeManager } from './localeCoordinator'

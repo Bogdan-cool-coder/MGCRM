@@ -1,0 +1,152 @@
+{
+  "nav": {
+    "dashboard": "Дашборд",
+    "contacts": "Контакты",
+    "companies": "Компании",
+    "deals": "Сделки",
+    "documents": "Документы",
+    "tasks": "Задачи",
+    "finance": "Финансы",
+    "team": "Команда",
+    "settings": "Настройки",
+    "analytics": "Аналитика",
+    "profile": "Профиль",
+    "logout": "Выйти"
+  },
+  "auth": {
+    "login": {
+      "title": "Вход в систему",
+      "email": "Email",
+      "email_placeholder": "example@company.com",
+      "password": "Пароль",
+      "password_placeholder": "Введите пароль",
+      "submit": "Войти",
+      "submitting": "Вход...",
+      "error": "Неверный email или пароль",
+      "required_email": "Введите email",
+      "required_password": "Введите пароль",
+      "invalid_email": "Введите корректный email"
+    },
+    "two_factor": {
+      "title": "Двухфакторная аутентификация",
+      "subtitle": "Введите код из приложения аутентификатора",
+      "code_label": "Код TOTP",
+      "code_placeholder": "000000",
+      "backup_label": "Резервный код",
+      "backup_placeholder": "xxxxxxxx",
+      "submit": "Подтвердить",
+      "submitting": "Проверка...",
+      "error": "Неверный код. Попробуйте ещё раз.",
+      "use_backup": "Использовать резервный код",
+      "use_totp": "Использовать код TOTP",
+      "back_to_login": "Вернуться к входу",
+      "required_code": "Введите код"
+    },
+    "logout": {
+      "confirm": "Выйти из системы?",
+      "success": "Вы вышли из системы"
+    }
+  },
+  "profile": {
+    "title": "Профиль",
+    "tabs": {
+      "profile": "Профиль",
+      "security": "Безопасность",
+      "notifications": "Уведомления",
+      "locale": "Язык",
+      "theme": "Тема",
+      "calendar": "Календарь",
+      "signature": "Подпись",
+      "segments": "Сегменты"
+    },
+    "fields": {
+      "full_name": "Полное имя",
+      "email": "Email",
+      "role": "Роль",
+      "department": "Отдел",
+      "telegram": "Telegram ID",
+      "avatar": "Фото профиля"
+    },
+    "avatar": {
+      "upload": "Загрузить фото",
+      "change": "Изменить фото",
+      "remove": "Удалить фото",
+      "hint": "JPG, PNG до 5 МБ"
+    },
+    "security": {
+      "title": "Безопасность",
+      "password_section": "Смена пароля",
+      "current_password": "Текущий пароль",
+      "new_password": "Новый пароль",
+      "confirm_password": "Подтвердите пароль",
+      "change_password": "Изменить пароль",
+      "totp_section": "Двухфакторная аутентификация",
+      "totp_enabled": "2FA включена",
+      "totp_disabled": "2FA выключена",
+      "enable_totp": "Включить 2FA",
+      "disable_totp": "Отключить 2FA",
+      "totp_setup_title": "Настройка 2FA",
+      "totp_scan_qr": "Отсканируйте QR-код приложением аутентификатора",
+      "totp_enter_code": "Введите код для подтверждения",
+      "totp_verify": "Подтвердить",
+      "totp_backup_codes": "Резервные коды",
+      "totp_backup_hint": "Сохраните эти коды в надёжном месте. Каждый код можно использовать только один раз.",
+      "totp_setup_success": "Двухфакторная аутентификация успешно настроена"
+    },
+    "locale": {
+      "title": "Язык интерфейса",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "theme": {
+      "title": "Тема оформления",
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "system": "Системная"
+    },
+    "coming_soon": "Скоро",
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "saved": "Изменения сохранены"
+  },
+  "dashboard": {
+    "title": "Дашборд",
+    "welcome": "Добро пожаловать",
+    "coming_soon": "Здесь появятся виджеты и аналитика"
+  },
+  "roles": {
+    "admin": "Администратор",
+    "director": "Директор",
+    "lawyer": "Юрист",
+    "manager": "Менеджер",
+    "accountant": "Бухгалтер",
+    "cfo": "Финансовый директор"
+  },
+  "errors": {
+    "unauthorized": "Сессия истекла. Пожалуйста, войдите снова.",
+    "server_error": "Произошла ошибка сервера. Попробуйте ещё раз.",
+    "network_error": "Нет подключения к серверу.",
+    "not_found": "Страница не найдена.",
+    "forbidden": "Доступ запрещён.",
+    "validation": "Проверьте правильность заполненных полей.",
+    "unknown": "Произошла неизвестная ошибка."
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "back": "Назад",
+    "next": "Далее",
+    "yes": "Да",
+    "no": "Нет",
+    "or": "или",
+    "coming_soon": "Скоро"
+  }
+}
