@@ -80,6 +80,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Exchange Rate
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the daily exchange rate refresh job (UpdateExchangeRatesJob).
+    | Source: exchangerate.host (or compatible API). The job upserts rates for all
+    | supported currency pairs into catalog_exchange_rates using ON CONFLICT DO UPDATE
+    | — no duplicate rows on UNIQUE (from_code, to_code, date).
+    |
+    | PLAN §Д: FxRate in scope S1.2. Finance (M9) reads via ExchangeRateService,
+    | never directly from catalog_exchange_rates.
+    |
+    */
+    'exchange_rate' => [
+        'api_url' => env('EXCHANGE_RATE_API_URL', 'https://api.exchangerate.host'),
+        'api_key' => env('EXCHANGE_RATE_API_KEY', ''),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage paths
     |--------------------------------------------------------------------------
     |

@@ -6,14 +6,13 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
-class DatabaseSeeder extends Seeder
+class CatalogSeeder extends Seeder
 {
     public function run(): void
     {
         $this->call([
-            RolePermissionSeeder::class,
-            AdminSeeder::class,
-            CatalogSeeder::class,
+            ProductGroupSeeder::class,
+            ProductSeeder::class,
         ]);
     }
 }

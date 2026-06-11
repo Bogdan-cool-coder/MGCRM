@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Catalog\ExchangeRateController;
+use App\Http\Controllers\Catalog\PriceImportController;
+use App\Http\Controllers\Catalog\ProductController;
+use App\Http\Controllers\Catalog\ProductGroupController;
+use App\Http\Controllers\Catalog\ProductPlanController;
+use App\Http\Controllers\Catalog\ProductPriceController;
 use App\Http\Controllers\Crm\Admin\CityController;
 use App\Http\Controllers\Crm\Admin\CompanyTypeController;
 use App\Http\Controllers\Crm\Admin\ContactPositionController;
@@ -107,6 +113,56 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
             'update' => 'crm.custom-fields.update',
             'destroy' => 'crm.custom-fields.destroy',
         ]);
+
+    // =========================================================================
+    // Catalog — Product Groups
+    // =========================================================================
+    Route::prefix('catalog')->name('catalog.')->group(function (): void {
+        // Product Groups
+        Route::apiResource('product-groups', ProductGroupController::class)
+            ->parameter('product-groups', 'productGroup')
+            ->names([
+                'index' => 'product-groups.index',
+                'store' => 'product-groups.store',
+                'show' => 'product-groups.show',
+                'update' => 'product-groups.update',
+                'destroy' => 'product-groups.destroy',
+            ]);
+
+        // Products
+        Route::apiResource('products', ProductController::class);
+
+        // Product Plans (nested under product)
+        Route::prefix('products/{product}')->name('products.')->group(function (): void {
+            Route::get('plans', [ProductPlanController::class, 'index'])->name('plans.index');
+            Route::post('plans', [ProductPlanController::class, 'store'])->name('plans.store');
+            Route::get('plans/{plan}', [ProductPlanController::class, 'show'])->name('plans.show');
+            Route::patch('plans/{plan}', [ProductPlanController::class, 'update'])->name('plans.update');
+            Route::delete('plans/{plan}', [ProductPlanController::class, 'destroy'])->name('plans.destroy');
+
+            // Product Prices (nested under product)
+            Route::get('prices', [ProductPriceController::class, 'index'])->name('prices.index');
+            Route::post('prices', [ProductPriceController::class, 'store'])->name('prices.store');
+            Route::delete('prices/{price}', [ProductPriceController::class, 'destroy'])->name('prices.destroy');
+        });
+
+        // Exchange Rates
+        // NOTE: /convert must be declared BEFORE /{exchangeRate} to avoid route clash.
+        Route::get('exchange-rates/convert', [ExchangeRateController::class, 'convert'])->name('exchange-rates.convert');
+        Route::apiResource('exchange-rates', ExchangeRateController::class)
+            ->parameter('exchange-rates', 'exchangeRate')
+            ->names([
+                'index' => 'exchange-rates.index',
+                'store' => 'exchange-rates.store',
+                'show' => 'exchange-rates.show',
+                'update' => 'exchange-rates.update',
+                'destroy' => 'exchange-rates.destroy',
+            ]);
+
+        // Price Import
+        Route::post('price-import', [PriceImportController::class, 'store'])->name('price-import.store');
+        Route::post('price-import/preview', [PriceImportController::class, 'preview'])->name('price-import.preview');
+    });
 
     // =========================================================================
     // Admin — Directories
