@@ -17,7 +17,7 @@
     "login": {
       "title": "Вход в систему",
       "email": "Email",
-      "email_placeholder": "example@company.com",
+      "email_placeholder": "example{'@'}company.com",
       "password": "Пароль",
       "password_placeholder": "Введите пароль",
       "submit": "Войти",

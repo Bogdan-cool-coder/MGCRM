@@ -17,7 +17,7 @@
     "login": {
       "title": "Sign in",
       "email": "Email",
-      "email_placeholder": "example@company.com",
+      "email_placeholder": "example{'@'}company.com",
       "password": "Password",
       "password_placeholder": "Enter password",
       "submit": "Sign in",

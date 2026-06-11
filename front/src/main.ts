@@ -22,6 +22,7 @@ import {
 } from '@/application'
 import { createAppRouter } from '@/router'
 import { useUserStore } from '@/stores/user'
+import { useLayoutStore } from '@/stores/layout'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -35,6 +36,14 @@ const userStore = useUserStore(pinia)
 // Начальная локаль
 const initialLocale = localeManager.getInitialLocale()
 localeManager.setLocaleLocal(initialLocale)
+
+// Гидратация dark mode из persist до первого рендера.
+// pinia-plugin-persistedstate восстанавливает isDarkMode в store, но класс
+// .app-dark на <html> не восстанавливается — нужно сделать это явно до монтирования.
+const layoutStore = useLayoutStore(pinia)
+if (layoutStore.isDarkMode) {
+  document.documentElement.classList.add('app-dark')
+}
 
 const router = createAppRouter(pinia)
 

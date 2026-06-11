@@ -90,8 +90,9 @@ export const useLoginPage = () => {
         })
 
         if (response.two_factor_required) {
-          // 2FA включена — сохраняем temp-токен, переходим к шагу TOTP
-          // Важно: temp-токен хранится только в памяти (не в persist), т.к. он ограниченный
+          // 2FA включена — сохраняем temp-токен, переходим к шагу TOTP.
+          // Temp-токен кратковременно попадает в persist (через userStore.$patch → token),
+          // пока идёт шаг 2FA. При успехе заменяется полным токеном, при отмене — сбрасывается.
           tempToken.value = response.temp_token
           // Временно устанавливаем temp-токен в store для axios (для /api/2fa/validate)
           userStore.setCurrentUser(response.data)
