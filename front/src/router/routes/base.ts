@@ -33,6 +33,33 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/ProfilePage'),
     meta: { requiresAuth: true, title: 'nav.profile' },
   },
+  // ─── CRM: Contacts / Companies ───────────────────────────────────────────
+  {
+    path: '/contacts',
+    name: 'Contacts',
+    component: () => import('@/pages/ContactsPage'),
+    meta: { requiresAuth: true, title: 'nav.contacts' },
+  },
+  {
+    path: '/contacts/:id',
+    name: 'ContactDetail',
+    component: () => import('@/pages/ContactPage'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/companies',
+    name: 'Companies',
+    // Shared list view — same as contacts page, type pre-set to company
+    component: () => import('@/pages/ContactsPage'),
+    meta: { requiresAuth: true, title: 'nav.companies' },
+  },
+  {
+    path: '/companies/:id',
+    name: 'CompanyDetail',
+    component: () => import('@/pages/CompanyPage'),
+    meta: { requiresAuth: true },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

@@ -147,6 +147,79 @@
     "yes": "Yes",
     "no": "No",
     "or": "or",
-    "coming_soon": "Coming soon"
+    "coming_soon": "Coming soon",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "contacts": {
+    "page": {
+      "title": "Contacts",
+      "subtitle": "Individuals and companies",
+      "create": "New contact",
+      "dedup": "Dedup",
+      "total": "Total: {count}",
+      "typeSwitch": { "contact": "Individual", "company": "Company" },
+      "columns": { "name": "Name", "type": "Type", "source": "Source", "country": "Country", "tags": "Tags", "actions": "Actions" },
+      "filters": { "companyType": "Company type", "source": "Source", "country": "Country", "tags": "Tags", "apply": "Apply", "reset": "Reset" },
+      "empty": { "title": "No contacts yet", "subtitle": "Add your first client or contact", "filtered": "Nothing found", "filteredSub": "Try adjusting filters", "resetFilters": "Clear filters" },
+      "quickCreate": { "title": "New contact", "cancel": "Cancel", "submit": "Create", "success": "Record created", "holdingToggle": "Part of a holding", "holdingParent": "Parent company" },
+      "delete": { "confirm": "Delete record?", "detail": "This action cannot be undone.", "accept": "Delete", "reject": "Cancel", "success": "Record deleted" },
+      "errors": { "load": "Failed to load contacts", "create": "Failed to create record", "delete": "Failed to delete record" }
+    }
+  },
+  "company": {
+    "page": {
+      "back": "Back",
+      "newDeal": "New deal",
+      "tabs": { "overview": "Overview", "contacts": "Contacts", "notes": "Notes", "tasks": "Tasks", "deals": "Deals", "files": "Files", "holding": "Holding" },
+      "sections": { "main": "Main information", "requisites": "Requisites", "signatory": "Signatory" },
+      "fields": {
+        "name": "Name", "legalForm": "Legal form", "fullLegalForm": "Full legal name",
+        "genderEnding": "Gender ending", "companyType": "Company type", "industry": "Industry",
+        "country": "Country", "city": "City", "phone": "Phone", "email": "E-mail", "website": "Website",
+        "taxIdLabel": "Tax ID type", "taxId": "Tax ID", "address": "Legal address",
+        "bank": "Bank", "bankCodeLabel": "Bank code type", "bankCode": "Bank code", "account": "Account",
+        "directorPosition": "Director position", "directorGenitive": "Name (genitive)", "directorShort": "Name (short)", "actsBasis": "Acts on basis of",
+        "source": "Source"
+      },
+      "rail": { "responsible": "Responsible", "owner": "Owner", "source": "Source", "tags": "Tags", "addTag": "Add tag", "createdAt": "Created", "updatedAt": "Modified" },
+      "employees": {
+        "title": "Employees", "add": "Add employee", "addSuccess": "Employee added", "searchHint": "Enter contact name",
+        "columns": { "name": "Name", "position": "Position", "status": "Status", "primary": "Primary" },
+        "status": { "works": "Active", "left": "Left" },
+        "actions": { "setPrimary": "Set as primary", "changeStatus": "Change status", "unlink": "Unlink" },
+        "unlinkConfirm": "Unlink employee?", "empty": "No employees added"
+      },
+      "holding": { "parent": "Parent holding", "children": "Subsidiaries", "addChild": "Add subsidiary", "stub": "Holding management coming in next sprint" },
+      "stub": { "tasks": "Tasks section coming in next sprint", "deals": "Deals section coming in next sprint", "files": "Files section coming in next sprint" },
+      "category": { "L": "L", "M": "M", "S1": "S1", "S2": "S2" },
+      "inlineEdit": { "hint": "Double-click to edit", "save": "Save", "cancel": "Cancel", "saved": "Saved", "error": "Failed to save" },
+      "errors": { "notFound": "Company not found", "load": "Failed to load" }
+    }
+  },
+  "contact": {
+    "page": {
+      "back": "Back",
+      "tabs": { "overview": "Overview", "companies": "Companies", "notes": "Notes", "tasks": "Tasks", "files": "Files" },
+      "fields": { "fullName": "Full name", "position": "Position", "phone": "Phone", "email": "E-mail", "tgUsername": "Telegram", "source": "Source", "status": "Status", "notes": "Notes" },
+      "status": { "active": "Active", "inactive": "Inactive" },
+      "companies": {
+        "title": "Companies", "add": "Attach company",
+        "columns": { "company": "Company", "position": "Position", "status": "Status", "primary": "Primary" },
+        "actions": { "setPrimary": "Set as primary", "unlink": "Unlink" },
+        "unlinkConfirm": "Unlink contact from company?", "empty": "No companies linked"
+      },
+      "stub": { "tasks": "Tasks coming in next sprint", "files": "Files coming in next sprint" },
+      "errors": { "notFound": "Contact not found", "load": "Failed to load" }
+    }
+  },
+  "dedup": {
+    "dialog": {
+      "title": "Deduplication",
+      "titleWithCount": "Deduplication — {count} duplicate groups",
+      "scan": { "title": "Find duplicates", "type": { "company": "Companies", "contact": "Individuals" }, "button": "Scan for duplicates", "scanning": "Scanning...", "empty": "No duplicates found", "emptySubtitle": "Your database is clean", "error": "Scan error" },
+      "candidates": { "group": "Group {n}: {name} ({count} records)", "merge": "Merge", "notDuplicate": "Not a duplicate", "columns": { "id": "ID", "name": "Name", "key": "Tax ID / Email", "createdAt": "Created" } },
+      "merge": { "title": "Merge records", "masterLabel": "Select the master record (ID will be kept, others will be deleted):", "wholeRecordNote": "Merge is whole-record — all data comes from the master record.", "goldenLabel": "Select the golden record (this ID will be kept):", "fieldsLabel": "Field preview:", "warning": "After merging, records ID {id} will be deleted", "columns": { "field": "Field" }, "back": "Back", "submit": "Merge records", "success": "Records merged successfully", "dismissSuccess": "Group marked as not duplicate", "error": "Merge error" }
+    }
   }
 }

@@ -9,6 +9,7 @@ import '@/assets/styles/main.scss'
 
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
 
 import { applyAppCssVariables, MgCrmPreset, primeVueZIndex } from '@/theme'
 import { configureAxiosMiddleware } from '@/api/client'
@@ -67,6 +68,7 @@ app.use(PrimeVue, {
   zIndex: primeVueZIndex,
 })
 app.use(ToastService)
+app.use(ConfirmationService)
 app.use(router)
 
 // Bootstrap promise — запускает инициализацию сессии
