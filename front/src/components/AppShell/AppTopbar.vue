@@ -73,7 +73,7 @@ async function handleLogout() {
   justify-content: space-between;
   height: var(--app-header-height);
   padding: 0 $space-4;
-  background-color: $surface-0;
+  background-color: $surface-card;
   border-bottom: 1px solid $surface-200;
   flex-shrink: 0;
 }

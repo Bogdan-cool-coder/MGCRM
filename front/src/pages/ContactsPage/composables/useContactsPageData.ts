@@ -28,12 +28,17 @@ const DEFAULT_FILTER: ContactsFilter = {
   tags: [],
 }
 
-export const useContactsPageData = () => {
+export interface UseContactsPageDataOptions {
+  /** Начальный тип сущности. По умолчанию 'contact'. */
+  initialType?: EntityType
+}
+
+export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPageDataOptions = {}) => {
   const { t } = useI18n()
   const toast = useToast()
   const directoriesStore = useDirectoriesStore()
 
-  const entityType = ref<EntityType>('contact')
+  const entityType = ref<EntityType>(initialType)
   const page = ref(1)
   const perPage = ref(25)
   const filter = ref<ContactsFilter>({ ...DEFAULT_FILTER })

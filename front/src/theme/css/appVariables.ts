@@ -36,13 +36,15 @@ export function createAppCssVariables(): FlatVars {
 
   // Semantic surface — mapped to reactive PrimeVue surface tokens.
   // surface-page  = surface-100 (light: #F1F2F3, dark: #444547)
-  // surface-card  = surface-0   (light: #FFFFFF, dark: #000000)
+  // surface-card  = p-card-background — реактивный токен PrimeVue Card (light: #fff, dark: surface.0 dark)
+  //                 НЕ var(--p-surface-0) напрямую, т.к. в dark surface-0 = #000 (surface.950).
+  //                 Используем --p-card-background, который теперь = {surface.0} из colorScheme.
   // surface-overlay = surface-0
   // surface-muted = surface-50  (light: #F9FAFB, dark: inverted by PrimeVue)
   // surface-hover = surface-200
   vars['surface-page'] = 'var(--p-surface-100)'
-  vars['surface-card'] = 'var(--p-surface-0)'
-  vars['surface-overlay'] = 'var(--p-surface-0)'
+  vars['surface-card'] = 'var(--p-card-background)'
+  vars['surface-overlay'] = 'var(--p-card-background)'
   vars['surface-muted'] = 'var(--p-surface-50)'
   vars['surface-hover'] = 'var(--p-surface-200)'
 

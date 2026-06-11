@@ -9,6 +9,9 @@ $blue-100: var(--app-blue-100);
 $orange-500: var(--app-orange-500);
 
 // Surfaces and borders
+// $surface-card — реактивный семантический токен карточки (light: #fff, dark: surface dark).
+// Используй $surface-card (не $surface-0) для фона карточек/панелей — он адаптируется к теме.
+$surface-card: var(--app-surface-card);
 $surface-0: var(--app-surface-0);
 $surface-50: var(--app-surface-50);
 $surface-100: var(--app-surface-100);

@@ -1,9 +1,9 @@
 <template>
   <div class="contacts-page">
     <PageHeader
-      :title="t('contacts.page.title')"
-      :subtitle="t('contacts.page.subtitle')"
-      icon="pi pi-users"
+      :title="pageTitle"
+      :subtitle="pageSubtitle"
+      :icon="pageIcon"
     >
       <template #actions>
         <Button
@@ -129,6 +129,21 @@
                 />
                 {{ entityType === 'company' ? (data as Company).name : (data as Contact).full_name }}
               </span>
+            </template>
+          </Column>
+
+          <!-- Type column (BUG-5: between Name and Source) -->
+          <Column :header="t('contacts.page.columns.type')">
+            <template #body>
+              <Tag
+                :value="
+                  entityType === 'company'
+                    ? t('contacts.page.typeSwitch.company')
+                    : t('contacts.page.typeSwitch.contact')
+                "
+                :severity="entityType === 'company' ? 'secondary' : 'info'"
+                size="small"
+              />
             </template>
           </Column>
 
@@ -335,8 +350,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import SelectButton from 'primevue/selectbutton'
 import DataTable from 'primevue/datatable'
@@ -358,7 +374,11 @@ import type { Contact, Company } from '@/entities/crm'
 import type { EntityType } from './composables/useContactsPageData'
 
 const { t } = useI18n()
+const route = useRoute()
 const directoriesStore = useDirectoriesStore()
+
+// Определяем начальный тип по маршруту: /companies → 'company', /contacts → 'contact'
+const initialType: EntityType = route.name === 'Companies' ? 'company' : 'contact'
 
 const {
   entityType,
@@ -374,7 +394,22 @@ const {
   resetFilter,
   onPageChange,
   ensureDirectories,
-} = useContactsPageData()
+} = useContactsPageData({ initialType })
+
+// Динамический заголовок, иконка и подзаголовок зависят от текущего типа
+const pageTitle = computed(() =>
+  entityType.value === 'company'
+    ? t('nav.companies')
+    : t('contacts.page.title'),
+)
+const pageSubtitle = computed(() =>
+  entityType.value === 'company'
+    ? t('contacts.page.subtitle_companies')
+    : t('contacts.page.subtitle'),
+)
+const pageIcon = computed(() =>
+  entityType.value === 'company' ? 'pi pi-building' : 'pi pi-users',
+)
 
 const {
   quickCreateOpen,
@@ -477,7 +512,7 @@ onMounted(() => {
 }
 
 .contacts-page__card {
-  background: $surface-0;
+  background: $surface-card;
   border-radius: $radius-lg;
   border: 1px solid $surface-200;
   box-shadow: $shadow-card;

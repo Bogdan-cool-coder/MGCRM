@@ -155,6 +155,7 @@
     "page": {
       "title": "Contacts",
       "subtitle": "Individuals and companies",
+      "subtitle_companies": "Company list",
       "create": "New contact",
       "dedup": "Dedup",
       "total": "Total: {count}",
@@ -212,6 +213,9 @@
       "stub": { "tasks": "Tasks coming in next sprint", "files": "Files coming in next sprint" },
       "errors": { "notFound": "Contact not found", "load": "Failed to load" }
     }
+  },
+  "notes": {
+    "placeholder": "Add a note..."
   },
   "dedup": {
     "dialog": {

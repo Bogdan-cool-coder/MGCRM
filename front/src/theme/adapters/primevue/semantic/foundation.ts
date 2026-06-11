@@ -73,6 +73,28 @@ export const primeVueFoundationSemantic = {
         900: surfacePalette[50],
         950: surfacePalette[0],
       },
+      // DARK CARD/CONTENT (дизайн-система §5.2: Card/Panel bg = #444547, border = #616263).
+      //
+      // 1) semantic.card (surfaces.ts) — common-токен, эмитится только в :root (light).
+      //    Без dark-оверрайда здесь --p-card-background в dark наследовал бы light-значение.
+      // 2) ВАЖНО: Card-КОМПОНЕНТ Aura тоже эмитит --p-card-background = {content.background}
+      //    в своём style-таге (позже в @layer primeui, селектор :root перебивает наш .app-dark
+      //    при равной специфичности). Поэтому dark card.background ОБЯЗАН совпадать с dark
+      //    content.background ('{surface.100}') — тогда порядок тагов не влияет на цвет.
+      //
+      // Палитра dark ИНВЕРТИРОВАНА: '{surface.100}' = surfacePalette[800] = #444547 (Gray-800),
+      // '{surface.50}' = #272829, '{surface.200}' = #616263, '{surface.900}' = #F9FAFB (текст).
+      card: {
+        background: '{surface.100}',   // #444547 — канон §5.2 Card/Panel bg
+        borderColor: '{surface.200}',  // #616263 — канон §5.2 Border default
+        color: '{surface.900}',        // #F9FAFB — читабельный текст
+      },
+      content: {
+        background: '{surface.100}',   // #444547 — строки DataTable, панели
+        hoverBackground: '{surface.200}',
+        borderColor: '{surface.200}',
+        color: '{surface.900}',
+      },
     },
   },
   secondary: {

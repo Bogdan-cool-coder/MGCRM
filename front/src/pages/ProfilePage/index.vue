@@ -255,7 +255,7 @@ function tabIcon(tab: ProfileTab): string {
 .profile-tabs {
   width: 200px;
   height: 100%;
-  background-color: $surface-0;
+  background-color: $surface-card;
   border-right: 1px solid $surface-200;
   padding: $space-2 0;
   overflow-y: auto;

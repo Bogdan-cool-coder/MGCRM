@@ -15,4 +15,20 @@ export { primeVueZIndex }
 export const MgCrmPreset = definePreset(Aura, {
   primitive: primeVuePrimitive,
   semantic: primeVueSemantic,
+  components: {
+    // BUG-STRIPED FIX: Aura задаёт dark stripedBackground = '{surface.950}' в расчёте
+    // на НЕинвертированную палитру (950 = почти чёрный). Наша dark-схема инвертирована
+    // (dark surface.950 = #FFFFFF) → striped-строки становились белыми.
+    // '{surface.50}' в dark = #272829 — чуть темнее обычных строк ({content.background}
+    // = #444547), симметрично light (striped #F9FAFB чуть темнее белых строк).
+    datatable: {
+      colorScheme: {
+        dark: {
+          row: {
+            stripedBackground: '{surface.50}',
+          },
+        },
+      },
+    },
+  },
 })

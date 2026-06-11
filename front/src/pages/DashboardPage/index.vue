@@ -42,7 +42,7 @@ const { t } = useI18n()
   align-items: center;
   justify-content: center;
   padding: $space-8;
-  background-color: $surface-0;
+  background-color: $surface-card;
   border-radius: $radius-lg;
   border: 1px solid $surface-200;
   gap: $space-4;

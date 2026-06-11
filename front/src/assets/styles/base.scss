@@ -39,3 +39,9 @@ a {
 @layer primevue {
   // Placeholder для PrimeVue cssLayer
 }
+
+// ВНИМАНИЕ: НЕ добавляй сюда .app-dark { --p-* } оверрайды.
+// Dark-значения токенов задаются в пресете (theme/adapters/primevue/):
+// semantic colorScheme.dark — foundation.ts, компонентные — preset.ts (components).
+// Прямые оверрайды здесь — band-aid: vite в docker может отдавать stale CSS,
+// а компонентные style-таги PrimeVue эмитят те же переменные позже в @layer primeui.

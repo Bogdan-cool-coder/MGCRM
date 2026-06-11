@@ -182,7 +182,7 @@ const {
 .login-card {
   width: 100%;
   max-width: 400px;
-  background-color: $surface-0;
+  background-color: $surface-card;
   border-radius: $radius-lg;
   box-shadow: var(--app-shadow-lg);
   padding: $space-8;

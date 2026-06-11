@@ -28,7 +28,7 @@ defineProps<{
   justify-content: space-between;
   gap: $space-4;
   padding: $space-4 $space-6;
-  background-color: $surface-0;
+  background-color: $surface-card;
   border-bottom: 1px solid $surface-200;
   min-height: 56px;
   flex-shrink: 0;

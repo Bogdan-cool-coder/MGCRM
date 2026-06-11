@@ -234,7 +234,7 @@ onMounted(async () => {
 }
 
 .contact-page__tabs {
-  background: $surface-0;
+  background: $surface-card;
   border-radius: $radius-lg;
   border: 1px solid $surface-200;
   box-shadow: $shadow-card;
@@ -246,7 +246,7 @@ onMounted(async () => {
 }
 
 .contact-page__rail-wrapper {
-  background: $surface-0;
+  background: $surface-card;
   border-radius: $radius-lg;
   border: 1px solid $surface-200;
   box-shadow: $shadow-card;
