@@ -261,12 +261,12 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 **Ведущие:** `sales-specialist` + `frontend-specialist`. Контекст `Crm` (+ задел `Catalog`).
 
-- [ ] Миграции/модели: Contact v2, Company v2 (ИНН/КПП, юрформа), ContactPosition, M2M связи Contact↔Company + роли.
-- [ ] Справочники: типы компаний, гео (страны/города), источники.
-- [ ] **CustomFieldDef** — кастом-поля для любой сущности (полиморфно), как в old.
-- [ ] Дедуп + merge контактов/компаний.
-- [ ] UI: списки (DataTable + фильтры), карточки контакта/компании, формы, merge-диалог.
-- [ ] Тесты: CRUD, дедуп-логика, кастом-поля.
+- [x] Миграции/модели: Contact v2, Company v2 (юрформа/реквизиты/категории-кэш), ContactPosition, M2M ContactCompanyLink. *(S1.1 backend, 2026-06-11)*
+- [x] Справочники: CompanyType, ContactPosition, Source, Country (ISO2), City. *(S1.1 backend, 2026-06-11)*
+- [x] **CustomFieldDef** — scope company/contact (deal-scope зарезервирован, в S1.3). *(S1.1 backend, 2026-06-11)*
+- [x] Дедуп + merge контактов/компаний (DedupService: scan/merge/dismiss, DB::transaction, min/max-нормализация). *(S1.1 backend, 2026-06-11)*
+- [x] Тесты: CRUD, дедуп-логика, кастом-поля — 89/89 PHPUnit green. *(S1.1 backend, 2026-06-11)*
+- [ ] UI: списки (DataTable + фильтры), карточки контакта/компании, формы, merge-диалог. *(S1.1 UI — следующий шаг)*
 
 **Acceptance M2:** CRUD контактов и компаний с ИНН/КПП; кастом-поля видны в карточке; дедуп находит дубли и сливает; гео-справочники подключены. CI зелёный.
 

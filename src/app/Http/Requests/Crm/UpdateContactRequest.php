@@ -1,0 +1,39 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests\Crm;
+
+use App\Domain\Crm\Enums\ContactStatus;
+use App\Domain\Crm\Models\Contact;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateContactRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        /** @var Contact $contact */
+        $contact = $this->route('contact');
+
+        return $this->user()->can('update', $contact);
+    }
+
+    public function rules(): array
+    {
+        return [
+            'full_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'position' => ['nullable', 'string', 'max:128'],
+            'phone' => ['nullable', 'string', 'max:64'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'tg_username' => ['nullable', 'string', 'max:64'],
+            'notes' => ['nullable', 'string'],
+            'source' => ['nullable', 'string', 'max:32'],
+            'status' => ['nullable', Rule::enum(ContactStatus::class)],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:64'],
+            'extra_fields' => ['nullable', 'array'],
+            'owner_id' => ['nullable', 'integer', 'exists:users,id'],
+        ];
+    }
+}

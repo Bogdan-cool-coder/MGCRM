@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Policies\CompanyPolicy;
+use App\Domain\Crm\Policies\ContactPolicy;
+use App\Domain\Iam\Enums\Role;
+use App\Domain\Iam\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use PragmaRX\Google2FA\Google2FA;
 
@@ -16,6 +23,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        // CRM Policies (ARCHITECTURE.md §3 — no inline role checks)
+        Gate::policy(Company::class, CompanyPolicy::class);
+        Gate::policy(Contact::class, ContactPolicy::class);
+
+        // Admin-write gate: write operations on shared directories (company-types,
+        // contact-positions, sources, countries, cities) and CustomFieldDef are
+        // restricted to admin and director roles only.
+        Gate::define('admin-write', static fn (User $user): bool => in_array(
+            $user->role,
+            [Role::Admin, Role::Director],
+            strict: true,
+        ));
     }
 }
