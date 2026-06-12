@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 
 /**
  * Thin Deal controller (ARCHITECTURE.md §1). The ?view query selects list vs
@@ -81,13 +82,13 @@ class DealController extends Controller
         return DealResource::make($updated->load(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name']));
     }
 
-    public function destroy(Request $request, Deal $deal): JsonResponse
+    public function destroy(Request $request, Deal $deal): Response
     {
         $this->authorize('delete', $deal);
 
         $this->service->delete($deal);
 
-        return response()->json(['message' => 'Deal deleted.'], 200);
+        return response()->noContent();
     }
 
     public function move(MoveDealRequest $request, Deal $deal): JsonResponse

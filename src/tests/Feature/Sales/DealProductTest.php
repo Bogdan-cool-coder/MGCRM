@@ -110,7 +110,7 @@ class DealProductTest extends TestCase
         ]);
         $deal->update(['amount' => 600_00]);
 
-        $this->deleteJson("/api/deals/{$deal->id}/products/{$line->id}")->assertOk();
+        $this->deleteJson("/api/deals/{$deal->id}/products/{$line->id}")->assertNoContent();
 
         $deal->refresh();
         $this->assertSame(0, $deal->amount);

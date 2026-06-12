@@ -24,7 +24,7 @@ class PipelineSeedTest extends TestCase
 
         $codes = $pipeline->stages->sortBy('sort_order')->pluck('code')->all();
         $this->assertSame(
-            ['lost', 'new', 'qualify', 'schedule_meeting', 'meeting', 'cold', 'warm', 'hot', 'won', 'await_payment', 'paid'],
+            ['new', 'qualify', 'schedule_meeting', 'meeting', 'cold', 'warm', 'hot', 'won', 'await_payment', 'paid', 'lost'],
             $codes,
         );
     }

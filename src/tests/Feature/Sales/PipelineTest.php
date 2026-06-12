@@ -26,7 +26,7 @@ class PipelineTest extends TestCase
             ->assertJsonCount(11, 'data.0.stages');
     }
 
-    public function test_stages_ordered_by_sort_order(): void
+    public function test_stages_ordered_with_system_stages_last(): void
     {
         $this->seed(PipelineSeeder::class);
         Sanctum::actingAs(User::factory()->create(['role' => Role::Manager]), ['*']);
@@ -36,8 +36,9 @@ class PipelineTest extends TestCase
         $stages = $response->json('data.0.stages');
         $codes = array_column($stages, 'code');
 
+        // System won/lost stages always sort to the bottom of the funnel list.
         $this->assertSame(
-            ['lost', 'new', 'qualify', 'schedule_meeting', 'meeting', 'cold', 'warm', 'hot', 'won', 'await_payment', 'paid'],
+            ['new', 'qualify', 'schedule_meeting', 'meeting', 'cold', 'warm', 'hot', 'won', 'await_payment', 'paid', 'lost'],
             $codes,
         );
     }

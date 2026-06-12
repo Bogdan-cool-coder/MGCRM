@@ -185,11 +185,21 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     });
 
     // =========================================================================
-    // Sales — Pipelines (read-only in S1.3; editor lands in S1.5)
+    // Sales — Pipelines (read-only in S1.3; funnel editor lands in S1.5)
     // =========================================================================
     Route::get('pipelines', [PipelineController::class, 'index'])->name('pipelines.index');
+    Route::post('pipelines', [PipelineController::class, 'store'])->name('pipelines.store');
     Route::get('pipelines/{pipeline}', [PipelineController::class, 'show'])->name('pipelines.show');
+    Route::patch('pipelines/{pipeline}', [PipelineController::class, 'update'])->name('pipelines.update');
+    Route::delete('pipelines/{pipeline}', [PipelineController::class, 'destroy'])->name('pipelines.destroy');
+
+    // Stage editor (S1.5). reorder MUST be declared before {stage} (else it
+    // matches as {stage}=reorder). Stage writes are gated on the pipeline.
     Route::get('pipelines/{pipeline}/stages', [PipelineStageController::class, 'index'])->name('pipelines.stages.index');
+    Route::post('pipelines/{pipeline}/stages', [PipelineStageController::class, 'store'])->name('pipelines.stages.store');
+    Route::patch('pipelines/{pipeline}/stages/reorder', [PipelineStageController::class, 'reorder'])->name('pipelines.stages.reorder');
+    Route::patch('pipelines/{pipeline}/stages/{stage}', [PipelineStageController::class, 'update'])->name('pipelines.stages.update');
+    Route::delete('pipelines/{pipeline}/stages/{stage}', [PipelineStageController::class, 'destroy'])->name('pipelines.stages.destroy');
 
     // =========================================================================
     // Sales — Lost Reasons

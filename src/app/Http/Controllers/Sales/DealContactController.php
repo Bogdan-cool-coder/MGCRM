@@ -10,10 +10,10 @@ use App\Domain\Sales\Services\DealContactService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreDealContactRequest;
 use App\Http\Resources\Sales\DealContactResource;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 
 /**
  * Thin nested deal-contact controller. Adding a contact also links it to the
@@ -43,13 +43,13 @@ class DealContactController extends Controller
         return DealContactResource::make($dealContact);
     }
 
-    public function destroy(Request $request, Deal $deal, DealContact $dealContact): JsonResponse
+    public function destroy(Request $request, Deal $deal, DealContact $dealContact): Response
     {
         $this->authorize('update', $deal);
         abort_unless((int) $dealContact->deal_id === (int) $deal->id, 404);
 
         $this->service->removeContact($dealContact);
 
-        return response()->json(['message' => 'Contact unlinked.'], 200);
+        return response()->noContent();
     }
 }

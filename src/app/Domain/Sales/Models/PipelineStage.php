@@ -37,6 +37,8 @@ class PipelineStage extends Model
         'hidden_by_default',
         'parent_stage_id',
         'stage_features',
+        'task_types',
+        'required_fields',
         'won_gate',
         'sla_hours',
         'visible_department_ids',
@@ -53,6 +55,8 @@ class PipelineStage extends Model
             'won_gate' => 'boolean',
             'sla_hours' => 'integer',
             'stage_features' => 'array',
+            'task_types' => 'array',
+            'required_fields' => 'array',
             'visible_department_ids' => 'array',
             'visible_user_ids' => 'array',
         ];

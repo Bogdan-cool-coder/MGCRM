@@ -102,7 +102,7 @@ class DealContactTest extends TestCase
             'contact_id' => $contact->id,
         ]);
 
-        $this->deleteJson("/api/deals/{$deal->id}/contacts/{$link->id}")->assertOk();
+        $this->deleteJson("/api/deals/{$deal->id}/contacts/{$link->id}")->assertNoContent();
 
         $this->assertDatabaseMissing('deal_contacts', ['id' => $link->id]);
     }

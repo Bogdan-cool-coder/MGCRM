@@ -69,10 +69,10 @@ class DealCrudTest extends TestCase
         $stageId = $response->json('data.stage_id');
 
         $this->assertDatabaseHas('deal_stage_history', [
-            'deal_id'       => $dealId,
+            'deal_id' => $dealId,
             'from_stage_id' => null,
-            'to_stage_id'   => $stageId,
-            'user_id'       => $user->id,
+            'to_stage_id' => $stageId,
+            'user_id' => $user->id,
         ]);
     }
 
@@ -143,7 +143,7 @@ class DealCrudTest extends TestCase
         ]);
         Sanctum::actingAs($user, ['*']);
 
-        $this->deleteJson("/api/deals/{$deal->id}")->assertOk();
+        $this->deleteJson("/api/deals/{$deal->id}")->assertNoContent();
 
         $this->assertDatabaseMissing('deals', ['id' => $deal->id]);
         $this->assertDatabaseMissing('deal_products', ['deal_id' => $deal->id]);

@@ -25,8 +25,13 @@ class PipelineStageResource extends JsonResource
             'hidden_by_default' => $this->hidden_by_default,
             'parent_stage_id' => $this->parent_stage_id,
             'stage_features' => $this->stage_features ?? [],
+            'task_types' => $this->task_types ?? [],
+            'required_fields' => $this->required_fields ?? [],
             'won_gate' => $this->won_gate,
             'sla_hours' => $this->sla_hours,
+            'visible_department_ids' => $this->visible_department_ids,
+            'visible_user_ids' => $this->visible_user_ids,
+            'children' => self::collection($this->whenLoaded('children')),
         ];
     }
 }

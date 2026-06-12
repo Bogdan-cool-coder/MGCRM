@@ -6,7 +6,7 @@ namespace App\Domain\Sales\Services;
 
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
-use App\Domain\Org\Models\Department;
+use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\DealStageHistory;
@@ -24,6 +24,10 @@ class DealService
 {
     /** Number of cards returned per Kanban column (first page). */
     private const BOARD_COLUMN_LIMIT = 30;
+
+    public function __construct(
+        private readonly VisibilityResolver $visibility,
+    ) {}
 
     /**
      * Paginated, visibility-scoped list of deals.
@@ -132,11 +136,11 @@ class DealService
 
         // Record creation event in stage history (from_stage_id = null → creation).
         DealStageHistory::create([
-            'deal_id'       => $deal->id,
+            'deal_id' => $deal->id,
             'from_stage_id' => null,
-            'to_stage_id'   => $firstStage->id,
-            'user_id'       => $creator->id,
-            'created_at'    => $deal->created_at,
+            'to_stage_id' => $firstStage->id,
+            'user_id' => $creator->id,
+            'created_at' => $deal->created_at,
         ]);
 
         return $deal;
@@ -192,36 +196,8 @@ class DealService
 
         return match ($scope) {
             VisibilityScope::All => $query,
-            VisibilityScope::Department => $query->whereIn('department_id', $this->departmentSubtreeIds($user)),
+            VisibilityScope::Department => $query->whereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
             VisibilityScope::Own => $query->where('owner_user_id', $user->id),
         };
-    }
-
-    /**
-     * Department ids visible to a user under Department scope: their own
-     * department plus all descendants in the org tree.
-     *
-     * @return list<int>
-     */
-    private function departmentSubtreeIds(User $user): array
-    {
-        if ($user->department_id === null) {
-            return [-1]; // no department → match nothing
-        }
-
-        $ids = [$user->department_id];
-        $frontier = [$user->department_id];
-
-        while ($frontier !== []) {
-            $children = Department::query()
-                ->whereIn('parent_id', $frontier)
-                ->pluck('id')
-                ->all();
-
-            $frontier = array_values(array_diff($children, $ids));
-            $ids = array_merge($ids, $frontier);
-        }
-
-        return array_map('intval', $ids);
     }
 }

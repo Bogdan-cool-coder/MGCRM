@@ -7,7 +7,6 @@ namespace App\Domain\Sales\Policies;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
-use App\Domain\Org\Models\Department;
 use App\Domain\Sales\Models\Deal;
 
 /**
@@ -75,27 +74,6 @@ class DealPolicy
             return false;
         }
 
-        return in_array((int) $deal->department_id, $this->departmentSubtreeIds($user), true);
-    }
-
-    /**
-     * @return list<int>
-     */
-    private function departmentSubtreeIds(User $user): array
-    {
-        $ids = [(int) $user->department_id];
-        $frontier = [$user->department_id];
-
-        while ($frontier !== []) {
-            $children = Department::query()
-                ->whereIn('parent_id', $frontier)
-                ->pluck('id')
-                ->all();
-
-            $frontier = array_values(array_diff($children, $ids));
-            $ids = array_merge($ids, $frontier);
-        }
-
-        return array_map('intval', $ids);
+        return in_array((int) $deal->department_id, $this->resolver->departmentSubtreeIds($user), true);
     }
 }

@@ -55,6 +55,11 @@ class DealMoveService
                 ])->status(422);
             }
 
+            // 5a. Required-fields gate: the target stage may demand certain deal /
+            //     company fields be filled before entry (S1.5). Checked on entry
+            //     only — existing deals are never retro-validated (E6).
+            $this->assertRequiredFields($locked, $toStage);
+
             // 5. Won-gate: soft in S1.3 (warning only; hard 409 lands in S2).
             $wonGateWarning = false;
             if ($toStage->won_gate) {
@@ -94,6 +99,48 @@ class DealMoveService
 
             return ['deal' => $locked->load('stage'), 'won_gate_warning' => $wonGateWarning];
         });
+    }
+
+    /**
+     * Required-fields gate (S1.5). If the target stage declares required_fields
+     * ({"deal":[...], "company":[...]}), every listed field must be non-blank on
+     * the deal (and its company, read cross-domain via the relation) before the
+     * move proceeds; otherwise a 422 lists the missing fields.
+     *
+     * Semantics: "field is not null / not empty string". amount = 0 is NOT blank
+     * (0 passes) — a "> 0" rule is a different concern, not required_fields (E).
+     */
+    private function assertRequiredFields(Deal $deal, PipelineStage $toStage): void
+    {
+        $required = $toStage->required_fields ?? [];
+
+        if ($required === []) {
+            return;
+        }
+
+        $missing = [];
+
+        foreach ($required['deal'] ?? [] as $field) {
+            if (blank($deal->{$field})) {
+                $missing[] = "deal.{$field}";
+            }
+        }
+
+        $companyFields = $required['company'] ?? [];
+        if ($companyFields !== []) {
+            $company = $deal->company; // cross-domain read via relation (allowed)
+            foreach ($companyFields as $field) {
+                if ($company === null || blank($company->{$field})) {
+                    $missing[] = "company.{$field}";
+                }
+            }
+        }
+
+        if ($missing !== []) {
+            throw ValidationException::withMessages([
+                'required_fields' => "Required fields for stage \"{$toStage->name}\" are missing: ".implode(', ', $missing),
+            ])->status(422);
+        }
     }
 
     /**

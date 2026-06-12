@@ -11,10 +11,12 @@ use Illuminate\Database\Seeder;
 
 /**
  * INSERT-MISSING idempotent seeder for the locked AmoCRM-style "Продажи" sales
- * pipeline + its 11 stages. Codes/order/flags are the source of truth (S1.3 plan,
- * section В) — do NOT reorder or rename without an explicit request. Re-running
- * does not create duplicates (updateOrCreate by pipeline+code). parent_stage_id
- * for sub-statuses is resolved in a second pass.
+ * pipeline + its 11 stages. Codes/flags are the source of truth (S1.3 plan,
+ * section В) — do NOT add/remove/rename without an explicit request. The system
+ * lost stage is seeded last so it sorts to the bottom of the funnel; system
+ * stages also order to the bottom at read time (PipelineService::stagesFor /
+ * Pipeline::stages). Re-running does not create duplicates (updateOrCreate by
+ * pipeline+code). parent_stage_id for sub-statuses is resolved in a second pass.
  */
 class PipelineSeeder extends Seeder
 {
@@ -24,7 +26,6 @@ class PipelineSeeder extends Seeder
      * @var list<array{code: string, name: string, is_won?: bool, is_lost?: bool, hidden?: bool, won_gate?: bool, parent?: string, features?: list<string>, color?: string}>
      */
     private const STAGES = [
-        ['code' => 'lost', 'name' => 'Сделка проиграна', 'is_lost' => true, 'hidden' => true, 'color' => '#d32f2f'],
         ['code' => 'new', 'name' => 'Новые лиды', 'color' => '#90a4ae'],
         ['code' => 'qualify', 'name' => 'Квалификация', 'color' => '#42a5f5'],
         ['code' => 'schedule_meeting', 'name' => 'Назначить встречу', 'features' => ['send_presentation'], 'color' => '#26c6da'],
@@ -35,6 +36,7 @@ class PipelineSeeder extends Seeder
         ['code' => 'won', 'name' => 'Успешная сделка', 'is_won' => true, 'won_gate' => true, 'color' => '#66bb6a'],
         ['code' => 'await_payment', 'name' => 'Ожидаем оплату', 'is_won' => true, 'parent' => 'won', 'color' => '#9ccc65'],
         ['code' => 'paid', 'name' => 'Оплачено', 'is_won' => true, 'parent' => 'won', 'color' => '#43a047'],
+        ['code' => 'lost', 'name' => 'Сделка проиграна', 'is_lost' => true, 'hidden' => true, 'color' => '#d32f2f'],
     ];
 
     public function run(): void

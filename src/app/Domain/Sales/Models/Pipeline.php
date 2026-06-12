@@ -50,9 +50,18 @@ class Pipeline extends Model
 
     // ---- Relations ----
 
+    /**
+     * Stages ordered for display: system stages (won/lost) always sort to the
+     * bottom via a single system-rank (0 = funnel stage, 1 = won/lost), then by
+     * sort_order. Keeps the proper funnel reading order on the Kanban board and
+     * the stage editor even when a system stage carries a low sort_order. The
+     * CASE is portable across PG and SQLite.
+     */
     public function stages(): HasMany
     {
-        return $this->hasMany(PipelineStage::class)->orderBy('sort_order');
+        return $this->hasMany(PipelineStage::class)
+            ->orderByRaw('CASE WHEN is_won THEN 1 WHEN is_lost THEN 1 ELSE 0 END')
+            ->orderBy('sort_order');
     }
 
     public function deals(): HasMany

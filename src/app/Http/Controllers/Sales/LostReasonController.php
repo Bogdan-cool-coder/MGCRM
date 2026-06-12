@@ -10,10 +10,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreLostReasonRequest;
 use App\Http\Requests\Sales\UpdateLostReasonRequest;
 use App\Http\Resources\Sales\LostReasonResource;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 
 /**
  * Thin LostReason controller. Reads are open; writes are admin/director (policy).
@@ -47,12 +47,12 @@ class LostReasonController extends Controller
         return LostReasonResource::make($updated);
     }
 
-    public function destroy(Request $request, LostReason $lostReason): JsonResponse
+    public function destroy(Request $request, LostReason $lostReason): Response
     {
         $this->authorize('delete', $lostReason);
 
         $this->service->delete($lostReason);
 
-        return response()->json(['message' => 'Lost reason deleted.'], 200);
+        return response()->noContent();
     }
 }

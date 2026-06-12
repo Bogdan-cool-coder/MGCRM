@@ -30,7 +30,7 @@ class LostReasonTest extends TestCase
             ->assertJsonPath('data.name', 'Дорого')
             ->assertJsonPath('data.is_active', false);
 
-        $this->deleteJson("/api/lost-reasons/{$id}")->assertOk();
+        $this->deleteJson("/api/lost-reasons/{$id}")->assertNoContent();
         $this->assertDatabaseMissing('lost_reasons', ['id' => $id]);
     }
 

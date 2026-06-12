@@ -11,10 +11,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreDealProductRequest;
 use App\Http\Requests\Sales\UpdateDealProductRequest;
 use App\Http\Resources\Sales\DealProductResource;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 
 /**
  * Thin nested line-item controller. Every mutation re-derives Deal.amount in the
@@ -49,14 +49,14 @@ class DealProductController extends Controller
         return DealProductResource::make($updated);
     }
 
-    public function destroy(Request $request, Deal $deal, DealProduct $dealProduct): JsonResponse
+    public function destroy(Request $request, Deal $deal, DealProduct $dealProduct): Response
     {
         $this->authorize('update', $deal);
         $this->assertBelongsToDeal($deal, $dealProduct);
 
         $this->service->removeProduct($dealProduct);
 
-        return response()->json(['message' => 'Line item removed.'], 200);
+        return response()->noContent();
     }
 
     private function assertBelongsToDeal(Deal $deal, DealProduct $dealProduct): void
