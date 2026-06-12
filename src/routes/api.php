@@ -15,11 +15,14 @@ use App\Http\Controllers\Catalog\ProductPlanController;
 use App\Http\Controllers\Catalog\ProductPriceController;
 use App\Http\Controllers\Contracts\Admin\LicensorBankAccountController;
 use App\Http\Controllers\Contracts\Admin\LicensorEntityController;
+use App\Http\Controllers\Contracts\DocumentAttachmentController;
 use App\Http\Controllers\Contracts\DocumentController;
 use App\Http\Controllers\Contracts\DocumentItemController;
+use App\Http\Controllers\Contracts\DocumentRemarkController;
 use App\Http\Controllers\Contracts\DocumentRevisionController;
 use App\Http\Controllers\Contracts\TemplateController;
 use App\Http\Controllers\Contracts\TemplateVariableController;
+use App\Http\Controllers\Contracts\TemplateVersionController;
 use App\Http\Controllers\Crm\Admin\CityController;
 use App\Http\Controllers\Crm\Admin\CompanyTypeController;
 use App\Http\Controllers\Crm\Admin\ContactPositionController;
@@ -360,7 +363,18 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::post('licensor-entities/{licensorEntity}/bank-accounts', [LicensorBankAccountController::class, 'store'])->name('licensor-entities.bank-accounts.store');
     });
 
-    // Templates (no store/destroy via API — seeder only in S2.1; docx upload in S2.3).
+    // Templates (no store/destroy via API — seeder only in S2.1).
+    // S2.3: docx upload + AI-check lifecycle endpoints.
+    // Action routes MUST be declared BEFORE parameterised sub-resource routes to
+    // avoid routing clashes (e.g., /upload must not match as /{version}).
+    Route::post('templates/{template}/upload', [TemplateVersionController::class, 'upload'])->name('templates.versions.upload');
+
+    // Version sub-resource: action paths before {version} to avoid clash.
+    Route::post('templates/{template}/versions/{version}/check', [TemplateVersionController::class, 'check'])->name('templates.versions.check');
+    Route::post('templates/{template}/versions/{version}/override', [TemplateVersionController::class, 'override'])->name('templates.versions.override');
+    Route::get('templates/{template}/versions', [TemplateVersionController::class, 'index'])->name('templates.versions.index');
+    Route::get('templates/{template}/versions/{version}', [TemplateVersionController::class, 'show'])->name('templates.versions.show');
+
     Route::get('templates', [TemplateController::class, 'index'])->name('templates.index');
     Route::get('templates/{template}', [TemplateController::class, 'show'])->name('templates.show');
     Route::patch('templates/{template}', [TemplateController::class, 'update'])->name('templates.update');
@@ -374,10 +388,15 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
     // =========================================================================
     // Contracts — S2.2: Documents, Document Items, Document Revisions
+    // S2.5: Sign, Unsign, Archive, Unarchive, Remarks, Attachments
     // =========================================================================
     // Action routes MUST be declared BEFORE the apiResource to avoid clashing.
     Route::post('documents/{document}/submit', [DocumentController::class, 'submit'])->name('documents.submit');
     Route::post('documents/{document}/upload-drive', [DocumentController::class, 'uploadDrive'])->name('documents.upload-drive');
+    Route::post('documents/{document}/sign', [DocumentController::class, 'sign'])->name('documents.sign');
+    Route::post('documents/{document}/unsign', [DocumentController::class, 'unsign'])->name('documents.unsign');
+    Route::post('documents/{document}/archive', [DocumentController::class, 'archive'])->name('documents.archive');
+    Route::post('documents/{document}/unarchive', [DocumentController::class, 'unarchive'])->name('documents.unarchive');
 
     Route::get('documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::post('documents', [DocumentController::class, 'store'])->name('documents.store');
@@ -395,5 +414,16 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // Nested: document revisions (read-only — immutable snapshots)
         Route::get('revisions', [DocumentRevisionController::class, 'index'])->name('revisions.index');
         Route::get('revisions/{revision}', [DocumentRevisionController::class, 'show'])->name('revisions.show');
+
+        // S2.5: Remarks — resolve must be declared before {remark} to avoid routing clash
+        Route::post('remarks/{remark}/resolve', [DocumentRemarkController::class, 'toggleResolve'])->name('remarks.resolve');
+        Route::get('remarks', [DocumentRemarkController::class, 'index'])->name('remarks.index');
+        Route::post('remarks', [DocumentRemarkController::class, 'store'])->name('remarks.store');
+
+        // S2.5: Attachments — download must be declared before {attachment} destroy
+        Route::get('attachments/{attachment}/download', [DocumentAttachmentController::class, 'download'])->name('attachments.download');
+        Route::get('attachments', [DocumentAttachmentController::class, 'index'])->name('attachments.index');
+        Route::post('attachments', [DocumentAttachmentController::class, 'store'])->name('attachments.store');
+        Route::delete('attachments/{attachment}', [DocumentAttachmentController::class, 'destroy'])->name('attachments.destroy');
     });
 });

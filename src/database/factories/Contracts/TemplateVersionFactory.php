@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories\Contracts;
 
+use App\Domain\Contracts\Enums\AiCheckStatus;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Models\TemplateVersion;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,6 +24,9 @@ class TemplateVersionFactory extends Factory
             'docx_path' => null,
             'ai_remarks' => null,
             'ai_overridden' => false,
+            'ai_check_status' => AiCheckStatus::Pending,
+            'ai_checked_at' => null,
+            'pdf_ok' => null,
             'created_by_user_id' => null,
             'created_at' => now(),
         ];

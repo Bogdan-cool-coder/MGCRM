@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Contracts\Models;
 
+use App\Domain\Contracts\Enums\AiCheckStatus;
 use App\Domain\Iam\Models\User;
 use Database\Factories\Contracts\TemplateVersionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,6 +45,9 @@ class TemplateVersion extends Model
         'docx_path',
         'ai_remarks',
         'ai_overridden',
+        'ai_check_status',
+        'ai_checked_at',
+        'pdf_ok',
         'created_by_user_id',
         'created_at',
     ];
@@ -54,6 +58,9 @@ class TemplateVersion extends Model
             'version_number' => 'integer',
             'ai_remarks' => 'array',
             'ai_overridden' => 'boolean',
+            'ai_check_status' => AiCheckStatus::class,
+            'ai_checked_at' => 'datetime',
+            'pdf_ok' => 'boolean',
             'created_at' => 'datetime',
         ];
     }

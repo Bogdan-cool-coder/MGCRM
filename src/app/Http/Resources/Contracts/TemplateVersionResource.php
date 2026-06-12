@@ -20,8 +20,11 @@ class TemplateVersionResource extends JsonResource
             'template_id' => $this->template_id,
             'version_number' => $this->version_number,
             'docx_path' => $this->docx_path,
+            'ai_check_status' => $this->ai_check_status?->value,
+            'ai_checked_at' => $this->ai_checked_at,
             'ai_remarks' => $this->ai_remarks,
             'ai_overridden' => $this->ai_overridden,
+            'pdf_ok' => $this->pdf_ok,
             'created_by_user_id' => $this->created_by_user_id,
             'created_at' => $this->created_at,
         ];

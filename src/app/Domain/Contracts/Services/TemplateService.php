@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Contracts\Services;
 
+use App\Domain\Contracts\Enums\AiCheckStatus;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Models\TemplateVersion;
+use App\Jobs\Contracts\CheckTemplateJob;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -73,7 +75,7 @@ class TemplateService
      */
     public function createVersion(Template $template, string $docxPath, int $userId): TemplateVersion
     {
-        return DB::transaction(function () use ($template, $docxPath, $userId): TemplateVersion {
+        $version = DB::transaction(function () use ($template, $docxPath, $userId): TemplateVersion {
             $lastVersion = $this->latestVersion($template);
             $nextNumber = $lastVersion ? $lastVersion->version_number + 1 : 1;
 
@@ -83,6 +85,9 @@ class TemplateService
                 'docx_path' => $docxPath,
                 'ai_remarks' => null,
                 'ai_overridden' => false,
+                'ai_check_status' => AiCheckStatus::Pending,
+                'ai_checked_at' => null,
+                'pdf_ok' => null,
                 'created_by_user_id' => $userId,
                 'created_at' => now(),
             ]);
@@ -91,6 +96,12 @@ class TemplateService
 
             return $version;
         });
+
+        // Dispatch AI check outside the transaction so the version row is
+        // already committed when the job picks it up from the queue.
+        CheckTemplateJob::dispatch($version->id);
+
+        return $version;
     }
 
     /**
