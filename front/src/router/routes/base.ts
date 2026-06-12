@@ -80,6 +80,20 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'catalog.exchangeRates.page.title' },
   },
 
+  // ─── Sales: Deals ────────────────────────────────────────────────────────────
+  {
+    path: '/deals',
+    name: 'Deals',
+    component: () => import('@/pages/DealsPage'),
+    meta: { requiresAuth: true, title: 'sales.deals.page.title' },
+  },
+  {
+    path: '/deals/:id',
+    name: 'DealDetail',
+    component: () => import('@/pages/DealPage'),
+    meta: { requiresAuth: true },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

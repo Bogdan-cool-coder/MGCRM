@@ -45,3 +45,18 @@ a {
 // semantic colorScheme.dark — foundation.ts, компонентные — preset.ts (components).
 // Прямые оверрайды здесь — band-aid: vite в docker может отдавать stale CSS,
 // а компонентные style-таги PrimeVue эмитят те же переменные позже в @layer primeui.
+
+// S1.3 DealsListView DataTable dark mode — BUG-1 pattern from S1.1
+// DataTable body backgrounds are not toggled by PrimeVue's colorScheme in all versions:
+// we target the component CSS variables in the .app-dark scope.
+.app-dark {
+  --p-datatable-body-background: var(--p-surface-900);
+  --p-datatable-row-odd-background: var(--p-surface-800);
+  --p-datatable-row-hover-background: var(--p-surface-700);
+
+  // BUG-5: odd-row links are nearly invisible in dark because the odd-row bg is
+  // very dark. Force link colour to the primary-light token so text stays legible.
+  .p-datatable .p-datatable-tbody > tr:nth-child(odd) > td a {
+    color: var(--p-primary-300, #7fa8d4);
+  }
+}

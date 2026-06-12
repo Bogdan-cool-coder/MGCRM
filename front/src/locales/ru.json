@@ -638,5 +638,211 @@
         "error": "Ошибка при объединении"
       }
     }
+  },
+  "sales": {
+    "deals": {
+      "page": {
+        "title": "Сделки",
+        "subtitle": "Воронка продаж",
+        "create": "Создать сделку",
+        "viewBoard": "Kanban",
+        "viewList": "Список",
+        "columns": {
+          "id": "#",
+          "title": "Название",
+          "company": "Компания",
+          "stage": "Стадия",
+          "amount": "Сумма",
+          "owner": "Ответственный",
+          "createdAt": "Создано",
+          "actions": "Действия"
+        },
+        "filters": {
+          "search": "Поиск по названию",
+          "owner": "Ответственный",
+          "company": "Компания",
+          "stage": "Стадия",
+          "reset": "Сбросить"
+        },
+        "kanban": {
+          "deals": "{count} сделок",
+          "sum": "{amount}",
+          "loadMore": "Ещё {n}",
+          "hiddenStages": "Скрытые",
+          "daysInStage": "{n} дней"
+        },
+        "empty": {
+          "title": "Сделок пока нет",
+          "subtitle": "Создайте первую сделку на основе компании",
+          "filtered": "Ничего не найдено",
+          "filteredSubtitle": "Попробуйте изменить фильтры",
+          "resetFilters": "Сбросить фильтры"
+        },
+        "actions": {
+          "edit": "Редактировать",
+          "changeStage": "Сменить стадию",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить сделку?",
+          "deleteDetail": "Это действие нельзя отменить. Состав и история будут удалены.",
+          "deleteAccept": "Удалить",
+          "deleteReject": "Отмена",
+          "deleteSuccess": "Сделка удалена",
+          "moveSuccess": "Стадия изменена"
+        }
+      },
+      "form": {
+        "createTitle": "Новая сделка",
+        "fields": {
+          "company": "Компания",
+          "title": "Название",
+          "pipeline": "Воронка",
+          "currency": "Валюта",
+          "owner": "Ответственный",
+          "expectedCloseDate": "Ожидаемая дата закрытия"
+        },
+        "save": "Создать сделку",
+        "cancel": "Отмена",
+        "createSuccess": "Сделка создана",
+        "errors": {
+          "companyRequired": "Выберите компанию",
+          "titleRequired": "Название обязательно",
+          "currencyRequired": "Валюта обязательна"
+        }
+      }
+    },
+    "deal": {
+      "page": {
+        "back": "Назад",
+        "changeStage": "Сменить стадию",
+        "tabs": {
+          "overview": "Обзор",
+          "contacts": "Контакты",
+          "history": "История"
+        },
+        "rail": {
+          "stage": "Стадия",
+          "pipeline": "Воронка",
+          "owner": "Ответственный",
+          "department": "Отдел",
+          "createdAt": "Создано",
+          "updatedAt": "Обновлено",
+          "wonGateWarning": "Требуется договор или оплата для подтверждения победы"
+        },
+        "overview": {
+          "sectionMain": "Информация о сделке",
+          "fields": {
+            "title": "Название",
+            "company": "Компания",
+            "currency": "Валюта",
+            "tags": "Теги",
+            "expectedCloseDate": "Ожид. дата закрытия",
+            "expectedSignDate": "Ожид. дата подписания",
+            "expectedPaymentDate": "Ожид. дата оплаты"
+          }
+        },
+        "products": {
+          "sectionTitle": "Состав сделки",
+          "addProduct": "Добавить продукт",
+          "columns": {
+            "product": "Продукт",
+            "plan": "Тарифный план",
+            "quantity": "Кол-во",
+            "unitPrice": "Цена/ед.",
+            "amount": "Сумма",
+            "actions": ""
+          },
+          "total": "Итого",
+          "empty": {
+            "title": "Состав пуст",
+            "subtitle": "Добавьте продукты из каталога"
+          },
+          "addDialog": {
+            "title": "Добавить продукт",
+            "fields": {
+              "product": "Продукт",
+              "plan": "Тарифный план",
+              "quantity": "Количество",
+              "unitPrice": "Цена/ед. (снимок)",
+              "unitPriceOverrideHint": "Цена изменена вручную"
+            },
+            "preview": "Итого: {amount}",
+            "snapshotHint": "Снимок цены из каталога на момент добавления",
+            "save": "Добавить",
+            "cancel": "Отмена",
+            "addSuccess": "Продукт добавлен",
+            "updateSuccess": "Позиция обновлена",
+            "removeSuccess": "Позиция удалена",
+            "removeConfirm": "Удалить позицию?"
+          }
+        },
+        "contacts": {
+          "sectionTitle": "Контакты сделки",
+          "addContact": "Добавить контакт",
+          "primary": "Основной",
+          "empty": {
+            "title": "Контакты не привязаны",
+            "subtitle": "Добавьте ответственных лиц по сделке"
+          },
+          "addDialog": {
+            "title": "Добавить контакт",
+            "fields": {
+              "contact": "Контакт",
+              "isPrimary": "Основной контакт"
+            },
+            "save": "Добавить",
+            "cancel": "Отмена",
+            "success": "Контакт добавлен",
+            "removeConfirm": "Убрать контакт из сделки?",
+            "removeSuccess": "Контакт удалён"
+          }
+        },
+        "history": {
+          "sectionTitle": "История стадий",
+          "created": "Создание сделки",
+          "from": "из",
+          "empty": {
+            "title": "История переходов пуста"
+          }
+        },
+        "errors": {
+          "notFound": "Сделка не найдена или нет доступа",
+          "load": "Ошибка загрузки сделки",
+          "backToDeals": "К сделкам"
+        }
+      }
+    },
+    "move": {
+      "dialog": {
+        "title": "Сменить стадию",
+        "currentStage": "Текущая стадия",
+        "newStage": "Новая стадия",
+        "lostReason": "Причина отказа",
+        "lostComment": "Комментарий (необязательно)",
+        "wonGateHint": "Для перехода в эту стадию рекомендуется прикрепить договор (появится в S2).",
+        "submit": "Переместить",
+        "cancel": "Отмена",
+        "successToast": "Стадия изменена на «{stage}»",
+        "wonGateWarningToast": "Переход выполнен. Рекомендуется прикрепить договор.",
+        "errors": {
+          "lostReasonRequired": "Укажите причину отказа",
+          "forbidden": "Нет прав для этого действия"
+        }
+      }
+    },
+    "pipeline": {
+      "stages": {
+        "lost": "Сделка проиграна",
+        "new": "Новые лиды",
+        "qualify": "Квалификация",
+        "schedule_meeting": "Назначить встречу",
+        "meeting": "Встреча",
+        "cold": "Холодные (заморозка)",
+        "warm": "Тёплые",
+        "hot": "Горячие",
+        "won": "Успешная сделка",
+        "await_payment": "Ожидаем оплату",
+        "paid": "Оплачено"
+      }
+    }
   }
 }

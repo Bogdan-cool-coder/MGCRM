@@ -161,59 +161,208 @@
       "create": "New contact",
       "dedup": "Dedup",
       "total": "Total: {count}",
-      "typeSwitch": { "contact": "Individual", "company": "Company" },
-      "columns": { "name": "Name", "type": "Type", "source": "Source", "country": "Country", "tags": "Tags", "actions": "Actions" },
-      "filters": { "companyType": "Company type", "source": "Source", "country": "Country", "tags": "Tags", "apply": "Apply", "reset": "Reset" },
-      "empty": { "title": "No contacts yet", "subtitle": "Add your first client or contact", "filtered": "Nothing found", "filteredSub": "Try adjusting filters", "resetFilters": "Clear filters" },
-      "quickCreate": { "title": "New contact", "cancel": "Cancel", "submit": "Create", "success": "Record created", "holdingToggle": "Part of a holding", "holdingParent": "Parent company" },
-      "delete": { "confirm": "Delete record?", "detail": "This action cannot be undone.", "accept": "Delete", "reject": "Cancel", "success": "Record deleted" },
-      "errors": { "load": "Failed to load contacts", "create": "Failed to create record", "delete": "Failed to delete record" }
+      "typeSwitch": {
+        "contact": "Individual",
+        "company": "Company"
+      },
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "source": "Source",
+        "country": "Country",
+        "tags": "Tags",
+        "actions": "Actions"
+      },
+      "filters": {
+        "companyType": "Company type",
+        "source": "Source",
+        "country": "Country",
+        "tags": "Tags",
+        "apply": "Apply",
+        "reset": "Reset"
+      },
+      "empty": {
+        "title": "No contacts yet",
+        "subtitle": "Add your first client or contact",
+        "filtered": "Nothing found",
+        "filteredSub": "Try adjusting filters",
+        "resetFilters": "Clear filters"
+      },
+      "quickCreate": {
+        "title": "New contact",
+        "cancel": "Cancel",
+        "submit": "Create",
+        "success": "Record created",
+        "holdingToggle": "Part of a holding",
+        "holdingParent": "Parent company"
+      },
+      "delete": {
+        "confirm": "Delete record?",
+        "detail": "This action cannot be undone.",
+        "accept": "Delete",
+        "reject": "Cancel",
+        "success": "Record deleted"
+      },
+      "errors": {
+        "load": "Failed to load contacts",
+        "create": "Failed to create record",
+        "delete": "Failed to delete record"
+      }
     }
   },
   "company": {
     "page": {
       "back": "Back",
       "newDeal": "New deal",
-      "tabs": { "overview": "Overview", "contacts": "Contacts", "notes": "Notes", "tasks": "Tasks", "deals": "Deals", "files": "Files", "holding": "Holding" },
-      "sections": { "main": "Main information", "requisites": "Requisites", "signatory": "Signatory" },
+      "tabs": {
+        "overview": "Overview",
+        "contacts": "Contacts",
+        "notes": "Notes",
+        "tasks": "Tasks",
+        "deals": "Deals",
+        "files": "Files",
+        "holding": "Holding"
+      },
+      "sections": {
+        "main": "Main information",
+        "requisites": "Requisites",
+        "signatory": "Signatory"
+      },
       "fields": {
-        "name": "Name", "legalForm": "Legal form", "fullLegalForm": "Full legal name",
-        "genderEnding": "Gender ending", "companyType": "Company type", "industry": "Industry",
-        "country": "Country", "city": "City", "phone": "Phone", "email": "E-mail", "website": "Website",
-        "taxIdLabel": "Tax ID type", "taxId": "Tax ID", "address": "Legal address",
-        "bank": "Bank", "bankCodeLabel": "Bank code type", "bankCode": "Bank code", "account": "Account",
-        "directorPosition": "Director position", "directorGenitive": "Name (genitive)", "directorShort": "Name (short)", "actsBasis": "Acts on basis of",
+        "name": "Name",
+        "legalForm": "Legal form",
+        "fullLegalForm": "Full legal name",
+        "genderEnding": "Gender ending",
+        "companyType": "Company type",
+        "industry": "Industry",
+        "country": "Country",
+        "city": "City",
+        "phone": "Phone",
+        "email": "E-mail",
+        "website": "Website",
+        "taxIdLabel": "Tax ID type",
+        "taxId": "Tax ID",
+        "address": "Legal address",
+        "bank": "Bank",
+        "bankCodeLabel": "Bank code type",
+        "bankCode": "Bank code",
+        "account": "Account",
+        "directorPosition": "Director position",
+        "directorGenitive": "Name (genitive)",
+        "directorShort": "Name (short)",
+        "actsBasis": "Acts on basis of",
         "source": "Source"
       },
-      "rail": { "responsible": "Responsible", "owner": "Owner", "source": "Source", "tags": "Tags", "addTag": "Add tag", "createdAt": "Created", "updatedAt": "Modified" },
-      "employees": {
-        "title": "Employees", "add": "Add employee", "addSuccess": "Employee added", "searchHint": "Enter contact name",
-        "columns": { "name": "Name", "position": "Position", "status": "Status", "primary": "Primary" },
-        "status": { "works": "Active", "left": "Left" },
-        "actions": { "setPrimary": "Set as primary", "changeStatus": "Change status", "unlink": "Unlink" },
-        "unlinkConfirm": "Unlink employee?", "empty": "No employees added"
+      "rail": {
+        "responsible": "Responsible",
+        "owner": "Owner",
+        "source": "Source",
+        "tags": "Tags",
+        "addTag": "Add tag",
+        "createdAt": "Created",
+        "updatedAt": "Modified"
       },
-      "holding": { "parent": "Parent holding", "children": "Subsidiaries", "addChild": "Add subsidiary", "stub": "Holding management coming in next sprint" },
-      "stub": { "tasks": "Tasks section coming in next sprint", "deals": "Deals section coming in next sprint", "files": "Files section coming in next sprint" },
-      "category": { "L": "L", "M": "M", "S1": "S1", "S2": "S2" },
-      "inlineEdit": { "hint": "Double-click to edit", "save": "Save", "cancel": "Cancel", "saved": "Saved", "error": "Failed to save" },
-      "errors": { "notFound": "Company not found", "load": "Failed to load" }
+      "employees": {
+        "title": "Employees",
+        "add": "Add employee",
+        "addSuccess": "Employee added",
+        "searchHint": "Enter contact name",
+        "columns": {
+          "name": "Name",
+          "position": "Position",
+          "status": "Status",
+          "primary": "Primary"
+        },
+        "status": {
+          "works": "Active",
+          "left": "Left"
+        },
+        "actions": {
+          "setPrimary": "Set as primary",
+          "changeStatus": "Change status",
+          "unlink": "Unlink"
+        },
+        "unlinkConfirm": "Unlink employee?",
+        "empty": "No employees added"
+      },
+      "holding": {
+        "parent": "Parent holding",
+        "children": "Subsidiaries",
+        "addChild": "Add subsidiary",
+        "stub": "Holding management coming in next sprint"
+      },
+      "stub": {
+        "tasks": "Tasks section coming in next sprint",
+        "deals": "Deals section coming in next sprint",
+        "files": "Files section coming in next sprint"
+      },
+      "category": {
+        "L": "L",
+        "M": "M",
+        "S1": "S1",
+        "S2": "S2"
+      },
+      "inlineEdit": {
+        "hint": "Double-click to edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saved": "Saved",
+        "error": "Failed to save"
+      },
+      "errors": {
+        "notFound": "Company not found",
+        "load": "Failed to load"
+      }
     }
   },
   "contact": {
     "page": {
       "back": "Back",
-      "tabs": { "overview": "Overview", "companies": "Companies", "notes": "Notes", "tasks": "Tasks", "files": "Files" },
-      "fields": { "fullName": "Full name", "position": "Position", "phone": "Phone", "email": "E-mail", "tgUsername": "Telegram", "source": "Source", "status": "Status", "notes": "Notes" },
-      "status": { "active": "Active", "inactive": "Inactive" },
-      "companies": {
-        "title": "Companies", "add": "Attach company",
-        "columns": { "company": "Company", "position": "Position", "status": "Status", "primary": "Primary" },
-        "actions": { "setPrimary": "Set as primary", "unlink": "Unlink" },
-        "unlinkConfirm": "Unlink contact from company?", "empty": "No companies linked"
+      "tabs": {
+        "overview": "Overview",
+        "companies": "Companies",
+        "notes": "Notes",
+        "tasks": "Tasks",
+        "files": "Files"
       },
-      "stub": { "tasks": "Tasks coming in next sprint", "files": "Files coming in next sprint" },
-      "errors": { "notFound": "Contact not found", "load": "Failed to load" }
+      "fields": {
+        "fullName": "Full name",
+        "position": "Position",
+        "phone": "Phone",
+        "email": "E-mail",
+        "tgUsername": "Telegram",
+        "source": "Source",
+        "status": "Status",
+        "notes": "Notes"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "companies": {
+        "title": "Companies",
+        "add": "Attach company",
+        "columns": {
+          "company": "Company",
+          "position": "Position",
+          "status": "Status",
+          "primary": "Primary"
+        },
+        "actions": {
+          "setPrimary": "Set as primary",
+          "unlink": "Unlink"
+        },
+        "unlinkConfirm": "Unlink contact from company?",
+        "empty": "No companies linked"
+      },
+      "stub": {
+        "tasks": "Tasks coming in next sprint",
+        "files": "Files coming in next sprint"
+      },
+      "errors": {
+        "notFound": "Contact not found",
+        "load": "Failed to load"
+      }
     }
   },
   "catalog": {
@@ -223,33 +372,223 @@
         "subtitle": "Products and pricing plans",
         "create": "New product",
         "import": "Import Excel",
-        "importMenu": { "upload": "Upload price list", "template": "Download template" },
-        "columns": { "code": "Code", "name": "Name", "group": "Group", "pricingType": "Pricing", "isActive": "Active", "actions": "Actions" },
-        "filters": { "search": "Search by name or code", "group": "Group", "pricingType": "Pricing type", "status": "Status", "statusAll": "All", "statusActive": "Active", "statusArchived": "Archived", "reset": "Reset" },
-        "empty": { "title": "Catalog is empty", "subtitle": "Create a product or import a price list", "filtered": "Nothing found", "filteredSubtitle": "Try adjusting the filters", "resetFilters": "Clear filters" },
-        "actions": { "edit": "Edit", "delete": "Delete", "deleteConfirm": "Delete product?", "deleteDetail": "This action cannot be undone.", "deleteAccept": "Delete", "deleteReject": "Cancel", "deleteSuccess": "Product deleted", "deleteUsed": "Product is used in deals and cannot be deleted", "toggleSuccess": "Status updated" }
+        "importMenu": {
+          "upload": "Upload price list",
+          "template": "Download template"
+        },
+        "columns": {
+          "code": "Code",
+          "name": "Name",
+          "group": "Group",
+          "pricingType": "Pricing",
+          "isActive": "Active",
+          "actions": "Actions"
+        },
+        "filters": {
+          "search": "Search by name or code",
+          "group": "Group",
+          "pricingType": "Pricing type",
+          "status": "Status",
+          "statusAll": "All",
+          "statusActive": "Active",
+          "statusArchived": "Archived",
+          "reset": "Reset"
+        },
+        "empty": {
+          "title": "Catalog is empty",
+          "subtitle": "Create a product or import a price list",
+          "filtered": "Nothing found",
+          "filteredSubtitle": "Try adjusting the filters",
+          "resetFilters": "Clear filters"
+        },
+        "actions": {
+          "edit": "Edit",
+          "delete": "Delete",
+          "deleteConfirm": "Delete product?",
+          "deleteDetail": "This action cannot be undone.",
+          "deleteAccept": "Delete",
+          "deleteReject": "Cancel",
+          "deleteSuccess": "Product deleted",
+          "deleteUsed": "Product is used in deals and cannot be deleted",
+          "toggleSuccess": "Status updated"
+        }
       },
-      "pricingType": { "fixed": "Fixed", "tiered": "Tiered", "per_minute": "Per minute", "package": "Package", "custom": "Custom" },
-      "unit": { "year": "Per year", "one_time": "One-time", "minute": "Per minute", "package": "Package" }
+      "pricingType": {
+        "fixed": "Fixed",
+        "tiered": "Tiered",
+        "per_minute": "Per minute",
+        "package": "Package",
+        "custom": "Custom"
+      },
+      "unit": {
+        "year": "Per year",
+        "one_time": "One-time",
+        "minute": "Per minute",
+        "package": "Package"
+      }
     },
     "product": {
       "page": {
-        "back": "Back", "edit": "Edit",
-        "tabs": { "prices": "Prices", "deals": "Deals" },
-        "rail": { "isActive": "Active", "pricingType": "Pricing type", "templateCode": "Contract template", "createdAt": "Created", "updatedAt": "Updated" },
-        "prices": { "addPlan": "Add pricing plan", "basePriceRow": "Base", "emptyPlans": "No pricing plans added", "inlineEditHint": "Double-click to edit price", "save": "Save", "cancel": "Cancel", "saved": "Price updated", "saveError": "Failed to save price" },
-        "plan": { "createTitle": "New pricing plan", "editTitle": "Edit plan", "fields": { "name": "Name", "code": "Plan code", "unit": "Unit", "sortOrder": "Sort order", "isActive": "Active" }, "hint": "Prices are set in the product card table", "save": "Save plan", "cancel": "Cancel", "deleteConfirm": "Delete pricing plan?", "deleteUsed": "Plan is used in deals and cannot be deleted", "deleteSuccess": "Plan deleted" },
-        "stub": { "deals": "Deals section will appear in S1.3" },
-        "errors": { "notFound": "Product not found", "load": "Failed to load product" }
+        "back": "Back",
+        "edit": "Edit",
+        "tabs": {
+          "prices": "Prices",
+          "deals": "Deals"
+        },
+        "rail": {
+          "isActive": "Active",
+          "pricingType": "Pricing type",
+          "templateCode": "Contract template",
+          "createdAt": "Created",
+          "updatedAt": "Updated"
+        },
+        "prices": {
+          "addPlan": "Add pricing plan",
+          "basePriceRow": "Base",
+          "emptyPlans": "No pricing plans added",
+          "inlineEditHint": "Double-click to edit price",
+          "save": "Save",
+          "cancel": "Cancel",
+          "saved": "Price updated",
+          "saveError": "Failed to save price"
+        },
+        "plan": {
+          "createTitle": "New pricing plan",
+          "editTitle": "Edit plan",
+          "fields": {
+            "name": "Name",
+            "code": "Plan code",
+            "unit": "Unit",
+            "sortOrder": "Sort order",
+            "isActive": "Active"
+          },
+          "hint": "Prices are set in the product card table",
+          "save": "Save plan",
+          "cancel": "Cancel",
+          "deleteConfirm": "Delete pricing plan?",
+          "deleteUsed": "Plan is used in deals and cannot be deleted",
+          "deleteSuccess": "Plan deleted"
+        },
+        "stub": {
+          "deals": "Deals section will appear in S1.3"
+        },
+        "errors": {
+          "notFound": "Product not found",
+          "load": "Failed to load product"
+        }
       },
-      "form": { "createTitle": "New product", "editTitle": "Edit product", "fields": { "name": "Name", "code": "Code (slug)", "codeHint": "Lowercase letters, digits and underscores.", "description": "Description", "group": "Group", "pricingType": "Pricing type", "templateCode": "Contract template code", "sortOrder": "Sort order", "isActive": "Active" }, "save": "Create product", "update": "Save", "cancel": "Cancel", "createSuccess": "Product created", "updateSuccess": "Product updated", "errors": { "nameRequired": "Name is required", "codeRequired": "Code is required", "codeInvalid": "Only a-z, 0-9 and underscores", "codeTaken": "This code is already taken", "pricingTypeRequired": "Pricing type is required" } }
+      "form": {
+        "createTitle": "New product",
+        "editTitle": "Edit product",
+        "fields": {
+          "name": "Name",
+          "code": "Code (slug)",
+          "codeHint": "Lowercase letters, digits and underscores.",
+          "description": "Description",
+          "group": "Group",
+          "pricingType": "Pricing type",
+          "templateCode": "Contract template code",
+          "sortOrder": "Sort order",
+          "isActive": "Active"
+        },
+        "save": "Create product",
+        "update": "Save",
+        "cancel": "Cancel",
+        "createSuccess": "Product created",
+        "updateSuccess": "Product updated",
+        "errors": {
+          "nameRequired": "Name is required",
+          "codeRequired": "Code is required",
+          "codeInvalid": "Only a-z, 0-9 and underscores",
+          "codeTaken": "This code is already taken",
+          "pricingTypeRequired": "Pricing type is required"
+        }
+      }
     },
     "import": {
-      "dialog": { "title": "Import price list from Excel", "step1": "Upload file", "step2": "Preview", "uploadHint": "Drag .xlsx / .xls or click to select", "uploadMax": "Max 10 MB", "downloadTemplate": "Download template", "preview": { "title": "Check results", "wouldInsert": "To create: {n}", "wouldUpdate": "To update: {n}", "skipped": "Skipped: {n}", "errors": "Errors: {n}", "errorsColumns": { "row": "Row", "message": "Error" }, "warningWithErrors": "Rows with errors will be skipped during import" }, "previewing": "Analysing file...", "importing": "Importing...", "submit": "Import", "submitWithErrors": "Import (skip errors)", "changeFile": "Change file", "cancel": "Cancel", "successToast": "Import complete: {inserted} created, {updated} updated", "errorToast": "Import failed. Please try again." }
+      "dialog": {
+        "title": "Import price list from Excel",
+        "step1": "Upload file",
+        "step2": "Preview",
+        "uploadHint": "Drag .xlsx / .xls or click to select",
+        "uploadMax": "Max 10 MB",
+        "downloadTemplate": "Download template",
+        "preview": {
+          "title": "Check results",
+          "wouldInsert": "To create: {n}",
+          "wouldUpdate": "To update: {n}",
+          "skipped": "Skipped: {n}",
+          "errors": "Errors: {n}",
+          "errorsColumns": {
+            "row": "Row",
+            "message": "Error"
+          },
+          "warningWithErrors": "Rows with errors will be skipped during import"
+        },
+        "previewing": "Analysing file...",
+        "importing": "Importing...",
+        "submit": "Import",
+        "submitWithErrors": "Import (skip errors)",
+        "changeFile": "Change file",
+        "cancel": "Cancel",
+        "successToast": "Import complete: {inserted} created, {updated} updated",
+        "errorToast": "Import failed. Please try again."
+      }
     },
     "exchangeRates": {
-      "page": { "title": "Exchange Rates", "subtitle": "Current and historical rates", "refresh": "Refresh rates", "addManual": "Enter manually", "columns": { "from": "From", "to": "To", "rate": "Rate", "date": "Date", "source": "Source", "actions": "Actions" }, "source": { "api": "API", "manual": "Manual" }, "filters": { "from": "From currency", "to": "To currency", "dateFrom": "Date from", "dateTo": "Date to", "reset": "Reset" }, "ageWarning": { "message": "Rates were last updated more than 24 hours ago.", "refreshNow": "Refresh now" }, "actions": { "edit": "Edit", "delete": "Delete", "deleteConfirm": "Delete rate?", "deleteSuccess": "Rate deleted", "refreshSuccess": "Rates refreshed", "refreshError": "Failed to refresh rates" }, "empty": { "title": "No rates loaded", "subtitle": "Click «Refresh rates» to load automatically" } },
-      "manual": { "title": "Enter rate manually", "fields": { "from": "From currency", "to": "To currency", "rate": "Rate", "date": "Date" }, "save": "Save rate", "cancel": "Cancel", "success": "Rate saved" }
+      "page": {
+        "title": "Exchange Rates",
+        "subtitle": "Current and historical rates",
+        "refresh": "Refresh rates",
+        "addManual": "Enter manually",
+        "columns": {
+          "from": "From",
+          "to": "To",
+          "rate": "Rate",
+          "date": "Date",
+          "source": "Source",
+          "actions": "Actions"
+        },
+        "source": {
+          "api": "API",
+          "manual": "Manual"
+        },
+        "filters": {
+          "from": "From currency",
+          "to": "To currency",
+          "dateFrom": "Date from",
+          "dateTo": "Date to",
+          "reset": "Reset"
+        },
+        "ageWarning": {
+          "message": "Rates were last updated more than 24 hours ago.",
+          "refreshNow": "Refresh now"
+        },
+        "actions": {
+          "edit": "Edit",
+          "delete": "Delete",
+          "deleteConfirm": "Delete rate?",
+          "deleteSuccess": "Rate deleted",
+          "refreshSuccess": "Rates refreshed",
+          "refreshError": "Failed to refresh rates"
+        },
+        "empty": {
+          "title": "No rates loaded",
+          "subtitle": "Click «Refresh rates» to load automatically"
+        }
+      },
+      "manual": {
+        "title": "Enter rate manually",
+        "fields": {
+          "from": "From currency",
+          "to": "To currency",
+          "rate": "Rate",
+          "date": "Date"
+        },
+        "save": "Save rate",
+        "cancel": "Cancel",
+        "success": "Rate saved"
+      }
     }
   },
   "notes": {
@@ -259,9 +598,84 @@
     "dialog": {
       "title": "Deduplication",
       "titleWithCount": "Deduplication — {count} duplicate groups",
-      "scan": { "title": "Find duplicates", "type": { "company": "Companies", "contact": "Individuals" }, "button": "Scan for duplicates", "scanning": "Scanning...", "empty": "No duplicates found", "emptySubtitle": "Your database is clean", "error": "Scan error" },
-      "candidates": { "group": "Group {n}: {name} ({count} records)", "merge": "Merge", "notDuplicate": "Not a duplicate", "columns": { "id": "ID", "name": "Name", "key": "Tax ID / Email", "createdAt": "Created" } },
-      "merge": { "title": "Merge records", "masterLabel": "Select the master record (ID will be kept, others will be deleted):", "wholeRecordNote": "Merge is whole-record — all data comes from the master record.", "goldenLabel": "Select the golden record (this ID will be kept):", "fieldsLabel": "Field preview:", "warning": "After merging, records ID {id} will be deleted", "columns": { "field": "Field" }, "back": "Back", "submit": "Merge records", "success": "Records merged successfully", "dismissSuccess": "Group marked as not duplicate", "error": "Merge error" }
+      "scan": {
+        "title": "Find duplicates",
+        "type": {
+          "company": "Companies",
+          "contact": "Individuals"
+        },
+        "button": "Scan for duplicates",
+        "scanning": "Scanning...",
+        "empty": "No duplicates found",
+        "emptySubtitle": "Your database is clean",
+        "error": "Scan error"
+      },
+      "candidates": {
+        "group": "Group {n}: {name} ({count} records)",
+        "merge": "Merge",
+        "notDuplicate": "Not a duplicate",
+        "columns": {
+          "id": "ID",
+          "name": "Name",
+          "key": "Tax ID / Email",
+          "createdAt": "Created"
+        }
+      },
+      "merge": {
+        "title": "Merge records",
+        "masterLabel": "Select the master record (ID will be kept, others will be deleted):",
+        "wholeRecordNote": "Merge is whole-record — all data comes from the master record.",
+        "goldenLabel": "Select the golden record (this ID will be kept):",
+        "fieldsLabel": "Field preview:",
+        "warning": "After merging, records ID {id} will be deleted",
+        "columns": {
+          "field": "Field"
+        },
+        "back": "Back",
+        "submit": "Merge records",
+        "success": "Records merged successfully",
+        "dismissSuccess": "Group marked as not duplicate",
+        "error": "Merge error"
+      }
+    }
+  },
+  "sales": {
+    "deals": {
+      "page": {
+        "title": "Deals",
+        "subtitle": "Sales pipeline",
+        "create": "New deal",
+        "viewBoard": "Kanban",
+        "viewList": "List",
+        "columns": { "id": "#", "title": "Title", "company": "Company", "stage": "Stage", "amount": "Amount", "owner": "Owner", "createdAt": "Created", "actions": "Actions" },
+        "filters": { "search": "Search by title", "owner": "Owner", "company": "Company", "stage": "Stage", "reset": "Reset" },
+        "kanban": { "deals": "{count} deals", "sum": "{amount}", "loadMore": "More {n}", "hiddenStages": "Hidden", "daysInStage": "{n} days" },
+        "empty": { "title": "No deals yet", "subtitle": "Create your first deal linked to a company", "filtered": "Nothing found", "filteredSubtitle": "Try adjusting filters", "resetFilters": "Clear filters" },
+        "actions": { "edit": "Edit", "changeStage": "Change stage", "delete": "Delete", "deleteConfirm": "Delete deal?", "deleteDetail": "This action cannot be undone.", "deleteAccept": "Delete", "deleteReject": "Cancel", "deleteSuccess": "Deal deleted", "moveSuccess": "Stage updated" }
+      },
+      "form": { "createTitle": "New deal", "fields": { "company": "Company", "title": "Title", "pipeline": "Pipeline", "currency": "Currency", "owner": "Owner", "expectedCloseDate": "Expected close date" }, "save": "Create deal", "cancel": "Cancel", "createSuccess": "Deal created", "errors": { "companyRequired": "Select a company", "titleRequired": "Title is required", "currencyRequired": "Currency is required" } }
+    },
+    "deal": {
+      "page": {
+        "back": "Back",
+        "changeStage": "Change stage",
+        "tabs": { "overview": "Overview", "contacts": "Contacts", "history": "History" },
+        "rail": { "stage": "Stage", "pipeline": "Pipeline", "owner": "Owner", "department": "Department", "createdAt": "Created", "updatedAt": "Updated", "wonGateWarning": "Contract or payment required to confirm win" },
+        "overview": {
+          "sectionMain": "Deal information",
+          "fields": { "title": "Title", "company": "Company", "currency": "Currency", "tags": "Tags", "expectedCloseDate": "Expected close date", "expectedSignDate": "Expected sign date", "expectedPaymentDate": "Expected payment date" }
+        },
+        "products": { "sectionTitle": "Deal products", "addProduct": "Add product", "columns": { "product": "Product", "plan": "Plan", "quantity": "Qty", "unitPrice": "Unit price", "amount": "Amount", "actions": "" }, "total": "Total", "empty": { "title": "No products", "subtitle": "Add products from catalog" }, "addDialog": { "title": "Add product", "fields": { "product": "Product", "plan": "Plan", "quantity": "Quantity", "unitPrice": "Unit price (snapshot)", "unitPriceOverrideHint": "Price manually overridden" }, "preview": "Total: {amount}", "snapshotHint": "Price snapshot from catalog at time of addition", "save": "Add", "cancel": "Cancel", "addSuccess": "Product added", "updateSuccess": "Item updated", "removeSuccess": "Item removed", "removeConfirm": "Remove item?" } },
+        "contacts": { "sectionTitle": "Deal contacts", "addContact": "Add contact", "primary": "Primary", "empty": { "title": "No contacts linked", "subtitle": "Add responsible persons for this deal" }, "addDialog": { "title": "Add contact", "fields": { "contact": "Contact", "isPrimary": "Primary contact" }, "save": "Add", "cancel": "Cancel", "success": "Contact added", "removeConfirm": "Remove contact from deal?", "removeSuccess": "Contact removed" } },
+        "history": { "sectionTitle": "Stage history", "created": "Deal created", "from": "from", "empty": { "title": "No stage transitions yet" } },
+        "errors": { "notFound": "Deal not found or access denied", "load": "Failed to load deal", "backToDeals": "Back to deals" }
+      }
+    },
+    "move": {
+      "dialog": { "title": "Change stage", "currentStage": "Current stage", "newStage": "New stage", "lostReason": "Lost reason", "lostComment": "Comment (optional)", "wonGateHint": "Contract recommended for this stage (available in S2).", "submit": "Move", "cancel": "Cancel", "successToast": "Stage changed to \"{stage}\"", "wonGateWarningToast": "Stage updated. Consider attaching a contract.", "errors": { "lostReasonRequired": "Specify a lost reason", "forbidden": "Not authorized" } }
+    },
+    "pipeline": {
+      "stages": { "lost": "Deal lost", "new": "New leads", "qualify": "Qualification", "schedule_meeting": "Schedule meeting", "meeting": "Meeting", "cold": "Cold (frozen)", "warm": "Warm", "hot": "Hot", "won": "Won", "await_payment": "Awaiting payment", "paid": "Paid" }
     }
   }
 }
