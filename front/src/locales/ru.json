@@ -14,7 +14,8 @@
     "profile": "Профиль",
     "logout": "Выйти",
     "pipelineSettings": "Настройки воронки",
-    "myTasks": "Мои задачи"
+    "myTasks": "Мои задачи",
+    "managerCabinet": "Кабинет"
   },
   "auth": {
     "login": {
@@ -1130,5 +1131,56 @@
         "subtitle": "Создайте первый этап"
       }
     }
+  },
+  "managerCabinet": {
+    "title": "Кабинет менеджера",
+    "profile": {
+      "unavailable": "Профиль недоступен",
+      "subordinates": "{n} подчинённых",
+      "noSubordinates": "Нет подчинённых",
+      "noManager": "Нет руководителя",
+      "noDepartment": "Отдел не указан"
+    },
+    "stepper": {
+      "label": "Период"
+    },
+    "kpi": {
+      "scorePct": "МК%",
+      "personalSales": "Личные продажи",
+      "ftm": "FTM-встречи",
+      "rank": "Ранг в команде",
+      "plan": "план",
+      "noPlan": "Нет плана",
+      "excellent": "Отлично",
+      "good": "Хорошо",
+      "needsWork": "Нужно улучшить",
+      "ftmLabel": "зачтённых встреч",
+      "unavailable": "Данные KPI недоступны",
+      "incomeSrcNote": "Выручка по закрытым сделкам"
+    },
+    "team": {
+      "title": "Сравнение с командой",
+      "name": "Сотрудник",
+      "scorePct": "МК%",
+      "status": "Статус",
+      "average": "Среднее по команде",
+      "of": "из",
+      "avgLabel": "Среднее",
+      "alone": "Вы единственный в отделе"
+    },
+    "feed": {
+      "title": "Активности за период",
+      "filterAll": "Все",
+      "filterCall": "Звонок",
+      "filterMeeting": "Встреча",
+      "filterTask": "Задача",
+      "filterNote": "Заметка",
+      "ftmOnly": "Только FTM",
+      "date": "Дата",
+      "target": "Объект",
+      "noActivity": "Нет активностей за выбранный период",
+      "resetFilters": "Сбросить фильтры"
+    },
+    "multiCurrencyWarning": "Часть сделок в других валютах не включена в суммы. Добавьте курсы валют в Каталог."
   }
 }

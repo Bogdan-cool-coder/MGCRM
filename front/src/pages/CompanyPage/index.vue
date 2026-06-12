@@ -420,6 +420,7 @@ onMounted(async () => {
   padding: $space-4 $space-6;
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .company-page__error {

@@ -13,7 +13,7 @@
       <AppTopbar v-if="showLayout" />
 
       <!-- Контент страницы -->
-      <main class="layout__content flex-grow-1 overflow-auto">
+      <main class="layout__content">
         <router-view />
       </main>
     </div>
@@ -74,6 +74,11 @@ watch(
 }
 
 .layout__content {
+  // Flex properties set explicitly — do NOT rely on Bootstrap overflow-auto utility
+  // (Bootstrap grid utilities are loaded but overflow utilities are absent from bundle).
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
   background-color: $surface-100;
   padding: $space-4 $space-6;
 }

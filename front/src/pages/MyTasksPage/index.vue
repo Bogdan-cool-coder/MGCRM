@@ -237,6 +237,7 @@ onMounted(async () => {
 .my-tasks-page__content {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   padding: $space-4 $space-6;
   display: flex;
   flex-direction: column;

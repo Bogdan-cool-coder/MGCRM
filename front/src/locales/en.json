@@ -14,7 +14,8 @@
     "profile": "Profile",
     "logout": "Sign out",
     "pipelineSettings": "Pipeline settings",
-    "myTasks": "My tasks"
+    "myTasks": "My tasks",
+    "managerCabinet": "My Cabinet"
   },
   "auth": {
     "login": {
@@ -1125,5 +1126,56 @@
         "subtitle": "Create the first stage"
       }
     }
+  },
+  "managerCabinet": {
+    "title": "Manager Cabinet",
+    "profile": {
+      "unavailable": "Profile unavailable",
+      "subordinates": "{n} subordinates",
+      "noSubordinates": "No subordinates",
+      "noManager": "No manager",
+      "noDepartment": "No department"
+    },
+    "stepper": {
+      "label": "Period"
+    },
+    "kpi": {
+      "scorePct": "KPI%",
+      "personalSales": "Personal sales",
+      "ftm": "FTM meetings",
+      "rank": "Team rank",
+      "plan": "plan",
+      "noPlan": "No plan",
+      "excellent": "Excellent",
+      "good": "Good",
+      "needsWork": "Needs work",
+      "ftmLabel": "counted meetings",
+      "unavailable": "KPI data unavailable",
+      "incomeSrcNote": "Revenue from closed deals"
+    },
+    "team": {
+      "title": "Team comparison",
+      "name": "Member",
+      "scorePct": "KPI%",
+      "status": "Status",
+      "average": "Team average",
+      "of": "of",
+      "avgLabel": "Average",
+      "alone": "You are the only member in this department"
+    },
+    "feed": {
+      "title": "Activity feed",
+      "filterAll": "All",
+      "filterCall": "Call",
+      "filterMeeting": "Meeting",
+      "filterTask": "Task",
+      "filterNote": "Note",
+      "ftmOnly": "FTM only",
+      "date": "Date",
+      "target": "Target",
+      "noActivity": "No activities for the selected period",
+      "resetFilters": "Reset filters"
+    },
+    "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog."
   }
 }

@@ -102,6 +102,14 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'nav.myTasks' },
   },
 
+  // ─── Sales: Manager Cabinet ───────────────────────────────────────────────
+  {
+    path: '/manager-cabinet',
+    name: 'ManagerCabinet',
+    component: () => import('@/pages/ManagerCabinetPage'),
+    meta: { requiresAuth: true, title: 'nav.managerCabinet' },
+  },
+
   // ─── Settings: Pipeline ───────────────────────────────────────────────────
   {
     path: '/settings/pipeline',
