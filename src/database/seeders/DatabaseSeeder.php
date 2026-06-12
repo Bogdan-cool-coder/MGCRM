@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
             ManagerKpiSeeder::class,
             // Inbox (S1.9): demo channel + public form (deps on pipeline + admin).
             InboxSeeder::class,
+            // Contracts (S2.1): licensor entities, templates, template variables.
+            ContractsSeeder::class,
         ]);
     }
 }

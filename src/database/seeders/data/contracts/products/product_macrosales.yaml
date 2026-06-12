@@ -1,0 +1,73 @@
+# Product Pack: MacroSales
+# Используется генератором при создании сублицензионного договора на MacroSales.
+
+name: "MacroSales"
+
+# === Цепочка прав ===
+has_multiple_copyright_holders: false
+copyright_holder:
+  name: "MacroDigitalTech Ltd."
+  jurisdiction: "ОАЭ"
+  license_agreement_number: "_____"  # ЗАПОЛНИТЬ из реального лицензионного договора
+  license_agreement_date: "27.06.2024"
+
+# === Товарный знак ===
+tm_info:
+  name: "MACROSALES"
+  country: "ОАЭ"
+  registration: "свидетельство № 434431 от 22.10.2024"
+
+# === Параметры внедрения ===
+implementation_weeks: 12
+training_hours_default: 15
+training_hours_per_module: null
+
+# === Feature flags ===
+has_data_archive_clause: true     # клиенты MacroSales — застройщики, у них тоже большие БД
+has_premium_support_option: false
+
+# === Модули для Приложения 1 ===
+modules_table:
+  - name: "MacroSales"
+    modules:
+      - name: "Управление лидами"
+        status: "подключено"
+      - name: "Шахматка"
+        status: "подключено"
+      - name: "Управление сделками"
+        status: "подключено"
+      - name: "Управление задачами"
+        status: "подключено"
+      - name: "Количество учётных записей"
+        status: "до 10"
+      - name: "Количество проектов"
+        status: "до 2"
+      - name: "Техническая поддержка"
+        status: "подключено"
+  - name: "MacroWEB"
+    modules:
+      - name: "Сайт жилого комплекса"
+        status: "не подключено"
+      - name: "Каталог на сайте жилого комплекса"
+        status: "не подключено"
+  - name: "MacroPortals"
+    modules:
+      - name: "Каталог с шахматкой с установкой на сайт Сублицензиата"
+        status: "не подключено"
+      - name: "Кабинет агента"
+        status: "не подключено"
+
+# === Структура брифа клиента (raздел 4) - аналогично MacroCRM ===
+brief_fields:
+  # Тот же набор что и в MacroCRM - аудитория одинаковая (застройщики)
+  - id: "4.1"
+    label: "Регион(ы) деятельности. Род деятельности компании"
+  # ... (полный список как в product_macrocrm.yaml)
+
+# === Технические параметры настройки (раздел 5) ===
+tech_fields:
+  # Тот же набор что и в MacroCRM
+  - id: "5.1"
+    label: "Формат использования системы"
+    default: "Облачное решение"
+  # ...

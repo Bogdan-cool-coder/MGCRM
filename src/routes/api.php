@@ -13,6 +13,10 @@ use App\Http\Controllers\Catalog\ProductController;
 use App\Http\Controllers\Catalog\ProductGroupController;
 use App\Http\Controllers\Catalog\ProductPlanController;
 use App\Http\Controllers\Catalog\ProductPriceController;
+use App\Http\Controllers\Contracts\Admin\LicensorBankAccountController;
+use App\Http\Controllers\Contracts\Admin\LicensorEntityController;
+use App\Http\Controllers\Contracts\TemplateController;
+use App\Http\Controllers\Contracts\TemplateVariableController;
 use App\Http\Controllers\Crm\Admin\CityController;
 use App\Http\Controllers\Crm\Admin\CompanyTypeController;
 use App\Http\Controllers\Crm\Admin\ContactPositionController;
@@ -333,4 +337,35 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
     Route::get('inbox', [InboundMessageController::class, 'index'])->name('inbox.index');
     Route::get('inbox/{inboundMessage}', [InboundMessageController::class, 'show'])->name('inbox.show');
+
+    // =========================================================================
+    // Contracts — S2.1: Licensors, Templates, Template Variables
+    // =========================================================================
+    // Admin: licensor entities and bank accounts (write: admin/lawyer only via Policy).
+    Route::prefix('admin')->name('admin.')->group(function (): void {
+        // Licensor entities — no destroy (deactivate only, not in S2.1).
+        Route::get('licensor-entities', [LicensorEntityController::class, 'index'])->name('licensor-entities.index');
+        Route::post('licensor-entities', [LicensorEntityController::class, 'store'])->name('licensor-entities.store');
+        Route::get('licensor-entities/{licensorEntity}', [LicensorEntityController::class, 'show'])->name('licensor-entities.show');
+        Route::patch('licensor-entities/{licensorEntity}', [LicensorEntityController::class, 'update'])->name('licensor-entities.update');
+
+        // Bank accounts (nested + shallow).
+        // NOTE: /bank-accounts/{bankAccount} shallow routes must be BEFORE nested.
+        Route::patch('bank-accounts/{bankAccount}', [LicensorBankAccountController::class, 'update'])->name('bank-accounts.update');
+        Route::delete('bank-accounts/{bankAccount}', [LicensorBankAccountController::class, 'destroy'])->name('bank-accounts.destroy');
+        Route::get('licensor-entities/{licensorEntity}/bank-accounts', [LicensorBankAccountController::class, 'index'])->name('licensor-entities.bank-accounts.index');
+        Route::post('licensor-entities/{licensorEntity}/bank-accounts', [LicensorBankAccountController::class, 'store'])->name('licensor-entities.bank-accounts.store');
+    });
+
+    // Templates (no store/destroy via API — seeder only in S2.1; docx upload in S2.3).
+    Route::get('templates', [TemplateController::class, 'index'])->name('templates.index');
+    Route::get('templates/{template}', [TemplateController::class, 'show'])->name('templates.show');
+    Route::patch('templates/{template}', [TemplateController::class, 'update'])->name('templates.update');
+
+    // Template variables — full CRUD.
+    Route::get('template-variables', [TemplateVariableController::class, 'index'])->name('template-variables.index');
+    Route::post('template-variables', [TemplateVariableController::class, 'store'])->name('template-variables.store');
+    Route::get('template-variables/{templateVariable}', [TemplateVariableController::class, 'show'])->name('template-variables.show');
+    Route::patch('template-variables/{templateVariable}', [TemplateVariableController::class, 'update'])->name('template-variables.update');
+    Route::delete('template-variables/{templateVariable}', [TemplateVariableController::class, 'destroy'])->name('template-variables.destroy');
 });

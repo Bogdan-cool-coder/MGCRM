@@ -14,6 +14,12 @@ use App\Domain\Catalog\Models\ProductGroup;
 use App\Domain\Catalog\Policies\ExchangeRatePolicy;
 use App\Domain\Catalog\Policies\ProductGroupPolicy;
 use App\Domain\Catalog\Policies\ProductPolicy;
+use App\Domain\Contracts\Models\LicensorEntity;
+use App\Domain\Contracts\Models\Template;
+use App\Domain\Contracts\Models\TemplateVariable;
+use App\Domain\Contracts\Policies\LicensorPolicy;
+use App\Domain\Contracts\Policies\TemplatePolicy;
+use App\Domain\Contracts\Policies\TemplateVariablePolicy;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Policies\CompanyPolicy;
@@ -70,6 +76,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Channel::class, ChannelPolicy::class);
         Gate::policy(Form::class, FormPolicy::class);
         Gate::policy(InboundMessage::class, InboundMessagePolicy::class);
+
+        // Contracts Policies (S2.1)
+        Gate::policy(LicensorEntity::class, LicensorPolicy::class);
+        Gate::policy(Template::class, TemplatePolicy::class);
+        Gate::policy(TemplateVariable::class, TemplateVariablePolicy::class);
 
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are

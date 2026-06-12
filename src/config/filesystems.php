@@ -47,6 +47,21 @@ return [
             'report' => false,
         ],
 
+        /*
+        |----------------------------------------------------------------------
+        | Documents disk (Contracts domain — S2.1)
+        |----------------------------------------------------------------------
+        | Non-public local storage for contract docx/pdf files and docx templates.
+        | Access via Sanctum Bearer + Storage::disk('documents')->download().
+        | Not symlinked to public/storage — intentionally private.
+        */
+        'documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/documents'),
+            'serve' => false,
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
