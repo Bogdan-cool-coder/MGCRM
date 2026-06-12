@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Org\Models;
 
 use App\Domain\Iam\Models\User;
+use Database\Factories\DepartmentFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +20,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Department extends Model
 {
+    /** @use HasFactory<DepartmentFactory> */
+    use HasFactory;
+
+    protected static function newFactory(): DepartmentFactory
+    {
+        return DepartmentFactory::new();
+    }
+
     /**
      * @var list<string>
      */

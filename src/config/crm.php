@@ -142,6 +142,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | KPI / Manager Cabinet (S1.8)
+    |--------------------------------------------------------------------------
+    |
+    | Thresholds for the score_pct badge in the manager cabinet.
+    | score_warning_threshold: pct >= this → 'warning' badge (below = 'danger').
+    | Both thresholds are 80 by design (danger < 80, warning 80–99, success >= 100).
+    |
+    */
+    'kpi' => [
+        'score_warning_threshold' => 80,
+        'score_danger_threshold' => 80,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage paths
     |--------------------------------------------------------------------------
     |

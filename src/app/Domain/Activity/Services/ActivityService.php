@@ -16,6 +16,7 @@ use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Sales\Models\Deal;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -393,7 +394,83 @@ class ActivityService
         return $query->count();
     }
 
+    /**
+     * Number of counted FTM (first-time meetings) for a user in a period — the
+     * public contract consumed by the S1.8 manager cabinet (ManagerKpiService).
+     * The Sales domain never imports the Activity model directly (DDD §2); it
+     * asks the Activity domain through this method.
+     *
+     * An activity is a counted FTM when ALL five FTM conditions are true (plan
+     * §Б2): kind = meeting, is_first_time_meeting, ftm_decision_maker_attended,
+     * ftm_presentation_shown and ftm_report_url IS NOT NULL — scoped to the
+     * user's own meetings (responsible_id) and to created_at within [from, to].
+     *
+     * The five-condition predicate is single-sourced in applyFtmConditions() so
+     * this KPI count can never drift from the ftm_counted flag rendered in the
+     * activity feed (risk Н: "FTM-формула расходится с отображением в ленте").
+     */
+    public function countFtmForUser(int $userId, CarbonInterface $from, CarbonInterface $to): int
+    {
+        return Activity::query()
+            ->where('responsible_id', $userId)
+            ->whereBetween('created_at', [$from, $to])
+            ->where(fn (Builder $q) => $this->applyFtmConditions($q))
+            ->count();
+    }
+
+    /**
+     * Paginated activity feed for a single user — the public contract consumed
+     * by the S1.8 manager cabinet (GET /api/me/activity-feed via
+     * ManagerKpiService). Scoped to the user's own activities (responsible_id),
+     * newest first.
+     *
+     * Supported filters (plan §Б4):
+     *  - kind: 'call'|'meeting'|'task'|'note' (or 'all'/null for every kind);
+     *  - from / to (Carbon): restrict by created_at to the stepper period;
+     *  - ftm_only (bool): keep only counted FTM meetings (the same five-condition
+     *    predicate as countFtmForUser, via applyFtmConditions()).
+     *
+     * The five-condition FTM predicate is single-sourced so the ftm_only filter
+     * and the per-item ftm_counted flag stay in lockstep with the KPI count.
+     *
+     * @param  array<string, mixed>  $filters  kind, from, to, ftm_only
+     * @return LengthAwarePaginator<int, Activity>
+     */
+    public function feedForUser(int $userId, array $filters, int $perPage = 25): LengthAwarePaginator
+    {
+        $kind = $filters['kind'] ?? null;
+
+        return Activity::query()
+            ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
+            ->where('responsible_id', $userId)
+            ->when($kind !== null && $kind !== 'all', fn (Builder $q) => $q->where('kind', $kind))
+            ->when(isset($filters['from']), fn (Builder $q) => $q->where('created_at', '>=', $filters['from']))
+            ->when(isset($filters['to']), fn (Builder $q) => $q->where('created_at', '<=', $filters['to']))
+            ->when(
+                ! empty($filters['ftm_only']),
+                fn (Builder $q) => $q->where(fn (Builder $inner) => $this->applyFtmConditions($inner)),
+            )
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+    }
+
     // ---- Private ----
+
+    /**
+     * The five FTM (first-time meeting) conditions (plan §Б2), single-sourced so
+     * the countFtmForUser() KPI, the feed's ftm_only filter and the per-item
+     * ftm_counted flag share one predicate and can never drift apart.
+     *
+     * @param  Builder<Activity>  $query
+     */
+    private function applyFtmConditions(Builder $query): void
+    {
+        $query->where('kind', ActivityType::Meeting->value)
+            ->where('is_first_time_meeting', true)
+            ->where('ftm_decision_maker_attended', true)
+            ->where('ftm_presentation_shown', true)
+            ->whereNotNull('ftm_report_url');
+    }
 
     /**
      * Apply a named preset predicate to a query (E4). Shared by presets() and
