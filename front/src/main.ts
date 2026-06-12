@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { persistPlugin } from '@/plugins/persist'
 import { i18n } from '@/plugins/i18n'
+import './plugins/echarts'
 
 import 'bootstrap/dist/css/bootstrap-grid.min.css'
 import 'primeicons/primeicons.css'

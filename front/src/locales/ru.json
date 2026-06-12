@@ -113,7 +113,65 @@
     "saved": "Изменения сохранены"
   },
   "dashboard": {
-    "title": "Дашборд",
+    "title": "Дашборд продаж",
+    "export": "Экспорт Excel",
+    "filters": {
+      "period": "Период",
+      "pipeline": "Воронка",
+      "manager": "Менеджер",
+      "allPipelines": "Все воронки",
+      "allManagers": "Все менеджеры"
+    },
+    "periods": {
+      "currentMonth": "Текущий месяц",
+      "lastMonth": "Прошлый месяц",
+      "currentQuarter": "Текущий квартал",
+      "currentYear": "Текущий год"
+    },
+    "statusGroups": {
+      "title": "Статус сделок",
+      "active": "Активные",
+      "won": "Выиграно",
+      "lost": "Проиграно",
+      "total": "Итого",
+      "deals": "сделок",
+      "noTrend": "—"
+    },
+    "funnel": {
+      "title": "Конверсия по стадиям",
+      "stage": "Стадия",
+      "count": "Сделок",
+      "avgDays": "Срок, дн.",
+      "transition": "Переход в следующую"
+    },
+    "topBar": {
+      "title": "Топ-10",
+      "products": "Продукты",
+      "managers": "Менеджеры"
+    },
+    "forecast": {
+      "title": "Прогноз выручки",
+      "totalWeighted": "Взвешенный прогноз",
+      "hot": "HOT-deals",
+      "warm": "Warm",
+      "trial": "Trial / Переговоры"
+    },
+    "dealsWithoutTasks": {
+      "title": "Сделки без задач",
+      "subtitle": "сделок без запланированных задач",
+      "openList": "Открыть список",
+      "allHaveTasks": "Все активные сделки имеют запланированные задачи",
+      "noData": "Нет данных"
+    },
+    "multiCurrencyWarning": "Часть сделок в других валютах не включена в суммы. Добавьте курсы валют в Каталог.",
+    "empty": {
+      "noDeals": "Нет сделок за выбранный период",
+      "noFunnel": "Нет данных по воронке",
+      "noTopData": "Нет данных для отображения",
+      "noForecast": "Нет данных для прогноза",
+      "noPipeline": "Воронка не найдена"
+    },
+    "loading": "Загрузка данных...",
     "welcome": "Добро пожаловать",
     "coming_soon": "Здесь появятся виджеты и аналитика"
   },

@@ -113,7 +113,65 @@
     "saved": "Changes saved"
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Sales Dashboard",
+    "export": "Export Excel",
+    "filters": {
+      "period": "Period",
+      "pipeline": "Pipeline",
+      "manager": "Manager",
+      "allPipelines": "All pipelines",
+      "allManagers": "All managers"
+    },
+    "periods": {
+      "currentMonth": "Current month",
+      "lastMonth": "Last month",
+      "currentQuarter": "Current quarter",
+      "currentYear": "Current year"
+    },
+    "statusGroups": {
+      "title": "Deal status",
+      "active": "Active",
+      "won": "Won",
+      "lost": "Lost",
+      "total": "Total",
+      "deals": "deals",
+      "noTrend": "—"
+    },
+    "funnel": {
+      "title": "Funnel conversion",
+      "stage": "Stage",
+      "count": "Deals",
+      "avgDays": "Days avg.",
+      "transition": "Conversion to next"
+    },
+    "topBar": {
+      "title": "Top 10",
+      "products": "Products",
+      "managers": "Managers"
+    },
+    "forecast": {
+      "title": "Revenue forecast",
+      "totalWeighted": "Weighted forecast",
+      "hot": "HOT deals",
+      "warm": "Warm",
+      "trial": "Trial / Negotiation"
+    },
+    "dealsWithoutTasks": {
+      "title": "Deals without tasks",
+      "subtitle": "deals without scheduled tasks",
+      "openList": "Open list",
+      "allHaveTasks": "All active deals have scheduled tasks",
+      "noData": "No data"
+    },
+    "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog.",
+    "empty": {
+      "noDeals": "No deals for the selected period",
+      "noFunnel": "No funnel data",
+      "noTopData": "No data to display",
+      "noForecast": "No forecast data",
+      "noPipeline": "Pipeline not found"
+    },
+    "loading": "Loading data...",
     "welcome": "Welcome",
     "coming_soon": "Widgets and analytics will appear here"
   },
