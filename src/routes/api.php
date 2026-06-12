@@ -25,12 +25,18 @@ use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
 use App\Http\Controllers\Iam\UserController;
+use App\Http\Controllers\Inbox\ChannelController;
+use App\Http\Controllers\Inbox\FormController;
+use App\Http\Controllers\Inbox\InboundMessageController;
+use App\Http\Controllers\Inbox\InboxWebhookController;
+use App\Http\Controllers\Inbox\PublicFormController;
 use App\Http\Controllers\Sales\DashboardController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
 use App\Http\Controllers\Sales\DealHistoryController;
 use App\Http\Controllers\Sales\DealProductController;
 use App\Http\Controllers\Sales\LostReasonController;
+use App\Http\Controllers\Sales\ManagerCabinetController;
 use App\Http\Controllers\Sales\PipelineController;
 use App\Http\Controllers\Sales\PipelineStageController;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +48,20 @@ use Illuminate\Support\Facades\Route;
 | No token required. Login may hand back a limited temp token (2FA on).
 */
 Route::post('/login', [AuthController::class, 'login']);
+
+/*
+|--------------------------------------------------------------------------
+| Public inbound endpoints (S1.9) — NO auth, per-IP throttle:inbound
+|--------------------------------------------------------------------------
+| Form render/submit + generic channel webhook. These live OUTSIDE the
+| auth:sanctum group on purpose (anonymous traffic). The webhook additionally
+| verifies the X-Channel-Token header (hash_equals) in its controller.
+*/
+Route::middleware('throttle:inbound')->group(function (): void {
+    Route::get('forms/public/{slug}', [PublicFormController::class, 'meta'])->name('forms.public.meta');
+    Route::post('forms/public/{slug}/submit', [PublicFormController::class, 'submit'])->name('forms.public.submit');
+    Route::post('inbox/webhook/{channel}', [InboxWebhookController::class, 'webhook'])->name('inbox.webhook');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -196,6 +216,16 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     });
 
     // =========================================================================
+    // Manager Cabinet (S1.8) — personal KPI / profile / activity feed
+    // =========================================================================
+    // user_id? query-param: manager → own only (403 if other); director/admin → any.
+    Route::prefix('me')->name('me.')->group(function (): void {
+        Route::get('profile', [ManagerCabinetController::class, 'profile'])->name('profile');
+        Route::get('kpi', [ManagerCabinetController::class, 'kpi'])->name('kpi');
+        Route::get('activity-feed', [ManagerCabinetController::class, 'activityFeed'])->name('activity-feed');
+    });
+
+    // =========================================================================
     // Sales — Dashboard (S1.7)
     // =========================================================================
     // NOTE: .xlsx path must be declared BEFORE the plain JSON route because
@@ -289,4 +319,18 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::post('meeting-report-questions', [MeetingReportQuestionController::class, 'store'])->name('meeting-report-questions.store');
     Route::patch('meeting-report-questions/{question}', [MeetingReportQuestionController::class, 'update'])->name('meeting-report-questions.update');
     Route::delete('meeting-report-questions/{question}', [MeetingReportQuestionController::class, 'destroy'])->name('meeting-report-questions.destroy');
+
+    // =========================================================================
+    // Inbox (S1.9) — Channels / Forms / Inbox list (admin-gated by policy)
+    // =========================================================================
+    // Token endpoints MUST be declared before the apiResource {channel} routes
+    // so reveal-token / regenerate-token are not swallowed as a {channel} id.
+    Route::get('channels/{channel}/reveal-token', [ChannelController::class, 'reveal'])->name('channels.reveal-token');
+    Route::post('channels/{channel}/regenerate-token', [ChannelController::class, 'regenerate'])->name('channels.regenerate-token');
+    Route::apiResource('channels', ChannelController::class);
+
+    Route::apiResource('forms', FormController::class);
+
+    Route::get('inbox', [InboundMessageController::class, 'index'])->name('inbox.index');
+    Route::get('inbox/{inboundMessage}', [InboundMessageController::class, 'show'])->name('inbox.show');
 });

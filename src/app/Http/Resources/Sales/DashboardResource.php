@@ -14,23 +14,20 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * The resource receives a plain array (not an Eloquent model) so $this->resource
  * is the array directly. All keys mirror the §В3 contract verbatim.
  *
- * withoutWrapping() is called so the JSON response is NOT nested under a `data`
- * key — the dashboard contract puts top-level keys (meta, status_groups, …)
- * directly at the root.
+ * The §В3 contract puts top-level keys (meta, status_groups, …) directly at the
+ * root with no `data` envelope. We disable the wrapper with a per-CLASS static
+ * override ($wrap = null) instead of calling withoutWrapping() in the
+ * constructor (HD3, S1.9). The old constructor call mutated the inherited
+ * JsonResource::$wrap statically — a process-wide side-effect that silently
+ * unwrapped every other resource (DealResource, …) in the same request/test
+ * process. ResourceResponse reads `get_class($resource)::$wrap` (late static
+ * binding), so this override applies ONLY to DashboardResource; neighbours keep
+ * the inherited 'data' wrapper.
  */
 class DashboardResource extends JsonResource
 {
-    /**
-     * @param  array<string, mixed>  $resource
-     */
-    public function __construct(array $resource)
-    {
-        parent::__construct($resource);
-
-        // Disable the default `data` wrapper. The §В3 contract expects
-        // top-level keys (meta, status_groups, funnel, …) with no envelope.
-        self::withoutWrapping();
-    }
+    /** Per-class wrapper override — only this resource is unwrapped (HD3). */
+    public static $wrap = null;
 
     public function toArray(Request $request): array
     {

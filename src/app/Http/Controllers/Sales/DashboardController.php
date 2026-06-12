@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Sales;
 
-use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Sales\Data\DashboardFilters;
 use App\Domain\Sales\Services\SalesDashboardService;
 use App\Http\Controllers\Controller;
-use App\Http\Middleware\ResolveVisibility;
 use App\Http\Requests\Sales\DashboardRequest;
 use App\Http\Resources\Sales\DashboardResource;
-use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -49,14 +46,5 @@ class DashboardController extends Controller
                 'Cache-Control' => 'no-store',
             ]
         );
-    }
-
-    // ---- Private ----
-
-    private function scope(Request $request): VisibilityScope
-    {
-        $scope = $request->attributes->get(ResolveVisibility::ATTRIBUTE);
-
-        return $scope instanceof VisibilityScope ? $scope : VisibilityScope::Own;
     }
 }

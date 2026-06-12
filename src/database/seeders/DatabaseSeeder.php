@@ -19,6 +19,10 @@ class DatabaseSeeder extends Seeder
             // activities (depend on demo deals seeded above).
             MeetingReportQuestionSeeder::class,
             DemoActivitiesSeeder::class,
+            // Manager Cabinet KPI (S1.8): demo managers, salary plans, won deals.
+            ManagerKpiSeeder::class,
+            // Inbox (S1.9): demo channel + public form (deps on pipeline + admin).
+            InboxSeeder::class,
         ]);
     }
 }

@@ -20,13 +20,22 @@ use App\Domain\Crm\Policies\CompanyPolicy;
 use App\Domain\Crm\Policies\ContactPolicy;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
+use App\Domain\Inbox\Models\Channel;
+use App\Domain\Inbox\Models\Form;
+use App\Domain\Inbox\Models\InboundMessage;
+use App\Domain\Inbox\Policies\ChannelPolicy;
+use App\Domain\Inbox\Policies\FormPolicy;
+use App\Domain\Inbox\Policies\InboundMessagePolicy;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Policies\DealPolicy;
 use App\Domain\Sales\Policies\LostReasonPolicy;
 use App\Domain\Sales\Policies\PipelinePolicy;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use PragmaRX\Google2FA\Google2FA;
 
@@ -57,6 +66,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Activity::class, ActivityPolicy::class);
         Gate::policy(MeetingReportQuestion::class, MeetingReportQuestionPolicy::class);
 
+        // Inbox Policies (S1.9)
+        Gate::policy(Channel::class, ChannelPolicy::class);
+        Gate::policy(Form::class, FormPolicy::class);
+        Gate::policy(InboundMessage::class, InboundMessagePolicy::class);
+
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
         // restricted to admin and director roles only.
@@ -73,5 +87,12 @@ class AppServiceProvider extends ServiceProvider
             [Role::Admin, Role::Director],
             strict: true,
         ));
+
+        // Named limiter for the public inbound endpoints (form submit + webhook).
+        // Per-IP, throttled BEFORE any DB work so a token leak / spam burst can't
+        // create a flood of Company/Deal records (S1.9 E5).
+        RateLimiter::for('inbound', static fn (Request $request): Limit => Limit::perMinute(
+            (int) config('inbox.rate_limit_per_minute', 30),
+        )->by($request->ip()));
     }
 }

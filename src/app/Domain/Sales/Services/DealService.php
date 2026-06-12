@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
+use App\Domain\Sales\Events\DealCreated;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\DealStageHistory;
@@ -144,6 +146,68 @@ class DealService
         ]);
 
         return $deal;
+    }
+
+    /**
+     * Cross-domain contract for the Inbox context (S1.9). Creates a Deal on an
+     * already-resolved Company at an EXPLICIT stage (no "first non-won" lookup —
+     * the caller, InboundRoutingService, resolves the target stage: channel
+     * default or sales `code='new'`/fallback). The owner is the channel's static
+     * default_owner_id; the department is stamped from that owner.
+     *
+     * Writes the creation row in DealStageHistory (from_stage_id = null) and
+     * emits the DealCreated event — the stable contract the Notification /
+     * automation / outbound-webhook domains subscribe to (no senders ship yet).
+     *
+     * NB: unlike create(), this is internal (no creator User) — there is no
+     * authenticated actor for an anonymous inbound submission, so the history
+     * user_id is null. Title/source come from $opts (resolved by the caller).
+     *
+     * $ownerId is typed nullable for contract fidelity with the channel's
+     * nullable default_owner_id, but `deals.owner_user_id` is NOT NULL: the
+     * caller (InboundRoutingService) must resolve a concrete owner (channel
+     * default, or its own fallback) before calling. Round-robin (M7) overrides
+     * the static owner later via the DealCreated event.
+     *
+     * @param  array{title?: string, currency?: string, source?: string, tags?: list<string>, extra_fields?: array<string, mixed>}  $opts
+     */
+    public function createInbound(
+        Company $company,
+        array $opts,
+        ?int $ownerId,
+        int $pipelineId,
+        int $stageId,
+    ): Deal {
+        return DB::transaction(function () use ($company, $opts, $ownerId, $pipelineId, $stageId): Deal {
+            $owner = $ownerId !== null ? User::find($ownerId) : null;
+
+            $deal = Deal::create([
+                'pipeline_id' => $pipelineId,
+                'stage_id' => $stageId,
+                'company_id' => $company->id,
+                'title' => $opts['title'] ?? "Лид: {$company->name}",
+                'currency' => $opts['currency'] ?? config('crm.currencies.default', 'RUB'),
+                'owner_user_id' => $ownerId,
+                'department_id' => $owner?->department_id,
+                'tags' => $opts['tags'] ?? [],
+                'extra_fields' => $opts['extra_fields'] ?? [],
+                'stage_changed_at' => now(),
+            ]);
+
+            // Creation event in stage history (from_stage_id = null → creation).
+            // user_id is null: an inbound lead has no authenticated actor.
+            DealStageHistory::create([
+                'deal_id' => $deal->id,
+                'from_stage_id' => null,
+                'to_stage_id' => $stageId,
+                'user_id' => null,
+                'created_at' => $deal->created_at,
+            ]);
+
+            DealCreated::dispatch($deal);
+
+            return $deal;
+        });
     }
 
     /**

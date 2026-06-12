@@ -144,4 +144,67 @@ class CompanyService
             ->where('contact_id', $contactId)
             ->delete();
     }
+
+    /**
+     * Lookup-dedup: find an existing Company by email (priority) or normalized phone.
+     *
+     * Called by InboundRoutingService (Domain/Inbox) to avoid creating duplicate
+     * companies when routing inbound messages.
+     *
+     * Rules (mirror inbox.py company_dedup_key + find_existing_company_by_contact):
+     *   1. Email takes priority — matched case-insensitively via LOWER(TRIM(email)).
+     *   2. Phone fallback — both sides normalized to digits-only in PHP to avoid
+     *      non-portable REGEXP chains across PostgreSQL and SQLite.
+     *   3. Both null/empty → returns null (no dedup key available).
+     *   4. On a tie (multiple matches) returns the earliest record (min id) —
+     *      deterministic under race conditions.
+     *
+     * Normalization is done entirely in PHP — bound params only, no DB::raw string
+     * literals — portable across PostgreSQL and SQLite (same pattern as DedupService).
+     *
+     * @param  string|null  $email  Raw email from inbound message / form submission.
+     * @param  string|null  $phone  Raw phone from inbound message / form submission.
+     */
+    public function findForDedup(?string $email, ?string $phone): ?Company
+    {
+        // --- Email (priority) ---
+        $emailNorm = $email !== null ? mb_strtolower(trim($email)) : '';
+        if ($emailNorm !== '') {
+            return Company::query()
+                ->whereNull('deleted_at')
+                ->whereRaw('LOWER(TRIM(email)) = ?', [$emailNorm])
+                ->orderBy('id')
+                ->first();
+        }
+
+        // --- Phone fallback (digits-only normalization in PHP) ---
+        $phoneNorm = $phone !== null ? (preg_replace('/[^0-9]/', '', $phone) ?? '') : '';
+        if ($phoneNorm === '') {
+            return null;
+        }
+
+        // Fetch candidates that have a non-null phone, then post-filter in PHP
+        // to compare normalized values — avoids non-portable REGEXP_REPLACE chains
+        // (PostgreSQL uses regexp_replace, SQLite lacks it).
+        $candidates = Company::query()
+            ->whereNull('deleted_at')
+            ->whereNotNull('phone')
+            ->orderBy('id')
+            ->get(['id', 'phone']);
+
+        $matchId = null;
+        foreach ($candidates as $candidate) {
+            $normalized = preg_replace('/[^0-9]/', '', (string) $candidate->phone) ?? '';
+            if ($normalized === $phoneNorm) {
+                $matchId = $candidate->id;
+                break; // already ordered by id asc → first match is the earliest
+            }
+        }
+
+        if ($matchId === null) {
+            return null;
+        }
+
+        return Company::find($matchId);
+    }
 }

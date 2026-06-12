@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Thin Deal controller (ARCHITECTURE.md §1). The ?view query selects list vs
@@ -91,8 +92,21 @@ class DealController extends Controller
         return response()->noContent();
     }
 
+    /** Cache TTL for replaying an idempotent move result (HD1, Q1: 24h). */
+    private const IDEMPOTENCY_TTL_SECONDS = 86_400;
+
     public function move(MoveDealRequest $request, Deal $deal): JsonResponse
     {
+        // HD1 (S1.9): request-level idempotency. The move is already
+        // state-idempotent (no-op + row-lock); an optional Idempotency-Key adds
+        // replay safety against retried POSTs — the same key returns the cached
+        // result without running a second move (no duplicate DealStageHistory).
+        $cacheKey = $this->idempotencyCacheKey($request, $deal);
+
+        if ($cacheKey !== null && ($cached = Cache::get($cacheKey)) !== null) {
+            return $this->moveResponse($cached['deal_id'], $cached['won_gate_warning']);
+        }
+
         $result = $this->mover->move(
             $deal,
             (int) $request->validated('to_stage_id'),
@@ -106,13 +120,49 @@ class DealController extends Controller
         /** @var Deal $moved */
         $moved = $result['deal'];
 
-        return DealResource::make(
-            $moved->load(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name'])
-        )->additional(['won_gate_warning' => $result['won_gate_warning']])
-            ->response();
+        if ($cacheKey !== null) {
+            Cache::put($cacheKey, [
+                'deal_id' => $moved->id,
+                'won_gate_warning' => $result['won_gate_warning'],
+            ], self::IDEMPOTENCY_TTL_SECONDS);
+        }
+
+        return $this->moveResponse($moved->id, $result['won_gate_warning']);
     }
 
     // ---- Private ----
+
+    /**
+     * Build the idempotency cache key from the Idempotency-Key header, scoped to
+     * the deal (Q1: `move:{deal_id}:{key}`). Returns null when the header is
+     * absent — callers without a key keep the plain state-idempotent behaviour.
+     */
+    private function idempotencyCacheKey(Request $request, Deal $deal): ?string
+    {
+        $key = $request->header('Idempotency-Key');
+
+        if (! is_string($key) || trim($key) === '') {
+            return null;
+        }
+
+        return "move:{$deal->id}:".trim($key);
+    }
+
+    /**
+     * Render the standard move response (DealResource + won_gate_warning) from a
+     * deal id, reloading the display relations. Shared by the fresh-move and
+     * cached-replay paths so both return the identical shape.
+     */
+    private function moveResponse(int $dealId, bool $wonGateWarning): JsonResponse
+    {
+        $deal = Deal::query()
+            ->with(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name'])
+            ->findOrFail($dealId);
+
+        return DealResource::make($deal)
+            ->additional(['won_gate_warning' => $wonGateWarning])
+            ->response();
+    }
 
     private function board(Request $request, VisibilityScope $scope): JsonResponse
     {
