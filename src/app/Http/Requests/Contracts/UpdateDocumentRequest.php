@@ -17,6 +17,7 @@ class UpdateDocumentRequest extends FormRequest
     {
         return [
             'title' => ['nullable', 'string', 'max:512'],
+            'city' => ['nullable', 'string', 'max:150'],
             'currency' => ['nullable', 'string', 'max:8'],
             'source_deal_id' => ['nullable', 'integer', 'exists:deals,id'],
             'source_company_id' => ['nullable', 'integer', 'exists:crm_companies,id'],

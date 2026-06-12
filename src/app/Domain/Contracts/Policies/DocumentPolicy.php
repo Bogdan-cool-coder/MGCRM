@@ -81,6 +81,19 @@ class DocumentPolicy
     }
 
     /**
+     * Generate DOCX + PDF: author, admin, or lawyer.
+     * Manager/director can generate their own documents.
+     */
+    public function generate(User $user, Document $document): bool
+    {
+        if ($this->isPrivileged($user)) {
+            return true;
+        }
+
+        return (int) $document->author_user_id === $user->id;
+    }
+
+    /**
      * Upload drive stub — admin/lawyer only (will be real in M11).
      */
     public function uploadDrive(User $user, Document $document): bool

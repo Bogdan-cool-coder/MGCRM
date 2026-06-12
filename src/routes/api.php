@@ -15,8 +15,11 @@ use App\Http\Controllers\Catalog\ProductPlanController;
 use App\Http\Controllers\Catalog\ProductPriceController;
 use App\Http\Controllers\Contracts\Admin\LicensorBankAccountController;
 use App\Http\Controllers\Contracts\Admin\LicensorEntityController;
+use App\Http\Controllers\Contracts\CompanyDocumentController;
+use App\Http\Controllers\Contracts\DealDocumentController;
 use App\Http\Controllers\Contracts\DocumentAttachmentController;
 use App\Http\Controllers\Contracts\DocumentController;
+use App\Http\Controllers\Contracts\DocumentGenerateController;
 use App\Http\Controllers\Contracts\DocumentItemController;
 use App\Http\Controllers\Contracts\DocumentRemarkController;
 use App\Http\Controllers\Contracts\DocumentRevisionController;
@@ -390,6 +393,20 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // Contracts — S2.2: Documents, Document Items, Document Revisions
     // S2.5: Sign, Unsign, Archive, Unarchive, Remarks, Attachments
     // =========================================================================
+    // =========================================================================
+    // Contracts — S2.4: Document Generation + Download
+    // =========================================================================
+    // generate + download must be declared BEFORE the nested items/revisions routes.
+    Route::post('documents/{document}/generate', [DocumentGenerateController::class, 'generate'])->name('documents.generate');
+    Route::get('documents/{document}/download/docx', [DocumentGenerateController::class, 'downloadDocx'])->name('documents.download.docx');
+    Route::get('documents/{document}/download/pdf', [DocumentGenerateController::class, 'downloadPdf'])->name('documents.download.pdf');
+
+    // Deal → document generate entry point (S2.4).
+    Route::post('deals/{deal}/documents/generate', [DealDocumentController::class, 'generate'])->name('deals.documents.generate');
+
+    // Company → document generate entry point (S2.4).
+    Route::post('companies/{company}/documents/generate', [CompanyDocumentController::class, 'generate'])->name('companies.documents.generate');
+
     // Action routes MUST be declared BEFORE the apiResource to avoid clashing.
     Route::post('documents/{document}/submit', [DocumentController::class, 'submit'])->name('documents.submit');
     Route::post('documents/{document}/upload-drive', [DocumentController::class, 'uploadDrive'])->name('documents.upload-drive');

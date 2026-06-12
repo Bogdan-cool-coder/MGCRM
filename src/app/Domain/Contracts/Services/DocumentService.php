@@ -79,6 +79,7 @@ class DocumentService
             'kind' => $data['kind'] ?? 'contract',
             'product_code' => $data['product_code'],
             'country_code' => $data['country_code'],
+            'city' => $data['city'] ?? null,
             'title' => $data['title'] ?? null,
             'currency' => $data['currency'] ?? null,
             'source_deal_id' => $data['source_deal_id'] ?? null,

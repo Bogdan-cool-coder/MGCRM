@@ -44,6 +44,12 @@ class DocumentResource extends JsonResource
             'template_version' => $this->template_version,
             'docx_path' => $this->docx_path,
             'pdf_path' => $this->pdf_path,
+            'download_urls' => $this->docx_path !== null || $this->pdf_path !== null
+                ? [
+                    'docx' => $this->docx_path !== null ? "/api/documents/{$this->id}/download/docx" : null,
+                    'pdf' => $this->pdf_path !== null ? "/api/documents/{$this->id}/download/pdf" : null,
+                ]
+                : null,
 
             // Drive links (M11)
             'drive_folder_url' => $this->drive_folder_url,
