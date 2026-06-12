@@ -34,6 +34,26 @@
             </span>
           </router-link>
         </li>
+        <!-- Admin / Director only items -->
+        <template v-if="isAdminOrDirector">
+          <li
+            v-for="item in adminNavItems"
+            :key="item.name"
+            class="app-sidebar__nav-item"
+          >
+            <router-link
+              :to="item.to"
+              class="app-sidebar__nav-link"
+              active-class="app-sidebar__nav-link--active"
+              :title="collapsed ? t(item.labelKey) : undefined"
+            >
+              <i :class="['app-sidebar__nav-icon', item.icon]" />
+              <span v-if="!collapsed" class="app-sidebar__nav-label">
+                {{ t(item.labelKey) }}
+              </span>
+            </router-link>
+          </li>
+        </template>
       </ul>
     </nav>
 
@@ -91,6 +111,21 @@ const navItems = [
   { name: 'analytics', to: '/analytics', icon: 'pi pi-chart-line', labelKey: 'nav.analytics' },
   { name: 'settings', to: '/settings', icon: 'pi pi-cog', labelKey: 'nav.settings' },
 ]
+
+// Items visible only to admin / director
+const adminNavItems = [
+  {
+    name: 'pipeline-settings',
+    to: '/settings/pipeline',
+    icon: 'pi pi-sliders-h',
+    labelKey: 'nav.pipelineSettings',
+  },
+]
+
+const isAdminOrDirector = computed<boolean>(() => {
+  const role = userStore.getUserRole
+  return role === 'admin' || role === 'director'
+})
 
 const roleLabel = computed(() => {
   const role = userStore.getUserRole

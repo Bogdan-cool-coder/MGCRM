@@ -94,6 +94,14 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
 
+  // ─── Settings: Pipeline ───────────────────────────────────────────────────
+  {
+    path: '/settings/pipeline',
+    name: 'PipelineSettings',
+    component: () => import('@/pages/PipelineSettingsPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.pipelineSettings' },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

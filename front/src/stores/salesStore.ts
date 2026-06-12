@@ -41,6 +41,16 @@ export const useSalesStore = defineStore('sales', () => {
     lostReasonsCache.value = reasons
   }
 
+  function invalidateStagesCache(pipelineId?: number) {
+    if (pipelineId != null) {
+      const m = new Map(stagesCache.value)
+      m.delete(pipelineId)
+      stagesCache.value = m
+    } else {
+      stagesCache.value = new Map()
+    }
+  }
+
   return {
     activePipelineId,
     activeView,
@@ -51,5 +61,6 @@ export const useSalesStore = defineStore('sales', () => {
     cacheStages,
     getCachedStages,
     cacheLostReasons,
+    invalidateStagesCache,
   }
 })

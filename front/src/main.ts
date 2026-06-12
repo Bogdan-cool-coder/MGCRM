@@ -10,6 +10,7 @@ import '@/assets/styles/main.scss'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
+import Tooltip from 'primevue/tooltip'
 
 import { applyAppCssVariables, MgCrmPreset, primeVueZIndex } from '@/theme'
 import { configureAxiosMiddleware } from '@/api/client'
@@ -69,6 +70,7 @@ app.use(PrimeVue, {
 })
 app.use(ToastService)
 app.use(ConfirmationService)
+app.directive('tooltip', Tooltip)
 app.use(router)
 
 // Bootstrap promise — запускает инициализацию сессии

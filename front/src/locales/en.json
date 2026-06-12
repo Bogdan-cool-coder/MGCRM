@@ -12,7 +12,8 @@
     "settings": "Settings",
     "analytics": "Analytics",
     "profile": "Profile",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "pipelineSettings": "Pipeline settings"
   },
   "auth": {
     "login": {
@@ -647,35 +648,309 @@
         "create": "New deal",
         "viewBoard": "Kanban",
         "viewList": "List",
-        "columns": { "id": "#", "title": "Title", "company": "Company", "stage": "Stage", "amount": "Amount", "owner": "Owner", "createdAt": "Created", "actions": "Actions" },
-        "filters": { "search": "Search by title", "owner": "Owner", "company": "Company", "stage": "Stage", "reset": "Reset" },
-        "kanban": { "deals": "{count} deals", "sum": "{amount}", "loadMore": "More {n}", "hiddenStages": "Hidden", "daysInStage": "{n} days" },
-        "empty": { "title": "No deals yet", "subtitle": "Create your first deal linked to a company", "filtered": "Nothing found", "filteredSubtitle": "Try adjusting filters", "resetFilters": "Clear filters" },
-        "actions": { "edit": "Edit", "changeStage": "Change stage", "delete": "Delete", "deleteConfirm": "Delete deal?", "deleteDetail": "This action cannot be undone.", "deleteAccept": "Delete", "deleteReject": "Cancel", "deleteSuccess": "Deal deleted", "moveSuccess": "Stage updated" }
+        "columns": {
+          "id": "#",
+          "title": "Title",
+          "company": "Company",
+          "stage": "Stage",
+          "amount": "Amount",
+          "owner": "Owner",
+          "createdAt": "Created",
+          "actions": "Actions"
+        },
+        "filters": {
+          "search": "Search by title",
+          "owner": "Owner",
+          "company": "Company",
+          "stage": "Stage",
+          "reset": "Reset"
+        },
+        "kanban": {
+          "deals": "{count} deals",
+          "sum": "{amount}",
+          "loadMore": "More {n}",
+          "hiddenStages": "Hidden",
+          "daysInStage": "{n} days"
+        },
+        "empty": {
+          "title": "No deals yet",
+          "subtitle": "Create your first deal linked to a company",
+          "filtered": "Nothing found",
+          "filteredSubtitle": "Try adjusting filters",
+          "resetFilters": "Clear filters"
+        },
+        "actions": {
+          "edit": "Edit",
+          "changeStage": "Change stage",
+          "delete": "Delete",
+          "deleteConfirm": "Delete deal?",
+          "deleteDetail": "This action cannot be undone.",
+          "deleteAccept": "Delete",
+          "deleteReject": "Cancel",
+          "deleteSuccess": "Deal deleted",
+          "moveSuccess": "Stage updated"
+        }
       },
-      "form": { "createTitle": "New deal", "fields": { "company": "Company", "title": "Title", "pipeline": "Pipeline", "currency": "Currency", "owner": "Owner", "expectedCloseDate": "Expected close date" }, "save": "Create deal", "cancel": "Cancel", "createSuccess": "Deal created", "errors": { "companyRequired": "Select a company", "titleRequired": "Title is required", "currencyRequired": "Currency is required" } }
+      "form": {
+        "createTitle": "New deal",
+        "fields": {
+          "company": "Company",
+          "title": "Title",
+          "pipeline": "Pipeline",
+          "currency": "Currency",
+          "owner": "Owner",
+          "expectedCloseDate": "Expected close date"
+        },
+        "save": "Create deal",
+        "cancel": "Cancel",
+        "createSuccess": "Deal created",
+        "errors": {
+          "companyRequired": "Select a company",
+          "titleRequired": "Title is required",
+          "currencyRequired": "Currency is required"
+        }
+      }
     },
     "deal": {
       "page": {
         "back": "Back",
         "changeStage": "Change stage",
-        "tabs": { "overview": "Overview", "contacts": "Contacts", "history": "History" },
-        "rail": { "stage": "Stage", "pipeline": "Pipeline", "owner": "Owner", "department": "Department", "createdAt": "Created", "updatedAt": "Updated", "wonGateWarning": "Contract or payment required to confirm win" },
+        "tabs": {
+          "overview": "Overview",
+          "contacts": "Contacts",
+          "history": "History"
+        },
+        "rail": {
+          "stage": "Stage",
+          "pipeline": "Pipeline",
+          "owner": "Owner",
+          "department": "Department",
+          "createdAt": "Created",
+          "updatedAt": "Updated",
+          "wonGateWarning": "Contract or payment required to confirm win"
+        },
         "overview": {
           "sectionMain": "Deal information",
-          "fields": { "title": "Title", "company": "Company", "currency": "Currency", "tags": "Tags", "expectedCloseDate": "Expected close date", "expectedSignDate": "Expected sign date", "expectedPaymentDate": "Expected payment date" }
+          "fields": {
+            "title": "Title",
+            "company": "Company",
+            "currency": "Currency",
+            "tags": "Tags",
+            "expectedCloseDate": "Expected close date",
+            "expectedSignDate": "Expected sign date",
+            "expectedPaymentDate": "Expected payment date"
+          }
         },
-        "products": { "sectionTitle": "Deal products", "addProduct": "Add product", "columns": { "product": "Product", "plan": "Plan", "quantity": "Qty", "unitPrice": "Unit price", "amount": "Amount", "actions": "" }, "total": "Total", "empty": { "title": "No products", "subtitle": "Add products from catalog" }, "addDialog": { "title": "Add product", "fields": { "product": "Product", "plan": "Plan", "quantity": "Quantity", "unitPrice": "Unit price (snapshot)", "unitPriceOverrideHint": "Price manually overridden" }, "preview": "Total: {amount}", "snapshotHint": "Price snapshot from catalog at time of addition", "save": "Add", "cancel": "Cancel", "addSuccess": "Product added", "updateSuccess": "Item updated", "removeSuccess": "Item removed", "removeConfirm": "Remove item?" } },
-        "contacts": { "sectionTitle": "Deal contacts", "addContact": "Add contact", "primary": "Primary", "empty": { "title": "No contacts linked", "subtitle": "Add responsible persons for this deal" }, "addDialog": { "title": "Add contact", "fields": { "contact": "Contact", "isPrimary": "Primary contact" }, "save": "Add", "cancel": "Cancel", "success": "Contact added", "removeConfirm": "Remove contact from deal?", "removeSuccess": "Contact removed" } },
-        "history": { "sectionTitle": "Stage history", "created": "Deal created", "from": "from", "empty": { "title": "No stage transitions yet" } },
-        "errors": { "notFound": "Deal not found or access denied", "load": "Failed to load deal", "backToDeals": "Back to deals" }
+        "products": {
+          "sectionTitle": "Deal products",
+          "addProduct": "Add product",
+          "columns": {
+            "product": "Product",
+            "plan": "Plan",
+            "quantity": "Qty",
+            "unitPrice": "Unit price",
+            "amount": "Amount",
+            "actions": ""
+          },
+          "total": "Total",
+          "empty": {
+            "title": "No products",
+            "subtitle": "Add products from catalog"
+          },
+          "addDialog": {
+            "title": "Add product",
+            "fields": {
+              "product": "Product",
+              "plan": "Plan",
+              "quantity": "Quantity",
+              "unitPrice": "Unit price (snapshot)",
+              "unitPriceOverrideHint": "Price manually overridden"
+            },
+            "preview": "Total: {amount}",
+            "snapshotHint": "Price snapshot from catalog at time of addition",
+            "save": "Add",
+            "cancel": "Cancel",
+            "addSuccess": "Product added",
+            "updateSuccess": "Item updated",
+            "removeSuccess": "Item removed",
+            "removeConfirm": "Remove item?"
+          }
+        },
+        "contacts": {
+          "sectionTitle": "Deal contacts",
+          "addContact": "Add contact",
+          "primary": "Primary",
+          "empty": {
+            "title": "No contacts linked",
+            "subtitle": "Add responsible persons for this deal"
+          },
+          "addDialog": {
+            "title": "Add contact",
+            "fields": {
+              "contact": "Contact",
+              "isPrimary": "Primary contact"
+            },
+            "save": "Add",
+            "cancel": "Cancel",
+            "success": "Contact added",
+            "removeConfirm": "Remove contact from deal?",
+            "removeSuccess": "Contact removed"
+          }
+        },
+        "history": {
+          "sectionTitle": "Stage history",
+          "created": "Deal created",
+          "from": "from",
+          "empty": {
+            "title": "No stage transitions yet"
+          }
+        },
+        "errors": {
+          "notFound": "Deal not found or access denied",
+          "load": "Failed to load deal",
+          "backToDeals": "Back to deals"
+        }
       }
     },
     "move": {
-      "dialog": { "title": "Change stage", "currentStage": "Current stage", "newStage": "New stage", "lostReason": "Lost reason", "lostComment": "Comment (optional)", "wonGateHint": "Contract recommended for this stage (available in S2).", "submit": "Move", "cancel": "Cancel", "successToast": "Stage changed to \"{stage}\"", "wonGateWarningToast": "Stage updated. Consider attaching a contract.", "errors": { "lostReasonRequired": "Specify a lost reason", "forbidden": "Not authorized" } }
+      "dialog": {
+        "title": "Change stage",
+        "currentStage": "Current stage",
+        "newStage": "New stage",
+        "lostReason": "Lost reason",
+        "lostComment": "Comment (optional)",
+        "wonGateHint": "Contract recommended for this stage (available in S2).",
+        "submit": "Move",
+        "cancel": "Cancel",
+        "successToast": "Stage changed to \"{stage}\"",
+        "wonGateWarningToast": "Stage updated. Consider attaching a contract.",
+        "errors": {
+          "lostReasonRequired": "Specify a lost reason",
+          "forbidden": "Not authorized"
+        }
+      }
     },
     "pipeline": {
-      "stages": { "lost": "Deal lost", "new": "New leads", "qualify": "Qualification", "schedule_meeting": "Schedule meeting", "meeting": "Meeting", "cold": "Cold (frozen)", "warm": "Warm", "hot": "Hot", "won": "Won", "await_payment": "Awaiting payment", "paid": "Paid" }
+      "stages": {
+        "lost": "Deal lost",
+        "new": "New leads",
+        "qualify": "Qualification",
+        "schedule_meeting": "Schedule meeting",
+        "meeting": "Meeting",
+        "cold": "Cold (frozen)",
+        "warm": "Warm",
+        "hot": "Hot",
+        "won": "Won",
+        "await_payment": "Awaiting payment",
+        "paid": "Paid"
+      }
+    },
+    "pipelineEditor": {
+      "pageTitle": "Pipeline settings",
+      "section": { "pipelines": "Sales pipelines", "stages": "Pipeline stages" },
+      "createPipeline": "New pipeline",
+      "createPipelineDialog": {
+        "title": "New pipeline",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. \"Sales\"",
+        "autoSeedInfo": "After creation, the pipeline will contain three system stages: New leads, Won, and Lost. You can add custom stages in the editor.",
+        "save": "Create",
+        "cancel": "Cancel",
+        "successToast": "Pipeline \"{name}\" created",
+        "errorDuplicate": "A pipeline with this name already exists"
+      },
+      "renamePipeline": {
+        "successToast": "Pipeline renamed",
+        "errorToast": "Rename failed"
+      },
+      "deletePipeline": {
+        "confirmHeader": "Delete pipeline?",
+        "confirmBody": "The pipeline and all its stages will be deleted. Make sure there are no deals in it.",
+        "confirmAccept": "Delete",
+        "confirmReject": "Cancel",
+        "successToast": "Pipeline deleted",
+        "errorWithDeals": "This pipeline has deals. Move them before deleting.",
+        "errorLastSales": "Cannot delete the only sales pipeline."
+      },
+      "activeBadge": "active"
+    },
+    "stageEditor": {
+      "addStage": "Add stage",
+      "createDialog": {
+        "title": "New stage",
+        "save": "Create",
+        "cancel": "Cancel",
+        "successToast": "Stage created",
+        "errorDuplicateCode": "This code is already used in this pipeline"
+      },
+      "editDrawer": {
+        "title": "Edit stage",
+        "save": "Save",
+        "cancel": "Cancel",
+        "successToast": "Stage saved",
+        "errorToast": "Failed to save stage"
+      },
+      "fields": {
+        "name": "Name",
+        "code": "Code",
+        "codeReadonlyHint": "Stage code cannot be changed after creation",
+        "color": "Color",
+        "hiddenByDefault": "Hidden on board",
+        "wonGate": "Won gate",
+        "wonGateHint": "Attaching a contract is recommended before reaching this stage",
+        "slaHours": "SLA (hours)",
+        "slaPlaceholder": "None",
+        "stageFeatures": "Stage features",
+        "taskTypes": "Task types",
+        "taskTypesHint": "Empty — all types allowed",
+        "requiredFieldsDeal": "Required deal fields",
+        "requiredFieldsCompany": "Required company fields",
+        "parentStageId": "Sub-status of",
+        "parentStagePlaceholder": "— None (top-level)"
+      },
+      "stageFeatureOptions": {
+        "send_presentation": "Send presentation",
+        "meeting_report": "Meeting report",
+        "generate_document": "Generate document"
+      },
+      "activityTypeOptions": {
+        "call": "Call",
+        "meeting": "Meeting",
+        "task": "Task",
+        "note": "Note"
+      },
+      "dealFieldOptions": {
+        "title": "Title",
+        "currency": "Currency",
+        "contract_id": "Contract",
+        "expected_close_date": "Exp. close date",
+        "expected_sign_date": "Exp. sign date",
+        "expected_payment_date": "Exp. payment date"
+      },
+      "companyFieldOptions": {
+        "name": "Name",
+        "inn": "Tax ID",
+        "phone": "Phone",
+        "email": "Email"
+      },
+      "systemStageBadge": "system",
+      "substageBadge": "sub-status",
+      "deleteStage": {
+        "confirmHeader": "Delete stage?",
+        "confirmBody": "This stage will be deleted. It must have no deals or sub-statuses.",
+        "confirmAccept": "Delete",
+        "confirmReject": "Cancel",
+        "successToast": "Stage deleted",
+        "errorSystem": "System stage cannot be deleted.",
+        "errorWithDeals": "This stage has deals. Move them before deleting.",
+        "errorWithSubstages": "This stage has sub-statuses. Delete them first.",
+        "systemTooltip": "System stage cannot be deleted"
+      },
+      "reorder": { "errorToast": "Failed to save order. Order reverted." },
+      "emptyStages": {
+        "title": "No stages in this pipeline",
+        "subtitle": "Create the first stage"
+      }
     }
   }
 }

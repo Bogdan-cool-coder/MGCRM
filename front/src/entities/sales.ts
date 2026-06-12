@@ -22,6 +22,11 @@ export interface PipelineStageDto {
   parent_stage_id: number | null
   stage_features: string[]
   sla_hours: number | null
+  task_types: string[]
+  required_fields: { deal?: string[]; company?: string[] }
+  visible_department_ids?: number[] | null
+  visible_user_ids?: number[] | null
+  children?: PipelineStageDto[]
 }
 
 export interface PipelineDto {
@@ -254,6 +259,52 @@ export interface UpdateDealProductPayload {
 export interface AddDealContactPayload {
   contact_id: number
   is_primary?: boolean
+}
+
+// ─── Pipeline / Stage CRUD payloads (S1.5) ───────────────────────────────────
+
+export interface CreatePipelinePayload {
+  name: string
+  kind?: string
+  is_active?: boolean
+  sort_order?: number
+}
+
+export interface UpdatePipelinePayload {
+  name?: string
+  is_active?: boolean
+  sort_order?: number
+}
+
+export interface CreateStagePayload {
+  name: string
+  code: string
+  color?: string | null
+  hidden_by_default?: boolean
+  won_gate?: boolean
+  sla_hours?: number | null
+  stage_features?: string[]
+  task_types?: string[]
+  required_fields?: { deal?: string[]; company?: string[] }
+  parent_stage_id?: number | null
+  sort_order?: number
+}
+
+export interface UpdateStagePayload {
+  name?: string
+  color?: string | null
+  hidden_by_default?: boolean
+  won_gate?: boolean
+  sla_hours?: number | null
+  stage_features?: string[]
+  task_types?: string[]
+  required_fields?: { deal?: string[]; company?: string[] }
+  parent_stage_id?: number | null
+}
+
+export interface ReorderStageItem {
+  id: number
+  sort_order?: number
 }
 
 // ─── API list params ─────────────────────────────────────────────────────────

@@ -23,6 +23,11 @@ import type {
   UpdateDealProductPayload,
   AddDealContactPayload,
   DealListParams,
+  CreatePipelinePayload,
+  UpdatePipelinePayload,
+  CreateStagePayload,
+  UpdateStagePayload,
+  ReorderStageItem,
 } from '@/entities/sales'
 
 // ─── Move response ─────────────────────────────────────────────────────────────
@@ -57,6 +62,8 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
       parent_stage_id: null,
       stage_features: [],
       sla_hours: null,
+      task_types: [],
+      required_fields: {},
     }
 
     const deals: DealCardDto[] = col.deals.map((d) => ({
@@ -107,6 +114,59 @@ export const salesApi = {
 
   async getPipelineStages(id: number): Promise<PipelineStageDto[]> {
     const res = await apiClient.get<{ data: PipelineStageDto[] }>(`/api/pipelines/${id}/stages`)
+    return res.data.data
+  },
+
+  // ── Pipeline CRUD (S1.5) ───────────────────────────────────────────────────
+
+  async createPipeline(payload: CreatePipelinePayload): Promise<PipelineDto> {
+    const res = await apiClient.post<{ data: PipelineDto }>('/api/pipelines', payload)
+    return res.data.data
+  },
+
+  async updatePipeline(id: number, payload: UpdatePipelinePayload): Promise<PipelineDto> {
+    const res = await apiClient.patch<{ data: PipelineDto }>(`/api/pipelines/${id}`, payload)
+    return res.data.data
+  },
+
+  async deletePipeline(id: number): Promise<void> {
+    await apiClient.delete(`/api/pipelines/${id}`)
+  },
+
+  // ── Stage CRUD (S1.5) ──────────────────────────────────────────────────────
+
+  async createStage(pipelineId: number, payload: CreateStagePayload): Promise<PipelineStageDto> {
+    const res = await apiClient.post<{ data: PipelineStageDto }>(
+      `/api/pipelines/${pipelineId}/stages`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async updateStage(
+    pipelineId: number,
+    stageId: number,
+    payload: UpdateStagePayload,
+  ): Promise<PipelineStageDto> {
+    const res = await apiClient.patch<{ data: PipelineStageDto }>(
+      `/api/pipelines/${pipelineId}/stages/${stageId}`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async deleteStage(pipelineId: number, stageId: number): Promise<void> {
+    await apiClient.delete(`/api/pipelines/${pipelineId}/stages/${stageId}`)
+  },
+
+  async reorderStages(
+    pipelineId: number,
+    stages: ReorderStageItem[],
+  ): Promise<PipelineStageDto[]> {
+    const res = await apiClient.patch<{ data: PipelineStageDto[] }>(
+      `/api/pipelines/${pipelineId}/stages/reorder`,
+      { stages },
+    )
     return res.data.data
   },
 

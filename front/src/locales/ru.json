@@ -12,7 +12,8 @@
     "settings": "Настройки",
     "analytics": "Аналитика",
     "profile": "Профиль",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "pipelineSettings": "Настройки воронки"
   },
   "auth": {
     "login": {
@@ -842,6 +843,118 @@
         "won": "Успешная сделка",
         "await_payment": "Ожидаем оплату",
         "paid": "Оплачено"
+      }
+    },
+    "pipelineEditor": {
+      "pageTitle": "Настройки воронки",
+      "section": {
+        "pipelines": "Воронки продаж",
+        "stages": "Этапы воронки"
+      },
+      "createPipeline": "Создать воронку",
+      "createPipelineDialog": {
+        "title": "Новая воронка",
+        "nameLabel": "Название",
+        "namePlaceholder": "Например, «Продажи»",
+        "autoSeedInfo": "После создания воронка будет содержать три системных этапа: «Новые лиды», «Успешная сделка» и «Сделка проиграна». Вы сможете добавить собственные этапы в редакторе.",
+        "save": "Создать",
+        "cancel": "Отмена",
+        "successToast": "Воронка «{name}» создана",
+        "errorDuplicate": "Воронка с таким названием уже существует"
+      },
+      "renamePipeline": {
+        "successToast": "Воронка переименована",
+        "errorToast": "Ошибка переименования"
+      },
+      "deletePipeline": {
+        "confirmHeader": "Удалить воронку?",
+        "confirmBody": "Воронка будет удалена вместе со всеми этапами. Убедитесь, что в ней нет сделок.",
+        "confirmAccept": "Удалить",
+        "confirmReject": "Отмена",
+        "successToast": "Воронка удалена",
+        "errorWithDeals": "В воронке есть сделки. Перенесите их перед удалением.",
+        "errorLastSales": "Нельзя удалить единственную воронку продаж."
+      },
+      "activeBadge": "активная"
+    },
+    "stageEditor": {
+      "addStage": "Добавить этап",
+      "createDialog": {
+        "title": "Новый этап",
+        "save": "Создать",
+        "cancel": "Отмена",
+        "successToast": "Этап создан",
+        "errorDuplicateCode": "Такой код уже используется в этой воронке"
+      },
+      "editDrawer": {
+        "title": "Редактировать этап",
+        "save": "Сохранить",
+        "cancel": "Отмена",
+        "successToast": "Этап сохранён",
+        "errorToast": "Ошибка сохранения этапа"
+      },
+      "fields": {
+        "name": "Название",
+        "code": "Код",
+        "codeReadonlyHint": "Код этапа нельзя изменить после создания",
+        "color": "Цвет",
+        "hiddenByDefault": "Скрыть на доске",
+        "wonGate": "Гейт победы",
+        "wonGateHint": "Перед переходом на этот этап рекомендуется прикрепить договор",
+        "slaHours": "SLA (часов)",
+        "slaPlaceholder": "Нет",
+        "stageFeatures": "Возможности этапа",
+        "taskTypes": "Типы задач",
+        "taskTypesHint": "Пусто — все типы разрешены",
+        "requiredFieldsDeal": "Обязательные поля сделки",
+        "requiredFieldsCompany": "Обязательные поля компании",
+        "parentStageId": "Подстатус для",
+        "parentStagePlaceholder": "— Нет (самостоятельный)"
+      },
+      "stageFeatureOptions": {
+        "send_presentation": "Отправить презентацию",
+        "meeting_report": "Отчёт о встрече",
+        "generate_document": "Сгенерировать документ"
+      },
+      "activityTypeOptions": {
+        "call": "Звонок",
+        "meeting": "Встреча",
+        "task": "Задача",
+        "note": "Заметка"
+      },
+      "dealFieldOptions": {
+        "title": "Название",
+        "currency": "Валюта",
+        "contract_id": "Договор",
+        "expected_close_date": "Ожид. дата закрытия",
+        "expected_sign_date": "Ожид. дата подписания",
+        "expected_payment_date": "Ожид. дата оплаты"
+      },
+      "companyFieldOptions": {
+        "name": "Название",
+        "inn": "ИНН",
+        "phone": "Телефон",
+        "email": "Email"
+      },
+      "systemStageBadge": "системный",
+      "substageBadge": "подстатус",
+      "deleteStage": {
+        "confirmHeader": "Удалить этап?",
+        "confirmBody": "Этот этап будет удалён. На нём не должно быть сделок или подстатусов.",
+        "confirmAccept": "Удалить",
+        "confirmReject": "Отмена",
+        "successToast": "Этап удалён",
+        "errorSystem": "Системный этап нельзя удалить.",
+        "errorWithDeals": "На этапе есть сделки. Перенесите их перед удалением.",
+        "errorWithSubstages": "У этапа есть подстатусы. Удалите их сначала.",
+        "systemTooltip": "Системный этап нельзя удалить"
+      },
+      "reorder": {
+        "errorToast": "Ошибка сохранения порядка. Порядок возвращён."
+      },
+      "emptyStages": {
+        "title": "В воронке нет этапов",
+        "subtitle": "Создайте первый этап"
       }
     }
   }
