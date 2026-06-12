@@ -99,6 +99,49 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pipeline / Sales Dashboard
+    |--------------------------------------------------------------------------
+    |
+    | Probability keywords for forecast computation (SalesDashboardService).
+    | Keys are lowercase substrings matched against stage.name; values are
+    | weights [0.0 – 1.0] applied to deal.amount in the weighted forecast.
+    |
+    | HOT threshold: stages with probability >= 0.7 are placed in the "hot"
+    | bucket regardless of which keyword matched.
+    |
+    */
+    'pipeline' => [
+        'hot_threshold' => 0.7,
+        'probability_keywords' => [
+            'won' => 1.0,
+            'успех' => 1.0,
+            'signed' => 1.0,
+            'paid' => 1.0,
+            'оплачен' => 1.0,
+            'выигран' => 1.0,
+            'hot' => 0.7,
+            'горяч' => 0.7,
+            'trial' => 0.5,
+            'negotiation' => 0.5,
+            'согласован' => 0.5,
+            'warm' => 0.4,
+            'тёпл' => 0.4,
+            'теплый' => 0.4,
+            'proposal' => 0.3,
+            'кп' => 0.3,
+            'meeting' => 0.2,
+            'встреч' => 0.2,
+            'qualif' => 0.15,
+            'квалиф' => 0.15,
+            'cold' => 0.1,
+            'холод' => 0.1,
+            'lost' => 0.0,
+            'проигран' => 0.0,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage paths
     |--------------------------------------------------------------------------
     |

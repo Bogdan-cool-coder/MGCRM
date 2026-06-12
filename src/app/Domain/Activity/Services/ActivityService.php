@@ -18,6 +18,7 @@ use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Sales\Models\Deal;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -339,6 +340,57 @@ class ActivityService
             ->where('responsible_id', $user->id)
             ->where('is_closed', false)
             ->count();
+    }
+
+    /**
+     * Number of OPEN deals (stage not won/lost) in a pipeline, within the user's
+     * visibility scope, that have NO open task-like activity (S1.7 dashboard
+     * "deals without tasks" widget, BQ1).
+     *
+     * A deal counts as "without tasks" when there is no open Activity of a
+     * task-like kind (call/meeting/task with is_closed = false) targeting it —
+     * a NOT EXISTS correlated subquery on activities (target_type = 'deal').
+     *
+     * This is the public contract consumed by SalesDashboardService: the Sales
+     * domain never imports the Activity model directly (DDD §2) and instead asks
+     * the Activity domain through this method. Visibility is resolved here from
+     * the user's role via VisibilityResolver and applied to the Deal query
+     * exactly like DealService::scopedQuery, so the count can never leak deals
+     * the user may not see (E6).
+     */
+    public function countDealsWithoutTasks(int $pipelineId, User $user): int
+    {
+        $scope = $this->visibility->resolve($user);
+
+        $taskLikeKinds = [
+            ActivityType::Call->value,
+            ActivityType::Meeting->value,
+            ActivityType::Task->value,
+        ];
+
+        $query = Deal::query()
+            ->where('pipeline_id', $pipelineId)
+            // Open deals only: exclude won/lost stages (status lives on the stage).
+            ->whereHas('stage', function (Builder $q): void {
+                $q->where('is_won', false)->where('is_lost', false);
+            })
+            // No open task-like activity targets this deal.
+            ->whereNotExists(function ($sub) use ($taskLikeKinds): void {
+                $sub->select(DB::raw(1))
+                    ->from('activities')
+                    ->whereColumn('activities.target_id', 'deals.id')
+                    ->where('activities.target_type', ActivityTargetType::Deal->value)
+                    ->whereIn('activities.kind', $taskLikeKinds)
+                    ->where('activities.is_closed', false);
+            });
+
+        $query = match ($scope) {
+            VisibilityScope::All => $query,
+            VisibilityScope::Department => $query->whereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
+            VisibilityScope::Own => $query->where('owner_user_id', $user->id),
+        };
+
+        return $query->count();
     }
 
     // ---- Private ----

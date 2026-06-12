@@ -25,6 +25,7 @@ use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
 use App\Http\Controllers\Iam\UserController;
+use App\Http\Controllers\Sales\DashboardController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
 use App\Http\Controllers\Sales\DealHistoryController;
@@ -192,6 +193,17 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('sources', SourceController::class);
         Route::apiResource('countries', CountryController::class);
         Route::apiResource('cities', CityController::class);
+    });
+
+    // =========================================================================
+    // Sales — Dashboard (S1.7)
+    // =========================================================================
+    // NOTE: .xlsx path must be declared BEFORE the plain JSON route because
+    // Laravel matches routes top-down and /sales/dashboard.xlsx would otherwise
+    // be caught by a wildcard or route-binding if declared after.
+    Route::prefix('sales')->name('sales.')->group(function (): void {
+        Route::get('dashboard.xlsx', [DashboardController::class, 'export'])->name('dashboard.export');
+        Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
     });
 
     // =========================================================================
