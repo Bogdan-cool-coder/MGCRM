@@ -3,10 +3,22 @@
     v-model:visible="visible"
     position="right"
     style="width: 500px"
-    :closable="!saving"
-    :header="t('sales.deals.form.createTitle')"
     @hide="onHide"
   >
+    <template #header>
+      <div class="deal-drawer__header">
+        <span class="deal-drawer__header-title">{{ t('sales.deals.form.createTitle') }}</span>
+        <Button
+          icon="pi pi-times"
+          severity="secondary"
+          text
+          rounded
+          :disabled="saving"
+          :aria-label="t('common.close')"
+          @click="visible = false"
+        />
+      </div>
+    </template>
     <div class="deal-drawer">
       <!-- Company -->
       <div class="deal-drawer__field">
@@ -347,6 +359,25 @@ function onHide() {
   flex-direction: column;
   gap: $space-4;
   padding: $space-2 0;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: $space-2;
+  }
+
+  &__header-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: var(--p-text-color);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .deal-drawer__field {
@@ -375,5 +406,9 @@ function onHide() {
 
 .w-full {
   width: 100%;
+}
+
+:deep(.p-drawer-close-button) {
+  display: none !important;
 }
 </style>

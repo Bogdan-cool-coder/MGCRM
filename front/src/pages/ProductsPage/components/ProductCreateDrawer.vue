@@ -3,10 +3,24 @@
     v-model:visible="visible"
     position="right"
     style="width: 500px"
-    :closable="!saving"
-    :header="isEdit ? t('catalog.product.form.editTitle') : t('catalog.product.form.createTitle')"
     @hide="onHide"
   >
+    <template #header>
+      <div class="product-drawer__header">
+        <span class="product-drawer__header-title">
+          {{ isEdit ? t('catalog.product.form.editTitle') : t('catalog.product.form.createTitle') }}
+        </span>
+        <Button
+          icon="pi pi-times"
+          severity="secondary"
+          text
+          rounded
+          :disabled="saving"
+          :aria-label="t('common.close')"
+          @click="visible = false"
+        />
+      </div>
+    </template>
     <div class="product-drawer">
       <!-- Name -->
       <div class="product-drawer__field">
@@ -344,6 +358,25 @@ function onHide() {
   gap: $space-4;
   padding: $space-2 0;
 
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: $space-2;
+  }
+
+  &__header-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: var(--p-text-color);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   &__field {
     display: flex;
     flex-direction: column;
@@ -387,5 +420,9 @@ function onHide() {
 // Dark mode
 :global(.app-dark) .p-drawer {
   background: var(--p-surface-card);
+}
+
+:deep(.p-drawer-close-button) {
+  display: none !important;
 }
 </style>

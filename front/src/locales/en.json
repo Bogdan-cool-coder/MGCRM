@@ -13,7 +13,8 @@
     "analytics": "Analytics",
     "profile": "Profile",
     "logout": "Sign out",
-    "pipelineSettings": "Pipeline settings"
+    "pipelineSettings": "Pipeline settings",
+    "myTasks": "My tasks"
   },
   "auth": {
     "login": {
@@ -640,6 +641,118 @@
       }
     }
   },
+  "activity": {
+    "kinds": {
+      "call": "Call",
+      "meeting": "Meeting",
+      "task": "Task",
+      "note": "Note"
+    },
+    "statuses": {
+      "new": "New",
+      "in_progress": "In progress",
+      "done": "Done",
+      "rejected": "Rejected"
+    },
+    "priorities": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "presets": {
+      "myTasks": "My tasks",
+      "myOrders": "My orders",
+      "today": "Today",
+      "overdue": "Overdue",
+      "thisWeek": "This week",
+      "pinned": "Pinned",
+      "all": "All"
+    },
+    "overdueBadge": "Overdue",
+    "form": {
+      "createTitle": "New activity",
+      "editTitle": "Edit activity",
+      "kind": "Type",
+      "title": "Title",
+      "titlePlaceholder": "Activity title",
+      "body": "Description",
+      "responsible": "Assignee",
+      "dueAt": "Due date",
+      "priority": "Priority",
+      "resultText": "Result",
+      "resultTextPlaceholder": "Describe the result...",
+      "ftmDecisionMakerAttended": "Decision-maker attended",
+      "ftmPresentationShown": "Presentation shown",
+      "ftmReportUrl": "Report URL",
+      "kindDisabledTooltip": "This activity type is not allowed at the current stage",
+      "save": "Save",
+      "create": "Create",
+      "cancel": "Cancel",
+      "fillMeetingReport": "Fill meeting report",
+      "successCreate": "Activity created",
+      "successUpdate": "Activity saved",
+      "confirmDiscard": "Discard changes?",
+      "confirmDiscardBody": "Unsaved changes will be lost."
+    },
+    "actions": {
+      "add": "Add activity",
+      "complete": "Complete",
+      "reopen": "Reopen",
+      "edit": "Edit",
+      "delete": "Delete",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "completeSuccess": "Activity completed",
+      "reopenSuccess": "Activity reopened",
+      "deleteConfirmHeader": "Delete activity?",
+      "deleteConfirmBody": "This activity will be permanently deleted.",
+      "deleteConfirmAccept": "Delete",
+      "deleteConfirmReject": "Cancel",
+      "deleteSuccess": "Activity deleted",
+      "pinSuccess": "Pinned",
+      "unpinSuccess": "Unpinned",
+      "noPermissionComplete": "You don't have permission to complete this task"
+    },
+    "timeline": {
+      "empty": "No activities",
+      "emptyDeal": "No activities for this deal",
+      "emptyCompany": "No activities for this company",
+      "emptyCtaDeal": "Add first activity",
+      "loadMore": "Load more",
+      "targetDeal": "Deal: {name}",
+      "overdueBadge": "Overdue"
+    },
+    "meetingReport": {
+      "dialogTitle": "Meeting report",
+      "comment": "Comment",
+      "commentPlaceholder": "Additional meeting notes...",
+      "save": "Save report",
+      "cancel": "Cancel",
+      "saveSuccess": "Meeting report saved",
+      "emptyQuestions": "No questions configured. Fill in the free comment.",
+      "errorEmpty": "Fill in at least one answer or comment.",
+      "errorStaleQuestion": "Question is outdated. Refresh the page."
+    },
+    "myTasksPage": {
+      "title": "My tasks",
+      "create": "Create task",
+      "filters": {
+        "kind": "Type",
+        "status": "Status",
+        "priority": "Priority",
+        "dueFrom": "From",
+        "dueTo": "To",
+        "search": "Search",
+        "reset": "Reset"
+      },
+      "empty": "No tasks in this section",
+      "emptyOverdue": "All tasks completed on time"
+    },
+    "quickAdd": {
+      "tooltip": "Add activity to deal"
+    }
+  },
   "sales": {
     "deals": {
       "page": {
@@ -718,6 +831,8 @@
         "tabs": {
           "overview": "Overview",
           "contacts": "Contacts",
+          "activities": "Activities",
+          "tasks": "Activities",
           "history": "History"
         },
         "rail": {

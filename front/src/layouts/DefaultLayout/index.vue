@@ -24,20 +24,42 @@
 
   <!-- Global ConfirmDialog -->
   <ConfirmDialog />
+
+  <!-- Global ActivityFormDialog (for Kanban quick-add) -->
+  <ActivityFormDialog
+    v-if="activityStore.quickAddContext"
+    v-model="quickAddOpen"
+    :target-type="'deal'"
+    :target-id="activityStore.quickAddContext.dealId"
+    :allowed-kinds="activityStore.quickAddContext.allowedKinds"
+    @created="activityStore.closeQuickAdd()"
+    @update:model-value="(v) => { if (!v) activityStore.closeQuickAdd() }"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { AppSidebar, AppTopbar } from '@/components/AppShell'
 import { useLayoutStore } from '@/stores/layout'
+import { useActivityStore } from '@/stores/activityStore'
+import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 
 const route = useRoute()
 const layoutStore = useLayoutStore()
+const activityStore = useActivityStore()
 
 const showLayout = computed(() => route.name !== 'Login')
+
+const quickAddOpen = ref(false)
+watch(
+  () => activityStore.quickAddContext,
+  (ctx) => {
+    quickAddOpen.value = !!ctx
+  },
+)
 </script>
 
 <style lang="scss" scoped>

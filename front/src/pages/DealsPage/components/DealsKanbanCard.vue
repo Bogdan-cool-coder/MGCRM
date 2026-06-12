@@ -38,6 +38,14 @@
           · {{ t('sales.deals.page.kanban.daysInStage', { n: daysInStage }) }}
         </span>
       </span>
+      <button
+        class="kanban-card__quick-add"
+        :title="t('activity.quickAdd.tooltip')"
+        type="button"
+        @click.stop="onQuickAdd"
+      >
+        <i class="pi pi-plus" />
+      </button>
     </div>
   </div>
 </template>
@@ -48,6 +56,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import { formatCurrency } from '@/utils/currency'
+import { useActivityStore } from '@/stores/activityStore'
 import type { DealCardDto } from '@/entities/sales'
 
 const props = defineProps<{
@@ -61,6 +70,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
+const activityStore = useActivityStore()
 
 const isEditing = ref(false)
 const editTitle = ref('')
@@ -109,6 +119,10 @@ function submitEdit() {
 
 function cancelEdit() {
   isEditing.value = false
+}
+
+function onQuickAdd() {
+  activityStore.openQuickAdd(props.card.id)
 }
 </script>
 
@@ -212,6 +226,36 @@ function cancelEdit() {
 
 .kanban-card__days--warn {
   color: var(--p-orange-500);
+}
+
+.kanban-card__quick-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: $radius-sm;
+  border: none;
+  background: transparent;
+  color: $surface-400;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--app-transition-fast), background-color var(--app-transition-fast), color var(--app-transition-fast);
+  flex-shrink: 0;
+  padding: 0;
+
+  i {
+    font-size: 11px;
+  }
+
+  &:hover {
+    background: var(--p-surface-hover);
+    color: $primary-color;
+  }
+}
+
+.kanban-card:hover .kanban-card__quick-add {
+  opacity: 1;
 }
 
 // Ghost (drag placeholder)

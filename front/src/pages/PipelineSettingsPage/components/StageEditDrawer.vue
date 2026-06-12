@@ -3,9 +3,21 @@
     v-model:visible="visible"
     position="right"
     style="width: 560px"
-    :header="t('sales.stageEditor.editDrawer.title')"
-    :closable="!saving"
   >
+    <template #header>
+      <div class="stage-drawer__header">
+        <span class="stage-drawer__header-title">{{ t('sales.stageEditor.editDrawer.title') }}</span>
+        <Button
+          icon="pi pi-times"
+          severity="secondary"
+          text
+          rounded
+          :disabled="saving"
+          :aria-label="t('common.close')"
+          @click="visible = false"
+        />
+      </div>
+    </template>
     <div v-if="stage" class="stage-drawer">
       <!-- Name -->
       <div class="stage-drawer__field">
@@ -332,6 +344,25 @@ function submit() {
   gap: $space-4;
   padding: $space-2 0;
 
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: $space-2;
+  }
+
+  &__header-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: var(--p-text-color);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   &__field {
     display: flex;
     flex-direction: column;
@@ -402,5 +433,9 @@ function submit() {
     justify-content: flex-end;
     gap: $space-2;
   }
+}
+
+:deep(.p-drawer-close-button) {
+  display: none !important;
 }
 </style>

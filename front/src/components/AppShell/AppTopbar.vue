@@ -76,6 +76,10 @@ async function handleLogout() {
   background-color: $surface-card;
   border-bottom: 1px solid $surface-200;
   flex-shrink: 0;
+  // Explicit stacking context below PrimeVue overlay (z-index: 1000).
+  // Prevents topbar buttons from receiving clicks through the Drawer mask.
+  position: relative;
+  z-index: 1;
 }
 
 .app-topbar__spacer {

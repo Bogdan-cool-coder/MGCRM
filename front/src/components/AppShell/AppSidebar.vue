@@ -32,6 +32,12 @@
             <span v-if="!collapsed" class="app-sidebar__nav-label">
               {{ t(item.labelKey) }}
             </span>
+            <span
+              v-if="!collapsed && item.name === 'my-tasks' && activityStore.myOpenCount > 0"
+              class="app-sidebar__nav-badge"
+            >
+              {{ activityStore.myOpenCount }}
+            </span>
           </router-link>
         </li>
         <!-- Admin / Director only items -->
@@ -82,10 +88,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppLogo from './AppLogo.vue'
 import { useUserStore } from '@/stores/user'
+import { useActivityStore } from '@/stores/activityStore'
 
 defineProps<{
   collapsed: boolean
@@ -97,12 +104,14 @@ defineEmits<{
 
 const { t } = useI18n()
 const userStore = useUserStore()
+const activityStore = useActivityStore()
 
 const navItems = [
   { name: 'dashboard', to: '/dashboard', icon: 'pi pi-home', labelKey: 'nav.dashboard' },
   { name: 'contacts', to: '/contacts', icon: 'pi pi-users', labelKey: 'nav.contacts' },
   { name: 'companies', to: '/companies', icon: 'pi pi-building', labelKey: 'nav.companies' },
   { name: 'deals', to: '/deals', icon: 'pi pi-briefcase', labelKey: 'nav.deals' },
+  { name: 'my-tasks', to: '/my-tasks', icon: 'pi pi-check-square', labelKey: 'nav.myTasks' },
   { name: 'products', to: '/admin/products', icon: 'pi pi-box', labelKey: 'nav.catalog' },
   { name: 'documents', to: '/documents', icon: 'pi pi-file', labelKey: 'nav.documents' },
   { name: 'tasks', to: '/tasks', icon: 'pi pi-check-square', labelKey: 'nav.tasks' },
@@ -121,6 +130,12 @@ const adminNavItems = [
     labelKey: 'nav.pipelineSettings',
   },
 ]
+
+onMounted(() => {
+  if (userStore.getUser) {
+    void activityStore.fetchMyOpenCount()
+  }
+})
 
 const isAdminOrDirector = computed<boolean>(() => {
   const role = userStore.getUserRole
@@ -237,6 +252,23 @@ const roleLabel = computed(() => {
   font-weight: $font-weight-medium;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+}
+
+.app-sidebar__nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--p-orange-500);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 // Footer / user section

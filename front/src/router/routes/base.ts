@@ -94,6 +94,14 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
 
+  // ─── Activities: My Tasks ─────────────────────────────────────────────────
+  {
+    path: '/my-tasks',
+    name: 'MyTasks',
+    component: () => import('@/pages/MyTasksPage/index.vue'),
+    meta: { requiresAuth: true, title: 'nav.myTasks' },
+  },
+
   // ─── Settings: Pipeline ───────────────────────────────────────────────────
   {
     path: '/settings/pipeline',

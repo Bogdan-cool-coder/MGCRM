@@ -71,6 +71,15 @@
               <TabList>
                 <Tab value="overview">{{ t('sales.deal.page.tabs.overview') }}</Tab>
                 <Tab value="contacts">{{ t('sales.deal.page.tabs.contacts') }}</Tab>
+                <Tab value="activities">
+                  {{ t('sales.deal.page.tabs.activities') }}
+                  <Badge
+                    v-if="activitiesComposable.overdueCount.value > 0"
+                    :value="activitiesComposable.overdueCount.value"
+                    severity="danger"
+                    class="ms-1"
+                  />
+                </Tab>
                 <Tab value="history">{{ t('sales.deal.page.tabs.history') }}</Tab>
               </TabList>
               <TabPanels>
@@ -104,6 +113,25 @@
                       :removing-id="removingId"
                       @add-contact="addContactDialogOpen = true"
                       @remove-contact="onRemoveContact"
+                    />
+                  </div>
+                </TabPanel>
+
+                <!-- Activities tab -->
+                <TabPanel value="activities">
+                  <div class="deal-page__tab-content">
+                    <DealActivitiesTab
+                      :deal-id="dealId"
+                      :activities="activitiesComposable.activities.value"
+                      :loading="activitiesComposable.loading.value"
+                      :has-more="activitiesComposable.hasMore.value"
+                      :allowed-kinds="deal.stage.task_types as ActivityKind[]"
+                      @load-more="activitiesComposable.loadMore()"
+                      @complete="onActivityComplete"
+                      @reopen="onActivityReopen"
+                      @remove="onActivityRemove"
+                      @updated="onActivityUpdated"
+                      @created="onActivityCreated"
                     />
                   </div>
                 </TabPanel>
@@ -172,6 +200,7 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Skeleton from 'primevue/skeleton'
 import Menu from 'primevue/menu'
+import Badge from 'primevue/badge'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
@@ -179,6 +208,7 @@ import DealOverviewTab from './components/DealOverviewTab.vue'
 import DealProductsCard from './components/DealProductsCard.vue'
 import DealContactsTab from './components/DealContactsTab.vue'
 import DealStageHistoryTab from './components/DealStageHistoryTab.vue'
+import DealActivitiesTab from './components/DealActivitiesTab.vue'
 import DealRightRail from './components/DealRightRail.vue'
 import DealAddProductDialog from './components/DealAddProductDialog.vue'
 import DealAddContactDialog from './components/DealAddContactDialog.vue'
@@ -187,13 +217,16 @@ import { useDealPage } from './composables/useDealPage'
 import { useDealProducts } from './composables/useDealProducts'
 import { useDealContacts } from './composables/useDealContacts'
 import { useDealHistory } from './composables/useDealHistory'
+import { useDealActivities } from './composables/useDealActivities'
 import { useDealActions } from './composables/useDealActions'
 import { useSalesStore } from '@/stores/salesStore'
 import { salesApi } from '@/api/sales'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { formatCurrency } from '@/utils/currency'
 import { getApiErrorMessage } from '@/utils/errors'
+import { activityApi } from '@/api/activity'
 import type { DealDto, DealProductDto, PipelineStageDto } from '@/entities/sales'
+import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -222,6 +255,10 @@ const { contacts, removingId } = dealContactsComposable
 // ── History ────────────────────────────────────────────────────────────────────
 
 const dealHistoryComposable = useDealHistory(() => dealId.value)
+
+// ── Activities ─────────────────────────────────────────────────────────────────
+
+const activitiesComposable = useDealActivities(() => dealId.value)
 const { history } = dealHistoryComposable
 
 // ── Actions ────────────────────────────────────────────────────────────────────
@@ -356,6 +393,75 @@ function onDealMoved(updated: DealDto) {
   void dealHistoryComposable.load()
 }
 
+// ── Activity handlers ──────────────────────────────────────────────────────────
+
+async function onActivityComplete(activity: ActivityDto) {
+  // Optimistic
+  activitiesComposable.updateLocal({ ...activity, status: 'done', is_closed: true })
+  try {
+    const updated = await activityApi.completeActivity(activity.id)
+    activitiesComposable.updateLocal(updated)
+    toast.add({ severity: 'success', summary: t('activity.actions.completeSuccess'), life: 3000 })
+  } catch (err) {
+    activitiesComposable.updateLocal(activity)
+    const status = (err as { response?: { status?: number } })?.response?.status
+    toast.add({
+      severity: 'error',
+      summary:
+        status === 403
+          ? t('activity.actions.noPermissionComplete')
+          : getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
+
+async function onActivityReopen(activity: ActivityDto) {
+  activitiesComposable.updateLocal({ ...activity, status: 'in_progress', is_closed: false })
+  try {
+    const updated = await activityApi.reopenActivity(activity.id)
+    activitiesComposable.updateLocal(updated)
+    toast.add({ severity: 'success', summary: t('activity.actions.reopenSuccess'), life: 3000 })
+  } catch (err) {
+    activitiesComposable.updateLocal(activity)
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 3000,
+    })
+  }
+}
+
+async function onActivityRemove(activity: ActivityDto) {
+  try {
+    await activityApi.deleteActivity(activity.id)
+    activitiesComposable.remove(activity.id)
+    toast.add({ severity: 'success', summary: t('activity.actions.deleteSuccess'), life: 3000 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 3000,
+    })
+  }
+}
+
+async function onActivityUpdated(activity: ActivityDto) {
+  // If it's a pin update from the menu (optimistic already set by child)
+  try {
+    const updated = await activityApi.updateActivity(activity.id, {
+      is_pinned: activity.is_pinned,
+    })
+    activitiesComposable.updateLocal(updated)
+  } catch {
+    // ignore pin errors silently (non-critical)
+  }
+}
+
+function onActivityCreated(activity: ActivityDto) {
+  activitiesComposable.addLocal(activity)
+}
+
 function confirmDelete() {
   confirm.require({
     header: t('sales.deals.page.actions.deleteConfirm'),
@@ -430,6 +536,7 @@ onMounted(async () => {
       dealProductsComposable.load(),
       dealContactsComposable.load(),
       dealHistoryComposable.load(),
+      activitiesComposable.load(),
     ])
   }
 })

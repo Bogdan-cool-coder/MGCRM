@@ -104,10 +104,22 @@
                 </div>
               </TabPanel>
 
-              <!-- Tasks stub -->
+              <!-- Tasks: Activities tab -->
               <TabPanel value="tasks">
                 <div class="company-page__tab-content">
-                  <CompanyStubTab :message="t('company.page.stub.tasks')" />
+                  <CompanyActivitiesTab
+                    v-if="company"
+                    :company-id="company.id"
+                    :activities="companyActivities.activities.value"
+                    :loading="companyActivities.loading.value"
+                    :has-more="companyActivities.hasMore.value"
+                    @load-more="companyActivities.loadMore()"
+                    @complete="onActivityComplete"
+                    @reopen="onActivityReopen"
+                    @remove="onActivityRemove"
+                    @updated="onActivityUpdated"
+                    @created="onActivityCreated"
+                  />
                 </div>
               </TabPanel>
 
@@ -231,13 +243,20 @@ import CompanyEmployeesTab from './components/CompanyEmployeesTab.vue'
 import CompanyRightRail from './components/CompanyRightRail.vue'
 import CompanyNotesTab from './components/CompanyNotesTab.vue'
 import CompanyStubTab from './components/CompanyStubTab.vue'
+import CompanyActivitiesTab from './components/CompanyActivitiesTab.vue'
 import { useCompanyPageData } from './composables/useCompanyPageData'
 import { useCompanyPageActions } from './composables/useCompanyPageActions'
+import { useCompanyActivities } from './composables/useCompanyActivities'
 import { useDirectoriesStore } from '@/stores/directories'
+import { activityApi } from '@/api/activity'
+import { useToast } from 'primevue/usetoast'
+import { getApiErrorMessage } from '@/utils/errors'
 import type { CategoryCode, EmploymentStatus } from '@/entities/crm'
+import type { ActivityDto } from '@/entities/activity'
 
 const { t } = useI18n()
 const router = useRouter()
+const toast = useToast()
 const directoriesStore = useDirectoriesStore()
 
 const activeTab = ref('overview')
@@ -278,6 +297,74 @@ const {
   loadEmployees,
 })
 
+// ── Company Activities ─────────────────────────────────────────────────────────
+
+const companyActivities = useCompanyActivities(() => companyId.value)
+
+// ── Activity handlers ──────────────────────────────────────────────────────────
+
+async function onActivityComplete(activity: ActivityDto) {
+  companyActivities.updateLocal({ ...activity, status: 'done', is_closed: true })
+  try {
+    const updated = await activityApi.completeActivity(activity.id)
+    companyActivities.updateLocal(updated)
+    toast.add({ severity: 'success', summary: t('activity.actions.completeSuccess'), life: 3000 })
+  } catch (err) {
+    companyActivities.updateLocal(activity)
+    const status = (err as { response?: { status?: number } })?.response?.status
+    toast.add({
+      severity: 'error',
+      summary:
+        status === 403
+          ? t('activity.actions.noPermissionComplete')
+          : getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
+
+async function onActivityReopen(activity: ActivityDto) {
+  companyActivities.updateLocal({ ...activity, status: 'in_progress', is_closed: false })
+  try {
+    const updated = await activityApi.reopenActivity(activity.id)
+    companyActivities.updateLocal(updated)
+  } catch (err) {
+    companyActivities.updateLocal(activity)
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 3000,
+    })
+  }
+}
+
+async function onActivityRemove(activity: ActivityDto) {
+  try {
+    await activityApi.deleteActivity(activity.id)
+    await companyActivities.remove(activity.id)
+    toast.add({ severity: 'success', summary: t('activity.actions.deleteSuccess'), life: 3000 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 3000,
+    })
+  }
+}
+
+async function onActivityUpdated(activity: ActivityDto) {
+  try {
+    const updated = await activityApi.updateActivity(activity.id, { is_pinned: activity.is_pinned })
+    companyActivities.updateLocal(updated)
+  } catch {
+    // non-critical
+  }
+}
+
+function onActivityCreated(activity: ActivityDto) {
+  companyActivities.addLocal(activity)
+}
+
 const companySubtitle = computed(() => {
   if (!company.value) return ''
   const parts = []
@@ -317,6 +404,7 @@ function onSubmitEmployee() {
 onMounted(async () => {
   if (!directoriesStore.loaded) void directoriesStore.fetchAll()
   await loadAll()
+  void companyActivities.load()
 })
 </script>
 

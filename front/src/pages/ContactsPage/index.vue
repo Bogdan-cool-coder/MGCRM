@@ -216,8 +216,22 @@
       v-model:visible="quickCreateOpen"
       position="right"
       style="width: 420px"
-      :header="t('contacts.page.quickCreate.title')"
+      :closable="false"
     >
+      <template #header>
+        <div class="contacts-page__drawer-header">
+          <span class="contacts-page__drawer-header-title">{{ t('contacts.page.quickCreate.title') }}</span>
+          <Button
+            icon="pi pi-times"
+            severity="secondary"
+            text
+            rounded
+            :disabled="isCreating"
+            :aria-label="t('common.close')"
+            @click="closeQuickCreate"
+          />
+        </div>
+      </template>
       <div class="contacts-page__drawer">
         <SelectButton
           v-model="quickCreateType"
@@ -582,6 +596,25 @@ onMounted(() => {
   font-size: $font-size-sm;
   color: $surface-500;
   text-align: right;
+}
+
+.contacts-page__drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: $space-2;
+}
+
+.contacts-page__drawer-header-title {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: var(--p-text-color);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .contacts-page__drawer {

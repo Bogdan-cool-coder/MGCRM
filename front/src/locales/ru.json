@@ -13,7 +13,8 @@
     "analytics": "Аналитика",
     "profile": "Профиль",
     "logout": "Выйти",
-    "pipelineSettings": "Настройки воронки"
+    "pipelineSettings": "Настройки воронки",
+    "myTasks": "Мои задачи"
   },
   "auth": {
     "login": {
@@ -640,6 +641,118 @@
       }
     }
   },
+  "activity": {
+    "kinds": {
+      "call": "Звонок",
+      "meeting": "Встреча",
+      "task": "Задача",
+      "note": "Заметка"
+    },
+    "statuses": {
+      "new": "Новая",
+      "in_progress": "В работе",
+      "done": "Выполнено",
+      "rejected": "Отклонено"
+    },
+    "priorities": {
+      "low": "Низкий",
+      "normal": "Норма",
+      "high": "Высокий",
+      "critical": "Критический"
+    },
+    "presets": {
+      "myTasks": "Мои задачи",
+      "myOrders": "Мои поручения",
+      "today": "Сегодня",
+      "overdue": "Просроченные",
+      "thisWeek": "Эта неделя",
+      "pinned": "Закреплённые",
+      "all": "Все задачи"
+    },
+    "overdueBadge": "Просрочено",
+    "form": {
+      "createTitle": "Новая активность",
+      "editTitle": "Редактировать активность",
+      "kind": "Тип",
+      "title": "Название",
+      "titlePlaceholder": "Название активности",
+      "body": "Описание",
+      "responsible": "Исполнитель",
+      "dueAt": "Дедлайн",
+      "priority": "Приоритет",
+      "resultText": "Результат",
+      "resultTextPlaceholder": "Опишите результат...",
+      "ftmDecisionMakerAttended": "ЛПР присутствовал",
+      "ftmPresentationShown": "Презентация показана",
+      "ftmReportUrl": "Ссылка на отчёт",
+      "kindDisabledTooltip": "На этом этапе нельзя создавать активности данного типа",
+      "save": "Сохранить",
+      "create": "Создать",
+      "cancel": "Отмена",
+      "fillMeetingReport": "Заполнить отчёт встречи",
+      "successCreate": "Активность создана",
+      "successUpdate": "Активность сохранена",
+      "confirmDiscard": "Отменить изменения?",
+      "confirmDiscardBody": "Несохранённые изменения будут потеряны."
+    },
+    "actions": {
+      "add": "Добавить активность",
+      "complete": "Выполнить",
+      "reopen": "Переоткрыть",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "pin": "Закрепить",
+      "unpin": "Открепить",
+      "completeSuccess": "Активность выполнена",
+      "reopenSuccess": "Активность переоткрыта",
+      "deleteConfirmHeader": "Удалить активность?",
+      "deleteConfirmBody": "Активность будет удалена без возможности восстановления.",
+      "deleteConfirmAccept": "Удалить",
+      "deleteConfirmReject": "Отмена",
+      "deleteSuccess": "Активность удалена",
+      "pinSuccess": "Закреплено",
+      "unpinSuccess": "Откреплено",
+      "noPermissionComplete": "Нет прав для выполнения этой задачи"
+    },
+    "timeline": {
+      "empty": "Нет активностей",
+      "emptyDeal": "Нет активностей по этой сделке",
+      "emptyCompany": "Нет активностей по этой компании",
+      "emptyCtaDeal": "Добавить первую активность",
+      "loadMore": "Загрузить ещё",
+      "targetDeal": "Сделка: {name}",
+      "overdueBadge": "Просрочено"
+    },
+    "meetingReport": {
+      "dialogTitle": "Отчёт о встрече",
+      "comment": "Комментарий",
+      "commentPlaceholder": "Дополнительные комментарии по встрече...",
+      "save": "Сохранить отчёт",
+      "cancel": "Отмена",
+      "saveSuccess": "Отчёт о встрече сохранён",
+      "emptyQuestions": "Реестр вопросов не настроен. Заполните свободный комментарий.",
+      "errorEmpty": "Заполните хотя бы один ответ или комментарий.",
+      "errorStaleQuestion": "Вопрос устарел. Обновите страницу."
+    },
+    "myTasksPage": {
+      "title": "Мои задачи",
+      "create": "Создать задачу",
+      "filters": {
+        "kind": "Тип",
+        "status": "Статус",
+        "priority": "Приоритет",
+        "dueFrom": "Дата от",
+        "dueTo": "Дата до",
+        "search": "Поиск",
+        "reset": "Сбросить"
+      },
+      "empty": "Нет задач в этом разделе",
+      "emptyOverdue": "Все задачи выполнены вовремя"
+    },
+    "quickAdd": {
+      "tooltip": "Добавить активность к сделке"
+    }
+  },
   "sales": {
     "deals": {
       "page": {
@@ -718,6 +831,8 @@
         "tabs": {
           "overview": "Обзор",
           "contacts": "Контакты",
+          "activities": "Активности",
+          "tasks": "Активности",
           "history": "История"
         },
         "rail": {
