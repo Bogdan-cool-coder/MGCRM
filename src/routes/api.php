@@ -15,6 +15,9 @@ use App\Http\Controllers\Catalog\ProductPlanController;
 use App\Http\Controllers\Catalog\ProductPriceController;
 use App\Http\Controllers\Contracts\Admin\LicensorBankAccountController;
 use App\Http\Controllers\Contracts\Admin\LicensorEntityController;
+use App\Http\Controllers\Contracts\DocumentController;
+use App\Http\Controllers\Contracts\DocumentItemController;
+use App\Http\Controllers\Contracts\DocumentRevisionController;
 use App\Http\Controllers\Contracts\TemplateController;
 use App\Http\Controllers\Contracts\TemplateVariableController;
 use App\Http\Controllers\Crm\Admin\CityController;
@@ -368,4 +371,29 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::get('template-variables/{templateVariable}', [TemplateVariableController::class, 'show'])->name('template-variables.show');
     Route::patch('template-variables/{templateVariable}', [TemplateVariableController::class, 'update'])->name('template-variables.update');
     Route::delete('template-variables/{templateVariable}', [TemplateVariableController::class, 'destroy'])->name('template-variables.destroy');
+
+    // =========================================================================
+    // Contracts — S2.2: Documents, Document Items, Document Revisions
+    // =========================================================================
+    // Action routes MUST be declared BEFORE the apiResource to avoid clashing.
+    Route::post('documents/{document}/submit', [DocumentController::class, 'submit'])->name('documents.submit');
+    Route::post('documents/{document}/upload-drive', [DocumentController::class, 'uploadDrive'])->name('documents.upload-drive');
+
+    Route::get('documents', [DocumentController::class, 'index'])->name('documents.index');
+    Route::post('documents', [DocumentController::class, 'store'])->name('documents.store');
+    Route::get('documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
+    Route::patch('documents/{document}', [DocumentController::class, 'update'])->name('documents.update');
+    Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+
+    // Nested: document items
+    Route::prefix('documents/{document}')->name('documents.')->group(function (): void {
+        Route::get('items', [DocumentItemController::class, 'index'])->name('items.index');
+        Route::post('items', [DocumentItemController::class, 'store'])->name('items.store');
+        Route::patch('items/{item}', [DocumentItemController::class, 'update'])->name('items.update');
+        Route::delete('items/{item}', [DocumentItemController::class, 'destroy'])->name('items.destroy');
+
+        // Nested: document revisions (read-only — immutable snapshots)
+        Route::get('revisions', [DocumentRevisionController::class, 'index'])->name('revisions.index');
+        Route::get('revisions/{revision}', [DocumentRevisionController::class, 'show'])->name('revisions.show');
+    });
 });

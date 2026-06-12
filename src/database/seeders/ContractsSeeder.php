@@ -7,8 +7,11 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 
 /**
- * ContractsSeeder — orchestrator for all S2.1 seed data.
+ * ContractsSeeder — orchestrator for all Contracts seed data.
  * Registered in DatabaseSeeder.
+ *
+ * S2.1: LicensorEntity, Template, TemplateVariable
+ * S2.2: DemoDocuments
  */
 class ContractsSeeder extends Seeder
 {
@@ -18,6 +21,7 @@ class ContractsSeeder extends Seeder
             LicensorEntitySeeder::class,
             TemplateSeeder::class,
             TemplateVariableSeeder::class,
+            DemoDocumentsSeeder::class,
         ]);
     }
 }

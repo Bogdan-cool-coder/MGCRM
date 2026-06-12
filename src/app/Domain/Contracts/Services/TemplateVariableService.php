@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Contracts\Services;
 
+use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\TemplateVariable;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * TemplateVariableService — CRUD and wildcard-scoped listing for template variables.
@@ -68,17 +70,30 @@ class TemplateVariableService
 
     /**
      * Delete a template variable.
-     * Guard against usage in Contract.context is added in S2.2.
+     *
+     * Guard (S2.2): if any Document stores this variable key in context->custom,
+     * deletion is refused with a 409 abort. This protects the data integrity of
+     * existing contracts that reference the variable.
+     *
+     * whereJsonContains on 'context->custom' works on both SQLite (json1) and
+     * PostgreSQL (jsonb). The key presence check uses the Laravel built-in helper.
      */
     public function delete(TemplateVariable $variable): void
     {
-        // S2.2 guard:
-        // if DB::getSchemaBuilder()->hasTable('contracts')) {
-        //     $inUse = DB::table('contracts')
-        //         ->whereJsonContains('context->custom', [$variable->key => true])
-        //         ->exists();
-        //     if ($inUse) { abort(409, "Variable '{$variable->key}' is used in one or more contracts."); }
-        // }
+        if (Schema::hasTable('documents')) {
+            // Check if any document has a value set for this variable key.
+            // context->custom is a JSON object like {"key": "value", ...}.
+            // whereJsonContains checks if the key exists with the given value.
+            // We check for the key's existence by searching for any non-null value.
+            $inUse = Document::query()
+                ->whereNotNull("context->custom->{$variable->key}")
+                ->exists();
+
+            if ($inUse) {
+                abort(409, "Variable '{$variable->key}' is used in one or more documents.");
+            }
+        }
+
         $variable->delete();
     }
 }
