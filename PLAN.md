@@ -279,14 +279,16 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 **Ведущие:** `sales-specialist` + `catalog` (в его зоне) + `frontend-specialist` + `designer`. Контекст `Sales` + `Catalog`.
 
-- [ ] Pipeline (sales/lifecycle/renewal), стадии, lost-reasons.
-- [ ] Deal: CRUD, продукты line-items (DealProduct), контакты, история стадий.
-- [ ] **Kanban-доска** (PrimeVue + drag-n-drop) + list-view (DataTable, фильтры).
-- [ ] Карточка сделки, форма отчёта о встрече.
-- [ ] Каталог продуктов/планов/цены (Catalog).
-- [ ] Тесты: переходы стадий, расчёт суммы сделки, drag-drop API.
+- [x] Pipeline (sales/lifecycle/renewal), стадии, lost-reasons. *(S1.3 backend, 2026-06-12)*
+- [x] Deal: CRUD, продукты line-items (DealProduct), контакты, история стадий. *(S1.3 backend, 2026-06-12)*
+- [x] **Kanban-доска** (vuedraggable@^4 drag-n-drop) + list-view (DataTable, фильтры). *(S1.3 frontend, 2026-06-12)*
+- [x] Карточка сделки (inline-edit, line-items, contacts, history). *(S1.3 frontend, 2026-06-12)*
+- [x] Каталог продуктов/планов/цены (Catalog). *(S1.2, 2026-06-12)*
+- [x] Тесты: переходы стадий, расчёт суммы сделки, drag-drop API (253/569 PHPUnit). *(S1.3, 2026-06-12)*
+- [ ] Форма отчёта о встрече (MeetingReport) — S1.6 (Activity)
+- [ ] Настройки воронки (CRUD этапов, цвета) — S1.5
 
-**Acceptance M3:** создание сделки с продуктами; **Kanban drag-drop** меняет стадию и пишет историю; lost-reason при проигрыше; list-view с фильтрами; каталог продуктов подтягивается в line-items. CI зелёный.
+**Acceptance M3:** создание сделки с продуктами; **Kanban drag-drop** меняет стадию и пишет историю; lost-reason при проигрыше; list-view с фильтрами; каталог продуктов подтягивается в line-items. CI зелёный. *(ядро выполнено S1.3 2026-06-12; остаток → S1.5+S1.6)*
 
 ---
 
@@ -438,7 +440,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [ ] Каркас поднимается одной командой; **логин с 2FA работает**; 6 ролей; CI зелёный (M0)
 - [ ] CRUD сотрудников с передачей прав + дерево отделов + **visibility-scope** ограничивает выдачу (M1)
 - [ ] CRUD контактов/компаний с ИНН/КПП + кастом-поля + **дедуп/merge** (M2)
-- [ ] **Kanban сделок drag-drop** меняет стадию + line-items продуктов + lost-reasons (M3)
+- [x] **Kanban сделок drag-drop** меняет стадию + line-items продуктов + lost-reasons (S1.3, 2026-06-12)
 - [ ] Входящее сообщение/форма → **лид** → конвертация в сделку (M4)
 - [ ] **Договор генерится PHPWord→Gotenberg→PDF** + маршрут согласования + статус-машина (M5)
 - [ ] Активность в таймлайне + задача с дедлайном + **уведомление in-app/email/TG** по preferences (M6)

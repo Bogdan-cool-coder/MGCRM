@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Resources\Sales;
+
+use App\Domain\Sales\Models\PipelineStage;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/** @mixin PipelineStage */
+class PipelineStageResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'pipeline_id' => $this->pipeline_id,
+            'name' => $this->name,
+            'code' => $this->code,
+            'sort_order' => $this->sort_order,
+            'color' => $this->color,
+            'is_won' => $this->is_won,
+            'is_lost' => $this->is_lost,
+            'hidden_by_default' => $this->hidden_by_default,
+            'parent_stage_id' => $this->parent_stage_id,
+            'stage_features' => $this->stage_features ?? [],
+            'won_gate' => $this->won_gate,
+            'sla_hours' => $this->sla_hours,
+        ];
+    }
+}

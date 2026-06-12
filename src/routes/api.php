@@ -21,6 +21,13 @@ use App\Http\Controllers\Crm\ContactCompanyController;
 use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
+use App\Http\Controllers\Sales\DealContactController;
+use App\Http\Controllers\Sales\DealController;
+use App\Http\Controllers\Sales\DealHistoryController;
+use App\Http\Controllers\Sales\DealProductController;
+use App\Http\Controllers\Sales\LostReasonController;
+use App\Http\Controllers\Sales\PipelineController;
+use App\Http\Controllers\Sales\PipelineStageController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -175,5 +182,47 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('sources', SourceController::class);
         Route::apiResource('countries', CountryController::class);
         Route::apiResource('cities', CityController::class);
+    });
+
+    // =========================================================================
+    // Sales — Pipelines (read-only in S1.3; editor lands in S1.5)
+    // =========================================================================
+    Route::get('pipelines', [PipelineController::class, 'index'])->name('pipelines.index');
+    Route::get('pipelines/{pipeline}', [PipelineController::class, 'show'])->name('pipelines.show');
+    Route::get('pipelines/{pipeline}/stages', [PipelineStageController::class, 'index'])->name('pipelines.stages.index');
+
+    // =========================================================================
+    // Sales — Lost Reasons
+    // =========================================================================
+    Route::get('lost-reasons', [LostReasonController::class, 'index'])->name('lost-reasons.index');
+    Route::post('lost-reasons', [LostReasonController::class, 'store'])->name('lost-reasons.store');
+    Route::patch('lost-reasons/{lostReason}', [LostReasonController::class, 'update'])->name('lost-reasons.update');
+    Route::delete('lost-reasons/{lostReason}', [LostReasonController::class, 'destroy'])->name('lost-reasons.destroy');
+
+    // =========================================================================
+    // Sales — Deals
+    // =========================================================================
+    Route::get('deals', [DealController::class, 'index'])->name('deals.index');
+    Route::post('deals', [DealController::class, 'store'])->name('deals.store');
+    Route::get('deals/{deal}', [DealController::class, 'show'])->name('deals.show');
+    Route::patch('deals/{deal}', [DealController::class, 'update'])->name('deals.update');
+    Route::delete('deals/{deal}', [DealController::class, 'destroy'])->name('deals.destroy');
+    // Stage change — the ONLY path that mutates stage_id (security boundary).
+    Route::post('deals/{deal}/move', [DealController::class, 'move'])->name('deals.move');
+
+    Route::prefix('deals/{deal}')->name('deals.')->group(function (): void {
+        // Line items
+        Route::get('products', [DealProductController::class, 'index'])->name('products.index');
+        Route::post('products', [DealProductController::class, 'store'])->name('products.store');
+        Route::patch('products/{dealProduct}', [DealProductController::class, 'update'])->name('products.update');
+        Route::delete('products/{dealProduct}', [DealProductController::class, 'destroy'])->name('products.destroy');
+
+        // Contacts (M2M)
+        Route::get('contacts', [DealContactController::class, 'index'])->name('contacts.index');
+        Route::post('contacts', [DealContactController::class, 'store'])->name('contacts.store');
+        Route::delete('contacts/{dealContact}', [DealContactController::class, 'destroy'])->name('contacts.destroy');
+
+        // Stage history
+        Route::get('history', [DealHistoryController::class, 'index'])->name('history.index');
     });
 });

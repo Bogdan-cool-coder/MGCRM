@@ -91,7 +91,13 @@ class ContactService
     {
         return DB::transaction(function () use ($contact, $companyId, $linkData): ContactCompanyLink {
             if (! empty($linkData['is_primary'])) {
+                // Clear primary on the contact axis: one primary company per contact.
                 ContactCompanyLink::where('contact_id', $contact->id)
+                    ->where('is_primary', true)
+                    ->update(['is_primary' => false]);
+
+                // Clear primary on the company axis: one primary contact per company.
+                ContactCompanyLink::where('company_id', $companyId)
                     ->where('is_primary', true)
                     ->update(['is_primary' => false]);
             }
@@ -120,7 +126,12 @@ class ContactService
     public function reassignPrimary(Contact $contact, int $companyId): ContactCompanyLink
     {
         return DB::transaction(function () use ($contact, $companyId): ContactCompanyLink {
+            // Clear primary on contact axis (all companies for this contact)
             ContactCompanyLink::where('contact_id', $contact->id)
+                ->update(['is_primary' => false]);
+
+            // Clear primary on company axis (all contacts for this company)
+            ContactCompanyLink::where('company_id', $companyId)
                 ->update(['is_primary' => false]);
 
             $link = ContactCompanyLink::where('contact_id', $contact->id)

@@ -16,6 +16,12 @@ use App\Domain\Crm\Policies\CompanyPolicy;
 use App\Domain\Crm\Policies\ContactPolicy;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Models\LostReason;
+use App\Domain\Sales\Models\Pipeline;
+use App\Domain\Sales\Policies\DealPolicy;
+use App\Domain\Sales\Policies\LostReasonPolicy;
+use App\Domain\Sales\Policies\PipelinePolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use PragmaRX\Google2FA\Google2FA;
@@ -38,10 +44,23 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ProductGroup::class, ProductGroupPolicy::class);
         Gate::policy(ExchangeRate::class, ExchangeRatePolicy::class);
 
+        // Sales Policies
+        Gate::policy(Deal::class, DealPolicy::class);
+        Gate::policy(Pipeline::class, PipelinePolicy::class);
+        Gate::policy(LostReason::class, LostReasonPolicy::class);
+
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
         // restricted to admin and director roles only.
         Gate::define('admin-write', static fn (User $user): bool => in_array(
+            $user->role,
+            [Role::Admin, Role::Director],
+            strict: true,
+        ));
+
+        // Dedup global scan gate: scanning the full database for duplicates is a
+        // privileged operation — only admin/director may trigger it.
+        Gate::define('dedup-scan-all', static fn (User $user): bool => in_array(
             $user->role,
             [Role::Admin, Role::Director],
             strict: true,

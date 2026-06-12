@@ -9,10 +9,9 @@ use App\Domain\Catalog\Models\ProductGroup;
 use App\Domain\Catalog\Models\ProductPrice;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
-use Illuminate\Database\Schema\Blueprint;
+use App\Domain\Sales\Models\Deal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -87,12 +86,21 @@ class ProductTest extends TestCase
         $product = Product::factory()->create();
         Sanctum::actingAs($user, ['*']);
 
-        // Create a fake deal_products table and insert a row (simulating S1.3).
-        Schema::create('deal_products', function (Blueprint $table): void {
-            $table->bigIncrements('id');
-            $table->unsignedBigInteger('product_id');
-        });
-        DB::table('deal_products')->insert(['product_id' => $product->id]);
+        // S1.3 provides the real deal_products table; a referencing line item
+        // must block product deletion (409). Insert a complete row directly.
+        $deal = Deal::factory()->create();
+        DB::table('deal_products')->insert([
+            'deal_id' => $deal->id,
+            'product_id' => $product->id,
+            'plan_id' => null,
+            'quantity' => 1,
+            'unit_price' => 10000,
+            'currency' => 'RUB',
+            'amount' => 10000,
+            'sort_order' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->deleteJson("/api/catalog/products/{$product->id}")
             ->assertStatus(409);

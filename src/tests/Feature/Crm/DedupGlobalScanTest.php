@@ -139,38 +139,27 @@ class DedupGlobalScanTest extends TestCase
     // Visibility scoping
     // =========================================================================
 
-    public function test_manager_sees_only_own_contacts_in_global_scan(): void
+    /**
+     * Global scan is now gated to admin/director only (H1).
+     * A manager hitting the no-entity_id path receives 403, not scoped results.
+     * The service-level visibility scoping logic is tested via DedupServiceTest (unit).
+     */
+    public function test_manager_gets_403_not_scoped_results_on_global_scan(): void
     {
         $manager = User::factory()->create(['role' => Role::Manager]);
         $other = User::factory()->create(['role' => Role::Manager]);
 
-        // Two contacts owned by manager with same email → should appear in scan
-        $m1 = Contact::factory()->create(['email' => 'mgr@example.com', 'owner_id' => $manager->id]);
-        $m2 = Contact::factory()->create(['email' => 'mgr@example.com', 'owner_id' => $manager->id]);
+        Contact::factory()->create(['email' => 'mgr@example.com', 'owner_id' => $manager->id]);
+        Contact::factory()->create(['email' => 'mgr@example.com', 'owner_id' => $manager->id]);
 
-        // Two contacts owned by other user with same email → should NOT appear
         Contact::factory()->create(['email' => 'other@example.com', 'owner_id' => $other->id]);
         Contact::factory()->create(['email' => 'other@example.com', 'owner_id' => $other->id]);
 
         Sanctum::actingAs($manager, ['*']);
 
-        $response = $this->getJson('/api/crm/dedup/scan?scope=contact')->assertOk();
-        $data = $response->json('data');
-
-        // Manager should see their own dup group
-        $group = collect($data)->first(fn (array $g): bool => $g['key'] === 'email:mgr@example.com');
-        $this->assertNotNull($group);
-
-        // Manager must NOT see other user's contacts in any group
-        $allIds = collect($data)->flatMap(fn (array $g): array => collect($g['entities'])->pluck('id')->toArray())->toArray();
-        $this->assertNotContains(
-            'other@example.com',
-            collect($data)->flatMap(fn (array $g): array => collect($g['entities'])->pluck('email')->toArray())->toArray()
-        );
-
-        // Confirm: only manager-owned IDs present
-        $this->assertContains($m1->id, $allIds);
-        $this->assertContains($m2->id, $allIds);
+        // H1: manager is blocked from global scan entirely
+        $this->getJson('/api/crm/dedup/scan?scope=contact')
+            ->assertForbidden();
     }
 
     public function test_admin_sees_all_contacts_in_global_scan(): void
@@ -195,7 +184,11 @@ class DedupGlobalScanTest extends TestCase
         $this->assertContains($c2->id, $ids);
     }
 
-    public function test_manager_cannot_see_other_owners_contacts_in_global_scan(): void
+    /**
+     * A manager cannot access the global scan at all (H1 Gate).
+     * This replaces the old test that expected 200+scoped results.
+     */
+    public function test_manager_cannot_access_global_scan_of_other_owners_contacts(): void
     {
         $manager = User::factory()->create(['role' => Role::Manager]);
         $other = User::factory()->create(['role' => Role::Manager]);
@@ -206,11 +199,9 @@ class DedupGlobalScanTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        $response = $this->getJson('/api/crm/dedup/scan?scope=contact')->assertOk();
-        $data = $response->json('data');
-
-        $group = collect($data)->first(fn (array $g): bool => $g['key'] === 'email:foreign@example.com');
-        $this->assertNull($group, 'Manager must not see duplicate groups owned by other users');
+        // H1: manager is blocked — 403, no data leaks
+        $this->getJson('/api/crm/dedup/scan?scope=contact')
+            ->assertForbidden();
     }
 
     // =========================================================================
@@ -257,5 +248,36 @@ class DedupGlobalScanTest extends TestCase
         Sanctum::actingAs($admin, ['*']);
 
         $this->getJson('/api/crm/dedup/scan?scope=deal')->assertUnprocessable();
+    }
+
+    // =========================================================================
+    // H1: dedup-scan-all Gate — manager must get 403, admin/director 200
+    // =========================================================================
+
+    public function test_manager_gets_403_on_global_scan(): void
+    {
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/crm/dedup/scan?scope=contact')
+            ->assertForbidden();
+    }
+
+    public function test_admin_gets_200_on_global_scan(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($admin, ['*']);
+
+        $this->getJson('/api/crm/dedup/scan?scope=contact')
+            ->assertOk();
+    }
+
+    public function test_director_gets_200_on_global_scan(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson('/api/crm/dedup/scan?scope=contact')
+            ->assertOk();
     }
 }

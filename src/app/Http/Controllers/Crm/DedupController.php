@@ -52,8 +52,10 @@ class DedupController extends Controller
         $scope = $request->query('scope');
         $entityIdRaw = $request->query('entity_id');
 
-        // ---- Global scan (no entity_id) ----
+        // ---- Global scan (no entity_id) — admin/director only ----
         if ($entityIdRaw === null) {
+            $this->authorize('dedup-scan-all');
+
             $groups = $this->service->scanAll($scope, $request->user());
 
             $data = $groups->map(function (array $group): array {
