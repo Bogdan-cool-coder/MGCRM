@@ -134,6 +134,11 @@ class Document extends Model
         return $this->hasMany(DocumentRemark::class)->orderBy('created_at');
     }
 
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(Approval::class)->orderBy('created_at');
+    }
+
     // ---- Scopes ----
 
     /** @param Builder<Document> $query */

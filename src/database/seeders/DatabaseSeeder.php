@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
             InboxSeeder::class,
             // Contracts (S2.1): licensor entities, templates, template variables.
             ContractsSeeder::class,
+            // Contracts (S2.6): default approval route + test users.
+            ApprovalRouteSeeder::class,
         ]);
     }
 }

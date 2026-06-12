@@ -15,8 +15,10 @@ use App\Http\Controllers\Catalog\ProductPlanController;
 use App\Http\Controllers\Catalog\ProductPriceController;
 use App\Http\Controllers\Contracts\Admin\LicensorBankAccountController;
 use App\Http\Controllers\Contracts\Admin\LicensorEntityController;
+use App\Http\Controllers\Contracts\ApprovalRouteController;
 use App\Http\Controllers\Contracts\CompanyDocumentController;
 use App\Http\Controllers\Contracts\DealDocumentController;
+use App\Http\Controllers\Contracts\DocumentApprovalController;
 use App\Http\Controllers\Contracts\DocumentAttachmentController;
 use App\Http\Controllers\Contracts\DocumentController;
 use App\Http\Controllers\Contracts\DocumentGenerateController;
@@ -407,8 +409,22 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // Company → document generate entry point (S2.4).
     Route::post('companies/{company}/documents/generate', [CompanyDocumentController::class, 'generate'])->name('companies.documents.generate');
 
+    // =========================================================================
+    // Contracts — S2.6: Approval routes (CRUD) + approval-related document actions
+    // =========================================================================
+    Route::get('approval-routes', [ApprovalRouteController::class, 'index'])->name('approval-routes.index');
+    Route::post('approval-routes', [ApprovalRouteController::class, 'store'])->name('approval-routes.store');
+    Route::get('approval-routes/{approvalRoute}', [ApprovalRouteController::class, 'show'])->name('approval-routes.show');
+    Route::patch('approval-routes/{approvalRoute}', [ApprovalRouteController::class, 'update'])->name('approval-routes.update');
+    Route::delete('approval-routes/{approvalRoute}', [ApprovalRouteController::class, 'destroy'])->name('approval-routes.destroy');
+
+    // S2.6: "My approvals" — MUST be declared before /{approval} to avoid routing clash.
+    Route::get('approvals/my', [DocumentApprovalController::class, 'myApprovals'])->name('approvals.my');
+    Route::get('approvals/{approval}', [DocumentApprovalController::class, 'showApproval'])->name('approvals.show');
+
     // Action routes MUST be declared BEFORE the apiResource to avoid clashing.
-    Route::post('documents/{document}/submit', [DocumentController::class, 'submit'])->name('documents.submit');
+    // S2.6: submit is now handled by DocumentApprovalController (ApprovalService::submit).
+    Route::post('documents/{document}/submit', [DocumentApprovalController::class, 'submit'])->name('documents.submit');
     Route::post('documents/{document}/upload-drive', [DocumentController::class, 'uploadDrive'])->name('documents.upload-drive');
     Route::post('documents/{document}/sign', [DocumentController::class, 'sign'])->name('documents.sign');
     Route::post('documents/{document}/unsign', [DocumentController::class, 'unsign'])->name('documents.unsign');
@@ -420,6 +436,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::get('documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
     Route::patch('documents/{document}', [DocumentController::class, 'update'])->name('documents.update');
     Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+
+    // S2.6: Decide (vote) and approval summary — must be before the nested prefix group.
+    Route::post('documents/{document}/decide', [DocumentApprovalController::class, 'decide'])->name('documents.decide');
+    Route::get('documents/{document}/approval-summary', [DocumentApprovalController::class, 'approvalSummary'])->name('documents.approval-summary');
 
     // Nested: document items
     Route::prefix('documents/{document}')->name('documents.')->group(function (): void {

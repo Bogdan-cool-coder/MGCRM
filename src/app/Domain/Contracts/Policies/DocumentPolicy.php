@@ -194,6 +194,31 @@ class DocumentPolicy
         return (int) $document->author_user_id === $user->id;
     }
 
+    // ---- S2.6: Approval ----
+
+    /**
+     * Decide (vote approved/rejected/needs_rework): any authenticated user EXCEPT the author.
+     * The service enforces stage membership; policy only blocks the author.
+     */
+    public function decide(User $user, Document $document): bool
+    {
+        return $user->id !== (int) $document->author_user_id;
+    }
+
+    /**
+     * View approval summary:
+     *   admin/lawyer — any document;
+     *   others       — own documents only.
+     */
+    public function approvalSummary(User $user, Document $document): bool
+    {
+        if ($this->isPrivileged($user)) {
+            return true;
+        }
+
+        return (int) $document->author_user_id === $user->id;
+    }
+
     // ---- Helpers ----
 
     private function isPrivileged(User $user): bool

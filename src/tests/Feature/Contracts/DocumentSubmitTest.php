@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Contracts;
 
 use App\Domain\Contracts\Enums\ContractStatus;
+use App\Domain\Contracts\Models\ApprovalRoute;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Iam\Enums\Role;
@@ -13,25 +14,71 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
+/**
+ * DocumentSubmitTest — S2.2 submit tests updated for S2.6.
+ *
+ * After S2.6, POST /submit goes through ApprovalService::submit which:
+ *   1. Requires docx_path to be set.
+ *   2. Requires an active ApprovalRoute.
+ *   3. Transitions Draft → Submitted → InReview (not just → Submitted).
+ *
+ * Tests that assert on the resulting status now expect 'in_review'.
+ * Tests that check the revision snapshot / attempt increment still work.
+ */
 class DocumentSubmitTest extends TestCase
 {
     use RefreshDatabase;
 
+    // ---- Helper: create approver + route ----
+
+    private function makeApprover(): User
+    {
+        return User::factory()->create(['role' => Role::Lawyer]);
+    }
+
+    private function makeRoute(User $approver): ApprovalRoute
+    {
+        return ApprovalRoute::factory()->create([
+            'document_kind' => 'contract',
+            'template_id' => null,
+            'is_default' => true,
+            'is_active' => true,
+            'stages' => [
+                ['order' => 1, 'name' => 'Stage 1', 'user_ids' => [$approver->id], 'min_required' => 1],
+            ],
+        ]);
+    }
+
+    private function docWithDocx(int $authorId): Document
+    {
+        return Document::factory()->draft()->create([
+            'author_user_id' => $authorId,
+            'docx_path' => 'documents/test.docx',
+        ]);
+    }
+
+    // ---- Tests ----
+
     public function test_author_can_submit_draft_document(): void
     {
         $user = User::factory()->create(['role' => Role::Manager]);
-        $doc = Document::factory()->draft()->create(['author_user_id' => $user->id]);
+        $approver = $this->makeApprover();
+        $this->makeRoute($approver);
+        $doc = $this->docWithDocx($user->id);
         Sanctum::actingAs($user, ['*']);
 
         $response = $this->postJson("/api/documents/{$doc->id}/submit")
             ->assertOk();
 
-        $this->assertSame('submitted', $response->json('data.status'));
+        // S2.6: submit now goes Draft → Submitted → InReview in one call
+        $this->assertSame('in_review', $response->json('data.status'));
     }
 
     public function test_submit_creates_revision_snapshot(): void
     {
         $user = User::factory()->create(['role' => Role::Manager]);
+        $approver = $this->makeApprover();
+        $this->makeRoute($approver);
         $doc = Document::factory()->draft()->withContext([
             'sublicensee' => ['name' => 'ACME Corp'],
             'license' => [],
@@ -39,7 +86,7 @@ class DocumentSubmitTest extends TestCase
             'payments' => [],
             'acts' => [],
             'custom' => ['note' => 'Test note'],
-        ])->create(['author_user_id' => $user->id]);
+        ])->create(['author_user_id' => $user->id, 'docx_path' => 'documents/test.docx']);
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson("/api/documents/{$doc->id}/submit")
@@ -58,7 +105,9 @@ class DocumentSubmitTest extends TestCase
     public function test_submit_with_note_stores_note_in_revision(): void
     {
         $user = User::factory()->create(['role' => Role::Manager]);
-        $doc = Document::factory()->draft()->create(['author_user_id' => $user->id]);
+        $approver = $this->makeApprover();
+        $this->makeRoute($approver);
+        $doc = $this->docWithDocx($user->id);
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson("/api/documents/{$doc->id}/submit", [
@@ -72,17 +121,18 @@ class DocumentSubmitTest extends TestCase
     public function test_submit_increments_attempt_number(): void
     {
         $user = User::factory()->create(['role' => Role::Manager]);
+        $approver = $this->makeApprover();
+        $this->makeRoute($approver);
         Sanctum::actingAs($user, ['*']);
 
-        // First submit: Draft → Submitted
-        $doc = Document::factory()->draft()->create(['author_user_id' => $user->id]);
+        // First submit: Draft → Submitted → InReview
+        $doc = $this->docWithDocx($user->id);
         $this->postJson("/api/documents/{$doc->id}/submit")->assertOk();
 
-        // Manually return to Draft state (NeedsRework → Submitted in real life, but
-        // we force it here to test the attempt increment mechanism)
+        // Force back to NeedsRework (simulating the full cycle)
         $doc->update(['status' => ContractStatus::NeedsRework->value]);
 
-        // Second submit: NeedsRework → Submitted
+        // Second submit: NeedsRework → Submitted → InReview
         $this->postJson("/api/documents/{$doc->id}/submit")->assertOk();
 
         $revisions = DocumentRevision::query()
@@ -122,7 +172,12 @@ class DocumentSubmitTest extends TestCase
     {
         $admin = User::factory()->create(['role' => Role::Admin]);
         $owner = User::factory()->create(['role' => Role::Manager]);
-        $doc = Document::factory()->draft()->create(['author_user_id' => $owner->id]);
+        $approver = $this->makeApprover();
+        $this->makeRoute($approver);
+        $doc = Document::factory()->draft()->create([
+            'author_user_id' => $owner->id,
+            'docx_path' => 'documents/test.docx',
+        ]);
         Sanctum::actingAs($admin, ['*']);
 
         $this->postJson("/api/documents/{$doc->id}/submit")
@@ -133,7 +188,21 @@ class DocumentSubmitTest extends TestCase
     {
         $lawyer = User::factory()->create(['role' => Role::Lawyer]);
         $owner = User::factory()->create(['role' => Role::Manager]);
-        $doc = Document::factory()->draft()->create(['author_user_id' => $owner->id]);
+        // Lawyer is the submitter but must not be in stage-1 user_ids (self-approval guard)
+        $otherApprover = User::factory()->create(['role' => Role::Director->value]);
+        ApprovalRoute::factory()->create([
+            'document_kind' => 'contract',
+            'template_id' => null,
+            'is_default' => true,
+            'is_active' => true,
+            'stages' => [
+                ['order' => 1, 'name' => 'Stage 1', 'user_ids' => [$otherApprover->id], 'min_required' => 1],
+            ],
+        ]);
+        $doc = Document::factory()->draft()->create([
+            'author_user_id' => $owner->id,
+            'docx_path' => 'documents/test.docx',
+        ]);
         Sanctum::actingAs($lawyer, ['*']);
 
         $this->postJson("/api/documents/{$doc->id}/submit")

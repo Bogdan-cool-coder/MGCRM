@@ -11,7 +11,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Contracts\ArchiveDocumentRequest;
 use App\Http\Requests\Contracts\SignDocumentRequest;
 use App\Http\Requests\Contracts\StoreDocumentRequest;
-use App\Http\Requests\Contracts\SubmitDocumentRequest;
 use App\Http\Requests\Contracts\UnsignDocumentRequest;
 use App\Http\Requests\Contracts\UpdateDocumentRequest;
 use App\Http\Resources\Contracts\DocumentResource;
@@ -97,24 +96,6 @@ class DocumentController extends Controller
         $document->delete();
 
         return response()->json(null, 204);
-    }
-
-    /**
-     * POST /api/documents/{document}/submit
-     * Triggers Draft → Submitted transition with a revision snapshot.
-     */
-    public function submit(SubmitDocumentRequest $request, Document $document): JsonResource
-    {
-        $this->authorize('submit', $document);
-
-        $updated = $this->service->transition(
-            $document,
-            ContractStatus::Submitted,
-            $request->user()->id,
-            $request->validated('note'),
-        );
-
-        return DocumentResource::make($updated);
     }
 
     /**

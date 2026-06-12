@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Contracts;
 
 use App\Domain\Contracts\Enums\ContractStatus;
+use App\Domain\Contracts\Models\ApprovalRoute;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Iam\Enums\Role;
@@ -16,6 +17,20 @@ use Tests\TestCase;
 class DocumentRevisionTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function makeApproverAndRoute(): void
+    {
+        $approver = User::factory()->create(['role' => Role::Lawyer]);
+        ApprovalRoute::factory()->create([
+            'document_kind' => 'contract',
+            'template_id' => null,
+            'is_default' => true,
+            'is_active' => true,
+            'stages' => [
+                ['order' => 1, 'name' => 'Stage 1', 'user_ids' => [$approver->id], 'min_required' => 1],
+            ],
+        ]);
+    }
 
     public function test_list_revisions_returns_correct_count(): void
     {
@@ -34,6 +49,7 @@ class DocumentRevisionTest extends TestCase
 
     public function test_revision_context_snapshot_matches_document_context_at_submit_time(): void
     {
+        $this->makeApproverAndRoute();
         $user = User::factory()->create(['role' => Role::Manager]);
         $context = [
             'sublicensee' => ['name' => 'ACME Corp', 'bin' => '999888777'],
@@ -45,6 +61,7 @@ class DocumentRevisionTest extends TestCase
         ];
         $doc = Document::factory()->draft()->withContext($context)->create([
             'author_user_id' => $user->id,
+            'docx_path' => 'documents/test.docx',
         ]);
         Sanctum::actingAs($user, ['*']);
 
@@ -62,10 +79,14 @@ class DocumentRevisionTest extends TestCase
 
     public function test_resubmit_after_rework_creates_new_revision_with_incremented_version_number(): void
     {
+        $this->makeApproverAndRoute();
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $doc = Document::factory()->draft()->create(['author_user_id' => $user->id]);
+        $doc = Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'docx_path' => 'documents/test.docx',
+        ]);
 
         // First submit.
         $this->postJson("/api/documents/{$doc->id}/submit")->assertOk();

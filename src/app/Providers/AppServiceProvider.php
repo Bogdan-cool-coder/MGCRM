@@ -14,10 +14,12 @@ use App\Domain\Catalog\Models\ProductGroup;
 use App\Domain\Catalog\Policies\ExchangeRatePolicy;
 use App\Domain\Catalog\Policies\ProductGroupPolicy;
 use App\Domain\Catalog\Policies\ProductPolicy;
+use App\Domain\Contracts\Models\ApprovalRoute;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\LicensorEntity;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Models\TemplateVariable;
+use App\Domain\Contracts\Policies\ApprovalRoutePolicy;
 use App\Domain\Contracts\Policies\DocumentPolicy;
 use App\Domain\Contracts\Policies\LicensorPolicy;
 use App\Domain\Contracts\Policies\TemplatePolicy;
@@ -86,6 +88,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Contracts Policies (S2.2)
         Gate::policy(Document::class, DocumentPolicy::class);
+
+        // Contracts Policies (S2.6)
+        Gate::policy(ApprovalRoute::class, ApprovalRoutePolicy::class);
 
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
