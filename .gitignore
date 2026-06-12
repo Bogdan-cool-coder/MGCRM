@@ -27,7 +27,7 @@
 /data/
 
 # === Agent-private memory (машинная, локальная — не коммитим) ===
-.claude/agent-memory/
+**/.claude/agent-memory/
 
 # === OS / IDE ===
 .DS_Store

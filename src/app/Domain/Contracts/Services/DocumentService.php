@@ -25,6 +25,10 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  */
 class DocumentService
 {
+    public function __construct(
+        private readonly AttachmentService $attachmentService,
+    ) {}
+
     /**
      * Paginated list with optional filters.
      *
@@ -233,6 +237,7 @@ class DocumentService
             match ($to) {
                 ContractStatus::Uploaded => throw new HttpException(409, 'not_yet_implemented'),
                 ContractStatus::Submitted => $this->guardSubmit($locked, $userId),
+                ContractStatus::Signed => $this->guardSign($locked),
                 default => null,
             };
 
@@ -308,7 +313,7 @@ class DocumentService
     ): void {
         match ($to) {
             ContractStatus::Submitted => $this->createRevisionSnapshot($locked, $userId, $note),
-            ContractStatus::Signed => $locked->signed_at = now(),
+            ContractStatus::Signed => $this->applySigned($locked),
             ContractStatus::Archived => $locked->archived_at = now(),
             default => null,
         };
@@ -360,6 +365,83 @@ class DocumentService
             'discount_amount' => $discountAmount,
             'total' => $total,
         ]);
+    }
+
+    /**
+     * Archive a document (set archived_at = now()).
+     * Archive is a flag, NOT a status transition — status remains unchanged.
+     *
+     * @throws ValidationException when document is in InReview status
+     */
+    public function archive(Document $doc, int $userId): Document
+    {
+        if ($doc->status === ContractStatus::InReview) {
+            throw ValidationException::withMessages([
+                'status' => 'Cannot archive a document that is currently in review.',
+            ])->status(422);
+        }
+
+        $doc->archived_at = now();
+        $doc->save();
+
+        return $doc->fresh();
+    }
+
+    /**
+     * Unarchive a document (clear archived_at).
+     */
+    public function unarchive(Document $doc, int $userId): Document
+    {
+        $doc->archived_at = null;
+        $doc->save();
+
+        return $doc->fresh();
+    }
+
+    /**
+     * Unsign a document: Signed → Approved, signed_at = null.
+     * Only admin/lawyer (enforced by Policy).
+     *
+     * @throws ValidationException when document is not in Signed status
+     */
+    public function unsign(Document $doc, int $userId): Document
+    {
+        if ($doc->status !== ContractStatus::Signed) {
+            throw ValidationException::withMessages([
+                'status' => "Document must be in 'signed' status to unsign (current: {$doc->status->value}).",
+            ])->status(422);
+        }
+
+        $doc->status = ContractStatus::Approved;
+        $doc->signed_at = null;
+        $doc->save();
+
+        return $doc->fresh();
+    }
+
+    // ---- Private helpers ----
+
+    /**
+     * Guard: Approved → Signed requires at least one signed_scan attachment.
+     *
+     * @throws ValidationException 422 when signed_scan is missing
+     */
+    private function guardSign(Document $locked): void
+    {
+        if (! $this->attachmentService->hasSignedScan($locked)) {
+            throw ValidationException::withMessages([
+                'attachments' => 'Upload a signed scan (kind=signed_scan) before signing.',
+            ])->status(422);
+        }
+    }
+
+    /**
+     * Side effect for Approved → Signed transition.
+     */
+    private function applySigned(Document $locked): void
+    {
+        $locked->signed_at = now();
+        // TODO(cs-specialist): trigger CS subscription creation after signed (S-CS sprint)
     }
 
     /**

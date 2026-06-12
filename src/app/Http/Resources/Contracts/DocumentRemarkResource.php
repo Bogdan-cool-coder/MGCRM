@@ -21,10 +21,18 @@ class DocumentRemarkResource extends JsonResource
             'attempt' => $this->attempt,
             'stage_order' => $this->stage_order,
             'author_user_id' => $this->author_user_id,
+            'author' => $this->whenLoaded('author', fn () => [
+                'id' => $this->author->id,
+                'full_name' => $this->author->full_name,
+            ]),
             'text' => $this->text,
             'is_resolved' => $this->is_resolved,
             'resolved_at' => $this->resolved_at?->toISOString(),
             'resolved_by_user_id' => $this->resolved_by_user_id,
+            'resolved_by' => $this->whenLoaded('resolvedBy', fn () => $this->resolvedBy ? [
+                'id' => $this->resolvedBy->id,
+                'full_name' => $this->resolvedBy->full_name,
+            ] : null),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

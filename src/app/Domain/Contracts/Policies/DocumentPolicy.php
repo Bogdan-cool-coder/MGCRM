@@ -88,6 +88,99 @@ class DocumentPolicy
         return $this->isPrivileged($user);
     }
 
+    // ---- S2.5: Sign / Unsign / Archive / Unarchive ----
+
+    /**
+     * Sign (Approved → Signed): author, admin, or lawyer.
+     * Service enforces the signed_scan guard.
+     */
+    public function sign(User $user, Document $document): bool
+    {
+        if ($this->isPrivileged($user)) {
+            return true;
+        }
+
+        return (int) $document->author_user_id === $user->id;
+    }
+
+    /**
+     * Unsign (Signed → Approved): admin or lawyer only.
+     */
+    public function unsign(User $user, Document $document): bool
+    {
+        return $this->isPrivileged($user);
+    }
+
+    /**
+     * Archive (set archived_at flag): author, admin, or lawyer.
+     * Service enforces the in_review guard.
+     */
+    public function archive(User $user, Document $document): bool
+    {
+        if ($this->isPrivileged($user)) {
+            return true;
+        }
+
+        return (int) $document->author_user_id === $user->id;
+    }
+
+    /**
+     * Unarchive (clear archived_at flag): admin or lawyer only.
+     */
+    public function unarchive(User $user, Document $document): bool
+    {
+        return $this->isPrivileged($user);
+    }
+
+    // ---- S2.5: Remarks ----
+
+    /**
+     * Create a remark manually via API: admin or lawyer only.
+     * Primary machine path (ApprovalService) bypasses this policy.
+     */
+    public function createRemark(User $user, Document $document): bool
+    {
+        return $this->isPrivileged($user);
+    }
+
+    /**
+     * Resolve/unresolve a remark: author of the document, admin, or lawyer.
+     */
+    public function resolveRemark(User $user, Document $document): bool
+    {
+        if ($this->isPrivileged($user)) {
+            return true;
+        }
+
+        return (int) $document->author_user_id === $user->id;
+    }
+
+    // ---- S2.5: Attachments ----
+
+    /**
+     * Upload an attachment: author, admin, or lawyer.
+     */
+    public function uploadAttachment(User $user, Document $document): bool
+    {
+        if ($this->isPrivileged($user)) {
+            return true;
+        }
+
+        return (int) $document->author_user_id === $user->id;
+    }
+
+    /**
+     * Delete an attachment: admin, lawyer, or author (author blocked when signed via service guard).
+     */
+    public function deleteAttachment(User $user, Document $document): bool
+    {
+        if ($this->isPrivileged($user)) {
+            return true;
+        }
+
+        return (int) $document->author_user_id === $user->id;
+    }
+
     // ---- Helpers ----
 
     private function isPrivileged(User $user): bool

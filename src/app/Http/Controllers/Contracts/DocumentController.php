@@ -8,8 +8,11 @@ use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Services\DocumentService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Contracts\ArchiveDocumentRequest;
+use App\Http\Requests\Contracts\SignDocumentRequest;
 use App\Http\Requests\Contracts\StoreDocumentRequest;
 use App\Http\Requests\Contracts\SubmitDocumentRequest;
+use App\Http\Requests\Contracts\UnsignDocumentRequest;
 use App\Http\Requests\Contracts\UpdateDocumentRequest;
 use App\Http\Resources\Contracts\DocumentResource;
 use Illuminate\Http\JsonResponse;
@@ -123,5 +126,61 @@ class DocumentController extends Controller
         $this->authorize('uploadDrive', $document);
 
         $this->service->stubUploadDrive();
+    }
+
+    /**
+     * POST /api/documents/{document}/sign
+     * Transitions Approved → Signed. Requires at least one signed_scan attachment.
+     */
+    public function sign(SignDocumentRequest $request, Document $document): JsonResource
+    {
+        $this->authorize('sign', $document);
+
+        $updated = $this->service->transition(
+            $document,
+            ContractStatus::Signed,
+            $request->user()->id,
+        );
+
+        return DocumentResource::make($updated);
+    }
+
+    /**
+     * POST /api/documents/{document}/unsign
+     * Rolls back Signed → Approved. Admin/lawyer only.
+     */
+    public function unsign(UnsignDocumentRequest $request, Document $document): JsonResource
+    {
+        $this->authorize('unsign', $document);
+
+        $updated = $this->service->unsign($document, $request->user()->id);
+
+        return DocumentResource::make($updated);
+    }
+
+    /**
+     * POST /api/documents/{document}/archive
+     * Sets archived_at flag (does not change status). Forbidden while in_review.
+     */
+    public function archive(ArchiveDocumentRequest $request, Document $document): JsonResource
+    {
+        $this->authorize('archive', $document);
+
+        $updated = $this->service->archive($document, $request->user()->id);
+
+        return DocumentResource::make($updated);
+    }
+
+    /**
+     * POST /api/documents/{document}/unarchive
+     * Clears archived_at flag. Admin/lawyer only.
+     */
+    public function unarchive(ArchiveDocumentRequest $request, Document $document): JsonResource
+    {
+        $this->authorize('unarchive', $document);
+
+        $updated = $this->service->unarchive($document, $request->user()->id);
+
+        return DocumentResource::make($updated);
     }
 }

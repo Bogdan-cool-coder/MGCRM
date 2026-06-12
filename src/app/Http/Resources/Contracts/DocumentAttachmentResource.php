@@ -24,6 +24,10 @@ class DocumentAttachmentResource extends JsonResource
             'content_type' => $this->content_type,
             'uploaded_by_user_id' => $this->uploaded_by_user_id,
             'created_at' => $this->created_at?->toISOString(),
+            'download_url' => route('documents.attachments.download', [
+                $this->document_id,
+                $this->id,
+            ]),
         ];
     }
 }

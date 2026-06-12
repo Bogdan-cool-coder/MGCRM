@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Contracts\Models;
 
 use App\Domain\Iam\Models\User;
+use Database\Factories\Contracts\DocumentRemarkFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,6 +21,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class DocumentRemark extends Model
 {
+    /** @use HasFactory<DocumentRemarkFactory> */
+    use HasFactory;
+
+    protected static function newFactory(): DocumentRemarkFactory
+    {
+        return DocumentRemarkFactory::new();
+    }
+
     protected $table = 'document_remarks';
 
     protected $fillable = [

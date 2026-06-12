@@ -58,4 +58,30 @@ return [
     |--------------------------------------------------------------------------
     */
     'country_codes' => ['kz', 'uz'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Document attachment upload constraints
+    |--------------------------------------------------------------------------
+    | allowed_mimes     — MIME types checked in AttachmentService::upload()
+    | allowed_extensions— file extensions checked in UploadAttachmentRequest
+    | max_size_bytes    — hard limit (15 MB default)
+    | extensions        — MIME → extension mapping used to derive file names
+    */
+    'attachments' => [
+        'allowed_mimes' => [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+        ],
+        'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+        'max_size_bytes' => 15 * 1024 * 1024, // 15 MB
+        'extensions' => [
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ],
+    ],
 ];
