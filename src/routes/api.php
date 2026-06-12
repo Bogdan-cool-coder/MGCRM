@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Activity\ActivityController;
+use App\Http\Controllers\Activity\MeetingReportController;
+use App\Http\Controllers\Activity\MeetingReportQuestionController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Catalog\ExchangeRateController;
@@ -21,6 +24,7 @@ use App\Http\Controllers\Crm\ContactCompanyController;
 use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
+use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
 use App\Http\Controllers\Sales\DealHistoryController;
@@ -63,6 +67,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // 2FA enrolment (requires a fully authenticated session).
     Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);
     Route::post('/2fa/verify-setup', [TwoFactorController::class, 'verifySetup']);
+
+    // =========================================================================
+    // Iam — Colleague directory (assign / responsible dropdowns)
+    // =========================================================================
+    // Read-only reference list of co-workers; any authenticated user may read.
+    Route::get('users', [UserController::class, 'index'])->name('users.index');
 
     // =========================================================================
     // CRM — Contacts
@@ -234,5 +244,37 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Stage history
         Route::get('history', [DealHistoryController::class, 'index'])->name('history.index');
+
+        // Meeting report — create/update a meeting activity on this deal (S1.6).
+        Route::post('meeting-report', [MeetingReportController::class, 'save'])->name('meeting-report.save');
     });
+
+    // =========================================================================
+    // Activity — Activities / Tasks (S1.6)
+    // =========================================================================
+    // Specific paths MUST precede /{activity} (else they match as {activity}).
+    Route::get('activities/presets/{preset}', [ActivityController::class, 'presets'])->name('activities.presets');
+    Route::get('activities/counts-by-preset', [ActivityController::class, 'countsByPreset'])->name('activities.counts-by-preset');
+    Route::get('activities/my-open-count', [ActivityController::class, 'myOpenCount'])->name('activities.my-open-count');
+
+    Route::get('activities', [ActivityController::class, 'index'])->name('activities.index');
+    Route::post('activities', [ActivityController::class, 'store'])->name('activities.store');
+    Route::get('activities/{activity}', [ActivityController::class, 'show'])->name('activities.show');
+    Route::patch('activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
+    Route::delete('activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
+    // Completion / status — the only paths that mutate status.
+    Route::post('activities/{activity}/complete', [ActivityController::class, 'complete'])->name('activities.complete');
+    Route::post('activities/{activity}/reopen', [ActivityController::class, 'reopen'])->name('activities.reopen');
+    Route::patch('activities/{activity}/status', [ActivityController::class, 'status'])->name('activities.status');
+
+    // =========================================================================
+    // Activity — Meeting report question registry
+    // =========================================================================
+    Route::get('meeting-report/questions', [MeetingReportController::class, 'questions'])->name('meeting-report.questions');
+
+    // Admin registry CRUD (admin/director — gated by policy).
+    Route::get('meeting-report-questions', [MeetingReportQuestionController::class, 'index'])->name('meeting-report-questions.index');
+    Route::post('meeting-report-questions', [MeetingReportQuestionController::class, 'store'])->name('meeting-report-questions.store');
+    Route::patch('meeting-report-questions/{question}', [MeetingReportQuestionController::class, 'update'])->name('meeting-report-questions.update');
+    Route::delete('meeting-report-questions/{question}', [MeetingReportQuestionController::class, 'destroy'])->name('meeting-report-questions.destroy');
 });

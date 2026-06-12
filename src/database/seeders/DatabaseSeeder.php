@@ -15,6 +15,10 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             CatalogSeeder::class,
             SalesSeeder::class,
+            // Activity (S1.6): meeting-report registry (deps-free) + demo
+            // activities (depend on demo deals seeded above).
+            MeetingReportQuestionSeeder::class,
+            DemoActivitiesSeeder::class,
         ]);
     }
 }

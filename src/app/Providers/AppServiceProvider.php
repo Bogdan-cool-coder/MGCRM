@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Activity\Models\Activity;
+use App\Domain\Activity\Models\MeetingReportQuestion;
+use App\Domain\Activity\Policies\ActivityPolicy;
+use App\Domain\Activity\Policies\MeetingReportQuestionPolicy;
 use App\Domain\Catalog\Models\ExchangeRate;
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Catalog\Models\ProductGroup;
@@ -48,6 +52,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Deal::class, DealPolicy::class);
         Gate::policy(Pipeline::class, PipelinePolicy::class);
         Gate::policy(LostReason::class, LostReasonPolicy::class);
+
+        // Activity Policies
+        Gate::policy(Activity::class, ActivityPolicy::class);
+        Gate::policy(MeetingReportQuestion::class, MeetingReportQuestionPolicy::class);
 
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
