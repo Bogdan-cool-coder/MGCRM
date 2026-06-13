@@ -118,6 +118,64 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.pipelineSettings' },
   },
 
+  // ─── Documents: Workspace ────────────────────────────────────────────────
+  {
+    path: '/documents',
+    name: 'Documents',
+    component: () => import('@/pages/DocumentsPage'),
+    meta: { requiresAuth: true, title: 'nav.documents' },
+  },
+  {
+    path: '/documents/:id',
+    name: 'DocumentDetail',
+    component: () => import('@/pages/DocumentPage'),
+    meta: { requiresAuth: true },
+  },
+
+  // ─── Documents: Admin ────────────────────────────────────────────────────
+  {
+    path: '/admin/templates',
+    name: 'Templates',
+    component: () => import('@/pages/TemplatesPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director'], title: 'nav.templates' },
+  },
+  {
+    path: '/admin/templates/:id',
+    name: 'TemplateDetail',
+    component: () => import('@/pages/TemplatePage'),
+    meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director'] },
+  },
+  {
+    path: '/admin/template-variables',
+    name: 'TemplateVariables',
+    component: () => import('@/pages/TemplateVariablesPage'),
+    meta: {
+      requiresAuth: true,
+      roles: ['admin', 'lawyer', 'director'],
+      title: 'nav.templateVariables',
+    },
+  },
+  {
+    path: '/admin/approval-routes',
+    name: 'ApprovalRoutes',
+    component: () => import('@/pages/ApprovalRoutesPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'lawyer'], title: 'nav.approvalRoutes' },
+  },
+  {
+    path: '/admin/message-templates',
+    name: 'MessageTemplates',
+    component: () => import('@/pages/MessageTemplatesPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'lawyer'], title: 'nav.messageTemplates' },
+  },
+
+  // ─── Approvals ───────────────────────────────────────────────────────────
+  {
+    path: '/my-approvals',
+    name: 'MyApprovals',
+    component: () => import('@/pages/MyApprovalsPage'),
+    meta: { requiresAuth: true, title: 'nav.myApprovals' },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

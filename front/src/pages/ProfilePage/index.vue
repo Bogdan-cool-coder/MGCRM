@@ -128,6 +128,53 @@
               </div>
             </template>
 
+            <!-- Telegram tab -->
+            <template v-if="activeTab === 'telegram'">
+              <h2 class="profile-content__heading">{{ t('profile.telegram.title') }}</h2>
+              <div class="profile-section">
+                <!-- Not linked -->
+                <div v-if="!telegramLinked" class="telegram-block">
+                  <div class="telegram-block__icon-row">
+                    <i class="pi pi-telegram telegram-block__icon" />
+                    <div>
+                      <p class="telegram-block__status">{{ t('profile.telegram.notLinked') }}</p>
+                      <p class="telegram-block__desc">{{ t('profile.telegram.description') }}</p>
+                    </div>
+                  </div>
+                  <Button
+                    icon="pi pi-link"
+                    :label="t('profile.telegram.linkBtn')"
+                    :loading="telegramLinking"
+                    class="mt-3"
+                    @click="linkTelegram"
+                  />
+                </div>
+                <!-- Linked -->
+                <div v-else class="telegram-block">
+                  <div class="telegram-block__icon-row">
+                    <i class="pi pi-telegram telegram-block__icon telegram-block__icon--success" />
+                    <div>
+                      <p class="telegram-block__status telegram-block__status--success">
+                        {{ t('profile.telegram.linked') }}
+                        <span v-if="telegramUsername" class="telegram-block__username">
+                          @{{ telegramUsername }}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    icon="pi pi-unlink"
+                    :label="t('profile.telegram.unlinkBtn')"
+                    severity="danger"
+                    outlined
+                    :loading="telegramUnlinking"
+                    class="mt-3"
+                    @click="unlinkTelegram"
+                  />
+                </div>
+              </div>
+            </template>
+
             <!-- Coming soon tabs -->
             <template v-if="['notifications', 'locale', 'theme', 'calendar', 'signature', 'segments'].includes(activeTab)">
               <h2 class="profile-content__heading">{{ t(`profile.tabs.${activeTab}`) }}</h2>
@@ -220,6 +267,12 @@ const {
   startTotpSetup,
   verifyTotpSetup,
   cancelTotpSetup,
+  telegramLinked,
+  telegramUsername,
+  telegramLinking,
+  telegramUnlinking,
+  linkTelegram,
+  unlinkTelegram,
 } = useProfilePage()
 
 const TAB_ICONS: Record<ProfileTab, string> = {
@@ -231,6 +284,7 @@ const TAB_ICONS: Record<ProfileTab, string> = {
   calendar: 'pi pi-calendar',
   signature: 'pi pi-pen-to-square',
   segments: 'pi pi-tag',
+  telegram: 'pi pi-telegram',
 }
 
 function tabIcon(tab: ProfileTab): string {
@@ -375,6 +429,51 @@ function tabIcon(tab: ProfileTab): string {
 
 .text-muted {
   color: $surface-500;
+}
+
+// Telegram
+.telegram-block {
+  max-width: 480px;
+
+  &__icon-row {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-3;
+  }
+
+  &__icon {
+    font-size: 28px;
+    color: var(--p-text-muted-color);
+    margin-top: 2px;
+    flex-shrink: 0;
+
+    &--success {
+      color: var(--p-green-500);
+    }
+  }
+
+  &__status {
+    font-size: $font-size-md;
+    font-weight: $font-weight-medium;
+    color: var(--p-text-color);
+    margin: 0 0 $space-1;
+  }
+
+  &__status--success {
+    color: var(--p-green-600);
+  }
+
+  &__username {
+    color: var(--p-primary-color);
+    font-weight: $font-weight-normal;
+    margin-left: $space-1;
+  }
+
+  &__desc {
+    font-size: $font-size-sm;
+    color: var(--p-text-muted-color);
+    margin: 0;
+  }
 }
 
 // Coming soon

@@ -38,6 +38,12 @@
             >
               {{ activityStore.myOpenCount }}
             </span>
+            <span
+              v-if="!collapsed && item.name === 'my-approvals' && approvalsStore.pendingCount > 0"
+              class="app-sidebar__nav-badge"
+            >
+              {{ approvalsStore.pendingCount }}
+            </span>
           </router-link>
         </li>
         <!-- Admin / Director only items -->
@@ -93,6 +99,7 @@ import { useI18n } from 'vue-i18n'
 import AppLogo from './AppLogo.vue'
 import { useUserStore } from '@/stores/user'
 import { useActivityStore } from '@/stores/activityStore'
+import { useApprovalsStore } from '@/stores/approvalsStore'
 
 defineProps<{
   collapsed: boolean
@@ -105,6 +112,7 @@ defineEmits<{
 const { t } = useI18n()
 const userStore = useUserStore()
 const activityStore = useActivityStore()
+const approvalsStore = useApprovalsStore()
 
 const navItems = [
   { name: 'dashboard', to: '/dashboard', icon: 'pi pi-home', labelKey: 'nav.dashboard' },
@@ -114,11 +122,8 @@ const navItems = [
   { name: 'my-tasks', to: '/my-tasks', icon: 'pi pi-check-square', labelKey: 'nav.myTasks' },
   { name: 'manager-cabinet', to: '/manager-cabinet', icon: 'pi pi-id-card', labelKey: 'nav.managerCabinet' },
   { name: 'products', to: '/admin/products', icon: 'pi pi-box', labelKey: 'nav.catalog' },
-  { name: 'documents', to: '/documents', icon: 'pi pi-file', labelKey: 'nav.documents' },
-  { name: 'finance', to: '/finance', icon: 'pi pi-wallet', labelKey: 'nav.finance' },
-  { name: 'team', to: '/team', icon: 'pi pi-sitemap', labelKey: 'nav.team' },
-  { name: 'analytics', to: '/analytics', icon: 'pi pi-chart-line', labelKey: 'nav.analytics' },
-  { name: 'settings', to: '/settings', icon: 'pi pi-cog', labelKey: 'nav.settings' },
+  { name: 'documents', to: '/documents', icon: 'pi pi-file-edit', labelKey: 'nav.documents' },
+  { name: 'my-approvals', to: '/my-approvals', icon: 'pi pi-check-square', labelKey: 'nav.myApprovals' },
 ]
 
 // Items visible only to admin / director
@@ -129,11 +134,36 @@ const adminNavItems = [
     icon: 'pi pi-sliders-h',
     labelKey: 'nav.pipelineSettings',
   },
+  {
+    name: 'templates',
+    to: '/admin/templates',
+    icon: 'pi pi-file-edit',
+    labelKey: 'nav.templates',
+  },
+  {
+    name: 'template-variables',
+    to: '/admin/template-variables',
+    icon: 'pi pi-list',
+    labelKey: 'nav.templateVariables',
+  },
+  {
+    name: 'approval-routes',
+    to: '/admin/approval-routes',
+    icon: 'pi pi-sitemap',
+    labelKey: 'nav.approvalRoutes',
+  },
+  {
+    name: 'message-templates',
+    to: '/admin/message-templates',
+    icon: 'pi pi-envelope',
+    labelKey: 'nav.messageTemplates',
+  },
 ]
 
 onMounted(() => {
   if (userStore.getUser) {
     void activityStore.fetchMyOpenCount()
+    void approvalsStore.fetchPendingCount()
   }
 })
 

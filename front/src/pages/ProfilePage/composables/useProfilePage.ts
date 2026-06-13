@@ -5,6 +5,7 @@ import { useUserStore } from '@/stores/user'
 import { useMutation } from '@/composables/async/useMutation'
 import { authApi } from '@/api/auth'
 import { getApiErrorMessage, getValidationErrors } from '@/utils/errors'
+import { useToast } from 'primevue/usetoast'
 
 export type ProfileTab =
   | 'profile'
@@ -15,6 +16,7 @@ export type ProfileTab =
   | 'calendar'
   | 'signature'
   | 'segments'
+  | 'telegram'
 
 const VALID_TABS: ProfileTab[] = [
   'profile',
@@ -25,6 +27,7 @@ const VALID_TABS: ProfileTab[] = [
   'calendar',
   'signature',
   'segments',
+  'telegram',
 ]
 
 export const useProfilePage = () => {
@@ -32,6 +35,7 @@ export const useProfilePage = () => {
   const route = useRoute()
   const router = useRouter()
   const userStore = useUserStore()
+  const toast = useToast()
 
   // Active tab — from ?tab= query param
   const activeTab = computed<ProfileTab>(() => {
@@ -114,6 +118,83 @@ export const useProfilePage = () => {
     totpSetupError.value = ''
   }
 
+  // ─── Telegram binding ────────────────────────────────────────────────────────
+  const telegramLinking = ref(false)
+  const telegramUnlinking = ref(false)
+  let telegramPollTimer: ReturnType<typeof setInterval> | null = null
+  let telegramPollCount = 0
+
+  const telegramLinked = computed(() => !!userStore.getUser?.telegram_user_id)
+  const telegramUsername = computed(() => userStore.getUser?.telegram_user_id ?? null)
+
+  function stopTelegramPoll() {
+    if (telegramPollTimer !== null) {
+      clearInterval(telegramPollTimer)
+      telegramPollTimer = null
+      telegramPollCount = 0
+    }
+  }
+
+  async function refreshUser() {
+    try {
+      const me = await authApi.me()
+      userStore.setCurrentUser(me.data)
+    } catch {
+      // non-critical
+    }
+  }
+
+  function startTelegramPoll() {
+    stopTelegramPoll()
+    telegramPollCount = 0
+    telegramPollTimer = setInterval(async () => {
+      telegramPollCount++
+      await refreshUser()
+      if (userStore.getUser?.telegram_user_id) {
+        stopTelegramPoll()
+        toast.add({
+          severity: 'success',
+          summary: t('profile.telegram.linkSuccess'),
+          life: 4000,
+        })
+      } else if (telegramPollCount >= 12) {
+        // max 60s (12 * 5s)
+        stopTelegramPoll()
+      }
+    }, 5000)
+  }
+
+  async function linkTelegram() {
+    telegramLinking.value = true
+    try {
+      const res = await authApi.telegramLink()
+      window.open(res.link_url, '_blank')
+      toast.add({
+        severity: 'info',
+        summary: t('profile.telegram.linkHint'),
+        life: 6000,
+      })
+      startTelegramPoll()
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    } finally {
+      telegramLinking.value = false
+    }
+  }
+
+  async function unlinkTelegram() {
+    telegramUnlinking.value = true
+    try {
+      await authApi.telegramUnlink()
+      await refreshUser()
+      toast.add({ severity: 'info', summary: t('common.saved', 'Сохранено'), life: 2000 })
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    } finally {
+      telegramUnlinking.value = false
+    }
+  }
+
   return {
     // Tab management
     activeTab,
@@ -137,5 +218,13 @@ export const useProfilePage = () => {
     startTotpSetup,
     verifyTotpSetup,
     cancelTotpSetup,
+
+    // Telegram
+    telegramLinked,
+    telegramUsername,
+    telegramLinking,
+    telegramUnlinking,
+    linkTelegram,
+    unlinkTelegram,
   }
 }

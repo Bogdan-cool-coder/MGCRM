@@ -1,0 +1,77 @@
+/**
+ * Template entities — S2.10 Documents module.
+ * docx template + version + AI check.
+ */
+
+import type { DocumentKind } from './document'
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+export type AiCheckStatus = 'pending' | 'checking' | 'checked' | 'failed'
+
+// ─── Template Version ─────────────────────────────────────────────────────────
+
+export interface AiRemarkDto {
+  type: 'error' | 'warning'
+  severity: 'high' | 'medium' | 'low'
+  text: string
+}
+
+export interface TemplateVersionDto {
+  id: number
+  template_id: number
+  version_number: number
+  docx_path: string | null
+  pdf_ok: boolean | null
+  ai_check_status: AiCheckStatus
+  ai_remarks: AiRemarkDto[]
+  override_by: number | null
+  override_at: string | null
+  created_by: number | null
+  created_by_name: string | null
+  created_at: string
+}
+
+// ─── Template ─────────────────────────────────────────────────────────────────
+
+export interface TemplateDto {
+  id: number
+  code: string
+  title: string
+  kind: DocumentKind
+  product_codes: string[]
+  country_codes: string[]
+  category_codes: string[]
+  is_active: boolean
+  current_version: TemplateVersionDto | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TemplateListItemDto {
+  id: number
+  code: string
+  title: string
+  kind: DocumentKind
+  product_codes: string[]
+  country_codes: string[]
+  is_active: boolean
+  current_version: TemplateVersionDto | null
+  created_at: string
+}
+
+// ─── Payloads ────────────────────────────────────────────────────────────────
+
+export interface TemplateListParams {
+  kind?: DocumentKind | null
+  search?: string | null
+  product_code?: string | null
+  country_code?: string | null
+}
+
+export interface PatchTemplatePayload {
+  title?: string
+  product_codes?: string[]
+  country_codes?: string[]
+  category_codes?: string[]
+}

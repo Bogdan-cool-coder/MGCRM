@@ -209,6 +209,15 @@ async function onSubmit() {
         return
       }
     }
+    if (status === 409) {
+      toast.add({
+        severity: 'error',
+        summary: t('documents.card.wonGate.summary'),
+        detail: t('documents.card.wonGate.detail'),
+        life: 7000,
+      })
+      return
+    }
     if (status === 403) {
       toast.add({ severity: 'error', summary: t('sales.move.dialog.errors.forbidden'), life: 4000 })
       return

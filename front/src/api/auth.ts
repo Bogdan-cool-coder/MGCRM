@@ -62,4 +62,19 @@ export const authApi = {
     )
     return response.data
   },
+
+  /**
+   * POST /api/me/telegram-link — получить deeplink для привязки Telegram
+   */
+  async telegramLink(): Promise<{ link_url: string }> {
+    const response = await apiClient.post<{ link_url: string }>('/api/me/telegram-link')
+    return response.data
+  },
+
+  /**
+   * DELETE /api/me/telegram — отвязать Telegram аккаунт
+   */
+  async telegramUnlink(): Promise<void> {
+    await apiClient.delete('/api/me/telegram')
+  },
 }

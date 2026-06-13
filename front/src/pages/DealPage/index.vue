@@ -81,6 +81,7 @@
                   />
                 </Tab>
                 <Tab value="history">{{ t('sales.deal.page.tabs.history') }}</Tab>
+                <Tab value="documents">{{ t('sales.deal.page.tabs.documents') }}</Tab>
               </TabList>
               <TabPanels>
                 <!-- Overview tab -->
@@ -140,6 +141,13 @@
                 <TabPanel value="history">
                   <div class="deal-page__tab-content">
                     <DealStageHistoryTab :history="history" />
+                  </div>
+                </TabPanel>
+
+                <!-- Documents tab -->
+                <TabPanel value="documents">
+                  <div class="deal-page__tab-content">
+                    <DealDocumentsTab :deal-id="dealId" />
                   </div>
                 </TabPanel>
               </TabPanels>
@@ -212,6 +220,7 @@ import DealActivitiesTab from './components/DealActivitiesTab.vue'
 import DealRightRail from './components/DealRightRail.vue'
 import DealAddProductDialog from './components/DealAddProductDialog.vue'
 import DealAddContactDialog from './components/DealAddContactDialog.vue'
+import DealDocumentsTab from './components/DealDocumentsTab.vue'
 import MoveDealDialog from '../DealsPage/components/MoveDealDialog.vue'
 import { useDealPage } from './composables/useDealPage'
 import { useDealProducts } from './composables/useDealProducts'

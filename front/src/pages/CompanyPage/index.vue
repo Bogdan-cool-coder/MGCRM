@@ -64,6 +64,7 @@
               <Tab value="notes">{{ t('company.page.tabs.notes') }}</Tab>
               <Tab value="tasks">{{ t('company.page.tabs.tasks') }}</Tab>
               <Tab value="deals">{{ t('company.page.tabs.deals') }}</Tab>
+              <Tab value="documents">{{ t('company.page.tabs.documents') }}</Tab>
               <Tab value="files">{{ t('company.page.tabs.files') }}</Tab>
               <Tab value="holding">{{ t('company.page.tabs.holding') }}</Tab>
             </TabList>
@@ -127,6 +128,13 @@
               <TabPanel value="deals">
                 <div class="company-page__tab-content">
                   <CompanyStubTab :message="t('company.page.stub.deals')" />
+                </div>
+              </TabPanel>
+
+              <!-- Documents tab -->
+              <TabPanel value="documents">
+                <div class="company-page__tab-content">
+                  <CompanyDocumentsTab v-if="company" :company-id="company.id" />
                 </div>
               </TabPanel>
 
@@ -244,6 +252,7 @@ import CompanyRightRail from './components/CompanyRightRail.vue'
 import CompanyNotesTab from './components/CompanyNotesTab.vue'
 import CompanyStubTab from './components/CompanyStubTab.vue'
 import CompanyActivitiesTab from './components/CompanyActivitiesTab.vue'
+import CompanyDocumentsTab from './components/CompanyDocumentsTab.vue'
 import { useCompanyPageData } from './composables/useCompanyPageData'
 import { useCompanyPageActions } from './composables/useCompanyPageActions'
 import { useCompanyActivities } from './composables/useCompanyActivities'

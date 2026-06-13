@@ -15,7 +15,12 @@
     "logout": "Sign out",
     "pipelineSettings": "Pipeline settings",
     "myTasks": "My tasks",
-    "managerCabinet": "My Cabinet"
+    "managerCabinet": "My Cabinet",
+    "myApprovals": "My approvals",
+    "templates": "Templates",
+    "templateVariables": "Variable catalog",
+    "approvalRoutes": "Approval routes",
+    "messageTemplates": "Message templates"
   },
   "auth": {
     "login": {
@@ -61,7 +66,8 @@
       "theme": "Theme",
       "calendar": "Calendar",
       "signature": "Signature",
-      "segments": "Segments"
+      "segments": "Segments",
+      "telegram": "Telegram"
     },
     "fields": {
       "full_name": "Full name",
@@ -107,6 +113,16 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System"
+    },
+    "telegram": {
+      "title": "Telegram notifications",
+      "notLinked": "Telegram account not linked",
+      "description": "Link your Telegram account to receive approval notifications",
+      "linkBtn": "Link Telegram",
+      "linked": "Telegram linked",
+      "unlinkBtn": "Unlink",
+      "linkHint": "Open the bot and press Start to complete linking",
+      "linkSuccess": "Telegram successfully linked!"
     },
     "coming_soon": "Coming soon",
     "save": "Save",
@@ -212,7 +228,14 @@
     "coming_soon": "Coming soon",
     "expand": "Expand",
     "collapse": "Collapse",
-    "total": "Total: {count}"
+    "total": "Total: {count}",
+    "reset": "Reset",
+    "download": "Download",
+    "upload": "Upload",
+    "archive": "Archive",
+    "restore": "Restore",
+    "date": "Date",
+    "open": "Open"
   },
   "contacts": {
     "page": {
@@ -282,7 +305,8 @@
         "tasks": "Tasks",
         "deals": "Deals",
         "files": "Files",
-        "holding": "Holding"
+        "holding": "Holding",
+        "documents": "Documents"
       },
       "sections": {
         "main": "Main information",
@@ -892,7 +916,8 @@
           "contacts": "Contacts",
           "activities": "Activities",
           "tasks": "Activities",
-          "history": "History"
+          "history": "History",
+          "documents": "Documents"
         },
         "rail": {
           "stage": "Stage",
@@ -1021,7 +1046,10 @@
     },
     "pipelineEditor": {
       "pageTitle": "Pipeline settings",
-      "section": { "pipelines": "Sales pipelines", "stages": "Pipeline stages" },
+      "section": {
+        "pipelines": "Sales pipelines",
+        "stages": "Pipeline stages"
+      },
       "createPipeline": "New pipeline",
       "createPipelineDialog": {
         "title": "New pipeline",
@@ -1120,7 +1148,9 @@
         "errorWithSubstages": "This stage has sub-statuses. Delete them first.",
         "systemTooltip": "System stage cannot be deleted"
       },
-      "reorder": { "errorToast": "Failed to save order. Order reverted." },
+      "reorder": {
+        "errorToast": "Failed to save order. Order reverted."
+      },
       "emptyStages": {
         "title": "No stages in this pipeline",
         "subtitle": "Create the first stage"
@@ -1177,5 +1207,326 @@
       "resetFilters": "Reset filters"
     },
     "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog."
+  },
+  "documents": {
+    "list": {
+      "title": "Documents",
+      "create": "Create document",
+      "filters": {
+        "status": "Status",
+        "kind": "Type",
+        "product": "Product",
+        "country": "Country",
+        "author": "Author",
+        "company": "Company",
+        "search": "Search...",
+        "archived": "Show archived"
+      },
+      "columns": {
+        "date": "Date",
+        "company": "Company"
+      },
+      "empty": "No documents",
+      "emptyFiltered": "Nothing found"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "in_review": "In review",
+      "needs_rework": "Needs rework",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "signed": "Signed",
+      "uploaded": "In Drive",
+      "archived": "Archived"
+    },
+    "kinds": {
+      "contract": "Contract",
+      "invoice": "Invoice",
+      "act": "Act",
+      "reconciliation": "Reconciliation",
+      "yaml": "YAML",
+      "docx": "DOCX"
+    },
+    "create": {
+      "title": "Create document",
+      "kind": "Document type",
+      "company": "Company",
+      "product": "Product",
+      "country": "Country",
+      "template": "Template",
+      "title_field": "Title (optional)",
+      "noTemplates": "No templates for this configuration",
+      "submit": "Create",
+      "cancel": "Cancel"
+    },
+    "card": {
+      "back": "Back",
+      "tabs": {
+        "context": "Context",
+        "items": "Items",
+        "revisions": "Revisions",
+        "remarks": "Remarks",
+        "attachments": "Attachments"
+      },
+      "actions": {
+        "generate": "Generate",
+        "generating": "Generating...",
+        "downloadDocx": "Download .docx",
+        "downloadPdf": "Download .pdf",
+        "submit": "Submit for approval",
+        "resubmit": "Resubmit",
+        "sign": "Sign",
+        "unsign": "Revoke signature",
+        "archive": "Archive",
+        "unarchive": "Unarchive",
+        "duplicate": "Duplicate",
+        "delete": "Delete"
+      },
+      "autosave": {
+        "saved": "✓ Saved",
+        "saving": "Saving...",
+        "error": "Save error"
+      },
+      "generateWarning": {
+        "summary": "Template not verified",
+        "detail": "Document created, but the template has not passed AI verification. We recommend rechecking the template."
+      },
+      "wonGate": {
+        "summary": "Approved contract required",
+        "detail": "To close the deal, a contract in status Approved, Signed or In Drive is required."
+      },
+      "meta": {
+        "created": "Created",
+        "author": "Author",
+        "template": "Template",
+        "amount": "Amount",
+        "discount": "Discount"
+      },
+      "notFound": "Document not found",
+      "backToList": "Back to documents"
+    },
+    "approval": {
+      "title": "Approval",
+      "stage": "Stage {current} of {total}",
+      "attempt": "Attempt #{n}",
+      "noApproval": "Not yet submitted for approval",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "needs_rework": "Needs rework",
+      "pending": "Pending",
+      "decide": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "rework": "Return",
+        "title": "Approval decision",
+        "commentRequired": "Comment is required",
+        "commentPlaceholder": "Reason or comment..."
+      },
+      "rejectedAlert": "Document rejected",
+      "reworkAlert": "Returned for rework",
+      "resubmitBtn": "Fixed, resubmit"
+    },
+    "attachments": {
+      "upload": "Upload attachment",
+      "kinds": {
+        "signed_scan": "Signed scan",
+        "payment": "Payment document",
+        "other": "Other"
+      },
+      "empty": "No attachments",
+      "noScan": "Signed scan required for signing"
+    },
+    "remarks": {
+      "resolve": "Mark as resolved",
+      "resolved": "Resolved",
+      "open": "Open",
+      "empty": "No remarks",
+      "filterAttempt": "Attempt"
+    },
+    "revisions": {
+      "empty": "No revisions",
+      "version": "Version",
+      "attempt": "Attempt",
+      "note": "Note",
+      "author": "Author"
+    },
+    "items": {
+      "add": "Add row",
+      "product": "Product",
+      "qty": "Qty (months)",
+      "price": "Price/month",
+      "total": "Total",
+      "currency": "Currency",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "toPay": "To pay",
+      "empty": "No items"
+    }
+  },
+  "templates": {
+    "list": {
+      "title": "Document templates",
+      "create": "Create template",
+      "empty": "No templates"
+    },
+    "card": {
+      "back": "Back",
+      "edit": "Edit",
+      "notFound": "Template not found",
+      "upload": {
+        "title": "Upload .docx version",
+        "btn": "Upload .docx",
+        "replace": "Replace .docx",
+        "limit": "Maximum 10 MB",
+        "current": "Current version: {v}"
+      },
+      "aiCheck": {
+        "title": "AI check",
+        "statuses": {
+          "pending": "Awaiting check",
+          "checking": "Checking...",
+          "checked": "Verified",
+          "failed": "Check failed"
+        },
+        "pdfOk": "PDF OK",
+        "pdfFail": "PDF: error",
+        "pdfUnknown": "PDF not checked",
+        "noRemarks": "No remarks",
+        "recheck": "Recheck",
+        "override": "Save despite remarks",
+        "overrideConfirm": "Are you sure? AI remarks will be saved but not resolved.",
+        "remarkTypes": {
+          "error": "Error",
+          "warning": "Warning"
+        }
+      },
+      "versions": {
+        "title": "Version history",
+        "empty": "No versions"
+      },
+      "meta": {
+        "title": "Meta",
+        "code": "Code",
+        "products": "Products",
+        "countries": "Countries",
+        "categories": "Categories"
+      }
+    }
+  },
+  "templateVariables": {
+    "title": "Variable catalog",
+    "create": "Add variable",
+    "key": "Key (placeholder)",
+    "type": "Type",
+    "group": "Group",
+    "products": "Products",
+    "required": "Required",
+    "active": "Active",
+    "copied": "Copied",
+    "empty": "No variables",
+    "types": {
+      "text": "Text",
+      "textarea": "Text (long)",
+      "number": "Number",
+      "date": "Date",
+      "select": "Select",
+      "checkbox": "Checkbox"
+    },
+    "dialog": {
+      "createTitle": "New variable",
+      "editTitle": "Edit variable",
+      "key": "Key",
+      "label": "Label",
+      "helpText": "Help text",
+      "varType": "Type",
+      "options": "Options",
+      "defaultValue": "Default value",
+      "required": "Required",
+      "group": "Group",
+      "productCodes": "Products",
+      "countryCodes": "Countries",
+      "sortOrder": "Sort order",
+      "isActive": "Active",
+      "addOption": "Add option"
+    }
+  },
+  "approvalRoutes": {
+    "title": "Approval routes",
+    "create": "Create route",
+    "empty": "No routes",
+    "columns": {
+      "name": "Name",
+      "kind": "Document type",
+      "template": "Template",
+      "isDefault": "Default",
+      "isActive": "Active"
+    },
+    "drawer": {
+      "title": "Approval route",
+      "name": "Name",
+      "kind": "Document type",
+      "template": "Template (optional)",
+      "isDefault": "Default route",
+      "defaultWarning": "Another default route for this type will be disabled",
+      "stages": "Stages",
+      "addStage": "Add stage",
+      "stage": {
+        "name": "Stage name",
+        "users": "Approvers",
+        "minRequired": "Minimum votes"
+      },
+      "save": "Save",
+      "cancel": "Cancel"
+    }
+  },
+  "myApprovals": {
+    "title": "My approvals",
+    "tabs": {
+      "pending": "Awaiting decision",
+      "history": "My decisions"
+    },
+    "columns": {
+      "document": "Document",
+      "kind": "Type",
+      "company": "Company",
+      "stage": "Stage",
+      "date": "Date",
+      "decision": "Decision",
+      "comment": "Comment"
+    },
+    "empty": {
+      "pending": "No pending approvals",
+      "history": "No decisions yet"
+    }
+  },
+  "messageTemplates": {
+    "title": "Message templates",
+    "create": "Create template",
+    "empty": "No templates",
+    "columns": {
+      "name": "Name",
+      "bindings": "Bindings",
+      "isActive": "Active"
+    },
+    "drawer": {
+      "title": "Message template",
+      "name": "Name",
+      "subject": "Subject",
+      "body": "Body",
+      "isActive": "Active",
+      "preview": "Preview",
+      "renderBtn": "Render",
+      "unresolvedKeys": "Unresolved keys",
+      "bindings": "Bindings",
+      "addBinding": "Add binding",
+      "bindingChannel": "Channel",
+      "bindingPipeline": "Pipeline",
+      "bindingStage": "Pipeline stage",
+      "bindingActivityType": "Activity type",
+      "bindingSlot": "Automation slot",
+      "catalogHint": "Available keys — in the Variable catalog",
+      "showCatalog": "Show variable catalog"
+    }
   }
 }

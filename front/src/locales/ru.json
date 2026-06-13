@@ -15,7 +15,12 @@
     "logout": "Выйти",
     "pipelineSettings": "Настройки воронки",
     "myTasks": "Мои задачи",
-    "managerCabinet": "Кабинет"
+    "managerCabinet": "Кабинет",
+    "myApprovals": "Мои согласования",
+    "templates": "Шаблоны",
+    "templateVariables": "Каталог меток",
+    "approvalRoutes": "Маршруты",
+    "messageTemplates": "Рассылки"
   },
   "auth": {
     "login": {
@@ -61,7 +66,8 @@
       "theme": "Тема",
       "calendar": "Календарь",
       "signature": "Подпись",
-      "segments": "Сегменты"
+      "segments": "Сегменты",
+      "telegram": "Telegram"
     },
     "fields": {
       "full_name": "Полное имя",
@@ -107,6 +113,16 @@
       "light": "Светлая",
       "dark": "Тёмная",
       "system": "Системная"
+    },
+    "telegram": {
+      "title": "Telegram-уведомления",
+      "notLinked": "Аккаунт Telegram не привязан",
+      "description": "Привяжите аккаунт Telegram для получения уведомлений о согласованиях",
+      "linkBtn": "Привязать Telegram",
+      "linked": "Telegram привязан",
+      "unlinkBtn": "Отвязать",
+      "linkHint": "Перейдите в бота и нажмите Start для завершения привязки",
+      "linkSuccess": "Telegram успешно привязан!"
     },
     "coming_soon": "Скоро",
     "save": "Сохранить",
@@ -212,7 +228,14 @@
     "coming_soon": "Скоро",
     "expand": "Развернуть",
     "collapse": "Свернуть",
-    "total": "Итого: {count}"
+    "total": "Итого: {count}",
+    "reset": "Сбросить",
+    "download": "Скачать",
+    "upload": "Загрузить",
+    "archive": "Архивировать",
+    "restore": "Восстановить",
+    "date": "Дата",
+    "open": "Открыть"
   },
   "contacts": {
     "page": {
@@ -282,7 +305,8 @@
         "tasks": "Задачи",
         "deals": "Сделки",
         "files": "Файлы",
-        "holding": "Холдинг"
+        "holding": "Холдинг",
+        "documents": "Документы"
       },
       "sections": {
         "main": "Основная информация",
@@ -892,7 +916,8 @@
           "contacts": "Контакты",
           "activities": "Активности",
           "tasks": "Активности",
-          "history": "История"
+          "history": "История",
+          "documents": "Документы"
         },
         "rail": {
           "stage": "Стадия",
@@ -1182,5 +1207,326 @@
       "resetFilters": "Сбросить фильтры"
     },
     "multiCurrencyWarning": "Часть сделок в других валютах не включена в суммы. Добавьте курсы валют в Каталог."
+  },
+  "documents": {
+    "list": {
+      "title": "Документы",
+      "create": "Создать документ",
+      "filters": {
+        "status": "Статус",
+        "kind": "Тип",
+        "product": "Продукт",
+        "country": "Страна",
+        "author": "Автор",
+        "company": "Компания",
+        "search": "Поиск...",
+        "archived": "Показать архивные"
+      },
+      "columns": {
+        "date": "Дата",
+        "company": "Компания"
+      },
+      "empty": "Нет документов",
+      "emptyFiltered": "Ничего не найдено"
+    },
+    "statuses": {
+      "draft": "Черновик",
+      "submitted": "Отправлен",
+      "in_review": "На согласовании",
+      "needs_rework": "На доработке",
+      "approved": "Согласован",
+      "rejected": "Отклонён",
+      "signed": "Подписан",
+      "uploaded": "В Drive",
+      "archived": "Архив"
+    },
+    "kinds": {
+      "contract": "Договор",
+      "invoice": "Счёт",
+      "act": "Акт",
+      "reconciliation": "Сверка",
+      "yaml": "YAML",
+      "docx": "DOCX"
+    },
+    "create": {
+      "title": "Создать документ",
+      "kind": "Тип документа",
+      "company": "Компания",
+      "product": "Продукт",
+      "country": "Страна",
+      "template": "Шаблон",
+      "title_field": "Заголовок (необязательно)",
+      "noTemplates": "Нет шаблонов для данной конфигурации",
+      "submit": "Создать",
+      "cancel": "Отмена"
+    },
+    "card": {
+      "back": "Назад",
+      "tabs": {
+        "context": "Контекст",
+        "items": "Позиции",
+        "revisions": "Ревизии",
+        "remarks": "Ремарки",
+        "attachments": "Вложения"
+      },
+      "actions": {
+        "generate": "Генерировать",
+        "generating": "Генерация...",
+        "downloadDocx": "Скачать .docx",
+        "downloadPdf": "Скачать .pdf",
+        "submit": "На согласование",
+        "resubmit": "Отправить снова",
+        "sign": "Подписать",
+        "unsign": "Отозвать подпись",
+        "archive": "В архив",
+        "unarchive": "Из архива",
+        "duplicate": "Дублировать",
+        "delete": "Удалить"
+      },
+      "autosave": {
+        "saved": "✓ Сохранено",
+        "saving": "Сохранение...",
+        "error": "Ошибка сохранения"
+      },
+      "generateWarning": {
+        "summary": "Шаблон не проверен",
+        "detail": "Документ создан, но AI-проверка шаблона не была пройдена. Рекомендуем перепроверить шаблон."
+      },
+      "wonGate": {
+        "summary": "Нужен согласованный договор",
+        "detail": "Для завершения сделки необходим договор в статусе Согласован, Подписан или В Drive."
+      },
+      "meta": {
+        "created": "Создан",
+        "author": "Автор",
+        "template": "Шаблон",
+        "amount": "Сумма",
+        "discount": "Скидка"
+      },
+      "notFound": "Документ не найден",
+      "backToList": "К списку документов"
+    },
+    "approval": {
+      "title": "Согласование",
+      "stage": "Этап {current} из {total}",
+      "attempt": "Попытка #{n}",
+      "noApproval": "Ещё не отправлен на согласование",
+      "approved": "Согласован",
+      "rejected": "Отклонён",
+      "needs_rework": "На доработке",
+      "pending": "Ожидает",
+      "decide": {
+        "approve": "Согласовать",
+        "reject": "Отклонить",
+        "rework": "Вернуть",
+        "title": "Решение по документу",
+        "commentRequired": "Комментарий обязателен",
+        "commentPlaceholder": "Причина или комментарий..."
+      },
+      "rejectedAlert": "Договор отклонён",
+      "reworkAlert": "Возвращён на доработку",
+      "resubmitBtn": "Я исправил, отправить снова"
+    },
+    "attachments": {
+      "upload": "Загрузить вложение",
+      "kinds": {
+        "signed_scan": "Подписанный скан",
+        "payment": "Документ об оплате",
+        "other": "Другое"
+      },
+      "empty": "Нет вложений",
+      "noScan": "Для подписания нужен скан"
+    },
+    "remarks": {
+      "resolve": "Отметить как решённую",
+      "resolved": "Решена",
+      "open": "Открыта",
+      "empty": "Нет ремарок",
+      "filterAttempt": "Попытка"
+    },
+    "revisions": {
+      "empty": "Нет ревизий",
+      "version": "Версия",
+      "attempt": "Попытка",
+      "note": "Заметка",
+      "author": "Автор"
+    },
+    "items": {
+      "add": "Добавить строку",
+      "product": "Продукт",
+      "qty": "Кол-во мес.",
+      "price": "Цена/мес.",
+      "total": "Итого",
+      "currency": "Валюта",
+      "subtotal": "Субитог",
+      "discount": "Скидка",
+      "toPay": "К оплате",
+      "empty": "Нет позиций"
+    }
+  },
+  "templates": {
+    "list": {
+      "title": "Шаблоны документов",
+      "create": "Создать шаблон",
+      "empty": "Нет шаблонов"
+    },
+    "card": {
+      "back": "Назад",
+      "edit": "Редактировать",
+      "notFound": "Шаблон не найден",
+      "upload": {
+        "title": "Загрузить версию .docx",
+        "btn": "Загрузить .docx",
+        "replace": "Заменить .docx",
+        "limit": "Максимум 10 МБ",
+        "current": "Текущая версия: {v}"
+      },
+      "aiCheck": {
+        "title": "AI-проверка",
+        "statuses": {
+          "pending": "Ожидает проверки",
+          "checking": "Проверяется...",
+          "checked": "Проверен",
+          "failed": "Ошибка проверки"
+        },
+        "pdfOk": "PDF OK",
+        "pdfFail": "PDF: ошибка",
+        "pdfUnknown": "PDF не проверен",
+        "noRemarks": "Замечаний нет",
+        "recheck": "Перепроверить",
+        "override": "Сохранить вопреки замечаниям",
+        "overrideConfirm": "Вы уверены? AI-замечания будут сохранены, но не устранены.",
+        "remarkTypes": {
+          "error": "Ошибка",
+          "warning": "Замечание"
+        }
+      },
+      "versions": {
+        "title": "История версий",
+        "empty": "Нет версий"
+      },
+      "meta": {
+        "title": "Мета-информация",
+        "code": "Код",
+        "products": "Продукты",
+        "countries": "Страны",
+        "categories": "Категории"
+      }
+    }
+  },
+  "templateVariables": {
+    "title": "Каталог переменных",
+    "create": "Добавить переменную",
+    "key": "Ключ (метка)",
+    "type": "Тип",
+    "group": "Группа",
+    "products": "Продукты",
+    "required": "Обязательная",
+    "active": "Активна",
+    "copied": "Скопировано",
+    "empty": "Нет переменных",
+    "types": {
+      "text": "Текст",
+      "textarea": "Текст (много)",
+      "number": "Число",
+      "date": "Дата",
+      "select": "Список",
+      "checkbox": "Флаг"
+    },
+    "dialog": {
+      "createTitle": "Новая переменная",
+      "editTitle": "Редактировать переменную",
+      "key": "Ключ",
+      "label": "Название",
+      "helpText": "Подсказка",
+      "varType": "Тип",
+      "options": "Варианты значений",
+      "defaultValue": "Значение по умолчанию",
+      "required": "Обязательная",
+      "group": "Группа",
+      "productCodes": "Продукты",
+      "countryCodes": "Страны",
+      "sortOrder": "Порядок сортировки",
+      "isActive": "Активна",
+      "addOption": "Добавить вариант"
+    }
+  },
+  "approvalRoutes": {
+    "title": "Маршруты согласования",
+    "create": "Создать маршрут",
+    "empty": "Нет маршрутов",
+    "columns": {
+      "name": "Название",
+      "kind": "Тип документа",
+      "template": "Шаблон",
+      "isDefault": "По умолчанию",
+      "isActive": "Активен"
+    },
+    "drawer": {
+      "title": "Маршрут согласования",
+      "name": "Название",
+      "kind": "Тип документа",
+      "template": "Шаблон (опционально)",
+      "isDefault": "Дефолтный маршрут",
+      "defaultWarning": "Другой дефолтный маршрут для этого типа будет отключён",
+      "stages": "Этапы",
+      "addStage": "Добавить этап",
+      "stage": {
+        "name": "Название этапа",
+        "users": "Согласанты",
+        "minRequired": "Минимум голосов"
+      },
+      "save": "Сохранить",
+      "cancel": "Отмена"
+    }
+  },
+  "myApprovals": {
+    "title": "Мои согласования",
+    "tabs": {
+      "pending": "Ожидают решения",
+      "history": "Мои решения"
+    },
+    "columns": {
+      "document": "Документ",
+      "kind": "Тип",
+      "company": "Компания",
+      "stage": "Этап",
+      "date": "Дата",
+      "decision": "Решение",
+      "comment": "Комментарий"
+    },
+    "empty": {
+      "pending": "Нет ожидающих согласований",
+      "history": "Нет принятых решений"
+    }
+  },
+  "messageTemplates": {
+    "title": "Шаблоны рассылок",
+    "create": "Создать шаблон",
+    "empty": "Нет шаблонов",
+    "columns": {
+      "name": "Название",
+      "bindings": "Биндингов",
+      "isActive": "Активен"
+    },
+    "drawer": {
+      "title": "Шаблон рассылки",
+      "name": "Название",
+      "subject": "Тема",
+      "body": "Текст",
+      "isActive": "Активен",
+      "preview": "Превью",
+      "renderBtn": "Рендерить",
+      "unresolvedKeys": "Нерешённые метки",
+      "bindings": "Биндинги",
+      "addBinding": "Добавить биндинг",
+      "bindingChannel": "Канал",
+      "bindingPipeline": "Воронка",
+      "bindingStage": "Этап воронки",
+      "bindingActivityType": "Тип активности",
+      "bindingSlot": "Слот автоматизации",
+      "catalogHint": "Доступные метки — в Каталоге переменных",
+      "showCatalog": "Показать каталог меток"
+    }
   }
 }
