@@ -204,6 +204,45 @@ services:
         condition: service_started
 
   # ---------------------------------------------------------------------------
+  # Telegram bot (S2.9) — long-polling, SINGLE process. Optional profile `bot`:
+  #   docker compose -f docker-compose.dev.yml --profile bot up -d bot
+  #
+  # NEVER scale this service (parallel getUpdates → Telegram 409 Conflict).
+  # RUN_TELEGRAM_POLLING=true is set ONLY here; app/queue do not poll.
+  # nutgram:listen (auto-reload) can be substituted for nutgram:run in dev.
+  # ---------------------------------------------------------------------------
+  bot:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile.dev
+    image: macro-crm-app-dev:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-bot-dev
+    command: php artisan nutgram:run
+    restart: unless-stopped
+    profiles:
+      - bot
+    env_file:
+      - src/.env
+    environment:
+      RUN_TELEGRAM_POLLING: "true"
+    volumes:
+      - ./src:/var/www/html
+      - storage_app_dev:/var/www/html/storage/app
+      - storage_framework_dev:/var/www/html/storage/framework
+      - storage_logs_dev:/var/www/html/storage/logs
+      - vendor_dev:/var/www/html/vendor
+      - bootstrap_cache_dev:/var/www/html/bootstrap/cache
+    networks:
+      - macro-crm-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # ---------------------------------------------------------------------------
   # Gotenberg — PDF generation. Optional, start manually when needed:
   #   docker compose -f docker-compose.dev.yml up -d gotenberg
   # ---------------------------------------------------------------------------

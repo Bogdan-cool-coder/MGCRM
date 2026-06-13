@@ -27,6 +27,8 @@ class DatabaseSeeder extends Seeder
             ContractsSeeder::class,
             // Contracts (S2.6): default approval route + test users.
             ApprovalRouteSeeder::class,
+            // Contracts (S2.7): demo message templates with bindings.
+            MessageTemplateSeeder::class,
         ]);
     }
 }

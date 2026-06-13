@@ -96,6 +96,45 @@ services:
       app:
         condition: service_started
 
+  # ---------------------------------------------------------------------------
+  # Telegram bot (S2.9) — long-polling in a SINGLE process.
+  #
+  # CRITICAL: replicas:1 — this service must NEVER be scaled. A parallel
+  # getUpdates from a second process triggers Telegram 409 Conflict and drops
+  # updates. RUN_TELEGRAM_POLLING=true is set ONLY here; `app` and `queue-worker`
+  # do not poll (they resolve the same bot singleton purely as an outgoing Bot
+  # API client). Deploy note: this service restarts on its OWN — it is NOT part
+  # of the rolling restart of the web/queue replicas:
+  #   docker compose up -d --force-recreate bot
+  # ---------------------------------------------------------------------------
+  bot:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: app
+    image: macro-crm-app:${IMAGE_TAG:-dev-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-bot
+    command: php artisan nutgram:run
+    restart: unless-stopped
+    env_file:
+      - src/.env
+    environment:
+      RUN_TELEGRAM_POLLING: "true"
+    volumes:
+      - storage_app:/var/www/html/storage/app
+      - storage_framework:/var/www/html/storage/framework
+      - storage_logs:/var/www/html/storage/logs
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+    networks:
+      - macro-crm-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+
   gotenberg:
     image: gotenberg/gotenberg:8
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-gotenberg

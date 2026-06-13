@@ -25,6 +25,7 @@ use App\Http\Controllers\Contracts\DocumentGenerateController;
 use App\Http\Controllers\Contracts\DocumentItemController;
 use App\Http\Controllers\Contracts\DocumentRemarkController;
 use App\Http\Controllers\Contracts\DocumentRevisionController;
+use App\Http\Controllers\Contracts\MessageTemplateController;
 use App\Http\Controllers\Contracts\TemplateController;
 use App\Http\Controllers\Contracts\TemplateVariableController;
 use App\Http\Controllers\Contracts\TemplateVersionController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\Inbox\FormController;
 use App\Http\Controllers\Inbox\InboundMessageController;
 use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
+use App\Http\Controllers\Notification\TelegramLinkController;
 use App\Http\Controllers\Sales\DashboardController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
@@ -238,6 +240,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::get('profile', [ManagerCabinetController::class, 'profile'])->name('profile');
         Route::get('kpi', [ManagerCabinetController::class, 'kpi'])->name('kpi');
         Route::get('activity-feed', [ManagerCabinetController::class, 'activityFeed'])->name('activity-feed');
+
+        // S2.9 — Telegram link management (owner-only deeplink issue / unlink).
+        Route::post('telegram-link', [TelegramLinkController::class, 'issue'])->name('telegram-link');
+        Route::delete('telegram', [TelegramLinkController::class, 'unlink'])->name('telegram.unlink');
     });
 
     // =========================================================================
@@ -440,6 +446,21 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // S2.6: Decide (vote) and approval summary — must be before the nested prefix group.
     Route::post('documents/{document}/decide', [DocumentApprovalController::class, 'decide'])->name('documents.decide');
     Route::get('documents/{document}/approval-summary', [DocumentApprovalController::class, 'approvalSummary'])->name('documents.approval-summary');
+
+    // =========================================================================
+    // Contracts — S2.7: Message Templates (text broadcast templates)
+    // =========================================================================
+    // NOTE: /context MUST be declared BEFORE /{messageTemplate} to avoid route clash.
+    Route::get('message-templates/context', [MessageTemplateController::class, 'context'])->name('message-templates.context');
+    Route::get('message-templates', [MessageTemplateController::class, 'index'])->name('message-templates.index');
+    Route::post('message-templates', [MessageTemplateController::class, 'store'])->name('message-templates.store');
+    Route::get('message-templates/{messageTemplate}', [MessageTemplateController::class, 'show'])->name('message-templates.show');
+    Route::patch('message-templates/{messageTemplate}', [MessageTemplateController::class, 'update'])->name('message-templates.update');
+    Route::delete('message-templates/{messageTemplate}', [MessageTemplateController::class, 'destroy'])->name('message-templates.destroy');
+    Route::post('message-templates/{messageTemplate}/preview', [MessageTemplateController::class, 'preview'])->name('message-templates.preview');
+    Route::get('message-templates/{messageTemplate}/bindings', [MessageTemplateController::class, 'bindingIndex'])->name('message-templates.bindings.index');
+    Route::post('message-templates/{messageTemplate}/bindings', [MessageTemplateController::class, 'bindingStore'])->name('message-templates.bindings.store');
+    Route::delete('message-templates/{messageTemplate}/bindings/{binding}', [MessageTemplateController::class, 'bindingDestroy'])->name('message-templates.bindings.destroy');
 
     // Nested: document items
     Route::prefix('documents/{document}')->name('documents.')->group(function (): void {

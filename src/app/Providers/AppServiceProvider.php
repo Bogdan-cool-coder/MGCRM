@@ -14,14 +14,18 @@ use App\Domain\Catalog\Models\ProductGroup;
 use App\Domain\Catalog\Policies\ExchangeRatePolicy;
 use App\Domain\Catalog\Policies\ProductGroupPolicy;
 use App\Domain\Catalog\Policies\ProductPolicy;
+use App\Domain\Contracts\Events\ApprovalDecisionMade;
+use App\Domain\Contracts\Events\DocumentSubmittedForApproval;
 use App\Domain\Contracts\Models\ApprovalRoute;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\LicensorEntity;
+use App\Domain\Contracts\Models\MessageTemplate;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Models\TemplateVariable;
 use App\Domain\Contracts\Policies\ApprovalRoutePolicy;
 use App\Domain\Contracts\Policies\DocumentPolicy;
 use App\Domain\Contracts\Policies\LicensorPolicy;
+use App\Domain\Contracts\Policies\MessageTemplatePolicy;
 use App\Domain\Contracts\Policies\TemplatePolicy;
 use App\Domain\Contracts\Policies\TemplateVariablePolicy;
 use App\Domain\Crm\Models\Company;
@@ -36,6 +40,8 @@ use App\Domain\Inbox\Models\InboundMessage;
 use App\Domain\Inbox\Policies\ChannelPolicy;
 use App\Domain\Inbox\Policies\FormPolicy;
 use App\Domain\Inbox\Policies\InboundMessagePolicy;
+use App\Domain\Notification\Listeners\NotifyAuthorListener;
+use App\Domain\Notification\Listeners\SendApprovalRequestListener;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
 use App\Domain\Sales\Models\Pipeline;
@@ -44,6 +50,7 @@ use App\Domain\Sales\Policies\LostReasonPolicy;
 use App\Domain\Sales\Policies\PipelinePolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -92,6 +99,9 @@ class AppServiceProvider extends ServiceProvider
         // Contracts Policies (S2.6)
         Gate::policy(ApprovalRoute::class, ApprovalRoutePolicy::class);
 
+        // Contracts Policies (S2.7)
+        Gate::policy(MessageTemplate::class, MessageTemplatePolicy::class);
+
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
         // restricted to admin and director roles only.
@@ -115,5 +125,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('inbound', static fn (Request $request): Limit => Limit::perMinute(
             (int) config('inbox.rate_limit_per_minute', 30),
         )->by($request->ip()));
+
+        // Telegram approval channel (S2.9 — bot-specialist). Listeners are created
+        // here (S2.6 dispatches these events without any listeners). They only
+        // dispatch queued Jobs, so the web request is not blocked by Telegram I/O.
+        Event::listen(DocumentSubmittedForApproval::class, SendApprovalRequestListener::class);
+        Event::listen(ApprovalDecisionMade::class, NotifyAuthorListener::class);
     }
 }
