@@ -29,6 +29,8 @@ class DatabaseSeeder extends Seeder
             ApprovalRouteSeeder::class,
             // Contracts (S2.7): demo message templates with bindings.
             MessageTemplateSeeder::class,
+            // Onboarding (S3.1): demo course with 2 modules and 4 lesson kinds.
+            OnboardingSeeder::class,
         ]);
     }
 }

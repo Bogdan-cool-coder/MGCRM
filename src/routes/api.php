@@ -47,6 +47,9 @@ use App\Http\Controllers\Inbox\InboundMessageController;
 use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
 use App\Http\Controllers\Notification\TelegramLinkController;
+use App\Http\Controllers\Onboarding\CourseController;
+use App\Http\Controllers\Onboarding\CourseModuleController;
+use App\Http\Controllers\Onboarding\LessonController;
 use App\Http\Controllers\Sales\DashboardController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
@@ -483,5 +486,28 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::get('attachments', [DocumentAttachmentController::class, 'index'])->name('attachments.index');
         Route::post('attachments', [DocumentAttachmentController::class, 'store'])->name('attachments.store');
         Route::delete('attachments/{attachment}', [DocumentAttachmentController::class, 'destroy'])->name('attachments.destroy');
+    });
+
+    // =========================================================================
+    // Onboarding — S3.1: Courses, Modules, Lessons (admin/director write)
+    // =========================================================================
+    Route::prefix('admin/onboarding')->name('onboarding.')->group(function (): void {
+        // Courses — publish/unpublish MUST be before {course} to avoid clash.
+        Route::post('courses/{course}/publish', [CourseController::class, 'publish'])->name('courses.publish');
+        Route::post('courses/{course}/unpublish', [CourseController::class, 'unpublish'])->name('courses.unpublish');
+        Route::apiResource('courses', CourseController::class);
+
+        // Modules (nested under courses).
+        // reorder MUST be before {module} to avoid routing clash.
+        Route::post('courses/{course}/modules/reorder', [CourseModuleController::class, 'reorder'])->name('courses.modules.reorder');
+        Route::apiResource('courses.modules', CourseModuleController::class)->except(['show']);
+
+        // Lessons (nested under modules).
+        // upload and reorder MUST be before the {lesson} parameter routes.
+        Route::post('lessons/{lesson}/upload', [LessonController::class, 'uploadFile'])->name('lessons.upload');
+        Route::post('modules/{module}/lessons/{lesson}/publish', [LessonController::class, 'publish'])->name('modules.lessons.publish');
+        Route::post('modules/{module}/lessons/{lesson}/unpublish', [LessonController::class, 'unpublish'])->name('modules.lessons.unpublish');
+        Route::post('modules/{module}/lessons/reorder', [CourseModuleController::class, 'reorderLessons'])->name('modules.lessons.reorder');
+        Route::apiResource('modules.lessons', LessonController::class);
     });
 });

@@ -42,6 +42,12 @@ use App\Domain\Inbox\Policies\FormPolicy;
 use App\Domain\Inbox\Policies\InboundMessagePolicy;
 use App\Domain\Notification\Listeners\NotifyAuthorListener;
 use App\Domain\Notification\Listeners\SendApprovalRequestListener;
+use App\Domain\Onboarding\Models\Course;
+use App\Domain\Onboarding\Models\CourseModule;
+use App\Domain\Onboarding\Models\Lesson;
+use App\Domain\Onboarding\Policies\CourseModulePolicy;
+use App\Domain\Onboarding\Policies\CoursePolicy;
+use App\Domain\Onboarding\Policies\LessonPolicy;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
 use App\Domain\Sales\Models\Pipeline;
@@ -101,6 +107,11 @@ class AppServiceProvider extends ServiceProvider
 
         // Contracts Policies (S2.7)
         Gate::policy(MessageTemplate::class, MessageTemplatePolicy::class);
+
+        // Onboarding Policies (S3.1)
+        Gate::policy(Course::class, CoursePolicy::class);
+        Gate::policy(CourseModule::class, CourseModulePolicy::class);
+        Gate::policy(Lesson::class, LessonPolicy::class);
 
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
