@@ -7,6 +7,7 @@ namespace App\Domain\Onboarding\Services;
 use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Models\CourseModule;
 use App\Domain\Onboarding\Models\Lesson;
+use App\Domain\Onboarding\Models\Quiz;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -243,6 +244,65 @@ class LessonService
     {
         // Ensure quiz_id key always exists (S3.2 sets non-null value).
         return ['quiz_id' => isset($content['quiz_id']) ? (int) $content['quiz_id'] : null];
+    }
+
+    // -------------------------------------------------------------------------
+    // S3.2 — Quiz binding
+    // -------------------------------------------------------------------------
+
+    /**
+     * Attach a quiz to a lesson.kind=quiz lesson.
+     * Called inside QuizService::create() transaction — no separate transaction here.
+     *
+     * @throws ValidationException if lesson is not kind=quiz or already has a quiz
+     */
+    /**
+     * Validate that a lesson can accept a quiz attachment.
+     * Called by QuizService::create() BEFORE Quiz::create() to avoid hitting
+     * the DDL UNIQUE constraint with a non-friendly DB error.
+     *
+     * @throws ValidationException
+     */
+    public function assertCanAttachQuiz(Lesson $lesson): void
+    {
+        if ($lesson->kind !== LessonKind::Quiz) {
+            throw ValidationException::withMessages([
+                'lesson_id' => 'The lesson must be of kind "quiz" to attach a quiz.',
+            ])->status(422);
+        }
+
+        if ($lesson->quiz_id !== null) {
+            throw ValidationException::withMessages([
+                'lesson_id' => 'This lesson already has a quiz attached.',
+            ])->status(422);
+        }
+    }
+
+    /**
+     * Attach a quiz to a lesson.kind=quiz lesson.
+     * Called inside QuizService::create() transaction — no separate transaction here.
+     * Pre-conditions already validated by assertCanAttachQuiz().
+     */
+    public function attachQuiz(Lesson $lesson, Quiz $quiz): Lesson
+    {
+        $content = $lesson->content ?? [];
+        $content['quiz_id'] = $quiz->id;
+        $lesson->update(['content' => $content]);
+
+        return $lesson->refresh();
+    }
+
+    /**
+     * Detach a quiz from a lesson (clears content.quiz_id).
+     * Called inside QuizService::delete() transaction — no separate transaction here.
+     */
+    public function detachQuiz(Lesson $lesson): Lesson
+    {
+        $content = $lesson->content ?? [];
+        $content['quiz_id'] = null;
+        $lesson->update(['content' => $content]);
+
+        return $lesson->refresh();
     }
 
     private function detectProvider(string $url): string

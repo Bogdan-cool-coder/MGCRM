@@ -16,6 +16,8 @@ class OnboardingSeeder extends Seeder
     {
         $this->call([
             DemoCourseSeeder::class,
+            OnboardingAssignmentSeeder::class,
+            DemoQuizSeeder::class,  // S3.2: attaches quiz to demo quiz-lesson
         ]);
     }
 }

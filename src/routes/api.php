@@ -47,9 +47,15 @@ use App\Http\Controllers\Inbox\InboundMessageController;
 use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
 use App\Http\Controllers\Notification\TelegramLinkController;
+use App\Http\Controllers\Onboarding\AssignmentController;
 use App\Http\Controllers\Onboarding\CourseController;
 use App\Http\Controllers\Onboarding\CourseModuleController;
 use App\Http\Controllers\Onboarding\LessonController;
+use App\Http\Controllers\Onboarding\QuizAttemptController;
+use App\Http\Controllers\Onboarding\QuizController;
+use App\Http\Controllers\Onboarding\QuizOptionController;
+use App\Http\Controllers\Onboarding\QuizQuestionController;
+use App\Http\Controllers\Onboarding\StudentCourseController;
 use App\Http\Controllers\Sales\DashboardController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
@@ -509,5 +515,54 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::post('modules/{module}/lessons/{lesson}/unpublish', [LessonController::class, 'unpublish'])->name('modules.lessons.unpublish');
         Route::post('modules/{module}/lessons/reorder', [CourseModuleController::class, 'reorderLessons'])->name('modules.lessons.reorder');
         Route::apiResource('modules.lessons', LessonController::class);
+
+        // Assignments (S3.3) — bulk-assign and CRUD.
+        // archive MUST be before {assignment} to avoid routing clash.
+        Route::post('assignments/{assignment}/archive', [AssignmentController::class, 'archive'])->name('assignments.archive');
+        Route::apiResource('assignments', AssignmentController::class);
+
+        // =====================================================================
+        // Onboarding — S3.2: Quizzes, Questions, Options (admin write)
+        // =====================================================================
+        // Quizzes — CRUD
+        Route::get('quizzes', [QuizController::class, 'index'])->name('quizzes.index');
+        Route::post('quizzes', [QuizController::class, 'store'])->name('quizzes.store');
+        Route::get('quizzes/{quiz}', [QuizController::class, 'show'])->name('quizzes.show');
+        Route::patch('quizzes/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
+        Route::delete('quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
+
+        // Questions (nested under quiz).
+        // reorder MUST be declared BEFORE {question} to avoid routing clash.
+        Route::post('quizzes/{quiz}/questions/reorder', [QuizQuestionController::class, 'reorder'])->name('quizzes.questions.reorder');
+        Route::get('quizzes/{quiz}/questions', [QuizQuestionController::class, 'index'])->name('quizzes.questions.index');
+        Route::post('quizzes/{quiz}/questions', [QuizQuestionController::class, 'store'])->name('quizzes.questions.store');
+
+        // Shallow question routes (update/delete without quiz prefix)
+        Route::patch('quiz-questions/{question}', [QuizQuestionController::class, 'update'])->name('quiz-questions.update');
+        Route::delete('quiz-questions/{question}', [QuizQuestionController::class, 'destroy'])->name('quiz-questions.destroy');
+
+        // Options (nested under question).
+        // reorder MUST be declared BEFORE {option} to avoid routing clash.
+        Route::post('quiz-questions/{question}/options/reorder', [QuizOptionController::class, 'reorder'])->name('quiz-questions.options.reorder');
+        Route::get('quiz-questions/{question}/options', [QuizOptionController::class, 'index'])->name('quiz-questions.options.index');
+        Route::post('quiz-questions/{question}/options', [QuizOptionController::class, 'store'])->name('quiz-questions.options.store');
+
+        // Shallow option routes (update/delete without question prefix)
+        Route::patch('quiz-options/{option}', [QuizOptionController::class, 'update'])->name('quiz-options.update');
+        Route::delete('quiz-options/{option}', [QuizOptionController::class, 'destroy'])->name('quiz-options.destroy');
+    });
+
+    // =========================================================================
+    // Onboarding — S3.3: Student view (any authenticated user)
+    // S3.2: Student quiz endpoints
+    // =========================================================================
+    Route::prefix('onboarding')->name('onboarding.student.')->group(function (): void {
+        Route::get('my-courses', [StudentCourseController::class, 'index'])->name('my-courses');
+        Route::get('assignments/{assignment}', [StudentCourseController::class, 'show'])->name('assignments.show');
+
+        // S3.2: Student quiz — view quiz (no correct answers) + start attempt.
+        // start MUST be declared BEFORE the plain GET to avoid route collision.
+        Route::post('lessons/{lesson}/quiz/start', [QuizAttemptController::class, 'start'])->name('lessons.quiz.start');
+        Route::get('lessons/{lesson}/quiz', [QuizController::class, 'showForStudent'])->name('lessons.quiz.show');
     });
 });

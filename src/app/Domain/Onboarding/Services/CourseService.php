@@ -71,12 +71,16 @@ class CourseService
     /**
      * Delete a course.
      * Guard: cannot delete if modules exist (409).
-     * After S3.3: also guard against active assignments.
+     * Guard: cannot delete if active assignments exist (409) — S3.3.
      */
     public function delete(Course $course): void
     {
         if ($course->modules()->exists()) {
             abort(409, 'Cannot delete course with existing modules. Remove all modules first.');
+        }
+
+        if ($course->assignments()->exists()) {
+            abort(409, 'Cannot delete course with active assignments.');
         }
 
         $course->delete();

@@ -21,3 +21,7 @@ Artisan::command('inspire', function () {
 // The job uses ExchangeRateService::upsertRate() with updateOrCreate()
 // → ON CONFLICT DO UPDATE, no duplicate rows in catalog_exchange_rates.
 Schedule::job(UpdateExchangeRatesJob::class)->dailyAt('03:00');
+
+// Onboarding: mark overdue course assignments — runs daily at midnight UTC.
+// Batch-UPDATE: status → overdue where due_date < now() AND status IN (pending, in_progress).
+Schedule::command('onboarding:mark-overdue')->daily();

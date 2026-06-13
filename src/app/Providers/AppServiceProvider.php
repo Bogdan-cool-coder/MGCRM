@@ -43,11 +43,21 @@ use App\Domain\Inbox\Policies\InboundMessagePolicy;
 use App\Domain\Notification\Listeners\NotifyAuthorListener;
 use App\Domain\Notification\Listeners\SendApprovalRequestListener;
 use App\Domain\Onboarding\Models\Course;
+use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\CourseModule;
 use App\Domain\Onboarding\Models\Lesson;
+use App\Domain\Onboarding\Models\Quiz;
+use App\Domain\Onboarding\Models\QuizAttempt;
+use App\Domain\Onboarding\Models\QuizOption;
+use App\Domain\Onboarding\Models\QuizQuestion;
+use App\Domain\Onboarding\Policies\AssignmentPolicy;
 use App\Domain\Onboarding\Policies\CourseModulePolicy;
 use App\Domain\Onboarding\Policies\CoursePolicy;
 use App\Domain\Onboarding\Policies\LessonPolicy;
+use App\Domain\Onboarding\Policies\QuizAttemptPolicy;
+use App\Domain\Onboarding\Policies\QuizOptionPolicy;
+use App\Domain\Onboarding\Policies\QuizPolicy;
+use App\Domain\Onboarding\Policies\QuizQuestionPolicy;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
 use App\Domain\Sales\Models\Pipeline;
@@ -112,6 +122,15 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Course::class, CoursePolicy::class);
         Gate::policy(CourseModule::class, CourseModulePolicy::class);
         Gate::policy(Lesson::class, LessonPolicy::class);
+
+        // Onboarding Policies (S3.3)
+        Gate::policy(CourseAssignment::class, AssignmentPolicy::class);
+
+        // Onboarding Policies (S3.2)
+        Gate::policy(Quiz::class, QuizPolicy::class);
+        Gate::policy(QuizQuestion::class, QuizQuestionPolicy::class);
+        Gate::policy(QuizOption::class, QuizOptionPolicy::class);
+        Gate::policy(QuizAttempt::class, QuizAttemptPolicy::class);
 
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
