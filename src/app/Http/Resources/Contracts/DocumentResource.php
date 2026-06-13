@@ -40,8 +40,13 @@ class DocumentResource extends JsonResource
             'context' => $this->context ?? [],
             'extra_fields' => $this->extra_fields ?? [],
 
-            // Template / file references
-            'template_version' => $this->template_version,
+            // Template / file references — object when the relation is loaded, raw ID otherwise
+            'template_version_id' => $this->template_version,
+            'template_version' => $this->whenLoaded('templateVersion', fn () => $this->templateVersion === null ? null : [
+                'id' => $this->templateVersion->id,
+                'code' => $this->templateVersion->template?->code,
+                'version_number' => $this->templateVersion->version_number,
+            ]),
             'docx_path' => $this->docx_path,
             'pdf_path' => $this->pdf_path,
             'download_urls' => $this->docx_path !== null || $this->pdf_path !== null
@@ -59,7 +64,15 @@ class DocumentResource extends JsonResource
             // Cross-domain references
             'source_deal_id' => $this->source_deal_id,
             'source_company_id' => $this->source_company_id,
+            'source_company' => $this->whenLoaded('sourceCompany', fn () => [
+                'id' => $this->sourceCompany->id,
+                'name' => $this->sourceCompany->name,
+            ]),
             'author_user_id' => $this->author_user_id,
+            'author' => $this->whenLoaded('author', fn () => [
+                'id' => $this->author->id,
+                'full_name' => $this->author->full_name,
+            ]),
 
             // Timestamps
             'signed_at' => $this->signed_at?->toISOString(),

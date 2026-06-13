@@ -37,7 +37,7 @@ class DocumentService
     public function list(array $filters, int $perPage = 25): LengthAwarePaginator
     {
         $query = Document::query()
-            ->with(['author:id,full_name']);
+            ->with(['author:id,full_name', 'sourceCompany:id,name', 'templateVersion.template:id,code']);
 
         // By default hide archived records (archived=0 or absent).
         $showArchived = filter_var($filters['archived'] ?? false, FILTER_VALIDATE_BOOLEAN);

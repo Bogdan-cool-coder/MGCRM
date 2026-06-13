@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Contracts;
 
 use App\Domain\Contracts\Models\Document;
+use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -221,6 +222,56 @@ class DocumentCrudTest extends TestCase
 
         $this->deleteJson("/api/documents/{$doc->id}")
             ->assertForbidden();
+    }
+
+    // ---- BUG-AUTHOR-1 / BUG-COMP-1: list expands author and source_company ----
+
+    public function test_list_documents_includes_author_object(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager, 'full_name' => 'Jane Doe']);
+        Document::factory()->draft()->create(['author_user_id' => $user->id]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/documents')->assertOk();
+
+        $item = $response->json('data.0');
+        $this->assertArrayHasKey('author', $item);
+        $this->assertSame($user->id, $item['author']['id']);
+        $this->assertSame('Jane Doe', $item['author']['full_name']);
+    }
+
+    public function test_list_documents_includes_source_company_object(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $company = Company::factory()->create(['name' => 'ACME Corp']);
+        Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'source_company_id' => $company->id,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/documents')->assertOk();
+
+        $item = $response->json('data.0');
+        $this->assertArrayHasKey('source_company', $item);
+        $this->assertSame($company->id, $item['source_company']['id']);
+        $this->assertSame('ACME Corp', $item['source_company']['name']);
+    }
+
+    public function test_list_documents_source_company_null_when_not_set(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'source_company_id' => null,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/documents')->assertOk();
+
+        $item = $response->json('data.0');
+        // source_company should be absent (not loaded) or null — never a raw ID
+        $this->assertNull($item['source_company'] ?? null);
     }
 
     // ---- pagination / filters ----

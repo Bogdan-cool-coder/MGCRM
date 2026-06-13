@@ -47,7 +47,7 @@ class DocumentController extends Controller
         $this->authorize('view', $document);
 
         return DocumentResource::make(
-            $document->load(['items', 'revisions', 'attachments', 'remarks', 'author:id,full_name'])
+            $document->load(['items', 'revisions', 'attachments', 'remarks', 'author:id,full_name', 'templateVersion.template:id,code'])
         );
     }
 
