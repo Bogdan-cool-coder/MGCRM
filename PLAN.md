@@ -134,7 +134,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 | `Finance` | весь Ф0–Ф6 (GL, операции, счета, акты, отчёты, НДС) | M9 |
 | `Analytics` | воронки, KPI, когорты, Excel, дашборды | M10 |
 | `Integration` | Google Calendar/Drive, OAuth2-провайдер, webhooks | M11 |
-| `Onboarding` | Course, Lesson, Quiz, прогресс | M12 |
+| `Onboarding` | Course, Lesson, Quiz, прогресс | Спринт 3 (между M5 и M8) |
 | `Catalog` | Product, ProductPlan, цены, FxRate | M2/M3 (по зоне sales) |
 
 ### 4.3 Frontend-структура (1-в-1 с Vizion)
@@ -153,7 +153,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 | 0 — Фундамент | M0 + M1 ядро | Iam, Org |
 | 1 — Продажи | M2+M3+M4+M6 | Crm, Catalog, Sales, Inbox, Activity |
 | 2 — Документы | M5 | Contracts, Notification(TG) |
-| 3 — Онбординг | M12(Onboarding-часть) | Onboarding |
+| 3 — Онбординг | Спринт 3 | Onboarding |
 | 4 — CS | M8 | CustomerSuccess |
 | 5 — Финансы | M9+M10 | Finance, Analytics |
 | Сквозные | M7+M11 | Automation, Integration, Bot |
