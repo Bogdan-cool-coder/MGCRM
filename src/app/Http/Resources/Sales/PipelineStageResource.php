@@ -28,6 +28,7 @@ class PipelineStageResource extends JsonResource
             'task_types' => $this->task_types ?? [],
             'required_fields' => $this->required_fields ?? [],
             'won_gate' => $this->won_gate,
+            'won_gate_contract_required' => $this->won_gate_contract_required,
             'sla_hours' => $this->sla_hours,
             'visible_department_ids' => $this->visible_department_ids,
             'visible_user_ids' => $this->visible_user_ids,

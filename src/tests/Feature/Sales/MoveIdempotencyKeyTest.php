@@ -58,7 +58,9 @@ class MoveIdempotencyKeyTest extends TestCase
 
         $this->assertDatabaseCount('deal_stage_history', 1);
         $this->assertSame($first->json('data.id'), $replay->json('data.id'));
-        $this->assertSame($first->json('won_gate_warning'), $replay->json('won_gate_warning'));
+
+        // S2.8: the soft won_gate_warning is gone from the move response shape.
+        $replay->assertJsonMissingPath('won_gate_warning');
     }
 
     public function test_different_key_does_not_replay(): void

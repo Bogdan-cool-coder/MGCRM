@@ -32,6 +32,7 @@ class PipelineStageFactory extends Factory
             'parent_stage_id' => null,
             'stage_features' => [],
             'won_gate' => false,
+            'won_gate_contract_required' => true,
             'sla_hours' => null,
             'visible_department_ids' => null,
             'visible_user_ids' => null,

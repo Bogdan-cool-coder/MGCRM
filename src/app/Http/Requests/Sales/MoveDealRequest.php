@@ -19,7 +19,7 @@ class MoveDealRequest extends FormRequest
             'to_stage_id' => ['required', 'integer', 'exists:pipeline_stages,id'],
             'lost_reason' => ['nullable', 'string', 'max:1000'],
             'lost_reason_id' => ['nullable', 'integer', 'exists:lost_reasons,id'],
-            // won-gate is evaluated in DealMoveService (soft warning in S1.3).
+            // won-gate is evaluated in DealMoveService (hard 409 since S2.8).
         ];
     }
 }

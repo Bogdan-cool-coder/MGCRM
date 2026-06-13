@@ -6,6 +6,8 @@ namespace Database\Seeders;
 
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Catalog\Services\ProductService;
+use App\Domain\Contracts\Enums\ContractStatus;
+use App\Domain\Contracts\Models\Document;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -99,7 +101,53 @@ class DemoDealsSeeder extends Seeder
             );
 
             $this->seedLineItems($deal, $currency, $items);
+
+            // S2.8 hard won-gate: a deal sitting in a contract-gated won stage must
+            // have a live contract, otherwise moving it there would 409. Seed an
+            // approved demo contract so the data stays consistent with the gate.
+            $this->ensureContractForGatedWonDeal($deal, $stage, $owner);
         }
+    }
+
+    /**
+     * Attach an approved demo Document to a deal that lives in a contract-gated
+     * won stage (won_gate + won_gate_contract_required). Idempotent: keyed by
+     * source_deal_id. Stages without the gate (e.g. await_payment) are skipped.
+     */
+    private function ensureContractForGatedWonDeal(Deal $deal, PipelineStage $stage, User $owner): void
+    {
+        if (! ($stage->is_won && $stage->won_gate && $stage->won_gate_contract_required)) {
+            return;
+        }
+
+        if (Document::query()->where('source_deal_id', $deal->id)->exists()) {
+            return;
+        }
+
+        Document::create([
+            'kind' => 'contract',
+            'title' => "[DEMO] Договор — {$deal->title}",
+            'product_code' => 'macrocrm',
+            'country_code' => 'kz',
+            'status' => ContractStatus::Approved->value,
+            'source_deal_id' => $deal->id,
+            'source_company_id' => $deal->company_id,
+            'author_user_id' => $owner->id,
+            'currency' => $deal->currency,
+            'context' => [
+                'sublicensee' => [],
+                'license' => [],
+                'contract' => [],
+                'payments' => [],
+                'acts' => [],
+                'custom' => [],
+            ],
+            'subtotal' => 0,
+            'discount_pct' => 0,
+            'discount_amount' => 0,
+            'total' => 0,
+            'extra_fields' => [],
+        ]);
     }
 
     /**

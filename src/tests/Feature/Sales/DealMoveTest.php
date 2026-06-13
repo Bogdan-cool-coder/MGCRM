@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sales;
 
+use App\Domain\Contracts\Models\Document;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
@@ -24,6 +25,14 @@ class DealMoveTest extends TestCase
         return Deal::factory()->forOwner($user)->create([
             'pipeline_id' => $pipeline->id,
             'stage_id' => $this->stageCode($pipeline, $stageCode),
+        ]);
+    }
+
+    private function approvedContractFor(Deal $deal): Document
+    {
+        return Document::factory()->approved()->create([
+            'source_deal_id' => $deal->id,
+            'author_user_id' => $deal->owner_user_id,
         ]);
     }
 
@@ -88,32 +97,67 @@ class DealMoveTest extends TestCase
         $this->assertSame($reason->id, $deal->lost_reason_id);
     }
 
-    public function test_move_to_won_sets_closed_at(): void
+    public function test_move_to_won_with_approved_contract_returns_200(): void
     {
         $user = User::factory()->create(['role' => Role::Manager]);
         $deal = $this->dealFor($user, 'hot');
         $won = $deal->pipeline->stages->firstWhere('code', 'won');
+        $this->approvedContractFor($deal);
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $won->id])
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $won->id);
 
         $deal->refresh();
         $this->assertNotNull($deal->closed_at);
     }
 
-    public function test_move_to_won_gate_warning_without_contract(): void
+    public function test_move_to_won_without_contract_returns_409(): void
     {
         $user = User::factory()->create(['role' => Role::Manager]);
         $deal = $this->dealFor($user, 'hot');
         $won = $deal->pipeline->stages->firstWhere('code', 'won');
+        $originalStageId = $deal->stage_id;
         Sanctum::actingAs($user, ['*']);
 
-        // No contract attached → soft warning, but the move still proceeds.
+        // No live contract → hard gate: 409 with a stable error_code.
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $won->id])
+            ->assertStatus(409)
+            ->assertJsonPath('error_code', 'won_gate_contract_required');
+
+        // The deal did not move and no history row was written.
+        $this->assertDatabaseHas('deals', ['id' => $deal->id, 'stage_id' => $originalStageId]);
+        $this->assertDatabaseMissing('deal_stage_history', [
+            'deal_id' => $deal->id,
+            'to_stage_id' => $won->id,
+        ]);
+    }
+
+    public function test_move_to_won_with_flag_off_returns_200(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'hot');
+        $won = $deal->pipeline->stages->firstWhere('code', 'won');
+        // Relax the contract requirement on the won stage; no contract present.
+        $won->update(['won_gate_contract_required' => false]);
+        Sanctum::actingAs($user, ['*']);
+
         $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $won->id])
             ->assertOk()
-            ->assertJsonPath('won_gate_warning', true)
             ->assertJsonPath('data.stage_id', $won->id);
+    }
+
+    public function test_move_response_no_longer_has_won_gate_warning(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'new');
+        $qualify = $deal->pipeline->stages->firstWhere('code', 'qualify');
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $qualify->id])
+            ->assertOk()
+            ->assertJsonMissingPath('won_gate_warning');
     }
 
     public function test_patch_cannot_change_stage(): void

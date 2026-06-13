@@ -40,6 +40,7 @@ class StoreStageRequest extends FormRequest
             'hidden_by_default' => ['nullable', 'boolean'],
             'sla_hours' => ['nullable', 'integer', 'min:1'],
             'won_gate' => ['nullable', 'boolean'],
+            'won_gate_contract_required' => ['nullable', 'boolean'],
             'parent_stage_id' => ['nullable', 'integer', 'exists:pipeline_stages,id'],
             'stage_features' => ['nullable', 'array'],
             'stage_features.*' => [Rule::enum(StageFeature::class)],

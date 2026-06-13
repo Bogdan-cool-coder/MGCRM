@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Domain\Contracts\Enums\ContractStatus;
+use App\Domain\Contracts\Models\Document;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -172,7 +174,7 @@ class ManagerKpiSeeder extends Seeder
                         'name' => 'Demo Company',
                     ]);
 
-                    Deal::create([
+                    $deal = Deal::create([
                         'pipeline_id' => $wonStage->pipeline_id,
                         'stage_id' => $wonStage->id,
                         'company_id' => $company->id,
@@ -183,8 +185,52 @@ class ManagerKpiSeeder extends Seeder
                         'department_id' => $dept->id,
                         'stage_changed_at' => $now->copy()->startOfMonth()->addDays(5),
                     ]);
+
+                    $this->ensureContractForWonDeal($deal, $wonStage, $manager);
                 }
             }
         }
+    }
+
+    /**
+     * S2.8 hard won-gate: a deal in a contract-gated won stage needs a live
+     * contract. Seed an approved demo Document so the KPI demo data is consistent
+     * with the gate. Idempotent: keyed by source_deal_id. Stages without the gate
+     * (won_gate / won_gate_contract_required off) are skipped.
+     */
+    private function ensureContractForWonDeal(Deal $deal, PipelineStage $wonStage, User $owner): void
+    {
+        if (! ($wonStage->won_gate && $wonStage->won_gate_contract_required)) {
+            return;
+        }
+
+        if (Document::query()->where('source_deal_id', $deal->id)->exists()) {
+            return;
+        }
+
+        Document::create([
+            'kind' => 'contract',
+            'title' => "[DEMO] Договор — {$deal->title}",
+            'product_code' => 'macrocrm',
+            'country_code' => 'kz',
+            'status' => ContractStatus::Approved->value,
+            'source_deal_id' => $deal->id,
+            'source_company_id' => $deal->company_id,
+            'author_user_id' => $owner->id,
+            'currency' => 'RUB',
+            'context' => [
+                'sublicensee' => [],
+                'license' => [],
+                'contract' => [],
+                'payments' => [],
+                'acts' => [],
+                'custom' => [],
+            ],
+            'subtotal' => 0,
+            'discount_pct' => 0,
+            'discount_amount' => 0,
+            'total' => 0,
+            'extra_fields' => [],
+        ]);
     }
 }

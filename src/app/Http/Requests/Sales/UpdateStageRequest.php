@@ -44,6 +44,7 @@ class UpdateStageRequest extends FormRequest
             'hidden_by_default' => ['sometimes', 'boolean'],
             'sla_hours' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'won_gate' => ['sometimes', 'boolean'],
+            'won_gate_contract_required' => ['sometimes', 'boolean'],
             'parent_stage_id' => ['sometimes', 'nullable', 'integer', 'exists:pipeline_stages,id'],
             'stage_features' => ['sometimes', 'array'],
             'stage_features.*' => [Rule::enum(StageFeature::class)],

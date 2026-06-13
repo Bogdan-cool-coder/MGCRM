@@ -174,4 +174,32 @@ return [
         'exports' => 'exports',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Telegram bot (S2.9)
+    |--------------------------------------------------------------------------
+    |
+    | Approval channel + employee account linking. Application code reads these
+    | via config('crm.telegram.*') — never env() directly (ARCHITECTURE.md §3).
+    |
+    | run_polling: long-polling (getUpdates) must run in EXACTLY ONE process —
+    | the dedicated `bot` compose service (replicas:1). A parallel getUpdates from
+    | a web/queue replica triggers Telegram 409 Conflict and drops updates, so
+    | RUN_TELEGRAM_POLLING is set true ONLY in that container. Web/queue resolve
+    | the same bot singleton purely as an outgoing Bot API client (sendMessage),
+    | which never polls.
+    |
+    | bot_username feeds the deeplink t.me/<username>?start=link_<token>.
+    | link_ttl_minutes is the one-shot link-token TTL (10 min, per old).
+    |
+    */
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+        'approval_chat_id' => env('TELEGRAM_APPROVAL_CHAT_ID'),
+        'link_ttl_minutes' => (int) env('TELEGRAM_LINK_TTL_MINUTES', 10),
+        'web_base_url' => env('TELEGRAM_WEB_BASE_URL', env('APP_URL')),
+        'run_polling' => filter_var(env('RUN_TELEGRAM_POLLING', false), FILTER_VALIDATE_BOOL),
+    ],
+
 ];

@@ -269,6 +269,26 @@ class DocumentService
     }
 
     /**
+     * Cross-domain entry point for the Sales won-gate (S2.8). The ONLY way Sales
+     * reads the documents table — Sales never queries Document directly.
+     *
+     * True when the deal has a "live" contract: a Document with this source_deal_id
+     * whose status is approved / signed / uploaded. draft / submitted / in_review /
+     * needs_rework and the terminal rejected / archived do NOT count.
+     */
+    public function hasActiveContractForDeal(int $dealId): bool
+    {
+        return Document::query()
+            ->where('source_deal_id', $dealId)
+            ->whereIn('status', [
+                ContractStatus::Approved->value,
+                ContractStatus::Signed->value,
+                ContractStatus::Uploaded->value,
+            ])
+            ->exists();
+    }
+
+    /**
      * Record generated file paths on a Document (called by S2.4 GenerationService).
      */
     public function recordGenerated(Document $doc, string $docxPath, string $pdfPath, ?int $templateVersionId): Document

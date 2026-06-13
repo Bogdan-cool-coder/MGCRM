@@ -203,6 +203,39 @@ class StageEditorTest extends TestCase
             ->assertJsonValidationErrorFor('task_types.0');
     }
 
+    public function test_update_stage_sets_won_gate_contract_required(): void
+    {
+        $pipeline = $this->pipeline();
+        $stage = $pipeline->stages->firstWhere('code', 'won');
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Admin]), ['*']);
+
+        $this->patchJson("/api/pipelines/{$pipeline->id}/stages/{$stage->id}", [
+            'won_gate_contract_required' => false,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.won_gate_contract_required', false);
+
+        $this->assertDatabaseHas('pipeline_stages', [
+            'id' => $stage->id,
+            'won_gate_contract_required' => false,
+        ]);
+    }
+
+    public function test_stage_resource_exposes_won_gate_contract_required(): void
+    {
+        $pipeline = $this->pipeline();
+        $won = $pipeline->stages->firstWhere('code', 'won');
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Manager]), ['*']);
+
+        // The seeded won stage is hard by default (flag = true).
+        $this->getJson("/api/deals?view=board&pipeline_id={$pipeline->id}")
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $won->id,
+                'won_gate_contract_required' => true,
+            ]);
+    }
+
     public function test_update_foreign_pipeline_stage_returns_404(): void
     {
         $pipeline = $this->pipeline();

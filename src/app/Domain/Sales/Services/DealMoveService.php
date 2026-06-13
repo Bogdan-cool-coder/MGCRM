@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Contracts\Services\DocumentService;
+use App\Domain\Sales\Exceptions\WonGateException;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealStageHistory;
 use App\Domain\Sales\Models\PipelineStage;
@@ -14,24 +16,30 @@ use Illuminate\Validation\ValidationException;
  * DealMoveService — the ONLY path to change a deal's stage (security boundary).
  *
  * Move is transactional + row-locked, idempotent (no-op when already in the
- * target stage), gated by lost-reason (hard 422) and won-gate (soft warning in
- * S1.3 — see Q3), and writes DealStageHistory plus stage_changed_at/closed_at.
+ * target stage), and gated by:
+ *   - lost-reason (hard 422),
+ *   - required-fields (hard 422, on entry only),
+ *   - won-gate (hard 409 — S2.8: entering a won stage with the contract gate on
+ *     requires a "live" contract; otherwise WonGateException is thrown and the
+ *     whole move rolls back, so no DealStageHistory is written).
  *
- * Result shape: ['deal' => Deal, 'won_gate_warning' => bool].
+ * On success it writes DealStageHistory plus stage_changed_at/closed_at and
+ * returns the moved Deal.
  */
 class DealMoveService
 {
-    /**
-     * @return array{deal: Deal, won_gate_warning: bool}
-     */
+    public function __construct(
+        private readonly DocumentService $documents,
+    ) {}
+
     public function move(
         Deal $deal,
         int $toStageId,
         int $userId,
         ?string $lostReason = null,
         ?int $lostReasonId = null,
-    ): array {
-        return DB::transaction(function () use ($deal, $toStageId, $userId, $lostReason, $lostReasonId): array {
+    ): Deal {
+        return DB::transaction(function () use ($deal, $toStageId, $userId, $lostReason, $lostReasonId): Deal {
             // 1. Row-lock the deal (anti double-drag race).
             $locked = Deal::query()->lockForUpdate()->findOrFail($deal->id);
 
@@ -45,7 +53,7 @@ class DealMoveService
 
             // 3. Idempotency: already in the target stage → no-op (no history row).
             if ((int) $locked->stage_id === (int) $toStage->id) {
-                return ['deal' => $locked->load('stage'), 'won_gate_warning' => false];
+                return $locked->load('stage');
             }
 
             // 4. Lost-gate: entering a lost stage requires a reason (text or FK).
@@ -60,10 +68,17 @@ class DealMoveService
             //     only — existing deals are never retro-validated (E6).
             $this->assertRequiredFields($locked, $toStage);
 
-            // 5. Won-gate: soft in S1.3 (warning only; hard 409 lands in S2).
-            $wonGateWarning = false;
-            if ($toStage->won_gate) {
-                $wonGateWarning = ! $this->canPassWonGate($locked);
+            // 5. Won-gate (S2.8): hard. Entering a won stage with the contract gate
+            //    on requires a live contract (approved/signed/uploaded). Otherwise
+            //    409. Checked BEFORE save() / DealStageHistory so the move rolls
+            //    back cleanly (no history). is_won is the reliable "win" marker —
+            //    the stage editor cannot toggle it.
+            if ($toStage->is_won
+                && $toStage->won_gate
+                && $toStage->won_gate_contract_required
+                && ! $this->documents->hasActiveContractForDeal($locked->id)
+            ) {
+                throw new WonGateException;
             }
 
             // 6. Apply the transition.
@@ -97,7 +112,7 @@ class DealMoveService
                 'created_at' => now(),
             ]);
 
-            return ['deal' => $locked->load('stage'), 'won_gate_warning' => $wonGateWarning];
+            return $locked->load('stage');
         });
     }
 
@@ -141,15 +156,5 @@ class DealMoveService
                 'required_fields' => "Required fields for stage \"{$toStage->name}\" are missing: ".implode(', ', $missing),
             ])->status(422);
         }
-    }
-
-    /**
-     * Won-gate check (S1.3 stub). Passes if a contract is attached; otherwise
-     * the move still proceeds but the caller surfaces a soft warning. The hard
-     * gate (signed contract / payment) lands once Contract/Finance exist (S2/M9).
-     */
-    private function canPassWonGate(Deal $deal): bool
-    {
-        return $deal->contract_id !== null;
     }
 }

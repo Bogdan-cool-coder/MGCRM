@@ -104,10 +104,10 @@ class DealController extends Controller
         $cacheKey = $this->idempotencyCacheKey($request, $deal);
 
         if ($cacheKey !== null && ($cached = Cache::get($cacheKey)) !== null) {
-            return $this->moveResponse($cached['deal_id'], $cached['won_gate_warning']);
+            return $this->moveResponse($cached['deal_id']);
         }
 
-        $result = $this->mover->move(
+        $moved = $this->mover->move(
             $deal,
             (int) $request->validated('to_stage_id'),
             $request->user()->id,
@@ -117,17 +117,13 @@ class DealController extends Controller
                 : null,
         );
 
-        /** @var Deal $moved */
-        $moved = $result['deal'];
-
         if ($cacheKey !== null) {
             Cache::put($cacheKey, [
                 'deal_id' => $moved->id,
-                'won_gate_warning' => $result['won_gate_warning'],
             ], self::IDEMPOTENCY_TTL_SECONDS);
         }
 
-        return $this->moveResponse($moved->id, $result['won_gate_warning']);
+        return $this->moveResponse($moved->id);
     }
 
     // ---- Private ----
@@ -149,19 +145,18 @@ class DealController extends Controller
     }
 
     /**
-     * Render the standard move response (DealResource + won_gate_warning) from a
-     * deal id, reloading the display relations. Shared by the fresh-move and
-     * cached-replay paths so both return the identical shape.
+     * Render the standard move response (clean DealResource, 200) from a deal id,
+     * reloading the display relations. Shared by the fresh-move and cached-replay
+     * paths so both return the identical shape. The soft won_gate_warning is gone
+     * (S2.8): the gate is now a hard 409 raised inside DealMoveService.
      */
-    private function moveResponse(int $dealId, bool $wonGateWarning): JsonResponse
+    private function moveResponse(int $dealId): JsonResponse
     {
         $deal = Deal::query()
             ->with(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name'])
             ->findOrFail($dealId);
 
-        return DealResource::make($deal)
-            ->additional(['won_gate_warning' => $wonGateWarning])
-            ->response();
+        return DealResource::make($deal)->response();
     }
 
     private function board(Request $request, VisibilityScope $scope): JsonResponse

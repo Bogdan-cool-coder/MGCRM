@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sales;
 
+use App\Domain\Contracts\Models\Document;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -87,7 +88,13 @@ class PipelineCrudTest extends TestCase
             'currency' => 'RUB',
         ])->assertCreated()->json('data.id');
 
-        // Close it — the won stage must exist on the new pipeline.
+        // Close it — the won stage must exist on the new pipeline. The won stage
+        // is contract-gated by default (S2.8), so attach an approved contract.
+        Document::factory()->approved()->create([
+            'source_deal_id' => $dealId,
+            'author_user_id' => $admin->id,
+        ]);
+
         $won = Pipeline::find($pipelineId)->stages()->where('code', 'won')->firstOrFail();
         $this->postJson("/api/deals/{$dealId}/move", ['to_stage_id' => $won->id])
             ->assertOk()
