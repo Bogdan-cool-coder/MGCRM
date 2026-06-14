@@ -47,6 +47,7 @@ use App\Http\Controllers\Inbox\InboundMessageController;
 use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
 use App\Http\Controllers\Notification\TelegramLinkController;
+use App\Http\Controllers\Onboarding\AiTutorController;
 use App\Http\Controllers\Onboarding\AssignmentController;
 use App\Http\Controllers\Onboarding\CertificateController;
 use App\Http\Controllers\Onboarding\CourseController;
@@ -510,8 +511,13 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('courses.modules', CourseModuleController::class)->except(['show']);
 
         // Lessons (nested under modules).
-        // upload and reorder MUST be before the {lesson} parameter routes.
+        // upload, generate-questions, and reorder MUST be before the {lesson} parameter routes.
         Route::post('lessons/{lesson}/upload', [LessonController::class, 'uploadFile'])->name('lessons.upload');
+
+        // =====================================================================
+        // Onboarding — S3.5: AI question generation (admin/director only)
+        // =====================================================================
+        Route::post('lessons/{lesson}/generate-questions', [LessonController::class, 'generateQuestions'])->name('lessons.generate-questions');
         Route::post('modules/{module}/lessons/{lesson}/publish', [LessonController::class, 'publish'])->name('modules.lessons.publish');
         Route::post('modules/{module}/lessons/{lesson}/unpublish', [LessonController::class, 'unpublish'])->name('modules.lessons.unpublish');
         Route::post('modules/{module}/lessons/reorder', [CourseModuleController::class, 'reorderLessons'])->name('modules.lessons.reorder');
@@ -577,6 +583,14 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // S3.4: Lesson completion (text/video/pdf — not quiz).
         Route::post('lessons/{lesson}/complete', [LessonController::class, 'complete'])->name('lessons.complete');
+
+        // =====================================================================
+        // Onboarding — S3.5: AI-тьютор (any authenticated student)
+        // history DELETE must be before history GET to avoid clash.
+        // =====================================================================
+        Route::post('lessons/{lesson}/ai-tutor', [AiTutorController::class, 'ask'])->name('lessons.ai-tutor.ask');
+        Route::delete('lessons/{lesson}/ai-tutor/history', [AiTutorController::class, 'clearHistory'])->name('lessons.ai-tutor.history.delete');
+        Route::get('lessons/{lesson}/ai-tutor/history', [AiTutorController::class, 'history'])->name('lessons.ai-tutor.history');
 
         // S3.2: Student quiz — view quiz (no correct answers) + start attempt.
         // start MUST be declared BEFORE the plain GET to avoid route collision.

@@ -28,6 +28,7 @@ class QuizQuestion extends Model
         'sort_order',
         'explanation',
         'points',
+        'is_draft',
     ];
 
     protected function casts(): array
@@ -37,6 +38,7 @@ class QuizQuestion extends Model
             'kind' => QuestionKind::class,
             'sort_order' => 'integer',
             'points' => 'integer',
+            'is_draft' => 'boolean',
         ];
     }
 

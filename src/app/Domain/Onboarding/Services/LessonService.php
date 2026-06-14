@@ -305,6 +305,26 @@ class LessonService
         return $lesson->refresh();
     }
 
+    // -------------------------------------------------------------------------
+    // S3.5 — AI generation status
+    // -------------------------------------------------------------------------
+
+    /**
+     * Write ai_generation_status into Lesson.content JSONB (no ALTER needed).
+     *
+     * @param  'pending'|'running'|'done'|'failed'  $status
+     */
+    public function setAiGenerationStatus(Lesson $lesson, string $status, ?string $error = null): Lesson
+    {
+        $content = $lesson->content ?? [];
+        $content['ai_generation_status'] = $status;
+        $content['ai_generation_error'] = $error;
+        $content['ai_generation_at'] = now()->toISOString();
+        $lesson->update(['content' => $content]);
+
+        return $lesson->refresh();
+    }
+
     private function detectProvider(string $url): string
     {
         if (str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be')) {

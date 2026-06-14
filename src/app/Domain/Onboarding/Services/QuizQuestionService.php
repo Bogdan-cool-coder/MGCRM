@@ -48,6 +48,7 @@ class QuizQuestionService
                 'sort_order' => ($max ?? 0) + 1,
                 'explanation' => $data['explanation'] ?? null,
                 'points' => $data['points'] ?? 1,
+                'is_draft' => $data['is_draft'] ?? false,
             ]);
         });
     }

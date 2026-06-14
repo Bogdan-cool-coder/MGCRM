@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Onboarding;
 
+use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Models\CourseModule;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\LessonProgress;
 use App\Domain\Onboarding\Services\LessonService;
 use App\Domain\Onboarding\Services\ProgressService;
+use App\Domain\Onboarding\Services\QuizService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\CompleteLessonRequest;
+use App\Http\Requests\Onboarding\GenerateQuestionsRequest;
 use App\Http\Requests\Onboarding\StoreLessonRequest;
 use App\Http\Requests\Onboarding\UpdateLessonRequest;
 use App\Http\Requests\Onboarding\UploadLessonFileRequest;
 use App\Http\Resources\Onboarding\LessonProgressResource;
 use App\Http\Resources\Onboarding\LessonResource;
+use App\Jobs\Onboarding\GenerateQuizQuestionsJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -26,6 +30,7 @@ class LessonController extends Controller
     public function __construct(
         private readonly LessonService $service,
         private readonly ProgressService $progressService,
+        private readonly QuizService $quizService,
     ) {}
 
     public function index(Request $request, CourseModule $module): AnonymousResourceCollection
@@ -96,6 +101,60 @@ class LessonController extends Controller
         ]);
 
         return LessonResource::make($lesson);
+    }
+
+    /**
+     * POST /api/admin/onboarding/lessons/{lesson}/generate-questions
+     *
+     * Dispatch AI quiz question generation as a background Job.
+     * Returns 202 Accepted immediately; status tracked in Lesson.content.ai_generation_status.
+     *
+     * Guards:
+     *   - 403 if not admin/director (via authorize)
+     *   - 422 if lesson.kind is not text or pdf
+     *   - 422 if no Quiz exists for the lesson
+     *   - 409 if ai_generation_status=running (already in progress)
+     */
+    public function generateQuestions(GenerateQuestionsRequest $request, Lesson $lesson): JsonResponse
+    {
+        $this->authorize('update', $lesson);
+
+        // Guard: only text and pdf lessons support generation.
+        if (! in_array($lesson->kind, [LessonKind::Text, LessonKind::Pdf], strict: true)) {
+            return response()->json(
+                ['error' => 'Генерация доступна только для текстовых и PDF-уроков.'],
+                422,
+            );
+        }
+
+        // Guard: quiz must exist.
+        $quiz = $this->quizService->listByLesson($lesson);
+        if ($quiz === null) {
+            return response()->json(
+                ['error' => 'Сначала создайте квиз для урока через раздел «Квизы».'],
+                422,
+            );
+        }
+
+        // Guard: avoid duplicate dispatch.
+        $currentStatus = data_get($lesson->content, 'ai_generation_status');
+        if ($currentStatus === 'running') {
+            return response()->json(
+                ['error' => 'Генерация уже запущена. Дождитесь завершения или проверьте статус.'],
+                409,
+            );
+        }
+
+        $desiredCount = (int) ($request->validated()['desired_count'] ?? 5);
+
+        $this->service->setAiGenerationStatus($lesson, 'pending');
+
+        GenerateQuizQuestionsJob::dispatch($lesson->id, $quiz->id, $desiredCount);
+
+        return response()->json([
+            'status' => 'pending',
+            'message' => 'Генерация вопросов запущена. Проверьте статус через несколько минут.',
+        ], 202);
     }
 
     /**

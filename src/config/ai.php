@@ -18,6 +18,8 @@ $reportModel = env('AI_REPORT_MODEL', 'claude-sonnet-4-6');
 $widgetModel = env('AI_WIDGET_MODEL', 'claude-sonnet-4-6');
 $documentModel = env('AI_DOCUMENT_MODEL', 'claude-sonnet-4-6');
 $quickQaModel = env('AI_QUICKQA_MODEL', 'claude-haiku-4-5-20251001');
+$tutorModel = env('AI_TUTOR_MODEL', 'claude-sonnet-4-6');
+$quizGenModel = env('AI_QUIZGEN_MODEL', 'claude-sonnet-4-6');
 
 return [
     // The "home" provider namespace. The retry service resolves the active
@@ -56,6 +58,16 @@ return [
             ],
             'quick_qa' => [
                 ['model' => $quickQaModel, 'attempts' => 3],
+            ],
+
+            // S3.5: AI-тьютор — multi-turn диалог по контенту урока (Sonnet для качества).
+            'tutor' => [
+                ['model' => $tutorModel, 'attempts' => 3],
+            ],
+
+            // S3.5: Генерация черновых вопросов квиза из текстового/PDF контента.
+            'quiz_generation' => [
+                ['model' => $quizGenModel, 'attempts' => 3],
             ],
 
             'retry' => [
