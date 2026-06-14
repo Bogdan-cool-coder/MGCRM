@@ -20,7 +20,15 @@
     "templates": "Templates",
     "templateVariables": "Variable catalog",
     "approvalRoutes": "Approval routes",
-    "messageTemplates": "Message templates"
+    "messageTemplates": "Message templates",
+    "myCourses": "My learning",
+    "myCertificates": "Certificates",
+    "onboardingAdmin": "Courses (HR)",
+    "onboardingAssignments": "Assignments",
+    "hrProgress": "Progress",
+    "sections": {
+      "learning": "Learning"
+    }
   },
   "auth": {
     "login": {
@@ -235,7 +243,16 @@
     "archive": "Archive",
     "restore": "Restore",
     "date": "Date",
-    "open": "Open"
+    "open": "Open",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "error": "Error",
+    "loadError": "Failed to load",
+    "required": "Required field",
+    "invalidValue": "Invalid value",
+    "preview": "Preview",
+    "hidePreview": "Hide preview",
+    "saveFirst": "Save the lesson first to upload a file"
   },
   "contacts": {
     "page": {
@@ -1527,6 +1544,292 @@
       "bindingSlot": "Automation slot",
       "catalogHint": "Available keys — in the Variable catalog",
       "showCatalog": "Show variable catalog"
+    }
+  },
+  "onboarding": {
+    "courses": {
+      "title": "Onboarding courses",
+      "create": "Create course",
+      "statuses": {
+        "draft": "Draft",
+        "published": "Published"
+      },
+      "policy": {
+        "informational": "Informational",
+        "soft_gate": "Required"
+      },
+      "columns": {
+        "title": "Title",
+        "modules": "Modules",
+        "policy": "Policy",
+        "passingScore": "Score",
+        "deadline": "Deadline",
+        "status": "Status"
+      },
+      "createDialog": {
+        "title": "Create course",
+        "name": "Title",
+        "namePlaceholder": "Course title...",
+        "description": "Description",
+        "policyLabel": "Completion policy",
+        "passingScore": "Passing score (%)",
+        "deadlineDays": "Deadline (days)",
+        "coverUrl": "Cover URL (optional)",
+        "submit": "Create",
+        "cancel": "Cancel"
+      },
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "unpublishConfirm": "Unpublish this course? Students won't be able to take it.",
+      "deleteConfirm": "Delete course? This action cannot be undone.",
+      "empty": "No courses yet",
+      "emptyCreate": "Create your first onboarding course",
+      "emptyFiltered": "Nothing found",
+      "filter": {
+        "status": "Status",
+        "policy": "Policy",
+        "search": "Search...",
+        "reset": "Reset",
+        "all": "All"
+      }
+    },
+    "builder": {
+      "back": "Courses",
+      "save": "Save",
+      "settingsTitle": "Course settings",
+      "structureTitle": "Course structure",
+      "addModule": "+ Add module",
+      "addLesson": "+ Add lesson",
+      "noModules": "No modules — add the first one",
+      "noLessons": "No lessons — add the first one",
+      "lessonKinds": {
+        "text": "Text",
+        "video": "Video",
+        "pdf": "PDF",
+        "quiz": "Quiz"
+      },
+      "module": {
+        "editTitle": "Module",
+        "name": "Title",
+        "deleteConfirm": "Delete module and all its lessons?"
+      },
+      "lesson": {
+        "editTitle": "Lesson",
+        "name": "Title",
+        "kind": "Type",
+        "duration": "Duration (min)",
+        "content": "Content",
+        "contentHint": "Markdown syntax. Callout blocks supported: > [!info], > [!warning]",
+        "videoUrl": "Video URL",
+        "videoHint": "YouTube, Loom, Vimeo supported",
+        "pdfUpload": "Upload file",
+        "pdfLink": "PDF URL",
+        "quizSelect": "Select quiz",
+        "quizCreate": "+ Create new quiz",
+        "publish": "Publish lesson",
+        "unpublish": "Unpublish",
+        "published": "Lesson published",
+        "unpublished": "Lesson unpublished",
+        "deleteConfirm": "Delete lesson?"
+      },
+      "quiz": {
+        "editTitle": "Quiz editor",
+        "name": "Title",
+        "description": "Description",
+        "passingScore": "Passing score (%)",
+        "timeLimit": "Time limit (min, 0 = no limit)",
+        "addQuestion": "+ Add question",
+        "generateAi": "Generate from lesson",
+        "generating": "Generating...",
+        "generatingHint": "AI is creating draft questions — this may take a few seconds",
+        "draftQuestions": "AI suggested questions (drafts)",
+        "draftHint": "Review and add the ones you need",
+        "draftAdd": "Add to quiz",
+        "draftSkip": "Skip",
+        "question": {
+          "kind": "Type",
+          "kinds": {
+            "single": "Single answer",
+            "multiple": "Multiple answers"
+          },
+          "text": "Question text",
+          "explanation": "Explanation",
+          "points": "Points",
+          "addOption": "+ Add option",
+          "optionCorrect": "Correct",
+          "deleteConfirm": "Delete question?"
+        },
+        "validation": {
+          "minQuestion": "Add at least one question",
+          "minOptions": "Each question must have at least 2 options",
+          "noCorrect": "Mark the correct answer for each question"
+        }
+      },
+      "publishCard": {
+        "title": "Publication",
+        "status": "Status"
+      },
+      "assignmentsCard": {
+        "title": "Assignments",
+        "count": "{n} employees",
+        "assign": "+ Assign employees",
+        "empty": "Not assigned to anyone"
+      },
+      "metaCard": {
+        "created": "Created",
+        "lessonsCount": "Lessons",
+        "passingScore": "Minimum score"
+      }
+    },
+    "assignments": {
+      "title": "Assignments",
+      "assign": "Assign course",
+      "columns": {
+        "employee": "Employee",
+        "course": "Course",
+        "status": "Status",
+        "progress": "Progress",
+        "deadline": "Deadline"
+      },
+      "statuses": {
+        "pending": "Not started",
+        "in_progress": "In progress",
+        "completed": "Completed",
+        "overdue": "Overdue",
+        "archived": "Archived"
+      },
+      "editDeadline": "Edit deadline",
+      "archive": "Archive",
+      "archiveConfirm": "Archive this assignment?",
+      "delete": "Delete",
+      "deleteConfirm": "Delete assignment? (only if no progress)",
+      "drawer": {
+        "title": "Assign course",
+        "employees": "Employees",
+        "employeesPlaceholder": "Select employees...",
+        "deadline": "Deadline",
+        "deadlineHint": "If not set, the course deadline ({n} days) will be used",
+        "submit": "Assign",
+        "cancel": "Cancel",
+        "successSummary": "Assigned: {assigned}",
+        "skippedWarning": "{skipped} employees already assigned"
+      },
+      "filter": {
+        "course": "Course",
+        "employee": "Employee",
+        "status": "Status",
+        "reset": "Reset",
+        "all": "All"
+      },
+      "empty": "No assignments",
+      "emptyFiltered": "Nothing found",
+      "newDeadline": "New deadline"
+    },
+    "hrProgress": {
+      "title": "Learning progress",
+      "kpi": {
+        "total": "Total assignments",
+        "completed": "Completed",
+        "inProgress": "In progress",
+        "overdue": "Overdue"
+      },
+      "charts": {
+        "byStatus": "Status distribution",
+        "topCourses": "Top 10 courses by completion"
+      },
+      "tableTitle": "Progress matrix",
+      "columns": {
+        "employee": "Employee",
+        "course": "Course",
+        "progress": "Progress",
+        "status": "Status",
+        "deadline": "Deadline",
+        "avgScore": "Avg score"
+      },
+      "filter": {
+        "course": "Course",
+        "employee": "Employee",
+        "status": "Status",
+        "reset": "Reset",
+        "all": "All"
+      },
+      "empty": "No assignments yet"
+    },
+    "myCourses": {
+      "title": "My learning",
+      "tabs": {
+        "active": "Active",
+        "completed": "Completed",
+        "overdue": "Overdue"
+      },
+      "continue": "Continue",
+      "viewCertificate": "View certificate",
+      "deadline": "Deadline",
+      "overdueFrom": "Overdue since",
+      "progress": "{n}% complete",
+      "empty": "No courses assigned to you yet",
+      "emptyTab": "No courses in this category"
+    },
+    "coursePage": {
+      "back": "My courses",
+      "prev": "Previous lesson",
+      "next": "Next lesson",
+      "markDone": "Mark as completed",
+      "markViewed": "Mark as viewed",
+      "lessonDone": "Lesson completed!",
+      "openPdf": "Open PDF",
+      "downloadPdf": "Download PDF",
+      "unsupportedVideo": "Unsupported video format",
+      "quiz": {
+        "title": "Quiz",
+        "passingScore": "Passing score",
+        "attempt": "Attempt #{n}",
+        "start": "Start quiz",
+        "question": "Question {current} of {total}",
+        "submit": "Submit answers",
+        "timer": "Time left",
+        "result": {
+          "passed": "Congratulations! Quiz passed — {score} of 100 points",
+          "failed": "Quiz failed — {score} of 100 points. Required: {min}%",
+          "review": "Answer review",
+          "correct": "Correct",
+          "incorrect": "Incorrect",
+          "answer": "Correct answer",
+          "explanation": "Explanation",
+          "retry": "Try again",
+          "nextLesson": "Next lesson"
+        }
+      },
+      "complete": {
+        "title": "Course completed!",
+        "congrats": "Congratulations! You have successfully completed the course «{title}».",
+        "certPending": "Certificate is being generated...",
+        "certReady": "Certificate issued!",
+        "downloadCert": "Download certificate",
+        "backToCourses": "Back to my courses"
+      },
+      "aiTutor": {
+        "title": "AI Tutor",
+        "btnLabel": "Ask AI",
+        "placeholder": "Ask a question about this lesson...",
+        "send": "Send",
+        "clearHistory": "Clear history",
+        "clearConfirm": "Clear chat history?",
+        "historyCleared": "History cleared",
+        "emptyHistory": "History is empty",
+        "unavailable": "AI is temporarily unavailable",
+        "unavailableDetail": "Please try again in a few seconds.",
+        "adminViewOnly": "You are viewing someone else's assignment"
+      }
+    },
+    "certificates": {
+      "title": "My certificates",
+      "number": "Certificate",
+      "issuedAt": "Issued",
+      "download": "Download PDF",
+      "empty": "No certificates yet",
+      "emptyHint": "Complete a course to receive a certificate",
+      "goToCourses": "Go to learning"
     }
   }
 }

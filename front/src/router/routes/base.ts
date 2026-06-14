@@ -176,6 +176,52 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'nav.myApprovals' },
   },
 
+  // ─── Onboarding: Admin / HR ──────────────────────────────────────────────
+  {
+    path: '/admin/onboarding/courses',
+    name: 'OnboardingAdminCourses',
+    component: () => import('@/pages/OnboardingAdminCoursesPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.onboardingAdmin' },
+  },
+  {
+    path: '/admin/onboarding/courses/:id',
+    name: 'CourseBuilder',
+    component: () => import('@/pages/CourseBuilderPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'] },
+  },
+  {
+    path: '/admin/onboarding/assignments',
+    name: 'OnboardingAssignments',
+    component: () => import('@/pages/OnboardingAssignmentsPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.onboardingAssignments' },
+  },
+  {
+    path: '/admin/onboarding/progress',
+    name: 'HrProgress',
+    component: () => import('@/pages/HrProgressPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.hrProgress' },
+  },
+
+  // ─── Onboarding: Student ─────────────────────────────────────────────────
+  {
+    path: '/onboarding/my-courses',
+    name: 'MyCourses',
+    component: () => import('@/pages/MyCoursesPage'),
+    meta: { requiresAuth: true, title: 'nav.myCourses' },
+  },
+  {
+    path: '/onboarding/assignments/:id',
+    name: 'CoursePlayer',
+    component: () => import('@/pages/CoursePage'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/onboarding/my-certificates',
+    name: 'MyOnboardingCertificates',
+    component: () => import('@/pages/MyOnboardingCertificatesPage'),
+    meta: { requiresAuth: true, title: 'nav.myCertificates' },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

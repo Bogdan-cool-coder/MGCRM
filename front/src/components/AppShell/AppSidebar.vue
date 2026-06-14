@@ -44,6 +44,12 @@
             >
               {{ approvalsStore.pendingCount }}
             </span>
+            <span
+              v-if="!collapsed && item.name === 'my-courses' && onboardingStore.overdueCount > 0"
+              class="app-sidebar__nav-badge app-sidebar__nav-badge--danger"
+            >
+              {{ onboardingStore.overdueCount }}
+            </span>
           </router-link>
         </li>
         <!-- Admin / Director only items -->
@@ -100,6 +106,7 @@ import AppLogo from './AppLogo.vue'
 import { useUserStore } from '@/stores/user'
 import { useActivityStore } from '@/stores/activityStore'
 import { useApprovalsStore } from '@/stores/approvalsStore'
+import { useOnboardingStore } from '@/stores/onboardingStore'
 
 defineProps<{
   collapsed: boolean
@@ -113,6 +120,7 @@ const { t } = useI18n()
 const userStore = useUserStore()
 const activityStore = useActivityStore()
 const approvalsStore = useApprovalsStore()
+const onboardingStore = useOnboardingStore()
 
 const navItems = [
   { name: 'dashboard', to: '/dashboard', icon: 'pi pi-home', labelKey: 'nav.dashboard' },
@@ -124,6 +132,9 @@ const navItems = [
   { name: 'products', to: '/admin/products', icon: 'pi pi-box', labelKey: 'nav.catalog' },
   { name: 'documents', to: '/documents', icon: 'pi pi-file-edit', labelKey: 'nav.documents' },
   { name: 'my-approvals', to: '/my-approvals', icon: 'pi pi-check-square', labelKey: 'nav.myApprovals' },
+  // ─── Learning section (students — all roles) ───────────────────────────
+  { name: 'my-courses', to: '/onboarding/my-courses', icon: 'pi pi-book', labelKey: 'nav.myCourses' },
+  { name: 'my-certificates', to: '/onboarding/my-certificates', icon: 'pi pi-award', labelKey: 'nav.myCertificates' },
 ]
 
 // Items visible only to admin / director
@@ -158,12 +169,32 @@ const adminNavItems = [
     icon: 'pi pi-envelope',
     labelKey: 'nav.messageTemplates',
   },
+  // ─── Learning section (admin/director only) ────────────────────────────
+  {
+    name: 'onboarding-courses',
+    to: '/admin/onboarding/courses',
+    icon: 'pi pi-graduation-cap',
+    labelKey: 'nav.onboardingAdmin',
+  },
+  {
+    name: 'onboarding-assignments',
+    to: '/admin/onboarding/assignments',
+    icon: 'pi pi-users',
+    labelKey: 'nav.onboardingAssignments',
+  },
+  {
+    name: 'hr-progress',
+    to: '/admin/onboarding/progress',
+    icon: 'pi pi-chart-bar',
+    labelKey: 'nav.hrProgress',
+  },
 ]
 
 onMounted(() => {
   if (userStore.getUser) {
     void activityStore.fetchMyOpenCount()
     void approvalsStore.fetchPendingCount()
+    void onboardingStore.fetchOverdueCount()
   }
 })
 
@@ -299,6 +330,10 @@ const roleLabel = computed(() => {
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
+
+  &--danger {
+    background: var(--p-red-500);
+  }
 }
 
 // Footer / user section

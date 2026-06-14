@@ -20,7 +20,15 @@
     "templates": "Шаблоны",
     "templateVariables": "Каталог меток",
     "approvalRoutes": "Маршруты",
-    "messageTemplates": "Рассылки"
+    "messageTemplates": "Рассылки",
+    "myCourses": "Моё обучение",
+    "myCertificates": "Сертификаты",
+    "onboardingAdmin": "Курсы (HR)",
+    "onboardingAssignments": "Назначения",
+    "hrProgress": "Прогресс",
+    "sections": {
+      "learning": "Обучение"
+    }
   },
   "auth": {
     "login": {
@@ -235,7 +243,16 @@
     "archive": "Архивировать",
     "restore": "Восстановить",
     "date": "Дата",
-    "open": "Открыть"
+    "open": "Открыть",
+    "saved": "Сохранено",
+    "deleted": "Удалено",
+    "error": "Ошибка",
+    "loadError": "Ошибка загрузки",
+    "required": "Обязательное поле",
+    "invalidValue": "Некорректное значение",
+    "preview": "Предпросмотр",
+    "hidePreview": "Скрыть предпросмотр",
+    "saveFirst": "Сначала сохраните урок для загрузки файла"
   },
   "contacts": {
     "page": {
@@ -1527,6 +1544,292 @@
       "bindingSlot": "Слот автоматизации",
       "catalogHint": "Доступные метки — в Каталоге переменных",
       "showCatalog": "Показать каталог меток"
+    }
+  },
+  "onboarding": {
+    "courses": {
+      "title": "Курсы онбординга",
+      "create": "Создать курс",
+      "statuses": {
+        "draft": "Черновик",
+        "published": "Опубликован"
+      },
+      "policy": {
+        "informational": "Информационный",
+        "soft_gate": "Обязательный"
+      },
+      "columns": {
+        "title": "Название",
+        "modules": "Модулей",
+        "policy": "Политика",
+        "passingScore": "Балл",
+        "deadline": "Срок",
+        "status": "Статус"
+      },
+      "createDialog": {
+        "title": "Создать курс",
+        "name": "Название",
+        "namePlaceholder": "Название курса...",
+        "description": "Описание",
+        "policyLabel": "Политика завершения",
+        "passingScore": "Проходной балл (%)",
+        "deadlineDays": "Срок прохождения (дн.)",
+        "coverUrl": "URL обложки (опц.)",
+        "submit": "Создать",
+        "cancel": "Отмена"
+      },
+      "publish": "Опубликовать",
+      "unpublish": "Снять с публикации",
+      "unpublishConfirm": "Снять курс с публикации? Студенты не смогут его проходить.",
+      "deleteConfirm": "Удалить курс? Это действие необратимо.",
+      "empty": "Курсов пока нет",
+      "emptyCreate": "Создайте первый курс для онбординга команды",
+      "emptyFiltered": "Ничего не найдено",
+      "filter": {
+        "status": "Статус",
+        "policy": "Политика",
+        "search": "Поиск...",
+        "reset": "Сбросить",
+        "all": "Все"
+      }
+    },
+    "builder": {
+      "back": "Курсы",
+      "save": "Сохранить",
+      "settingsTitle": "Настройки курса",
+      "structureTitle": "Структура курса",
+      "addModule": "+ Добавить модуль",
+      "addLesson": "+ Добавить урок",
+      "noModules": "Модулей нет — добавьте первый",
+      "noLessons": "Уроков нет — добавьте первый",
+      "lessonKinds": {
+        "text": "Текст",
+        "video": "Видео",
+        "pdf": "PDF",
+        "quiz": "Квиз"
+      },
+      "module": {
+        "editTitle": "Модуль",
+        "name": "Название",
+        "deleteConfirm": "Удалить модуль и все его уроки?"
+      },
+      "lesson": {
+        "editTitle": "Урок",
+        "name": "Название",
+        "kind": "Тип",
+        "duration": "Длительность (мин)",
+        "content": "Содержимое",
+        "contentHint": "Markdown-синтаксис. Поддерживаются callout-блоки: > [!info], > [!warning]",
+        "videoUrl": "URL видео",
+        "videoHint": "Поддерживается YouTube, Loom, Vimeo",
+        "pdfUpload": "Загрузить файл",
+        "pdfLink": "Ссылка на PDF",
+        "quizSelect": "Выбрать квиз",
+        "quizCreate": "+ Создать новый квиз",
+        "publish": "Опубликовать урок",
+        "unpublish": "Снять с публикации",
+        "published": "Урок опубликован",
+        "unpublished": "Урок снят с публикации",
+        "deleteConfirm": "Удалить урок?"
+      },
+      "quiz": {
+        "editTitle": "Редактор квиза",
+        "name": "Название",
+        "description": "Описание",
+        "passingScore": "Проходной балл (%)",
+        "timeLimit": "Лимит времени (мин, 0 = без лимита)",
+        "addQuestion": "+ Добавить вопрос",
+        "generateAi": "Сгенерировать из урока",
+        "generating": "Генерируем...",
+        "generatingHint": "AI создаёт черновые вопросы — это займёт несколько секунд",
+        "draftQuestions": "Предложенные AI вопросы (черновики)",
+        "draftHint": "Проверьте и добавьте нужные",
+        "draftAdd": "Добавить в квиз",
+        "draftSkip": "Пропустить",
+        "question": {
+          "kind": "Тип",
+          "kinds": {
+            "single": "Один ответ",
+            "multiple": "Несколько ответов"
+          },
+          "text": "Текст вопроса",
+          "explanation": "Пояснение",
+          "points": "Баллов",
+          "addOption": "+ Добавить вариант",
+          "optionCorrect": "Верный",
+          "deleteConfirm": "Удалить вопрос?"
+        },
+        "validation": {
+          "minQuestion": "Добавьте хотя бы один вопрос",
+          "minOptions": "У каждого вопроса должно быть хотя бы 2 варианта",
+          "noCorrect": "Укажите правильный ответ для каждого вопроса"
+        }
+      },
+      "publishCard": {
+        "title": "Публикация",
+        "status": "Статус"
+      },
+      "assignmentsCard": {
+        "title": "Назначения",
+        "count": "{n} сотрудников",
+        "assign": "+ Назначить сотрудников",
+        "empty": "Никому не назначен"
+      },
+      "metaCard": {
+        "created": "Создан",
+        "lessonsCount": "Уроков",
+        "passingScore": "Минимальный балл"
+      }
+    },
+    "assignments": {
+      "title": "Назначения",
+      "assign": "Назначить курс",
+      "columns": {
+        "employee": "Сотрудник",
+        "course": "Курс",
+        "status": "Статус",
+        "progress": "Прогресс",
+        "deadline": "Дедлайн"
+      },
+      "statuses": {
+        "pending": "Не начат",
+        "in_progress": "В процессе",
+        "completed": "Завершён",
+        "overdue": "Просрочен",
+        "archived": "Архив"
+      },
+      "editDeadline": "Изменить дедлайн",
+      "archive": "Архивировать",
+      "archiveConfirm": "Архивировать назначение?",
+      "delete": "Удалить",
+      "deleteConfirm": "Удалить назначение? (только если нет прогресса)",
+      "drawer": {
+        "title": "Назначить курс",
+        "employees": "Сотрудники",
+        "employeesPlaceholder": "Выберите сотрудников...",
+        "deadline": "Дедлайн",
+        "deadlineHint": "Если не указан, используется срок курса ({n} дн.)",
+        "submit": "Назначить",
+        "cancel": "Отмена",
+        "successSummary": "Назначено: {assigned}",
+        "skippedWarning": "{skipped} сотрудников уже назначены"
+      },
+      "filter": {
+        "course": "Курс",
+        "employee": "Сотрудник",
+        "status": "Статус",
+        "reset": "Сбросить",
+        "all": "Все"
+      },
+      "empty": "Назначений нет",
+      "emptyFiltered": "Ничего не найдено",
+      "newDeadline": "Новый дедлайн"
+    },
+    "hrProgress": {
+      "title": "Прогресс обучения",
+      "kpi": {
+        "total": "Всего назначений",
+        "completed": "Завершено",
+        "inProgress": "В процессе",
+        "overdue": "Просрочено"
+      },
+      "charts": {
+        "byStatus": "Распределение по статусам",
+        "topCourses": "Топ-10 курсов по завершаемости"
+      },
+      "tableTitle": "Матрица прогресса",
+      "columns": {
+        "employee": "Сотрудник",
+        "course": "Курс",
+        "progress": "Прогресс",
+        "status": "Статус",
+        "deadline": "Дедлайн",
+        "avgScore": "Средний балл"
+      },
+      "filter": {
+        "course": "Курс",
+        "employee": "Сотрудник",
+        "status": "Статус",
+        "reset": "Сбросить",
+        "all": "Все"
+      },
+      "empty": "Назначений пока нет"
+    },
+    "myCourses": {
+      "title": "Моё обучение",
+      "tabs": {
+        "active": "Активные",
+        "completed": "Завершённые",
+        "overdue": "Просроченные"
+      },
+      "continue": "Продолжить",
+      "viewCertificate": "Посмотреть сертификат",
+      "deadline": "Дедлайн",
+      "overdueFrom": "Просрочен с",
+      "progress": "{n}% пройдено",
+      "empty": "Вам пока не назначены курсы",
+      "emptyTab": "В этой категории нет курсов"
+    },
+    "coursePage": {
+      "back": "Мои курсы",
+      "prev": "Предыдущий урок",
+      "next": "Следующий урок",
+      "markDone": "Отметить как пройденный",
+      "markViewed": "Отметить как просмотренный",
+      "lessonDone": "Урок пройден!",
+      "openPdf": "Открыть PDF",
+      "downloadPdf": "Скачать PDF",
+      "unsupportedVideo": "Неподдерживаемый формат видео",
+      "quiz": {
+        "title": "Квиз",
+        "passingScore": "Проходной балл",
+        "attempt": "Попытка #{n}",
+        "start": "Начать квиз",
+        "question": "Вопрос {current} из {total}",
+        "submit": "Отправить ответы",
+        "timer": "Осталось",
+        "result": {
+          "passed": "Поздравляем! Тест пройден — {score} из 100 баллов",
+          "failed": "Тест не пройден — {score} из 100 баллов. Нужно не менее {min}%",
+          "review": "Разбор ответов",
+          "correct": "Верно",
+          "incorrect": "Неверно",
+          "answer": "Правильный ответ",
+          "explanation": "Пояснение",
+          "retry": "Пройти снова",
+          "nextLesson": "Следующий урок"
+        }
+      },
+      "complete": {
+        "title": "Курс завершён!",
+        "congrats": "Поздравляем! Вы успешно завершили курс «{title}».",
+        "certPending": "Сертификат готовится...",
+        "certReady": "Сертификат выдан!",
+        "downloadCert": "Скачать сертификат",
+        "backToCourses": "К моим курсам"
+      },
+      "aiTutor": {
+        "title": "AI-тьютор",
+        "btnLabel": "Спросить AI",
+        "placeholder": "Задайте вопрос по уроку...",
+        "send": "Отправить",
+        "clearHistory": "Очистить историю",
+        "clearConfirm": "Очистить историю чата?",
+        "historyCleared": "История очищена",
+        "emptyHistory": "История пуста",
+        "unavailable": "AI временно недоступен",
+        "unavailableDetail": "Попробуйте через несколько секунд.",
+        "adminViewOnly": "Вы просматриваете чужое назначение"
+      }
+    },
+    "certificates": {
+      "title": "Мои сертификаты",
+      "number": "Сертификат",
+      "issuedAt": "Выдан",
+      "download": "Скачать PDF",
+      "empty": "Сертификатов пока нет",
+      "emptyHint": "Завершите курс, чтобы получить сертификат",
+      "goToCourses": "Перейти к обучению"
     }
   }
 }
