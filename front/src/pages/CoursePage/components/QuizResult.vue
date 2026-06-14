@@ -88,7 +88,7 @@ const { t } = useI18n()
 function correctAnswerText(answer: QuizAnswerResult): string {
   // We don't have option texts in the result, only IDs
   // Display IDs as a fallback — in practice backend should return texts
-  return answer.correct_option_ids.join(', ')
+  return (answer.correct_option_ids ?? []).join(', ')
 }
 </script>
 

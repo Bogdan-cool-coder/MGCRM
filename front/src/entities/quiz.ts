@@ -9,7 +9,7 @@ export interface Quiz {
   id: number
   title: string
   description: string | null
-  passing_score_pct: number
+  pass_score_pct: number
   time_limit_minutes: number
   ai_generation_status: AiGenerationStatus
   questions: QuizQuestion[]
@@ -59,21 +59,21 @@ export interface QuizAnswerResult {
   kind: QuestionKind
   explanation: string | null
   selected_option_ids: number[]
-  correct_option_ids: number[]
+  correct_option_ids: number[] | null
   is_correct: boolean
 }
 
 export interface QuizCreatePayload {
   title: string
   description?: string | null
-  passing_score_pct: number
+  pass_score_pct: number
   time_limit_minutes?: number
 }
 
 export interface QuizPatchPayload {
   title?: string
   description?: string | null
-  passing_score_pct?: number
+  pass_score_pct?: number
   time_limit_minutes?: number
 }
 

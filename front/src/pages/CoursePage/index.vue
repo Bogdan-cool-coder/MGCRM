@@ -115,6 +115,16 @@
               :disabled="nextDisabled"
               @click="navigateNext"
             />
+            <!-- Last lesson: show complete button (BUG-NEXT-LESSON-DEAD) -->
+            <Button
+              v-else-if="currentLesson && isOwner && assignment?.status !== 'completed'"
+              :label="t('onboarding.coursePage.completeBtn')"
+              icon="pi pi-check-circle"
+              severity="success"
+              :loading="completingLesson"
+              :disabled="!isLessonCompleted(currentLesson.id)"
+              @click="handleCompleteLesson"
+            />
           </div>
         </div>
       </div>

@@ -18,6 +18,8 @@ export interface Course {
   lessons_count: number
   created_at: string
   updated_at: string
+  /** Eager-loaded modules with lessons — present in AssignmentDetailResource (student endpoint) */
+  modules?: CourseModule[]
 }
 
 export interface CourseModule {

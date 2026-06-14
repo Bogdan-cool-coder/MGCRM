@@ -134,6 +134,7 @@
           lazy
           data-key="id"
           class="products-page__table"
+          @row-click="onRowClick"
         >
           <!-- Expander -->
           <Column expander style="width: 3rem" />
@@ -298,6 +299,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
@@ -323,6 +325,7 @@ import PriceImportDialog from './components/PriceImportDialog.vue'
 import type { ProductDto } from '@/entities/catalog'
 
 const { t } = useI18n()
+const router = useRouter()
 const userStore = useUserStore()
 
 const canWrite = computed(() => {
@@ -439,6 +442,10 @@ function onProductSaved() {
   void load()
 }
 
+function onRowClick(event: { data: ProductDto }) {
+  void router.push(`/admin/products/${event.data.id}`)
+}
+
 onMounted(() => {
   void load()
   void loadGroups()
@@ -489,6 +496,7 @@ onMounted(() => {
 
 .products-page__table {
   flex: 1;
+  cursor: pointer;
 }
 
 .products-page__code {

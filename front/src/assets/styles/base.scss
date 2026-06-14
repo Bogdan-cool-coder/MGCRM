@@ -46,6 +46,13 @@ a {
 // Прямые оверрайды здесь — band-aid: vite в docker может отдавать stale CSS,
 // а компонентные style-таги PrimeVue эмитят те же переменные позже в @layer primeui.
 
+// BUG-ANIM-1: PrimeVue Dialog/Drawer overlay mask can retain pointer-events:auto
+// after animation ends (enter-active phase), blocking clicks in background content.
+// Force pointer-events:none — the dialog itself is unaffected (it sits on top).
+.p-overlay-mask {
+  pointer-events: none;
+}
+
 // S1.3 DealsListView DataTable dark mode — BUG-1 pattern from S1.1
 // DataTable body backgrounds are not toggled by PrimeVue's colorScheme in all versions:
 // we target the component CSS variables in the .app-dark scope.

@@ -99,7 +99,9 @@ async function deleteModule(courseId: number, moduleId: number): Promise<void> {
 }
 
 async function reorderModules(courseId: number, items: ReorderPayloadItem[]): Promise<void> {
-  await apiClient.post(`/api/admin/onboarding/courses/${courseId}/modules/reorder`, items)
+  await apiClient.post(`/api/admin/onboarding/courses/${courseId}/modules/reorder`, {
+    order: items.map((i) => ({ id: i.id })),
+  })
 }
 
 // ─── LESSONS ─────────────────────────────────────────────────────────────────
@@ -124,7 +126,9 @@ async function deleteLesson(moduleId: number, lessonId: number): Promise<void> {
 }
 
 async function reorderLessons(moduleId: number, items: ReorderPayloadItem[]): Promise<void> {
-  await apiClient.post(`/api/admin/onboarding/modules/${moduleId}/lessons/reorder`, items)
+  await apiClient.post(`/api/admin/onboarding/modules/${moduleId}/lessons/reorder`, {
+    order: items.map((i) => ({ id: i.id })),
+  })
 }
 
 async function publishLesson(moduleId: number, lessonId: number): Promise<Lesson> {

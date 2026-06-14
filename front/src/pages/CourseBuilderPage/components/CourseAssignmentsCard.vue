@@ -22,7 +22,7 @@
             :key="a.id"
             class="assignment-row"
           >
-            <span class="assignment-row__name">{{ a.user?.full_name }}</span>
+            <span class="assignment-row__name">{{ a.user_name ?? a.user?.full_name ?? '—' }}</span>
             <AssignmentStatusTag :status="a.status" />
             <ProgressBar :value="a.progress_pct" style="height: 4px; flex: 1;" />
             <span class="assignment-row__pct">{{ a.progress_pct }}%</span>

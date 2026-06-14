@@ -86,7 +86,7 @@ export const useTemplatePage = () => {
   }
 
   watch(latestVersion, (v) => {
-    if (v?.ai_check_status === 'checking') {
+    if (v?.ai_check_status === 'checking' || v?.ai_check_status === 'pending') {
       startPolling()
     } else {
       stopPolling()
@@ -113,7 +113,7 @@ export const useTemplatePage = () => {
       await fetchTemplate()
       await fetchVersions()
       toast.add({ severity: 'success', summary: t('templates.card.upload.btn'), life: 3000 })
-      if (newVersion.ai_check_status === 'checking') {
+      if (newVersion.ai_check_status === 'checking' || newVersion.ai_check_status === 'pending') {
         startPolling()
       }
     } catch {

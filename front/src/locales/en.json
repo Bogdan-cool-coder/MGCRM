@@ -275,6 +275,7 @@
         "actions": "Actions"
       },
       "filters": {
+        "search": "Search by name...",
         "companyType": "Company type",
         "source": "Source",
         "country": "Country",
@@ -1035,7 +1036,7 @@
         "newStage": "New stage",
         "lostReason": "Lost reason",
         "lostComment": "Comment (optional)",
-        "wonGateHint": "Contract recommended for this stage (available in S2).",
+        "wonGateHint": "An active contract or payment is required to move to this stage.",
         "submit": "Move",
         "cancel": "Cancel",
         "successToast": "Stage changed to \"{stage}\"",
@@ -1774,6 +1775,7 @@
       "back": "My courses",
       "prev": "Previous lesson",
       "next": "Next lesson",
+      "completeBtn": "Complete course",
       "markDone": "Mark as completed",
       "markViewed": "Mark as viewed",
       "lessonDone": "Lesson completed!",

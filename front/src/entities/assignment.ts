@@ -16,6 +16,8 @@ export interface CourseAssignment {
   due_date: string | null
   assigned_at: string
   completed_at: string | null
+  /** Flat list of completed lesson ids — populated by AssignmentDetailResource (student + admin) */
+  completed_lesson_ids?: number[]
   course: Course
   user?: AssignmentUser
 }

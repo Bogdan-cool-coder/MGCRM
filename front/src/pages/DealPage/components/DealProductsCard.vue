@@ -198,7 +198,8 @@ const totalAmount = computed(() =>
 
 .deal-products-card__total-amount {
   font-weight: $font-weight-bold;
-  color: $primary-color;
+  // var(--p-primary-color) is reactive: light → {primary.900}=#172747, dark → {primary.400}=#6f87bc
+  color: var(--p-primary-color);
   font-size: $font-size-base;
 }
 </style>

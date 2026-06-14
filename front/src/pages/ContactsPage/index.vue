@@ -34,6 +34,15 @@
 
         <!-- Filter panel -->
         <div class="contacts-page__filters">
+          <IconField>
+            <InputIcon class="pi pi-search" />
+            <InputText
+              v-model="filter.search"
+              :placeholder="t('contacts.page.filters.search')"
+              class="contacts-page__search"
+              @input="onSearchInput"
+            />
+          </IconField>
           <Select
             v-if="entityType === 'company'"
             v-model="filter.company_type_id"
@@ -374,6 +383,8 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import Drawer from 'primevue/drawer'
 import Menu from 'primevue/menu'
 import Paginator from 'primevue/paginator'
@@ -480,6 +491,12 @@ function onPaginatorChange(event: { page: number }) {
   onPageChange(event.page + 1)
 }
 
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+function onSearchInput() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => applyFilter(), 300)
+}
+
 onMounted(() => {
   ensureDirectories()
   void load()
@@ -519,6 +536,10 @@ onMounted(() => {
   gap: $space-2;
   flex-wrap: wrap;
   flex: 1;
+}
+
+.contacts-page__search {
+  min-width: 220px;
 }
 
 .contacts-page__filter-select {

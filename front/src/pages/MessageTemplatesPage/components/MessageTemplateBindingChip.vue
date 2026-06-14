@@ -21,12 +21,14 @@ const emit = defineEmits<{
 }>()
 
 const label = computed(() => {
-  const parts: string[] = [props.binding.channel]
+  const parts: string[] = []
+  if (props.binding.channel_label) parts.push(props.binding.channel_label)
+  else if (props.binding.channel_kind) parts.push(props.binding.channel_kind.toUpperCase())
   if (props.binding.pipeline_name) parts.push(props.binding.pipeline_name)
   if (props.binding.stage_name) parts.push(props.binding.stage_name)
   if (props.binding.activity_type) parts.push(props.binding.activity_type)
   if (props.binding.automation_slot) parts.push(props.binding.automation_slot)
-  return parts.join(' · ')
+  return parts.length > 0 ? parts.join(' · ') : '—'
 })
 </script>
 

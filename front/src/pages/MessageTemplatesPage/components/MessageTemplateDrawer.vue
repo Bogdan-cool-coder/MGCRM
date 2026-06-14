@@ -3,9 +3,21 @@
     v-model:visible="visible"
     position="right"
     style="width: 680px"
+    @hide="emit('update:modelValue', false)"
   >
     <template #header>
-      <span class="fw-semibold">{{ t('messageTemplates.drawer.title') }}</span>
+      <div class="d-flex align-items-center justify-content-between w-100 gap-2">
+        <span class="fw-semibold">{{ t('messageTemplates.drawer.title') }}</span>
+        <Button
+          icon="pi pi-times"
+          severity="secondary"
+          text
+          rounded
+          size="small"
+          :aria-label="t('common.close')"
+          @click="visible = false"
+        />
+      </div>
     </template>
 
     <div class="mt-drawer">
@@ -123,12 +135,13 @@
           <div v-else class="mt-drawer__binding-fields">
             <div class="row g-2 mb-2">
               <div class="col-md-4">
-                <label class="mt-drawer__label-sm">{{ t('messageTemplates.drawer.bindingChannel') }} *</label>
+                <label class="mt-drawer__label-sm">{{ t('messageTemplates.drawer.bindingChannel') }}</label>
                 <Select
-                  v-model="bindingForm.channel"
+                  v-model="bindingForm.channel_kind"
                   :options="channelOptions"
                   option-label="label"
                   option-value="value"
+                  show-clear
                   class="w-100 mt-1"
                   :placeholder="t('messageTemplates.drawer.bindingChannel')"
                 />
@@ -149,7 +162,7 @@
               <div class="col-md-4">
                 <label class="mt-drawer__label-sm">{{ t('messageTemplates.drawer.bindingStage') }}</label>
                 <Select
-                  v-model="bindingForm.stage_id"
+                  v-model="bindingForm.pipeline_stage_id"
                   :options="stageOptions"
                   option-label="label"
                   option-value="value"
@@ -318,26 +331,27 @@ async function renderPreview() {
 
 // ─── Binding form ─────────────────────────────────────────────────────────────
 interface BindingForm {
-  channel: MessageChannel
+  channel_kind: MessageChannel | null
   pipeline_id: number | null
-  stage_id: number | null
+  pipeline_stage_id: number | null
   activity_type: ActivityTypeBinding | null
   automation_slot: string
 }
 
 const bindingForm = ref<BindingForm>({
-  channel: 'telegram',
+  channel_kind: null,
   pipeline_id: null,
-  stage_id: null,
+  pipeline_stage_id: null,
   activity_type: null,
   automation_slot: '',
 })
 
 const channelOptions = [
-  { label: 'Telegram', value: 'telegram' as MessageChannel },
-  { label: 'WhatsApp', value: 'whatsapp' as MessageChannel },
+  { label: 'Telegram', value: 'tg' as MessageChannel },
+  { label: 'WhatsApp', value: 'wa' as MessageChannel },
   { label: 'Email', value: 'email' as MessageChannel },
-  { label: 'SMS', value: 'sms' as MessageChannel },
+  { label: 'Web Form', value: 'web_form' as MessageChannel },
+  { label: 'API', value: 'api' as MessageChannel },
 ]
 
 const activityTypeOptions = [
@@ -362,7 +376,7 @@ async function loadPipelines() {
 }
 
 async function onPipelineChange() {
-  bindingForm.value.stage_id = null
+  bindingForm.value.pipeline_stage_id = null
   stageOptions.value = []
   if (!bindingForm.value.pipeline_id) return
   try {
@@ -374,19 +388,19 @@ async function onPipelineChange() {
 }
 
 async function submitBinding() {
-  if (!props.templateId || !bindingForm.value.channel) return
+  if (!props.templateId) return
   addingBinding.value = true
   try {
     const binding = await messageTemplatesApi.addTemplateBinding(props.templateId, {
-      channel: bindingForm.value.channel,
+      channel_kind: bindingForm.value.channel_kind,
       pipeline_id: bindingForm.value.pipeline_id,
-      stage_id: bindingForm.value.stage_id,
+      pipeline_stage_id: bindingForm.value.pipeline_stage_id,
       activity_type: bindingForm.value.activity_type,
       automation_slot: bindingForm.value.automation_slot || null,
     })
     form.value.bindings.push(binding)
     bindingFormOpen.value = false
-    bindingForm.value = { channel: 'telegram', pipeline_id: null, stage_id: null, activity_type: null, automation_slot: '' }
+    bindingForm.value = { channel_kind: null, pipeline_id: null, pipeline_stage_id: null, activity_type: null, automation_slot: '' }
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   } finally {

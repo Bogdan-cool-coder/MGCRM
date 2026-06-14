@@ -3,7 +3,7 @@ import { useToast } from 'primevue/usetoast'
 import { onboardingStudentApi } from '@/api/onboardingStudent'
 import type { Quiz, QuizAttempt, QuizAttemptResult } from '@/entities/quiz'
 
-export function useQuizAttempt(lessonId: number) {
+export function useQuizAttempt(lessonId: number, onPassed?: () => void) {
   const toast = useToast()
 
   const quiz = ref<Quiz | null>(null)
@@ -96,6 +96,9 @@ export function useQuizAttempt(lessonId: number) {
       }
       result.value = await onboardingStudentApi.submitQuizAttempt(attempt.value.id, payload)
       phase.value = 'result'
+      if (result.value.passed) {
+        onPassed?.()
+      }
     } catch {
       toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось отправить ответы', life: 4000 })
     } finally {

@@ -3,7 +3,7 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
       <span />
       <Button
-        v-if="canEdit"
+        v-if="canUpload"
         icon="pi pi-upload"
         :label="t('documents.attachments.upload')"
         severity="secondary"
@@ -70,7 +70,7 @@
           <i class="pi pi-file" />
           <span>{{ t('documents.attachments.empty') }}</span>
           <Button
-            v-if="canEdit"
+            v-if="canUpload"
             :label="t('documents.attachments.upload')"
             icon="pi pi-upload"
             severity="secondary"
@@ -154,6 +154,11 @@ const props = defineProps<{
   canEdit: boolean
   status: string
 }>()
+
+// Upload is allowed in draft/rejected/needs_rework/in_review (backend S2.8 + BUG-ATTACH-1)
+const canUpload = computed(() =>
+  props.canEdit || props.status === 'in_review' || props.status === 'needs_rework',
+)
 
 const emit = defineEmits<{
   hasScanChange: [value: boolean]

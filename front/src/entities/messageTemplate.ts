@@ -3,18 +3,20 @@
  * Message templates for Telegram / email / SMS dispatch.
  */
 
-export type MessageChannel = 'telegram' | 'whatsapp' | 'email' | 'sms'
+// ChannelKind enum values from backend
+export type MessageChannel = 'tg' | 'wa' | 'email' | 'web_form' | 'api'
 export type ActivityTypeBinding = 'call' | 'meeting' | 'task' | 'note'
 
 // ─── Entities ────────────────────────────────────────────────────────────────
 
 export interface MessageTemplateBindingDto {
   id: number
-  template_id: number
-  channel: MessageChannel
+  message_template_id: number
+  channel_kind: MessageChannel | null
+  channel_label: string | null
   pipeline_id: number | null
   pipeline_name: string | null
-  stage_id: number | null
+  pipeline_stage_id: number | null
   stage_name: string | null
   activity_type: ActivityTypeBinding | null
   automation_slot: string | null
@@ -51,9 +53,9 @@ export interface CreateMessageTemplatePayload {
 export type PatchMessageTemplatePayload = Partial<CreateMessageTemplatePayload>
 
 export interface CreateBindingPayload {
-  channel: MessageChannel
+  channel_kind: MessageChannel | null
   pipeline_id?: number | null
-  stage_id?: number | null
+  pipeline_stage_id?: number | null
   activity_type?: ActivityTypeBinding | null
   automation_slot?: string | null
 }

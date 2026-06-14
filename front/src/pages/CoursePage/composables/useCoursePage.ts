@@ -3,7 +3,6 @@ import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { useToast } from 'primevue/usetoast'
 import { onboardingStudentApi } from '@/api/onboardingStudent'
-import { onboardingAdminApi } from '@/api/onboardingAdmin'
 import { useUserStore } from '@/stores/user'
 import type { CourseAssignment } from '@/entities/assignment'
 import type { CourseModule, Lesson } from '@/entities/course'
@@ -60,10 +59,12 @@ export function useCoursePage(assignmentId: number) {
   async function load(): Promise<void> {
     await assignment.run(async () => {
       const a = await onboardingStudentApi.getAssignment(assignmentId)
-      // load course structure (modules + lessons) via admin-style endpoint
-      // course_id may be embedded in a.course.id when not at top level
-      const resolvedCourseId = a.course?.id ?? a.course_id
-      const courseModules = await onboardingAdminApi.getModules(resolvedCourseId)
+      // Hydrate completed lesson ids from backend response (BUG-LESSON-TREE)
+      if (Array.isArray(a.completed_lesson_ids) && a.completed_lesson_ids.length > 0) {
+        completedLessonIds.value = new Set(a.completed_lesson_ids)
+      }
+      // modules with lessons are eager-loaded in AssignmentDetailResource (backend loads course.modules.lessons)
+      const courseModules: CourseModule[] = a.course?.modules ?? []
       modules.value = courseModules
       // set first incomplete lesson as current
       const firstLesson = courseModules.flatMap((m) => m.lessons ?? [])[0]
@@ -97,11 +98,18 @@ export function useCoursePage(assignmentId: number) {
   async function completeCurrentLesson(timeSpentSeconds?: number): Promise<void> {
     if (!currentLessonId.value) return
     const lessonId = currentLessonId.value
+    const isQuiz = currentLesson.value?.kind === 'quiz'
     await completingLesson.run(
       async () => {
-        await onboardingStudentApi.completeLesson(lessonId, timeSpentSeconds)
+        // Quiz lessons are completed via quiz-attempt submit on the backend;
+        // calling /complete on them returns 403 — skip the call entirely.
+        if (!isQuiz) {
+          await onboardingStudentApi.completeLesson(lessonId, timeSpentSeconds)
+        }
         completedLessonIds.value = new Set([...completedLessonIds.value, lessonId])
-        toast.add({ severity: 'success', summary: 'Урок пройден!', life: 3000 })
+        if (!isQuiz) {
+          toast.add({ severity: 'success', summary: 'Урок пройден!', life: 3000 })
+        }
         // Refresh assignment to check if course completed
         const updated = await onboardingStudentApi.getAssignment(assignmentId)
         assignment.data.value = updated

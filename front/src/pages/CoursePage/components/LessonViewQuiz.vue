@@ -15,7 +15,7 @@
       <div class="quiz-header mb-3">
         <h3 class="quiz-header__title">{{ quizAttempt.quiz.value.title }}</h3>
         <p class="quiz-header__meta">
-          {{ t('onboarding.coursePage.quiz.passingScore') }}: {{ quizAttempt.quiz.value.passing_score_pct }}%
+          {{ t('onboarding.coursePage.quiz.passingScore') }}: {{ quizAttempt.quiz.value.pass_score_pct }}%
         </p>
         <p v-if="attemptNumber > 0" class="quiz-header__attempt">
           {{ t('onboarding.coursePage.quiz.attempt', { n: attemptNumber }) }}
@@ -73,7 +73,7 @@
       <div v-else-if="quizAttempt.phase.value === 'result' && quizAttempt.result.value">
         <QuizResult
           :result="quizAttempt.result.value"
-          :passing-score="quizAttempt.quiz.value.passing_score_pct"
+          :passing-score="quizAttempt.quiz.value.pass_score_pct"
           :can-proceed="completionPolicy === 'informational'"
           @retry="handleRetry"
           @next="$emit('next')"
@@ -100,14 +100,13 @@ const props = defineProps<{
   completionPolicy?: CompletionPolicy
 }>()
 
-defineEmits<{
+const { t } = useI18n()
+const emit = defineEmits<{
   next: []
   quizPassed: []
 }>()
 
-const { t } = useI18n()
-
-const quizAttempt = useQuizAttempt(props.lessonId)
+const quizAttempt = useQuizAttempt(props.lessonId, () => emit('quizPassed'))
 const attemptNumber = ref(0)
 
 onMounted(async () => {

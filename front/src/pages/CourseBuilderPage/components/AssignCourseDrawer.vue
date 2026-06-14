@@ -122,10 +122,10 @@ const userOptions = ref<UserOption[]>([])
 async function loadUsers(): Promise<void> {
   loadingUsers.value = true
   try {
-    const res = await apiClient.get<{ data: { id: number; first_name: string; last_name: string; email: string }[] }>('/api/users')
+    const res = await apiClient.get<{ data: { id: number; full_name: string; email: string }[] }>('/api/users')
     userOptions.value = res.data.data.map((u) => ({
       id: u.id,
-      label: `${u.first_name} ${u.last_name} (${u.email})`,
+      label: `${u.full_name} (${u.email})`,
     }))
   } catch {
     // ignore

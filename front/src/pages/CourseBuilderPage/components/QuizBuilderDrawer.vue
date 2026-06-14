@@ -47,7 +47,7 @@
         </div>
         <div class="col-6">
           <label class="form-label required">{{ t('onboarding.builder.quiz.passingScore') }}</label>
-          <InputNumber v-model="localQuiz.passing_score_pct" :min="0" :max="100" suffix="%" class="w-100" />
+          <InputNumber v-model="localQuiz.pass_score_pct" :min="0" :max="100" suffix="%" class="w-100" />
         </div>
         <div class="col-6">
           <label class="form-label">{{ t('onboarding.builder.quiz.timeLimit') }}</label>
@@ -238,7 +238,7 @@ interface LocalQuiz {
   id?: number
   title: string
   description: string
-  passing_score_pct: number
+  pass_score_pct: number
   time_limit_minutes: number
   questions: LocalQuestion[]
 }
@@ -282,7 +282,7 @@ watch(
         id: q.id,
         title: q.title,
         description: q.description ?? '',
-        passing_score_pct: q.passing_score_pct,
+        pass_score_pct: q.pass_score_pct,
         time_limit_minutes: q.time_limit_minutes,
         questions: (q.questions ?? []).map((qq) => ({
           id: qq.id,
@@ -303,7 +303,7 @@ watch(
       localQuiz.value = {
         title: '',
         description: '',
-        passing_score_pct: 80,
+        pass_score_pct: 80,
         time_limit_minutes: 0,
         questions: [],
       }
@@ -439,14 +439,14 @@ async function submit(): Promise<void> {
       quiz = await onboardingAdminApi.patchQuiz(localQuiz.value.id, {
         title: localQuiz.value.title,
         description: localQuiz.value.description || null,
-        passing_score_pct: localQuiz.value.passing_score_pct,
+        pass_score_pct: localQuiz.value.pass_score_pct,
         time_limit_minutes: localQuiz.value.time_limit_minutes,
       })
     } else {
       quiz = await onboardingAdminApi.createQuiz({
         title: localQuiz.value.title,
         description: localQuiz.value.description || null,
-        passing_score_pct: localQuiz.value.passing_score_pct,
+        pass_score_pct: localQuiz.value.pass_score_pct,
         time_limit_minutes: localQuiz.value.time_limit_minutes,
       })
     }
