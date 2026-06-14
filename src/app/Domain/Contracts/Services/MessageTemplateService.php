@@ -196,7 +196,7 @@ class MessageTemplateService
         $data['updated_by_user_id'] = $userId;
         $template->update($data);
 
-        return $template->fresh()->load('bindings');
+        return $template->fresh()->load(['bindings.pipeline', 'bindings.pipelineStage']);
     }
 
     /**

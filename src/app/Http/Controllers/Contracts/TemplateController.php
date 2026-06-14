@@ -26,6 +26,8 @@ class TemplateController extends Controller
         $templates = $this->service->list(
             $request->query('kind'),
             $request->query('category'),
+            $request->query('product_code'),  // BUG-DOC-2: forward JSON-array scope filters
+            $request->query('country_code'),
         );
 
         return TemplateResource::collection($templates);

@@ -27,11 +27,19 @@ class TemplateService
     /**
      * @return Collection<int, Template>
      */
-    public function list(?string $kind = null, ?string $category = null): Collection
-    {
+    public function list(
+        ?string $kind = null,
+        ?string $category = null,
+        ?string $productCode = null,
+        ?string $countryCode = null,
+    ): Collection {
         return Template::query()
             ->when($kind !== null, fn ($q) => $q->where('kind', $kind))
             ->when($category !== null, fn ($q) => $q->where('category', $category))
+            // BUG-DOC-2: use scope methods (whereJsonLength / whereJsonContains) rather
+            // than scalar WHERE on JSON-array columns product_codes / country_codes.
+            ->when($productCode !== null, fn ($q) => $q->forProduct($productCode))
+            ->when($countryCode !== null, fn ($q) => $q->forCountry($countryCode))
             ->with('currentVersion')
             ->orderBy('code')
             ->get();

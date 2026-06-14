@@ -109,6 +109,39 @@ class DocumentAttachmentTest extends TestCase
         ])->assertUnprocessable();
     }
 
+    // BUG-ATTACH-1: signed_scan arrives during review / rework — uploads must be allowed.
+
+    public function test_upload_allowed_when_status_is_in_review(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $doc = Document::factory()->inReview()->create(['author_user_id' => $admin->id]);
+        Sanctum::actingAs($admin, ['*']);
+
+        $file = UploadedFile::fake()->create('scan.pdf', 100, 'application/pdf');
+
+        $this->postJson("/api/documents/{$doc->id}/attachments", [
+            'file' => $file,
+            'kind' => AttachmentKind::SignedScan->value,
+        ])->assertCreated();
+    }
+
+    public function test_upload_allowed_when_status_is_needs_rework(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $doc = Document::factory()->create([
+            'status' => ContractStatus::NeedsRework->value,
+            'author_user_id' => $admin->id,
+        ]);
+        Sanctum::actingAs($admin, ['*']);
+
+        $file = UploadedFile::fake()->create('scan.pdf', 100, 'application/pdf');
+
+        $this->postJson("/api/documents/{$doc->id}/attachments", [
+            'file' => $file,
+            'kind' => AttachmentKind::SignedScan->value,
+        ])->assertCreated();
+    }
+
     public function test_can_list_attachments(): void
     {
         $author = User::factory()->create(['role' => Role::Manager]);

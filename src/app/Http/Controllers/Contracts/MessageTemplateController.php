@@ -59,7 +59,7 @@ class MessageTemplateController extends Controller
             return response()->json(['message' => 'Нет подходящего шаблона для данного контекста.'], 404);
         }
 
-        $template->load('bindings');
+        $template->load(['bindings.pipeline', 'bindings.pipelineStage']);
 
         return MessageTemplateResource::make($template);
     }
@@ -72,7 +72,7 @@ class MessageTemplateController extends Controller
     {
         $this->authorize('viewAny', MessageTemplate::class);
 
-        $query = MessageTemplate::with('bindings');
+        $query = MessageTemplate::with(['bindings.pipeline', 'bindings.pipelineStage']);
 
         // Filter by is_active (default: active only, pass is_active=false for soft-deleted)
         if ($request->has('is_active')) {
@@ -106,7 +106,7 @@ class MessageTemplateController extends Controller
             $request->user()->id,
         );
 
-        $template->load('bindings');
+        $template->load(['bindings.pipeline', 'bindings.pipelineStage']);
 
         return MessageTemplateResource::make($template)
             ->response()
@@ -120,7 +120,7 @@ class MessageTemplateController extends Controller
     {
         $this->authorize('view', $messageTemplate);
 
-        $messageTemplate->load('bindings');
+        $messageTemplate->load(['bindings.pipeline', 'bindings.pipelineStage']);
 
         return MessageTemplateResource::make($messageTemplate);
     }
@@ -175,8 +175,10 @@ class MessageTemplateController extends Controller
     {
         $this->authorize('view', $messageTemplate);
 
+        // BUG-MSG-4: eager-load pipeline/pipelineStage so BindingResource can emit
+        // pipeline_name / stage_name chips without N+1 queries.
         return MessageTemplateBindingResource::collection(
-            $messageTemplate->bindings()->orderBy('id')->get()
+            $messageTemplate->bindings()->with(['pipeline', 'pipelineStage'])->orderBy('id')->get()
         );
     }
 
@@ -190,6 +192,9 @@ class MessageTemplateController extends Controller
         $this->authorize('update', $messageTemplate);
 
         $binding = $this->service->addBinding($messageTemplate, $request->validated());
+
+        // BUG-MSG-4: load pipeline/pipelineStage for BindingResource labels.
+        $binding->load(['pipeline', 'pipelineStage']);
 
         return MessageTemplateBindingResource::make($binding)
             ->response()

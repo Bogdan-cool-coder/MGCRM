@@ -59,6 +59,65 @@ class TemplateTest extends TestCase
         $this->assertCount(1, $response->json('data'));
     }
 
+    // BUG-DOC-2: template selection by product/country must use whereJsonContains, not
+    // scalar WHERE, because product_codes / country_codes are JSON array columns.
+
+    public function test_list_templates_filter_by_product_code_exact_match(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Template::factory()->create(['product_codes' => ['macrocrm', 'macrosales']]);
+        Template::factory()->create(['product_codes' => ['macrosales']]);
+        Template::factory()->create(['product_codes' => []]); // wildcard
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/templates?product_code=macrocrm')
+            ->assertOk();
+
+        // Wildcard (empty array) + exact-match → 2 results
+        $this->assertCount(2, $response->json('data'));
+    }
+
+    public function test_list_templates_filter_by_country_code_exact_match(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Template::factory()->create(['country_codes' => ['kz', 'uz']]);
+        Template::factory()->create(['country_codes' => ['ru']]);
+        Template::factory()->create(['country_codes' => []]); // wildcard
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/templates?country_code=kz')
+            ->assertOk();
+
+        // Wildcard + kz match → 2 results
+        $this->assertCount(2, $response->json('data'));
+    }
+
+    public function test_list_templates_filter_by_product_and_country(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        // Both match
+        Template::factory()->create([
+            'product_codes' => ['macrocrm'],
+            'country_codes' => ['kz'],
+        ]);
+        // Product matches, country wildcard
+        Template::factory()->create([
+            'product_codes' => ['macrocrm'],
+            'country_codes' => [],
+        ]);
+        // Neither matches
+        Template::factory()->create([
+            'product_codes' => ['macrosales'],
+            'country_codes' => ['uz'],
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/templates?product_code=macrocrm&country_code=kz')
+            ->assertOk();
+
+        $this->assertCount(2, $response->json('data'));
+    }
+
     // ---- show ----
 
     public function test_show_template_with_current_version(): void
