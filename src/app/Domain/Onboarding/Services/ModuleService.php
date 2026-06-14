@@ -31,6 +31,7 @@ class ModuleService
         return CourseModule::query()
             ->where('course_id', $course->id)
             ->orderBy('sort_order')
+            ->with(['lessons' => fn ($q) => $q->orderBy('sort_order')])
             ->get();
     }
 

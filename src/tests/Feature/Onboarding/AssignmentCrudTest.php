@@ -73,7 +73,7 @@ class AssignmentCrudTest extends TestCase
 
         $this->getJson("/api/admin/onboarding/assignments/{$assignment->id}")
             ->assertOk()
-            ->assertJsonStructure(['data' => ['assignment_id', 'status', 'progress_pct']]);
+            ->assertJsonStructure(['data' => ['id', 'user_id', 'status', 'progress_pct']]);
     }
 
     // ---- update ----

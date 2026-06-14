@@ -77,7 +77,10 @@ class OnboardingDashboardService
         // Build the NOW() expression portably.
         $nowExpr = $isPg ? 'NOW()' : "datetime('now')";
 
-        $row = $this->baseQuery($filters)
+        // Use aggregateQuery (no ORDER BY) to avoid PG SQLSTATE[42803]:
+        // "column must appear in GROUP BY or be used in an aggregate function"
+        // baseQuery() adds ->orderBy() which conflicts with pure aggregate SELECTs on PG.
+        $row = $this->aggregateQuery($filters)
             ->selectRaw(
                 'COUNT(*) as total_assignments,'.
                 "COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,".
@@ -105,6 +108,27 @@ class OnboardingDashboardService
     // -------------------------------------------------------------------------
     // Private: base query + filters
     // -------------------------------------------------------------------------
+
+    /**
+     * Aggregate-safe query: same filters as baseQuery but WITHOUT ORDER BY.
+     *
+     * PG SQLSTATE[42803]: when a SELECT has COUNT(*)/GROUP BY, any ORDER BY
+     * column must either be in GROUP BY or be an aggregate itself. The eager-load
+     * ORDER BY added by baseQuery() violates this. Use aggregateQuery() for all
+     * getSummary / topCoursesByAssignments callers.
+     *
+     * @return Builder<CourseAssignment>
+     */
+    private function aggregateQuery(HrDashboardFilters $filters): Builder
+    {
+        $query = CourseAssignment::query();
+
+        if (! $filters->includeArchived) {
+            $query->where('status', '!=', AssignmentStatus::Archived->value);
+        }
+
+        return $this->applyFilters($query, $filters);
+    }
 
     /**
      * Base builder: eager-load user + course, exclude archived unless flag, apply filters, sort.
@@ -278,7 +302,9 @@ class OnboardingDashboardService
      */
     public function topCoursesByAssignments(HrDashboardFilters $filters, int $limit = 10): array
     {
-        $rows = $this->baseQuery($filters)
+        // Use aggregateQuery (no ORDER BY) to avoid PG SQLSTATE[42803] when GROUP BY
+        // is combined with the ORDER BY that baseQuery() adds.
+        $rows = $this->aggregateQuery($filters)
             ->join('courses as c', 'course_assignments.course_id', '=', 'c.id')
             ->selectRaw('c.title as course_title, COUNT(course_assignments.id) as assignment_count')
             ->groupBy('c.id', 'c.title')
@@ -300,7 +326,7 @@ class OnboardingDashboardService
                 // Because we only fetched limit+1 rows, we compute the remainder
                 // as a second COUNT query on everything beyond the top-N.
                 $topIds = $rows->slice(0, $limit)->pluck('course_title')->all();
-                $othersCount = $this->baseQuery($filters)
+                $othersCount = $this->aggregateQuery($filters)
                     ->join('courses as c', 'course_assignments.course_id', '=', 'c.id')
                     ->whereNotIn('c.title', $topIds)
                     ->count();

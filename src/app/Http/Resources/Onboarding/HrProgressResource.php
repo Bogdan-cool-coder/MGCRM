@@ -33,10 +33,12 @@ class HrProgressResource extends JsonResource
         $row = $this->resource;
 
         return [
-            'id' => $row['id'],
-            'user' => $row['user'],
-            'course' => $row['course'],
-            'completion_rate' => $row['completion_rate'],
+            'assignment_id' => $row['id'],
+            'user_id' => $row['user']['id'] ?? null,
+            'user_name' => $row['user']['name'] ?? null,
+            'course_id' => $row['course']['id'] ?? null,
+            'course_title' => $row['course']['title'] ?? null,
+            'progress_pct' => $row['completion_rate'],
             'status' => $row['status'],
             'due_date' => $row['due_date'],
             'is_overdue' => $row['is_overdue'],

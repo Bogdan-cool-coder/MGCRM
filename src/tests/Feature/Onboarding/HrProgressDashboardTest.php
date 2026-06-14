@@ -130,10 +130,12 @@ class HrProgressDashboardTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     '*' => [
-                        'id',
-                        'user',
-                        'course',
-                        'completion_rate',
+                        'assignment_id',
+                        'user_id',
+                        'user_name',
+                        'course_id',
+                        'course_title',
+                        'progress_pct',
                         'status',
                         'due_date',
                         'is_overdue',
@@ -161,13 +163,11 @@ class HrProgressDashboardTest extends TestCase
             ->assertOk()
             ->assertJsonStructure([
                 'data' => [
-                    'kpi' => [
-                        'total_assignments',
-                        'in_progress_count',
-                        'completed_count',
-                        'overdue_count',
-                        'pending_count',
-                    ],
+                    'total',
+                    'completed',
+                    'in_progress',
+                    'pending',
+                    'overdue',
                     'status_chart' => ['labels', 'datasets', 'meta'],
                     'top_courses_chart' => ['labels', 'datasets', 'meta'],
                 ],
@@ -225,7 +225,7 @@ class HrProgressDashboardTest extends TestCase
         $this->getJson(self::PROGRESS_URL.'?user_id='.$user1->id)
             ->assertOk()
             ->assertJsonPath('meta.total', 1)
-            ->assertJsonPath('data.0.user.id', $user1->id);
+            ->assertJsonPath('data.0.user_id', $user1->id);
     }
 
     public function test_filter_by_course_id_returns_only_that_course(): void
@@ -241,7 +241,7 @@ class HrProgressDashboardTest extends TestCase
         $this->getJson(self::PROGRESS_URL.'?course_id='.$course1->id)
             ->assertOk()
             ->assertJsonPath('meta.total', 1)
-            ->assertJsonPath('data.0.course.id', $course1->id);
+            ->assertJsonPath('data.0.course_id', $course1->id);
     }
 
     public function test_filter_by_status_completed_returns_only_completed(): void
@@ -301,7 +301,7 @@ class HrProgressDashboardTest extends TestCase
         }
 
         $response = $this->getJson(self::PROGRESS_URL.'?user_id='.$user->id)->assertOk();
-        self::assertSame(50, $response->json('data.0.completion_rate'));
+        self::assertSame(50, $response->json('data.0.progress_pct'));
     }
 
     public function test_completion_rate_zero_for_no_progress(): void
@@ -313,7 +313,7 @@ class HrProgressDashboardTest extends TestCase
         $this->makeAssignment($user, $course, 'pending');
 
         $response = $this->getJson(self::PROGRESS_URL.'?user_id='.$user->id)->assertOk();
-        self::assertSame(0, $response->json('data.0.completion_rate'));
+        self::assertSame(0, $response->json('data.0.progress_pct'));
     }
 
     public function test_is_overdue_flag_in_response(): void
@@ -424,13 +424,13 @@ class HrProgressDashboardTest extends TestCase
         }
 
         $response = $this->getJson(self::SUMMARY_URL)->assertOk();
-        $kpi = $response->json('data.kpi');
+        $data = $response->json('data');
 
-        self::assertSame(14, $kpi['total_assignments']);
-        self::assertSame(5, $kpi['pending_count']);
-        self::assertSame(3, $kpi['in_progress_count']);
-        self::assertSame(4, $kpi['completed_count']);
-        self::assertSame(2, $kpi['overdue_count']);
+        self::assertSame(14, $data['total']);
+        self::assertSame(5, $data['pending']);
+        self::assertSame(3, $data['in_progress']);
+        self::assertSame(4, $data['completed']);
+        self::assertSame(2, $data['overdue']);
     }
 
     public function test_summary_status_chart_labels_and_data_correct(): void

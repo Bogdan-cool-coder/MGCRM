@@ -86,7 +86,7 @@ class StudentCourseViewTest extends TestCase
 
         $this->getJson("/api/onboarding/assignments/{$assignment->id}")
             ->assertOk()
-            ->assertJsonStructure(['data' => ['assignment_id', 'status', 'progress_pct', 'course']]);
+            ->assertJsonStructure(['data' => ['id', 'user_id', 'status', 'progress_pct', 'course']]);
     }
 
     public function test_student_cannot_view_others_assignment_detail(): void
@@ -159,7 +159,7 @@ class StudentCourseViewTest extends TestCase
 
         $this->getJson("/api/onboarding/assignments/{$assignment->id}")
             ->assertOk()
-            ->assertJsonStructure(['data' => ['assignment_id', 'status', 'progress_pct', 'course']]);
+            ->assertJsonStructure(['data' => ['id', 'user_id', 'status', 'progress_pct', 'course']]);
     }
 
     public function test_director_can_view_any_assignment_detail(): void
@@ -176,7 +176,7 @@ class StudentCourseViewTest extends TestCase
 
         $this->getJson("/api/onboarding/assignments/{$assignment->id}")
             ->assertOk()
-            ->assertJsonStructure(['data' => ['assignment_id', 'status', 'progress_pct', 'course']]);
+            ->assertJsonStructure(['data' => ['id', 'user_id', 'status', 'progress_pct', 'course']]);
     }
 
     public function test_unauthenticated_cannot_access_my_courses(): void

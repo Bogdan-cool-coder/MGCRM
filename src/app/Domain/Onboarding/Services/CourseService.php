@@ -27,6 +27,7 @@ class CourseService
     public function list(array $filters = [], int $perPage = 25): LengthAwarePaginator
     {
         return Course::query()
+            ->withCount('modules')
             ->when(! empty($filters['published_only']), fn (Builder $q) => $q->where('is_published', true))
             ->when(! empty($filters['created_by']), fn (Builder $q) => $q->where('created_by_user_id', $filters['created_by']))
             ->when(! empty($filters['q']), function (Builder $q) use ($filters): void {
