@@ -48,6 +48,7 @@ use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
 use App\Http\Controllers\Notification\TelegramLinkController;
 use App\Http\Controllers\Onboarding\AssignmentController;
+use App\Http\Controllers\Onboarding\CertificateController;
 use App\Http\Controllers\Onboarding\CourseController;
 use App\Http\Controllers\Onboarding\CourseModuleController;
 use App\Http\Controllers\Onboarding\LessonController;
@@ -522,6 +523,13 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('assignments', AssignmentController::class);
 
         // =====================================================================
+        // Onboarding — S3.6: Certificates (admin/director view + regenerate)
+        // =====================================================================
+        // regenerate MUST be declared BEFORE {assignment} plain show to avoid clash.
+        Route::post('certificates/{assignment}/regenerate', [CertificateController::class, 'regenerate'])->name('certificates.regenerate');
+        Route::get('certificates/{assignment}', [CertificateController::class, 'show'])->name('certificates.show');
+
+        // =====================================================================
         // Onboarding — S3.2: Quizzes, Questions, Options (admin write)
         // =====================================================================
         // Quizzes — CRUD
@@ -560,6 +568,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::prefix('onboarding')->name('onboarding.student.')->group(function (): void {
         Route::get('my-courses', [StudentCourseController::class, 'index'])->name('my-courses');
         Route::get('assignments/{assignment}', [StudentCourseController::class, 'show'])->name('assignments.show');
+
+        // S3.6: Certificates — student view (own only) + download.
+        // download MUST be declared BEFORE plain show to avoid routing clash.
+        Route::get('certificates/{assignment}/download', [CertificateController::class, 'download'])->name('certificates.download');
+        Route::get('certificates/{assignment}', [CertificateController::class, 'show'])->name('certificates.show');
+        Route::get('my-certificates', [CertificateController::class, 'index'])->name('certificates.index');
 
         // S3.4: Lesson completion (text/video/pdf — not quiz).
         Route::post('lessons/{lesson}/complete', [LessonController::class, 'complete'])->name('lessons.complete');

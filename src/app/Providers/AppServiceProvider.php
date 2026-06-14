@@ -42,6 +42,9 @@ use App\Domain\Inbox\Policies\FormPolicy;
 use App\Domain\Inbox\Policies\InboundMessagePolicy;
 use App\Domain\Notification\Listeners\NotifyAuthorListener;
 use App\Domain\Notification\Listeners\SendApprovalRequestListener;
+use App\Domain\Onboarding\Events\CourseCompleted;
+use App\Domain\Onboarding\Listeners\GenerateCertificateListener;
+use App\Domain\Onboarding\Models\Certificate;
 use App\Domain\Onboarding\Models\Course;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\CourseModule;
@@ -51,6 +54,7 @@ use App\Domain\Onboarding\Models\QuizAttempt;
 use App\Domain\Onboarding\Models\QuizOption;
 use App\Domain\Onboarding\Models\QuizQuestion;
 use App\Domain\Onboarding\Policies\AssignmentPolicy;
+use App\Domain\Onboarding\Policies\CertificatePolicy;
 use App\Domain\Onboarding\Policies\CourseModulePolicy;
 use App\Domain\Onboarding\Policies\CoursePolicy;
 use App\Domain\Onboarding\Policies\LessonPolicy;
@@ -132,6 +136,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(QuizOption::class, QuizOptionPolicy::class);
         Gate::policy(QuizAttempt::class, QuizAttemptPolicy::class);
 
+        // Onboarding Policies (S3.6)
+        Gate::policy(Certificate::class, CertificatePolicy::class);
+
         // Admin-write gate: write operations on shared directories (company-types,
         // contact-positions, sources, countries, cities) and CustomFieldDef are
         // restricted to admin and director roles only.
@@ -161,5 +168,9 @@ class AppServiceProvider extends ServiceProvider
         // dispatch queued Jobs, so the web request is not blocked by Telegram I/O.
         Event::listen(DocumentSubmittedForApproval::class, SendApprovalRequestListener::class);
         Event::listen(ApprovalDecisionMade::class, NotifyAuthorListener::class);
+
+        // Onboarding — Certificate generation (S3.6). On CourseCompleted, dispatch
+        // GenerateCertificateJob to the queue (never block the HTTP request).
+        Event::listen(CourseCompleted::class, GenerateCertificateListener::class);
     }
 }
