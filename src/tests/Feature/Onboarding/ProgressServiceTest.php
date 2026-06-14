@@ -12,6 +12,8 @@ use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\CourseModule;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\LessonProgress;
+use App\Domain\Onboarding\Models\Quiz;
+use App\Domain\Onboarding\Models\QuizAttempt;
 use App\Domain\Onboarding\Services\ProgressService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -183,5 +185,137 @@ class ProgressServiceTest extends TestCase
         ]);
 
         Event::assertNotDispatched(CourseCompleted::class);
+    }
+
+    // =========================================================================
+    // S3.4 additions — recordLessonDone and quiz-guard
+    // =========================================================================
+
+    public function test_record_lesson_done_creates_progress_and_returns_it(): void
+    {
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => 'text',
+            'is_published' => true,
+        ]);
+        $user = User::factory()->create();
+        $assignment = CourseAssignment::factory()->create([
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+        ]);
+
+        $progress = $this->service->recordLessonDone($assignment, $lesson->id, 120);
+
+        $this->assertNotNull($progress->completed_at);
+        $this->assertSame(120, $progress->time_spent_seconds);
+        $this->assertSame($assignment->id, $progress->assignment_id);
+        $this->assertSame($lesson->id, $progress->lesson_id);
+
+        $this->assertDatabaseHas('lesson_progress', [
+            'assignment_id' => $assignment->id,
+            'lesson_id' => $lesson->id,
+            'time_spent_seconds' => 120,
+        ]);
+    }
+
+    public function test_record_lesson_done_throws_for_quiz_lesson(): void
+    {
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $quizLesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => 'quiz',
+            'is_published' => true,
+        ]);
+        $user = User::factory()->create();
+        $assignment = CourseAssignment::factory()->create([
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->expectException(\LogicException::class);
+
+        $this->service->recordLessonDone($assignment, $quizLesson->id);
+    }
+
+    public function test_is_completed_requires_quiz_attempt_passed_for_quiz_lesson(): void
+    {
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $quizLesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => 'quiz',
+            'is_published' => true,
+        ]);
+        $quiz = Quiz::factory()->create([
+            'lesson_id' => $quizLesson->id,
+            'pass_score_pct' => 80,
+        ]);
+        $quizLesson->update(['content' => ['quiz_id' => $quiz->id]]);
+
+        $user = User::factory()->create();
+        $assignment = CourseAssignment::factory()->create([
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+        ]);
+
+        // Has lesson_progress but no passed quiz attempt
+        LessonProgress::factory()->completed()->create([
+            'assignment_id' => $assignment->id,
+            'lesson_id' => $quizLesson->id,
+        ]);
+
+        // Failed attempt
+        QuizAttempt::factory()->create([
+            'quiz_id' => $quiz->id,
+            'user_id' => $user->id,
+            'assignment_id' => $assignment->id,
+            'passed' => false,
+            'score_pct' => 50,
+            'finished_at' => now(),
+        ]);
+
+        $this->assertFalse($this->service->isCompleted($assignment));
+    }
+
+    public function test_is_completed_true_when_quiz_lesson_has_passed_attempt(): void
+    {
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $quizLesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => 'quiz',
+            'is_published' => true,
+        ]);
+        $quiz = Quiz::factory()->create([
+            'lesson_id' => $quizLesson->id,
+            'pass_score_pct' => 80,
+        ]);
+        $quizLesson->update(['content' => ['quiz_id' => $quiz->id]]);
+
+        $user = User::factory()->create();
+        $assignment = CourseAssignment::factory()->create([
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+        ]);
+
+        LessonProgress::factory()->completed()->create([
+            'assignment_id' => $assignment->id,
+            'lesson_id' => $quizLesson->id,
+        ]);
+
+        // Passed attempt
+        QuizAttempt::factory()->create([
+            'quiz_id' => $quiz->id,
+            'user_id' => $user->id,
+            'assignment_id' => $assignment->id,
+            'passed' => true,
+            'score_pct' => 100,
+            'finished_at' => now(),
+        ]);
+
+        $this->assertTrue($this->service->isCompleted($assignment));
     }
 }

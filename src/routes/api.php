@@ -555,14 +555,23 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // Onboarding — S3.3: Student view (any authenticated user)
     // S3.2: Student quiz endpoints
+    // S3.4: Lesson completion + quiz attempt submit/show
     // =========================================================================
     Route::prefix('onboarding')->name('onboarding.student.')->group(function (): void {
         Route::get('my-courses', [StudentCourseController::class, 'index'])->name('my-courses');
         Route::get('assignments/{assignment}', [StudentCourseController::class, 'show'])->name('assignments.show');
 
+        // S3.4: Lesson completion (text/video/pdf — not quiz).
+        Route::post('lessons/{lesson}/complete', [LessonController::class, 'complete'])->name('lessons.complete');
+
         // S3.2: Student quiz — view quiz (no correct answers) + start attempt.
         // start MUST be declared BEFORE the plain GET to avoid route collision.
         Route::post('lessons/{lesson}/quiz/start', [QuizAttemptController::class, 'start'])->name('lessons.quiz.start');
         Route::get('lessons/{lesson}/quiz', [QuizController::class, 'showForStudent'])->name('lessons.quiz.show');
+
+        // S3.4: Quiz attempt — submit + view result.
+        // submit MUST be declared BEFORE {attempt} show to avoid routing clash.
+        Route::post('quiz-attempts/{attempt}/submit', [QuizAttemptController::class, 'submit'])->name('quiz-attempts.submit');
+        Route::get('quiz-attempts/{attempt}', [QuizAttemptController::class, 'show'])->name('quiz-attempts.show');
     });
 });

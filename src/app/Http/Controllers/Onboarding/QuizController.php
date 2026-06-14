@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Onboarding;
 
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\Quiz;
+use App\Domain\Onboarding\Services\ProgressService;
 use App\Domain\Onboarding\Services\QuizService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\StoreQuizRequest;
@@ -21,6 +22,7 @@ class QuizController extends Controller
 {
     public function __construct(
         private readonly QuizService $service,
+        private readonly ProgressService $progressService,
     ) {}
 
     /**
@@ -88,10 +90,14 @@ class QuizController extends Controller
     /**
      * GET /api/onboarding/lessons/{lesson}/quiz
      * Student-facing: no is_correct, no explanation.
-     * S3.4 will add assignment-ownership check.
+     * S3.4: ownership check — 403 if user has no active assignment for this course.
      */
     public function showForStudent(Request $request, Lesson $lesson): JsonResource
     {
+        // Ownership: resolve assignment (403 if not assigned)
+        $lesson->load('module');
+        $this->progressService->resolveAssignment($request->user(), $lesson->module->course_id);
+
         $quiz = $this->service->listByLesson($lesson);
 
         if ($quiz === null) {

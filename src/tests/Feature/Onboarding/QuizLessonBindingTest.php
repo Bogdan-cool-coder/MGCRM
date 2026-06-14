@@ -7,6 +7,7 @@ namespace Tests\Feature\Onboarding;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Onboarding\Models\Course;
+use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\CourseModule;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\Quiz;
@@ -109,6 +110,11 @@ class QuizLessonBindingTest extends TestCase
         ]);
 
         $student = User::factory()->create(['role' => Role::Manager]);
+        // S3.4: showForStudent now requires an active assignment
+        CourseAssignment::factory()->create([
+            'course_id' => $this->course->id,
+            'user_id' => $student->id,
+        ]);
         Sanctum::actingAs($student, ['*']);
 
         $response = $this->getJson(
