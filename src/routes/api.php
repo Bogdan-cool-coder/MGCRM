@@ -53,6 +53,7 @@ use App\Http\Controllers\Onboarding\CertificateController;
 use App\Http\Controllers\Onboarding\CourseController;
 use App\Http\Controllers\Onboarding\CourseModuleController;
 use App\Http\Controllers\Onboarding\LessonController;
+use App\Http\Controllers\Onboarding\ProgressController;
 use App\Http\Controllers\Onboarding\QuizAttemptController;
 use App\Http\Controllers\Onboarding\QuizController;
 use App\Http\Controllers\Onboarding\QuizOptionController;
@@ -527,6 +528,14 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // archive MUST be before {assignment} to avoid routing clash.
         Route::post('assignments/{assignment}/archive', [AssignmentController::class, 'archive'])->name('assignments.archive');
         Route::apiResource('assignments', AssignmentController::class);
+
+        // =====================================================================
+        // Onboarding — S3.7: HR-dashboard (admin/director only)
+        // =====================================================================
+        // summary MUST be declared BEFORE the plain progress route so that
+        // /progress/summary is not swallowed by a future {id} binding.
+        Route::get('progress/summary', [ProgressController::class, 'summary'])->name('progress.summary');
+        Route::get('progress', [ProgressController::class, 'index'])->name('progress.index');
 
         // =====================================================================
         // Onboarding — S3.6: Certificates (admin/director view + regenerate)

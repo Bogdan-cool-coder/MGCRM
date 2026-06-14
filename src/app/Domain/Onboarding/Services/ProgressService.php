@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Onboarding\Services;
 
 use App\Domain\Iam\Models\User;
+use App\Domain\Onboarding\Data\HrDashboardFilters;
 use App\Domain\Onboarding\Enums\AssignmentStatus;
 use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Events\CourseCompleted;
@@ -195,16 +196,32 @@ class ProgressService
     }
 
     /**
-     * HR dashboard aggregate.
+     * HR dashboard — paginated assignment list with aggregates.
      *
-     * CONTRACT for S3.7 — stub in S3.3.
+     * S3.7: delegates to OnboardingDashboardService (SRP). Stub replaced.
      *
      * @param  array<string, mixed>  $filters
      */
     public function getHrDashboard(array $filters = [], int $perPage = 25): LengthAwarePaginator
     {
-        // S3.7 stub.
-        throw new \LogicException('getHrDashboard() is implemented in S3.7.');
+        $f = HrDashboardFilters::fromArray($filters);
+
+        return app(OnboardingDashboardService::class)->getHrDashboard($f, $perPage);
+    }
+
+    /**
+     * HR dashboard summary — KPI counters + ECharts chart payloads.
+     *
+     * S3.7 convenience delegate.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public function getHrDashboardSummary(array $filters = []): array
+    {
+        $f = HrDashboardFilters::fromArray($filters);
+
+        return app(OnboardingDashboardService::class)->getSummary($f);
     }
 
     // -------------------------------------------------------------------------
