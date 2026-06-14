@@ -95,6 +95,19 @@ class AssignmentService
     }
 
     /**
+     * List assignments for a specific course (admin/director view).
+     * Used by CourseAssignmentsCard.
+     */
+    public function listForCourse(int $courseId, int $perPage = 25): LengthAwarePaginator
+    {
+        return CourseAssignment::query()
+            ->with(['user'])
+            ->where('course_id', $courseId)
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+    }
+
+    /**
      * List assignments for a specific user (student view).
      *
      * @return Collection<int, CourseAssignment>

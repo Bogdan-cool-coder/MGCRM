@@ -525,6 +525,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('modules.lessons', LessonController::class);
 
         // Assignments (S3.3) — bulk-assign and CRUD.
+        // courseAssignments MUST be before apiResource to avoid routing clash.
+        Route::get('courses/{course}/assignments', [AssignmentController::class, 'courseAssignments'])->name('courses.assignments.index');
         // archive MUST be before {assignment} to avoid routing clash.
         Route::post('assignments/{assignment}/archive', [AssignmentController::class, 'archive'])->name('assignments.archive');
         Route::apiResource('assignments', AssignmentController::class);

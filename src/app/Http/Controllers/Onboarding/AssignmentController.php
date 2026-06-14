@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Onboarding;
 
+use App\Domain\Onboarding\Models\Course;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Services\AssignmentService;
 use App\Http\Controllers\Controller;
@@ -12,6 +13,7 @@ use App\Http\Requests\Onboarding\UpdateAssignmentRequest;
 use App\Http\Resources\Onboarding\AssignmentDetailResource;
 use App\Http\Resources\Onboarding\BulkAssignResultResource;
 use App\Http\Resources\Onboarding\CourseAssignmentResource;
+use App\Http\Resources\Onboarding\CourseAssignmentsListResource;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +36,23 @@ class AssignmentController extends Controller
     public function __construct(
         private readonly AssignmentService $service,
     ) {}
+
+    /**
+     * GET /api/admin/onboarding/courses/{course}/assignments
+     * List all assignments for a specific course (admin/director only).
+     * Used by the CourseAssignmentsCard on the admin course detail page.
+     */
+    public function courseAssignments(Request $request, Course $course): AnonymousResourceCollection
+    {
+        $this->authorize('viewAny', CourseAssignment::class);
+
+        $paginator = $this->service->listForCourse(
+            $course->id,
+            (int) $request->query('per_page', 25),
+        );
+
+        return CourseAssignmentsListResource::collection($paginator);
+    }
 
     public function index(Request $request): AnonymousResourceCollection
     {

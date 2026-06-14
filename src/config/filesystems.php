@@ -60,6 +60,10 @@ return [
             'root' => storage_path('app/private/documents'),
             'serve' => false,
             'throw' => false,
+            // BUG-CERT-PERM: queue worker may run as root with tight umask → dirs end up
+            // 0700, web cannot read PDFs (404). Force 0755 for new subdirectories so that
+            // php-fpm / nginx (www-data) can traverse into onboarding/certificates/{id}/.
+            'directory_visibility' => 'public',
         ],
 
         's3' => [

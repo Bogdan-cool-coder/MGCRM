@@ -34,6 +34,8 @@ class AssignmentDetailResource extends JsonResource
             'due_date' => $this->due_date?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'progress_pct' => $progressService->calcProgress($this->resource),
+            // Flat array of completed lesson IDs for quick frontend lookup.
+            'completed_lesson_ids' => $completedLessonIds->values()->all(),
             'course' => $this->when($course !== null, static function () use ($course, $completedLessonIds): array {
                 return [
                     'id' => $course->id,
