@@ -33,3 +33,8 @@ Schedule::command('onboarding:mark-overdue')->daily();
 // scan stacking on itself.
 Schedule::command('automation:scan-idle')->hourly()->withoutOverlapping();
 Schedule::command('automation:scan-date-field')->hourly()->withoutOverlapping();
+
+// Automation retention (M7) — nightly prune of the automation_runs journal so the
+// audit / idempotency table stays bounded. Window is config('automation.retention_days')
+// (90); off-peak at 03:00, withoutOverlapping guards against a long delete stacking.
+Schedule::command('automation:prune-runs')->dailyAt('03:00')->withoutOverlapping();

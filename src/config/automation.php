@@ -63,4 +63,17 @@ return [
         'allow_private' => (bool) env('AUTOMATION_WEBHOOK_ALLOW_PRIVATE', false),
         'timeout' => 10,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | automation_runs retention
+    |--------------------------------------------------------------------------
+    |
+    | How many days of automation_runs (the audit + idempotency journal) to keep.
+    | The daily `automation:prune-runs` command (routes/console.php) deletes rows
+    | older than this by created_at; its --days flag overrides this value for
+    | ad-hoc pruning. Keeps the table bounded as every trigger appends a row.
+    |
+    */
+    'retention_days' => (int) env('AUTOMATION_RUN_RETENTION_DAYS', 90),
 ];
