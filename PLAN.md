@@ -357,15 +357,16 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] **P4** (automation + backend-specialist, 2д): HTTP-слой (AutomationController/AutomationRunController + FormRequests с discriminated match-валидацией + ручные Resources + routes) + PipelineAutomationPolicy (ability automation.manage `47eed95`) + тесты PHPUnit/SQLite. **Backend M7 DoD: 1531 PASS / 3584 assertions, Pint clean.** *(`d2f8c0c`, 2026-06-15)*
 - [x] **Фаза 1 Frontend** (frontend-specialist, 4–6д): StageEditorItem аккордеон + AutomationInlineCard + AutomationWizardDialog (Dialog+Stepper 3 шага, 8 per-action конфигов) + AutomationListPanel (DataTable) + AutomationRunsPage + DryRunDrawer. Чистый PrimeVue, без @vue-flow. *vue-tsc/ESLint 0 ошибок, build clean.*
 - [x] **Фаза 1 Backend-fix + Frontend-fix** (backend-specialist + frontend-specialist, 1д): POST /api/automations/{id}/execute (manual real-run) — ExecuteNowResult, AutomationTestService::executeNow() реюзает resolveMatches() + ActionDispatcher::dispatch(); тригger_event_ts deterministic; ExecuteAutomationRequest 422 для inline без target_id; idempotent dedup. Frontend: wizard configs usersApi/templatesApi вместо голого apiClient; date_field/idle :min=1 validate < 1; automationsApi.execute(); ru.json resultToast {executed,skipped}; loadMore пагинация по странице. **Suite: 1542 PASS / 3631 assertions, Pint clean; vue-tsc/ESLint 0 новых ошибок.** *(`c261af7` execute + `c1b4987` front, 2026-06-16)*
+- [x] **Тех-долг M7** (automation-specialist + deploy-engineer, 2026-06-16): (1) User::find cross-domain — оставлен как конвенция проекта (используется во всех доменах: Sales/Activity/Inbox/Notification; отдельный resolver = расхождение с паттерном); (2) automation_runs retention — `AutomationRunRetentionService::prune(int $days)` + команда `automation:prune-runs {--days=}` (config `automation.retention_days`=90, clamp ≥1) + Schedule::dailyAt('03:00')->withoutOverlapping() в routes/console.php; (3) Infra — queue:work теперь `--queue=default,automation` (дефолт первым), новый сервис `scheduler` (schedule:work, profile=worker в dev, всегда в prod) в обоих docker-compose, rolling-restart.sh + GHA deploy.yml обновлены. **Suite: 1545 PASS / 3641 assertions, Pint 917 файлов clean. (2026-06-16)**
 - [ ] **Фаза 2 NODE-полотно** (@vue-flow/core — аппрувнут юзером): ПОСЛЕ приёмки Фазы 1; стадии-ноды + действия-ноды + рёбра-триггеры + graph_layout JSONB на Pipeline.
 
 **Вне MVP (поздняя фаза):** Sequences/SequenceRun/BulkTask; is_sla/escalation_chain; PipelineTransition (межворонничные); field_value_changed/activity_completed триггеры; start_sequence/set_tags действия; by_product/by_country/by_department для change_owner.
 
-**Cross-agent блокеры:**
-- sales-specialist: `Sales\Events\DealStageChanged` (диспатч из DealMoveService::move() после commit) — блокер P2 inline.
-- contract-specialist: публичный метод генерации по template_code — блокер P1 GenerateDocumentAction.
-- backend-specialist: ability `automation.manage` для Policy — блокер P4.
-- deploy-engineer: очередь `automation` в queue:work + Schedule hourly — блокер P2 cron.
+**Cross-agent блокеры** (все закрыты для Фазы 1):
+- ~~sales-specialist: `Sales\Events\DealStageChanged`~~ — закрыт (`bafbca0`)
+- ~~contract-specialist: публичный метод генерации по template_code~~ — закрыт (`7efc402`)
+- ~~backend-specialist: ability `automation.manage`~~ — закрыт (`47eed95`)
+- ~~deploy-engineer: очередь `automation` в queue:work + scheduler hourly~~ — закрыт (2026-06-16)
 
 **Acceptance M7 (Фаза 1):** правило «вход в стадию → создать задачу + TG-уведомление» срабатывает и пишется в audit-runs; dry-run показывает matched records; журнал runs отображается с фильтрами; конструктор в PipelineSettingsPage работает без поломки drag-reorder. CI зелёный.
 
