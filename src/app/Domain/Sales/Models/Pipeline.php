@@ -31,6 +31,7 @@ class Pipeline extends Model
         'name',
         'kind',
         'settings',
+        'graph_layout',
         'visible_role',
         'visible_user_ids',
         'is_active',
@@ -42,6 +43,9 @@ class Pipeline extends Model
         return [
             'kind' => PipelineKind::class,
             'settings' => 'array',
+            // Cosmetic node-canvas layout. cast `array` keeps null as null in the
+            // DB (not []), so the front can tell "never laid out" from "empty".
+            'graph_layout' => 'array',
             'visible_user_ids' => 'array',
             'is_active' => 'boolean',
             'sort_order' => 'integer',

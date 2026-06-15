@@ -18,6 +18,9 @@ class PipelineResource extends JsonResource
             'name' => $this->name,
             'kind' => $this->kind?->value,
             'settings' => $this->settings ?? [],
+            // As-is (no `?? []`): the front needs to tell null ("never laid out")
+            // from {} ("laid out empty") to decide whether to auto-build a layout.
+            'graph_layout' => $this->graph_layout,
             'visible_role' => $this->visible_role,
             'is_active' => $this->is_active,
             'sort_order' => $this->sort_order,

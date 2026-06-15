@@ -132,6 +132,66 @@ class PipelineCrudTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_update_pipeline_persists_and_returns_graph_layout(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Admin]), ['*']);
+        $pipeline = Pipeline::factory()->create();
+
+        // Node keys (anchor/stage_*/automation_*) are a front-end contract — the
+        // back end never validates their semantics, so static keys are enough.
+        $layout = [
+            'nodes' => [
+                'anchor' => ['x' => 40, 'y' => 200],
+                'stage_12' => ['x' => 320, 'y' => 120],
+            ],
+        ];
+
+        $this->patchJson("/api/pipelines/{$pipeline->id}", ['graph_layout' => $layout])
+            ->assertOk()
+            ->assertJsonPath('data.graph_layout', $layout);
+
+        // Persisted: a fresh read returns the same layout.
+        $this->getJson("/api/pipelines/{$pipeline->id}")
+            ->assertOk()
+            ->assertJsonPath('data.graph_layout', $layout);
+    }
+
+    public function test_update_pipeline_null_resets_graph_layout(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Admin]), ['*']);
+        $pipeline = Pipeline::factory()->create([
+            'graph_layout' => ['nodes' => ['anchor' => ['x' => 1, 'y' => 2]]],
+        ]);
+
+        $this->patchJson("/api/pipelines/{$pipeline->id}", ['graph_layout' => null])
+            ->assertOk()
+            ->assertJsonPath('data.graph_layout', null);
+
+        $this->assertNull($pipeline->fresh()->graph_layout);
+    }
+
+    public function test_update_pipeline_rejects_non_array_graph_layout(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Admin]), ['*']);
+        $pipeline = Pipeline::factory()->create();
+
+        $this->patchJson("/api/pipelines/{$pipeline->id}", ['graph_layout' => 'oops'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('graph_layout');
+    }
+
+    public function test_update_pipeline_rejects_non_numeric_node_coordinate(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Admin]), ['*']);
+        $pipeline = Pipeline::factory()->create();
+
+        $this->patchJson("/api/pipelines/{$pipeline->id}", [
+            'graph_layout' => ['nodes' => ['anchor' => ['x' => 'left', 'y' => 2]]],
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('graph_layout.nodes.anchor.x');
+    }
+
     public function test_delete_empty_secondary_pipeline_returns_204(): void
     {
         $admin = User::factory()->create(['role' => Role::Admin]);
