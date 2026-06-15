@@ -65,10 +65,18 @@
             <div class="stage-editor-card__stage-block">
               <StageEditorItem
                 :stage="element"
+                :stage-automations="automationsFor(element.id)"
+                :automations-loading="automationsLoading"
+                :automations-error="automationsError"
                 @edit="(s) => emit('editStage', s)"
                 @delete="(id) => emit('deleteStage', id)"
                 @rename="(id, name) => emit('renameStage', id, name)"
                 @toggle-hidden="(id, v) => emit('toggleHidden', id, v)"
+                @add-automation="(stageId) => emit('addAutomation', stageId)"
+                @edit-automation="(a) => emit('editAutomation', a)"
+                @delete-automation="(id) => emit('deleteAutomation', id)"
+                @toggle-automation="(id, v) => emit('toggleAutomation', id, v)"
+                @refetch-automations="(stageId) => emit('refetchAutomations', stageId)"
               />
               <!-- Substages -->
               <StageSubstageItem
@@ -98,12 +106,17 @@ import Skeleton from 'primevue/skeleton'
 import StageEditorItem from './StageEditorItem.vue'
 import StageSubstageItem from './StageSubstageItem.vue'
 import type { PipelineStageDto } from '@/entities/sales'
+import type { AutomationDto } from '@/entities/automation'
 
 const props = defineProps<{
   topLevelStages: PipelineStageDto[]
   substagesOf: (parentId: number) => PipelineStageDto[]
   pipelineName?: string
   loading?: boolean
+  // Automation props
+  automationsFor: (stageId: number) => AutomationDto[]
+  automationsLoading: boolean
+  automationsError: unknown
 }>()
 
 const emit = defineEmits<{
@@ -113,6 +126,12 @@ const emit = defineEmits<{
   renameStage: [id: number, name: string]
   toggleHidden: [id: number, value: boolean]
   reorder: [ordered: PipelineStageDto[]]
+  // Automation emits
+  addAutomation: [stageId: number]
+  editAutomation: [automation: AutomationDto]
+  deleteAutomation: [id: number]
+  toggleAutomation: [id: number, isActive: boolean]
+  refetchAutomations: [stageId: number]
 }>()
 
 const { t } = useI18n()

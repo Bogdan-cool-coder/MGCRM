@@ -26,6 +26,7 @@
     "onboardingAdmin": "Courses (HR)",
     "onboardingAssignments": "Assignments",
     "hrProgress": "Progress",
+    "automationRuns": "Automation log",
     "sections": {
       "learning": "Learning"
     }
@@ -254,7 +255,10 @@
     "invalidValue": "Invalid value",
     "preview": "Preview",
     "hidePreview": "Hide preview",
-    "saveFirst": "Save the lesson first to upload a file"
+    "saveFirst": "Save the lesson first to upload a file",
+    "retry": "Retry",
+    "hide": "Hide",
+    "show": "Show"
   },
   "contacts": {
     "page": {
@@ -1970,6 +1974,216 @@
       "empty": "No certificates yet",
       "emptyHint": "Complete a course to receive a certificate",
       "goToCourses": "Go to learning"
+    }
+  },
+  "automation": {
+    "wizard": {
+      "titleNew": "New automation",
+      "titleEdit": "Edit automation",
+      "step1": {
+        "label": "Action",
+        "searchPlaceholder": "Search actions...",
+        "noResults": "No actions found"
+      },
+      "step2": {
+        "label": "Configure"
+      },
+      "step3": {
+        "label": "Trigger"
+      },
+      "next": "Next",
+      "back": "Back",
+      "create": "Create",
+      "save": "Save"
+    },
+    "fields": {
+      "name": "Automation name",
+      "namePlaceholder": "E.g.: Notify manager on stage entry...",
+      "isActive": "Automation active",
+      "recipient": "Recipient",
+      "recipientOwner": "Deal owner",
+      "recipientUser": "Specific user",
+      "recipientChatId": "Chat ID (manual)",
+      "tgChatId": "Telegram Chat ID",
+      "searchUser": "Find user...",
+      "message": "Message",
+      "messagePlaceholder": "Deal {target_title}...",
+      "placeholders": "Available placeholders",
+      "taskTitle": "Task title",
+      "taskTitlePlaceholder": "Call client {target_title}",
+      "taskDesc": "Task description",
+      "dueDays": "Due (days from trigger)",
+      "dueDaysPlaceholder": "0 = today, 1 = tomorrow",
+      "dueDaysHint": "0 = today, 1 = tomorrow, empty = no deadline",
+      "field": "Field",
+      "value": "Value",
+      "setFieldNote": "Available fields depend on pipeline target type",
+      "template": "Document template",
+      "searchTemplate": "Find template...",
+      "attachTo": "Attach to",
+      "attachToDeal": "Deal",
+      "attachToCompany": "Company",
+      "generateDocNote": "MVP: records a timeline event. Full PDF generation after Documents integration.",
+      "rule": "Assignment rule",
+      "pool": "User pool",
+      "poolHint": "If pool is empty — entire sales department is used",
+      "targetStage": "Target stage",
+      "noStages": "No available stages",
+      "changeStageNote": "Current stage excluded. System stages Won/Lost are marked.",
+      "stageWon": "Won",
+      "stageLost": "Lost",
+      "webhookUrl": "URL",
+      "webhookUrlNote": "Private addresses (127.0.0.1, 192.168.x.x) are blocked",
+      "webhookSecret": "Secret (HMAC signature, optional)",
+      "webhookSecretPlaceholder": "Leave empty if not needed",
+      "webhookSecretNote": "Signs the payload as X-Signature-256",
+      "webhookAdminNote": "This action is available to administrators only",
+      "emailTo": "Recipient",
+      "emailManual": "Email manually",
+      "emailAddress": "Email",
+      "emailAddressPlaceholder": "example{'@'}company.com",
+      "emailSubject": "Subject",
+      "emailSubjectPlaceholder": "Your deal {target_title}...",
+      "emailBody": "Body",
+      "emailMvpNote": "MVP: email is queued. Actual sending requires SMTP setup in Integrations.",
+      "dealField": {
+        "notes": "Notes",
+        "title": "Title"
+      }
+    },
+    "trigger": {
+      "label": "Trigger — when does it fire?",
+      "on_enter_stage": "On stage entry",
+      "on_enter_stage_desc": "Fires immediately when a deal enters this stage.",
+      "idle_in_stage_days": "Idle in stage N days",
+      "idle_desc": "Cron check every hour.",
+      "date_field_approaching": "Date approaching",
+      "date_desc": "Cron check every hour. Fires N days before a date field.",
+      "on_create": "On entity create",
+      "on_create_desc": "Fires when a new deal/lead is created.",
+      "cronBadge": "Cron",
+      "instantBadge": "Instant",
+      "idleDays": "Days",
+      "dateField": "Date field",
+      "daysBeforeDate": "Days before",
+      "targetType": "Target type"
+    },
+    "action": {
+      "tg_notify": "Telegram notification",
+      "create_task": "Create task",
+      "set_field": "Set field",
+      "generate_document": "Generate document",
+      "change_owner": "Change owner",
+      "change_stage": "Change stage",
+      "webhook": "Webhook",
+      "email": "Email"
+    },
+    "actionDesc": {
+      "tg_notify": "Send a Telegram message to the owner or a specific user",
+      "create_task": "Creates an Activity of type 'task' with a deadline",
+      "set_field": "Update a whitelisted deal field",
+      "generate_document": "Generate a document from a template and attach it to the deal",
+      "change_owner": "Reassign deal by rule (round-robin, product, country)",
+      "change_stage": "Move the deal to another pipeline stage",
+      "webhook": "Send an HTTP request to an external URL",
+      "email": "Send an email"
+    },
+    "actionBadge": {
+      "adminOnly": "Admin only",
+      "requiresSmtp": "Requires SMTP"
+    },
+    "ownerRule": {
+      "round_robin": "Round-robin",
+      "by_product": "By product",
+      "by_country": "By country",
+      "by_department": "By department"
+    },
+    "dateField": {
+      "expected_close_date": "Close date",
+      "expected_sign_date": "Sign date",
+      "expected_payment_date": "Payment date"
+    },
+    "list": {
+      "toggle": "Automations",
+      "addButton": "Automation",
+      "addFirstButton": "+ First automation",
+      "empty": "No automations",
+      "emptyHint": "Add the first automation for this pipeline",
+      "panelTitle": "All pipeline automations",
+      "filterTrigger": "All triggers",
+      "filterAction": "All actions",
+      "col": {
+        "name": "Name",
+        "stage": "Stage",
+        "trigger": "Trigger",
+        "action": "Action",
+        "active": "Active"
+      }
+    },
+    "toast": {
+      "created": "Automation created",
+      "saved": "Automation saved",
+      "deleted": "Automation deleted",
+      "activated": "Automation enabled",
+      "deactivated": "Automation paused",
+      "deleteConfirm": "Delete automation?",
+      "deleteBody": "All future runs will be stopped. History will be preserved."
+    },
+    "runs": {
+      "pageTitle": "Automation log",
+      "empty": "No runs yet",
+      "count": "Rows: {n}",
+      "loadMore": "Load more",
+      "applyFilter": "Apply",
+      "retrySuccess": "Retry started",
+      "retry": "Retry",
+      "targetDeal": "Deal",
+      "filter": {
+        "automation": "All automations",
+        "status": "Any status",
+        "action": "Any action",
+        "period": "Period"
+      },
+      "col": {
+        "automation": "Automation",
+        "action": "Action",
+        "target": "Target",
+        "status": "Status",
+        "startedAt": "Time",
+        "error": "Error"
+      },
+      "status": {
+        "success": "Success",
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "pending": "Pending",
+        "queued": "Queued"
+      }
+    },
+    "dryrun": {
+      "button": "Dry run",
+      "drawerTitle": "Preview",
+      "matchedCount": "Records matched: {n}",
+      "actionsLabel": "Actions plan:",
+      "limitLabel": "Max records",
+      "execute": "Execute now",
+      "confirmHeader": "Confirm execution",
+      "confirmBody": "Execute action for {n} records?",
+      "noMatches": "No matching records",
+      "resultToast": "Done: {s} success, {f} failed, {sk} skipped",
+      "emptyHint": "Click 'Dry-run' to preview",
+      "analyzing": "Analyzing...",
+      "targetDeal": "Deal to test",
+      "targetDealPlaceholder": "Select a deal...",
+      "dealSearch": "Search deal...",
+      "targetDealHint": "For inline triggers (on_enter_stage, on_create) a specific deal must be selected"
+    },
+    "errors": {
+      "nameRequired": "Enter automation name",
+      "triggerRequired": "Select a trigger",
+      "idleDaysRequired": "Enter number of days (min 1)",
+      "dateFieldRequired": "Select a date field",
+      "dateDaysRequired": "Enter number of days (min 0)"
     }
   }
 }

@@ -222,6 +222,14 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'nav.myCertificates' },
   },
 
+  // ─── Automation Runs Journal ─────────────────────────────────────────────
+  {
+    path: '/admin/automation-runs',
+    name: 'AutomationRuns',
+    component: () => import('@/pages/AutomationRunsPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'automation.runs.pageTitle' },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

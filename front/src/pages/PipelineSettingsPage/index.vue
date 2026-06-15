@@ -21,12 +21,31 @@
         :substages-of="substagesOf"
         :pipeline-name="selectedPipeline?.name"
         :loading="stagesLoading"
+        :automations-for="pipelineAutomations.getForStage"
+        :automations-loading="pipelineAutomations.loading.value"
+        :automations-error="pipelineAutomations.error.value"
         @add-stage="showCreateStage = true"
         @edit-stage="openEditDrawer"
         @delete-stage="handleDeleteStage"
         @rename-stage="handleRenameStage"
         @toggle-hidden="handleToggleHidden"
         @reorder="handleReorder"
+        @add-automation="openWizardForStage"
+        @edit-automation="openWizardForEdit"
+        @delete-automation="handleDeleteAutomation"
+        @toggle-automation="handleToggleAutomation"
+        @refetch-automations="() => pipelineAutomations.invalidate()"
+      />
+
+      <!-- Automation list panel (all automations of pipeline) -->
+      <AutomationListPanel
+        v-if="selectedPipelineId !== null"
+        :automations="pipelineAutomations.automations.value"
+        :loading="pipelineAutomations.loading.value"
+        @add-automation="openWizardForPipeline"
+        @edit-automation="openWizardForEdit"
+        @delete-automation="handleDeleteAutomation"
+        @toggle="handleToggleAutomation"
       />
     </div>
 
@@ -55,25 +74,45 @@
       @save="handleSaveStage"
     />
 
+    <!-- Automation Wizard Dialog -->
+    <AutomationWizardDialog
+      v-if="selectedPipelineId !== null"
+      :model-visible="showWizard"
+      :pipeline-id="selectedPipelineId"
+      :stage-id="wizardStageId"
+      :stages="stages"
+      :edit-automation="editingAutomation"
+      @update:model-visible="showWizard = $event"
+      @saved="handleAutomationSaved"
+    />
+
     <!-- Confirm Dialog -->
     <ConfirmDialog />
+
+    <!-- Toast -->
+    <Toast />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Toast from 'primevue/toast'
 import { PageHeader } from '@/components/AppShell'
 import PipelineList from './components/PipelineList.vue'
 import StageEditorList from './components/StageEditorList.vue'
 import CreatePipelineDialog from './components/CreatePipelineDialog.vue'
 import CreateStageDialog from './components/CreateStageDialog.vue'
 import StageEditDrawer from './components/StageEditDrawer.vue'
+import AutomationListPanel from './components/AutomationListPanel.vue'
+import AutomationWizardDialog from './components/AutomationWizardDialog.vue'
 import { usePipelineSettings } from './composables/usePipelineSettings'
+import { usePipelineAutomations } from './composables/usePipelineAutomations'
 import type { PipelineStageDto, CreateStagePayload, UpdateStagePayload } from '@/entities/sales'
+import type { AutomationDto } from '@/entities/automation'
 
 const { t } = useI18n()
 const confirm = useConfirm()
@@ -125,6 +164,8 @@ const {
   reorderStages,
 } = usePipelineSettings()
 
+const pipelineAutomations = usePipelineAutomations()
+
 // ─── Dialog / Drawer state ────────────────────────────────────────────────────
 
 const showCreatePipeline = ref(false)
@@ -137,6 +178,11 @@ const stageFieldErrors = ref<Record<string, string>>({})
 const showEditDrawer = ref(false)
 const editingStage = ref<PipelineStageDto | null>(null)
 const savingStage = ref(false)
+
+// Wizard
+const showWizard = ref(false)
+const wizardStageId = ref<number | null>(null)
+const editingAutomation = ref<AutomationDto | null>(null)
 
 // ─── Pipeline handlers ────────────────────────────────────────────────────────
 
@@ -165,7 +211,6 @@ function handleDeletePipeline(id: number) {
     acceptProps: { severity: 'danger' },
     accept: async () => {
       await deletePipeline(id)
-      // Always close dialog regardless of success/error (toast handles feedback)
       confirm.close()
     },
   })
@@ -183,7 +228,6 @@ async function handleCreateStage(payload: CreateStagePayload) {
   } catch (e: unknown) {
     const status = extractErrorStatus(e)
     if (status === 422) {
-      // Parse per-field 422 errors — keep dialog open
       if (typeof e === 'object' && e !== null) {
         const err = e as Record<string, unknown>
         if ('response' in err) {
@@ -225,7 +269,6 @@ async function handleSaveStage(stageId: number, payload: UpdateStagePayload) {
     await updateStage(stageId, payload)
     succeeded = true
   } catch (e: unknown) {
-    // Show error toast for non-422 errors; for 422 keep drawer open
     const status = extractErrorStatus(e)
     if (status !== 422) {
       toast.add({
@@ -250,7 +293,6 @@ function handleDeleteStage(id: number) {
     acceptProps: { severity: 'danger' },
     accept: async () => {
       await deleteStage(id)
-      // Always close dialog regardless of success/error (toast handles feedback)
       confirm.close()
     },
   })
@@ -285,6 +327,70 @@ async function handleToggleHidden(id: number, value: boolean) {
 async function handleReorder(ordered: PipelineStageDto[]) {
   await reorderStages(ordered)
 }
+
+// ─── Automation handlers ──────────────────────────────────────────────────────
+
+function openWizardForStage(stageId: number) {
+  editingAutomation.value = null
+  wizardStageId.value = stageId
+  showWizard.value = true
+}
+
+function openWizardForPipeline() {
+  editingAutomation.value = null
+  wizardStageId.value = null
+  showWizard.value = true
+}
+
+function openWizardForEdit(automation: AutomationDto) {
+  editingAutomation.value = automation
+  wizardStageId.value = automation.stage_id ?? null
+  showWizard.value = true
+}
+
+async function handleAutomationSaved() {
+  toast.add({ severity: 'success', summary: t('automation.toast.saved'), life: 3000 })
+  pipelineAutomations.invalidate()
+}
+
+async function handleDeleteAutomation(id: number) {
+  confirm.require({
+    header: t('automation.toast.deleteConfirm'),
+    message: t('automation.toast.deleteBody'),
+    acceptLabel: t('common.delete'),
+    rejectLabel: t('common.cancel'),
+    acceptProps: { severity: 'danger' },
+    accept: async () => {
+      try {
+        await pipelineAutomations.deleteAutomation(id)
+        toast.add({ severity: 'success', summary: t('automation.toast.deleted'), life: 3000 })
+      } catch (e: unknown) {
+        toast.add({ severity: 'error', summary: t('errors.server_error'), detail: extractErrorMessage(e), life: 5000 })
+      }
+    },
+  })
+}
+
+async function handleToggleAutomation(id: number, isActive: boolean) {
+  try {
+    await pipelineAutomations.toggleActive(id, isActive)
+    toast.add({
+      severity: 'success',
+      summary: isActive ? t('automation.toast.activated') : t('automation.toast.deactivated'),
+      life: 2000,
+    })
+  } catch (e: unknown) {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), detail: extractErrorMessage(e), life: 5000 })
+  }
+}
+
+// ─── Watch pipeline selection → fetch automations ─────────────────────────────
+
+watch(selectedPipelineId, async (id) => {
+  if (id !== null) {
+    await pipelineAutomations.fetchForPipeline(id)
+  }
+})
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 

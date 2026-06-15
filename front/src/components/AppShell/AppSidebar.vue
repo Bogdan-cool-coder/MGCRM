@@ -188,6 +188,13 @@ const adminNavItems = [
     icon: 'pi pi-chart-bar',
     labelKey: 'nav.hrProgress',
   },
+  // ─── Automation journal ───────────────────────────────────────────────────
+  {
+    name: 'automation-runs',
+    to: '/admin/automation-runs',
+    icon: 'pi pi-clock',
+    labelKey: 'nav.automationRuns',
+  },
 ]
 
 onMounted(() => {

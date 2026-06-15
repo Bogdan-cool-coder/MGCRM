@@ -26,6 +26,7 @@
     "onboardingAdmin": "Курсы (HR)",
     "onboardingAssignments": "Назначения",
     "hrProgress": "Прогресс",
+    "automationRuns": "Журнал автоматизаций",
     "sections": {
       "learning": "Обучение"
     }
@@ -254,7 +255,10 @@
     "invalidValue": "Некорректное значение",
     "preview": "Предпросмотр",
     "hidePreview": "Скрыть предпросмотр",
-    "saveFirst": "Сначала сохраните урок для загрузки файла"
+    "saveFirst": "Сначала сохраните урок для загрузки файла",
+    "retry": "Повторить",
+    "hide": "Скрыть",
+    "show": "Показать"
   },
   "contacts": {
     "page": {
@@ -1970,6 +1974,216 @@
       "empty": "Сертификатов пока нет",
       "emptyHint": "Завершите курс, чтобы получить сертификат",
       "goToCourses": "Перейти к обучению"
+    }
+  },
+  "automation": {
+    "wizard": {
+      "titleNew": "Новая автоматизация",
+      "titleEdit": "Редактировать автоматизацию",
+      "step1": {
+        "label": "Действие",
+        "searchPlaceholder": "Поиск действий...",
+        "noResults": "Действий не найдено"
+      },
+      "step2": {
+        "label": "Настройка"
+      },
+      "step3": {
+        "label": "Триггер"
+      },
+      "next": "Далее",
+      "back": "Назад",
+      "create": "Создать",
+      "save": "Сохранить"
+    },
+    "fields": {
+      "name": "Название автоматизации",
+      "namePlaceholder": "Например: Уведомить менеджера при входе...",
+      "isActive": "Автоматизация активна",
+      "recipient": "Получатель",
+      "recipientOwner": "Владелец сделки",
+      "recipientUser": "Конкретный пользователь",
+      "recipientChatId": "Чат-ID (вручную)",
+      "tgChatId": "Telegram Chat ID",
+      "searchUser": "Найти пользователя...",
+      "message": "Текст сообщения",
+      "messagePlaceholder": "Сделка {target_title}...",
+      "placeholders": "Доступные плейсхолдеры",
+      "taskTitle": "Заголовок задачи",
+      "taskTitlePlaceholder": "Позвонить клиенту {target_title}",
+      "taskDesc": "Описание задачи",
+      "dueDays": "Срок (дней от срабатывания)",
+      "dueDaysPlaceholder": "0 = сегодня, 1 = завтра",
+      "dueDaysHint": "0 = сегодня, 1 = завтра, пусто = без срока",
+      "field": "Поле",
+      "value": "Значение",
+      "setFieldNote": "Доступные поля зависят от типа объекта воронки",
+      "template": "Шаблон документа",
+      "searchTemplate": "Найти шаблон...",
+      "attachTo": "Прикрепить к",
+      "attachToDeal": "Сделке",
+      "attachToCompany": "Компании",
+      "generateDocNote": "В MVP: действие записывает событие в timeline сделки. Полная генерация PDF — после интеграции с Документами.",
+      "rule": "Правило распределения",
+      "pool": "Pool пользователей",
+      "poolHint": "Если pool пустой — используется весь отдел продаж",
+      "targetStage": "Целевой этап",
+      "noStages": "Нет доступных стадий",
+      "changeStageNote": "Текущая стадия исключена. Системные стадии «Выиграно»/«Проиграно» помечены.",
+      "stageWon": "Выиграно",
+      "stageLost": "Проиграно",
+      "webhookUrl": "URL",
+      "webhookUrlNote": "Приватные адреса (127.0.0.1, 192.168.x.x) заблокированы",
+      "webhookSecret": "Secret (HMAC-подпись, опционально)",
+      "webhookSecretPlaceholder": "Оставьте пустым, если не нужно",
+      "webhookSecretNote": "Подписывает payload как X-Signature-256",
+      "webhookAdminNote": "Действие доступно только администраторам",
+      "emailTo": "Получатель",
+      "emailManual": "Email вручную",
+      "emailAddress": "Email",
+      "emailAddressPlaceholder": "example{'@'}company.com",
+      "emailSubject": "Тема письма",
+      "emailSubjectPlaceholder": "Ваша сделка {target_title}...",
+      "emailBody": "Текст письма",
+      "emailMvpNote": "В MVP: письмо ставится в очередь. Фактическая отправка — после настройки SMTP в Интеграциях.",
+      "dealField": {
+        "notes": "Заметки",
+        "title": "Название"
+      }
+    },
+    "trigger": {
+      "label": "Триггер — когда срабатывает?",
+      "on_enter_stage": "При входе на этап",
+      "on_enter_stage_desc": "Срабатывает сразу, когда сделка попадает на эту стадию.",
+      "idle_in_stage_days": "Висит на этапе N дней",
+      "idle_desc": "Cron-проверка каждый час.",
+      "date_field_approaching": "Дата приближается",
+      "date_desc": "Cron-проверка каждый час. Срабатывает за N дней до указанного поля даты.",
+      "on_create": "При создании сущности",
+      "on_create_desc": "Срабатывает при создании нового объекта (сделки/лида).",
+      "cronBadge": "Cron",
+      "instantBadge": "Мгновенно",
+      "idleDays": "Количество дней",
+      "dateField": "Поле даты",
+      "daysBeforeDate": "За сколько дней",
+      "targetType": "Тип объекта"
+    },
+    "action": {
+      "tg_notify": "Уведомление в Telegram",
+      "create_task": "Создать задачу",
+      "set_field": "Изменить поле",
+      "generate_document": "Сгенерировать документ",
+      "change_owner": "Сменить ответственного",
+      "change_stage": "Сменить этап",
+      "webhook": "Webhook",
+      "email": "Email"
+    },
+    "actionDesc": {
+      "tg_notify": "Отправить сообщение в Telegram владельцу или конкретному пользователю",
+      "create_task": "Создаёт Activity типа «task» с дедлайном",
+      "set_field": "Обновить поле у сделки (whitelist полей)",
+      "generate_document": "Создать документ по шаблону и прикрепить к сделке",
+      "change_owner": "Переназначить сделку по правилу (round-robin, продукт, страна)",
+      "change_stage": "Перевести сделку на другой этап воронки",
+      "webhook": "Отправить HTTP-запрос на внешний URL",
+      "email": "Отправить письмо на email"
+    },
+    "actionBadge": {
+      "adminOnly": "Только Admin",
+      "requiresSmtp": "Требует SMTP"
+    },
+    "ownerRule": {
+      "round_robin": "По очереди (round-robin)",
+      "by_product": "По продукту",
+      "by_country": "По стране",
+      "by_department": "По отделу"
+    },
+    "dateField": {
+      "expected_close_date": "Дата закрытия",
+      "expected_sign_date": "Дата подписания",
+      "expected_payment_date": "Дата оплаты"
+    },
+    "list": {
+      "toggle": "Автоматизации",
+      "addButton": "Автоматизация",
+      "addFirstButton": "+ Первая автоматизация",
+      "empty": "Нет автоматизаций",
+      "emptyHint": "Добавьте первую автоматизацию для этой воронки",
+      "panelTitle": "Все автоматизации воронки",
+      "filterTrigger": "Все триггеры",
+      "filterAction": "Все действия",
+      "col": {
+        "name": "Название",
+        "stage": "Стадия",
+        "trigger": "Триггер",
+        "action": "Действие",
+        "active": "Активна"
+      }
+    },
+    "toast": {
+      "created": "Автоматизация создана",
+      "saved": "Автоматизация сохранена",
+      "deleted": "Автоматизация удалена",
+      "activated": "Автоматизация активирована",
+      "deactivated": "Автоматизация приостановлена",
+      "deleteConfirm": "Удалить автоматизацию?",
+      "deleteBody": "Все будущие срабатывания будут остановлены. История сохранится."
+    },
+    "runs": {
+      "pageTitle": "Журнал автоматизаций",
+      "empty": "Ещё не было срабатываний",
+      "count": "Строк: {n}",
+      "loadMore": "Загрузить ещё",
+      "applyFilter": "Применить",
+      "retrySuccess": "Повтор запущен",
+      "retry": "Повторить",
+      "targetDeal": "Сделка",
+      "filter": {
+        "automation": "Все автоматизации",
+        "status": "Любой статус",
+        "action": "Любое действие",
+        "period": "Период"
+      },
+      "col": {
+        "automation": "Автоматизация",
+        "action": "Действие",
+        "target": "Объект",
+        "status": "Статус",
+        "startedAt": "Время",
+        "error": "Ошибка"
+      },
+      "status": {
+        "success": "Успех",
+        "failed": "Ошибка",
+        "skipped": "Пропущено",
+        "pending": "В работе",
+        "queued": "В очереди"
+      }
+    },
+    "dryrun": {
+      "button": "Dry-run",
+      "drawerTitle": "Предпросмотр",
+      "matchedCount": "Затронуто записей: {n}",
+      "actionsLabel": "Планируемые действия:",
+      "limitLabel": "Максимум записей",
+      "execute": "Выполнить сейчас",
+      "confirmHeader": "Подтвердить выполнение",
+      "confirmBody": "Выполнить действие для {n} записей?",
+      "noMatches": "Нет совпадающих записей",
+      "resultToast": "Выполнено: {executed} записей, пропущено: {skipped}",
+      "emptyHint": "Нажмите «Dry-run» для предпросмотра",
+      "analyzing": "Анализируем...",
+      "targetDeal": "Сделка для проверки",
+      "targetDealPlaceholder": "Выберите сделку...",
+      "dealSearch": "Поиск сделки...",
+      "targetDealHint": "Для инлайн-триггеров (on_enter_stage, on_create) необходимо выбрать конкретную сделку"
+    },
+    "errors": {
+      "nameRequired": "Введите название автоматизации",
+      "triggerRequired": "Выберите триггер",
+      "idleDaysRequired": "Укажите количество дней (не менее 1)",
+      "dateFieldRequired": "Выберите поле даты",
+      "dateDaysRequired": "Укажите количество дней (не менее 0)"
     }
   }
 }
