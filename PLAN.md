@@ -343,15 +343,30 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ### M7. Автоматизации + Sequences + Bulk (2-3 недели)
 
-**Ведущие:** `automation-specialist` + `frontend-specialist`. Контекст `Automation`.
+**Ведущие:** `automation-specialist` + `sales-specialist` (DealStageChanged event) + `frontend-specialist`. Контекст `Automation`.
 
-- [ ] PipelineAutomation: триггеры (on_enter_stage/on_create/idle_in_stage/date_approaching/field_changed/activity_completed) + действия (tg_notify/create_task/set_field/generate_document/change_owner/webhook/email/start_sequence).
-- [ ] Визуальный билдер правил + audit-runs.
-- [ ] Sequences (email/SMS-цепочки).
-- [ ] Bulk-операции (генерация доков, задачи) с прогресс-баром.
-- [ ] Тесты: срабатывание триггера → действие; прогон sequence; bulk с прогрессом (мок очереди).
+> **Планирование ЗАВЕРШЕНО (2026-06-15, PM-verify PASS).** Два детальных плана согласованы и зафиксированы в vault:
+> - UI-ТЗ: `6. Справочник/ТЗ — Конструктор воронки и автоматизации (UI).md`
+> - Backend plan: `5. Планы/Автоматизации (движок M7) — backend plan.md`
 
-**Acceptance M7:** правило «вход в стадию → создать задачу + TG-уведомление» срабатывает и пишется в audit-runs; sequence шлёт цепочку писем; bulk-генерация доков показывает прогресс. CI зелёный.
+**MVP-скоуп (Фаза 0 → Фаза 1 → Фаза 2):**
+- [x] **P0** (automation, 1–1.5д): модели+миграции (pipeline_automations, automation_runs + partial-UNIQUE идемпотентность) + enums (TriggerKind/ActionKind/RunStatus) + AutomationEngine (resolveFor/claimRunSlot/finalize). *(`d2f8c0c`, 2026-06-15)*
+- [x] **P1** (automation, 2–2.5д): ActionDispatcher + 8 action-handlers (tg_notify/create_task/set_field/generate_document/change_owner/change_stage/webhook/email) — реюз TelegramNotifier/ActivityService/DealMoveService/DocumentService. *(`d2f8c0c`)*
+- [x] **P2** (automation + sales-specialist, 1.5–2д): inline-триггеры (on_create → DealCreated уже есть; on_enter_stage → НОВЫЙ DealStageChanged из sales-specialist `bafbca0`) + cron (ScanIdleInStage/ScanDateField + ExecuteAutomationActionJob tries=1/ShouldBeUnique + Schedule hourly). *(`d2f8c0c`)*
+- [x] **P3** (automation, 1д): AutomationTestService dry-run (без side-effects) + фильтры/scopes AutomationRun журнала. *(`d2f8c0c`)*
+- [x] **P4** (automation + backend-specialist, 2д): HTTP-слой (AutomationController/AutomationRunController + FormRequests с discriminated match-валидацией + ручные Resources + routes) + PipelineAutomationPolicy (ability automation.manage `47eed95`) + тесты PHPUnit/SQLite. **Backend M7 DoD: 1531 PASS / 3584 assertions, Pint clean.** *(`d2f8c0c`, 2026-06-15)*
+- [ ] **Фаза 1 Frontend** (frontend-specialist, 4–6д): StageEditorItem аккордеон + AutomationInlineCard + AutomationWizardDialog (Dialog+Stepper 3 шага, 8 per-action конфигов) + AutomationListPanel (DataTable) + AutomationRunsPage + DryRunDrawer. Чистый PrimeVue, без @vue-flow.
+- [ ] **Фаза 2 NODE-полотно** (@vue-flow/core — аппрувнут юзером): ПОСЛЕ приёмки Фазы 1; стадии-ноды + действия-ноды + рёбра-триггеры + graph_layout JSONB на Pipeline.
+
+**Вне MVP (поздняя фаза):** Sequences/SequenceRun/BulkTask; is_sla/escalation_chain; PipelineTransition (межворонничные); field_value_changed/activity_completed триггеры; start_sequence/set_tags действия; by_product/by_country/by_department для change_owner.
+
+**Cross-agent блокеры:**
+- sales-specialist: `Sales\Events\DealStageChanged` (диспатч из DealMoveService::move() после commit) — блокер P2 inline.
+- contract-specialist: публичный метод генерации по template_code — блокер P1 GenerateDocumentAction.
+- backend-specialist: ability `automation.manage` для Policy — блокер P4.
+- deploy-engineer: очередь `automation` в queue:work + Schedule hourly — блокер P2 cron.
+
+**Acceptance M7 (Фаза 1):** правило «вход в стадию → создать задачу + TG-уведомление» срабатывает и пишется в audit-runs; dry-run показывает matched records; журнал runs отображается с фильтрами; конструктор в PipelineSettingsPage работает без поломки drag-reorder. CI зелёный.
 
 ---
 
