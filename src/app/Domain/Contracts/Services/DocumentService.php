@@ -9,6 +9,8 @@ use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
 use App\Domain\Contracts\Models\DocumentRevision;
+use App\Domain\Contracts\Models\Template;
+use App\Domain\Sales\Models\Deal;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -270,6 +272,56 @@ class DocumentService
     public function stubUploadDrive(): never
     {
         throw new HttpException(409, 'not_yet_implemented');
+    }
+
+    /**
+     * Cross-domain entry point for Automation M7 action `generate_document`.
+     *
+     * Resolves (or creates) a Document linked to the given Deal, looks up the
+     * Template by its unique code, then delegates full generation (PHPWord +
+     * Gotenberg) to ContractGenerationService::generate().
+     *
+     * ContractGenerationService is passed in to avoid a circular DI chain
+     * (ContractGenerationService already depends on DocumentService).
+     *
+     * @param  array<string, mixed>  $opts  Optional overrides: product_code, country_code, city, currency.
+     *
+     * @throws ValidationException 422 on business-rule violations (template not found, city missing, …)
+     * @throws HttpException 502/503 on Gotenberg failures
+     */
+    public function generateByTemplateCode(
+        Deal $deal,
+        string $templateCode,
+        ContractGenerationService $generationService,
+        array $opts = [],
+        int $actorUserId = 0,
+    ): Document {
+        // 1. Validate template exists by code (raises ModelNotFoundException → 404 upstream).
+        Template::where('code', $templateCode)->firstOrFail();
+
+        // 2. Resolve or create an editable Document for this deal.
+        $doc = Document::query()
+            ->where('source_deal_id', $deal->id)
+            ->whereIn('status', [ContractStatus::Draft->value, ContractStatus::NeedsRework->value])
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($doc === null) {
+            $doc = $this->create([
+                'kind' => 'contract',
+                'product_code' => $opts['product_code'] ?? 'macrocrm',
+                'country_code' => $opts['country_code'] ?? 'uz',
+                'city' => $opts['city'] ?? $deal->company?->city ?? 'Ташкент',
+                'currency' => $opts['currency'] ?? $deal->currency ?? 'UZS',
+                'source_deal_id' => $deal->id,
+                'source_company_id' => $deal->company_id,
+            ], $actorUserId);
+        }
+
+        // 3. Generate DOCX + PDF.
+        $result = $generationService->generate($doc, $actorUserId);
+
+        return $result['document'];
     }
 
     /**
