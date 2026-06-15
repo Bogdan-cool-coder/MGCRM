@@ -73,7 +73,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage, getApiErrorStatus, getValidationErrors } from '@/utils/errors'
-import { apiClient } from '@/api/client'
+import { contactsApi } from '@/api/crm/contacts'
 import type { DealContactDto } from '@/entities/sales'
 
 interface ContactOption {
@@ -117,10 +117,12 @@ async function searchContacts(query: string) {
     return
   }
   try {
-    const res = await apiClient.get<{ data: ContactOption[] }>('/api/contacts', {
-      params: { q: query, company_id: props.companyId, per_page: 15 },
+    const result = await contactsApi.list({
+      search: query,
+      per_page: 15,
+      company_id: props.companyId,
     })
-    contactSuggestions.value = res.data.data
+    contactSuggestions.value = result.data as ContactOption[]
   } catch {
     contactSuggestions.value = []
   }

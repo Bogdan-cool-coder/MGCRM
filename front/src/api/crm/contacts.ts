@@ -8,6 +8,7 @@ export interface ContactListParams {
   source?: string
   country_code?: string
   tags?: string[]
+  company_id?: number
 }
 
 export interface CreateContactPayload {
