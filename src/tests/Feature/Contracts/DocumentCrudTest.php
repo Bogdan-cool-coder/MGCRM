@@ -8,6 +8,7 @@ use App\Domain\Contracts\Models\Document;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Models\Deal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -272,6 +273,45 @@ class DocumentCrudTest extends TestCase
         $item = $response->json('data.0');
         // source_company should be absent (not loaded) or null — never a raw ID
         $this->assertNull($item['source_company'] ?? null);
+    }
+
+    // ---- deal_id filter ----
+
+    public function test_documents_filtered_by_deal_id(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $dealA = Deal::factory()->create();
+        $dealB = Deal::factory()->create();
+        // Two documents linked to dealA
+        Document::factory()->draft()->create(['author_user_id' => $user->id, 'source_deal_id' => $dealA->id]);
+        Document::factory()->draft()->create(['author_user_id' => $user->id, 'source_deal_id' => $dealA->id]);
+        // One document linked to a different deal
+        Document::factory()->draft()->create(['author_user_id' => $user->id, 'source_deal_id' => $dealB->id]);
+        // One document with no deal
+        Document::factory()->draft()->create(['author_user_id' => $user->id, 'source_deal_id' => null]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson("/api/documents?deal_id={$dealA->id}")
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(2, $data);
+        foreach ($data as $item) {
+            $this->assertSame($dealA->id, $item['source_deal_id']);
+        }
+    }
+
+    public function test_deal_id_filter_returns_empty_when_no_match(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $deal = Deal::factory()->create();
+        Document::factory()->draft()->create(['author_user_id' => $user->id, 'source_deal_id' => $deal->id]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/documents?deal_id=999999')
+            ->assertOk();
+
+        $this->assertCount(0, $response->json('data'));
     }
 
     // ---- pagination / filters ----

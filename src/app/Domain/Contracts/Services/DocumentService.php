@@ -65,6 +65,10 @@ class DocumentService
             $query->where('author_user_id', $filters['author_id']);
         }
 
+        if (isset($filters['deal_id'])) {
+            $query->where('source_deal_id', (int) $filters['deal_id']);
+        }
+
         return $query->orderByDesc('created_at')->paginate($perPage);
     }
 
