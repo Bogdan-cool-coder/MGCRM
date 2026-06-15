@@ -7,6 +7,7 @@ namespace Tests\Unit\Sales;
 use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Exceptions\WonGateException;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
@@ -14,6 +15,7 @@ use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
 use App\Domain\Sales\Services\DealMoveService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
 use Mockery;
 use Tests\TestCase;
@@ -182,6 +184,39 @@ class DealMoveServiceTest extends TestCase
 
         $this->expectException(ValidationException::class);
         $service->move($deal, $foreignStage->id, $user->id);
+    }
+
+    public function test_real_move_dispatches_deal_stage_changed(): void
+    {
+        Event::fake([DealStageChanged::class]);
+
+        [$deal, $target, $user] = $this->makeDeal();
+        $fromStageId = (int) $deal->stage_id;
+        $service = $this->serviceWithContract(null);
+
+        $result = $service->move($deal, $target->id, $user->id);
+
+        Event::assertDispatched(
+            DealStageChanged::class,
+            function (DealStageChanged $event) use ($result, $fromStageId, $target): bool {
+                return $event->deal->is($result)
+                    && $event->fromStageId === $fromStageId
+                    && $event->toStageId === (int) $target->id
+                    && $event->occurredAt !== '';
+            },
+        );
+    }
+
+    public function test_redundant_move_does_not_dispatch_event(): void
+    {
+        Event::fake([DealStageChanged::class]);
+
+        [$deal, , $user] = $this->makeDeal();
+        $service = $this->serviceWithContract(null);
+
+        $service->move($deal, (int) $deal->stage_id, $user->id);
+
+        Event::assertNotDispatched(DealStageChanged::class);
     }
 
     public function test_leaving_lost_clears_reason(): void

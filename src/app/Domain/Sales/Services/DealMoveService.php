@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sales\Services;
 
 use App\Domain\Contracts\Services\DocumentService;
+use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Exceptions\WonGateException;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealStageHistory;
@@ -39,7 +40,12 @@ class DealMoveService
         ?string $lostReason = null,
         ?int $lostReasonId = null,
     ): Deal {
-        return DB::transaction(function () use ($deal, $toStageId, $userId, $lostReason, $lostReasonId): Deal {
+        // Captured inside the transaction, dispatched AFTER commit so listeners
+        // (automation on_enter_stage, M7) observe the persisted stage. Stays null
+        // on a no-op / rolled-back move, so no event is emitted in those cases.
+        $fromStageId = null;
+
+        $result = DB::transaction(function () use ($deal, $toStageId, $userId, $lostReason, $lostReasonId, &$fromStageId): Deal {
             // 1. Row-lock the deal (anti double-drag race).
             $locked = Deal::query()->lockForUpdate()->findOrFail($deal->id);
 
@@ -51,7 +57,8 @@ class DealMoveService
                 ]);
             }
 
-            // 3. Idempotency: already in the target stage → no-op (no history row).
+            // 3. Idempotency: already in the target stage → no-op (no history row,
+            //    no event — $fromStageId stays null).
             if ((int) $locked->stage_id === (int) $toStage->id) {
                 return $locked->load('stage');
             }
@@ -81,7 +88,8 @@ class DealMoveService
                 throw new WonGateException;
             }
 
-            // 6. Apply the transition.
+            // 6. Apply the transition. Record the source stage in the outer
+            //    variable so the post-commit dispatch knows the move happened.
             $fromStageId = (int) $locked->stage_id;
             $locked->stage_id = $toStage->id;
             $locked->stage_changed_at = now();
@@ -114,6 +122,20 @@ class DealMoveService
 
             return $locked->load('stage');
         });
+
+        // 8. Post-commit: announce the stage change so listeners see the
+        //    committed state. Only on a real transition ($fromStageId set by the
+        //    transaction); no-op and rolled-back moves leave it null.
+        if ($fromStageId !== null) {
+            DealStageChanged::dispatch(
+                $result,
+                $fromStageId,
+                (int) $result->stage_id,
+                now()->toIso8601String(),
+            );
+        }
+
+        return $result;
     }
 
     /**
