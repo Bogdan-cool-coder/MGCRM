@@ -53,6 +53,19 @@ class RolePermissionSeederTest extends TestCase
         $this->assertTrue($cfo->hasPermissionTo('finance.settings.manage'));
     }
 
+    public function test_automation_manage_granted_to_admin_and_director_only(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $admin = SpatieRole::findByName(Role::Admin->value, 'web');
+        $director = SpatieRole::findByName(Role::Director->value, 'web');
+        $manager = SpatieRole::findByName(Role::Manager->value, 'web');
+
+        $this->assertTrue($admin->hasPermissionTo('automation.manage'));
+        $this->assertTrue($director->hasPermissionTo('automation.manage'));
+        $this->assertFalse($manager->hasPermissionTo('automation.manage'));
+    }
+
     public function test_admin_seeder_creates_dev_admin_with_role(): void
     {
         $this->seed(RolePermissionSeeder::class);

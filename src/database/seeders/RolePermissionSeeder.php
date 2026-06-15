@@ -38,6 +38,7 @@ class RolePermissionSeeder extends Seeder
         'sales.manage',
         'contracts.view',
         'contracts.manage',
+        'automation.manage',
         'analytics.view',
         'settings.manage',
     ];
@@ -98,6 +99,7 @@ class RolePermissionSeeder extends Seeder
                 'crm.view', 'crm.manage',
                 'sales.view', 'sales.manage',
                 'contracts.view', 'contracts.manage',
+                'automation.manage',
                 'analytics.view',
                 'finance.view', 'finance.reports.management',
             ],
