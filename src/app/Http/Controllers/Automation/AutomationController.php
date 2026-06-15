@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Automation;
 
 use App\Domain\Automation\Exceptions\DryRunTargetRequiredException;
+use App\Domain\Automation\Models\AutomationRun;
 use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Automation\Services\AutomationQueryService;
 use App\Domain\Automation\Services\AutomationService;
 use App\Domain\Automation\Services\AutomationTestService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Automation\ExecuteAutomationRequest;
 use App\Http\Requests\Automation\IndexAutomationRequest;
 use App\Http\Requests\Automation\StoreAutomationRequest;
 use App\Http\Requests\Automation\TestAutomationRequest;
 use App\Http\Requests\Automation\UpdateAutomationRequest;
 use App\Http\Resources\Automation\AutomationResource;
+use App\Http\Resources\Automation\AutomationRunResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -99,5 +102,42 @@ class AutomationController extends Controller
         }
 
         return response()->json(['data' => $result->toArray()]);
+    }
+
+    /**
+     * Manual run: execute the automation right now FOR REAL (side-effects fire).
+     *
+     * Reuses the dry-run target resolution, then drives the real dispatch path
+     * (claim slot → execute → finalize) for each matched deal. Inline triggers
+     * require a pinned target (enforced by ExecuteAutomationRequest → 422). The
+     * DryRunTargetRequiredException catch is a defensive backstop for the same
+     * constraint, mirroring test().
+     */
+    public function execute(ExecuteAutomationRequest $request, PipelineAutomation $automation): JsonResponse
+    {
+        $this->authorize('test', $automation);
+
+        try {
+            $result = $this->tester->executeNow($automation, $request->targetId(), $request->limit());
+        } catch (DryRunTargetRequiredException $e) {
+            return response()->json([
+                'message' => 'Pick a specific deal to run this trigger manually.',
+                'errors' => ['target_id' => [$e->getMessage()]],
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // Attach the parent automation so the resource can denormalise its name /
+        // action_kind without an extra query (the rows were just created here).
+        $runs = collect($result->runs)->each(
+            static fn (AutomationRun $run): AutomationRun => $run->setRelation('automation', $automation),
+        );
+
+        return response()->json([
+            'data' => [
+                'executed' => $result->executed,
+                'skipped' => $result->skipped,
+                'runs' => AutomationRunResource::collection($runs),
+            ],
+        ]);
     }
 }

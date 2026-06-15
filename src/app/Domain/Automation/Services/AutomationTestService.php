@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Automation\Services;
 
 use App\Domain\Automation\Data\DryRunResult;
+use App\Domain\Automation\Data\ExecuteNowResult;
 use App\Domain\Automation\Data\MatchedTarget;
 use App\Domain\Automation\Enums\AutomationTargetType;
 use App\Domain\Automation\Enums\TriggerKind;
@@ -12,6 +13,7 @@ use App\Domain\Automation\Exceptions\DryRunTargetRequiredException;
 use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Sales\Models\Deal;
 use Carbon\CarbonImmutable;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -49,11 +51,7 @@ class AutomationTestService
      */
     public function dryRun(PipelineAutomation $automation, ?int $targetId = null, int $limit = 50): DryRunResult
     {
-        $limit = max(1, min(500, $limit));
-
-        $matched = $targetId !== null
-            ? $this->matchPinned($automation, $targetId)
-            : $this->matchByTrigger($automation, $limit);
+        $matched = $this->resolveMatches($automation, $targetId, $limit);
 
         $plan = [];
 
@@ -74,6 +72,123 @@ class AutomationTestService
             ),
             actionsPlan: $plan,
         );
+    }
+
+    /**
+     * Run the automation FOR REAL, right now (manual trigger from the builder).
+     *
+     * Same target resolution as dryRun() — reuse resolveMatches(), so the deals
+     * fired are exactly the ones the preview showed — but instead of the handler's
+     * dryRun() this drives ActionDispatcher::dispatch(): claim an idempotency slot
+     * (AutomationEngine::claimRunSlot) then execute the action synchronously and
+     * finalize the run. Real side-effects fire (Telegram/webhook through their
+     * deferred queue jobs, set_field / create_task synchronously).
+     *
+     * Idempotency is preserved verbatim: trigger_event_ts is the SAME deterministic
+     * instant the scanner / inline listeners derive (stage-entry for idle &
+     * on_enter_stage, the date value for date_field, created_at for on_create). So
+     * re-running this endpoint for a deal whose slot is already held re-derives the
+     * same key, hits the partial-unique index, and is counted as `skipped` — no
+     * duplicate action, no duplicate row.
+     *
+     * Inline triggers (on_enter_stage / on_create) have no DB match set, so a
+     * concrete $targetId is required; without one resolveMatches throws
+     * DryRunTargetRequiredException (the endpoint maps it to 422).
+     *
+     * Fault isolation: ActionDispatcher::dispatch never throws — a bad handler
+     * becomes a `failed` run — so one broken deal cannot abort the batch.
+     *
+     * @param  int  $limit  max matched deals to fire (cron triggers); clamped 1..500
+     */
+    public function executeNow(PipelineAutomation $automation, ?int $targetId = null, int $limit = 50): ExecuteNowResult
+    {
+        $matched = $this->resolveMatches($automation, $targetId, $limit);
+
+        $runs = [];
+        $executed = 0;
+        $skipped = 0;
+
+        foreach ($matched as $entry) {
+            $run = $this->dispatcher->dispatch(
+                $automation,
+                $entry['target'],
+                $this->triggerEventTsFor($automation, $entry['target']),
+            );
+
+            if ($run === null) {
+                // Slot already held (a prior run / concurrent worker) — deduped.
+                $skipped++;
+
+                continue;
+            }
+
+            $executed++;
+            $runs[] = $run;
+        }
+
+        return new ExecuteNowResult(
+            automation: $automation,
+            executed: $executed,
+            skipped: $skipped,
+            runs: $runs,
+        );
+    }
+
+    /**
+     * Resolve the deals an automation currently targets (shared by dryRun and
+     * executeNow). Pinned to one deal when $targetId is given, otherwise the cron
+     * triggers collect up to $limit currently-matching deals. Inline triggers
+     * without a pinned target throw DryRunTargetRequiredException.
+     *
+     * @return list<array{target: Deal, matched: MatchedTarget}>
+     */
+    private function resolveMatches(PipelineAutomation $automation, ?int $targetId, int $limit): array
+    {
+        $limit = max(1, min(500, $limit));
+
+        return $targetId !== null
+            ? $this->matchPinned($automation, $targetId)
+            : $this->matchByTrigger($automation, $limit);
+    }
+
+    /**
+     * The deterministic trigger_event_ts for a real manual run of $deal — the SAME
+     * instant the automatic trigger sources key on, so manual and automatic firing
+     * share one idempotency slot and never duplicate each other:
+     *
+     *  - idle_in_stage_days / on_enter_stage → stage_changed_at (the stage-entry).
+     *  - date_field_approaching              → the watched date value.
+     *  - on_create                           → created_at.
+     *
+     * Falls back to now() only when the expected column is null (so a manual run
+     * still proceeds with a fresh slot rather than failing).
+     */
+    private function triggerEventTsFor(PipelineAutomation $automation, Deal $deal): DateTimeInterface
+    {
+        $candidate = match ($automation->trigger_kind) {
+            TriggerKind::IdleInStageDays, TriggerKind::OnEnterStage => $deal->stage_changed_at,
+            TriggerKind::DateFieldApproaching => $this->dateFieldValue($automation, $deal),
+            TriggerKind::OnCreate => $deal->created_at,
+        };
+
+        return $candidate !== null
+            ? CarbonImmutable::parse($candidate)
+            : CarbonImmutable::now();
+    }
+
+    /**
+     * The watched date column's value for a date_field_approaching automation, or
+     * null when the field is missing / non-whitelisted (caller falls back to now()).
+     */
+    private function dateFieldValue(PipelineAutomation $automation, Deal $deal): mixed
+    {
+        $field = (string) ($automation->trigger_config['field'] ?? '');
+
+        if (! in_array($field, AutomationScanner::DATE_FIELDS, strict: true)) {
+            return null;
+        }
+
+        return $deal->{$field};
     }
 
     /**

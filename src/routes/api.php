@@ -313,6 +313,7 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // shadowed, and the runs journal sits on its own collection path.
     // =========================================================================
     Route::post('automations/{automation}/test', [AutomationController::class, 'test'])->name('automations.test');
+    Route::post('automations/{automation}/execute', [AutomationController::class, 'execute'])->name('automations.execute');
     Route::apiResource('automations', AutomationController::class);
     Route::get('automation-runs', [AutomationRunController::class, 'index'])->name('automation-runs.index');
 
