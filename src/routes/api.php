@@ -7,6 +7,8 @@ use App\Http\Controllers\Activity\MeetingReportController;
 use App\Http\Controllers\Activity\MeetingReportQuestionController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Automation\AutomationController;
+use App\Http\Controllers\Automation\AutomationRunController;
 use App\Http\Controllers\Catalog\ExchangeRateController;
 use App\Http\Controllers\Catalog\PriceImportController;
 use App\Http\Controllers\Catalog\ProductController;
@@ -303,6 +305,16 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::post('lost-reasons', [LostReasonController::class, 'store'])->name('lost-reasons.store');
     Route::patch('lost-reasons/{lostReason}', [LostReasonController::class, 'update'])->name('lost-reasons.update');
     Route::delete('lost-reasons/{lostReason}', [LostReasonController::class, 'destroy'])->name('lost-reasons.destroy');
+
+    // =========================================================================
+    // Automation (M7) — pipeline automations (builder) + runs journal.
+    // Whole block is admin/director-gated (PipelineAutomationPolicy). The /test
+    // dry-run route MUST precede the apiResource {automation} routes so it is not
+    // shadowed, and the runs journal sits on its own collection path.
+    // =========================================================================
+    Route::post('automations/{automation}/test', [AutomationController::class, 'test'])->name('automations.test');
+    Route::apiResource('automations', AutomationController::class);
+    Route::get('automation-runs', [AutomationRunController::class, 'index'])->name('automation-runs.index');
 
     // =========================================================================
     // Sales — Deals

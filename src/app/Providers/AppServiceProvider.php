@@ -8,6 +8,21 @@ use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Models\MeetingReportQuestion;
 use App\Domain\Activity\Policies\ActivityPolicy;
 use App\Domain\Activity\Policies\MeetingReportQuestionPolicy;
+use App\Domain\Automation\Actions\ActionHandler;
+use App\Domain\Automation\Actions\ChangeOwnerAction;
+use App\Domain\Automation\Actions\ChangeStageAction;
+use App\Domain\Automation\Actions\CreateTaskAction;
+use App\Domain\Automation\Actions\EmailAction;
+use App\Domain\Automation\Actions\GenerateDocumentAction;
+use App\Domain\Automation\Actions\SetFieldAction;
+use App\Domain\Automation\Actions\TgNotifyAction;
+use App\Domain\Automation\Actions\WebhookAction;
+use App\Domain\Automation\Listeners\RunOnCreateAutomations;
+use App\Domain\Automation\Listeners\RunOnEnterStageAutomations;
+use App\Domain\Automation\Models\PipelineAutomation;
+use App\Domain\Automation\Policies\PipelineAutomationPolicy;
+use App\Domain\Automation\Services\ActionDispatcher;
+use App\Domain\Automation\Services\AutomationEngine;
 use App\Domain\Catalog\Models\ExchangeRate;
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Catalog\Models\ProductGroup;
@@ -62,6 +77,8 @@ use App\Domain\Onboarding\Policies\QuizAttemptPolicy;
 use App\Domain\Onboarding\Policies\QuizOptionPolicy;
 use App\Domain\Onboarding\Policies\QuizPolicy;
 use App\Domain\Onboarding\Policies\QuizQuestionPolicy;
+use App\Domain\Sales\Events\DealCreated;
+use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
 use App\Domain\Sales\Models\Pipeline;
@@ -78,9 +95,38 @@ use PragmaRX\Google2FA\Google2FA;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Automation action handlers (M7). Tagged so ActionDispatcher receives the
+     * full set without a hard-coded list — binding a new handler here is the
+     * only edit needed to add an action_kind.
+     *
+     * @var list<class-string<ActionHandler>>
+     */
+    private const AUTOMATION_ACTION_HANDLERS = [
+        TgNotifyAction::class,
+        CreateTaskAction::class,
+        SetFieldAction::class,
+        GenerateDocumentAction::class,
+        ChangeOwnerAction::class,
+        ChangeStageAction::class,
+        WebhookAction::class,
+        EmailAction::class,
+    ];
+
     public function register(): void
     {
         $this->app->singleton(Google2FA::class, static fn (): Google2FA => new Google2FA);
+
+        // Automation: tag the action handlers and feed them into the dispatcher.
+        $this->app->tag(self::AUTOMATION_ACTION_HANDLERS, 'automation.actions');
+
+        $this->app->singleton(
+            ActionDispatcher::class,
+            static fn ($app): ActionDispatcher => new ActionDispatcher(
+                $app->make(AutomationEngine::class),
+                $app->tagged('automation.actions'),
+            ),
+        );
     }
 
     public function boot(): void
@@ -121,6 +167,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Contracts Policies (S2.7)
         Gate::policy(MessageTemplate::class, MessageTemplatePolicy::class);
+
+        // Automation Policies (M7) — builder + runs journal are admin/director
+        // only (the `automation.manage` ability).
+        Gate::policy(PipelineAutomation::class, PipelineAutomationPolicy::class);
 
         // Onboarding Policies (S3.1)
         Gate::policy(Course::class, CoursePolicy::class);
@@ -172,5 +222,12 @@ class AppServiceProvider extends ServiceProvider
         // Onboarding — Certificate generation (S3.6). On CourseCompleted, dispatch
         // GenerateCertificateJob to the queue (never block the HTTP request).
         Event::listen(CourseCompleted::class, GenerateCertificateListener::class);
+
+        // Automation inline triggers (M7 P2). on_create / on_enter_stage fire from
+        // Sales events AFTER their transaction commits; the listeners only claim an
+        // idempotency slot and queue the action (ExecuteAutomationActionJob), so no
+        // Telegram/webhook IO ever blocks the deal create / move web request.
+        Event::listen(DealCreated::class, RunOnCreateAutomations::class);
+        Event::listen(DealStageChanged::class, RunOnEnterStageAutomations::class);
     }
 }

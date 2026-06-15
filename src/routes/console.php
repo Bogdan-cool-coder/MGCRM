@@ -25,3 +25,11 @@ Schedule::job(UpdateExchangeRatesJob::class)->dailyAt('03:00');
 // Onboarding: mark overdue course assignments — runs daily at midnight UTC.
 // Batch-UPDATE: status → overdue where due_date < now() AND status IN (pending, in_progress).
 Schedule::command('onboarding:mark-overdue')->daily();
+
+// Automation cron triggers (M7 P2) — run hourly. Each scan claims a `pending`
+// AutomationRun per matching deal and queues ExecuteAutomationActionJob; the
+// partial-unique AutomationRun index makes re-running every hour idempotent
+// (no duplicate side-effect), so withoutOverlapping is enough to avoid a slow
+// scan stacking on itself.
+Schedule::command('automation:scan-idle')->hourly()->withoutOverlapping();
+Schedule::command('automation:scan-date-field')->hourly()->withoutOverlapping();
