@@ -2191,6 +2191,45 @@
       "stageRequired": "Выберите стадию назначения",
       "fieldRequired": "Выберите поле",
       "fieldValueRequired": "Введите значение поля"
+    },
+    "canvas": {
+      "modeForm": "Форма",
+      "modeCanvas": "Полотно",
+      "autoLayout": "Авто-раскладка",
+      "autoLayoutHint": "Позиция на полотне косметическая. Порядок стадий — в режиме Форма.",
+      "fitView": "По экрану",
+      "backToForm": "К форме",
+      "paletteTitle": "Действия",
+      "paletteHint": "Перетащите на стадию",
+      "paletteCollapse": "Свернуть палитру",
+      "paletteExpand": "Развернуть палитру",
+      "toolTask": "Задача",
+      "toolField": "Поле",
+      "toolDocument": "Документ",
+      "toolOwner": "Владелец",
+      "toolStage": "Стадия",
+      "anchorLabel": "Вход в воронку",
+      "anchorAutoCount": "on_create: {n}",
+      "stageDeals": "Сделок: {n}",
+      "stageAutos": "Автоматизаций: {n}",
+      "addAutomation": "+ Автоматизация",
+      "autoActive": "активна",
+      "autoInactive": "неактивна",
+      "emptyNoStages": "Сначала добавьте стадии в режиме «Форма»",
+      "emptyNoAutos": "Перетащите действие из панели слева или нажмите + на стадии",
+      "goToForm": "Перейти к Форме",
+      "noEditStageHere": "Редактируйте стадии в режиме Формы",
+      "layoutSaveError": "Не удалось сохранить раскладку",
+      "layoutSaving": "Сохранение...",
+      "desktopOnly": "Полотно доступно только на широких экранах. Используйте режим Формы.",
+      "deleteConfirmHeader": "Удалить автоматизацию?",
+      "deleteConfirmBody": "Узел и связь будут удалены. История срабатываний сохранится.",
+      "triggerEdge": {
+        "on_enter_stage": "При входе",
+        "idle_in_stage_days": "Висит {n} дн.",
+        "date_field_approaching": "Дата {n} дн.",
+        "on_create": "При создании"
+      }
     }
   }
 }

@@ -2,7 +2,10 @@
   <div class="pipeline-settings-page">
     <PageHeader :title="t('sales.pipelineEditor.pageTitle')" icon="pi pi-sliders-h" />
 
-    <div class="pipeline-settings-page__content">
+    <div
+      class="pipeline-settings-page__content"
+      :class="{ 'pipeline-settings-page__content--canvas': viewMode === 'canvas' }"
+    >
       <!-- Pipelines section -->
       <PipelineList
         :pipelines="pipelines"
@@ -14,39 +17,72 @@
         @delete="handleDeletePipeline"
       />
 
-      <!-- Stages editor section -->
-      <StageEditorList
-        v-if="selectedPipelineId !== null"
-        :top-level-stages="topLevelStages"
-        :substages-of="substagesOf"
-        :pipeline-name="selectedPipeline?.name"
-        :loading="stagesLoading"
-        :automations-for="pipelineAutomations.getForStage"
-        :automations-loading="pipelineAutomations.loading.value"
-        :automations-error="pipelineAutomations.error.value"
-        @add-stage="showCreateStage = true"
-        @edit-stage="openEditDrawer"
-        @delete-stage="handleDeleteStage"
-        @rename-stage="handleRenameStage"
-        @toggle-hidden="handleToggleHidden"
-        @reorder="handleReorder"
-        @add-automation="openWizardForStage"
-        @edit-automation="openWizardForEdit"
-        @delete-automation="handleDeleteAutomation"
-        @toggle-automation="handleToggleAutomation"
-        @refetch-automations="() => pipelineAutomations.invalidate()"
-      />
+      <!-- View mode toggle — shown only when a pipeline is selected -->
+      <div v-if="selectedPipelineId !== null" class="pipeline-settings-page__mode-bar">
+        <SelectButton
+          v-model="viewMode"
+          :options="viewModeOptions"
+          option-label="label"
+          option-value="value"
+          :allow-empty="false"
+        />
+      </div>
 
-      <!-- Automation list panel (all automations of pipeline) -->
-      <AutomationListPanel
-        v-if="selectedPipelineId !== null"
-        :automations="pipelineAutomations.automations.value"
-        :loading="pipelineAutomations.loading.value"
-        @add-automation="openWizardForPipeline"
-        @edit-automation="openWizardForEdit"
-        @delete-automation="handleDeleteAutomation"
-        @toggle="handleToggleAutomation"
-      />
+      <!-- FORM MODE: Stages editor + Automation panel -->
+      <template v-if="viewMode === 'form'">
+        <!-- Stages editor section -->
+        <StageEditorList
+          v-if="selectedPipelineId !== null"
+          :top-level-stages="topLevelStages"
+          :substages-of="substagesOf"
+          :pipeline-name="selectedPipeline?.name"
+          :loading="stagesLoading"
+          :automations-for="pipelineAutomations.getForStage"
+          :automations-loading="pipelineAutomations.loading.value"
+          :automations-error="pipelineAutomations.error.value"
+          @add-stage="showCreateStage = true"
+          @edit-stage="openEditDrawer"
+          @delete-stage="handleDeleteStage"
+          @rename-stage="handleRenameStage"
+          @toggle-hidden="handleToggleHidden"
+          @reorder="handleReorder"
+          @add-automation="openWizardForStage"
+          @edit-automation="openWizardForEdit"
+          @delete-automation="handleDeleteAutomation"
+          @toggle-automation="handleToggleAutomation"
+          @refetch-automations="() => pipelineAutomations.invalidate()"
+        />
+
+        <!-- Automation list panel (all automations of pipeline) -->
+        <AutomationListPanel
+          v-if="selectedPipelineId !== null"
+          :automations="pipelineAutomations.automations.value"
+          :loading="pipelineAutomations.loading.value"
+          @add-automation="openWizardForPipeline"
+          @edit-automation="openWizardForEdit"
+          @delete-automation="handleDeleteAutomation"
+          @toggle="handleToggleAutomation"
+        />
+      </template>
+
+      <!-- CANVAS MODE -->
+      <div
+        v-else-if="viewMode === 'canvas' && selectedPipelineId !== null"
+        class="pipeline-settings-page__canvas-area"
+      >
+        <PipelineCanvas
+          :pipeline-id="selectedPipelineId"
+          :stages="stages"
+          :automations="pipelineAutomations.automations.value"
+          :graph-layout="selectedPipeline?.graph_layout ?? null"
+          @switch-to-form="viewMode = 'form'"
+          @add-automation="openWizardForStage"
+          @add-automation-with-action="openWizardWithAction"
+          @edit-automation="openWizardForEdit"
+          @delete-automation="handleDeleteAutomation"
+          @toggle-automation="handleToggleAutomation"
+        />
+      </div>
     </div>
 
     <!-- Create Pipeline Dialog -->
@@ -82,6 +118,7 @@
       :stage-id="wizardStageId"
       :stages="stages"
       :edit-automation="editingAutomation"
+      :initial-action-kind="wizardInitialActionKind"
       @update:model-visible="showWizard = $event"
       @saved="handleAutomationSaved"
     />
@@ -95,12 +132,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
+import SelectButton from 'primevue/selectbutton'
 import { PageHeader } from '@/components/AppShell'
 import PipelineList from './components/PipelineList.vue'
 import StageEditorList from './components/StageEditorList.vue'
@@ -109,14 +147,25 @@ import CreateStageDialog from './components/CreateStageDialog.vue'
 import StageEditDrawer from './components/StageEditDrawer.vue'
 import AutomationListPanel from './components/AutomationListPanel.vue'
 import AutomationWizardDialog from './components/AutomationWizardDialog.vue'
+import PipelineCanvas from './canvas/PipelineCanvas.vue'
 import { usePipelineSettings } from './composables/usePipelineSettings'
 import { usePipelineAutomations } from './composables/usePipelineAutomations'
 import type { PipelineStageDto, CreateStagePayload, UpdateStagePayload } from '@/entities/sales'
-import type { AutomationDto } from '@/entities/automation'
+import type { AutomationDto, ActionKind } from '@/entities/automation'
 
 const { t } = useI18n()
 const confirm = useConfirm()
 const toast = useToast()
+
+// ─── View mode (form | canvas) ────────────────────────────────────────────────
+
+type ViewMode = 'form' | 'canvas'
+const viewMode = ref<ViewMode>('form')
+
+const viewModeOptions = computed(() => [
+  { label: t('automation.canvas.modeForm'), value: 'form' },
+  { label: t('automation.canvas.modeCanvas'), value: 'canvas' },
+])
 
 function extractErrorMessage(e: unknown): string {
   if (typeof e === 'object' && e !== null) {
@@ -183,6 +232,7 @@ const savingStage = ref(false)
 const showWizard = ref(false)
 const wizardStageId = ref<number | null>(null)
 const editingAutomation = ref<AutomationDto | null>(null)
+const wizardInitialActionKind = ref<ActionKind | null>(null)
 
 // ─── Pipeline handlers ────────────────────────────────────────────────────────
 
@@ -330,20 +380,30 @@ async function handleReorder(ordered: PipelineStageDto[]) {
 
 // ─── Automation handlers ──────────────────────────────────────────────────────
 
-function openWizardForStage(stageId: number) {
+function openWizardForStage(stageId: number | null) {
   editingAutomation.value = null
+  wizardInitialActionKind.value = null
+  wizardStageId.value = stageId
+  showWizard.value = true
+}
+
+function openWizardWithAction(stageId: number | null, actionKind: ActionKind) {
+  editingAutomation.value = null
+  wizardInitialActionKind.value = actionKind
   wizardStageId.value = stageId
   showWizard.value = true
 }
 
 function openWizardForPipeline() {
   editingAutomation.value = null
+  wizardInitialActionKind.value = null
   wizardStageId.value = null
   showWizard.value = true
 }
 
 function openWizardForEdit(automation: AutomationDto) {
   editingAutomation.value = automation
+  wizardInitialActionKind.value = null
   wizardStageId.value = automation.stage_id ?? null
   showWizard.value = true
 }
@@ -414,6 +474,25 @@ onMounted(async () => {
     overflow-y: auto;
     min-height: 0;
     max-width: 900px;
+
+    &--canvas {
+      max-width: none;
+      overflow: hidden;
+    }
+  }
+
+  &__mode-bar {
+    display: flex;
+    align-items: center;
+  }
+
+  &__canvas-area {
+    flex: 1;
+    min-height: 600px;
+    border: 1px solid var(--p-surface-border);
+    border-radius: var(--p-border-radius);
+    overflow: hidden;
+    background: var(--p-surface-ground);
   }
 }
 </style>

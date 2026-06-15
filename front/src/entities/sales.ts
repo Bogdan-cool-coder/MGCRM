@@ -29,11 +29,22 @@ export interface PipelineStageDto {
   children?: PipelineStageDto[]
 }
 
+// ─── Graph layout (canvas positions) ─────────────────────────────────────────
+
+export interface GraphLayoutNodes {
+  [nodeId: string]: { x: number; y: number }
+}
+
+export interface GraphLayout {
+  nodes: GraphLayoutNodes
+}
+
 export interface PipelineDto {
   id: number
   name: string
   kind: PipelineKind
   stages: PipelineStageDto[]
+  graph_layout: GraphLayout | null
   created_at: string | null
   updated_at: string | null
 }
@@ -275,6 +286,7 @@ export interface UpdatePipelinePayload {
   name?: string
   is_active?: boolean
   sort_order?: number
+  graph_layout?: GraphLayout | null
 }
 
 export interface CreateStagePayload {

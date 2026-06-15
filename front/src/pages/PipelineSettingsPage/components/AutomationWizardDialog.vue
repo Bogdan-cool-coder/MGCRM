@@ -118,6 +118,8 @@ const props = defineProps<{
   stageId: number | null
   stages: PipelineStageDto[]
   editAutomation: AutomationDto | null
+  /** When set (drag from ToolPalette), wizard opens at step 2 with this action pre-selected */
+  initialActionKind?: ActionKind | null
 }>()
 
 const emit = defineEmits<{
@@ -187,6 +189,10 @@ function initFromProps() {
     isActive.value = props.editAutomation.is_active
     // Start at step 1 so user can review / change action
     currentStep.value = 1
+  } else if (props.initialActionKind) {
+    // Drag-from-palette: pre-select action, jump to step 2
+    selectedAction.value = props.initialActionKind
+    currentStep.value = 2
   }
 }
 

@@ -2191,6 +2191,45 @@
       "stageRequired": "Select a target stage",
       "fieldRequired": "Select a field",
       "fieldValueRequired": "Enter field value"
+    },
+    "canvas": {
+      "modeForm": "Form",
+      "modeCanvas": "Canvas",
+      "autoLayout": "Auto layout",
+      "autoLayoutHint": "Canvas position is cosmetic. Stage order is set in Form mode.",
+      "fitView": "Fit view",
+      "backToForm": "Back to form",
+      "paletteTitle": "Actions",
+      "paletteHint": "Drag onto a stage",
+      "paletteCollapse": "Collapse palette",
+      "paletteExpand": "Expand palette",
+      "toolTask": "Task",
+      "toolField": "Field",
+      "toolDocument": "Document",
+      "toolOwner": "Owner",
+      "toolStage": "Stage",
+      "anchorLabel": "Pipeline entry",
+      "anchorAutoCount": "on_create: {n}",
+      "stageDeals": "Deals: {n}",
+      "stageAutos": "Automations: {n}",
+      "addAutomation": "+ Automation",
+      "autoActive": "active",
+      "autoInactive": "inactive",
+      "emptyNoStages": "Add stages in Form mode first",
+      "emptyNoAutos": "Drag an action from the left panel or click + on a stage",
+      "goToForm": "Go to Form",
+      "noEditStageHere": "Edit stages in Form mode",
+      "layoutSaveError": "Failed to save layout",
+      "layoutSaving": "Saving...",
+      "desktopOnly": "Canvas is only available on wide screens. Use Form mode.",
+      "deleteConfirmHeader": "Delete automation?",
+      "deleteConfirmBody": "Node and edge will be removed. Run history is kept.",
+      "triggerEdge": {
+        "on_enter_stage": "On entry",
+        "idle_in_stage_days": "Idle {n} d.",
+        "date_field_approaching": "Date {n} d.",
+        "on_create": "On create"
+      }
     }
   }
 }
