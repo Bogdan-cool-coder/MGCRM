@@ -236,6 +236,7 @@ export interface UpdateDealPayload {
   expected_sign_date?: string | null
   expected_payment_date?: string | null
   owner_user_id?: number
+  extra_fields?: Record<string, unknown>
 }
 
 export interface MoveDealPayload {

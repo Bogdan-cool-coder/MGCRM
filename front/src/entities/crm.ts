@@ -209,3 +209,38 @@ export interface PaginatedResponse<T> {
 export type ContactListItem = Contact & { _type: 'contact' }
 export type CompanyListItem = Company & { _type: 'company' }
 export type CrmListItem = ContactListItem | CompanyListItem
+
+// ─── Contact Channel (Phase G) ────────────────────────────────────────────────
+
+export type ChannelType = 'phone' | 'email' | 'tg' | 'wa' | 'linkedin' | 'instagram' | 'viber'
+
+export interface ContactChannel {
+  id: number
+  contact_id: number
+  channel_type: ChannelType
+  value: string
+  is_primary_for_channel: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+// ─── Custom Field Definition (scope=deal|company) ─────────────────────────────
+
+export type CustomFieldScope = 'deal' | 'company' | 'contact'
+export type CustomFieldType = 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'date' | 'url' | 'bool'
+
+export interface CustomFieldDef {
+  id: number
+  scope: CustomFieldScope
+  code: string
+  label: string
+  field_type: CustomFieldType
+  options?: string[] | null
+  sort_order: number
+  is_active: boolean
+}
+
+export interface DealCustomFieldsResponse {
+  definitions: CustomFieldDef[]
+  values: Record<string, unknown>
+}

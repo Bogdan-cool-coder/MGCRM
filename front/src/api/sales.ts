@@ -220,6 +220,16 @@ export const salesApi = {
     await apiClient.delete(`/api/deals/${id}`)
   },
 
+  async archiveDeal(id: number): Promise<DealDto> {
+    const res = await apiClient.post<{ data: DealDto }>(`/api/deals/${id}/archive`)
+    return res.data.data
+  },
+
+  async unarchiveDeal(id: number): Promise<DealDto> {
+    const res = await apiClient.post<{ data: DealDto }>(`/api/deals/${id}/unarchive`)
+    return res.data.data
+  },
+
   async moveDeal(id: number, payload: MoveDealPayload): Promise<MoveDealResponse> {
     const res = await apiClient.post<MoveDealResponse>(`/api/deals/${id}/move`, payload)
     return res.data

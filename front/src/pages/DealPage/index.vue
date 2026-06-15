@@ -1,26 +1,32 @@
 <template>
-  <div class="deal-page">
-    <!-- Loading skeleton -->
+  <div class="deal-page-v2">
+    <!-- ── Loading skeleton ──────────────────────────────────────────────── -->
     <template v-if="loading">
-      <div class="deal-page__skeleton">
-        <Skeleton height="32px" class="mb-3" />
-        <div class="row g-4">
-          <div class="col-lg-9">
-            <Skeleton height="200px" class="mb-3" />
-            <Skeleton height="120px" />
-          </div>
-          <div class="col-lg-3">
-            <Skeleton height="200px" />
-          </div>
+      <div class="deal-page-v2__left">
+        <Skeleton height="180px" />
+        <div class="p-3">
+          <Skeleton height="32px" class="mb-2" />
+          <Skeleton height="60px" class="mb-2" />
+          <Skeleton height="120px" class="mb-2" />
+          <Skeleton height="80px" />
+        </div>
+      </div>
+      <div class="deal-page-v2__right">
+        <div class="p-3">
+          <Skeleton height="44px" class="mb-3" />
+          <Skeleton height="80px" class="mb-2" />
+          <Skeleton height="80px" class="mb-2" />
+          <Skeleton height="60px" />
         </div>
       </div>
     </template>
 
-    <!-- Error / not found -->
+    <!-- ── Error / Not Found ─────────────────────────────────────────────── -->
     <template v-else-if="error || !deal">
-      <div class="deal-page__error">
-        <i class="pi pi-exclamation-triangle deal-page__error-icon" />
-        <p class="deal-page__error-text">{{ t('sales.deal.page.errors.notFound') }}</p>
+      <div class="deal-page-v2__error">
+        <i class="pi pi-exclamation-triangle deal-page-v2__error-icon" />
+        <p class="deal-page-v2__error-title">{{ t('sales.deal.page.errors.notFound') }}</p>
+        <p class="deal-page-v2__error-hint">{{ t('sales.deal.page.errors.noAccess') }}</p>
         <Button
           icon="pi pi-arrow-left"
           :label="t('sales.deal.page.errors.backToDeals')"
@@ -31,163 +37,83 @@
       </div>
     </template>
 
-    <!-- Main content -->
+    <!-- ── Main content ──────────────────────────────────────────────────── -->
     <template v-else>
-      <PageHeader
-        :title="deal.title"
-        :subtitle="dealSubtitle"
-        icon="pi pi-briefcase"
-      >
-        <template #actions>
-          <Button
-            icon="pi pi-arrow-left"
-            :label="t('sales.deal.page.back')"
-            severity="secondary"
-            text
-            @click="router.back()"
-          />
-          <Button
-            icon="pi pi-arrows-h"
-            :label="t('sales.deal.page.changeStage')"
-            severity="secondary"
-            outlined
-            @click="openMoveDialog"
-          />
-          <Button
-            icon="pi pi-ellipsis-v"
-            text
-            severity="secondary"
-            @click="toggleMenu"
-          />
-          <Menu ref="dealMenu" :model="dealMenuItems" popup />
-        </template>
-      </PageHeader>
-
-      <div class="deal-page__content">
-        <div class="row g-4">
-          <!-- Left: Tabs -->
-          <div class="col-lg-9">
-            <Tabs v-model:value="activeTab" class="deal-page__tabs">
-              <TabList>
-                <Tab value="overview">{{ t('sales.deal.page.tabs.overview') }}</Tab>
-                <Tab value="contacts">{{ t('sales.deal.page.tabs.contacts') }}</Tab>
-                <Tab value="activities">
-                  {{ t('sales.deal.page.tabs.activities') }}
-                  <Badge
-                    v-if="activitiesComposable.overdueCount.value > 0"
-                    :value="activitiesComposable.overdueCount.value"
-                    severity="danger"
-                    class="ms-1"
-                  />
-                </Tab>
-                <Tab value="history">{{ t('sales.deal.page.tabs.history') }}</Tab>
-                <Tab value="documents">{{ t('sales.deal.page.tabs.documents') }}</Tab>
-              </TabList>
-              <TabPanels>
-                <!-- Overview tab -->
-                <TabPanel value="overview">
-                  <div class="deal-page__tab-content">
-                    <DealOverviewTab
-                      :deal="deal"
-                      :is-saving="isSaving"
-                      @save="onFieldSave"
-                    />
-                    <DealProductsCard
-                      :items="products"
-                      :currency="deal.currency"
-                      :loading="productsLoading"
-                      :updating-id="updatingId"
-                      :deleting-id="deletingId"
-                      class="deal-page__products-card"
-                      @add-product="addProductDialogOpen = true"
-                      @update-item="onUpdateProduct"
-                      @remove-item="onRemoveProduct"
-                    />
-                  </div>
-                </TabPanel>
-
-                <!-- Contacts tab -->
-                <TabPanel value="contacts">
-                  <div class="deal-page__tab-content">
-                    <DealContactsTab
-                      :contacts="contacts"
-                      :removing-id="removingId"
-                      @add-contact="addContactDialogOpen = true"
-                      @remove-contact="onRemoveContact"
-                    />
-                  </div>
-                </TabPanel>
-
-                <!-- Activities tab -->
-                <TabPanel value="activities">
-                  <div class="deal-page__tab-content">
-                    <DealActivitiesTab
-                      :deal-id="dealId"
-                      :activities="activitiesComposable.activities.value"
-                      :loading="activitiesComposable.loading.value"
-                      :has-more="activitiesComposable.hasMore.value"
-                      :allowed-kinds="deal.stage.task_types as ActivityKind[]"
-                      @load-more="activitiesComposable.loadMore()"
-                      @complete="onActivityComplete"
-                      @reopen="onActivityReopen"
-                      @remove="onActivityRemove"
-                      @updated="onActivityUpdated"
-                      @created="onActivityCreated"
-                    />
-                  </div>
-                </TabPanel>
-
-                <!-- History tab -->
-                <TabPanel value="history">
-                  <div class="deal-page__tab-content">
-                    <DealStageHistoryTab :history="history" />
-                  </div>
-                </TabPanel>
-
-                <!-- Documents tab -->
-                <TabPanel value="documents">
-                  <div class="deal-page__tab-content">
-                    <DealDocumentsTab :deal-id="dealId" />
-                  </div>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
-          </div>
-
-          <!-- Right rail -->
-          <div class="col-lg-3">
-            <DealRightRail :deal="deal" />
-          </div>
-        </div>
+      <!-- Left panel: info header + tabs -->
+      <div class="deal-page-v2__left">
+        <DealInfoPanel
+          :deal="deal"
+          :stages="allStages"
+          :users-list="usersList"
+          :days-in-stage="daysInStage"
+          :products="dealProductsComposable.products.value"
+          :products-loading="dealProductsComposable.loading.value"
+          :updating-id="dealProductsComposable.updatingId.value"
+          :deleting-id="dealProductsComposable.deletingId.value"
+          :contacts="dealContactsComposable.contacts.value"
+          :removing-contact-id="dealContactsComposable.removingId.value"
+          :history="history"
+          :activities="activitiesComposable.activities.value"
+          @back="router.back()"
+          @open-move-dialog="openMoveDialog"
+          @open-move-dialog-with-stage="openMoveDialogWithStage"
+          @deal-updated="updateDealLocal"
+          @deal-deleted="onDealDeleted"
+          @deal-archived="onDealArchived"
+          @open-add-product="addProductDialogOpen = true"
+          @open-add-contact="addContactDialogOpen = true"
+          @update-product="onUpdateProduct"
+          @remove-product="onRemoveProduct"
+          @remove-contact="onRemoveContact"
+          @amount-changed="onAmountChanged"
+        />
       </div>
 
-      <!-- Move dialog -->
-      <MoveDealDialog
-        v-model="moveDialogOpen"
-        :deal="deal"
-        :stages="allStages"
-        :lost-reasons="salesStore.lostReasonsCache"
-        @moved="onDealMoved"
-      />
-
-      <!-- Add product dialog -->
-      <DealAddProductDialog
-        v-model="addProductDialogOpen"
-        :deal-id="deal.id"
-        :currency="deal.currency"
-        :on-add="addProductProxy"
-        @added="onProductAdded"
-      />
-
-      <!-- Add contact dialog -->
-      <DealAddContactDialog
-        v-model="addContactDialogOpen"
-        :deal-id="deal.id"
-        :company-id="deal.company.id"
-        :on-add="addContactProxy"
-        @added="onContactAdded"
-      />
+      <!-- Right panel: feed + composer -->
+      <div class="deal-page-v2__right">
+        <DealFeed
+          :deal-id="deal.id"
+          :feed="feedComposable"
+          class="deal-page-v2__feed"
+          @open-composer-tab="onOpenComposerTab"
+        />
+        <DealComposer
+          ref="composerRef"
+          :deal-id="deal.id"
+          :users-list="usersList"
+          :initial-tab="composerInitialTab"
+          @created="onActivityCreated"
+        />
+      </div>
     </template>
+
+    <!-- ── Global dialogs ────────────────────────────────────────────────── -->
+    <MoveDealDialog
+      v-if="deal"
+      v-model="moveDialogOpen"
+      :deal="deal"
+      :stages="allStages"
+      :lost-reasons="salesStore.lostReasonsCache"
+      @moved="onDealMoved"
+    />
+
+    <DealAddProductDialog
+      v-if="deal"
+      v-model="addProductDialogOpen"
+      :deal-id="deal.id"
+      :currency="deal.currency"
+      :on-add="addProductProxy"
+      @added="onProductAdded"
+    />
+
+    <DealAddContactDialog
+      v-if="deal"
+      v-model="addContactDialogOpen"
+      :deal-id="deal.id"
+      :company-id="deal.company.id"
+      :on-add="addContactProxy"
+      @added="onContactAdded"
+    />
 
     <Toast position="top-right" />
     <ConfirmDialog />
@@ -198,29 +124,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useConfirm } from 'primevue/useconfirm'
 import Button from 'primevue/button'
-import Tabs from 'primevue/tabs'
-import TabList from 'primevue/tablist'
-import Tab from 'primevue/tab'
-import TabPanels from 'primevue/tabpanels'
-import TabPanel from 'primevue/tabpanel'
 import Skeleton from 'primevue/skeleton'
-import Menu from 'primevue/menu'
-import Badge from 'primevue/badge'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
-import PageHeader from '@/components/AppShell/PageHeader.vue'
-import DealOverviewTab from './components/DealOverviewTab.vue'
-import DealProductsCard from './components/DealProductsCard.vue'
-import DealContactsTab from './components/DealContactsTab.vue'
-import DealStageHistoryTab from './components/DealStageHistoryTab.vue'
-import DealActivitiesTab from './components/DealActivitiesTab.vue'
-import DealRightRail from './components/DealRightRail.vue'
+import DealInfoPanel from './components/DealInfoPanel.vue'
+import DealFeed from './components/DealFeed.vue'
+import DealComposer from './components/DealComposer.vue'
 import DealAddProductDialog from './components/DealAddProductDialog.vue'
 import DealAddContactDialog from './components/DealAddContactDialog.vue'
-import DealDocumentsTab from './components/DealDocumentsTab.vue'
 import MoveDealDialog from '../DealsPage/components/MoveDealDialog.vue'
 import { useDealPage } from './composables/useDealPage'
 import { useDealProducts } from './composables/useDealProducts'
@@ -228,167 +140,110 @@ import { useDealContacts } from './composables/useDealContacts'
 import { useDealHistory } from './composables/useDealHistory'
 import { useDealActivities } from './composables/useDealActivities'
 import { useDealActions } from './composables/useDealActions'
+import { useDealFeed } from './composables/useDealFeed'
 import { useSalesStore } from '@/stores/salesStore'
 import { salesApi } from '@/api/sales'
+import { usersApi } from '@/api/users'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
-import { formatCurrency } from '@/utils/currency'
-import { getApiErrorMessage } from '@/utils/errors'
-import { activityApi } from '@/api/activity'
 import type { DealDto, DealProductDto, PipelineStageDto } from '@/entities/sales'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
 const { t } = useI18n()
 const router = useRouter()
-const toast = useToast()
-const confirm = useConfirm()
 const salesStore = useSalesStore()
-
-// ── Tab state ──────────────────────────────────────────────────────────────────
-
-const activeTab = ref('overview')
 
 // ── Main deal data ─────────────────────────────────────────────────────────────
 
 const { dealId, deal, loading, error, load, updateDealLocal } = useDealPage()
 
-// ── Products ───────────────────────────────────────────────────────────────────
+// ── Sub-resources ──────────────────────────────────────────────────────────────
 
 const dealProductsComposable = useDealProducts(() => dealId.value)
-const { products, loading: productsLoading, updatingId, deletingId } = dealProductsComposable
-
-// ── Contacts ───────────────────────────────────────────────────────────────────
-
 const dealContactsComposable = useDealContacts(() => dealId.value)
-const { contacts, removingId } = dealContactsComposable
-
-// ── History ────────────────────────────────────────────────────────────────────
-
 const dealHistoryComposable = useDealHistory(() => dealId.value)
-
-// ── Activities ─────────────────────────────────────────────────────────────────
-
-const activitiesComposable = useDealActivities(() => dealId.value)
 const { history } = dealHistoryComposable
+const activitiesComposable = useDealActivities(() => dealId.value)
+
+// ── Feed ───────────────────────────────────────────────────────────────────────
+
+const feedComposable = useDealFeed(
+  () => dealId.value,
+  () => deal.value?.created_at ?? null,
+)
+
+// ── Composer ───────────────────────────────────────────────────────────────────
+
+const composerRef = ref<InstanceType<typeof DealComposer> | null>(null)
+const composerInitialTab = ref<ActivityKind>('note')
+
+function onOpenComposerTab(tab: ActivityKind) {
+  composerInitialTab.value = tab
+  composerRef.value?.setTab(tab)
+}
+
+function onActivityCreated(activity: ActivityDto) {
+  feedComposable.prependLocal(activity)
+}
 
 // ── Actions ────────────────────────────────────────────────────────────────────
 
-const { isSaving, moveDialogOpen, patchField, deleteDeal, openMoveDialog } =
-  useDealActions(() => dealId.value, (updated) => {
-    updateDealLocal(updated)
-  })
+const { moveDialogOpen, openMoveDialog } = useDealActions(
+  () => dealId.value,
+  (updated) => { updateDealLocal(updated) },
+)
 
 // ── Pipeline stages ────────────────────────────────────────────────────────────
 
 const allStagesResource = useAsyncResource<PipelineStageDto[]>(() => [])
 const allStages = computed(() => allStagesResource.data.value)
 
+// ── Users list ─────────────────────────────────────────────────────────────────
+
+const usersListResource = useAsyncResource<{ id: number; name: string }[]>(() => [])
+const usersList = computed(() => usersListResource.data.value)
+
+// ── Days in stage ──────────────────────────────────────────────────────────────
+
+const daysInStage = computed((): number => {
+  if (!deal.value) return 0
+  const historyArr = history.value
+  const relevant = historyArr.find((h) => h.to_stage?.id === deal.value!.stage.id)
+  const fromDate = relevant
+    ? new Date(relevant.created_at)
+    : new Date(deal.value.created_at)
+  const diff = Date.now() - fromDate.getTime()
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
+})
+
+// ── Move dialog with stage preselect ──────────────────────────────────────────
+
+function openMoveDialogWithStage() {
+  moveDialogOpen.value = true
+}
+
 // ── Dialogs ────────────────────────────────────────────────────────────────────
 
 const addProductDialogOpen = ref(false)
 const addContactDialogOpen = ref(false)
 
-// ── Menu ───────────────────────────────────────────────────────────────────────
+// ── Event handlers ─────────────────────────────────────────────────────────────
 
-const dealMenu = ref<InstanceType<typeof Menu> | null>(null)
-
-function toggleMenu(event: MouseEvent) {
-  dealMenu.value?.toggle(event)
+function onDealMoved(updated: DealDto) {
+  updateDealLocal(updated)
+  void dealHistoryComposable.load()
 }
 
-const dealMenuItems = computed(() => [
-  {
-    label: t('sales.deals.page.actions.delete'),
-    icon: 'pi pi-trash',
-    command: confirmDelete,
-  },
-])
-
-// ── Computed subtitle ──────────────────────────────────────────────────────────
-
-const dealSubtitle = computed(() => {
-  if (!deal.value) return ''
-  const parts = [
-    deal.value.company.name,
-    deal.value.stage.name,
-    formatCurrency(deal.value.amount, deal.value.currency),
-  ]
-  return parts.join(' · ')
-})
-
-// ── Handlers ───────────────────────────────────────────────────────────────────
-
-async function onFieldSave(field: string, value: unknown) {
-  try {
-    await patchField(field, value)
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      detail: getApiErrorMessage(err, t('errors.server_error')),
-      life: 4000,
-    })
-  }
+function onDealDeleted() {
+  // navigated by DealInfoHeader
 }
 
-async function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number }) {
-  try {
-    await dealProductsComposable.update(id, payload)
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      detail: getApiErrorMessage(err, t('errors.server_error')),
-      life: 3000,
-    })
-  }
-}
-
-async function onRemoveProduct(id: number) {
-  confirm.require({
-    header: t('sales.deal.page.products.addDialog.removeConfirm'),
-    acceptClass: 'p-button-danger',
-    accept: async () => {
-      try {
-        await dealProductsComposable.remove(id)
-        // Recalc deal amount
-        if (deal.value) {
-          updateDealLocal({ amount: products.value.reduce((s, p) => s + p.amount, 0) })
-        }
-      } catch (err) {
-        toast.add({
-          severity: 'error',
-          summary: t('errors.server_error'),
-          detail: getApiErrorMessage(err, t('errors.server_error')),
-          life: 3000,
-        })
-      }
-    },
-  })
+function onDealArchived() {
+  // navigated by DealInfoHeader
 }
 
 function onProductAdded(product: DealProductDto) {
-  // dealProductsComposable.add already updates list
-  // Update deal amount locally
   if (deal.value) {
     updateDealLocal({ amount: deal.value.amount + product.amount })
-  }
-}
-
-async function onRemoveContact(contactId: number) {
-  try {
-    await dealContactsComposable.remove(contactId)
-    toast.add({
-      severity: 'success',
-      summary: t('sales.deal.page.contacts.addDialog.removeSuccess'),
-      life: 3000,
-    })
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      detail: getApiErrorMessage(err, t('errors.server_error')),
-      life: 3000,
-    })
   }
 }
 
@@ -396,106 +251,33 @@ function onContactAdded() {
   // list updated by composable
 }
 
-function onDealMoved(updated: DealDto) {
-  updateDealLocal(updated)
-  // Reload history
-  void dealHistoryComposable.load()
+function onAmountChanged(newTotal: number) {
+  updateDealLocal({ amount: newTotal })
 }
 
-// ── Activity handlers ──────────────────────────────────────────────────────────
-
-async function onActivityComplete(activity: ActivityDto) {
-  // Optimistic
-  activitiesComposable.updateLocal({ ...activity, status: 'done', is_closed: true })
-  try {
-    const updated = await activityApi.completeActivity(activity.id)
-    activitiesComposable.updateLocal(updated)
-    toast.add({ severity: 'success', summary: t('activity.actions.completeSuccess'), life: 3000 })
-  } catch (err) {
-    activitiesComposable.updateLocal(activity)
-    const status = (err as { response?: { status?: number } })?.response?.status
-    toast.add({
-      severity: 'error',
-      summary:
-        status === 403
-          ? t('activity.actions.noPermissionComplete')
-          : getApiErrorMessage(err, t('errors.server_error')),
-      life: 4000,
-    })
+// Product events forwarded from DealInfoPanel → DealTabMain → DealProductsGroup
+async function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number }) {
+  await dealProductsComposable.update(id, payload)
+  // Recalculate amount
+  if (deal.value) {
+    const total = dealProductsComposable.products.value.reduce((s, p) => s + p.amount, 0)
+    updateDealLocal({ amount: total })
   }
 }
 
-async function onActivityReopen(activity: ActivityDto) {
-  activitiesComposable.updateLocal({ ...activity, status: 'in_progress', is_closed: false })
-  try {
-    const updated = await activityApi.reopenActivity(activity.id)
-    activitiesComposable.updateLocal(updated)
-    toast.add({ severity: 'success', summary: t('activity.actions.reopenSuccess'), life: 3000 })
-  } catch (err) {
-    activitiesComposable.updateLocal(activity)
-    toast.add({
-      severity: 'error',
-      summary: getApiErrorMessage(err, t('errors.server_error')),
-      life: 3000,
-    })
+async function onRemoveProduct(id: number) {
+  await dealProductsComposable.remove(id)
+  if (deal.value) {
+    const total = dealProductsComposable.products.value.reduce((s, p) => s + p.amount, 0)
+    updateDealLocal({ amount: total })
   }
 }
 
-async function onActivityRemove(activity: ActivityDto) {
-  try {
-    await activityApi.deleteActivity(activity.id)
-    activitiesComposable.remove(activity.id)
-    toast.add({ severity: 'success', summary: t('activity.actions.deleteSuccess'), life: 3000 })
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: getApiErrorMessage(err, t('errors.server_error')),
-      life: 3000,
-    })
-  }
+async function onRemoveContact(contactId: number) {
+  await dealContactsComposable.remove(contactId)
 }
 
-async function onActivityUpdated(activity: ActivityDto) {
-  // If it's a pin update from the menu (optimistic already set by child)
-  try {
-    const updated = await activityApi.updateActivity(activity.id, {
-      is_pinned: activity.is_pinned,
-    })
-    activitiesComposable.updateLocal(updated)
-  } catch {
-    // ignore pin errors silently (non-critical)
-  }
-}
-
-function onActivityCreated(activity: ActivityDto) {
-  activitiesComposable.addLocal(activity)
-}
-
-function confirmDelete() {
-  confirm.require({
-    header: t('sales.deals.page.actions.deleteConfirm'),
-    message: t('sales.deals.page.actions.deleteDetail'),
-    acceptLabel: t('sales.deals.page.actions.deleteAccept'),
-    rejectLabel: t('sales.deals.page.actions.deleteReject'),
-    acceptClass: 'p-button-danger',
-    accept: async () => {
-      try {
-        await deleteDeal()
-        toast.add({ severity: 'success', summary: t('sales.deals.page.actions.deleteSuccess'), life: 3000 })
-        void router.push('/deals')
-      } catch (err) {
-        toast.add({
-          severity: 'error',
-          summary: t('errors.server_error'),
-          detail: getApiErrorMessage(err, t('errors.server_error')),
-          life: 4000,
-        })
-      }
-    },
-  })
-}
-
-// ── Proxy functions matching dialog :on-add signatures ────────────────────────
+// ── Proxy fns for dialog :on-add ──────────────────────────────────────────────
 
 function addProductProxy(
   _dealId: number,
@@ -514,7 +296,6 @@ function addContactProxy(
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
-  // Load lost reasons if not cached
   if (salesStore.lostReasonsCache.length === 0) {
     try {
       const reasons = await salesApi.getLostReasons()
@@ -527,8 +308,8 @@ onMounted(async () => {
   await load()
 
   if (deal.value) {
-    // Load stages for the pipeline
     const pipelineId = deal.value.pipeline.id
+
     if (salesStore.getCachedStages(pipelineId).length === 0) {
       await allStagesResource.run(() => salesApi.getPipelineStages(pipelineId), {
         commit: (stages) => {
@@ -540,75 +321,98 @@ onMounted(async () => {
       allStagesResource.data.value = salesStore.getCachedStages(pipelineId)
     }
 
-    // Load sub-resources
     await Promise.all([
       dealProductsComposable.load(),
       dealContactsComposable.load(),
       dealHistoryComposable.load(),
       activitiesComposable.load(),
+      feedComposable.load(),
     ])
+
+    try {
+      await usersListResource.run(async () => {
+        const users = await usersApi.getUsers()
+        return users.map((u) => ({ id: u.id, name: u.full_name }))
+      })
+    } catch {
+      // non-critical
+    }
   }
 })
 </script>
 
 <style lang="scss" scoped>
-.deal-page {
+.deal-page-v2 {
   display: flex;
-  flex-direction: column;
-  height: 100%;
-  margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
-}
-
-.deal-page__skeleton {
-  padding: $space-4 $space-6;
-}
-
-.deal-page__error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-4;
-  padding: $space-8;
-}
-
-.deal-page__error-icon {
-  font-size: 3rem;
-  color: $surface-400;
-}
-
-.deal-page__error-text {
-  font-size: $font-size-lg;
-  color: $surface-500;
-  margin: 0;
-}
-
-.deal-page__content {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  padding: $space-4 $space-6;
-}
-
-.deal-page__tabs {
-  background: $surface-card;
-  border-radius: $radius-lg;
-  border: 1px solid $surface-200;
-  box-shadow: $shadow-card;
+  height: 100vh;
   overflow: hidden;
+  min-width: 1100px;
+  margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
 
-  :global(.app-dark) & {
-    border-color: var(--p-surface-700);
+  &__left {
+    width: 290px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid var(--p-surface-200);
+    background: var(--p-card-background);
+
+    .app-dark & {
+      border-right-color: var(--p-surface-700);
+    }
   }
-}
 
-.deal-page__tab-content {
-  padding: $space-4;
-  display: flex;
-  flex-direction: column;
-  gap: $space-4;
-}
+  &__right {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--p-surface-50);
+    overflow: hidden;
 
-.deal-page__products-card {
-  margin-top: $space-2;
+    .app-dark & {
+      background: var(--p-surface-900);
+    }
+  }
+
+  // ── Full-page states ────────────────────────────────────────────────────────
+
+  &__error {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $space-3;
+    padding: $space-8;
+    text-align: center;
+  }
+
+  &__error-icon {
+    font-size: 3rem;
+    color: var(--p-red-400);
+  }
+
+  &__error-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    margin: 0;
+    color: $surface-800;
+  }
+
+  &__error-hint {
+    color: $surface-500;
+    font-size: $font-size-sm;
+    margin: 0;
+  }
+
+  // ── Feed (fills right panel above composer) ─────────────────────────────────
+
+  &__feed {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
 }
 </style>

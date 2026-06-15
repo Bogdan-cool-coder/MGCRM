@@ -215,7 +215,9 @@
     "not_found": "Page not found.",
     "forbidden": "Access denied.",
     "validation": "Please check the form fields.",
-    "unknown": "An unknown error occurred."
+    "unknown": "An unknown error occurred.",
+    "required": "Required field",
+    "duplicate": "This record already exists"
   },
   "common": {
     "loading": "Loading...",
@@ -1023,10 +1025,143 @@
           }
         },
         "errors": {
-          "notFound": "Deal not found or access denied",
+          "notFound": "Deal not found",
+          "noAccess": "It may have been deleted or you don't have access",
           "load": "Failed to load deal",
           "backToDeals": "Back to deals"
+        },
+        "daysInStage": "days in stage",
+        "changeStage": "Change stage",
+        "menu": {
+          "rename": "Rename",
+          "changeOwner": "Change owner",
+          "editTags": "Edit tags",
+          "moveStage": "Move stage",
+          "duplicate": "Duplicate",
+          "duplicateSoon": "Coming soon",
+          "archive": "Archive",
+          "archiveConfirm": "Archive deal?",
+          "delete": "Delete deal",
+          "deleteConfirm": "Delete deal?",
+          "deleteDetail": "This action cannot be undone"
         }
+      },
+      "info": {
+        "tabs": {
+          "main": "Main",
+          "documents": "Documents",
+          "finances": "Finances",
+          "stats": "Stats"
+        },
+        "fields": {
+          "owner": "Owner",
+          "amount": "Budget",
+          "amountAuto": "Budget (auto)",
+          "company": "Company",
+          "expectedSignDate": "Expected sign date",
+          "expectedPaymentDate": "Expected payment date"
+        },
+        "groups": {
+          "products": "Products",
+          "deal": "Deal",
+          "contacts": "Contacts",
+          "company": "Company data",
+          "customFields": "Custom fields"
+        },
+        "products": {
+          "empty": "No items",
+          "add": "+ Add",
+          "total": "Total"
+        },
+        "contacts": {
+          "addContact": "+ Add contact",
+          "addChannel": "+ Add channel"
+        }
+      },
+      "addChannel": {
+        "title": "Add contact channel",
+        "channelType": "Channel type",
+        "value": "Value / ID",
+        "placeholders": {
+          "tg": "@username or numeric ID",
+          "wa": "Number +7XXXXXXXXXX",
+          "linkedin": "LinkedIn profile URL",
+          "email": "email@domain.com",
+          "phone": "+7XXXXXXXXXX"
+        },
+        "submit": "Add",
+        "success": "Channel added"
+      },
+      "documents": {
+        "generate": "Generate PDF",
+        "downloadDocx": "Download DOCX",
+        "templateLabel": "Template",
+        "contractFields": "Contract fields",
+        "approval": "Approval",
+        "finalDocs": "Final documents",
+        "uploadScan": "Upload signed scan",
+        "signedAt": "Actual signing date",
+        "empty": {
+          "title": "No documents",
+          "subtitle": "Generate the first contract from a template"
+        }
+      },
+      "finances": {
+        "stub": "Financial terms",
+        "stubHint": "Payment terms from the contract will appear here: deadlines, periods, amounts, acts.",
+        "waitingForDoc": "Waiting for contract"
+      },
+      "stats": {
+        "daysInDeal": "Days in deal",
+        "daysInStage": "In stage",
+        "activities": "Activities",
+        "stageChanges": "Stage changes",
+        "documents": "Documents",
+        "lastActivity": "Last activity",
+        "daysAgo": "{n} days ago"
+      },
+      "feed": {
+        "searchPlaceholder": "Search feed...",
+        "filterType": "Type",
+        "reset": "Reset",
+        "loadMore": "Load more",
+        "viewMenu": {
+          "collapseAll": "Collapse all groups",
+          "expandAll": "Expand all groups",
+          "customizeFields": "Customize card fields",
+          "copyLink": "Copy link",
+          "print": "Print / export"
+        },
+        "empty": {
+          "title": "Feed is empty",
+          "subtitle": "Create a task or call the client"
+        },
+        "types": {
+          "stage_change": "Stage change",
+          "field_change": "Field changes",
+          "note": "Notes",
+          "task": "Tasks",
+          "call": "Calls",
+          "meeting": "Meetings"
+        },
+        "events": {
+          "stageChanged": "Stage changed",
+          "dealCreated": "Deal created",
+          "fieldsChanged": "Fields changed",
+          "moreChanges": "{n} more"
+        }
+      },
+      "composer": {
+        "note": "Note",
+        "task": "Task",
+        "call": "Call",
+        "meeting": "Meeting",
+        "notePlaceholder": "Note text...",
+        "titlePlaceholder": "Title...",
+        "participants": "@ Participants",
+        "location": "Location",
+        "save": "Save",
+        "successCreate": "Added to feed"
       }
     },
     "move": {

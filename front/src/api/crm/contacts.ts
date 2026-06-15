@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client'
-import type { Contact, ContactCompanyLink, PaginatedResponse } from '@/entities/crm'
+import type { Contact, ContactChannel, ContactCompanyLink, PaginatedResponse } from '@/entities/crm'
 
 export interface ContactListParams {
   page?: number
@@ -88,5 +88,41 @@ export const contactsApi = {
 
   async setPrimaryCompany(contactId: number, companyId: number): Promise<void> {
     await apiClient.post(`/api/contacts/${contactId}/companies/${companyId}/primary`)
+  },
+
+  // ── Contact Channels (Phase G) ─────────────────────────────────────────────
+
+  async getChannels(contactId: number): Promise<ContactChannel[]> {
+    const res = await apiClient.get<{ data: ContactChannel[] }>(
+      `/api/contacts/${contactId}/channels`,
+    )
+    return res.data.data ?? []
+  },
+
+  async addChannel(
+    contactId: number,
+    payload: { channel_type: string; value: string },
+  ): Promise<ContactChannel> {
+    const res = await apiClient.post<{ data: ContactChannel }>(
+      `/api/contacts/${contactId}/channels`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async updateChannel(
+    contactId: number,
+    channelId: number,
+    payload: { channel_type?: string; value?: string },
+  ): Promise<ContactChannel> {
+    const res = await apiClient.patch<{ data: ContactChannel }>(
+      `/api/contacts/${contactId}/channels/${channelId}`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async deleteChannel(contactId: number, channelId: number): Promise<void> {
+    await apiClient.delete(`/api/contacts/${contactId}/channels/${channelId}`)
   },
 }

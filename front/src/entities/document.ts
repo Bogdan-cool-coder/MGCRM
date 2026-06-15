@@ -167,6 +167,7 @@ export interface PatchDocumentPayload {
   discount_amount?: number
   total?: number
   currency?: string
+  signed_at?: string | null
 }
 
 export interface DecideDocumentPayload {
