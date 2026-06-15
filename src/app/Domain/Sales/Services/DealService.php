@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sales\Services;
 
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Services\CustomFieldService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
@@ -17,6 +18,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 /**
  * DealService — all Deal CRUD/list/board logic. stage_id is deliberately NOT
@@ -27,8 +29,19 @@ class DealService
     /** Number of cards returned per Kanban column (first page). */
     private const BOARD_COLUMN_LIMIT = 30;
 
+    /** Deal fields whose direct changes are written to the audit log. */
+    private const AUDITED_FIELDS = [
+        'title',
+        'amount',
+        'currency',
+        'owner_user_id',
+        'tags',
+    ];
+
     public function __construct(
         private readonly VisibilityResolver $visibility,
+        private readonly CustomFieldService $customFieldService,
+        private readonly DealAuditService $auditService,
     ) {}
 
     /**
@@ -46,6 +59,14 @@ class DealService
             ->when(isset($filters['q']), function (Builder $q) use ($filters): void {
                 $q->where('title', 'like', '%'.$filters['q'].'%');
             })
+            // Archived deals are hidden by default; ?archived=true returns ONLY
+            // archived ones. Soft-deleted deals are excluded automatically by the
+            // SoftDeletes global scope (no deleted_at filter needed here).
+            ->when(
+                $filters['archived'] ?? false,
+                fn (Builder $q) => $q->whereNotNull('archived_at'),
+                fn (Builder $q) => $q->whereNull('archived_at'),
+            )
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }
@@ -214,24 +235,129 @@ class DealService
      * Partial update. stage_id is rejected here (defence in depth alongside the
      * FormRequest) — the only path to change stage is DealMoveService::move().
      *
+     * Custom fields (extra_fields) are written through CustomFieldService, which
+     * validates each code against its CustomFieldDef and MERGES into the existing
+     * JSONB (no full replace). An unknown code surfaces as a 422 validation error.
+     *
+     * Every changed scalar field plus per-key extra_fields changes are written to
+     * the append-only audit log (DealAuditService). stage_id is never audited here
+     * (it cannot reach this method) — its history lives in DealStageHistory.
+     *
      * @param  array<string, mixed>  $data
      */
-    public function update(Deal $deal, array $data): Deal
+    public function update(Deal $deal, array $data, ?User $actor = null): Deal
     {
         unset($data['stage_id']);
 
+        // Snapshot of the pre-merge extra_fields for the audit diff. writeFields
+        // mutates the model in place (and persists), so capture before calling it.
+        $extraBefore = $deal->extra_fields ?? [];
+        $extraChanged = array_key_exists('extra_fields', $data);
+
+        if ($extraChanged) {
+            $newExtra = $data['extra_fields'] ?? [];
+
+            try {
+                $this->customFieldService->writeFields($deal, is_array($newExtra) ? $newExtra : []);
+            } catch (InvalidArgumentException $e) {
+                throw ValidationException::withMessages([
+                    'extra_fields' => $e->getMessage(),
+                ]);
+            }
+
+            // Persisted by writeFields → drop from the direct $deal->update() set.
+            unset($data['extra_fields']);
+        }
+
+        // Snapshot only the scalar fields about to change (excludes extra_fields,
+        // already unset). getOriginal() reflects the values currently in the DB.
+        $original = array_intersect_key($deal->getOriginal(), $data);
+
         $deal->update($data);
+        $deal->refresh();
+
+        $this->auditService->record(
+            $deal,
+            $actor,
+            $this->buildAuditDiff($original, $data, $extraChanged, $extraBefore, $deal->extra_fields ?? []),
+        );
+
+        return $deal;
+    }
+
+    /**
+     * Archive a deal: stamp archived_at. Archived deals leave the default list but
+     * remain in ?archived=true. Distinct from delete (which is a soft delete).
+     */
+    public function archive(Deal $deal): Deal
+    {
+        $deal->update(['archived_at' => now()]);
         $deal->refresh();
 
         return $deal;
     }
 
+    /** Restore an archived deal back into the active list. */
+    public function unarchive(Deal $deal): Deal
+    {
+        $deal->update(['archived_at' => null]);
+        $deal->refresh();
+
+        return $deal;
+    }
+
+    /**
+     * Soft-delete a deal (deleted_at). It disappears from every listing via the
+     * SoftDeletes global scope. Children (products / contacts / stage history)
+     * remain in the DB — the FK cascade only fires on a hard delete.
+     */
     public function delete(Deal $deal): void
     {
-        DB::transaction(function () use ($deal): void {
-            // deal_products / deal_contacts / deal_stage_history cascade via FK.
-            $deal->delete();
-        });
+        $deal->delete();
+    }
+
+    /**
+     * Assemble the per-field audit diff for an update.
+     *
+     * Direct fields: only whitelisted, actually-changed scalars/arrays. The
+     * extra_fields key (when present) carries the full old/new JSONB maps;
+     * DealAuditService expands it into per-key rows.
+     *
+     * @param  array<string, mixed>  $original  pre-update DB values, keyed by field
+     * @param  array<string, mixed>  $data  applied direct-field values
+     * @param  array<string, mixed>  $extraBefore
+     * @param  array<string, mixed>  $extraAfter
+     * @return array<string, array{old: mixed, new: mixed}>
+     */
+    private function buildAuditDiff(
+        array $original,
+        array $data,
+        bool $extraChanged,
+        array $extraBefore,
+        array $extraAfter,
+    ): array {
+        $diff = [];
+
+        foreach (self::AUDITED_FIELDS as $field) {
+            if (! array_key_exists($field, $data)) {
+                continue;
+            }
+
+            $old = $original[$field] ?? null;
+            $new = $data[$field];
+
+            if ($old === $new) {
+                continue;
+            }
+
+            $diff[$field] = ['old' => $old, 'new' => $new];
+        }
+
+        if ($extraChanged && $extraBefore !== $extraAfter) {
+            $diff['extra_fields'] = ['old' => $extraBefore, 'new' => $extraAfter];
+        }
+
+        return $diff;
     }
 
     /**

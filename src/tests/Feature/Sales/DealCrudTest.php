@@ -124,7 +124,7 @@ class DealCrudTest extends TestCase
             ->assertJsonPath('data.title', 'Renamed');
     }
 
-    public function test_delete_deal_cascades_products_contacts_history(): void
+    public function test_delete_deal_is_soft_and_hides_from_listing(): void
     {
         $pipeline = $this->seedSalesPipeline();
         $user = User::factory()->create(['role' => Role::Manager]);
@@ -145,10 +145,15 @@ class DealCrudTest extends TestCase
 
         $this->deleteJson("/api/deals/{$deal->id}")->assertNoContent();
 
-        $this->assertDatabaseMissing('deals', ['id' => $deal->id]);
-        $this->assertDatabaseMissing('deal_products', ['deal_id' => $deal->id]);
-        $this->assertDatabaseMissing('deal_contacts', ['deal_id' => $deal->id]);
-        $this->assertDatabaseMissing('deal_stage_history', ['deal_id' => $deal->id]);
+        // G4: delete is now SOFT — the row stays (deleted_at stamped), children
+        // remain (FK cascade only fires on hard delete), but the deal is gone
+        // from every listing via the SoftDeletes global scope.
+        $this->assertSoftDeleted('deals', ['id' => $deal->id]);
+        $this->assertDatabaseHas('deal_products', ['deal_id' => $deal->id]);
+        $this->assertDatabaseHas('deal_contacts', ['deal_id' => $deal->id]);
+        $this->assertDatabaseHas('deal_stage_history', ['deal_id' => $deal->id]);
+
+        $this->getJson('/api/deals')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_manager_sees_only_own_deals(): void

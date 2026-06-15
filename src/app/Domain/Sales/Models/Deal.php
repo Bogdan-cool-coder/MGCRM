@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Deal — master Deal-on-Company entity. All business logic lives in
@@ -26,6 +27,8 @@ class Deal extends Model
 {
     /** @use HasFactory<DealFactory> */
     use HasFactory;
+
+    use SoftDeletes;
 
     protected static function newFactory(): DealFactory
     {
@@ -53,6 +56,7 @@ class Deal extends Model
         'expected_payment_date',
         'stage_changed_at',
         'closed_at',
+        'archived_at',
     ];
 
     protected function casts(): array
@@ -66,6 +70,7 @@ class Deal extends Model
             'expected_payment_date' => 'date',
             'stage_changed_at' => 'datetime',
             'closed_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -143,5 +148,10 @@ class Deal extends Model
     public function stageHistory(): HasMany
     {
         return $this->hasMany(DealStageHistory::class)->orderBy('created_at');
+    }
+
+    public function audits(): HasMany
+    {
+        return $this->hasMany(DealAudit::class)->orderByDesc('created_at');
     }
 }

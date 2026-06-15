@@ -75,6 +75,12 @@ class Contact extends Model
             ->withTimestamps();
     }
 
+    /** Communication channels (phone, email, tg, wa, etc.). */
+    public function channels(): HasMany
+    {
+        return $this->hasMany(ContactChannel::class)->orderBy('channel_type');
+    }
+
     /** Raw link models (for is_primary reassign, etc.). */
     public function companyLinks(): HasMany
     {

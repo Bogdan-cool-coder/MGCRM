@@ -8,6 +8,7 @@ use App\Domain\Crm\Enums\CustomFieldScope;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\CustomFieldDef;
+use App\Domain\Sales\Models\Deal;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
@@ -131,6 +132,7 @@ class CustomFieldService
         return match (true) {
             $entity instanceof Contact => CustomFieldScope::Contact,
             $entity instanceof Company => CustomFieldScope::Company,
+            $entity instanceof Deal => CustomFieldScope::Deal,
             default => throw new InvalidArgumentException(
                 'Unsupported entity type for custom fields: '.$entity::class
             ),

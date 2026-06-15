@@ -56,6 +56,7 @@ class DealResource extends JsonResource
 
             'stage_changed_at' => $this->stage_changed_at?->toIso8601String(),
             'closed_at' => $this->closed_at?->toIso8601String(),
+            'archived_at' => $this->archived_at?->toIso8601String(),
 
             'products' => DealProductResource::collection($this->whenLoaded('products')),
             'contacts' => DealContactResource::collection($this->whenLoaded('dealContacts')),

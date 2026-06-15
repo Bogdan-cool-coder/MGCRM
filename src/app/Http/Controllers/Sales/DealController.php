@@ -78,7 +78,7 @@ class DealController extends Controller
 
     public function update(UpdateDealRequest $request, Deal $deal): JsonResource
     {
-        $updated = $this->service->update($deal, $request->validated());
+        $updated = $this->service->update($deal, $request->validated(), $request->user());
 
         return DealResource::make($updated->load(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name']));
     }
@@ -90,6 +90,24 @@ class DealController extends Controller
         $this->service->delete($deal);
 
         return response()->noContent();
+    }
+
+    public function archive(Request $request, Deal $deal): JsonResource
+    {
+        $this->authorize('update', $deal);
+
+        $archived = $this->service->archive($deal);
+
+        return DealResource::make($archived->load(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name']));
+    }
+
+    public function unarchive(Request $request, Deal $deal): JsonResource
+    {
+        $this->authorize('update', $deal);
+
+        $restored = $this->service->unarchive($deal);
+
+        return DealResource::make($restored->load(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name']));
     }
 
     /** Cache TTL for replaying an idempotent move result (HD1, Q1: 24h). */

@@ -36,6 +36,7 @@ use App\Http\Controllers\Crm\Admin\CountryController;
 use App\Http\Controllers\Crm\Admin\SourceController;
 use App\Http\Controllers\Crm\CompanyController;
 use App\Http\Controllers\Crm\CompanyEmployeeController;
+use App\Http\Controllers\Crm\ContactChannelController;
 use App\Http\Controllers\Crm\ContactCompanyController;
 use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
@@ -62,6 +63,8 @@ use App\Http\Controllers\Onboarding\StudentCourseController;
 use App\Http\Controllers\Sales\DashboardController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
+use App\Http\Controllers\Sales\DealCustomFieldController;
+use App\Http\Controllers\Sales\DealFeedController;
 use App\Http\Controllers\Sales\DealHistoryController;
 use App\Http\Controllers\Sales\DealProductController;
 use App\Http\Controllers\Sales\LostReasonController;
@@ -138,6 +141,13 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
             ]);
         Route::post('companies/{company}/primary', [ContactCompanyController::class, 'setPrimary'])
             ->name('companies.primary');
+
+        // Contact channels (phone, email, tg, wa, etc.)
+        Route::get('channels', [ContactChannelController::class, 'index'])->name('channels.index');
+        Route::post('channels', [ContactChannelController::class, 'store'])->name('channels.store');
+        Route::patch('channels/{channel}', [ContactChannelController::class, 'update'])->name('channels.update');
+        Route::delete('channels/{channel}', [ContactChannelController::class, 'destroy'])->name('channels.destroy');
+
         // deals sub-resource stub (S1.3)
         Route::get('deals', static fn () => response()->json(['data' => [], 'stub' => true]))
             ->name('deals.index');
@@ -305,6 +315,11 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // Stage change — the ONLY path that mutates stage_id (security boundary).
     Route::post('deals/{deal}/move', [DealController::class, 'move'])->name('deals.move');
 
+    // Archive / restore (archived ≠ deleted: stamps archived_at, stays in
+    // ?archived=true; delete is a separate soft delete on deals.destroy).
+    Route::post('deals/{deal}/archive', [DealController::class, 'archive'])->name('deals.archive');
+    Route::post('deals/{deal}/unarchive', [DealController::class, 'unarchive'])->name('deals.unarchive');
+
     Route::prefix('deals/{deal}')->name('deals.')->group(function (): void {
         // Line items
         Route::get('products', [DealProductController::class, 'index'])->name('products.index');
@@ -319,6 +334,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Stage history
         Route::get('history', [DealHistoryController::class, 'index'])->name('history.index');
+
+        // Unified event feed (stage changes + activities + field changes).
+        Route::get('feed', [DealFeedController::class, 'index'])->name('feed.index');
+
+        // Custom-field definitions (scope=deal) enriched with current values.
+        Route::get('custom-fields', [DealCustomFieldController::class, 'index'])->name('custom-fields.index');
 
         // Meeting report — create/update a meeting activity on this deal (S1.6).
         Route::post('meeting-report', [MeetingReportController::class, 'save'])->name('meeting-report.save');
