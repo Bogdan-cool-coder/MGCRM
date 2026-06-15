@@ -197,7 +197,7 @@ const DateEditField = defineComponent({
           showIcon: true,
           style: 'width: 160px',
           'onUpdate:modelValue': (v: Date | null) => { localDate.value = v },
-          onBlur: submitDate,
+          onDateSelect: submitDate,
           onKeydown: (e: KeyboardEvent) => {
             if (e.key === 'Enter') submitDate()
             if (e.key === 'Escape') { isEditing.value = false }

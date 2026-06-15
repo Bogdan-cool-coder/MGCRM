@@ -130,6 +130,7 @@
             · {{ item.activity.responsible.full_name }}
           </span>
           <Tag
+            v-if="item.type !== 'note' && item.activity.priority"
             :severity="prioritySeverity(item.activity.priority)"
             :value="t(`activity.priorities.${item.activity.priority}`)"
             size="small"

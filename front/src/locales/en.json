@@ -763,6 +763,9 @@
       "high": "High",
       "critical": "Critical"
     },
+    "fields": {
+      "responsible": "Responsible"
+    },
     "presets": {
       "myTasks": "My tasks",
       "myOrders": "My orders",
@@ -1083,7 +1086,7 @@
         "channelType": "Channel type",
         "value": "Value / ID",
         "placeholders": {
-          "tg": "@username or numeric ID",
+          "tg": "{'@'}username or numeric ID",
           "wa": "Number +7XXXXXXXXXX",
           "linkedin": "LinkedIn profile URL",
           "email": "email@domain.com",
@@ -1158,7 +1161,7 @@
         "meeting": "Meeting",
         "notePlaceholder": "Note text...",
         "titlePlaceholder": "Title...",
-        "participants": "@ Participants",
+        "participants": "{'@'} Participants",
         "location": "Location",
         "save": "Save",
         "successCreate": "Added to feed"

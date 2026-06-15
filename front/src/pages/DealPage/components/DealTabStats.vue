@@ -101,7 +101,7 @@ const lastActivityLabel = computed((): string => {
   const diffDays = Math.floor(
     (Date.now() - new Date(dateRef).getTime()) / (1000 * 60 * 60 * 24),
   )
-  const kindLabel = t(`activities.kinds.${last.kind}`, last.kind)
+  const kindLabel = t(`activity.kinds.${last.kind}`, last.kind)
   return `${kindLabel} · ${t('sales.deal.stats.daysAgo', { n: diffDays })}`
 })
 </script>

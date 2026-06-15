@@ -763,6 +763,9 @@
       "high": "Высокий",
       "critical": "Критический"
     },
+    "fields": {
+      "responsible": "Ответственный"
+    },
     "presets": {
       "myTasks": "Мои задачи",
       "myOrders": "Мои поручения",
@@ -1083,7 +1086,7 @@
         "channelType": "Тип канала",
         "value": "Значение / ID",
         "placeholders": {
-          "tg": "@username или числовой ID",
+          "tg": "{'@'}username или числовой ID",
           "wa": "Номер +7XXXXXXXXXX",
           "linkedin": "URL профиля LinkedIn",
           "email": "email@domain.com",
@@ -1158,7 +1161,7 @@
         "meeting": "Встреча",
         "notePlaceholder": "Текст примечания...",
         "titlePlaceholder": "Заголовок...",
-        "participants": "@ Участники",
+        "participants": "{'@'} Участники",
         "location": "Место встречи",
         "save": "Сохранить",
         "successCreate": "Добавлено в ленту"
