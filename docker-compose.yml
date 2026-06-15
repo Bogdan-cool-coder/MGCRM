@@ -73,7 +73,10 @@ services:
       target: app
     image: macro-crm-app:${IMAGE_TAG:-dev-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-queue-worker
-    command: php artisan queue:work --queue=default --tries=1 --timeout=600 --max-jobs=50 --memory=256 --sleep=1
+    # Queue priority: default first (user-facing jobs) then automation (background scans).
+    # Both queues are served by a single worker — no starvation risk at current load.
+    # If automation jobs grow significantly, extract a dedicated automation-worker service.
+    command: php artisan queue:work --queue=default,automation --tries=1 --timeout=600 --max-jobs=50 --memory=256 --sleep=1
     restart: unless-stopped
     env_file:
       - src/.env
@@ -81,6 +84,44 @@ services:
       GOTENBERG_URL: http://gotenberg:3000
     volumes:
       # Same named volumes as app — worker shares storage/logs, storage/framework/cache
+      - storage_app:/var/www/html/storage/app
+      - storage_framework:/var/www/html/storage/framework
+      - storage_logs:/var/www/html/storage/logs
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+      - ./data/backups:/var/www/backups
+    networks:
+      - macro-crm-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # ---------------------------------------------------------------------------
+  # Scheduler — runs `php artisan schedule:work` to fire all registered crons.
+  #
+  # M7 automation commands that run hourly via this service:
+  #   automation:scan-idle        — triggers idle-deal automations
+  #   automation:scan-date-field  — triggers date-field automations
+  #
+  # SINGLE process: schedule:work polls every 60s internally. DO NOT scale.
+  # ---------------------------------------------------------------------------
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: app
+    image: macro-crm-app:${IMAGE_TAG:-dev-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-scheduler
+    command: php artisan schedule:work
+    restart: unless-stopped
+    env_file:
+      - src/.env
+    environment:
+      GOTENBERG_URL: http://gotenberg:3000
+    volumes:
       - storage_app:/var/www/html/storage/app
       - storage_framework:/var/www/html/storage/framework
       - storage_logs:/var/www/html/storage/logs

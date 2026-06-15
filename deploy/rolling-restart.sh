@@ -6,7 +6,7 @@
 #   2. Bring up new app replica alongside old one.
 #   3. Wait until new replica is healthy.
 #   4. Stop and remove old replica.
-#   5. Bring up remaining services (nginx, queue-worker, gotenberg).
+#   5. Bring up remaining services (nginx, queue-worker, scheduler, gotenberg).
 #   6. Run migrations (idempotent, --force).
 #
 # nginx health-check excludes non-healthy containers, so traffic is always
@@ -73,7 +73,7 @@ echo "==> Run migrations"
 docker compose exec -T app php artisan migrate --force
 
 echo "==> Bring up remaining services"
-docker compose up -d --no-deps nginx queue-worker gotenberg
+docker compose up -d --no-deps nginx queue-worker scheduler gotenberg
 
 echo "==> Health-check: /up"
 for i in $(seq 1 30); do

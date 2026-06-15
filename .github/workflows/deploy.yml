@@ -62,3 +62,5 @@ jobs:
             docker compose logs --tail=40 app || true
             echo "--- queue-worker logs (last 20 lines) ---"
             docker compose logs --tail=20 queue-worker || true
+            echo "--- scheduler logs (last 20 lines) ---"
+            docker compose logs --tail=20 scheduler || true
