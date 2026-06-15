@@ -11,105 +11,99 @@
       {{ apiError }}
     </Message>
 
-    <Stepper :value="currentStep" linear class="wizard-stepper">
-      <StepList>
-        <Step :value="1">{{ t('automation.wizard.step1.label') }}</Step>
-        <Step :value="2">{{ t('automation.wizard.step2.label') }}</Step>
-        <Step :value="3">{{ t('automation.wizard.step3.label') }}</Step>
-      </StepList>
+    <!-- Step indicator (visual only — no StepPanels, no slot isolation) -->
+    <div class="wizard-steps-indicator mb-4">
+      <div
+        v-for="step in STEPS"
+        :key="step.value"
+        :class="['wizard-step-item', { 'is-active': currentStep === step.value, 'is-done': currentStep > step.value }]"
+      >
+        <div class="wizard-step-item__circle">
+          <i v-if="currentStep > step.value" class="pi pi-check" />
+          <span v-else>{{ step.value }}</span>
+        </div>
+        <span class="wizard-step-item__label">{{ step.label }}</span>
+        <div v-if="step.value < STEPS.length" class="wizard-step-item__connector" />
+      </div>
+    </div>
 
-      <StepPanels>
-        <!-- Step 1: Action Picker -->
-        <StepPanel :value="1">
-          <div class="wizard-panel">
-            <ActionPickerStep v-model="selectedAction" />
-          </div>
-          <div class="wizard-footer">
-            <Button
-              :label="t('automation.wizard.next')"
-              icon="pi pi-arrow-right"
-              icon-pos="right"
-              :disabled="!selectedAction"
-              @click="goToStep(2)"
-            />
-          </div>
-        </StepPanel>
+    <!-- Step 1: Action Picker -->
+    <div v-show="currentStep === 1" class="wizard-panel">
+      <ActionPickerStep v-model="selectedAction" />
+    </div>
 
-        <!-- Step 2: Action Config -->
-        <StepPanel :value="2">
-          <div class="wizard-panel">
-            <ActionConfigStep
-              v-if="selectedAction"
-              ref="configStepRef"
-              :action-kind="selectedAction"
-              :model-name="automationName"
-              :model-config="actionConfig"
-              :stages="stages"
-              :stage-id="stageId"
-              @update:model-name="automationName = $event"
-              @update:model-config="actionConfig = $event"
-            />
-          </div>
-          <div class="wizard-footer">
-            <Button
-              :label="t('automation.wizard.back')"
-              icon="pi pi-arrow-left"
-              severity="secondary"
-              text
-              @click="goToStep(1)"
-            />
-            <Button
-              :label="t('automation.wizard.next')"
-              icon="pi pi-arrow-right"
-              icon-pos="right"
-              @click="onStep2Next"
-            />
-          </div>
-        </StepPanel>
+    <!-- Step 2: Action Config -->
+    <div v-show="currentStep === 2" class="wizard-panel">
+      <ActionConfigStep
+        v-if="selectedAction"
+        ref="configStepRef"
+        :action-kind="selectedAction"
+        :model-name="automationName"
+        :model-config="actionConfig"
+        :stages="stages"
+        :stage-id="stageId"
+        @update:model-name="automationName = $event"
+        @update:model-config="actionConfig = $event"
+      />
+    </div>
 
-        <!-- Step 3: Trigger Config -->
-        <StepPanel :value="3">
-          <div class="wizard-panel">
-            <TriggerConfigStep
-              ref="triggerStepRef"
-              :model-trigger="triggerKind"
-              :model-config="triggerConfig"
-              :model-is-active="isActive"
-              @update:model-trigger="triggerKind = $event"
-              @update:model-config="triggerConfig = $event"
-              @update:model-is-active="isActive = $event"
-            />
-          </div>
-          <div class="wizard-footer">
-            <Button
-              :label="t('automation.wizard.back')"
-              icon="pi pi-arrow-left"
-              severity="secondary"
-              text
-              @click="goToStep(2)"
-            />
-            <Button
-              :label="isEdit ? t('automation.wizard.save') : t('automation.wizard.create')"
-              icon="pi pi-check"
-              :loading="saving"
-              @click="onSubmit"
-            />
-          </div>
-        </StepPanel>
-      </StepPanels>
-    </Stepper>
+    <!-- Step 3: Trigger Config -->
+    <div v-show="currentStep === 3" class="wizard-panel">
+      <TriggerConfigStep
+        ref="triggerStepRef"
+        :model-trigger="triggerKind"
+        :model-config="triggerConfig"
+        :model-is-active="isActive"
+        @update:model-trigger="triggerKind = $event"
+        @update:model-config="triggerConfig = $event"
+        @update:model-is-active="isActive = $event"
+      />
+    </div>
+
+    <!-- Navigation footer -->
+    <div class="wizard-footer">
+      <!-- Back button (steps 2 and 3) -->
+      <Button
+        v-if="currentStep > 1"
+        :label="t('automation.wizard.back')"
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        text
+        @click="goToStep(currentStep - 1)"
+      />
+      <span v-else />
+
+      <!-- Next / Save -->
+      <Button
+        v-if="currentStep === 1"
+        :label="t('automation.wizard.next')"
+        icon="pi pi-arrow-right"
+        icon-pos="right"
+        :disabled="!selectedAction"
+        @click="goToStep(2)"
+      />
+      <Button
+        v-else-if="currentStep === 2"
+        :label="t('automation.wizard.next')"
+        icon="pi pi-arrow-right"
+        icon-pos="right"
+        @click="onStep2Next"
+      />
+      <Button
+        v-else
+        :label="isEdit ? t('automation.wizard.save') : t('automation.wizard.create')"
+        icon="pi pi-check"
+        :loading="saving"
+        @click="onSubmit"
+      />
+    </div>
   </Dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
-import Stepper from 'primevue/stepper'
-import StepList from 'primevue/steplist'
-import Step from 'primevue/step'
-import StepPanels from 'primevue/steppanels'
-import StepPanel from 'primevue/steppanel'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import ActionPickerStep from './wizard/ActionPickerStep.vue'
@@ -133,6 +127,14 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+// ─── Step metadata ────────────────────────────────────────────────────────────
+
+const STEPS = computed(() => [
+  { value: 1, label: t('automation.wizard.step1.label') },
+  { value: 2, label: t('automation.wizard.step2.label') },
+  { value: 3, label: t('automation.wizard.step3.label') },
+])
+
 // ─── State ────────────────────────────────────────────────────────────────────
 
 const visible = ref(props.modelVisible)
@@ -150,6 +152,8 @@ const isActive = ref(true)
 const isEdit = ref(false)
 const editId = ref<number | null>(null)
 
+// These refs now reliably resolve because the child components are always
+// mounted (v-show, not v-if inside StepPanel slots).
 const configStepRef = ref<{ validate: () => boolean } | null>(null)
 const triggerStepRef = ref<{ validate: () => boolean } | null>(null)
 
@@ -269,26 +273,110 @@ function extractMessage(e: unknown): string {
 </script>
 
 <style lang="scss" scoped>
+// ─── Step indicator ───────────────────────────────────────────────────────────
+
+.wizard-steps-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.wizard-step-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-shrink: 0;
+
+  &__circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--p-surface-300);
+    background: var(--p-surface-0);
+    color: var(--p-text-muted-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    flex-shrink: 0;
+    transition: border-color var(--app-transition-fast), background-color var(--app-transition-fast), color var(--app-transition-fast);
+
+    .app-dark & {
+      border-color: var(--p-surface-600);
+      background: var(--p-surface-800);
+    }
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+    transition: color var(--app-transition-fast);
+  }
+
+  &__connector {
+    flex: 1;
+    min-width: 24px;
+    height: 2px;
+    background: var(--p-surface-200);
+    margin: 0 $space-2;
+    border-radius: 1px;
+
+    .app-dark & {
+      background: var(--p-surface-700);
+    }
+  }
+
+  // Active step
+  &.is-active {
+    .wizard-step-item__circle {
+      border-color: var(--p-primary-color);
+      background: var(--p-primary-color);
+      color: #fff;
+    }
+
+    .wizard-step-item__label {
+      color: var(--p-text-color);
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  // Completed step
+  &.is-done {
+    .wizard-step-item__circle {
+      border-color: var(--p-primary-color);
+      background: var(--p-primary-50);
+      color: var(--p-primary-color);
+
+      .app-dark & {
+        background: var(--p-primary-900);
+        color: var(--p-primary-300);
+      }
+    }
+
+    .wizard-step-item__label {
+      color: var(--p-text-muted-color);
+    }
+  }
+}
+
+// ─── Panel & footer ───────────────────────────────────────────────────────────
+
 .wizard-panel {
-  padding: $space-4 0;
   min-height: 280px;
+  padding: $space-2 0 $space-4;
 }
 
 .wizard-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: $space-2;
   padding-top: $space-3;
   border-top: 1px solid var(--p-surface-200);
 
   .app-dark & {
     border-color: var(--p-surface-700);
-  }
-}
-
-.wizard-stepper {
-  :deep(.p-stepper-nav) {
-    margin-bottom: $space-4;
   }
 }
 </style>

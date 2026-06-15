@@ -94,11 +94,11 @@ export const automationsApi = {
     id: number,
     options: { target_type?: string; target_id?: number; limit?: number } = {},
   ): Promise<DryRunResponse> {
-    const response = await apiClient.post<DryRunResponse>(
+    const response = await apiClient.post<{ data: DryRunResponse }>(
       `/api/automations/${id}/test`,
       options,
     )
-    return response.data
+    return response.data.data
   },
 
   /**

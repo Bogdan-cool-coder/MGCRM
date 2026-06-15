@@ -2183,7 +2183,14 @@
       "triggerRequired": "Выберите триггер",
       "idleDaysRequired": "Укажите количество дней (не менее 1)",
       "dateFieldRequired": "Выберите поле даты",
-      "dateDaysRequired": "Укажите количество дней (не менее 0)"
+      "dateDaysRequired": "Укажите количество дней (не менее 0)",
+      "taskTitleRequired": "Введите название задачи",
+      "messageRequired": "Введите текст сообщения",
+      "templateRequired": "Выберите шаблон договора",
+      "webhookUrlRequired": "Введите URL вебхука",
+      "stageRequired": "Выберите стадию назначения",
+      "fieldRequired": "Выберите поле",
+      "fieldValueRequired": "Введите значение поля"
     }
   }
 }

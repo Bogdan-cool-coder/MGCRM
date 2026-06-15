@@ -2183,7 +2183,14 @@
       "triggerRequired": "Select a trigger",
       "idleDaysRequired": "Enter number of days (min 1)",
       "dateFieldRequired": "Select a date field",
-      "dateDaysRequired": "Enter number of days (min 0)"
+      "dateDaysRequired": "Enter number of days (min 0)",
+      "taskTitleRequired": "Enter task title",
+      "messageRequired": "Enter message text",
+      "templateRequired": "Select a contract template",
+      "webhookUrlRequired": "Enter webhook URL",
+      "stageRequired": "Select a target stage",
+      "fieldRequired": "Select a field",
+      "fieldValueRequired": "Enter field value"
     }
   }
 }

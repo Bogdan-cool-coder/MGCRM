@@ -163,17 +163,34 @@ export interface AutomationRunDto {
 
 // ─── Dry-run (test) response ──────────────────────────────────────────────────
 
-export interface DryRunRecord {
-  id: number
-  type: string
-  title: string
+/** One matched deal from a dry-run (MatchedTarget::toArray()) */
+export interface DryRunMatchedTarget {
+  target_type: string
+  target_id: number
+  label: string
+  matches_at: string | null
 }
 
+/** One action preview entry from a dry-run (ActionPreview::toArray() + target_id) */
+export interface DryRunActionItem {
+  target_id: number
+  would_execute: boolean
+  summary: string
+  reason?: string | null
+  [key: string]: unknown
+}
+
+/** DryRunResult::toArray() wrapped in { data: … } by AutomationController::test() */
 export interface DryRunResponse {
-  automation_id: number
-  matched_count: number
-  matched_records: DryRunRecord[]
-  actions_plan: string
+  automation: {
+    id: number
+    name: string
+    trigger_kind: string
+    action_kind: string
+  }
+  match_count: number
+  matched_targets: DryRunMatchedTarget[]
+  actions_plan: DryRunActionItem[]
 }
 
 // ─── Payloads ─────────────────────────────────────────────────────────────────

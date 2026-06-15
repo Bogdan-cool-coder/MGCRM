@@ -73,19 +73,25 @@ const recipientOptions = computed(() => [
   { label: t('automation.fields.emailManual'), value: 'manual' },
 ])
 
-watch([recipientType, to, subject, body], () => {
+function buildEmailConfig(): Record<string, unknown> {
   const cfg: Record<string, unknown> = {
     recipient_type: recipientType.value,
     subject: subject.value,
     body: body.value,
   }
   if (recipientType.value === 'manual') cfg.to = to.value
-  emit('update:config', cfg)
+  return cfg
+}
+
+watch([recipientType, to, subject, body], () => {
+  emit('update:config', buildEmailConfig())
 })
 
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: skip re-hydration if incoming config equals our own last emit.
+    if (JSON.stringify(v) === JSON.stringify(buildEmailConfig())) return
     recipientType.value = (v.recipient_type as 'owner' | 'manual') ?? 'owner'
     to.value = (v.to as string) ?? ''
     subject.value = (v.subject as string) ?? ''
@@ -93,6 +99,13 @@ watch(
   },
   { deep: true },
 )
+
+// Email has no hard-required fields blocking submission per spec
+function validate(): boolean {
+  return true
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

@@ -66,23 +66,36 @@
       <!-- Result -->
       <template v-else-if="dryRunResult">
         <div class="dry-run-drawer__matched mb-2">
-          <strong>{{ t('automation.dryrun.matchedCount', { n: dryRunResult.matched_count }) }}</strong>
+          <strong>{{ t('automation.dryrun.matchedCount', { n: dryRunResult.match_count }) }}</strong>
         </div>
 
-        <div v-if="dryRunResult.matched_records.length === 0">
+        <div v-if="(dryRunResult.matched_targets ?? []).length === 0">
           <Message severity="info" :closable="false">
             {{ t('automation.dryrun.noMatches') }}
           </Message>
         </div>
         <ul v-else class="dry-run-drawer__list">
-          <li v-for="rec in dryRunResult.matched_records" :key="rec.id">
-            {{ rec.title || `#${rec.id}` }}
+          <li v-for="rec in (dryRunResult.matched_targets ?? [])" :key="rec.target_id">
+            {{ rec.label || `#${rec.target_id}` }}
           </li>
         </ul>
 
-        <div v-if="dryRunResult.actions_plan" class="mt-3">
+        <div v-if="(dryRunResult.actions_plan ?? []).length > 0" class="mt-3">
           <p class="dry-run-drawer__plan-label">{{ t('automation.dryrun.actionsLabel') }}</p>
-          <p class="dry-run-drawer__plan-text">{{ dryRunResult.actions_plan }}</p>
+          <ul class="dry-run-drawer__plan-list">
+            <li
+              v-for="item in (dryRunResult.actions_plan ?? [])"
+              :key="item.target_id"
+              class="dry-run-drawer__plan-item"
+              :class="{ 'dry-run-drawer__plan-item--skip': !item.would_execute }"
+            >
+              <i
+                class="pi"
+                :class="item.would_execute ? 'pi-check-circle' : 'pi-times-circle'"
+              />
+              <span>{{ item.summary }}</span>
+            </li>
+          </ul>
         </div>
       </template>
 
@@ -111,7 +124,7 @@
             @click="runDryRun"
           />
           <Button
-            v-if="dryRunResult && dryRunResult.matched_count > 0"
+            v-if="dryRunResult && dryRunResult.match_count > 0"
             :label="t('automation.dryrun.execute')"
             icon="pi pi-play"
             :loading="executing"
@@ -247,7 +260,7 @@ async function runDryRun(): Promise<void> {
 
 function onExecute(): void {
   if (!props.automation || !dryRunResult.value) return
-  const n = dryRunResult.value.matched_count
+  const n = dryRunResult.value.match_count
   confirm.require({
     header: t('automation.dryrun.confirmHeader'),
     message: t('automation.dryrun.confirmBody', { n }),
@@ -365,10 +378,46 @@ async function doExecute(): Promise<void> {
     margin-bottom: $space-1;
   }
 
-  &__plan-text {
+  &__plan-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-1;
+  }
+
+  &__plan-item {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-2;
     font-size: $font-size-sm;
     color: var(--p-text-color);
-    white-space: pre-wrap;
+    padding: $space-1 $space-2;
+    border-radius: $radius-sm;
+    background-color: var(--p-surface-50);
+    border: 1px solid var(--p-surface-200);
+
+    .app-dark & {
+      background-color: var(--p-surface-800);
+      border-color: var(--p-surface-700);
+    }
+
+    .pi-check-circle {
+      color: var(--p-green-500);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .pi-times-circle {
+      color: var(--p-text-muted-color);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    &--skip {
+      opacity: 0.7;
+    }
   }
 }
 </style>

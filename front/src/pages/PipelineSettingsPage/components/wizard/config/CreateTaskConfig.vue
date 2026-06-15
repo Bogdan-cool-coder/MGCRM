@@ -6,9 +6,9 @@
         v-model="title"
         fluid
         :placeholder="t('automation.fields.taskTitlePlaceholder')"
-        :invalid="!!errors['action_config.title']"
+        :invalid="!!localErrors.title"
       />
-      <small v-if="errors['action_config.title']" class="field-error">{{ errors['action_config.title'] }}</small>
+      <small v-if="localErrors.title" class="field-error">{{ localErrors.title }}</small>
     </div>
 
     <div class="mb-3">
@@ -35,6 +35,7 @@
         option-label="full_name"
         option-value="id"
         :placeholder="t('automation.fields.searchUser')"
+        :loading="usersLoading"
         filter
         fluid
       />
@@ -61,7 +62,7 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
-import { usersApi } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 
 const props = defineProps<{
   config: Record<string, unknown>
@@ -74,18 +75,11 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-interface UserOption {
-  id: number
-  full_name: string
-}
-const users = ref<UserOption[]>([])
+const { users, loading: usersLoading, load: loadUsers } = useUsersCache()
 
-onMounted(async () => {
-  try {
-    users.value = await usersApi.getUsers()
-  } catch {
-    // non-critical
-  }
+onMounted(() => {
+  // loadUsers is idempotent: singleton cache, safe to call from multiple components
+  loadUsers()
 })
 
 const title = ref<string>((props.config.title as string) ?? '')
@@ -93,6 +87,8 @@ const description = ref<string>((props.config.description as string) ?? '')
 const assigneeType = ref<'owner' | 'user'>((props.config.assignee_type as 'owner' | 'user') ?? 'owner')
 const userId = ref<number | null>((props.config.user_id as number | null) ?? null)
 const dueDays = ref<number | null>((props.config.due_days as number | null) ?? null)
+
+const localErrors = ref<Record<string, string>>({})
 
 const assigneeOptions = computed(() => [
   { label: t('automation.fields.recipientOwner'), value: 'owner' },
@@ -117,6 +113,10 @@ watch([title, description, assigneeType, userId, dueDays], () => {
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: only re-hydrate locals when the incoming config differs from
+    // what we already have. Prevents the echo-cycle where our own emit('update:config')
+    // is reflected back by the parent as a new prop object and restarts the emission.
+    if (JSON.stringify(v) === JSON.stringify(buildConfig())) return
     title.value = (v.title as string) ?? ''
     description.value = (v.description as string) ?? ''
     assigneeType.value = (v.assignee_type as 'owner' | 'user') ?? 'owner'
@@ -125,6 +125,17 @@ watch(
   },
   { deep: true },
 )
+
+function validate(): boolean {
+  localErrors.value = {}
+  if (!title.value.trim()) {
+    localErrors.value.title = t('automation.errors.taskTitleRequired')
+    return false
+  }
+  return true
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

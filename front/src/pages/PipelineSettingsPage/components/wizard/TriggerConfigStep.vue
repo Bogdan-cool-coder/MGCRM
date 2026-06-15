@@ -6,17 +6,17 @@
       <div class="trigger-list">
         <!-- on_enter_stage -->
         <div
-          :class="['trigger-option', { 'trigger-option--selected': modelTrigger === 'on_enter_stage' }]"
+          :class="['trigger-option', { 'trigger-option--selected': selectedTrigger === 'on_enter_stage' }]"
           role="button"
           tabindex="0"
           @click="selectTrigger('on_enter_stage')"
           @keydown.enter="selectTrigger('on_enter_stage')"
         >
           <RadioButton
-            v-model="modelTrigger"
+            v-model="selectedTrigger"
             value="on_enter_stage"
             name="trigger_kind"
-            @click.stop
+            @update:model-value="selectTrigger('on_enter_stage')"
           />
           <div class="trigger-option__body">
             <div class="trigger-option__title">
@@ -29,17 +29,17 @@
 
         <!-- idle_in_stage_days -->
         <div
-          :class="['trigger-option', { 'trigger-option--selected': modelTrigger === 'idle_in_stage_days' }]"
+          :class="['trigger-option', { 'trigger-option--selected': selectedTrigger === 'idle_in_stage_days' }]"
           role="button"
           tabindex="0"
           @click="selectTrigger('idle_in_stage_days')"
           @keydown.enter="selectTrigger('idle_in_stage_days')"
         >
           <RadioButton
-            v-model="modelTrigger"
+            v-model="selectedTrigger"
             value="idle_in_stage_days"
             name="trigger_kind"
-            @click.stop
+            @update:model-value="selectTrigger('idle_in_stage_days')"
           />
           <div class="trigger-option__body">
             <div class="trigger-option__title">
@@ -47,7 +47,7 @@
               <Tag :value="t('automation.trigger.cronBadge')" severity="warning" size="small" class="ms-2" />
             </div>
             <div class="trigger-option__desc">{{ t('automation.trigger.idle_desc') }}</div>
-            <div v-if="modelTrigger === 'idle_in_stage_days'" class="trigger-option__sub mt-2" @click.stop>
+            <div v-if="selectedTrigger === 'idle_in_stage_days'" class="trigger-option__sub mt-2" @click.stop>
               <label class="field-label-sm">{{ t('automation.trigger.idleDays') }} <span class="required">*</span></label>
               <InputNumber
                 v-model="idleDays"
@@ -62,17 +62,17 @@
 
         <!-- date_field_approaching -->
         <div
-          :class="['trigger-option', { 'trigger-option--selected': modelTrigger === 'date_field_approaching' }]"
+          :class="['trigger-option', { 'trigger-option--selected': selectedTrigger === 'date_field_approaching' }]"
           role="button"
           tabindex="0"
           @click="selectTrigger('date_field_approaching')"
           @keydown.enter="selectTrigger('date_field_approaching')"
         >
           <RadioButton
-            v-model="modelTrigger"
+            v-model="selectedTrigger"
             value="date_field_approaching"
             name="trigger_kind"
-            @click.stop
+            @update:model-value="selectTrigger('date_field_approaching')"
           />
           <div class="trigger-option__body">
             <div class="trigger-option__title">
@@ -80,7 +80,7 @@
               <Tag :value="t('automation.trigger.cronBadge')" severity="warning" size="small" class="ms-2" />
             </div>
             <div class="trigger-option__desc">{{ t('automation.trigger.date_desc') }}</div>
-            <div v-if="modelTrigger === 'date_field_approaching'" class="trigger-option__sub mt-2" @click.stop>
+            <div v-if="selectedTrigger === 'date_field_approaching'" class="trigger-option__sub mt-2" @click.stop>
               <div class="mb-2">
                 <label class="field-label-sm">{{ t('automation.trigger.dateField') }} <span class="required">*</span></label>
                 <Select
@@ -109,17 +109,17 @@
 
         <!-- on_create -->
         <div
-          :class="['trigger-option', { 'trigger-option--selected': modelTrigger === 'on_create' }]"
+          :class="['trigger-option', { 'trigger-option--selected': selectedTrigger === 'on_create' }]"
           role="button"
           tabindex="0"
           @click="selectTrigger('on_create')"
           @keydown.enter="selectTrigger('on_create')"
         >
           <RadioButton
-            v-model="modelTrigger"
+            v-model="selectedTrigger"
             value="on_create"
             name="trigger_kind"
-            @click.stop
+            @update:model-value="selectTrigger('on_create')"
           />
           <div class="trigger-option__body">
             <div class="trigger-option__title">
@@ -175,17 +175,33 @@ const DATE_FIELDS = computed(() => [
 
 const errors = ref<Record<string, string>>({})
 
-// Local refs mirroring props
-const modelTrigger = ref<TriggerKind | null>(props.modelTrigger)
+// Local refs mirroring props.
+// NOTE: named selectedTrigger (not modelTrigger) to avoid shadowing the prop of the
+// same name, which confused Vue's reactivity and caused BUG-SELF-SHADOW.
+const selectedTrigger = ref<TriggerKind | null>(props.modelTrigger)
 const idleDays = ref<number | null>(null)
 const dateField = ref<string>('')
 const dateDays = ref<number | null>(null)
 const localIsActive = ref(props.modelIsActive)
 
-// Init from existing config
+function buildTriggerConfig(): Record<string, unknown> {
+  if (selectedTrigger.value === 'idle_in_stage_days') {
+    return { days: idleDays.value }
+  }
+  if (selectedTrigger.value === 'date_field_approaching') {
+    return { field: dateField.value, days: dateDays.value }
+  }
+  return {}
+}
+
+// Init from existing config (immediate) and keep in sync when parent resets wizard.
+// Identity guard prevents echo-cycle: after emitConfig() the parent may reflect the
+// same object back as a new prop reference, which would re-trigger the watcher and
+// call emitConfig() again → infinite loop. Skipping when values match breaks the cycle.
 watch(
   () => props.modelConfig,
   (v) => {
+    if (JSON.stringify(v) === JSON.stringify(buildTriggerConfig())) return
     idleDays.value = (v.days as number | null) ?? null
     dateField.value = (v.field as string) ?? ''
     dateDays.value = (v.days as number | null) ?? null
@@ -196,7 +212,7 @@ watch(
 watch(
   () => props.modelTrigger,
   (v) => {
-    modelTrigger.value = v
+    if (v !== selectedTrigger.value) selectedTrigger.value = v
   },
 )
 
@@ -204,12 +220,16 @@ watch(localIsActive, (v) => emit('update:modelIsActive', v))
 watch(
   () => props.modelIsActive,
   (v) => {
-    localIsActive.value = v
+    if (v !== localIsActive.value) localIsActive.value = v
   },
 )
 
 function selectTrigger(kind: TriggerKind) {
-  modelTrigger.value = kind
+  // Idempotent guard: if this trigger is already selected, do not re-emit.
+  // Prevents double-emit when both @click on the wrapper div AND
+  // @update:model-value on RadioButton fire for the same selection.
+  if (selectedTrigger.value === kind) return
+  selectedTrigger.value = kind
   emit('update:modelTrigger', kind)
   // Reset sub-config when trigger changes
   idleDays.value = null
@@ -220,13 +240,7 @@ function selectTrigger(kind: TriggerKind) {
 }
 
 function emitConfig() {
-  if (modelTrigger.value === 'idle_in_stage_days') {
-    emit('update:modelConfig', { days: idleDays.value })
-  } else if (modelTrigger.value === 'date_field_approaching') {
-    emit('update:modelConfig', { field: dateField.value, days: dateDays.value })
-  } else {
-    emit('update:modelConfig', {})
-  }
+  emit('update:modelConfig', buildTriggerConfig())
 }
 
 watch([idleDays, dateField, dateDays], () => {
@@ -236,17 +250,17 @@ watch([idleDays, dateField, dateDays], () => {
 // Validate
 function validate(): boolean {
   errors.value = {}
-  if (!modelTrigger.value) {
+  if (!selectedTrigger.value) {
     errors.value.trigger_kind = t('automation.errors.triggerRequired')
     return false
   }
-  if (modelTrigger.value === 'idle_in_stage_days') {
+  if (selectedTrigger.value === 'idle_in_stage_days') {
     if (!idleDays.value || idleDays.value < 1) {
       errors.value.idleDays = t('automation.errors.idleDaysRequired')
       return false
     }
   }
-  if (modelTrigger.value === 'date_field_approaching') {
+  if (selectedTrigger.value === 'date_field_approaching') {
     if (!dateField.value) {
       errors.value.dateField = t('automation.errors.dateFieldRequired')
       return false

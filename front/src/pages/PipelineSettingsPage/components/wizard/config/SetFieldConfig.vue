@@ -8,9 +8,10 @@
         option-label="label"
         option-value="value"
         fluid
-        :invalid="!!errors['action_config.field']"
+        :invalid="!!errors['action_config.field'] || !!localErrors.field"
       />
       <small v-if="errors['action_config.field']" class="field-error">{{ errors['action_config.field'] }}</small>
+      <small v-else-if="localErrors.field" class="field-error">{{ localErrors.field }}</small>
     </div>
 
     <div class="mb-3">
@@ -20,15 +21,16 @@
         v-model="value"
         rows="4"
         fluid
-        :invalid="!!errors['action_config.value']"
+        :invalid="!!errors['action_config.value'] || !!localErrors.value"
       />
       <InputText
         v-else
         v-model="value"
         fluid
-        :invalid="!!errors['action_config.value']"
+        :invalid="!!errors['action_config.value'] || !!localErrors.value"
       />
       <small v-if="errors['action_config.value']" class="field-error">{{ errors['action_config.value'] }}</small>
+      <small v-else-if="localErrors.value" class="field-error">{{ localErrors.value }}</small>
     </div>
 
     <Message severity="info" :closable="false" class="mt-2">
@@ -68,6 +70,7 @@ const fieldOptions = computed(() =>
 
 const field = ref<string>((props.config.field as string) ?? '')
 const value = ref<string>((props.config.value as string) ?? '')
+const localErrors = ref<Record<string, string>>({})
 
 watch([field, value], () => {
   emit('update:config', { field: field.value, value: value.value })
@@ -76,11 +79,29 @@ watch([field, value], () => {
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: skip re-hydration if incoming config equals our own last emit.
+    if (JSON.stringify(v) === JSON.stringify({ field: field.value, value: value.value })) return
     field.value = (v.field as string) ?? ''
     value.value = (v.value as string) ?? ''
   },
   { deep: true },
 )
+
+function validate(): boolean {
+  localErrors.value = {}
+  let ok = true
+  if (!field.value) {
+    localErrors.value.field = t('automation.errors.fieldRequired')
+    ok = false
+  }
+  if (!value.value.trim()) {
+    localErrors.value.value = t('automation.errors.fieldValueRequired')
+    ok = false
+  }
+  return ok
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

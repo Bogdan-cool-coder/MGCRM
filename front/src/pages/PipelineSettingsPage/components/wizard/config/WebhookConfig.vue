@@ -12,9 +12,10 @@
         type="url"
         fluid
         placeholder="https://..."
-        :invalid="!!errors['action_config.url']"
+        :invalid="!!errors['action_config.url'] || !!localErrors.url"
       />
       <small v-if="errors['action_config.url']" class="field-error">{{ errors['action_config.url'] }}</small>
+      <small v-else-if="localErrors.url" class="field-error">{{ localErrors.url }}</small>
       <small class="field-hint">{{ t('automation.fields.webhookUrlNote') }}</small>
     </div>
 
@@ -60,6 +61,7 @@ const { t } = useI18n()
 const url = ref<string>((props.config.url as string) ?? '')
 const secret = ref<string>((props.config.secret as string) ?? '')
 const showSecret = ref(false)
+const localErrors = ref<Record<string, string>>({})
 
 watch([url, secret], () => {
   emit('update:config', { url: url.value, secret: secret.value || null })
@@ -68,11 +70,24 @@ watch([url, secret], () => {
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: skip re-hydration if incoming config equals our own last emit.
+    if (JSON.stringify(v) === JSON.stringify({ url: url.value, secret: secret.value || null })) return
     url.value = (v.url as string) ?? ''
     secret.value = (v.secret as string) ?? ''
   },
   { deep: true },
 )
+
+function validate(): boolean {
+  localErrors.value = {}
+  if (!url.value.trim()) {
+    localErrors.value.url = t('automation.errors.webhookUrlRequired')
+    return false
+  }
+  return true
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

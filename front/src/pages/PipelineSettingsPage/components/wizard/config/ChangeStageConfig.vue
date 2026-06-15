@@ -8,7 +8,7 @@
         option-label="name"
         option-value="id"
         fluid
-        :invalid="!!errors['action_config.to_stage_id']"
+        :invalid="!!errors['action_config.to_stage_id'] || !!localErrors.to_stage_id"
         :empty-message="t('automation.fields.noStages')"
       >
         <template #option="{ option }">
@@ -32,6 +32,7 @@
       <small v-if="errors['action_config.to_stage_id']" class="field-error">
         {{ errors['action_config.to_stage_id'] }}
       </small>
+      <small v-else-if="localErrors.to_stage_id" class="field-error">{{ localErrors.to_stage_id }}</small>
       <small class="field-hint">{{ t('automation.fields.changeStageNote') }}</small>
     </div>
   </div>
@@ -63,6 +64,7 @@ const stageOptions = computed(() =>
 )
 
 const toStageId = ref<number | null>((props.config.to_stage_id as number | null) ?? null)
+const localErrors = ref<Record<string, string>>({})
 
 watch(toStageId, (v) => {
   emit('update:config', { to_stage_id: v })
@@ -71,10 +73,23 @@ watch(toStageId, (v) => {
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: skip re-hydration if incoming config equals our own last emit.
+    if (JSON.stringify(v) === JSON.stringify({ to_stage_id: toStageId.value })) return
     toStageId.value = (v.to_stage_id as number | null) ?? null
   },
   { deep: true },
 )
+
+function validate(): boolean {
+  localErrors.value = {}
+  if (toStageId.value === null) {
+    localErrors.value.to_stage_id = t('automation.errors.stageRequired')
+    return false
+  }
+  return true
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

@@ -19,6 +19,7 @@
         option-label="full_name"
         option-value="id"
         :placeholder="t('automation.fields.searchUser')"
+        :loading="usersLoading"
         filter
         display="chip"
         fluid
@@ -33,7 +34,7 @@ import { ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Select from 'primevue/select'
 import MultiSelect from 'primevue/multiselect'
-import { usersApi } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 
 const props = defineProps<{
   config: Record<string, unknown>
@@ -46,18 +47,10 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-interface UserOption {
-  id: number
-  full_name: string
-}
-const users = ref<UserOption[]>([])
+const { users, loading: usersLoading, load: loadUsers } = useUsersCache()
 
-onMounted(async () => {
-  try {
-    users.value = await usersApi.getUsers()
-  } catch {
-    // non-critical
-  }
+onMounted(() => {
+  loadUsers()
 })
 
 const rule = ref<string>((props.config.rule as string) ?? 'round_robin')
@@ -77,11 +70,20 @@ watch([rule, pool], () => {
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: skip re-hydration if incoming config equals our own last emit.
+    if (JSON.stringify(v) === JSON.stringify({ rule: rule.value, pool: pool.value })) return
     rule.value = (v.rule as string) ?? 'round_robin'
     pool.value = (v.pool as number[]) ?? []
   },
   { deep: true },
 )
+
+// ChangeOwner has no hard-required fields — validate always passes
+function validate(): boolean {
+  return true
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

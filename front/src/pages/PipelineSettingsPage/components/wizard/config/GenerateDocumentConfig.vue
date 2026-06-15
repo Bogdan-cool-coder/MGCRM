@@ -10,11 +10,11 @@
         :placeholder="t('automation.fields.searchTemplate')"
         filter
         fluid
-        :loading="loadingTemplates"
-        :invalid="!!errors['action_config.template_code']"
+        :loading="templatesLoading"
+        :invalid="!!localErrors.template_code"
       />
-      <small v-if="errors['action_config.template_code']" class="field-error">
-        {{ errors['action_config.template_code'] }}
+      <small v-if="localErrors.template_code" class="field-error">
+        {{ localErrors.template_code }}
       </small>
     </div>
 
@@ -40,7 +40,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Select from 'primevue/select'
 import Message from 'primevue/message'
-import { templatesApi } from '@/api/templates'
+import { useTemplatesCache } from '@/composables/crm/useTemplatesCache'
 
 const props = defineProps<{
   config: Record<string, unknown>
@@ -53,28 +53,16 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-interface TemplateOption {
-  code: string
-  title: string
-}
+const { templates, loading: templatesLoading, load: loadTemplates } = useTemplatesCache()
 
-const templates = ref<TemplateOption[]>([])
-const loadingTemplates = ref(false)
-
-onMounted(async () => {
-  loadingTemplates.value = true
-  try {
-    const list = await templatesApi.getTemplates({ kind: 'contract' })
-    templates.value = list.map((t) => ({ code: t.code, title: t.title }))
-  } catch {
-    // non-critical
-  } finally {
-    loadingTemplates.value = false
-  }
+onMounted(() => {
+  loadTemplates()
 })
 
 const templateCode = ref<string>((props.config.template_code as string) ?? '')
 const attachTo = ref<'deal' | 'company'>((props.config.attach_to as 'deal' | 'company') ?? 'deal')
+
+const localErrors = ref<Record<string, string>>({})
 
 const attachOptions = computed(() => [
   { label: t('automation.fields.attachToDeal'), value: 'deal' },
@@ -88,11 +76,24 @@ watch([templateCode, attachTo], () => {
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: skip re-hydration if incoming config equals our own last emit.
+    if (JSON.stringify(v) === JSON.stringify({ template_code: templateCode.value, attach_to: attachTo.value })) return
     templateCode.value = (v.template_code as string) ?? ''
     attachTo.value = (v.attach_to as 'deal' | 'company') ?? 'deal'
   },
   { deep: true },
 )
+
+function validate(): boolean {
+  localErrors.value = {}
+  if (!templateCode.value) {
+    localErrors.value.template_code = t('automation.errors.templateRequired')
+    return false
+  }
+  return true
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

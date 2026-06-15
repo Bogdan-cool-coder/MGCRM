@@ -22,6 +22,7 @@
         option-label="full_name"
         option-value="id"
         :placeholder="t('automation.fields.searchUser')"
+        :loading="usersLoading"
         filter
         fluid
       />
@@ -42,9 +43,9 @@
         rows="4"
         fluid
         :placeholder="t('automation.fields.messagePlaceholder')"
-        :invalid="!!errors.message"
+        :invalid="!!localErrors.message"
       />
-      <small v-if="errors.message" class="field-error">{{ errors.message }}</small>
+      <small v-if="localErrors.message" class="field-error">{{ localErrors.message }}</small>
     </div>
 
     <!-- Placeholder chips -->
@@ -70,7 +71,7 @@ import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Chip from 'primevue/chip'
-import { usersApi } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 
 const props = defineProps<{
   config: Record<string, unknown>
@@ -83,20 +84,11 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-interface UserOption {
-  id: number
-  full_name: string
-}
-
-const users = ref<UserOption[]>([])
+const { users, loading: usersLoading, load: loadUsers } = useUsersCache()
 const textareaRef = ref<{ $el?: HTMLElement } | null>(null)
 
-onMounted(async () => {
-  try {
-    users.value = await usersApi.getUsers()
-  } catch {
-    // non-critical
-  }
+onMounted(() => {
+  loadUsers()
 })
 
 const PLACEHOLDERS = ['{target_id}', '{target_type}', '{target_title}', '{owner_name}']
@@ -107,6 +99,8 @@ const recipientType = ref<'owner' | 'user' | 'chat_id'>(
 const userId = ref<number | null>((props.config.user_id as number | null) ?? null)
 const chatId = ref<string>((props.config.chat_id as string) ?? '')
 const message = ref<string>((props.config.message as string) ?? '')
+
+const localErrors = ref<Record<string, string>>({})
 
 const recipientOptions = computed(() => [
   { label: t('automation.fields.recipientOwner'), value: 'owner' },
@@ -140,6 +134,8 @@ watch([recipientType, userId, chatId, message], () => {
 watch(
   () => props.config,
   (v) => {
+    // Identity guard: skip re-hydration if incoming config equals our own last emit.
+    if (JSON.stringify(v) === JSON.stringify(buildConfig())) return
     recipientType.value = (v.recipient_type as 'owner' | 'user' | 'chat_id') ?? 'owner'
     userId.value = (v.user_id as number | null) ?? null
     chatId.value = (v.chat_id as string) ?? ''
@@ -147,6 +143,17 @@ watch(
   },
   { deep: true },
 )
+
+function validate(): boolean {
+  localErrors.value = {}
+  if (!message.value.trim()) {
+    localErrors.value.message = t('automation.errors.messageRequired')
+    return false
+  }
+  return true
+}
+
+defineExpose({ validate })
 </script>
 
 <style lang="scss" scoped>

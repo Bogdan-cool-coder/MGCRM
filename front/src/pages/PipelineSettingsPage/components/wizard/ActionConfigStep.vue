@@ -17,6 +17,7 @@
     <component
       :is="configComponent"
       v-if="configComponent"
+      ref="configRef"
       v-model:config="localConfig"
       :errors="errors"
       :stages="stages"
@@ -53,6 +54,11 @@ const localName = ref(props.modelName)
 const localConfig = ref<Record<string, unknown>>({ ...props.modelConfig })
 const errors = ref<Record<string, string>>({})
 
+// Ref to the currently mounted config sub-component (exposes validate()).
+// Typed as unknown because :is resolves to a dynamic AsyncComponent; narrowed below.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const configRef = ref<any>(null)
+
 watch(localName, (v) => emit('update:modelName', v))
 watch(localConfig, (v) => emit('update:modelConfig', { ...v }), { deep: true })
 
@@ -65,7 +71,13 @@ watch(
 watch(
   () => props.modelConfig,
   (v) => {
-    localConfig.value = { ...v }
+    // Identity guard: skip assignment if incoming value is structurally equal to
+    // what localConfig already holds. Without this, the parent echoing our own
+    // emit back as a new prop object would retrigger the deep-watcher above,
+    // causing an infinite update cycle ("Maximum recursive updates exceeded").
+    if (JSON.stringify(v) !== JSON.stringify(localConfig.value)) {
+      localConfig.value = { ...v }
+    }
   },
   { deep: true },
 )
@@ -99,7 +111,12 @@ const configComponent = computed(() => CONFIG_COMPONENTS[props.actionKind] ?? nu
 
 function validate(): boolean {
   validateName()
-  return Object.keys(errors.value).length === 0
+  const nameOk = Object.keys(errors.value).length === 0
+  // Delegate to the sub-component's own validate() if it exposes one
+  // configRef is typed as any because Vue cannot infer the exposed interface of an AsyncComponent
+  const subValidate: unknown = configRef.value?.validate
+  const configOk = typeof subValidate === 'function' ? (subValidate as () => boolean)() : true
+  return nameOk && configOk
 }
 
 defineExpose({ validate })

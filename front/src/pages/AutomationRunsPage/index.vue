@@ -288,10 +288,12 @@ function truncate(s: string, len: number): string {
   &__table {
     :deep(th) {
       background-color: var(--p-surface-50);
+    }
+  }
 
-      .app-dark & {
-        background-color: var(--p-surface-900);
-      }
+  :global(.app-dark) &__table {
+    :deep(th) {
+      background-color: var(--p-surface-900);
     }
   }
 
