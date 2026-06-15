@@ -283,6 +283,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] Deal: CRUD, продукты line-items (DealProduct), контакты, история стадий. *(S1.3 backend, 2026-06-12)*
 - [x] **Kanban-доска** (vuedraggable@^4 drag-n-drop) + list-view (DataTable, фильтры). *(S1.3 frontend, 2026-06-12)*
 - [x] Карточка сделки (inline-edit, line-items, contacts, history). *(S1.3 frontend, 2026-06-12)*
+- [x] **DealPage 2.0 amo-style redesign** (двухпанельный layout, DealFeed+Composer, вкладки Основное/Документы/Финансы/Статистика, контакт-каналы, audit-лента, кастом-поля, архив/soft-delete). Backend P0–P2 (`523cf57`, `967f16e`, +37 тестов, сьют 1343 PASS) + UI Фазы A–G + фикс-итерация (i18n namespace, endpoint каналов, слой данных). PM APPROVE. Ожидает браузерного QA. *(DealPage 2.0, 2026-06-15)*
 - [x] Каталог продуктов/планов/цены (Catalog). *(S1.2, 2026-06-12)*
 - [x] Тесты: переходы стадий, расчёт суммы сделки, drag-drop API (253/569 PHPUnit). *(S1.3, 2026-06-12)*
 - [x] **Дашборд продаж** (SalesDashboardService, 5 виджетов ECharts, Excel-экспорт, мультивалютный warning, visibility-scope, DashboardController+Resource). 433/433 PHPUnit, QA PASS. *(S1.7, 2026-06-12)*
