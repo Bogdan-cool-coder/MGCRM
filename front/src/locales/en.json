@@ -875,6 +875,94 @@
         "create": "New deal",
         "viewBoard": "Kanban",
         "viewList": "List",
+        "viewTasks": "Tasks",
+        "summary": "{count} deals · ≈ {total}",
+        "toolbar": {
+          "searchAndFilter": "Search & Filter",
+          "moreMenu": "More"
+        },
+        "menu": {
+          "import": "Import",
+          "export": "Export",
+          "duplicates": "Find duplicates",
+          "bulkActions": "Bulk actions",
+          "sort": "Sort",
+          "sortCreatedAt": "By date created",
+          "sortTitle": "By name",
+          "sortAmount": "By amount",
+          "sortActivity": "By activity"
+        },
+        "filters": {
+          "search": "Search deals",
+          "owner": "Owner",
+          "company": "Company",
+          "stage": "Stage",
+          "product": "Product",
+          "region": "Region / country",
+          "city": "City",
+          "budgetFrom": "Budget from",
+          "budgetTo": "to",
+          "tags": "Tags",
+          "tagsSearch": "Search tags",
+          "period": "Period",
+          "reset": "Reset",
+          "apply": "Apply",
+          "presets": "Saved presets",
+          "properties": "Deal properties",
+          "presetOpen": "Open deals",
+          "presetMine": "Mine only",
+          "presetWon": "Won",
+          "presetLost": "Lost",
+          "presetNoTask": "No task",
+          "presetOverdue": "Overdue task"
+        },
+        "bulk": {
+          "selected": "Selected: {n}",
+          "cancel": "Cancel",
+          "assignOwner": "Assign",
+          "addTask": "+ Task",
+          "moveStage": "Stage",
+          "editField": "Field",
+          "editTags": "Tags",
+          "delete": "Delete",
+          "deleteConfirm": "Delete {n} deals?",
+          "deleteDetail": "This action cannot be undone.",
+          "deleteSuccess": "{n} deals deleted"
+        },
+        "kanban": {
+          "deals": "{count} deals",
+          "sum": "{amount}",
+          "loadMore": "More {n}",
+          "hiddenStages": "Hidden",
+          "daysInStage": "{n}d",
+          "addDeal": "Add deal",
+          "colTotal": "≈ {sum}"
+        },
+        "card": {
+          "noTask": "No task",
+          "scheduleTask": "+ Schedule",
+          "overdue": "Overdue: {type} · {when}",
+          "taskOk": "{type} · {when}",
+          "daysInWork": "{n}d",
+          "today": "today {time}",
+          "tomorrow": "tomorrow {time}",
+          "overdueWhen": "{n} day ago | {n} days ago | {n} days ago"
+        },
+        "taskTypes": {
+          "call": "Call",
+          "meeting": "Meeting",
+          "task": "Task",
+          "note": "Note",
+          "follow_up": "Follow-up",
+          "qualification": "Qualification",
+          "warm": "Warm",
+          "hot": "HOT"
+        },
+        "currency": {
+          "approx": "≈ {sum}",
+          "tooltipTitle": "Total: ≈ {sum}",
+          "noRate": "Rate unavailable"
+        },
         "columns": {
           "id": "#",
           "title": "Title",
@@ -883,27 +971,15 @@
           "amount": "Amount",
           "owner": "Owner",
           "createdAt": "Created",
+          "task": "Task",
+          "daysInStage": "In stage",
           "actions": "Actions"
-        },
-        "filters": {
-          "search": "Search by title",
-          "owner": "Owner",
-          "company": "Company",
-          "stage": "Stage",
-          "reset": "Reset"
-        },
-        "kanban": {
-          "deals": "{count} deals",
-          "sum": "{amount}",
-          "loadMore": "More {n}",
-          "hiddenStages": "Hidden",
-          "daysInStage": "{n} days"
         },
         "empty": {
           "title": "No deals yet",
           "subtitle": "Create your first deal linked to a company",
-          "filtered": "Nothing found",
-          "filteredSubtitle": "Try adjusting filters",
+          "filtered": "No results for your filters",
+          "filteredSubtitle": "Try adjusting or resetting filters",
           "resetFilters": "Clear filters"
         },
         "actions": {
@@ -1302,6 +1378,9 @@
         "inn": "Tax ID",
         "phone": "Phone",
         "email": "Email"
+      },
+      "colorPicker": {
+        "none": "No color"
       },
       "systemStageBadge": "system",
       "substageBadge": "sub-status",
@@ -2291,5 +2370,48 @@
     "goToCourses": "Go to My Courses",
     "openSearch": "Open search",
     "showHelp": "Show shortcuts"
+  },
+  "tasks": {
+    "board": {
+      "title": "My tasks",
+      "searchPlaceholder": "Search tasks",
+      "addTask": "Task",
+      "scope": {
+        "label": "Scope",
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "columns": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "this_week": "This week",
+        "next_week": "Next week",
+        "noDate": "No date",
+        "noTasks": "No tasks"
+      },
+      "card": {
+        "complete": "Done",
+        "completed": "Task completed",
+        "overdueSince": "overdue {when}",
+        "today": "today {time}",
+        "tomorrow": "tomorrow {time}"
+      },
+      "empty": {
+        "title": "All done",
+        "subtitle": "Great work! New tasks will appear here."
+      },
+      "taskTypes": {
+        "call": "Call",
+        "meeting": "Meeting",
+        "task": "Task",
+        "note": "Note",
+        "follow_up": "Follow-up",
+        "qualification": "Qualification",
+        "warm": "Warm",
+        "hot": "HOT"
+      }
+    }
   }
 }

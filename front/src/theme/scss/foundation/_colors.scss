@@ -73,3 +73,55 @@ $sidebar-active-bar:   #ffffff;                      // 3px left indicator bar
 $sidebar-text:         rgba(255, 255, 255, 0.75);    // default nav text
 $sidebar-text-active:  #ffffff;                      // active nav text
 $sidebar-divider:      rgba(255, 255, 255, 0.08);    // hairline before admin block
+
+// ─── Kanban health-signal colors ─────────────────────────────────────────────
+
+$color-warning:        #FFB38A;
+$color-warning-bg:     #fff0e8;
+$color-warning-border: #ffc8ad;
+$color-warning-text:   #9b4029;
+
+$color-danger:         #FF5A44;
+$color-danger-bg:      #ffe8e6;
+$color-danger-border:  #ffd1cd;
+$color-danger-text:    #9b1917;
+
+// ─── Pipeline stage color palette ────────────────────────────────────────────
+
+// Bright variants (white text, except amber)
+$stage-color-teal:        #1D9E75;
+$stage-color-blue:        #378ADD;
+$stage-color-amber:       #EF9F27;
+$stage-color-pink:        #D4537E;
+$stage-color-purple:      #7F77DD;
+$stage-color-amber-text:  #6B4A00;   // dark text on bright amber
+
+// Soft variants (dark family text)
+$stage-color-soft-teal:   #E1F5EE;
+$stage-color-soft-blue:   #E6F1FB;
+$stage-color-soft-amber:  #FAEEDA;
+$stage-color-soft-pink:   #FBEAF0;
+$stage-color-soft-green:  #EAF3DE;
+
+$stage-text-soft-teal:    #0D5C44;
+$stage-text-soft-blue:    #1A4F8A;
+$stage-text-soft-amber:   #6B4A00;
+$stage-text-soft-pink:    #7A2347;
+$stage-text-soft-green:   #3A6020;
+
+// ─── Task-type tag colors (view 3) ───────────────────────────────────────────
+
+$task-tag-meeting-bg:          #E1F5EE;
+$task-tag-meeting-text:        #0D5C44;
+$task-tag-qualification-bg:    #FAEEDA;
+$task-tag-qualification-text:  #6B4A00;
+$task-tag-warm-bg:             #FBEAF0;
+$task-tag-warm-text:           #7A2347;
+$task-tag-hot-bg:              #ffe8e6;
+$task-tag-hot-text:            #9b1917;
+$task-tag-follow-up-bg:        #E6F1FB;
+$task-tag-follow-up-text:      #1A4F8A;
+$task-tag-call-bg:             #EAF3DE;
+$task-tag-call-text:           #3A6020;
+$task-tag-note-bg:             #f0f0f0;
+$task-tag-note-text:           #555555;

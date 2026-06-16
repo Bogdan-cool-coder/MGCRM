@@ -64,6 +64,8 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
       sla_hours: null,
       task_types: [],
       required_fields: {},
+      warn_days: null,
+      danger_days: null,
     }
 
     const deals: DealCardDto[] = col.deals.map((d) => ({
@@ -72,7 +74,10 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
       amount: d.amount,
       currency: d.currency,
       stage_id: d.stage_id,
-      stage_changed_at: null,
+      stage_changed_at: d.stage_changed_at ?? null,
+      days_in_stage: d.days_in_stage ?? null,
+      next_task: d.next_task ?? null,
+      primary_product: d.primary_product ?? null,
       company: { id: d.company_id, name: d.company_name ?? '' },
       owner: d.owner
         ? { id: d.owner.id, name: d.owner.full_name, avatar_path: null }
@@ -83,7 +88,10 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
       stage,
       total: col.total,
       sum_amount: col.sum_amount,
-      currency: 'KZT', // backend does not return per-column currency; use default
+      base_currency: col.base_currency ?? 'RUB',
+      currency: col.base_currency ?? 'RUB',
+      amounts_by_currency: col.amounts_by_currency ?? {},
+      multi_currency_warning: col.multi_currency_warning ?? false,
       deals,
       has_more: col.total > col.deals.length,
     }

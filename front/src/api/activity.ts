@@ -11,6 +11,7 @@ import type {
   UpdateActivityPayload,
   ActivityListParams,
   SaveMeetingReportPayload,
+  MyBoardResponse,
 } from '@/entities/activity'
 
 export type ActivityPreset = 'my_tasks' | 'my_orders' | 'today' | 'overdue' | 'this_week' | 'pinned'
@@ -107,5 +108,12 @@ export const activityApi = {
 
   async saveMeetingReport(dealId: number, data: SaveMeetingReportPayload): Promise<void> {
     await apiClient.post(`/api/deals/${dealId}/meeting-report`, data)
+  },
+
+  // ── My Board (view 3 — personal task kanban) ───────────────────────────────
+
+  async getMyBoard(): Promise<MyBoardResponse> {
+    const res = await apiClient.get<MyBoardResponse>('/api/activities/my-board')
+    return res.data
   },
 }

@@ -2,39 +2,52 @@
   <div class="deals-page">
     <PageHeader
       :title="t('sales.deals.page.title')"
-      :subtitle="t('sales.deals.page.subtitle')"
+      :subtitle="pageSubtitle"
       icon="pi pi-briefcase"
-    >
-      <template #actions>
-        <SelectButton
-          v-model="salesStore.activeView"
-          :options="viewOptions"
-          option-label="label"
-          option-value="value"
-          class="deals-page__view-toggle"
-        />
-        <Button
-          icon="pi pi-plus"
-          :label="t('sales.deals.page.create')"
-          @click="createDrawerOpen = true"
-        />
-      </template>
-    </PageHeader>
+    />
 
-    <!-- Filters -->
-    <DealsFilterPanel
-      :filters="filters"
+    <!-- Bulk toolbar (replaces normal toolbar when bulk mode is active) -->
+    <DealsBulkToolbar
+      v-if="salesStore.bulkMode"
+      :selected-count="salesStore.bulkSelection.length"
+      @cancel="salesStore.exitBulkMode()"
+      @assign-owner="onBulkAssignOwner"
+      @add-task="onBulkAddTask"
+      @move-stage="onBulkMoveStage"
+      @edit-field="onBulkEditField"
+      @edit-tags="onBulkEditTags"
+      @delete="onBulkDelete"
+    />
+
+    <!-- Main toolbar (amo-style one-liner) -->
+    <DealsToolbar
+      v-else
+      :active-view="salesStore.activeView"
+      :total-deals="totalDealsCount"
+      :total-sum="totalSumFormatted"
+      :active-sort="salesStore.boardSort"
+      @open-filter="filterOverlayVisible = true"
+      @set-view="onSetView"
+      @create="createDrawerOpen = true"
+      @export="onExport"
+      @enter-bulk="salesStore.enterBulkMode()"
+      @set-sort="onSetSort"
+    />
+
+    <!-- Filter overlay -->
+    <DealsFilterOverlay
+      :visible="filterOverlayVisible"
       :stages="currentStages"
-      :show-stage-filter="salesStore.activeView === 'list'"
       :users="[]"
-      @update:filters="onFiltersUpdate"
-      @search-input="onSearchInput"
-      @filter-select="onFilterSelect"
-      @reset="resetFilters"
+      :tags="[]"
+      :filters="toOverlayFilters()"
+      @close="filterOverlayVisible = false"
+      @apply="onFilterApply"
+      @reset="onFilterReset"
     />
 
     <!-- Board view -->
-    <div v-if="salesStore.activeView === 'board'" class="deals-page__board-wrap">
+    <div v-if="salesStore.activeView === 'kanban'" class="deals-page__board-wrap">
       <DealsKanbanBoard
         :visible-columns="visibleColumns"
         :hidden-columns="hiddenColumns"
@@ -44,11 +57,12 @@
         @load-more="onLoadMore"
         @show-hidden="toggleHiddenStage"
         @create="createDrawerOpen = true"
+        @add-deal-to-stage="onAddDealToStage"
       />
     </div>
 
     <!-- List view -->
-    <div v-else class="deals-page__list-wrap">
+    <div v-else-if="salesStore.activeView === 'list'" class="deals-page__list-wrap">
       <DealsListView
         :deals="deals"
         :loading="listLoading"
@@ -60,6 +74,15 @@
         @create="createDrawerOpen = true"
         @change-stage="openMoveDialog"
         @delete="confirmDelete"
+      />
+    </div>
+
+    <!-- Tasks view (view 3) -->
+    <div v-else class="deals-page__tasks-wrap">
+      <DealsTaskBoard
+        @add-task="createDrawerOpen = true"
+        @task-completed="onTaskCompleted"
+        @error="onTaskError"
       />
     </div>
 
@@ -91,17 +114,18 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import Button from 'primevue/button'
-import SelectButton from 'primevue/selectbutton'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import DealsKanbanBoard from './components/DealsKanbanBoard.vue'
 import DealsListView from './components/DealsListView.vue'
-import DealsFilterPanel from './components/DealsFilterPanel.vue'
+import DealsToolbar from './components/DealsToolbar.vue'
+import DealsBulkToolbar from './components/DealsBulkToolbar.vue'
+import DealsFilterOverlay from './components/DealsFilterOverlay.vue'
+import DealsTaskBoard from './components/DealsTaskBoard.vue'
 import DealCreateDrawer from './components/DealCreateDrawer.vue'
 import MoveDealDialog from './components/MoveDealDialog.vue'
-import { useDealsFilters, type DealsFilters } from './composables/useDealsFilters'
+import { useDealsFilters } from './composables/useDealsFilters'
 import { useDealsBoard } from './composables/useDealsBoard'
 import { useDealsList } from './composables/useDealsList'
 import { useSalesStore } from '@/stores/salesStore'
@@ -110,6 +134,8 @@ import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { PipelineDto, DealDto, DealCardDto, PipelineStageDto } from '@/entities/sales'
+import type { OverlayFilters } from './components/DealsFilterOverlay.vue'
+import type { DealsView, BoardSort } from '@/stores/salesStore'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -118,33 +144,9 @@ const toast = useToast()
 const confirm = useConfirm()
 const salesStore = useSalesStore()
 
-// ── View toggle ────────────────────────────────────────────────────────────────
+// ── Filter overlay ─────────────────────────────────────────────────────────────
 
-const viewOptions = [
-  { label: t('sales.deals.page.viewBoard'), value: 'board' },
-  { label: t('sales.deals.page.viewList'), value: 'list' },
-]
-
-// Sync activeView with URL param ?view=
-onMounted(() => {
-  const urlView = route.query.view as string
-  if (urlView === 'list' || urlView === 'board') {
-    salesStore.setActiveView(urlView)
-  }
-})
-
-watch(
-  () => salesStore.activeView,
-  (view) => {
-    void router.replace({ query: { ...route.query, view } })
-    if (view === 'list') {
-      listFilters.resetPage()
-      void listComposable.load()
-    } else {
-      void boardComposable.load()
-    }
-  },
-)
+const filterOverlayVisible = ref(false)
 
 // ── Pipeline ────────────────────────────────────────────────────────────────────
 
@@ -164,20 +166,63 @@ const currentStages = computed<PipelineStageDto[]>(() => {
 
 // ── Filters ─────────────────────────────────────────────────────────────────────
 
-const { filters, onSearchInput, onFilterSelect, resetFilters, hasActiveFilters } = useDealsFilters(
-  () => {
-    if (salesStore.activeView === 'board') {
-      void boardComposable.load()
-    } else {
-      listFilters.resetPage()
-      void listComposable.load()
-    }
+const {
+  filters,
+  resetFilters,
+  hasActiveFilters,
+  applyOverlayFilters,
+  toOverlayFilters,
+} = useDealsFilters(() => {
+  if (salesStore.activeView === 'kanban') {
+    void boardComposable.load()
+  } else if (salesStore.activeView === 'list') {
+    listFilters.resetPage()
+    void listComposable.load()
+  }
+})
+
+function onFilterApply(overlayFilters: OverlayFilters) {
+  applyOverlayFilters(overlayFilters)
+}
+
+function onFilterReset() {
+  resetFilters()
+}
+
+// ── View toggle ────────────────────────────────────────────────────────────────
+
+function onSetView(view: DealsView) {
+  salesStore.setActiveView(view)
+  void router.replace({ query: { ...route.query, view } })
+
+  if (view === 'kanban') {
+    void boardComposable.load()
+  } else if (view === 'list') {
+    listFilters.resetPage()
+    void listComposable.load()
+  }
+  // tasks view loads via DealsTaskBoard onMounted
+}
+
+function onSetSort(sort: BoardSort) {
+  salesStore.setBoardSort(sort)
+  void boardComposable.load()
+}
+
+// Sync URL
+onMounted(() => {
+  const urlView = route.query.view as string
+  if (urlView === 'list' || urlView === 'kanban' || urlView === 'tasks') {
+    salesStore.setActiveView(urlView as DealsView)
+  }
+})
+
+watch(
+  () => salesStore.activeView,
+  (view) => {
+    void router.replace({ query: { ...route.query, view } })
   },
 )
-
-function onFiltersUpdate(v: DealsFilters) {
-  filters.value = v
-}
 
 // ── Board composable ────────────────────────────────────────────────────────────
 
@@ -195,6 +240,27 @@ const {
   loadMoreInColumn,
 } = boardComposable
 
+// ── Summary (counts + sum) ─────────────────────────────────────────────────────
+
+const totalDealsCount = computed(() => {
+  return visibleColumns.value.reduce((s, col) => s + col.total, 0)
+})
+
+const totalSumFormatted = computed(() => {
+  const totalKopecks = visibleColumns.value.reduce((s, col) => s + col.sum_amount, 0)
+  const rub = totalKopecks / 100
+  const sign = '₽'
+  if (rub >= 1_000_000) return `${(rub / 1_000_000).toFixed(1)} млн ${sign}`
+  if (rub >= 1_000) return `${Math.round(rub / 1_000)} тыс. ${sign}`
+  return `${Math.round(rub)} ${sign}`
+})
+
+const pageSubtitle = computed(() => {
+  const pipeline = boardComposable.pipeline.value
+  const name = pipeline?.name ?? ''
+  return `${name} · ${totalDealsCount.value} сделок · ≈ ${totalSumFormatted.value}`
+})
+
 // ── List composable ─────────────────────────────────────────────────────────────
 
 const listComposable = useDealsList(filters, () => currentPipelineId.value)
@@ -210,6 +276,12 @@ const {
 // ── Create drawer ───────────────────────────────────────────────────────────────
 
 const createDrawerOpen = ref(false)
+
+function onAddDealToStage(stageId: number) {
+  // Pre-select stage in drawer — for now just open it
+  void stageId
+  createDrawerOpen.value = true
+}
 
 function onDealCreated() {
   void reload()
@@ -234,17 +306,13 @@ function onDealMoved() {
 async function onBoardDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   const toStage = currentStages.value.find((s) => s.id === toStageId)
 
-  // If dropping into lost stage — show move dialog instead
   if (toStage?.is_lost) {
-    // We need the full deal to open MoveDealDialog
-    // Fetch minimal deal on demand
     try {
       const deal = await salesApi.getDeal(card.id)
       openMoveDialog(deal)
     } catch {
       toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
     }
-    // Rollback the optimistic move since we're using dialog instead
     void boardComposable.load()
     return
   }
@@ -325,12 +393,66 @@ function confirmDelete(deal: DealDto) {
   })
 }
 
+// ── Bulk actions (stub — endpoints pending) ─────────────────────────────────────
+
+function onBulkAssignOwner() {
+  // TODO: BulkAssignDialog — backlog (PATCH /api/deals/bulk)
+}
+
+function onBulkAddTask() {
+  // TODO: ActivityCreateDialog with deal_ids — backlog (POST /api/activities/bulk)
+}
+
+function onBulkMoveStage() {
+  // TODO: BulkMoveStageDialog — backlog (PATCH /api/deals/bulk)
+}
+
+function onBulkEditField() {
+  // TODO: BulkEditFieldDialog — backlog (PATCH /api/deals/bulk)
+}
+
+function onBulkEditTags() {
+  // TODO: BulkTagDialog — backlog (PATCH /api/deals/bulk)
+}
+
+function onBulkDelete() {
+  confirm.require({
+    header: t('sales.deals.page.bulk.deleteConfirm', { n: salesStore.bulkSelection.length }),
+    message: t('sales.deals.page.bulk.deleteDetail'),
+    acceptLabel: t('sales.deals.page.bulk.delete'),
+    rejectLabel: t('sales.deals.page.bulk.cancel'),
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      // TODO: DELETE /api/deals/bulk — backlog
+      toast.add({ severity: 'info', summary: t('common.coming_soon'), life: 2000 })
+      salesStore.exitBulkMode()
+    },
+  })
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────────
+
+function onExport() {
+  // TODO: GET /api/deals/export — backlog
+  toast.add({ severity: 'info', summary: t('common.coming_soon'), life: 2000 })
+}
+
+// ── Tasks view ─────────────────────────────────────────────────────────────────
+
+function onTaskCompleted() {
+  toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 3000 })
+}
+
+function onTaskError(message: string) {
+  toast.add({ severity: 'error', summary: message, life: 4000 })
+}
+
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 
 async function reload() {
-  if (salesStore.activeView === 'board') {
+  if (salesStore.activeView === 'kanban') {
     void boardComposable.load()
-  } else {
+  } else if (salesStore.activeView === 'list') {
     void listComposable.load()
   }
 }
@@ -371,10 +493,6 @@ onMounted(async () => {
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
 }
 
-.deals-page__view-toggle {
-  // SelectButton needs no extra styling
-}
-
 .deals-page__board-wrap {
   flex: 1;
   overflow: hidden;
@@ -388,5 +506,14 @@ onMounted(async () => {
   overflow-y: auto;
   min-height: 0;
   padding: $space-4 $space-6;
+}
+
+.deals-page__tasks-wrap {
+  flex: 1;
+  overflow: hidden;
+  padding: 0 $space-6 $space-4;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 </style>

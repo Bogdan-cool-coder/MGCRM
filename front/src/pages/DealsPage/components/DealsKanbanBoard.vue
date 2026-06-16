@@ -38,6 +38,7 @@
         @drop="onDrop"
         @title-change="(cid: number, title: string) => emit('titleChange', cid, title)"
         @load-more="emit('loadMore', $event)"
+        @add-deal="emit('addDealToStage', $event)"
       />
 
       <!-- Hidden columns toggle -->
@@ -70,6 +71,7 @@ const emit = defineEmits<{
   loadMore: [stageId: number]
   showHidden: [stageId: number]
   create: []
+  addDealToStage: [stageId: number]
 }>()
 
 const { t } = useI18n()

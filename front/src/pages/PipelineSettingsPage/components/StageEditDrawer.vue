@@ -47,14 +47,7 @@
       <!-- Color -->
       <div class="stage-drawer__field">
         <label class="stage-drawer__label">{{ t('sales.stageEditor.fields.color') }}</label>
-        <div class="stage-drawer__color-row">
-          <ColorPicker v-model="form.colorHex" format="hex" />
-          <span
-            class="stage-drawer__color-preview"
-            :style="{ backgroundColor: `#${form.colorHex}` }"
-          />
-          <span class="stage-drawer__color-val">#{{ form.colorHex.toUpperCase() }}</span>
-        </div>
+        <StageColorPicker v-model="form.color" />
       </div>
 
       <Divider />
@@ -188,11 +181,11 @@ import Drawer from 'primevue/drawer'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
-import ColorPicker from 'primevue/colorpicker'
 import ToggleSwitch from 'primevue/toggleswitch'
 import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
 import Divider from 'primevue/divider'
+import StageColorPicker from './StageColorPicker.vue'
 import type { PipelineStageDto, UpdateStagePayload } from '@/entities/sales'
 
 const props = defineProps<{
@@ -244,7 +237,7 @@ const companyFieldOptions = [
 
 interface DrawerForm {
   name: string
-  colorHex: string
+  color: string | null
   hidden_by_default: boolean
   won_gate: boolean
   sla_hours: number | null
@@ -257,7 +250,7 @@ interface DrawerForm {
 
 const form = ref<DrawerForm>({
   name: '',
-  colorHex: '9B9C9F',
+  color: null,
   hidden_by_default: false,
   won_gate: false,
   sla_hours: null,
@@ -275,10 +268,9 @@ watch(
   () => props.stage,
   (s) => {
     if (!s) return
-    const raw = s.color ?? '#9B9C9F'
     form.value = {
       name: s.name,
-      colorHex: raw.replace('#', '').toUpperCase(),
+      color: s.color ?? null,
       hidden_by_default: s.hidden_by_default,
       won_gate: s.won_gate,
       sla_hours: s.sla_hours,
@@ -320,7 +312,7 @@ function submit() {
 
   const payload: UpdateStagePayload = {
     name: form.value.name.trim(),
-    color: `#${form.value.colorHex.toUpperCase()}`,
+    color: form.value.color,
     hidden_by_default: form.value.hidden_by_default,
     won_gate: form.value.won_gate,
     sla_hours: form.value.sla_hours,
@@ -406,26 +398,6 @@ function submit() {
     letter-spacing: 0.05em;
     color: var(--p-text-muted-color);
     margin: 0;
-  }
-
-  &__color-row {
-    display: flex;
-    align-items: center;
-    gap: $space-3;
-  }
-
-  &__color-preview {
-    width: 28px;
-    height: 28px;
-    border-radius: $radius-sm;
-    border: 1px solid var(--p-surface-300);
-    flex-shrink: 0;
-  }
-
-  &__color-val {
-    font-size: $font-size-sm;
-    font-family: monospace;
-    color: var(--p-text-muted-color);
   }
 
   &__footer {

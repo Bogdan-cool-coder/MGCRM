@@ -885,26 +885,112 @@
           "createdAt": "Создано",
           "actions": "Действия"
         },
+        "toolbar": {
+          "searchAndFilter": "Поиск и фильтр",
+          "moreMenu": "Ещё"
+        },
+        "menu": {
+          "import": "Импорт",
+          "export": "Экспорт",
+          "duplicates": "Поиск дублей",
+          "bulkActions": "Массовые действия",
+          "sort": "Сортировка",
+          "sortCreatedAt": "По дате создания",
+          "sortTitle": "По названию",
+          "sortAmount": "По бюджету",
+          "sortActivity": "По активности"
+        },
         "filters": {
-          "search": "Поиск по названию",
+          "search": "Поиск по сделкам",
           "owner": "Ответственный",
           "company": "Компания",
           "stage": "Стадия",
-          "reset": "Сбросить"
+          "product": "Продукт",
+          "region": "Регион / страна",
+          "city": "Город",
+          "budgetFrom": "Бюджет от",
+          "budgetTo": "до",
+          "tags": "Теги",
+          "tagsSearch": "Поиск тегов",
+          "period": "Период",
+          "reset": "Сбросить",
+          "apply": "Применить",
+          "presets": "Сохранённые пресеты",
+          "properties": "Свойства сделок",
+          "presetOpen": "Открытые сделки",
+          "presetMine": "Только мои",
+          "presetWon": "Успешно завершённые",
+          "presetLost": "Нереализованные",
+          "presetNoTask": "Без задач",
+          "presetOverdue": "С просроченными"
         },
+        "bulk": {
+          "selected": "Выбрано: {n}",
+          "cancel": "Отмена",
+          "assignOwner": "Ответственный",
+          "addTask": "+ Задача",
+          "moveStage": "Этап",
+          "editField": "Поле",
+          "editTags": "Теги",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить {n} сделок?",
+          "deleteDetail": "Это действие нельзя отменить.",
+          "deleteSuccess": "{n} сделок удалено"
+        },
+        "summary": "{count} сделок · ≈ {total}",
+        "viewTasks": "Задачи",
         "kanban": {
           "deals": "{count} сделок",
           "sum": "{amount}",
           "loadMore": "Ещё {n}",
           "hiddenStages": "Скрытые",
-          "daysInStage": "{n} дней"
+          "daysInStage": "{n} дн.",
+          "addDeal": "Добавить сделку",
+          "colTotal": "≈ {sum}"
+        },
+        "card": {
+          "noTask": "Нет задачи",
+          "scheduleTask": "+ Запланировать",
+          "overdue": "Просрочено: {type} · {when}",
+          "taskOk": "{type} · {when}",
+          "daysInWork": "{n} дн.",
+          "today": "сегодня {time}",
+          "tomorrow": "завтра {time}",
+          "overdueWhen": "{n} день назад | {n} дня назад | {n} дней назад"
+        },
+        "taskTypes": {
+          "call": "Звонок",
+          "meeting": "Встреча",
+          "task": "Задача",
+          "note": "Заметка",
+          "follow_up": "Follow-up",
+          "qualification": "Квалификация",
+          "warm": "Warm",
+          "hot": "HOT"
+        },
+        "currency": {
+          "approx": "≈ {sum}",
+          "tooltipTitle": "Итого: ≈ {sum}",
+          "noRate": "Курс недоступен"
         },
         "empty": {
           "title": "Сделок пока нет",
           "subtitle": "Создайте первую сделку на основе компании",
-          "filtered": "Ничего не найдено",
-          "filteredSubtitle": "Попробуйте изменить фильтры",
+          "filtered": "По вашим фильтрам ничего не найдено",
+          "filteredSubtitle": "Попробуйте изменить фильтры или сбросить их",
           "resetFilters": "Сбросить фильтры"
+        },
+        "columns": {
+          "id": "#",
+          "title": "Название",
+          "company": "Компания",
+          "stage": "Стадия",
+          "amount": "Сумма",
+          "owner": "Ответственный",
+          "createdAt": "Создано",
+          "task": "Задача",
+          "daysInStage": "В стадии",
+          "actions": ""
         },
         "actions": {
           "edit": "Редактировать",
@@ -1302,6 +1388,9 @@
         "inn": "ИНН",
         "phone": "Телефон",
         "email": "Email"
+      },
+      "colorPicker": {
+        "none": "Без цвета"
       },
       "systemStageBadge": "системный",
       "substageBadge": "подстатус",
@@ -2291,5 +2380,48 @@
     "goToCourses": "Перейти к Обучению",
     "openSearch": "Открыть поиск",
     "showHelp": "Показать шпаргалку"
+  },
+  "tasks": {
+    "board": {
+      "title": "Мои задачи",
+      "searchPlaceholder": "Поиск задач",
+      "addTask": "Задача",
+      "scope": {
+        "label": "Скоуп",
+        "day": "День",
+        "week": "Неделя",
+        "month": "Месяц"
+      },
+      "columns": {
+        "overdue": "Просрочено",
+        "today": "Сегодня",
+        "tomorrow": "Завтра",
+        "this_week": "Эта неделя",
+        "next_week": "Следующая неделя",
+        "noDate": "Без срока",
+        "noTasks": "Нет задач"
+      },
+      "card": {
+        "complete": "Готово",
+        "completed": "Задача выполнена",
+        "overdueSince": "просрочено {when}",
+        "today": "сегодня {time}",
+        "tomorrow": "завтра {time}"
+      },
+      "empty": {
+        "title": "Все задачи выполнены",
+        "subtitle": "Отличная работа! Новые задачи появятся здесь."
+      },
+      "taskTypes": {
+        "call": "Звонок",
+        "meeting": "Встреча",
+        "task": "Задача",
+        "note": "Заметка",
+        "follow_up": "Follow-up",
+        "qualification": "Квалификация",
+        "warm": "Warm",
+        "hot": "HOT"
+      }
+    }
   }
 }

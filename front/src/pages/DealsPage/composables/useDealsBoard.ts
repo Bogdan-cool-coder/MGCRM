@@ -120,6 +120,9 @@ export function useDealsBoard(
       amount: d.amount,
       currency: d.currency,
       stage_changed_at: d.stage_changed_at,
+      days_in_stage: null,
+      next_task: null,
+      primary_product: null,
     }))
     col.deals = [...col.deals, ...newCards]
   }

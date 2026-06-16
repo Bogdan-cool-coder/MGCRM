@@ -169,3 +169,22 @@ export interface SaveMeetingReportPayload {
   comment?: string | null
   activity_id?: number | null
 }
+
+// ─── My Board (task board view, view 3) ──────────────────────────────────────
+
+export type MyBoardBucket = 'overdue' | 'today' | 'tomorrow' | 'this_week' | 'next_week'
+
+export interface MyBoardActivityDto {
+  id: number
+  kind: ActivityKind
+  title: string | null
+  description: string | null
+  due_at: string | null
+  is_overdue: boolean
+  deal: { id: number; title: string } | null
+  assigned_to: { id: number; full_name: string } | null
+}
+
+export interface MyBoardResponse {
+  data: Record<MyBoardBucket, MyBoardActivityDto[]>
+}

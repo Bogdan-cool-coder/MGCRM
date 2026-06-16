@@ -81,6 +81,40 @@
         </template>
       </Column>
 
+      <!-- Task health -->
+      <Column :header="t('sales.deals.page.columns.task')">
+        <template #body="{ data }">
+          <Tag
+            v-if="data.next_task && !data.next_task.is_overdue"
+            severity="secondary"
+            :value="taskTagLabel(data.next_task)"
+            :icon="taskTypeIcon(data.next_task.type)"
+          />
+          <Tag
+            v-else-if="data.next_task && data.next_task.is_overdue"
+            severity="danger"
+            :value="t('sales.deals.page.card.overdue', { type: taskTypeLabel(data.next_task.type), when: '' }).trim()"
+          />
+          <Tag
+            v-else
+            severity="warn"
+            :value="t('sales.deals.page.card.noTask')"
+          />
+        </template>
+      </Column>
+
+      <!-- Days in stage -->
+      <Column :header="t('sales.deals.page.columns.daysInStage')" style="width: 100px">
+        <template #body="{ data }">
+          <span
+            class="deals-list__days"
+            :class="rottingClass(data)"
+          >
+            {{ effectiveDays(data) }}
+          </span>
+        </template>
+      </Column>
+
       <!-- Amount -->
       <Column :header="t('sales.deals.page.columns.amount')" sortable style="text-align: right">
         <template #body="{ data }">
@@ -130,8 +164,9 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
+import Tag from 'primevue/tag'
 import { formatCurrency } from '@/utils/currency'
-import type { DealDto } from '@/entities/sales'
+import type { DealDto, ActivityType } from '@/entities/sales'
 
 defineProps<{
   deals: DealDto[]
@@ -200,6 +235,55 @@ function formatDate(dateStr: string | null): string {
   const year = d.getFullYear()
   return `${day}.${month}.${year}`
 }
+
+// ── Task health helpers ────────────────────────────────────────────────────────
+
+function taskTypeIcon(type: ActivityType): string {
+  const map: Record<ActivityType, string> = {
+    call: 'pi pi-phone',
+    meeting: 'pi pi-calendar',
+    task: 'pi pi-check-square',
+    note: 'pi pi-file-edit',
+    follow_up: 'pi pi-arrow-right-arrow-left',
+  }
+  return map[type] ?? 'pi pi-check-square'
+}
+
+function taskTypeLabel(type: ActivityType): string {
+  return t(`sales.deals.page.taskTypes.${type}`)
+}
+
+function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): string {
+  if (!nextTask.due_at) return taskTypeLabel(nextTask.type)
+  const d = new Date(nextTask.due_at)
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  return `${taskTypeLabel(nextTask.type)} · ${day}.${month}`
+}
+
+// ── Rotting helpers ────────────────────────────────────────────────────────────
+
+function effectiveDays(deal: DealDto & { days_in_stage?: number | null }): string {
+  const days = deal.days_in_stage != null
+    ? deal.days_in_stage
+    : deal.stage_changed_at
+      ? Math.floor((Date.now() - new Date(deal.stage_changed_at).getTime()) / 86400000)
+      : 0
+  return String(days)
+}
+
+function rottingClass(deal: DealDto & { days_in_stage?: number | null }): string {
+  const days = deal.days_in_stage != null
+    ? deal.days_in_stage
+    : deal.stage_changed_at
+      ? Math.floor((Date.now() - new Date(deal.stage_changed_at).getTime()) / 86400000)
+      : 0
+  const warnDays = 7
+  const dangerDays = 14
+  if (days >= dangerDays) return 'deals-list__days--rotting'
+  if (days >= Math.floor(warnDays * 0.7)) return 'deals-list__days--warn'
+  return ''
+}
 </script>
 
 <style lang="scss" scoped>
@@ -251,6 +335,20 @@ function formatDate(dateStr: string | null): string {
 
   :global(.app-dark) & {
     border-top-color: var(--p-surface-700);
+  }
+}
+
+.deals-list__days {
+  font-size: $font-size-xs;
+  color: $surface-500;
+
+  &--warn {
+    color: var(--p-orange-500);
+  }
+
+  &--rotting {
+    color: $color-danger;
+    font-weight: $font-weight-medium;
   }
 }
 

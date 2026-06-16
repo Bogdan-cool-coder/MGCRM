@@ -27,6 +27,8 @@ export interface PipelineStageDto {
   visible_department_ids?: number[] | null
   visible_user_ids?: number[] | null
   children?: PipelineStageDto[]
+  warn_days: number | null
+  danger_days: number | null
 }
 
 // ─── Graph layout (canvas positions) ─────────────────────────────────────────
@@ -94,6 +96,27 @@ export interface DealDto {
   contacts?: DealContactDto[]
 }
 
+// ─── Activity type (used in NextTaskDto) ─────────────────────────────────────
+
+export type ActivityType = 'call' | 'meeting' | 'task' | 'note' | 'follow_up'
+
+// ─── Next task (board card health signal) ─────────────────────────────────────
+
+export interface NextTaskDto {
+  id: number
+  type: ActivityType
+  title: string | null
+  due_at: string | null
+  is_overdue: boolean
+}
+
+// ─── Primary product (board card line-item) ───────────────────────────────────
+
+export interface PrimaryProductDto {
+  id: number
+  name: string
+}
+
 // ─── Deal card (board view — lighter payload) ─────────────────────────────────
 
 export interface DealCardDto {
@@ -105,6 +128,9 @@ export interface DealCardDto {
   amount: number
   currency: string
   stage_changed_at: string | null
+  days_in_stage: number | null
+  next_task: NextTaskDto | null
+  primary_product: PrimaryProductDto | null
 }
 
 // ─── Board response ───────────────────────────────────────────────────────────
@@ -113,7 +139,10 @@ export interface BoardColumnDto {
   stage: PipelineStageDto
   total: number
   sum_amount: number
+  base_currency: string
   currency: string
+  amounts_by_currency: Record<string, number>
+  multi_currency_warning: boolean
   deals: DealCardDto[]
   has_more: boolean
 }
@@ -132,6 +161,9 @@ export interface BoardRawColumnDto {
   stage_id: number
   total: number
   sum_amount: number
+  base_currency: string
+  amounts_by_currency: Record<string, number>
+  multi_currency_warning: boolean
   deals: Array<{
     id: number
     title: string
@@ -141,7 +173,10 @@ export interface BoardRawColumnDto {
     company_id: number
     company_name: string | null
     owner: { id: number; full_name: string } | null
-    next_task: null
+    stage_changed_at: string | null
+    days_in_stage: number | null
+    next_task: NextTaskDto | null
+    primary_product: PrimaryProductDto | null
   }>
 }
 
@@ -301,6 +336,8 @@ export interface CreateStagePayload {
   required_fields?: { deal?: string[]; company?: string[] }
   parent_stage_id?: number | null
   sort_order?: number
+  warn_days?: number | null
+  danger_days?: number | null
 }
 
 export interface UpdateStagePayload {
@@ -313,6 +350,8 @@ export interface UpdateStagePayload {
   task_types?: string[]
   required_fields?: { deal?: string[]; company?: string[] }
   parent_stage_id?: number | null
+  warn_days?: number | null
+  danger_days?: number | null
 }
 
 export interface ReorderStageItem {
