@@ -42,7 +42,6 @@
         :nodes="canvasNodes"
         :edges="[]"
         :delete-key-code="null"
-        fit-view-on-init
         class="pipeline-canvas__flow"
       >
         <Background
@@ -83,7 +82,7 @@
           icon="pi pi-expand"
           severity="secondary"
           size="small"
-          @click="fitView()"
+          @click="fitView({ padding: 0.2 })"
         />
         <Button
           :label="t('automation.canvas.backToForm')"
@@ -106,13 +105,15 @@
 
         <!-- VueFlow canvas -->
         <VueFlow
+          id="pipeline-canvas"
           :nodes="canvasNodes"
           :edges="canvasEdges"
           :node-types="nodeTypes"
           :delete-key-code="null"
-          fit-view-on-init
           class="pipeline-canvas__flow"
           @node-drag-stop="onNodeDragStop"
+          @nodes-initialized="onNodesReady"
+          @pane-ready="onPaneReady"
           @dragover.prevent
           @drop="onDrop"
         >
@@ -139,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, markRaw, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
@@ -199,7 +200,7 @@ const toast = useToast()
 
 // ─── Vue Flow instance ────────────────────────────────────────────────────────
 
-const { fitView, getNodes, screenToFlowCoordinate } = useVueFlow()
+const { fitView, getNodes, screenToFlowCoordinate } = useVueFlow('pipeline-canvas')
 
 // ─── Node types (markRaw to prevent reactivity wrapping) ─────────────────────
 
@@ -343,6 +344,53 @@ async function handleAutoLayout(): Promise<void> {
   await saveLayout(newLayout)
 }
 
+// ─── Initial fitView ─────────────────────────────────────────────────────────
+//
+// Primary path: @nodes-initialized template event fires in the context of the
+// correct VueFlow instance (id="pipeline-canvas") after all nodes have been
+// measured (width/height non-zero). This is the canonical moment to call
+// fitView so the bounding-box computation is reliable.
+//
+// didInitialFit guards against repeated calls when automations are added while
+// the canvas is visible (nodes-initialized fires again).
+//
+// Because the parent renders PipelineCanvas via v-else-if (not v-show), the
+// component is fully unmounted when switching Form↔Canvas. Each open creates a
+// fresh instance — didInitialFit resets automatically.
+
+const didInitialFit = ref(false)
+
+function onNodesReady(): void {
+  if (didInitialFit.value) return
+  didInitialFit.value = true
+  // Double-rAF after nextTick: flush Vue DOM → browser layout pass #1 → layout
+  // pass #2. The second rAF guarantees that the flex chain has finalised the
+  // canvas height (layout__content → canvas-area → pipeline-canvas → body →
+  // __flow → .vue-flow) before VueFlow computes the bounding-box for fitView.
+  // A single rAF is not enough when the parent flex-resize also triggers a
+  // layout recalculation (observed: fitView called at 376px, bbox wrong).
+  void nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        fitView({ padding: 0.2 })
+      })
+    })
+  })
+}
+
+// Soft fallback: @pane-ready fires when the VueFlow pane DOM element mounts.
+// Nodes are NOT measured yet at this point — raise timeout to 800ms so the
+// flex chain + node measurement both finish before the bbox computation.
+// The guard prevents double-fit when @nodes-initialized already fired.
+function onPaneReady(): void {
+  setTimeout(() => {
+    if (!didInitialFit.value) {
+      didInitialFit.value = true
+      fitView({ padding: 0.2 })
+    }
+  }, 800)
+}
+
 // ─── Reload helper ────────────────────────────────────────────────────────────
 
 function reload(): void {
@@ -418,8 +466,11 @@ function onDrop(event: DragEvent): void {
 .pipeline-canvas {
   position: relative;
   width: 100%;
-  height: 100%;
-  min-height: 600px;
+  // Use flex:1 + min-height:0 to fill the flex-column canvas-area parent.
+  // height:100% is NOT used here — canvas-area has no explicit height (it uses
+  // flex:1 itself), so percentage heights would resolve incorrectly.
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 
@@ -449,6 +500,9 @@ function onDrop(event: DragEvent): void {
   }
 
   // ── Body (palette + flow) ─────────────────────────────────────────────────
+  // Do NOT set height:100% here — it conflicts with flex:1 and causes the
+  // element to try to be 100% of the scroll-container content height instead
+  // of filling the remaining flex space from the parent column.
 
   &__body {
     flex: 1;
@@ -457,10 +511,17 @@ function onDrop(event: DragEvent): void {
   }
 
   // ── Flow canvas ──────────────────────────────────────────────────────────
+  // flex:1 fills remaining horizontal space in __body (flex-row).
+  // align-self:stretch (the default) gives it the full height of __body.
+  // Explicit height:100% is intentionally kept so that VueFlow's own root
+  // element — which expects a concrete height on its container — resolves
+  // correctly via the cascade: __flow height = __body height (stretch) →
+  // .vue-flow height = 100% of __flow.
 
   &__flow {
     flex: 1;
     width: 100%;
+    height: 100%;
     min-height: 0;
 
     // Vue Flow theme bridge — use PrimeVue surface tokens

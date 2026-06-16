@@ -76,6 +76,13 @@ watch(
 .layout__content {
   // Flex properties set explicitly — do NOT rely on Bootstrap overflow-auto utility
   // (Bootstrap grid utilities are loaded but overflow utilities are absent from bundle).
+  //
+  // display:flex + flex-direction:column is required so that full-height pages
+  // (e.g. PipelineCanvas in canvas mode) can resolve height:100% / flex:1 on their
+  // root element. Without flex context here, height:100% resolves to scroll-content
+  // height (not the visible viewport), causing VueFlow to collapse to ~376px.
+  display: flex;
+  flex-direction: column;
   flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;

@@ -463,7 +463,12 @@ onMounted(async () => {
 .pipeline-settings-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  // flex:1 + min-height:0 makes this page fill the available height in the
+  // layout__content flex-column context (layout now sets display:flex).
+  // height:100% is NOT used because layout__content is a scroll-container;
+  // percentage heights resolve to scroll-content height there, not viewport.
+  flex: 1;
+  min-height: 0;
 
   &__content {
     display: flex;
@@ -478,6 +483,10 @@ onMounted(async () => {
     &--canvas {
       max-width: none;
       overflow: hidden;
+      padding: $space-3 $space-6 0;
+      gap: $space-3;
+      // Нейтрализуем padding layout__content, чтобы canvas мог занять всю высоту
+      margin-bottom: calc(-1 * $space-4);
     }
   }
 
@@ -487,8 +496,16 @@ onMounted(async () => {
   }
 
   &__canvas-area {
+    // Must be a flex-column container so that PipelineCanvas (its sole child)
+    // can use flex:1 to fill the available height instead of height:100%
+    // (which would resolve to scroll-content height in a non-flex parent).
+    display: flex;
+    flex-direction: column;
     flex: 1;
-    min-height: 600px;
+    // Safety: guarantee a usable canvas height even if the flex chain above is
+    // imperfect (e.g. intermediate containers without explicit height).
+    // 560px fits 9+ stages on a desktop viewport without page-level scrolling.
+    min-height: 560px;
     border: 1px solid var(--p-surface-border);
     border-radius: var(--p-border-radius);
     overflow: hidden;
