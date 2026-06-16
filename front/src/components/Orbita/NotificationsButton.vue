@@ -30,6 +30,7 @@ import { useI18n } from 'vue-i18n'
 import Popover from 'primevue/popover'
 import Tooltip from 'primevue/tooltip'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
+import type { OrbitaOverlayControl } from './types'
 
 interface Props {
   tooltipOptions: (value: string) => OrbitaTooltipOptions
@@ -44,6 +45,23 @@ const popoverRef = ref<InstanceType<typeof Popover> | null>(null)
 function handleClick(event: MouseEvent) {
   popoverRef.value?.toggle(event)
 }
+
+// ─── OrbitaOverlayControl interface ──────────────────────────────────────────
+// Exposed so parent (Orbita.vue) can wire useOrbitaOverlays for mutual exclusion.
+function syncPopover(open: boolean, event?: MouseEvent | null) {
+  if (!popoverRef.value) return
+  if (open && event) {
+    popoverRef.value.show(event)
+  } else if (!open) {
+    popoverRef.value.hide()
+  }
+}
+
+function realign() {
+  // PrimeVue Popover re-aligns on its own; no-op fallback
+}
+
+defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 </script>
 
 <style lang="scss" scoped>

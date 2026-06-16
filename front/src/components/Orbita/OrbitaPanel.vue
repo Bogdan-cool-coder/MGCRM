@@ -33,6 +33,8 @@
         ]"
         :aria-label="item.ariaLabel"
         :aria-current="item.isActive ? 'page' : undefined"
+        @mouseenter="prefetch(item.route)"
+        @focus="prefetch(item.route)"
         @click="emit('navigate', item.route)"
       >
         <i :class="item.icon" class="orbita-panel__btn-icon" aria-hidden="true" />
@@ -52,6 +54,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNavPrefetch } from './composables/useNavPrefetch'
 import type { OrbitaNavItem, OrbitaOrientation, OrbitaPanelDirection, OrbitaPosition } from './types'
 
 interface Props {
@@ -70,6 +73,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const panelRef = ref<HTMLElement | null>(null)
+const { prefetch } = useNavPrefetch()
 
 /**
  * Edge-aware label side for vertical orientation.

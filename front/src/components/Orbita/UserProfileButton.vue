@@ -27,6 +27,7 @@ import Tooltip from 'primevue/tooltip'
 import AccountMenu from '@/components/AppShell/AccountMenu.vue'
 import { useUserStore } from '@/stores/user'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
+import type { OrbitaOverlayControl } from './types'
 
 interface Props {
   tooltipOptions: (value: string) => OrbitaTooltipOptions
@@ -54,6 +55,23 @@ const initials = computed(() => {
 function handleClick(event: MouseEvent) {
   accountMenuRef.value?.toggle(event)
 }
+
+// ─── OrbitaOverlayControl interface ──────────────────────────────────────────
+// Exposed so parent (Orbita.vue) can wire useOrbitaOverlays for mutual exclusion.
+function syncPopover(open: boolean, event?: MouseEvent | null) {
+  if (!accountMenuRef.value) return
+  if (open && event) {
+    accountMenuRef.value.show(event)
+  } else if (!open) {
+    accountMenuRef.value.hide()
+  }
+}
+
+function realign() {
+  // AccountMenu (Popover) re-aligns on its own; no-op fallback
+}
+
+defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 </script>
 
 <style lang="scss" scoped>

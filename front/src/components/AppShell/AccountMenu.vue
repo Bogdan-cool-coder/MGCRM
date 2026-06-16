@@ -164,7 +164,11 @@ function hide() {
   popoverRef.value?.hide()
 }
 
-defineExpose({ toggle, hide })
+function show(event: Event) {
+  popoverRef.value?.show(event)
+}
+
+defineExpose({ toggle, hide, show })
 </script>
 
 <style lang="scss" scoped>

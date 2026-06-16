@@ -62,6 +62,8 @@
             active-class="app-sidebar__nav-link--active"
             :aria-label="t(item.labelKey)"
             :title="collapsed ? t(item.labelKey) : undefined"
+            @mouseenter="prefetch(item.route)"
+            @focus="prefetch(item.route)"
           >
             <i :class="['app-sidebar__nav-icon', item.icon]" />
             <span v-if="!collapsed" class="app-sidebar__nav-label">
@@ -110,6 +112,8 @@
               active-class="app-sidebar__nav-link--active"
               :aria-label="t(item.labelKey)"
               :title="collapsed ? t(item.labelKey) : undefined"
+              @mouseenter="prefetch(item.route)"
+              @focus="prefetch(item.route)"
             >
               <i :class="['app-sidebar__nav-icon', item.icon]" />
               <span v-if="!collapsed" class="app-sidebar__nav-label">
@@ -180,6 +184,7 @@ import { useOnboardingStore } from '@/stores/onboardingStore'
 import { prototypeNavItems, adminNavItems } from '@/shared/nav/navItems'
 import type { NavItemBadge } from '@/shared/nav/navItems'
 import AccountMenu from './AccountMenu.vue'
+import { useNavPrefetch } from '@/components/Orbita/composables/useNavPrefetch'
 
 defineProps<{
   collapsed: boolean
@@ -246,6 +251,9 @@ const roleLabel = computed(() => {
 function toggleAccountMenu(event: MouseEvent) {
   accountMenuRef.value?.toggle(event)
 }
+
+// ─── Prefetch on hover/focus ──────────────────────────────────────────────────
+const { prefetch } = useNavPrefetch()
 
 // ─── Init badge counts ────────────────────────────────────────────────────────
 onMounted(() => {

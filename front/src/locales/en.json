@@ -317,6 +317,9 @@
         "create": "Failed to create record",
         "delete": "Failed to delete record"
       }
+    },
+    "actions": {
+      "create": "Create contact"
     }
   },
   "company": {
@@ -1170,6 +1173,9 @@
         "location": "Location",
         "save": "Save",
         "successCreate": "Added to feed"
+      },
+      "actions": {
+        "create": "Create deal"
       }
     },
     "move": {
@@ -2274,9 +2280,16 @@
   "hotkeys": {
     "title": "Keyboard shortcuts",
     "globalNav": "Navigation",
+    "other": "Other",
     "goToDashboard": "Go to Dashboard",
     "goToContacts": "Go to Contacts",
+    "goToCompanies": "Go to Companies",
     "goToDeals": "Go to Deals",
-    "openSearch": "Open search"
+    "goToTasks": "Go to My Tasks",
+    "goToDocuments": "Go to Documents",
+    "goToApprovals": "Go to Approvals",
+    "goToCourses": "Go to My Courses",
+    "openSearch": "Open search",
+    "showHelp": "Show shortcuts"
   }
 }

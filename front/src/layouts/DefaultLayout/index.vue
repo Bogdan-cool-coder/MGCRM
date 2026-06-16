@@ -43,20 +43,33 @@
     @created="activityStore.closeQuickAdd()"
     @update:model-value="(v) => { if (!v) activityStore.closeQuickAdd() }"
   />
+
+  <!-- Command Palette — global Ctrl/Cmd+K -->
+  <CommandPalette v-if="showLayout" />
+
+  <!-- Hotkeys Cheatsheet — global ? -->
+  <HotkeysCheatsheet v-if="showLayout" />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { AppSidebar } from '@/components/AppShell'
-import { Orbita } from '@/components/Orbita'
+import {
+  Orbita,
+  CommandPalette,
+  HotkeysCheatsheet,
+  useNavHotkeys,
+  openCheatsheet,
+} from '@/components/Orbita'
 import { useLayoutStore } from '@/stores/layout'
 import { useActivityStore } from '@/stores/activityStore'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 
 const route = useRoute()
+const router = useRouter()
 const layoutStore = useLayoutStore()
 const activityStore = useActivityStore()
 
@@ -69,6 +82,22 @@ watch(
     quickAddOpen.value = !!ctx
   },
 )
+
+// ─── Track recent routes ──────────────────────────────────────────────────────
+// Only track authenticated pages (not login) and only when layout is shown
+router.afterEach((to) => {
+  if (to.name === 'Login' || to.name === 'Root') return
+  if (!to.meta?.requiresAuth) return
+  // Push the route path (strip trailing slash for consistency)
+  const path = to.path.replace(/\/$/, '') || '/'
+  layoutStore.pushRecentRoute(path)
+})
+
+// ─── Global hotkeys ───────────────────────────────────────────────────────────
+useNavHotkeys({
+  onOpenCommandPalette: () => layoutStore.openCommandPalette(),
+  onOpenCheatsheet: () => openCheatsheet(),
+})
 </script>
 
 <style lang="scss" scoped>

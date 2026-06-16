@@ -252,18 +252,32 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `locales/{ru,en}.json` — ключ `layout.appearance` добавлен.
 - **Беклог:** `pi pi-layout-sidebar` не существует в PrimeIcons v7 — нужна замена (не блокер рендера).
 
-#### Навигация — Срез 3 (frontend-specialist, 2026-06-16) — pending QA (PM-ревью 2026-06-16)
-> branch `feat/navigation-redesign` / рабочее дерево (uncommitted)
+#### Навигация — Срез 3 (frontend-specialist, 2026-06-16) ✅ PM APPROVE — pending браузерный QA
+> branch `feat/navigation-redesign` / commit `28a1963`
 - [x] `useOrbitaDrag.ts` — drag через `pointer*` events + `setPointerCapture` для надёжности; кламп в viewport (`clampOrbitaPosition`); магнит к краю `snapToEdge()` с CSS `transition 0.2s ease-out` при отпускании; клавиатурный drag (Arrow 16px на grip-ручке, Enter/Space — commit); live позиция без записи в стор во время drag (коммит только на `pointerup`); `resize`-реклэмп; чистый cleanup всех listeners в `onBeforeUnmount`.
-- [x] `Orbita.vue` — DOM-порядок исправлен (Panel перед Toggle → Toggle-якорь крайний справа/снизу); `handleRotate()` — pivot вычисляется по центру `.orbita-toggle` до и после `nextTick`+`rAF` с докладкой позиции; `onMounted` re-clamp; `is-dragging` CSS-класс; `cursor: default` вместо `grab` на весь контейнер.
-- [x] `OrbitaPanel.vue` — `labelSide` computed (`start`/`end`/`center`) по `currentPosition.left < viewport/2`; `data-label-side` на контейнере; CSS: H in-place flex + `max-width` transition; V `flex-direction: row`/`row-reverse` по стороне; `forced-colors` media query.
-- [x] `OrbitaToggle.vue` — rotate-сателлит (`pi pi-sync`; `@click → toggle-orientation`); grip — одиночный (убрана дублирующая вторая grip-группа); `tabindex="0"` + `@keydown` для клавиатурного drag; `isDragging` prop + `.is-dragging` CSS-класс; `focus-visible` стиль; `overflow: hidden` убран (препятствовал выходу `forced-colors` border).
-- [x] `NotificationsButton.vue` — заглушка с пустым Popover-флайаутом (pending backend `GET /api/notifications`).
-- [x] `UserProfileButton.vue` — `@keydown.esc.stop` закрывает AccountMenu через `accountMenuRef.hide()`; `accountMenuRef` ref на `AccountMenu`.
-- [x] `AccountMenu.vue` — `defineExpose({ toggle, hide })` (добавлен `hide` для UserProfileButton Escape-handler).
+- [x] `Orbita.vue` — DOM-порядок исправлен (Panel перед Toggle → Toggle-якорь крайний справа/снизу); `handleRotate()` — pivot вычисляется по центру `.orbita-toggle` до и после `nextTick`+`rAF` с докладкой позиции; `onMounted` re-clamp убран (обслуживается `useOrbitaDrag.scheduleClamp()`); `is-dragging` CSS-класс; `cursor: default` вместо `grab` на весь контейнер.
+- [x] `OrbitaPanel.vue` — `labelSide` computed (`start`/`end`/`center`) по `currentPosition.left < viewport/2`; `data-label-side` на контейнере; CSS: H in-place flex + `max-width` transition; V `flex-direction: row`/`row-reverse` по стороне; `forced-colors` media query; `useNavPrefetch` подключён — `prefetch()` на `@mouseenter`/`@focus` nav-кнопок.
+- [x] `OrbitaToggle.vue` — rotate-сателлит (`pi pi-sync`; `@click → toggle-orientation`); grip — одиночный (убрана дублирующая вторая grip-группа); `tabindex="0"` + `@keydown` для клавиатурного drag; `isDragging` prop + `.is-dragging` CSS-класс; `focus-visible` стиль; `overflow: hidden` убран (препятствовал выходу `forced-colors` border); `role="group"` на контейнере (было некорректно `aria-label` на div).
+- [x] `NotificationsButton.vue` — заглушка с пустым Popover-флайаутом (pending backend `GET /api/notifications`); `defineExpose<OrbitaOverlayControl>({ syncPopover, realign })` добавлен.
+- [x] `UserProfileButton.vue` — `defineExpose<OrbitaOverlayControl>({ syncPopover, realign })` добавлен.
+- [x] `AccountMenu.vue` — `defineExpose({ toggle, hide, show })` (добавлен `show` для корректного вызова через overlay-контрол).
 - [x] `locales/{ru,en}.json` — добавлены `orbita.navLabel` + `orbita.profile`; `orbita.rotateH` + `orbita.rotateV`.
 - [x] A11y: `<nav aria-label="…">` вокруг nav-кнопок; `aria-label` на всех кнопках toggle; `aria-current="page"` на активной nav-кнопке; `prefers-reduced-motion` блок в `Orbita.vue`; `forced-colors` блоки в `OrbitaPanel.vue` + `OrbitaToggle.vue`; `focus-visible` outline на grip + rotate.
-- **PM-статус:** PENDING QA. Беклог: поворот на мобильном (< 560px H → grid fallback в CSS, но pivot-логика не проверялась); `useOrbitaOverlays` импортирован в index.ts, но не задействован в Orbita.vue (заделан для будущего взаимоисключения оверлеев).
+- **Беклог:** поворот на мобильном (< 560px H → grid fallback в CSS, pivot-логика не проверялась).
+
+#### Навигация — Срез 4 (frontend-specialist, 2026-06-16) — PM CODE REVIEW (uncommitted, pending QA)
+> Scope: CommandPalette + useNavHotkeys + useNavPrefetch + overlay mutual exclusion + AppSidebar prefetch + canvas fixes
+- [x] `CommandPalette.vue` — PrimeVue Dialog + нативный `<input>` (без PrimeVue InputText, нет VeeValidate); fuzzy-match (prefix>contains>char-scatter); группировка Pages/Actions/Recent; клавишная навигация ↑↓ Enter Esc; `layoutStore.pushRecentRoute()` при навигации; `layoutStore.closeCommandPalette()` при Escape/выборе; focus на input при открытии; `@after-hide` сброс состояния.
+- [x] `HotkeysCheatsheet.vue` — PrimeVue Dialog; таблица ключей через `NAV_HOTKEY_ENTRIES`; разделение nav/other секций; `<kbd>` элементы; dark mode через `:global(.app-dark)`.
+- [x] `composables/useNavHotkeys.ts` — `window.addEventListener('keydown', …, { capture: true })` при mount, `removeEventListener` при unmount; чистая очистка `gTimer` через `clearSequence()`; guard `isInteractiveFocus()` (tagName INPUT/TEXTAREA/SELECT + contentEditable) + `isModalOpen()` (`[role="dialog"][aria-modal="true"]`); Cmd/Ctrl+K → palette; `?` → cheatsheet; `g→X` 8 последовательностей с таймаутом 1500ms; платформо-адаптивный модификатор (`navigator.platform.includes('Mac')`).
+- [x] `composables/useNavPrefetch.ts` — module-level `Set<string>` dedup; `router.resolve()` + lazy component factory call; ошибки glotают молча (best-effort); подключён в `OrbitaPanel.vue` и `AppSidebar.vue`.
+- [x] `DefaultLayout/index.vue` — `<CommandPalette v-if="showLayout" />` + `<HotkeysCheatsheet v-if="showLayout" />`; `useNavHotkeys({ onOpenCommandPalette, onOpenCheatsheet })`; `router.afterEach` → `layoutStore.pushRecentRoute()`.
+- [x] `Orbita.vue` — `useOrbitaOverlays` подключён с refs на `notificationsRef` и `userProfileRef`; дубликат `onMounted` re-clamp удалён (теперь только в `useOrbitaDrag.scheduleClamp()`).
+- [x] `AppSidebar.vue` — `useNavPrefetch` подключён; `@mouseenter`/`@focus` на nav-links для обоих блоков (protoype + admin).
+- [x] `index.ts` — экспортированы `CommandPalette`, `HotkeysCheatsheet`, `useNavHotkeys`, `cheatsheetOpen`, `openCheatsheet`, `closeCheatsheet`, `NAV_HOTKEY_ENTRIES`, `useNavPrefetch`.
+- [x] i18n `ru.json`/`en.json` — добавлены `hotkeys.other`, `hotkeys.goToCompanies`, `hotkeys.goToTasks`, `hotkeys.goToDocuments`, `hotkeys.goToApprovals`, `hotkeys.goToCourses`, `hotkeys.showHelp`.
+- **Беклог (deferred по ТЗ §3.4):** Quick-actions синк (`PATCH /api/user/preferences { nav_quick_actions }`) — ждёт backend `User.nav_quick_actions` + эндпоинт. Не реализовано намеренно.
+- **PM-статус:** CODE REVIEW PASS. Pending браузерный QA (qa-tester).
 
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
 > **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.

@@ -11,8 +11,8 @@
     In V (row mode) the same order runs left→right.
   -->
   <div
+    role="group"
     :class="['orbita-toggle', `orbita-toggle--${orientationClass}`, { 'is-dragging': isDragging }]"
-    :aria-label="t('orbita.drag')"
   >
     <!-- Drag satellite (focusable for keyboard nudge) -->
     <div

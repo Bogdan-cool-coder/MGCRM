@@ -26,8 +26,14 @@
       @navigate="navigateTo"
     >
       <template #actions>
-        <NotificationsButton :tooltip-options="tooltipOptions" />
-        <UserProfileButton   :tooltip-options="tooltipOptions" />
+        <NotificationsButton
+          ref="notificationsRef"
+          :tooltip-options="tooltipOptions"
+        />
+        <UserProfileButton
+          ref="userProfileRef"
+          :tooltip-options="tooltipOptions"
+        />
       </template>
     </OrbitaPanel>
 
@@ -49,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, ref, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useLayoutStore } from '@/stores/layout'
@@ -59,10 +65,11 @@ import OrbitaPanel  from './OrbitaPanel.vue'
 import OrbitaToggle from './OrbitaToggle.vue'
 import NotificationsButton from './NotificationsButton.vue'
 import UserProfileButton   from './UserProfileButton.vue'
-import { useOrbitaDrag }          from './composables/useOrbitaDrag'
+import { useOrbitaDrag }           from './composables/useOrbitaDrag'
+import { useOrbitaOverlays }       from './composables/useOrbitaOverlays'
 import { useOrbitaPanelDirection } from './composables/useOrbitaPanelDirection'
 import { useOrbitaTooltip }        from './composables/useOrbitaTooltip'
-import type { OrbitaNavItem } from './types'
+import type { OrbitaNavItem, OrbitaOverlayControl } from './types'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -71,8 +78,12 @@ const layoutStore = useLayoutStore()
 const userStore   = useUserStore()
 const { tooltipOptions } = useOrbitaTooltip()
 
-const orbitaRef     = ref<HTMLElement | null>(null)
+const orbitaRef      = ref<HTMLElement | null>(null)
 const orbitaPanelRef = ref<InstanceType<typeof OrbitaPanel> | null>(null)
+
+// ─── Overlay sub-component refs (for mutual exclusion) ────────────────────────
+const notificationsRef = ref<(OrbitaOverlayControl & InstanceType<typeof NotificationsButton>) | null>(null)
+const userProfileRef   = ref<(OrbitaOverlayControl & InstanceType<typeof UserProfileButton>) | null>(null)
 
 // ─── Nav items resolved from shared source ────────────────────────────────────
 const resolvedNavItems = computed<OrbitaNavItem[]>(() => {
@@ -105,6 +116,8 @@ const orientationClass = computed(() =>
 const panelRef = computed(() => orbitaPanelRef.value?.panelRef ?? null)
 
 // ─── Drag (Slice 3: magnet snap + keyboard nudge) ─────────────────────────────
+// NOTE: useOrbitaDrag already calls scheduleClamp() on mount — no additional
+//       onMounted re-clamp needed here (removed to prevent duplicate clamping).
 const { startDrag, onGripKeyDown, orbitaStyle, isDragging } = useOrbitaDrag({
   collapsed:           isCollapsed,
   currentOrientation,
@@ -120,6 +133,21 @@ const { panelDirection } = useOrbitaPanelDirection({
   currentPosition,
   panelRef,
   orbitaRef,
+})
+
+// ─── Overlay mutual exclusion (profile ↔ notifications) ──────────────────────
+// Wires useOrbitaOverlays so only one overlay can be open at a time.
+// Sub-components expose syncPopover + realign via defineExpose (OrbitaOverlayControl).
+// Cast needed because component instance type is a superset of OrbitaOverlayControl.
+const notificationsControlRef = notificationsRef as Ref<OrbitaOverlayControl | null>
+const userProfileControlRef   = userProfileRef   as Ref<OrbitaOverlayControl | null>
+useOrbitaOverlays({
+  route,
+  controls: {
+    notifications: notificationsControlRef,
+    profile:       userProfileControlRef,
+  },
+  closeWhen: isCollapsed,
 })
 
 // ─── Rotation: pivot around "+" anchor center ─────────────────────────────────
@@ -198,27 +226,9 @@ function toggleCollapsed() {
   layoutStore.toggleOrbitCollapsed()
 }
 
-// ─── Mount: restore persisted position (re-clamp in case viewport changed) ────
-onMounted(() => {
-  if (layoutStore.orbitPos) {
-    void nextTick().then(() => {
-      requestAnimationFrame(() => {
-        const el = orbitaRef.value
-        if (!el || typeof window === 'undefined') return
-        const rect = el.getBoundingClientRect()
-        const pos  = layoutStore.orbitPos
-        if (!pos) return
-        const vw = window.innerWidth
-        const vh = window.innerHeight
-        const clamped = {
-          top:  Math.min(Math.max(pos.top,  8), vh - rect.height - 8),
-          left: Math.min(Math.max(pos.left, 8), vw - rect.width  - 8),
-        }
-        layoutStore.setOrbitPos(clamped)
-      })
-    })
-  }
-})
+// ─── Mount: re-clamp handled by useOrbitaDrag.scheduleClamp() on mount.
+// Duplicate onMounted re-clamp removed (Срез 4 PM fix 4c).
+
 </script>
 
 <style lang="scss" scoped>
