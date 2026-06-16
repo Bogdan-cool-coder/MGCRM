@@ -105,7 +105,8 @@
 
         <!-- VueFlow canvas -->
         <VueFlow
-          id="pipeline-canvas"
+          :id="canvasId"
+          ref="flowContainer"
           :nodes="canvasNodes"
           :edges="canvasEdges"
           :node-types="nodeTypes"
@@ -125,8 +126,8 @@
           />
           <Controls :show-interactive="false" />
           <MiniMap
-            :mask-color="isDark ? 'var(--p-surface-900)' : 'var(--p-surface-200)'"
-            :node-color="'var(--p-surface-card)'"
+            :mask-color="isDark ? 'var(--p-surface-800)' : 'var(--p-surface-200)'"
+            :node-color="isDark ? 'var(--p-surface-400)' : 'var(--p-surface-300)'"
           />
         </VueFlow>
       </div>
@@ -140,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, computed, markRaw, onMounted, onBeforeUnmount, type ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
@@ -198,9 +199,22 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 
+// ─── Per-instance canvas id — guaranteed unique on every mount ───────────────
+// Using crypto.randomUUID() (available in all modern browsers) so the id is
+// guaranteed unique even if Vue Flow's HMR resets module-level state or the
+// component is remounted via :key. Falls back to timestamp+random for old
+// environments. A fresh id forces Vue Flow to create a brand-new internal
+// store on every mount so @nodes-initialized fires correctly and fitView
+// sees the actual viewport rather than an orphaned store.
+
+const canvasId =
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? `pipeline-canvas-${crypto.randomUUID()}`
+    : `pipeline-canvas-${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`
+
 // ─── Vue Flow instance ────────────────────────────────────────────────────────
 
-const { fitView, getNodes, screenToFlowCoordinate } = useVueFlow('pipeline-canvas')
+const { fitView, getNodes, screenToFlowCoordinate } = useVueFlow(canvasId)
 
 // ─── Node types (markRaw to prevent reactivity wrapping) ─────────────────────
 
@@ -344,52 +358,143 @@ async function handleAutoLayout(): Promise<void> {
   await saveLayout(newLayout)
 }
 
-// ─── Initial fitView ─────────────────────────────────────────────────────────
+// ─── Flow container ref (for ResizeObserver) ─────────────────────────────────
+// VueFlow is a component, so ref gives us a ComponentPublicInstance (with $el).
+// We read $el to get the root DOM element and narrow with instanceof Element.
+
+const flowContainer = ref<ComponentPublicInstance | null>(null)
+
+// ─── Initial fitView — retry-until-sized ─────────────────────────────────────
 //
-// Primary path: @nodes-initialized template event fires in the context of the
-// correct VueFlow instance (id="pipeline-canvas") after all nodes have been
-// measured (width/height non-zero). This is the canonical moment to call
-// fitView so the bounding-box computation is reliable.
+// Problem: double-rAF fires before the flex chain resolves the container height
+// → VueFlow sees a zero/wrong bbox → fitView() results in identity transform.
 //
-// didInitialFit guards against repeated calls when automations are added while
-// the canvas is visible (nodes-initialized fires again).
+// Solution: tryFit() spins up to MAX_RETRIES rAF frames checking that:
+//   (a) the .vue-flow element has clientWidth > 0 AND clientHeight > 0
+//   (b) at least one node has been measured (width & height non-zero in VueFlow)
+// Only when both conditions hold is fitView() called. This is deterministic —
+// it fires EXACTLY when the container is ready, never before.
 //
-// Because the parent renders PipelineCanvas via v-else-if (not v-show), the
-// component is fully unmounted when switching Form↔Canvas. Each open creates a
-// fresh instance — didInitialFit resets automatically.
+// Two triggers fire tryFit (whichever comes second wins; didInitialFit guards
+// against double-invocation):
+//   1. @nodes-initialized  — nodes are in the DOM and measured by VueFlow
+//   2. ResizeObserver      — container first gets a non-zero height
+//
+// didInitialFit resets on every mount (v-else-if unmounts on switch) so each
+// canvas open gets a fresh fit cycle. ResizeObserver is torn down after the
+// first successful fit or on component unmount.
 
 const didInitialFit = ref(false)
+const MAX_FIT_RETRIES = 30 // ~500 ms at 60 fps
+
+let fitResizeObserver: ResizeObserver | null = null
+
+function teardownFitObserver(): void {
+  if (fitResizeObserver) {
+    fitResizeObserver.disconnect()
+    fitResizeObserver = null
+  }
+}
+
+function getFlowEl(): HTMLElement | null {
+  const instance = flowContainer.value
+  if (!instance) return null
+  // ComponentPublicInstance.$el is the root DOM element of VueFlow
+  const root = instance.$el instanceof Element ? (instance.$el as HTMLElement) : null
+  if (!root) return null
+  // VueFlow renders a .vue-flow wrapper div — use it for sizing checks
+  return (root.querySelector('.vue-flow') as HTMLElement | null) ?? root
+}
+
+function tryFit(remaining: number): void {
+  if (didInitialFit.value) {
+    teardownFitObserver()
+    return
+  }
+  const el = getFlowEl()
+  if (!el) {
+    if (remaining > 0) requestAnimationFrame(() => tryFit(remaining - 1))
+    return
+  }
+  const { clientWidth, clientHeight } = el
+  // Also check that VueFlow has at least one node with dimensions
+  const nodesReady = getNodes.value.length === 0 || getNodes.value.some(
+    (n) => (n.dimensions?.width ?? 0) > 0 && (n.dimensions?.height ?? 0) > 0,
+  )
+  if (clientWidth > 0 && clientHeight > 0 && nodesReady) {
+    didInitialFit.value = true
+    fitView({ padding: 0.2 })
+    teardownFitObserver()
+    stopNodesWatch()
+  } else if (remaining > 0) {
+    requestAnimationFrame(() => tryFit(remaining - 1))
+  }
+}
+
+function startFit(): void {
+  tryFit(MAX_FIT_RETRIES)
+}
 
 function onNodesReady(): void {
-  if (didInitialFit.value) return
-  didInitialFit.value = true
-  // Double-rAF after nextTick: flush Vue DOM → browser layout pass #1 → layout
-  // pass #2. The second rAF guarantees that the flex chain has finalised the
-  // canvas height (layout__content → canvas-area → pipeline-canvas → body →
-  // __flow → .vue-flow) before VueFlow computes the bounding-box for fitView.
-  // A single rAF is not enough when the parent flex-resize also triggers a
-  // layout recalculation (observed: fitView called at 376px, bbox wrong).
-  void nextTick(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        fitView({ padding: 0.2 })
-      })
-    })
-  })
+  startFit()
 }
 
-// Soft fallback: @pane-ready fires when the VueFlow pane DOM element mounts.
-// Nodes are NOT measured yet at this point — raise timeout to 800ms so the
-// flex chain + node measurement both finish before the bbox computation.
-// The guard prevents double-fit when @nodes-initialized already fired.
+// pane-ready: keep as secondary trigger (guarded by didInitialFit via tryFit)
 function onPaneReady(): void {
-  setTimeout(() => {
-    if (!didInitialFit.value) {
-      didInitialFit.value = true
-      fitView({ padding: 0.2 })
-    }
-  }, 800)
+  startFit()
 }
+
+// ─── Defensive watch fallback ─────────────────────────────────────────────────
+// If neither @nodes-initialized nor @pane-ready fires (e.g. orphaned store due
+// to id collision during HMR), watching for the first node with measured
+// dimensions acts as a final safety net. The watcher is torn down after the
+// first successful fit or on component unmount to avoid unnecessary overhead.
+//
+// stopNodesWatch is declared with let so tryFit (defined above) can call it
+// via closure without a temporal dead zone problem — by the time any event
+// handler actually invokes tryFit the assignment below has completed.
+
+let stopNodesWatch: () => void = () => {}
+
+// Use getNodes (GraphNode[]) rather than canvasNodes (Node[]) — GraphNode carries
+// the dimensions field that Vue Flow populates after measuring DOM elements.
+const measuredNodes = computed(() =>
+  getNodes.value.filter((n) => (n.dimensions?.width ?? 0) > 0),
+)
+
+stopNodesWatch = watch(measuredNodes, (nodes) => {
+  if (!didInitialFit.value && nodes.length > 0) {
+    startFit()
+  }
+})
+
+onBeforeUnmount(() => {
+  stopNodesWatch()
+})
+
+// ResizeObserver: fires when the container first gets a non-zero height.
+// Installed in onMounted so the ref is populated.
+onMounted(() => {
+  fitResizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const { width, height } = entry.contentRect
+      if (width > 0 && height > 0) {
+        startFit()
+      }
+    }
+  })
+  // Observe after one rAF so the VueFlow component has mounted its $el
+  requestAnimationFrame(() => {
+    const target = getFlowEl()
+    if (target && fitResizeObserver) {
+      fitResizeObserver.observe(target)
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  teardownFitObserver()
+})
 
 // ─── Reload helper ────────────────────────────────────────────────────────────
 
@@ -535,6 +640,23 @@ function onDrop(event: DragEvent): void {
     --vf-bg-color: var(--p-surface-ground);
   }
 
+  // ── MiniMap theming ──────────────────────────────────────────────────────
+  // --p-card-background auto-switches light→white / dark→dark panel color;
+  // no separate .app-dark block needed for the background.
+  // mask-color and node-color are passed as props (bound in template) so they
+  // pick up isDark reactively — no CSS override needed for those.
+
+  :deep(.vue-flow__minimap) {
+    background: var(--p-card-background);
+    border: 1px solid var(--p-surface-border);
+    border-radius: 6px;
+  }
+
+  :deep(.vue-flow__minimap-mask) {
+    fill: var(--p-surface-200);
+    fill-opacity: 0.6;
+  }
+
   // ── Loading ──────────────────────────────────────────────────────────────
 
   &__loading {
@@ -641,5 +763,15 @@ function onDrop(event: DragEvent): void {
   &__narrow-message {
     width: 100%;
   }
+}
+
+// ── MiniMap dark mode (mask only) ────────────────────────────────────────────
+// Background is handled via --p-card-background (auto-switches light/dark).
+// Mask fill is an SVG attribute — CSS custom properties don't propagate into SVG
+// fill attributes set inline; we override via a global rule.
+
+:global(.app-dark) .vue-flow__minimap-mask {
+  fill: var(--p-surface-800);
+  fill-opacity: 0.7;
 }
 </style>

@@ -101,6 +101,7 @@
         class="pipeline-settings-page__canvas-area"
       >
         <PipelineCanvas
+          :key="`canvas-${selectedPipelineId}-${canvasMountSeq}`"
           :pipeline-id="selectedPipelineId"
           :stages="stages"
           :automations="pipelineAutomations.automations.value"
@@ -193,6 +194,16 @@ const toast = useToast()
 
 type ViewMode = 'form' | 'canvas'
 const viewMode = ref<ViewMode>('form')
+
+// canvasMountSeq increments every time we enter canvas mode (or switch pipeline
+// while already in canvas mode). The :key on PipelineCanvas is derived from
+// this counter so Vue fully destroys and re-creates the component on each open,
+// giving a fresh Vue Flow store, a new canvasId, and a clean fitView cycle.
+const canvasMountSeq = ref(0)
+
+watch(viewMode, (v) => {
+  if (v === 'canvas') canvasMountSeq.value++
+})
 
 const viewModeOptions = computed(() => [
   { label: t('automation.canvas.modeForm'), value: 'form' },
@@ -480,6 +491,9 @@ async function handleToggleAutomation(id: number, isActive: boolean) {
 
 watch(selectedPipelineId, async (id) => {
   if (id !== null) {
+    // If we are already in canvas mode, switching pipeline must also force a
+    // fresh PipelineCanvas mount (new graph layout, new Vue Flow store).
+    if (viewMode.value === 'canvas') canvasMountSeq.value++
     await pipelineAutomations.fetchForPipeline(id)
   }
 })

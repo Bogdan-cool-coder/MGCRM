@@ -4,7 +4,8 @@
     :header="isEdit ? t('automation.wizard.titleEdit') : t('automation.wizard.titleNew')"
     :style="{ width: '640px' }"
     modal
-    :close-on-escape="false"
+    :closable="true"
+    @hide="onDialogHide"
   >
     <!-- Error banner -->
     <Message v-if="apiError" severity="error" :closable="false" class="mb-3">
@@ -170,6 +171,10 @@ watch(
 )
 
 watch(visible, (v) => {
+  // onDialogHide handles the false → close path authoritatively.
+  // Only emit when visible goes true (open), or when it closes via programmatic
+  // assignment (e.g. visible.value = false inside onSubmit). The @hide handler
+  // takes care of X / Escape closes so we avoid a double-reset there.
   emit('update:modelVisible', v)
   if (!v) resetState()
 })
@@ -208,6 +213,17 @@ function resetState() {
   editId.value = null
   apiError.value = null
   saving.value = false
+}
+
+// PrimeVue Dialog emits @hide when the dialog finishes closing (X button, Escape,
+// or programmatic close). Using @hide as the authoritative close handler means
+// the wizard always resets to step 1 and notifies the parent — regardless of
+// which step was active when the user clicked X. The visible watcher below still
+// runs but is now guarded against redundant resets.
+function onDialogHide() {
+  visible.value = false
+  emit('update:modelVisible', false)
+  resetState()
 }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
