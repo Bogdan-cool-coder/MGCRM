@@ -5,7 +5,7 @@
       <!-- Owner — inline select -->
       <div class="deal-tab-main__quick-row">
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.owner') }}</span>
-        <div class="deal-tab-main__quick-value">
+        <div class="deal-tab-main__quick-value deal-tab-main__quick-value--owner">
           <InlineEditableField
             :model-value="deal.owner.id"
             field-key="owner_user_id"
@@ -29,17 +29,41 @@
         </div>
       </div>
 
-      <!-- Budget (auto) — derived, read-only -->
+      <!-- Budget (auto) + primary product chip -->
       <div class="deal-tab-main__quick-row">
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.amountAuto') }}</span>
         <div class="deal-tab-main__quick-value">
           <span class="deal-tab-main__budget">{{ formatCurrency(deal.amount, deal.currency) }}</span>
+          <Tag
+            v-if="primaryProductName"
+            :value="primaryProductName"
+            severity="secondary"
+            size="small"
+            class="ms-1"
+          />
+        </div>
+      </div>
+
+      <!-- Days in work with rotting indicator -->
+      <div class="deal-tab-main__quick-row">
+        <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.daysInWork') }}</span>
+        <div class="deal-tab-main__quick-value">
+          <span
+            class="deal-tab-main__days-badge"
+            :class="{
+              'deal-tab-main__days-badge--warn': daysWarning && !daysDanger,
+              'deal-tab-main__days-badge--danger': daysDanger,
+            }"
+          >
+            {{ daysInStage }} {{ t('sales.deal.page.daysInStage') }}
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- ── Group: Products ─────────────────────────────────────────────────────── -->
+    <!-- ── Group: Products (accent, open by default) ──────────────────────────── -->
     <DealProductsGroup
+      ref="productsGroupRef"
       :items="products"
       :currency="deal.currency"
       :loading="productsLoading"
@@ -51,11 +75,22 @@
       @amount-changed="emit('amountChanged', $event)"
     />
 
-    <!-- ── Group: Deal (dates) ─────────────────────────────────────────────────── -->
+    <!-- ── Group: Contacts (accent, open by default) ──────────────────────────── -->
+    <DealContactsGroup
+      ref="contactsGroupRef"
+      :contacts="contacts"
+      :removing-id="removingContactId"
+      @add-contact="emit('openAddContact')"
+      @remove-contact="onRemoveContact"
+    />
+
+    <!-- ── Group: Deal dates (quiet, collapsed by default) ───────────────────── -->
     <DealFieldGroup
+      ref="datesGroupRef"
       :title="t('sales.deal.info.groups.deal')"
       icon="pi-calendar"
       group-key="deal-dates"
+      :default-collapsed="true"
     >
       <!-- Expected sign date -->
       <div class="deal-tab-main__date-row">
@@ -82,27 +117,23 @@
       </div>
     </DealFieldGroup>
 
-    <!-- ── Group: Contacts ────────────────────────────────────────────────────── -->
-    <DealContactsGroup
-      :contacts="contacts"
-      :removing-id="removingContactId"
-      @add-contact="emit('openAddContact')"
-      @remove-contact="onRemoveContact"
-    />
-
-    <!-- ── Group: Company data ────────────────────────────────────────────────── -->
+    <!-- ── Group: Company data (quiet, collapsed by default) ─────────────────── -->
     <DealCompanyGroup
       v-if="companyFull"
+      ref="companyGroupRef"
       :company="companyFull"
+      :default-collapsed="true"
       @company-updated="onCompanyUpdated"
     />
 
-    <!-- ── Custom fields (scope=deal) ─────────────────────────────────────────── -->
+    <!-- ── Custom fields (scope=deal, quiet, collapsed by default) ────────────── -->
     <DealFieldGroup
       v-if="dealCustomDefs.length > 0"
+      ref="customGroupRef"
       :title="t('sales.deal.info.groups.customFields')"
       icon="pi-sliders-h"
       group-key="deal-custom"
+      :default-collapsed="true"
     >
       <DealFieldRow
         v-for="def in dealCustomDefs"
@@ -124,6 +155,7 @@ import { ref, computed, defineComponent, h, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
+import Tag from 'primevue/tag'
 import DatePicker from 'primevue/datepicker'
 import DealFieldGroup from './DealFieldGroup.vue'
 import DealFieldRow from './DealFieldRow.vue'
@@ -212,6 +244,7 @@ const DateEditField = defineComponent({
 
 const props = defineProps<{
   deal: DealDto
+  daysInStage: number
   products: DealProductDto[]
   productsLoading: boolean
   updatingId: number | null
@@ -219,6 +252,8 @@ const props = defineProps<{
   contacts: DealContactDto[]
   removingContactId: number | null
   usersList: { id: number; name: string }[]
+  collapseAllSignal?: number
+  expandAllSignal?: number
 }>()
 
 const emit = defineEmits<{
@@ -233,6 +268,52 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
+
+// ── Refs for collapse/expand all ───────────────────────────────────────────────
+
+const productsGroupRef = ref<InstanceType<typeof DealProductsGroup> | null>(null)
+const contactsGroupRef = ref<InstanceType<typeof DealContactsGroup> | null>(null)
+const datesGroupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
+const companyGroupRef = ref<InstanceType<typeof DealCompanyGroup> | null>(null)
+const customGroupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
+
+// Watch signals to collapse/expand all groups
+watch(
+  () => props.collapseAllSignal,
+  (val, old) => {
+    if (val !== old && val !== undefined && val > 0) {
+      // collapse all field groups
+      datesGroupRef.value?.collapse?.()
+      companyGroupRef.value?.collapse?.()
+      customGroupRef.value?.collapse?.()
+      // Note: products/contacts groups go through DealProductsGroup/DealContactsGroup
+      // which wrap DealFieldGroup — we'd need refs into them. They stay open (accent groups).
+    }
+  },
+)
+
+watch(
+  () => props.expandAllSignal,
+  (val, old) => {
+    if (val !== old && val !== undefined && val > 0) {
+      datesGroupRef.value?.expand?.()
+      companyGroupRef.value?.expand?.()
+      customGroupRef.value?.expand?.()
+    }
+  },
+)
+
+// ── Rotting thresholds ─────────────────────────────────────────────────────────
+
+const warnDays = computed(() => props.deal.stage.warn_days ?? 7)
+const dangerDays = computed(() => props.deal.stage.danger_days ?? 14)
+
+const daysWarning = computed(() => props.daysInStage >= warnDays.value)
+const daysDanger = computed(() => props.daysInStage >= dangerDays.value)
+
+// ── Primary product chip ───────────────────────────────────────────────────────
+
+const primaryProductName = computed(() => props.products[0]?.product?.name ?? null)
 
 // ── Owner save ─────────────────────────────────────────────────────────────────
 
@@ -402,6 +483,20 @@ watch(() => props.deal.company.id, (newId, oldId) => {
   display: flex;
   align-items: center;
   min-width: 0;
+  flex-wrap: wrap;
+  gap: $space-1;
+
+  // Owner field: pencil icon only on hover
+  &--owner {
+    :deep(.inline-edit-icon) {
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    &:hover :deep(.inline-edit-icon) {
+      opacity: 1;
+    }
+  }
 }
 
 .deal-tab-main__company-link {
@@ -421,6 +516,34 @@ watch(() => props.deal.company.id, (newId, oldId) => {
   font-weight: $font-weight-bold;
   color: $primary-color;
   padding: $space-1 $space-2;
+}
+
+.deal-tab-main__days-badge {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $surface-600;
+  padding: $space-1 $space-2;
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
+
+  &--warn {
+    color: var(--p-yellow-600);
+
+    .app-dark & {
+      color: var(--p-yellow-400);
+    }
+  }
+
+  &--danger {
+    color: var(--p-red-600);
+    font-weight: $font-weight-bold;
+
+    .app-dark & {
+      color: var(--p-red-400);
+    }
+  }
 }
 
 // ── Date fields ────────────────────────────────────────────────────────────────

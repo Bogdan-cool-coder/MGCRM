@@ -1129,6 +1129,8 @@
         },
         "daysInStage": "дн. в стадии",
         "changeStage": "Изменить стадию",
+        "clickToChangeStage": "Нажмите, чтобы сменить стадию",
+        "infoPanel": "Инфо",
         "menu": {
           "rename": "Переименовать",
           "changeOwner": "Сменить ответственного",
@@ -1140,7 +1142,18 @@
           "archiveConfirm": "Архивировать сделку?",
           "delete": "Удалить сделку",
           "deleteConfirm": "Удалить сделку?",
-          "deleteDetail": "Это действие нельзя отменить"
+          "deleteDetail": "Это действие нельзя отменить",
+          "collapseAll": "Свернуть все группы",
+          "expandAll": "Развернуть все группы",
+          "customizeFields": "Настроить поля",
+          "copyLink": "Копировать ссылку"
+        },
+        "feedView": "Лента",
+        "infoView": "Карточка",
+        "health": {
+          "noTask": "Нет задачи",
+          "overdue": "Просрочено",
+          "nextTask": "{kind} · {date}"
         }
       },
       "info": {
@@ -1156,7 +1169,8 @@
           "amountAuto": "Бюджет (авто)",
           "company": "Компания",
           "expectedSignDate": "Дата подписания (план)",
-          "expectedPaymentDate": "Дата оплаты (план)"
+          "expectedPaymentDate": "Дата оплаты (план)",
+          "daysInWork": "Дней в работе"
         },
         "groups": {
           "products": "Продукты",
@@ -1219,6 +1233,7 @@
       },
       "feed": {
         "searchPlaceholder": "Поиск в ленте...",
+        "searchTooltip": "Поиск в ленте",
         "filterType": "Тип",
         "reset": "Сбросить",
         "loadMore": "Загрузить ещё",
@@ -1258,7 +1273,14 @@
         "participants": "{'@'} Участники",
         "location": "Место встречи",
         "save": "Сохранить",
-        "successCreate": "Добавлено в ленту"
+        "successCreate": "Добавлено в ленту",
+        "taskSubtype": "Тип задачи",
+        "subtypes": {
+          "task": "Задача",
+          "call": "Звонок",
+          "meeting": "Встреча",
+          "follow_up": "Follow-up"
+        }
       },
       "actions": {
         "create": "Создать сделку"

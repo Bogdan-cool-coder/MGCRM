@@ -1,8 +1,10 @@
 <template>
   <DealFieldGroup
+    ref="fieldGroupRef"
     :title="t('sales.deal.info.groups.company')"
     icon="pi-building"
     group-key="company"
+    :default-collapsed="defaultCollapsed"
   >
     <!-- website -->
     <DealFieldRow
@@ -86,15 +88,26 @@ import { getApiErrorMessage } from '@/utils/errors'
 import type { Company } from '@/entities/crm'
 import type { CustomFieldDef } from '@/entities/crm'
 
-const props = defineProps<{
-  company: Company
-}>()
+const props = withDefaults(
+  defineProps<{
+    company: Company
+    defaultCollapsed?: boolean
+  }>(),
+  { defaultCollapsed: false },
+)
 
 const emit = defineEmits<{
   companyUpdated: [company: Company]
 }>()
 
 const { t } = useI18n()
+
+const fieldGroupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
+
+function collapse() { fieldGroupRef.value?.collapse?.() }
+function expand() { fieldGroupRef.value?.expand?.() }
+
+defineExpose({ collapse, expand })
 const toast = useToast()
 const directoriesStore = useDirectoriesStore()
 

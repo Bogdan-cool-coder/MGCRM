@@ -4,6 +4,7 @@
     :class="{
       'feed-item--done': isActivity && item.activity?.is_closed,
       'feed-item--deal-created': item.type === 'deal_created',
+      'feed-item--system': isSystem,
     }"
   >
     <!-- Timeline dot -->
@@ -127,7 +128,8 @@
             size="small"
           />
           <span v-if="item.activity.responsible" class="feed-item__responsible">
-            · {{ item.activity.responsible.full_name }}
+            <i class="pi pi-user feed-item__responsible-icon" />
+            {{ item.activity.responsible.full_name }}
           </span>
           <Tag
             v-if="item.type !== 'note' && item.activity.priority"
@@ -144,6 +146,7 @@
 
         <!-- Actions -->
         <div class="feed-item__actions">
+          <!-- Always visible: complete CTA for active tasks -->
           <Button
             v-if="!item.activity.is_closed && item.activity.status !== 'done'"
             icon="pi pi-check"
@@ -152,8 +155,10 @@
             size="small"
             outlined
             :loading="completingId === item.activity.id"
+            class="feed-item__complete-btn"
             @click="onComplete"
           />
+          <!-- Hover-only actions -->
           <Button
             v-if="item.activity.status === 'done'"
             icon="pi pi-refresh"
@@ -162,6 +167,7 @@
             size="small"
             text
             :loading="reopeningId === item.activity.id"
+            class="feed-item__hover-btn"
             @click="onReopen"
           />
           <Button
@@ -169,6 +175,7 @@
             severity="secondary"
             size="small"
             text
+            class="feed-item__hover-btn"
             @click="onEdit"
           />
           <Button
@@ -176,6 +183,7 @@
             severity="secondary"
             size="small"
             text
+            class="feed-item__hover-btn"
             @click="toggleMenu"
           />
         </div>
@@ -261,7 +269,15 @@ const isActivity = computed(
     props.item.type === 'note' ||
     props.item.type === 'task' ||
     props.item.type === 'call' ||
-    props.item.type === 'meeting',
+    props.item.type === 'meeting' ||
+    props.item.type === 'follow_up',
+)
+
+const isSystem = computed(
+  (): boolean =>
+    props.item.type === 'stage_change' ||
+    props.item.type === 'field_change' ||
+    props.item.type === 'deal_created',
 )
 
 const dotColor = computed((): 'primary' | 'green' | 'red' | 'surface' => {
@@ -285,6 +301,7 @@ const itemIcon = computed((): string => {
     case 'task': return 'pi-check-square'
     case 'call': return 'pi-phone'
     case 'meeting': return 'pi-users'
+    case 'follow_up': return 'pi-reply'
     default: return 'pi-circle'
   }
 })
@@ -647,5 +664,33 @@ function onActivityUpdated(activity: ActivityDto) {
   gap: $space-1;
   margin-top: $space-1;
   flex-wrap: wrap;
+}
+
+.feed-item__hover-btn {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.feed-item__card:hover .feed-item__hover-btn {
+  opacity: 1;
+}
+
+.feed-item__complete-btn {
+  // always visible — no opacity change
+}
+
+.feed-item__responsible-icon {
+  font-size: 10px;
+  margin-right: 2px;
+}
+
+// System events: transparent card
+.feed-item--system {
+  .feed-item__card {
+    background: transparent;
+    border: none;
+    padding: $space-1 $space-2;
+    box-shadow: none;
+  }
 }
 </style>

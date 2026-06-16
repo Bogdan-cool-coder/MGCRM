@@ -1,14 +1,16 @@
 <template>
   <div class="deal-composer">
-    <!-- Tab bar -->
-    <Tabs v-model:value="activeTab" class="deal-composer__tabs">
-      <TabList class="deal-composer__tab-list">
-        <Tab value="note">{{ t('sales.deal.composer.note') }}</Tab>
-        <Tab value="task">{{ t('sales.deal.composer.task') }}</Tab>
-        <Tab value="call">{{ t('sales.deal.composer.call') }}</Tab>
-        <Tab value="meeting">{{ t('sales.deal.composer.meeting') }}</Tab>
-      </TabList>
-    </Tabs>
+    <!-- Type selector dropdown -->
+    <div class="deal-composer__header">
+      <Select
+        v-model="activeTab"
+        :options="composerTypeOptions"
+        option-label="label"
+        option-value="value"
+        class="deal-composer__type-select"
+        size="small"
+      />
+    </div>
 
     <!-- Form body -->
     <div class="deal-composer__body">
@@ -23,16 +25,6 @@
           class="deal-composer__textarea"
         />
         <div class="deal-composer__footer">
-          <MultiSelect
-            v-model="noteForm.participantIds"
-            :options="usersList"
-            option-label="name"
-            option-value="id"
-            :placeholder="t('sales.deal.composer.participants')"
-            display="chip"
-            size="small"
-            class="deal-composer__participants"
-          />
           <Button
             icon="pi pi-send"
             :label="t('sales.deal.composer.save')"
@@ -42,9 +34,21 @@
         </div>
       </template>
 
-      <!-- ─── Task ──────────────────────────────────────────────────────────── -->
-      <template v-else-if="activeTab === 'task'">
+      <!-- ─── Task (with subtype selector) ─────────────────────────────────── -->
+      <template v-else>
         <div class="row g-2">
+          <!-- Task subtype -->
+          <div class="col-12">
+            <Select
+              v-model="taskForm.subtype"
+              :options="taskSubtypeOptions"
+              option-label="label"
+              option-value="value"
+              :placeholder="t('sales.deal.composer.taskSubtype')"
+              fluid
+              append-to="body"
+            />
+          </div>
           <div class="col-12">
             <InputText
               v-model="taskForm.title"
@@ -72,6 +76,7 @@
               :placeholder="t('activity.fields.responsible')"
               show-clear
               fluid
+              append-to="body"
             />
           </div>
           <div class="col-12">
@@ -93,129 +98,11 @@
           </div>
         </div>
         <div class="deal-composer__footer">
-          <MultiSelect
-            v-model="taskForm.participantIds"
-            :options="usersList"
-            option-label="name"
-            option-value="id"
-            :placeholder="t('sales.deal.composer.participants')"
-            display="chip"
-            size="small"
-            class="deal-composer__participants"
-          />
           <Button
             icon="pi pi-send"
             :label="t('sales.deal.composer.save')"
             :loading="saving"
             @click="submitTask"
-          />
-        </div>
-      </template>
-
-      <!-- ─── Call ──────────────────────────────────────────────────────────── -->
-      <template v-else-if="activeTab === 'call'">
-        <div class="row g-2">
-          <div class="col-12">
-            <InputText
-              v-model="callForm.title"
-              :placeholder="t('sales.deal.composer.titlePlaceholder')"
-              :invalid="!!errors.title"
-              fluid
-            />
-            <small v-if="errors.title" class="deal-composer__error">{{ errors.title }}</small>
-          </div>
-          <div class="col-6">
-            <DatePicker
-              v-model="callForm.dueAt"
-              show-icon
-              fluid
-              :placeholder="t('common.date')"
-            />
-          </div>
-          <div class="col-6">
-            <Select
-              v-model="callForm.responsibleId"
-              :options="usersList"
-              option-label="name"
-              option-value="id"
-              :placeholder="t('activity.fields.responsible')"
-              show-clear
-              fluid
-            />
-          </div>
-          <div class="col-12">
-            <Textarea
-              v-model="callForm.body"
-              :placeholder="t('sales.deal.composer.notePlaceholder')"
-              :rows="2"
-              fluid
-            />
-          </div>
-        </div>
-        <div class="deal-composer__footer">
-          <span />
-          <Button
-            icon="pi pi-send"
-            :label="t('sales.deal.composer.save')"
-            :loading="saving"
-            @click="submitCall"
-          />
-        </div>
-      </template>
-
-      <!-- ─── Meeting ───────────────────────────────────────────────────────── -->
-      <template v-else-if="activeTab === 'meeting'">
-        <div class="row g-2">
-          <div class="col-12">
-            <InputText
-              v-model="meetingForm.title"
-              :placeholder="t('sales.deal.composer.titlePlaceholder')"
-              :invalid="!!errors.title"
-              fluid
-            />
-            <small v-if="errors.title" class="deal-composer__error">{{ errors.title }}</small>
-          </div>
-          <div class="col-6">
-            <DatePicker
-              v-model="meetingForm.dueAt"
-              show-time
-              show-icon
-              fluid
-              :placeholder="t('common.date')"
-            />
-          </div>
-          <div class="col-6">
-            <InputText
-              v-model="meetingForm.location"
-              :placeholder="t('sales.deal.composer.location')"
-              fluid
-            />
-          </div>
-          <div class="col-12">
-            <Textarea
-              v-model="meetingForm.body"
-              :placeholder="t('sales.deal.composer.notePlaceholder')"
-              :rows="2"
-              fluid
-            />
-          </div>
-        </div>
-        <div class="deal-composer__footer">
-          <MultiSelect
-            v-model="meetingForm.participantIds"
-            :options="usersList"
-            option-label="name"
-            option-value="id"
-            :placeholder="t('sales.deal.composer.participants')"
-            display="chip"
-            size="small"
-            class="deal-composer__participants"
-          />
-          <Button
-            icon="pi pi-send"
-            :label="t('sales.deal.composer.save')"
-            :loading="saving"
-            @click="submitMeeting"
           />
         </div>
       </template>
@@ -227,19 +114,23 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
-import Tabs from 'primevue/tabs'
-import TabList from 'primevue/tablist'
-import Tab from 'primevue/tab'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
 import Select from 'primevue/select'
-import MultiSelect from 'primevue/multiselect'
 import SelectButton from 'primevue/selectbutton'
 import { activityApi } from '@/api/activity'
 import { useMutation } from '@/composables/async/useMutation'
 import type { ActivityDto, ActivityKind, ActivityPriority, CreateActivityPayload } from '@/entities/activity'
+
+// ─── Task subtype type ────────────────────────────────────────────────────────
+
+type TaskSubtype = 'task' | 'call' | 'meeting' | 'follow_up'
+
+// ─── Composer top-level tab (only note / task) ───────────────────────────────
+
+type ComposerTab = 'note' | 'task'
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
@@ -260,16 +151,45 @@ const toast = useToast()
 const mutation = useMutation<ActivityDto>()
 const saving = computed(() => mutation.isPending.value)
 
-const activeTab = ref<ActivityKind>(props.initialTab ?? 'note')
+/** Map any incoming ActivityKind to the two composer tabs */
+function kindToTab(kind: ActivityKind | undefined): ComposerTab {
+  if (!kind || kind === 'note') return 'note'
+  return 'task'
+}
+
+const activeTab = ref<ComposerTab>(kindToTab(props.initialTab))
 
 watch(
   () => props.initialTab,
-  (tab) => {
-    if (tab) activeTab.value = tab
+  (kind) => {
+    activeTab.value = kindToTab(kind)
+    // When switching from outside with a specific subtype, mirror it
+    if (kind && kind !== 'note') {
+      const subtypes: TaskSubtype[] = ['task', 'call', 'meeting', 'follow_up']
+      if (subtypes.includes(kind as TaskSubtype)) {
+        taskForm.value.subtype = kind as TaskSubtype
+      }
+    }
   },
 )
 
 const errors = ref<{ title?: string }>({})
+
+// ─── Type dropdown options (only Note + Task) ─────────────────────────────────
+
+const composerTypeOptions = computed(() => [
+  { value: 'note' as ComposerTab, label: t('sales.deal.composer.note') },
+  { value: 'task' as ComposerTab, label: t('sales.deal.composer.task') },
+])
+
+// ─── Task subtype options ─────────────────────────────────────────────────────
+
+const taskSubtypeOptions = computed(() => [
+  { value: 'task' as TaskSubtype, label: t('sales.deal.composer.subtypes.task') },
+  { value: 'call' as TaskSubtype, label: t('sales.deal.composer.subtypes.call') },
+  { value: 'meeting' as TaskSubtype, label: t('sales.deal.composer.subtypes.meeting') },
+  { value: 'follow_up' as TaskSubtype, label: t('sales.deal.composer.subtypes.follow_up') },
+])
 
 // ─── Priority options ─────────────────────────────────────────────────────────
 
@@ -279,11 +199,10 @@ const priorityOptions = computed(() => [
   { value: 'high' as ActivityPriority, label: t('activity.priorities.high') },
 ])
 
-// ─── Per-tab form state ───────────────────────────────────────────────────────
+// ─── Form state ───────────────────────────────────────────────────────────────
 
 const noteForm = ref({
   body: '',
-  participantIds: [] as number[],
 })
 
 const taskForm = ref({
@@ -292,29 +211,13 @@ const taskForm = ref({
   dueAt: null as Date | null,
   responsibleId: null as number | null,
   priority: 'normal' as ActivityPriority,
-  participantIds: [] as number[],
+  subtype: 'task' as TaskSubtype,
 })
-
-const callForm = ref({
-  title: '',
-  body: '',
-  dueAt: null as Date | null,
-  responsibleId: null as number | null,
-})
-
-const meetingForm = ref({
-  title: '',
-  body: '',
-  dueAt: null as Date | null,
-  location: '',
-  participantIds: [] as number[],
-})
-
-// ─── Reset helpers ────────────────────────────────────────────────────────────
 
 function resetNote() {
-  noteForm.value = { body: '', participantIds: [] }
+  noteForm.value = { body: '' }
 }
+
 function resetTask() {
   taskForm.value = {
     title: '',
@@ -322,14 +225,8 @@ function resetTask() {
     dueAt: null,
     responsibleId: null,
     priority: 'normal',
-    participantIds: [],
+    subtype: taskForm.value.subtype, // preserve subtype between submissions
   }
-}
-function resetCall() {
-  callForm.value = { title: '', body: '', dueAt: null, responsibleId: null }
-}
-function resetMeeting() {
-  meetingForm.value = { title: '', body: '', dueAt: null, location: '', participantIds: [] }
 }
 
 // ─── Submit helpers ───────────────────────────────────────────────────────────
@@ -373,8 +270,8 @@ async function submitTask() {
     return
   }
   try {
-    await doCreate({
-      kind: 'task',
+    const payload: CreateActivityPayload = {
+      kind: taskForm.value.subtype,
       title: taskForm.value.title.trim(),
       body: taskForm.value.body || null,
       due_at: taskForm.value.dueAt ? taskForm.value.dueAt.toISOString() : null,
@@ -382,51 +279,9 @@ async function submitTask() {
       priority: taskForm.value.priority,
       target_type: 'deal',
       target_id: props.dealId,
-    })
+    }
+    await doCreate(payload)
     resetTask()
-  } catch {
-    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
-  }
-}
-
-async function submitCall() {
-  errors.value = {}
-  if (!callForm.value.title.trim()) {
-    errors.value.title = t('common.required')
-    return
-  }
-  try {
-    await doCreate({
-      kind: 'call',
-      title: callForm.value.title.trim(),
-      body: callForm.value.body || null,
-      due_at: callForm.value.dueAt ? callForm.value.dueAt.toISOString() : null,
-      responsible_id: callForm.value.responsibleId,
-      target_type: 'deal',
-      target_id: props.dealId,
-    })
-    resetCall()
-  } catch {
-    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
-  }
-}
-
-async function submitMeeting() {
-  errors.value = {}
-  if (!meetingForm.value.title.trim()) {
-    errors.value.title = t('common.required')
-    return
-  }
-  try {
-    await doCreate({
-      kind: 'meeting',
-      title: meetingForm.value.title.trim(),
-      body: meetingForm.value.body || null,
-      due_at: meetingForm.value.dueAt ? meetingForm.value.dueAt.toISOString() : null,
-      target_type: 'deal',
-      target_id: props.dealId,
-    })
-    resetMeeting()
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
   }
@@ -435,7 +290,13 @@ async function submitMeeting() {
 // ─── Expose tab setter (for parent to switch tab) ─────────────────────────────
 
 function setTab(tab: ActivityKind) {
-  activeTab.value = tab
+  activeTab.value = kindToTab(tab)
+  if (tab !== 'note') {
+    const subtypes: TaskSubtype[] = ['task', 'call', 'meeting', 'follow_up']
+    if (subtypes.includes(tab as TaskSubtype)) {
+      taskForm.value.subtype = tab as TaskSubtype
+    }
+  }
 }
 
 defineExpose({ setTab })
@@ -452,24 +313,31 @@ defineExpose({ setTab })
   }
 }
 
-.deal-composer__tabs {
-  :deep(.p-tablist) {
-    border-bottom: 1px solid var(--p-surface-200);
-    padding: 0 $space-3;
+.deal-composer__header {
+  display: flex;
+  align-items: center;
+  padding: $space-2 $space-4 0;
+  border-bottom: 1px solid var(--p-surface-100);
 
-    .app-dark & {
-      border-bottom-color: var(--p-surface-700);
-    }
-  }
-
-  :deep(.p-tab) {
-    padding: $space-2 $space-3;
-    font-size: $font-size-sm;
+  .app-dark & {
+    border-bottom-color: var(--p-surface-700);
   }
 }
 
-.deal-composer__tab-list {
-  // compact style
+.deal-composer__type-select {
+  :deep(.p-select) {
+    border: none;
+    background: transparent;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $surface-700;
+    padding: 0;
+    box-shadow: none;
+
+    .app-dark & {
+      color: var(--p-surface-200);
+    }
+  }
 }
 
 .deal-composer__body {
@@ -487,15 +355,9 @@ defineExpose({ setTab })
 .deal-composer__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: $space-2;
   margin-top: $space-1;
-}
-
-.deal-composer__participants {
-  flex: 1;
-  min-width: 0;
-  max-width: 260px;
 }
 
 .deal-composer__error {

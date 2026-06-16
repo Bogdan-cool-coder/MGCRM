@@ -1,11 +1,12 @@
 <template>
   <div class="deal-header">
-    <!-- Top row: back btn + menu btn -->
+    <!-- Top row: back btn + id + menu btn -->
     <div class="deal-header__top-row">
       <button class="deal-header__btn-icon" @click="$emit('back')">
         <i class="pi pi-arrow-left" />
       </button>
       <div class="deal-header__spacer" />
+      <span class="deal-header__id">#{{ deal.id }}</span>
       <button ref="menuBtnRef" class="deal-header__btn-icon" @click="toggleMenu">
         <i class="pi pi-ellipsis-v" />
       </button>
@@ -15,12 +16,17 @@
     <!-- Title -->
     <h2 class="deal-header__title">{{ deal.title }}</h2>
 
-    <!-- Subtitle: #id · company -->
-    <p class="deal-header__subtitle">#{{ deal.id }} · {{ deal.company.name }}</p>
-
-    <!-- Stage tag -->
+    <!-- Stage row: clickable tag + health chip -->
     <div class="deal-header__stage-row">
-      <DealStageTag :stage="deal.stage" />
+      <button
+        class="deal-header__stage-btn"
+        v-tooltip.bottom="t('sales.deal.page.clickToChangeStage')"
+        @click="$emit('openMoveDialog')"
+      >
+        <DealStageTag :stage="deal.stage" />
+        <i class="pi pi-chevron-down deal-header__stage-chevron" />
+      </button>
+      <DealHealthChip :next-task="nextTask" />
     </div>
 
     <!-- Progress bar -->
@@ -36,13 +42,7 @@
       {{ deal.stage.name }} · {{ daysInStage }} {{ t('sales.deal.page.daysInStage') }}
     </p>
 
-    <!-- Change stage button -->
-    <button class="deal-header__change-stage-btn" @click="$emit('openMoveDialog')">
-      <i class="pi pi-arrows-h" />
-      {{ t('sales.deal.page.changeStage') }}
-    </button>
-
-    <!-- Dialogs: rename, owner, tags -->
+    <!-- Dialogs: rename, tags -->
     <Dialog
       v-model:visible="renameDialogVisible"
       :header="t('sales.deal.page.menu.rename')"
@@ -58,32 +58,6 @@
           :label="t('common.save')"
           :loading="renameSaving"
           @click="submitRename"
-        />
-      </template>
-    </Dialog>
-
-    <Dialog
-      v-model:visible="ownerDialogVisible"
-      :header="t('sales.deal.page.menu.changeOwner')"
-      modal
-      style="width: 28rem"
-    >
-      <div class="deal-header__dialog-body">
-        <Select
-          v-model="ownerForm.owner_user_id"
-          :options="usersList"
-          option-label="name"
-          option-value="id"
-          fluid
-          :placeholder="t('sales.deal.info.fields.owner')"
-        />
-      </div>
-      <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" text @click="ownerDialogVisible = false" />
-        <Button
-          :label="t('common.save')"
-          :loading="ownerSaving"
-          @click="submitOwner"
         />
       </template>
     </Dialog>
@@ -126,14 +100,14 @@ import Menu from 'primevue/menu'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
 import AutoComplete from 'primevue/autocomplete'
 import DealStageTag from './DealStageTag.vue'
 import DealStageProgressBar from './DealStageProgressBar.vue'
+import DealHealthChip from './DealHealthChip.vue'
 import { useMutation } from '@/composables/async/useMutation'
 import { salesApi } from '@/api/sales'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { DealDto, PipelineStageDto } from '@/entities/sales'
+import type { DealDto, PipelineStageDto, NextTaskDto } from '@/entities/sales'
 
 interface MenuUser {
   id: number
@@ -145,6 +119,7 @@ const props = defineProps<{
   stages: PipelineStageDto[]
   usersList: MenuUser[]
   daysInStage: number
+  nextTask: NextTaskDto | null
 }>()
 
 const emit = defineEmits<{
@@ -154,6 +129,8 @@ const emit = defineEmits<{
   dealUpdated: [deal: DealDto]
   dealDeleted: []
   dealArchived: []
+  collapseAllGroups: []
+  expandAllGroups: []
 }>()
 
 const { t } = useI18n()
@@ -169,6 +146,11 @@ function toggleMenu(event: MouseEvent) {
   menuRef.value?.toggle(event)
 }
 
+function copyLink() {
+  void navigator.clipboard.writeText(window.location.href)
+  toast.add({ severity: 'success', summary: t('sales.deal.page.menu.copyLink'), life: 2000 })
+}
+
 const dealMenuItems = computed(() => [
   {
     label: t('sales.deal.page.menu.rename'),
@@ -176,36 +158,36 @@ const dealMenuItems = computed(() => [
     command: openRenameDialog,
   },
   {
-    label: t('sales.deal.page.menu.changeOwner'),
-    icon: 'pi pi-user',
-    command: openOwnerDialog,
-  },
-  {
     label: t('sales.deal.page.menu.editTags'),
     icon: 'pi pi-tag',
     command: openTagsDialog,
   },
-  {
-    label: t('sales.deal.page.menu.moveStage'),
-    icon: 'pi pi-arrows-h',
-    command: () => emit('openMoveDialog'),
-  },
   { separator: true },
   {
-    label: t('sales.deal.page.menu.duplicate'),
-    icon: 'pi pi-copy',
-    disabled: true,
-    tooltip: t('sales.deal.page.menu.duplicateSoon'),
+    label: t('sales.deal.page.menu.collapseAll'),
+    icon: 'pi pi-arrows-v',
+    command: () => emit('collapseAllGroups'),
+  },
+  {
+    label: t('sales.deal.page.menu.expandAll'),
+    icon: 'pi pi-arrows-v',
+    command: () => emit('expandAllGroups'),
+  },
+  {
+    label: t('sales.deal.page.menu.customizeFields'),
+    icon: 'pi pi-cog',
+    command: () => void router.push('/admin/custom-fields?scope=deal'),
+  },
+  {
+    label: t('sales.deal.page.menu.copyLink'),
+    icon: 'pi pi-link',
+    command: copyLink,
   },
   { separator: true },
-  {
-    label: t('sales.deal.page.menu.archive'),
-    icon: 'pi pi-inbox',
-    command: confirmArchive,
-  },
   {
     label: t('sales.deal.page.menu.delete'),
     icon: 'pi pi-trash',
+    class: 'text-red-500',
     command: confirmDelete,
   },
 ])
@@ -230,36 +212,6 @@ async function submitRename() {
     emit('dealUpdated', updated)
     renameDialogVisible.value = false
     toast.add({ severity: 'success', summary: t('sales.deal.page.menu.rename'), life: 3000 })
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      detail: getApiErrorMessage(err, t('errors.server_error')),
-      life: 4000,
-    })
-  }
-}
-
-// ── Owner dialog ─────────────────────────────────────────────────────────────────
-const ownerDialogVisible = ref(false)
-const ownerForm = ref<{ owner_user_id: number | null }>({ owner_user_id: null })
-const ownerMutation = useMutation<DealDto>()
-const ownerSaving = computed(() => ownerMutation.isPending.value)
-
-function openOwnerDialog() {
-  ownerForm.value.owner_user_id = props.deal.owner.id
-  ownerDialogVisible.value = true
-}
-
-async function submitOwner() {
-  if (!ownerForm.value.owner_user_id) return
-  try {
-    const updated = await ownerMutation.run(() =>
-      salesApi.updateDeal(props.deal.id, { owner_user_id: ownerForm.value.owner_user_id! }),
-    )
-    emit('dealUpdated', updated)
-    ownerDialogVisible.value = false
-    toast.add({ severity: 'success', summary: t('sales.deal.page.menu.changeOwner'), life: 3000 })
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -304,33 +256,6 @@ function onSegmentClick(stageId: number) {
   emit('openMoveDialogWithStage', stageId)
 }
 
-// ── Archive ───────────────────────────────────────────────────────────────────────
-const archiveMutation = useMutation<DealDto>()
-
-function confirmArchive() {
-  confirm.require({
-    header: t('sales.deal.page.menu.archiveConfirm'),
-    message: '',
-    icon: 'pi pi-inbox',
-    acceptClass: 'p-button-warning',
-    accept: async () => {
-      try {
-        await archiveMutation.run(() => salesApi.archiveDeal(props.deal.id))
-        toast.add({ severity: 'success', summary: t('sales.deal.page.menu.archive'), life: 3000 })
-        emit('dealArchived')
-        void router.push('/deals')
-      } catch (err) {
-        toast.add({
-          severity: 'error',
-          summary: t('errors.server_error'),
-          detail: getApiErrorMessage(err, t('errors.server_error')),
-          life: 4000,
-        })
-      }
-    },
-  })
-}
-
 // ── Delete ────────────────────────────────────────────────────────────────────────
 const deleteMutation = useMutation()
 
@@ -361,7 +286,7 @@ function confirmDelete() {
 
 <style lang="scss" scoped>
 .deal-header {
-  background: #172747;
+  background: $brand-header-bg;
   padding: $space-3 $space-4 $space-4;
   display: flex;
   flex-direction: column;
@@ -377,6 +302,12 @@ function confirmDelete() {
 
 .deal-header__spacer {
   flex: 1;
+}
+
+.deal-header__id {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.02em;
 }
 
 .deal-header__btn-icon {
@@ -414,15 +345,32 @@ function confirmDelete() {
   line-height: 1.35;
 }
 
-.deal-header__subtitle {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: $font-size-xs;
-  margin: 0;
-}
-
 .deal-header__stage-row {
   display: flex;
   align-items: center;
+  gap: $space-2;
+  flex-wrap: wrap;
+}
+
+.deal-header__stage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: $radius-sm;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.deal-header__stage-chevron {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .deal-header__progress {
@@ -433,26 +381,6 @@ function confirmDelete() {
   color: rgba(255, 255, 255, 0.6);
   font-size: $font-size-xs;
   margin: 0;
-}
-
-.deal-header__change-stage-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-1;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  color: #fff;
-  cursor: pointer;
-  border-radius: $radius-sm;
-  padding: 4px 10px;
-  font-size: $font-size-xs;
-  transition: border-color 0.15s, background 0.15s;
-  width: fit-content;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #fff;
-  }
 }
 
 .deal-header__dialog-body {

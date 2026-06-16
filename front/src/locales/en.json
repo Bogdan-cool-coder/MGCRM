@@ -1119,6 +1119,8 @@
         },
         "daysInStage": "days in stage",
         "changeStage": "Change stage",
+        "clickToChangeStage": "Click to change stage",
+        "infoPanel": "Info",
         "menu": {
           "rename": "Rename",
           "changeOwner": "Change owner",
@@ -1130,7 +1132,18 @@
           "archiveConfirm": "Archive deal?",
           "delete": "Delete deal",
           "deleteConfirm": "Delete deal?",
-          "deleteDetail": "This action cannot be undone"
+          "deleteDetail": "This action cannot be undone",
+          "collapseAll": "Collapse all groups",
+          "expandAll": "Expand all groups",
+          "customizeFields": "Customize fields",
+          "copyLink": "Copy link"
+        },
+        "feedView": "Feed",
+        "infoView": "Info",
+        "health": {
+          "noTask": "No task",
+          "overdue": "Overdue",
+          "nextTask": "{kind} · {date}"
         }
       },
       "info": {
@@ -1146,7 +1159,8 @@
           "amountAuto": "Budget (auto)",
           "company": "Company",
           "expectedSignDate": "Expected sign date",
-          "expectedPaymentDate": "Expected payment date"
+          "expectedPaymentDate": "Expected payment date",
+          "daysInWork": "Days in progress"
         },
         "groups": {
           "products": "Products",
@@ -1209,6 +1223,7 @@
       },
       "feed": {
         "searchPlaceholder": "Search feed...",
+        "searchTooltip": "Search feed",
         "filterType": "Type",
         "reset": "Reset",
         "loadMore": "Load more",
@@ -1248,7 +1263,14 @@
         "participants": "{'@'} Participants",
         "location": "Location",
         "save": "Save",
-        "successCreate": "Added to feed"
+        "successCreate": "Added to feed",
+        "taskSubtype": "Task type",
+        "subtypes": {
+          "task": "Task",
+          "call": "Call",
+          "meeting": "Meeting",
+          "follow_up": "Follow-up"
+        }
       },
       "actions": {
         "create": "Create deal"

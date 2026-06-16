@@ -64,6 +64,11 @@ $primary-900: var(--app-primary-900);
 // Compatibility aliases
 $background-color: $surface-100;
 
+// ─── Brand header token ───────────────────────────────────────────────────────
+// Бренд-инвариант: хедер карточки сделки всегда тёмный (из брендбука).
+// НЕ меняется в dark-mode — зафиксировано в ТЗ DealPage 2.0 §1.1.
+$brand-header-bg: #172747;
+
 // ─── Sidebar tokens ──────────────────────────────────────────────────────────
 // Sidebar always stays dark (brand bg), regardless of light/dark theme.
 $sidebar-bg:           #172747;   // brand-primary — static, sidebar never adapts to theme

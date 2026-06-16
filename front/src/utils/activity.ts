@@ -9,6 +9,7 @@ export function kindIcon(kind: ActivityKind): string {
     meeting: 'pi pi-users',
     task: 'pi pi-check-square',
     note: 'pi pi-file',
+    follow_up: 'pi pi-reply',
   }
   return map[kind] ?? 'pi pi-circle'
 }

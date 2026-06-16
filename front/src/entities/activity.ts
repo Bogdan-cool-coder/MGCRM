@@ -5,7 +5,7 @@
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export type ActivityKind = 'call' | 'meeting' | 'task' | 'note'
+export type ActivityKind = 'call' | 'meeting' | 'task' | 'note' | 'follow_up'
 export type ActivityStatus = 'new' | 'in_progress' | 'done' | 'rejected'
 export type ActivityPriority = 'low' | 'normal' | 'high' | 'critical'
 export type ActivityTargetType = 'deal' | 'company' | 'contact'

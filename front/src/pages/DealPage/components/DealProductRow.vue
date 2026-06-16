@@ -1,45 +1,22 @@
 <template>
-  <tr class="deal-product-row">
-    <td>
-      <div class="deal-product-row__product">
-        <span>{{ item.product.name }}</span>
+  <div class="deal-product-row" :class="{ 'deal-product-row--editing': isEditing }">
+    <!-- View mode -->
+    <template v-if="!isEditing">
+      <div class="deal-product-row__desc">
+        {{ item.product.name }}
+        <span v-if="item.plan" class="deal-product-row__plan"> · {{ item.plan.name }}</span>
+        <span class="deal-product-row__qty-inline"> × {{ item.quantity }}</span>
       </div>
-    </td>
-    <td>{{ item.plan?.name ?? '—' }}</td>
-    <td class="deal-product-row__qty">
-      <template v-if="!isEditing">
-        {{ item.quantity }}
-      </template>
-      <InputNumber
-        v-else
-        v-model="editQty"
-        :min="0.01"
-        :max-fraction-digits="2"
-        style="width: 80px"
-      />
-    </td>
-    <td class="deal-product-row__price">
-      <template v-if="!isEditing">
-        {{ formatCurrency(item.unit_price, currency) }}
-      </template>
-      <InputNumber
-        v-else
-        v-model="editPriceDisplay"
-        :min="0"
-        :max-fraction-digits="2"
-        style="width: 120px"
-      />
-    </td>
-    <td class="deal-product-row__amount">
-      {{ formatCurrency(isEditing ? Math.round(toKopecks(editPriceDisplay ?? 0) * (editQty ?? 0)) : item.amount, currency) }}
-    </td>
-    <td class="deal-product-row__actions">
-      <template v-if="!isEditing">
+      <div class="deal-product-row__amount">
+        {{ formatCurrency(item.amount, currency) }}
+      </div>
+      <div class="deal-product-row__actions">
         <Button
           icon="pi pi-pencil"
           text
           severity="secondary"
           size="small"
+          class="deal-product-row__action-btn"
           @click="startEdit"
         />
         <Button
@@ -48,10 +25,33 @@
           severity="danger"
           size="small"
           :loading="deleting"
+          class="deal-product-row__action-btn"
           @click="emit('remove', item.id)"
         />
-      </template>
-      <template v-else>
+      </div>
+    </template>
+
+    <!-- Edit mode -->
+    <template v-else>
+      <div class="deal-product-row__edit-fields">
+        <InputNumber
+          v-model="editQty"
+          :min="0.01"
+          :max-fraction-digits="2"
+          :placeholder="'×'"
+          class="deal-product-row__edit-qty"
+        />
+        <InputNumber
+          v-model="editPriceDisplay"
+          :min="0"
+          :max-fraction-digits="2"
+          class="deal-product-row__edit-price"
+        />
+        <span class="deal-product-row__edit-total">
+          {{ formatCurrency(Math.round(toKopecks(editPriceDisplay ?? 0) * (editQty ?? 0)), currency) }}
+        </span>
+      </div>
+      <div class="deal-product-row__edit-actions">
         <Button
           icon="pi pi-check"
           text
@@ -67,9 +67,9 @@
           size="small"
           @click="cancelEdit"
         />
-      </template>
-    </td>
-  </tr>
+      </div>
+    </template>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -116,40 +116,103 @@ function cancelEdit() {
 
 <style lang="scss" scoped>
 .deal-product-row {
-  td {
-    padding: $space-2 $space-3;
-    font-size: $font-size-sm;
-    color: $surface-800;
-    border-bottom: 1px solid $surface-100;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  border-bottom: 1px solid var(--p-surface-100);
+  min-height: 36px;
 
-    :global(.app-dark) & {
-      border-bottom-color: var(--p-surface-700);
-      color: var(--p-surface-100);
-    }
+  .app-dark & {
+    border-bottom-color: var(--p-surface-700);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  // Show action buttons on hover
+  &:hover .deal-product-row__actions {
+    opacity: 1;
   }
 }
 
-.deal-product-row__product {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.deal-product-row__desc {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $surface-800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  .app-dark & {
+    color: var(--p-surface-100);
+  }
 }
 
-.deal-product-row__qty,
-.deal-product-row__price {
-  text-align: right;
+.deal-product-row__plan {
+  color: $surface-500;
+}
+
+.deal-product-row__qty-inline {
+  color: $surface-500;
 }
 
 .deal-product-row__amount {
-  text-align: right;
+  font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
-  color: $primary-color;
+  color: var(--p-primary-color);
+  flex-shrink: 0;
+  min-width: 80px;
+  text-align: right;
 }
 
 .deal-product-row__actions {
   display: flex;
   gap: $space-1;
-  justify-content: flex-end;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.deal-product-row__action-btn {
+  // inherits from PrimeVue Button
+}
+
+// Edit mode
+.deal-product-row--editing {
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.deal-product-row__edit-fields {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex: 1;
+  min-width: 0;
+}
+
+.deal-product-row__edit-qty {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.deal-product-row__edit-price {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.deal-product-row__edit-total {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--p-primary-color);
   white-space: nowrap;
+}
+
+.deal-product-row__edit-actions {
+  display: flex;
+  gap: $space-1;
+  flex-shrink: 0;
 }
 </style>

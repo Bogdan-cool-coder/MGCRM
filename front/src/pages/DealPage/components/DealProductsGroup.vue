@@ -3,6 +3,9 @@
     :title="t('sales.deal.info.groups.products')"
     icon="pi-shopping-cart"
     group-key="products"
+    :accent="true"
+    :count="items.length"
+    :total-label="items.length > 0 ? formatCurrency(totalAmount, currency) : undefined"
   >
     <template #header-action>
       <Button

@@ -92,6 +92,9 @@ export interface DealDto {
   lost_reason: string | null
   created_at: string
   updated_at: string
+  // v2 additions — populated when backend eager-loads nextTask + computes days_in_stage
+  next_task?: NextTaskDto | null
+  days_in_stage?: number | null
   products?: DealProductDto[]
   contacts?: DealContactDto[]
 }

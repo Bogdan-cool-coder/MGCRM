@@ -24,6 +24,7 @@ export type FeedItemType =
   | 'task'
   | 'call'
   | 'meeting'
+  | 'follow_up'
 
 export interface FeedActor {
   id: number
@@ -418,7 +419,8 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
         (item.type === 'note' ||
           item.type === 'task' ||
           item.type === 'call' ||
-          item.type === 'meeting') &&
+          item.type === 'meeting' ||
+          item.type === 'follow_up') &&
         item.activity?.id === updated.id
       ) {
         return { ...item, activity: updated }
@@ -435,7 +437,8 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
           (item.type === 'note' ||
             item.type === 'task' ||
             item.type === 'call' ||
-            item.type === 'meeting') &&
+            item.type === 'meeting' ||
+            item.type === 'follow_up') &&
           item.activity?.id === id
         ),
     )

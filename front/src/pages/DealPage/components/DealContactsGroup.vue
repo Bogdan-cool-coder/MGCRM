@@ -3,6 +3,8 @@
     :title="t('sales.deal.info.groups.contacts')"
     icon="pi-users"
     group-key="contacts"
+    :accent="true"
+    :count="contacts.length"
   >
     <!-- Empty state -->
     <div v-if="contacts.length === 0" class="deal-contacts-group__empty">

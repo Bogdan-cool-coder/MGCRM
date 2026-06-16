@@ -1,47 +1,21 @@
 <template>
   <div class="deal-feed">
-    <!-- ─── Sticky toolbar ───────────────────────────────────────────────────── -->
-    <div class="deal-feed__toolbar">
-      <div class="deal-feed__toolbar-left">
-        <InputText
-          v-model="localSearch"
-          :placeholder="t('sales.deal.feed.searchPlaceholder')"
-          size="small"
-          class="deal-feed__search"
-          @input="onSearchInput"
-        />
-        <Select
-          v-model="localType"
-          :options="feedTypeOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="t('sales.deal.feed.filterType')"
-          show-clear
-          size="small"
-          class="deal-feed__type-select"
-          @change="onTypeChange"
-        />
-        <Button
-          icon="pi pi-times"
-          :label="t('sales.deal.feed.reset')"
-          severity="secondary"
-          text
-          size="small"
-          @click="onReset"
-        />
-      </div>
+    <!-- ─── Top bar: just a search icon ──────────────────────────────────────── -->
+    <div class="deal-feed__topbar">
+      <span class="deal-feed__topbar-spacer" />
       <Button
-        ref="viewBtnRef"
-        icon="pi pi-ellipsis-v"
+        icon="pi pi-search"
         severity="secondary"
         text
         size="small"
-        @click="viewMenu?.toggle($event)"
+        v-tooltip.left="t('sales.deal.feed.searchTooltip')"
+        @click="searchOverlayOpen = !searchOverlayOpen"
       />
-      <Menu
-        ref="viewMenu"
-        :model="viewMenuItems"
-        popup
+      <FeedSearchOverlay
+        :open="searchOverlayOpen"
+        @search="onSearch"
+        @filter="onFilter"
+        @reset="onReset"
       />
     </div>
 
@@ -70,14 +44,6 @@
             outlined
             size="small"
             @click="emit('openComposerTab', 'task')"
-          />
-          <Button
-            icon="pi pi-phone"
-            :label="t('sales.deal.composer.call')"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="emit('openComposerTab', 'call')"
           />
         </div>
       </div>
@@ -140,16 +106,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
-import Menu from 'primevue/menu'
 import Skeleton from 'primevue/skeleton'
 import DealFeedItem from './DealFeedItem.vue'
+import FeedSearchOverlay from './FeedSearchOverlay.vue'
 import type { useDealFeed } from '../composables/useDealFeed'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
@@ -167,87 +130,32 @@ const emit = defineEmits<{
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
 const { t } = useI18n()
-const router = useRouter()
 const toast = useToast()
 
-const viewMenu = ref<InstanceType<typeof Menu> | null>(null)
 const completingId = ref<number | null>(null)
 const reopeningId = ref<number | null>(null)
+const searchOverlayOpen = ref(false)
 
-// Local search/filter state (mirrors composable but avoids prop-mutation lint error)
-const localSearch = ref('')
-const localType = ref<string>('')
+// ─── Search / filter handlers ─────────────────────────────────────────────────
 
-function onSearchInput() {
-  props.feed.setSearch(localSearch.value)
+function onSearch(query: string) {
+  props.feed.setSearch(query)
 }
 
-function onTypeChange() {
-  props.feed.setFilterType(localType.value as Parameters<typeof props.feed.setFilterType>[0])
+function onFilter(type: string) {
+  props.feed.setFilterType(type as Parameters<typeof props.feed.setFilterType>[0])
 }
 
 function onReset() {
-  localSearch.value = ''
-  localType.value = ''
   props.feed.resetFilter()
+  searchOverlayOpen.value = false
 }
-
-// ─── Type filter options ──────────────────────────────────────────────────────
-
-const feedTypeOptions = computed(() => [
-  { value: 'stage_change', label: t('sales.deal.feed.types.stage_change') },
-  { value: 'field_change', label: t('sales.deal.feed.types.field_change') },
-  { value: 'note', label: t('sales.deal.feed.types.note') },
-  { value: 'task', label: t('sales.deal.feed.types.task') },
-  { value: 'call', label: t('sales.deal.feed.types.call') },
-  { value: 'meeting', label: t('sales.deal.feed.types.meeting') },
-])
-
-// ─── View menu items ──────────────────────────────────────────────────────────
-
-const viewMenuItems = computed(() => [
-  {
-    label: t('sales.deal.feed.viewMenu.collapseAll'),
-    icon: 'pi pi-arrows-v',
-    command: () => props.feed.collapseAll(),
-  },
-  {
-    label: t('sales.deal.feed.viewMenu.expandAll'),
-    icon: 'pi pi-arrows-v',
-    command: () => props.feed.expandAll(),
-  },
-  { separator: true },
-  {
-    label: t('sales.deal.feed.viewMenu.customizeFields'),
-    icon: 'pi pi-cog',
-    command: () => void router.push('/admin/custom-fields?scope=deal'),
-  },
-  {
-    label: t('sales.deal.feed.viewMenu.copyLink'),
-    icon: 'pi pi-link',
-    command: () => copyLink(),
-  },
-  {
-    label: t('sales.deal.feed.viewMenu.print'),
-    icon: 'pi pi-print',
-    disabled: true,
-  },
-])
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatGroupDate(dateStr: string): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function copyLink() {
-  void navigator.clipboard.writeText(window.location.href)
-  toast.add({
-    severity: 'success',
-    summary: t('sales.deal.feed.viewMenu.copyLink'),
-    life: 2000,
-  })
 }
 
 // ─── Activity action handlers ─────────────────────────────────────────────────
@@ -294,40 +202,25 @@ async function onPin(id: number, isPinned: boolean) {
   overflow: hidden;
 }
 
-// ─── Toolbar ────────────────────────────────────────────────────────────────
+// ─── Top bar ────────────────────────────────────────────────────────────────
 
-.deal-feed__toolbar {
+.deal-feed__topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: $space-2;
-  padding: $space-3 $space-4;
+  justify-content: flex-end;
+  padding: $space-2 $space-3;
   border-bottom: 1px solid var(--p-surface-200);
   background: var(--p-card-background);
   flex-shrink: 0;
+  position: relative;
 
   .app-dark & {
     border-bottom-color: var(--p-surface-700);
   }
 }
 
-.deal-feed__toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
+.deal-feed__topbar-spacer {
   flex: 1;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.deal-feed__search {
-  width: 160px;
-  flex-shrink: 0;
-}
-
-.deal-feed__type-select {
-  width: 140px;
-  flex-shrink: 0;
 }
 
 // ─── Content ────────────────────────────────────────────────────────────────

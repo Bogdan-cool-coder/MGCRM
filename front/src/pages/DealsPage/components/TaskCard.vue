@@ -66,6 +66,7 @@ function kindIcon(kind: ActivityKind): string {
     meeting: 'pi pi-calendar',
     task: 'pi pi-check-square',
     note: 'pi pi-file-edit',
+    follow_up: 'pi pi-reply',
   }
   return map[kind] ?? 'pi pi-check-square'
 }

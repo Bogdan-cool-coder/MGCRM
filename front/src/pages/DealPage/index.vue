@@ -1,5 +1,11 @@
 <template>
-  <div class="deal-page-v2">
+  <div
+    class="deal-page-v2"
+    :class="{
+      'deal-page-v2--mobile': isMobile,
+      'deal-page-v2--tablet': isTablet,
+    }"
+  >
     <!-- ── Loading skeleton ──────────────────────────────────────────────── -->
     <template v-if="loading">
       <div class="deal-page-v2__left">
@@ -39,13 +45,45 @@
 
     <!-- ── Main content ──────────────────────────────────────────────────── -->
     <template v-else>
-      <!-- Left panel: info header + tabs -->
-      <div class="deal-page-v2__left">
+      <!-- Mobile top bar (< 768px) -->
+      <div v-if="isMobile" class="deal-page-v2__mobile-bar">
+        <Button icon="pi pi-arrow-left" text @click="router.back()" />
+        <SelectButton
+          v-model="mobileView"
+          :options="mobileViewOptions"
+          option-label="label"
+          option-value="value"
+          size="small"
+          class="deal-page-v2__mobile-switch"
+        />
+        <span class="deal-page-v2__spacer" />
+      </div>
+
+      <!-- Tablet top bar (768–1023px) — shown only outside info-panel drawer -->
+      <div v-else-if="isTablet" class="deal-page-v2__tablet-bar">
+        <Button icon="pi pi-arrow-left" text @click="router.back()" />
+        <Button
+          icon="pi pi-info-circle"
+          text
+          :label="t('sales.deal.page.infoPanel')"
+          @click="infoPanelOpen = true"
+        />
+        <span class="deal-page-v2__tablet-title text-truncate">{{ deal.title }}</span>
+        <span class="deal-page-v2__spacer" />
+      </div>
+
+      <!-- Left panel: info header + tabs (hidden on tablet/mobile, shown in drawer) -->
+      <div
+        v-if="!isTablet && !isMobile"
+        class="deal-page-v2__left"
+      >
         <DealInfoPanel
+          ref="infoPanelRef"
           :deal="deal"
           :stages="allStages"
           :users-list="usersList"
           :days-in-stage="daysInStage"
+          :next-task="deal.next_task ?? null"
           :products="dealProductsComposable.products.value"
           :products-loading="dealProductsComposable.loading.value"
           :updating-id="dealProductsComposable.updatingId.value"
@@ -66,11 +104,95 @@
           @remove-product="onRemoveProduct"
           @remove-contact="onRemoveContact"
           @amount-changed="onAmountChanged"
+          @collapse-all-groups="onCollapseAll"
+          @expand-all-groups="onExpandAll"
+        />
+      </div>
+
+      <!-- Tablet: Left panel inside Drawer -->
+      <Drawer
+        v-if="isTablet"
+        v-model:visible="infoPanelOpen"
+        position="left"
+        :style="{ width: '320px' }"
+        :modal="true"
+        :header="deal.title"
+      >
+        <DealInfoPanel
+          ref="infoPanelTabletRef"
+          :deal="deal"
+          :stages="allStages"
+          :users-list="usersList"
+          :days-in-stage="daysInStage"
+          :next-task="deal.next_task ?? null"
+          :products="dealProductsComposable.products.value"
+          :products-loading="dealProductsComposable.loading.value"
+          :updating-id="dealProductsComposable.updatingId.value"
+          :deleting-id="dealProductsComposable.deletingId.value"
+          :contacts="dealContactsComposable.contacts.value"
+          :removing-contact-id="dealContactsComposable.removingId.value"
+          :history="history"
+          :activities="activitiesComposable.activities.value"
+          @back="infoPanelOpen = false"
+          @open-move-dialog="openMoveDialog"
+          @open-move-dialog-with-stage="openMoveDialogWithStage"
+          @deal-updated="updateDealLocal"
+          @deal-deleted="onDealDeleted"
+          @deal-archived="onDealArchived"
+          @open-add-product="addProductDialogOpen = true"
+          @open-add-contact="addContactDialogOpen = true"
+          @update-product="onUpdateProduct"
+          @remove-product="onRemoveProduct"
+          @remove-contact="onRemoveContact"
+          @amount-changed="onAmountChanged"
+          @collapse-all-groups="onCollapseAll"
+          @expand-all-groups="onExpandAll"
+        />
+      </Drawer>
+
+      <!-- Mobile: Info panel (shown when mobileView === 'info') -->
+      <div
+        v-if="isMobile && mobileView === 'info'"
+        class="deal-page-v2__left deal-page-v2__left--mobile-active"
+      >
+        <DealInfoPanel
+          ref="infoPanelMobileRef"
+          :deal="deal"
+          :stages="allStages"
+          :users-list="usersList"
+          :days-in-stage="daysInStage"
+          :next-task="deal.next_task ?? null"
+          :products="dealProductsComposable.products.value"
+          :products-loading="dealProductsComposable.loading.value"
+          :updating-id="dealProductsComposable.updatingId.value"
+          :deleting-id="dealProductsComposable.deletingId.value"
+          :contacts="dealContactsComposable.contacts.value"
+          :removing-contact-id="dealContactsComposable.removingId.value"
+          :history="history"
+          :activities="activitiesComposable.activities.value"
+          @back="router.back()"
+          @open-move-dialog="openMoveDialog"
+          @open-move-dialog-with-stage="openMoveDialogWithStage"
+          @deal-updated="updateDealLocal"
+          @deal-deleted="onDealDeleted"
+          @deal-archived="onDealArchived"
+          @open-add-product="addProductDialogOpen = true"
+          @open-add-contact="addContactDialogOpen = true"
+          @update-product="onUpdateProduct"
+          @remove-product="onRemoveProduct"
+          @remove-contact="onRemoveContact"
+          @amount-changed="onAmountChanged"
+          @collapse-all-groups="onCollapseAll"
+          @expand-all-groups="onExpandAll"
         />
       </div>
 
       <!-- Right panel: feed + composer -->
-      <div class="deal-page-v2__right">
+      <div
+        v-if="!isMobile || mobileView === 'feed'"
+        class="deal-page-v2__right"
+        :class="{ 'deal-page-v2__right--mobile-active': isMobile }"
+      >
         <DealFeed
           :deal-id="deal.id"
           :feed="feedComposable"
@@ -82,12 +204,13 @@
           :deal-id="deal.id"
           :users-list="usersList"
           :initial-tab="composerInitialTab"
+          :class="{ 'deal-page-v2__composer--sticky': isMobile }"
           @created="onActivityCreated"
         />
       </div>
     </template>
 
-    <!-- ── Global dialogs ────────────────────────────────────────────────── -->
+    <!-- ── Global dialogs ────────────────────────────────────────────────────── -->
     <MoveDealDialog
       v-if="deal"
       v-model="moveDialogOpen"
@@ -128,6 +251,8 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Drawer from 'primevue/drawer'
+import SelectButton from 'primevue/selectbutton'
 import DealInfoPanel from './components/DealInfoPanel.vue'
 import DealFeed from './components/DealFeed.vue'
 import DealComposer from './components/DealComposer.vue'
@@ -141,6 +266,7 @@ import { useDealHistory } from './composables/useDealHistory'
 import { useDealActivities } from './composables/useDealActivities'
 import { useDealActions } from './composables/useDealActions'
 import { useDealFeed } from './composables/useDealFeed'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import { useSalesStore } from '@/stores/salesStore'
 import { salesApi } from '@/api/sales'
 import { usersApi } from '@/api/users'
@@ -152,11 +278,43 @@ const { t } = useI18n()
 const router = useRouter()
 const salesStore = useSalesStore()
 
-// ── Main deal data ─────────────────────────────────────────────────────────────
+// ── Breakpoints ────────────────────────────────────────────────────────────────
+
+const { isTablet, isMobile } = useBreakpoints()
+
+// ── Responsive state ───────────────────────────────────────────────────────────
+
+const infoPanelOpen = ref(false)
+const mobileView = ref<'info' | 'feed'>('info')
+
+const mobileViewOptions = computed(() => [
+  { value: 'info', label: t('sales.deal.page.infoView') },
+  { value: 'feed', label: t('sales.deal.page.feedView') },
+])
+
+// ── Panel refs ─────────────────────────────────────────────────────────────────
+
+const infoPanelRef = ref<InstanceType<typeof DealInfoPanel> | null>(null)
+const infoPanelTabletRef = ref<InstanceType<typeof DealInfoPanel> | null>(null)
+const infoPanelMobileRef = ref<InstanceType<typeof DealInfoPanel> | null>(null)
+
+function onCollapseAll() {
+  infoPanelRef.value?.onCollapseAll()
+  infoPanelTabletRef.value?.onCollapseAll()
+  infoPanelMobileRef.value?.onCollapseAll()
+}
+
+function onExpandAll() {
+  infoPanelRef.value?.onExpandAll()
+  infoPanelTabletRef.value?.onExpandAll()
+  infoPanelMobileRef.value?.onExpandAll()
+}
+
+// ── Main deal data ─────────────────────────────────────────────────────────────────
 
 const { dealId, deal, loading, error, load, updateDealLocal } = useDealPage()
 
-// ── Sub-resources ──────────────────────────────────────────────────────────────
+// ── Sub-resources ──────────────────────────────────────────────────────────────────
 
 const dealProductsComposable = useDealProducts(() => dealId.value)
 const dealContactsComposable = useDealContacts(() => dealId.value)
@@ -164,14 +322,14 @@ const dealHistoryComposable = useDealHistory(() => dealId.value)
 const { history } = dealHistoryComposable
 const activitiesComposable = useDealActivities(() => dealId.value)
 
-// ── Feed ───────────────────────────────────────────────────────────────────────
+// ── Feed ───────────────────────────────────────────────────────────────────────────
 
 const feedComposable = useDealFeed(
   () => dealId.value,
   () => deal.value?.created_at ?? null,
 )
 
-// ── Composer ───────────────────────────────────────────────────────────────────
+// ── Composer ───────────────────────────────────────────────────────────────────────
 
 const composerRef = ref<InstanceType<typeof DealComposer> | null>(null)
 const composerInitialTab = ref<ActivityKind>('note')
@@ -185,27 +343,29 @@ function onActivityCreated(activity: ActivityDto) {
   feedComposable.prependLocal(activity)
 }
 
-// ── Actions ────────────────────────────────────────────────────────────────────
+// ── Actions ────────────────────────────────────────────────────────────────────────
 
 const { moveDialogOpen, openMoveDialog } = useDealActions(
   () => dealId.value,
   (updated) => { updateDealLocal(updated) },
 )
 
-// ── Pipeline stages ────────────────────────────────────────────────────────────
+// ── Pipeline stages ────────────────────────────────────────────────────────────────
 
 const allStagesResource = useAsyncResource<PipelineStageDto[]>(() => [])
 const allStages = computed(() => allStagesResource.data.value)
 
-// ── Users list ─────────────────────────────────────────────────────────────────
+// ── Users list ─────────────────────────────────────────────────────────────────────
 
 const usersListResource = useAsyncResource<{ id: number; name: string }[]>(() => [])
 const usersList = computed(() => usersListResource.data.value)
 
-// ── Days in stage ──────────────────────────────────────────────────────────────
+// ── Days in stage ──────────────────────────────────────────────────────────────────
 
 const daysInStage = computed((): number => {
   if (!deal.value) return 0
+  // Prefer backend-computed value if available
+  if (deal.value.days_in_stage != null) return deal.value.days_in_stage
   const historyArr = history.value
   const relevant = historyArr.find((h) => h.to_stage?.id === deal.value!.stage.id)
   const fromDate = relevant
@@ -221,12 +381,12 @@ function openMoveDialogWithStage() {
   moveDialogOpen.value = true
 }
 
-// ── Dialogs ────────────────────────────────────────────────────────────────────
+// ── Dialogs ────────────────────────────────────────────────────────────────────────
 
 const addProductDialogOpen = ref(false)
 const addContactDialogOpen = ref(false)
 
-// ── Event handlers ─────────────────────────────────────────────────────────────
+// ── Event handlers ─────────────────────────────────────────────────────────────────
 
 function onDealMoved(updated: DealDto) {
   updateDealLocal(updated)
@@ -293,7 +453,7 @@ function addContactProxy(
   return dealContactsComposable.add(payload)
 }
 
-// ── Bootstrap ──────────────────────────────────────────────────────────────────
+// ── Bootstrap ──────────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
   if (salesStore.lostReasonsCache.length === 0) {
@@ -346,8 +506,17 @@ onMounted(async () => {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  min-width: 1100px;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+
+  // ── Wide desktop ≥1280px ───────────────────────────────────────────────────
+
+  @media (min-width: 1280px) {
+    .deal-page-v2__left {
+      width: 320px;
+    }
+  }
+
+  // ── Standard desktop 1024–1279px ──────────────────────────────────────────
 
   &__left {
     width: 290px;
@@ -374,6 +543,82 @@ onMounted(async () => {
     .app-dark & {
       background: var(--p-surface-900);
     }
+  }
+
+  // ── Tablet (768–1023px) ────────────────────────────────────────────────────
+
+  &--tablet {
+    flex-direction: column;
+
+    .deal-page-v2__right {
+      width: 100%;
+      flex: 1;
+    }
+  }
+
+  // ── Mobile (<768px) ────────────────────────────────────────────────────────
+
+  &--mobile {
+    flex-direction: column;
+    height: 100svh;
+  }
+
+  &__left--mobile-active {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    border-right: none;
+  }
+
+  &__right--mobile-active {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // ── Mobile / tablet bars ───────────────────────────────────────────────────
+
+  &__mobile-bar,
+  &__tablet-bar {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2 $space-3;
+    border-bottom: 1px solid var(--p-surface-200);
+    background: var(--p-card-background);
+    flex-shrink: 0;
+
+    .app-dark & {
+      border-bottom-color: var(--p-surface-700);
+    }
+  }
+
+  &__mobile-switch {
+    flex-shrink: 0;
+  }
+
+  &__tablet-title {
+    flex: 1;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $surface-800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // ── Composer sticky on mobile ──────────────────────────────────────────────
+
+  &__composer--sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
   }
 
   // ── Full-page states ────────────────────────────────────────────────────────
