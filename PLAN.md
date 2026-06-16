@@ -232,8 +232,8 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] QR для 2FA setup — текстовый `otpauth://` URI (без qrcode-либы); follow-up для M1+.
 - **DoD PASS:** type-check/lint/build зелёные. Браузерный smoke — перенесён на M0.7 (frontend-контейнер не в compose).
 
-#### Навигация — Срез 1 (frontend-specialist, 2026-06-16) — на ревью PM
-> ТЗ: `5. Планы/Навигация — ТЗ (Орбита + боковое меню).md` / branch `feat/navigation-redesign`
+#### Навигация — Срез 1 (frontend-specialist, 2026-06-16) ✅ PM APPROVE (беклог-замечания, не блокеры)
+> ТЗ: `5. Планы/Навигация — ТЗ (Орбита + боковое меню).md` / branch `feat/navigation-redesign` / commit `3543b49`
 - [x] `front/src/shared/nav/navItems.ts` — единый источник пунктов (`prototypeNavItems` 5 шт. + `adminNavItems` 9 шт. + `allNavItems` + `filterNavByRole()`).
 - [x] `AppSidebar.vue` рефакторинг — таблетки (margin 2px 8px / radius 9px / padding 8px 10px), активный бар 3×18px `::before`, бейджи (inline expanded, точки collapsed), логомарк «MG» hover→chevron, ролевой блок admin с хайрлайн-разделителем.
 - [x] `front/src/components/AppShell/AccountMenu.vue` — НОВЫЙ: `<Popover>` идентити+тема+язык+профиль+выход; `defineExpose({ toggle })`.
@@ -243,7 +243,14 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `DefaultLayout/index.vue` — `AppTopbar` удалён; условный рендер sidebar по `navMode === 'sidebar'`; `layout__main--full` для orbit-режима.
 - [x] `main.ts` — инициализация `themeStore` с миграцией из `layoutStore.isDarkMode` (backward compat).
 - [x] i18n: добавлены ключи `account.*`, `orbita.*`, `layout.*`, `commandPalette.*`, `hotkeys.*` в `ru.json` + `en.json`.
-- **PM-статус:** PENDING QA — на ревью, не закоммичен. Беклог-замечания (см. PM-ревью 2026-06-16).
+
+#### Навигация — Срез 2 (frontend-specialist, 2026-06-16) — pending QA (PM-ревью 2026-06-16)
+> branch `feat/navigation-redesign` / изменения в рабочем дереве (не закоммичено)
+- [x] `front/src/components/Orbita/` — НОВАЯ ПАПКА: Orbita.vue / OrbitaPanel.vue / OrbitaToggle.vue / NotificationsButton.vue / UserProfileButton.vue / composables/{useOrbitaDrag,useOrbitaPanelDirection,useOrbitaTooltip,useOrbitaOverlays} / positioning.ts / zIndex.ts / styles/{_tokens.scss,_compact-control.scss} / types.ts / index.ts / locale/{ru,en}.json — 1-в-1 из Vizion Toolbox.
+- [x] `DefaultLayout/index.vue` — `<Orbita v-if="layoutStore.navMode === 'orbit'">` добавлена.
+- [x] `ProfilePage/index.vue` + `composables/useProfilePage.ts` — вкладка «Внешний вид»: `SelectButton` темы + карточки navMode (sidebar/orbit); `setNavMode()`.
+- [x] `locales/{ru,en}.json` — ключ `layout.appearance` добавлен.
+- **PM-статус:** PENDING QA — беклог-замечание: `pi pi-layout-sidebar` не существует в PrimeIcons v7 (нужна замена, не блокер рендера).
 
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
 > **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.

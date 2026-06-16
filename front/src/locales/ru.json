@@ -76,7 +76,8 @@
       "calendar": "Календарь",
       "signature": "Подпись",
       "segments": "Сегменты",
-      "telegram": "Telegram"
+      "telegram": "Telegram",
+      "appearance": "Внешний вид"
     },
     "fields": {
       "full_name": "Полное имя",

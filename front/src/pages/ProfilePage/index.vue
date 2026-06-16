@@ -175,6 +175,45 @@
               </div>
             </template>
 
+            <!-- Appearance tab: theme + nav mode -->
+            <template v-if="activeTab === 'appearance'">
+              <h2 class="profile-content__heading">{{ t('layout.appearance') }}</h2>
+
+              <!-- Theme section -->
+              <div class="profile-section">
+                <h3 class="profile-section__title">{{ t('account.theme') }}</h3>
+                <SelectButton
+                  v-model="currentTheme"
+                  :options="themeOptions"
+                  option-label="label"
+                  option-value="value"
+                />
+              </div>
+
+              <!-- Nav mode section -->
+              <div class="profile-section">
+                <h3 class="profile-section__title">{{ t('layout.navMode') }}</h3>
+                <div class="nav-mode-cards">
+                  <button
+                    v-for="mode in navModeOptions"
+                    :key="mode.value"
+                    class="nav-mode-card"
+                    :class="{ 'nav-mode-card--active': currentNavMode === mode.value }"
+                    @click="setNavMode(mode.value)"
+                  >
+                    <i :class="['nav-mode-card__icon', mode.icon]" />
+                    <span class="nav-mode-card__label">{{ mode.label }}</span>
+                    <span v-if="mode.hint" class="nav-mode-card__hint">{{ mode.hint }}</span>
+                    <i v-if="currentNavMode === mode.value" class="pi pi-check nav-mode-card__check" />
+                  </button>
+                </div>
+                <p v-if="currentNavMode === 'orbit'" class="appearance-hint">
+                  <i class="pi pi-info-circle" />
+                  {{ t('layout.navModeOrbitHint') }}
+                </p>
+              </div>
+            </template>
+
             <!-- Coming soon tabs -->
             <template v-if="['notifications', 'locale', 'theme', 'calendar', 'signature', 'segments'].includes(activeTab)">
               <h2 class="profile-content__heading">{{ t(`profile.tabs.${activeTab}`) }}</h2>
@@ -236,14 +275,51 @@ import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
+import SelectButton from 'primevue/selectbutton'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import { useLayoutStore } from '@/stores/layout'
+import { useThemeStore } from '@/stores/theme'
 import { localeManager } from '@/application/locale'
 import { getI18nLocale, type AvailableLocales } from '@/plugins/i18n'
+import type { NavMode } from '@/stores/layout'
 import { useProfilePage, type ProfileTab } from './composables/useProfilePage'
 
 const { t } = useI18n()
 const layoutStore = useLayoutStore()
+const themeStore = useThemeStore()
+
+// ─── Appearance: theme ────────────────────────────────────────────────────────
+const currentTheme = computed<'light' | 'dark'>({
+  get: () => themeStore.theme,
+  set: (value) => themeStore.setTheme(value),
+})
+
+const themeOptions = computed(() => [
+  { label: t('account.themeLight'), value: 'light' },
+  { label: t('account.themeDark'), value: 'dark' },
+])
+
+// ─── Appearance: nav mode ─────────────────────────────────────────────────────
+const currentNavMode = computed(() => layoutStore.navMode)
+
+const navModeOptions = computed(() => [
+  {
+    value: 'sidebar' as NavMode,
+    icon: 'pi pi-objects-column',
+    label: t('layout.navModeSidebar'),
+    hint: null,
+  },
+  {
+    value: 'orbit' as NavMode,
+    icon: 'pi pi-circle-fill',
+    label: t('layout.navModeOrbit'),
+    hint: t('layout.navModeOrbitHint'),
+  },
+])
+
+function setNavMode(mode: NavMode) {
+  layoutStore.setNavMode(mode)
+}
 
 const currentLocale = computed(() => getI18nLocale())
 
@@ -285,6 +361,7 @@ const TAB_ICONS: Record<ProfileTab, string> = {
   signature: 'pi pi-pen-to-square',
   segments: 'pi pi-tag',
   telegram: 'pi pi-telegram',
+  appearance: 'pi pi-sliders-h',
 }
 
 function tabIcon(tab: ProfileTab): string {
@@ -473,6 +550,80 @@ function tabIcon(tab: ProfileTab): string {
     font-size: $font-size-sm;
     color: var(--p-text-muted-color);
     margin: 0;
+  }
+}
+
+// Appearance tab
+.nav-mode-cards {
+  display: flex;
+  gap: $space-3;
+  flex-wrap: wrap;
+}
+
+.nav-mode-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-4;
+  width: 200px;
+  background: $surface-card;
+  border: 2px solid $surface-200;
+  border-radius: $radius-md;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color $transition-fast,
+    background-color $transition-fast;
+
+  &:hover {
+    border-color: $primary;
+    background: rgba($primary, 0.03);
+  }
+
+  &--active {
+    border-color: $primary;
+    background: rgba($primary, 0.06);
+  }
+
+  &__icon {
+    font-size: 24px;
+    color: $primary;
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $surface-900;
+  }
+
+  &__hint {
+    font-size: $font-size-xs;
+    color: $surface-500;
+    line-height: 1.4;
+  }
+
+  &__check {
+    position: absolute;
+    top: $space-2;
+    right: $space-2;
+    font-size: 14px;
+    color: $primary;
+  }
+}
+
+.appearance-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  margin-top: $space-3;
+  font-size: $font-size-sm;
+  color: $surface-500;
+
+  i {
+    flex-shrink: 0;
+    margin-top: 2px;
   }
 }
 

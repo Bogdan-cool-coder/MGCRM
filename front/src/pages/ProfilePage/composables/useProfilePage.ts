@@ -17,6 +17,7 @@ export type ProfileTab =
   | 'signature'
   | 'segments'
   | 'telegram'
+  | 'appearance'
 
 const VALID_TABS: ProfileTab[] = [
   'profile',
@@ -28,6 +29,7 @@ const VALID_TABS: ProfileTab[] = [
   'signature',
   'segments',
   'telegram',
+  'appearance',
 ]
 
 export const useProfilePage = () => {

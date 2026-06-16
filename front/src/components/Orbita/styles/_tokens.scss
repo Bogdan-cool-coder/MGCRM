@@ -1,0 +1,20 @@
+/**
+ * Orbita SCSS design tokens.
+ * Adapted from Vizion Toolbox _tokens.scss.
+ * Theme-adaptive: surface tokens resolve to light/dark via var(--p-*).
+ */
+@use '@/theme/scss/index' as *;
+
+// Surface adapts to theme (white in light, dark in dark)
+$orbita-surface-bg: $surface-0;
+$orbita-surface-border: 1px solid rgba($surface-900, 0.08);
+$orbita-surface-border-hover: rgba($surface-900, 0.16);
+
+// Control sizes
+$orbita-control-size: 2.75rem;       // 44px — nav buttons
+$orbita-toggle-main-size: 2rem;      // + button
+$orbita-grip-size: 1rem;             // satellite grip
+$orbita-divider-inset: 0.35rem;
+
+// Panel overlap with toggle
+$orbita-toggle-overlap: 0.25rem;

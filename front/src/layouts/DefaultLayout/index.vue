@@ -1,11 +1,14 @@
 <template>
   <div class="layout d-flex h-100">
-    <!-- Sidebar — shown only for authenticated routes (not /login) -->
+    <!-- Sidebar — shown only for authenticated routes in sidebar mode -->
     <AppSidebar
       v-if="showLayout && layoutStore.navMode === 'sidebar'"
       :collapsed="layoutStore.isSidebarCollapsed"
       @toggle="layoutStore.toggleSidebar()"
     />
+
+    <!-- Orbita — floating nav in orbit mode -->
+    <Orbita v-if="showLayout && layoutStore.navMode === 'orbit'" />
 
     <!-- Main content area — full-width in orbit mode -->
     <div
@@ -48,6 +51,7 @@ import { useRoute } from 'vue-router'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { AppSidebar } from '@/components/AppShell'
+import { Orbita } from '@/components/Orbita'
 import { useLayoutStore } from '@/stores/layout'
 import { useActivityStore } from '@/stores/activityStore'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'

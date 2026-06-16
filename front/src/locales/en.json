@@ -76,7 +76,8 @@
       "calendar": "Calendar",
       "signature": "Signature",
       "segments": "Segments",
-      "telegram": "Telegram"
+      "telegram": "Telegram",
+      "appearance": "Appearance"
     },
     "fields": {
       "full_name": "Full name",
