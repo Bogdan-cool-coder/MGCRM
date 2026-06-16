@@ -1234,7 +1234,8 @@
         "errorWithDeals": "В воронке есть сделки. Перенесите их перед удалением.",
         "errorLastSales": "Нельзя удалить единственную воронку продаж."
       },
-      "activeBadge": "активная"
+      "activeBadge": "активная",
+      "selectPlaceholder": "Выберите воронку"
     },
     "stageEditor": {
       "addStage": "Добавить этап",
@@ -2203,14 +2204,16 @@
       "paletteHint": "Перетащите на стадию",
       "paletteCollapse": "Свернуть палитру",
       "paletteExpand": "Развернуть палитру",
+      "toolTelegram": "Telegram",
       "toolTask": "Задача",
       "toolField": "Поле",
       "toolDocument": "Документ",
       "toolOwner": "Владелец",
       "toolStage": "Стадия",
+      "toolWebhook": "Webhook",
+      "toolEmail": "Email",
       "anchorLabel": "Вход в воронку",
       "anchorAutoCount": "on_create: {n}",
-      "stageDeals": "Сделок: {n}",
       "stageAutos": "Автоматизаций: {n}",
       "addAutomation": "+ Автоматизация",
       "autoActive": "активна",

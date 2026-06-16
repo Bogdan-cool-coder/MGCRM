@@ -1234,7 +1234,8 @@
         "errorWithDeals": "This pipeline has deals. Move them before deleting.",
         "errorLastSales": "Cannot delete the only sales pipeline."
       },
-      "activeBadge": "active"
+      "activeBadge": "active",
+      "selectPlaceholder": "Select pipeline"
     },
     "stageEditor": {
       "addStage": "Add stage",
@@ -2203,14 +2204,16 @@
       "paletteHint": "Drag onto a stage",
       "paletteCollapse": "Collapse palette",
       "paletteExpand": "Expand palette",
+      "toolTelegram": "Telegram",
       "toolTask": "Task",
       "toolField": "Field",
       "toolDocument": "Document",
       "toolOwner": "Owner",
       "toolStage": "Stage",
+      "toolWebhook": "Webhook",
+      "toolEmail": "Email",
       "anchorLabel": "Pipeline entry",
       "anchorAutoCount": "on_create: {n}",
-      "stageDeals": "Deals: {n}",
       "stageAutos": "Automations: {n}",
       "addAutomation": "+ Automation",
       "autoActive": "active",

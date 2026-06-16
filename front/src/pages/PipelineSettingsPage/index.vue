@@ -1,13 +1,43 @@
 <template>
   <div class="pipeline-settings-page">
-    <PageHeader :title="t('sales.pipelineEditor.pageTitle')" icon="pi pi-sliders-h" />
+    <!-- Page header — hidden in canvas mode to reclaim vertical space -->
+    <PageHeader v-if="viewMode !== 'canvas'" :title="t('sales.pipelineEditor.pageTitle')" icon="pi pi-sliders-h" />
 
     <div
       class="pipeline-settings-page__content"
       :class="{ 'pipeline-settings-page__content--canvas': viewMode === 'canvas' }"
     >
-      <!-- Pipelines section -->
+      <!-- ── CANVAS compact chrome ──────────────────────────────────────────── -->
+      <!-- In canvas mode the full PipelineList card + PageHeader are hidden.    -->
+      <!-- Instead we show a single slim bar: pipeline switcher + mode toggle.   -->
+      <div v-if="viewMode === 'canvas'" class="pipeline-settings-page__canvas-bar">
+        <!-- Pipeline switcher (compact Select — triggers full selectPipeline) -->
+        <Select
+          :model-value="selectedPipelineId"
+          :options="pipelines"
+          option-label="name"
+          option-value="id"
+          :placeholder="t('sales.pipelineEditor.selectPlaceholder')"
+          size="small"
+          class="pipeline-settings-page__canvas-pipeline-select"
+          @change="(e: SelectChangeEvent) => selectPipeline(e.value as number)"
+        />
+        <!-- Spacer -->
+        <span class="pipeline-settings-page__canvas-bar-spacer" />
+        <!-- Mode toggle -->
+        <SelectButton
+          v-model="viewMode"
+          :options="viewModeOptions"
+          option-label="label"
+          option-value="value"
+          :allow-empty="false"
+        />
+      </div>
+
+      <!-- ── FORM MODE chrome ───────────────────────────────────────────────── -->
+      <!-- Pipelines section (full card — form mode only) -->
       <PipelineList
+        v-if="viewMode !== 'canvas'"
         :pipelines="pipelines"
         :selected-pipeline-id="selectedPipelineId"
         :loading="pipelinesLoading"
@@ -17,8 +47,8 @@
         @delete="handleDeletePipeline"
       />
 
-      <!-- View mode toggle — shown only when a pipeline is selected -->
-      <div v-if="selectedPipelineId !== null" class="pipeline-settings-page__mode-bar">
+      <!-- View mode toggle — form mode only, shown when a pipeline is selected -->
+      <div v-if="viewMode !== 'canvas' && selectedPipelineId !== null" class="pipeline-settings-page__mode-bar">
         <SelectButton
           v-model="viewMode"
           :options="viewModeOptions"
@@ -139,6 +169,8 @@ import { useToast } from 'primevue/usetoast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import SelectButton from 'primevue/selectbutton'
+import Select from 'primevue/select'
+import type { SelectChangeEvent } from 'primevue/select'
 import { PageHeader } from '@/components/AppShell'
 import PipelineList from './components/PipelineList.vue'
 import StageEditorList from './components/StageEditorList.vue'
@@ -495,6 +527,26 @@ onMounted(async () => {
     align-items: center;
   }
 
+  // ── Compact chrome shown only in canvas mode ────────────────────────────────
+  // Replaces the full PageHeader (~56px) + PipelineList card (~120px+) with a
+  // single 40px bar, giving the canvas ~176px+ of extra vertical space.
+
+  &__canvas-bar {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    flex-shrink: 0;
+  }
+
+  &__canvas-pipeline-select {
+    // Compact width — enough for a pipeline name (≤ 200 chars typical)
+    width: 220px;
+  }
+
+  &__canvas-bar-spacer {
+    flex: 1;
+  }
+
   &__canvas-area {
     // Must be a flex-column container so that PipelineCanvas (its sole child)
     // can use flex:1 to fill the available height instead of height:100%
@@ -502,10 +554,11 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     flex: 1;
-    // Safety: guarantee a usable canvas height even if the flex chain above is
-    // imperfect (e.g. intermediate containers without explicit height).
-    // 560px fits 9+ stages on a desktop viewport without page-level scrolling.
-    min-height: 560px;
+    // Safety floor lowered from 560px → 480px now that the compact bar saves
+    // ~176px of chrome. On a typical 900px-tall viewport the canvas gains that
+    // extra vertical space automatically via flex:1; the floor only kicks in
+    // when the flex chain is broken by an intermediate non-flex ancestor.
+    min-height: 480px;
     border: 1px solid var(--p-surface-border);
     border-radius: var(--p-border-radius);
     overflow: hidden;

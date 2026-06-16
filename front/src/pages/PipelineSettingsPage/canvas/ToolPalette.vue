@@ -66,14 +66,14 @@ interface ToolDef {
 }
 
 const TOOLS: ToolDef[] = [
-  { icon: 'pi-telegram',          label: 'Telegram',  actionKind: 'tg_notify' },
-  { icon: 'pi-clipboard',         label: t('automation.canvas.toolTask'),     actionKind: 'create_task' },
-  { icon: 'pi-pencil-square',     label: t('automation.canvas.toolField'),    actionKind: 'set_field' },
-  { icon: 'pi-file',              label: t('automation.canvas.toolDocument'), actionKind: 'generate_document' },
-  { icon: 'pi-user-edit',         label: t('automation.canvas.toolOwner'),    actionKind: 'change_owner' },
-  { icon: 'pi-arrow-right-circle',label: t('automation.canvas.toolStage'),    actionKind: 'change_stage' },
-  { icon: 'pi-wifi',              label: 'Webhook',   actionKind: 'webhook' },
-  { icon: 'pi-envelope',          label: 'Email',     actionKind: 'email' },
+  { icon: 'pi-telegram',           label: t('automation.canvas.toolTelegram'), actionKind: 'tg_notify' },
+  { icon: 'pi-clipboard',          label: t('automation.canvas.toolTask'),      actionKind: 'create_task' },
+  { icon: 'pi-pencil-square',      label: t('automation.canvas.toolField'),     actionKind: 'set_field' },
+  { icon: 'pi-file',               label: t('automation.canvas.toolDocument'),  actionKind: 'generate_document' },
+  { icon: 'pi-user-edit',          label: t('automation.canvas.toolOwner'),     actionKind: 'change_owner' },
+  { icon: 'pi-arrow-right-circle', label: t('automation.canvas.toolStage'),     actionKind: 'change_stage' },
+  { icon: 'pi-wifi',               label: t('automation.canvas.toolWebhook'),   actionKind: 'webhook' },
+  { icon: 'pi-envelope',           label: t('automation.canvas.toolEmail'),     actionKind: 'email' },
 ]
 
 // ─── Drag ─────────────────────────────────────────────────────────────────────
