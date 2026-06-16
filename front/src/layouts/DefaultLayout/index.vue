@@ -1,18 +1,23 @@
 <template>
-  <div class="layout d-flex h-100" :class="{ 'layout--dark': layoutStore.isDarkMode }">
-    <!-- Sidebar — показываем только для авторизованных (не на /login) -->
+  <div class="layout d-flex h-100">
+    <!-- Sidebar — shown only for authenticated routes (not /login) -->
     <AppSidebar
-      v-if="showLayout"
+      v-if="showLayout && layoutStore.navMode === 'sidebar'"
       :collapsed="layoutStore.isSidebarCollapsed"
       @toggle="layoutStore.toggleSidebar()"
     />
 
-    <!-- Основная область -->
-    <div class="layout__main d-flex flex-column flex-grow-1 overflow-hidden">
-      <!-- Topbar — только для авторизованных -->
-      <AppTopbar v-if="showLayout" />
+    <!-- Main content area — full-width in orbit mode -->
+    <div
+      :class="[
+        'layout__main d-flex flex-column flex-grow-1 overflow-hidden',
+        { 'layout__main--full': layoutStore.navMode === 'orbit' },
+      ]"
+    >
+      <!-- AppTopbar removed — all its features (theme, locale, profile, logout)
+           moved to AccountMenu inside AppSidebar footer (Срез 1) -->
 
-      <!-- Контент страницы -->
+      <!-- Page content -->
       <main class="layout__content">
         <router-view />
       </main>
@@ -42,7 +47,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { AppSidebar, AppTopbar } from '@/components/AppShell'
+import { AppSidebar } from '@/components/AppShell'
 import { useLayoutStore } from '@/stores/layout'
 import { useActivityStore } from '@/stores/activityStore'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
@@ -87,11 +92,12 @@ watch(
   min-height: 0;
   overflow-y: auto;
   background-color: $surface-100;
+  // No padding-top needed — AppTopbar removed; content starts at top of viewport
   padding: $space-4 $space-6;
 }
 
-// Убрать padding на логин-странице (рендерит сам с нуля)
-.layout--login .layout__content {
-  padding: 0;
+// Orbit mode: main occupies full viewport width (no sidebar offset)
+.layout__main--full {
+  width: 100%;
 }
 </style>

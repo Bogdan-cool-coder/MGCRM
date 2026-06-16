@@ -15,7 +15,7 @@
     "logout": "Sign out",
     "pipelineSettings": "Pipeline settings",
     "myTasks": "My tasks",
-    "managerCabinet": "My Cabinet",
+    "managerCabinet": "Manager Cabinet",
     "myApprovals": "My approvals",
     "templates": "Templates",
     "templateVariables": "Variable catalog",
@@ -2234,5 +2234,46 @@
         "on_create": "On create"
       }
     }
+  },
+  "account": {
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "language": "Language",
+    "profileSettings": "Profile settings",
+    "logout": "Log out"
+  },
+  "orbita": {
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "drag": "Drag",
+    "rotateH": "Horizontal mode",
+    "rotateV": "Vertical mode",
+    "notifications": "Notifications",
+    "noNotifications": "No new notifications",
+    "markAllRead": "Mark all as read"
+  },
+  "layout": {
+    "navMode": "Menu style",
+    "navModeSidebar": "Sidebar",
+    "navModeOrbit": "Orbit",
+    "navModeOrbitHint": "A floating panel you can drag anywhere on the screen.",
+    "appearance": "Appearance"
+  },
+  "commandPalette": {
+    "placeholder": "Search pages and actions...",
+    "sectionPages": "Pages",
+    "sectionActions": "Actions",
+    "sectionRecent": "Recent",
+    "empty": "No results found",
+    "hint": "↑↓ navigate  · Enter select  · Esc close"
+  },
+  "hotkeys": {
+    "title": "Keyboard shortcuts",
+    "globalNav": "Navigation",
+    "goToDashboard": "Go to Dashboard",
+    "goToContacts": "Go to Contacts",
+    "goToDeals": "Go to Deals",
+    "openSearch": "Open search"
   }
 }

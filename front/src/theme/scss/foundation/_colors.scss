@@ -63,3 +63,13 @@ $primary-900: var(--app-primary-900);
 
 // Compatibility aliases
 $background-color: $surface-100;
+
+// ─── Sidebar tokens ──────────────────────────────────────────────────────────
+// Sidebar always stays dark (brand bg), regardless of light/dark theme.
+$sidebar-bg:           #172747;   // brand-primary — static, sidebar never adapts to theme
+$sidebar-hover-bg:     #0E172B;   // brand-primary-dark — replaces hardcoded #0e172b
+$sidebar-active-bg:    rgba(255, 255, 255, 0.08);   // active pill highlight
+$sidebar-active-bar:   #ffffff;                      // 3px left indicator bar
+$sidebar-text:         rgba(255, 255, 255, 0.75);    // default nav text
+$sidebar-text-active:  #ffffff;                      // active nav text
+$sidebar-divider:      rgba(255, 255, 255, 0.08);    // hairline before admin block

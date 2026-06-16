@@ -232,6 +232,19 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] QR для 2FA setup — текстовый `otpauth://` URI (без qrcode-либы); follow-up для M1+.
 - **DoD PASS:** type-check/lint/build зелёные. Браузерный smoke — перенесён на M0.7 (frontend-контейнер не в compose).
 
+#### Навигация — Срез 1 (frontend-specialist, 2026-06-16) — на ревью PM
+> ТЗ: `5. Планы/Навигация — ТЗ (Орбита + боковое меню).md` / branch `feat/navigation-redesign`
+- [x] `front/src/shared/nav/navItems.ts` — единый источник пунктов (`prototypeNavItems` 5 шт. + `adminNavItems` 9 шт. + `allNavItems` + `filterNavByRole()`).
+- [x] `AppSidebar.vue` рефакторинг — таблетки (margin 2px 8px / radius 9px / padding 8px 10px), активный бар 3×18px `::before`, бейджи (inline expanded, точки collapsed), логомарк «MG» hover→chevron, ролевой блок admin с хайрлайн-разделителем.
+- [x] `front/src/components/AppShell/AccountMenu.vue` — НОВЫЙ: `<Popover>` идентити+тема+язык+профиль+выход; `defineExpose({ toggle })`.
+- [x] `front/src/stores/theme.ts` — НОВЫЙ: `theme: 'light'|'dark'`, persist key `mgcrm_theme`, `setTheme()` / `toggleTheme()`.
+- [x] `front/src/theme/scss/foundation/_colors.scss` — 7 SCSS-токенов sidebar (`$sidebar-bg/hover-bg/active-bg/active-bar/text/text-active/divider`); хардкод `#0e172b` и `#2b4987` вынесены из AppSidebar.
+- [x] `stores/layout.ts` — добавлены `navMode`, `orbitPos`, `orbitOrientation`, `orbitCollapsed`, `commandPaletteOpen`, `recentRoutes`; `isDarkMode` + `toggleDarkMode` помечены `@deprecated`.
+- [x] `DefaultLayout/index.vue` — `AppTopbar` удалён; условный рендер sidebar по `navMode === 'sidebar'`; `layout__main--full` для orbit-режима.
+- [x] `main.ts` — инициализация `themeStore` с миграцией из `layoutStore.isDarkMode` (backward compat).
+- [x] i18n: добавлены ключи `account.*`, `orbita.*`, `layout.*`, `commandPalette.*`, `hotkeys.*` в `ru.json` + `en.json`.
+- **PM-статус:** PENDING QA — на ревью, не закоммичен. Беклог-замечания (см. PM-ревью 2026-06-16).
+
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
 > **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.
 - [ ] `.github/workflows/ci.yml`: backend job = **(а)** `php artisan test` на sqlite (force) + **(б)** pgsql migrate-smoke (сервис `postgres:16-alpine`, `migrate --force`) + **(в) явный Pint-шаг (БЛОКИРУЮЩИЙ)**; frontend job = vue-tsc + **eslint (БЛОКИРУЮЩИЙ — наш DoD = зелёный CI)** + build. PHP **8.5**.

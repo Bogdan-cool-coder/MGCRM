@@ -15,7 +15,7 @@
     "logout": "Выйти",
     "pipelineSettings": "Настройки воронки",
     "myTasks": "Мои задачи",
-    "managerCabinet": "Кабинет",
+    "managerCabinet": "Кабинет менеджера",
     "myApprovals": "Мои согласования",
     "templates": "Шаблоны",
     "templateVariables": "Каталог меток",
@@ -2234,5 +2234,46 @@
         "on_create": "При создании"
       }
     }
+  },
+  "account": {
+    "theme": "Тема",
+    "themeLight": "Светлая",
+    "themeDark": "Тёмная",
+    "language": "Язык",
+    "profileSettings": "Настройки профиля",
+    "logout": "Выйти"
+  },
+  "orbita": {
+    "expand": "Развернуть",
+    "collapse": "Свернуть",
+    "drag": "Перетащить",
+    "rotateH": "Горизонтальный режим",
+    "rotateV": "Вертикальный режим",
+    "notifications": "Уведомления",
+    "noNotifications": "Нет новых уведомлений",
+    "markAllRead": "Отметить все прочитанными"
+  },
+  "layout": {
+    "navMode": "Вид меню",
+    "navModeSidebar": "Боковое меню",
+    "navModeOrbit": "Орбита",
+    "navModeOrbitHint": "Плавающая панель, которую можно перетащить в любую часть экрана.",
+    "appearance": "Внешний вид"
+  },
+  "commandPalette": {
+    "placeholder": "Поиск страниц и действий...",
+    "sectionPages": "Страницы",
+    "sectionActions": "Действия",
+    "sectionRecent": "Недавние",
+    "empty": "Ничего не найдено",
+    "hint": "↑↓ навигация  · Enter выбрать  · Esc закрыть"
+  },
+  "hotkeys": {
+    "title": "Клавиатурные сокращения",
+    "globalNav": "Навигация",
+    "goToDashboard": "Перейти на Дашборд",
+    "goToContacts": "Перейти к Контактам",
+    "goToDeals": "Перейти к Сделкам",
+    "openSearch": "Открыть поиск"
   }
 }
