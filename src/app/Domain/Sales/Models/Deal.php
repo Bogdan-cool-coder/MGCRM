@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Models;
 
+use App\Domain\Activity\Enums\ActivityStatus;
+use App\Domain\Activity\Enums\ActivityTargetType;
+use App\Domain\Activity\Enums\ActivityType;
+use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Models\User;
@@ -14,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -93,6 +98,22 @@ class Deal extends Model
         return 'open';
     }
 
+    /**
+     * Whole days the deal has sat in its current stage (the rotting clock base —
+     * Сделки — ТЗ §1.3). Computed from stage_changed_at; 0 when it has never
+     * changed stage. Pure (no DB) — the frontend colours it against the stage's
+     * warn_days/danger_days thresholds.
+     */
+    public function daysInStage(): int
+    {
+        if ($this->stage_changed_at === null) {
+            return 0;
+        }
+
+        return (int) $this->stage_changed_at->copy()->startOfDay()
+            ->diffInDays(now()->startOfDay());
+    }
+
     // ---- Relations ----
 
     public function pipeline(): BelongsTo
@@ -153,5 +174,28 @@ class Deal extends Model
     public function audits(): HasMany
     {
         return $this->hasMany(DealAudit::class)->orderByDesc('created_at');
+    }
+
+    /**
+     * The next OPEN, task-like activity on this deal by soonest due_at — the
+     * "deal health" signal shared by the Kanban card and the DealPage 2.0 header
+     * chip (DealPage 2.0 v2 §8 v2-B1). The cross-context link is the FK-less
+     * polymorphic target (target_type='deal' + target_id), mirroring how the
+     * Activity domain itself models the relationship.
+     *
+     * Open = not closed AND status != done AND has a due_at (a note never
+     * surfaces here — it carries no deadline). Eager-load this relation
+     * (with('nextTask')) to avoid N+1 in the DealResource. For board enrichment
+     * across many deals, DealService batches the equivalent query instead.
+     */
+    public function nextTask(): HasOne
+    {
+        return $this->hasOne(Activity::class, 'target_id')
+            ->where('target_type', ActivityTargetType::Deal->value)
+            ->whereIn('kind', ActivityType::taskLikeValues())
+            ->where('is_closed', false)
+            ->where('status', '!=', ActivityStatus::Done->value)
+            ->whereNotNull('due_at')
+            ->orderBy('due_at');
     }
 }

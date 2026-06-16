@@ -41,6 +41,8 @@ class UpdateStageRequest extends FormRequest
                     ->ignore($stage->id),
             ],
             'color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'warn_days' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'danger_days' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'hidden_by_default' => ['sometimes', 'boolean'],
             'sla_hours' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'won_gate' => ['sometimes', 'boolean'],

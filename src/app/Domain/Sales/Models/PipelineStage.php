@@ -32,6 +32,8 @@ class PipelineStage extends Model
         'code',
         'sort_order',
         'color',
+        'warn_days',
+        'danger_days',
         'is_won',
         'is_lost',
         'hidden_by_default',
@@ -50,6 +52,8 @@ class PipelineStage extends Model
     {
         return [
             'sort_order' => 'integer',
+            'warn_days' => 'integer',
+            'danger_days' => 'integer',
             'is_won' => 'boolean',
             'is_lost' => 'boolean',
             'hidden_by_default' => 'boolean',

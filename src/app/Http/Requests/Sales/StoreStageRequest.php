@@ -37,6 +37,8 @@ class StoreStageRequest extends FormRequest
                 Rule::unique('pipeline_stages', 'code')->where('pipeline_id', $pipeline->id),
             ],
             'color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'warn_days' => ['nullable', 'integer', 'min:0'],
+            'danger_days' => ['nullable', 'integer', 'min:0'],
             'hidden_by_default' => ['nullable', 'boolean'],
             'sla_hours' => ['nullable', 'integer', 'min:1'],
             'won_gate' => ['nullable', 'boolean'],

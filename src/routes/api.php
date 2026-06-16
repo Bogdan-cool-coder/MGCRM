@@ -365,6 +365,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::get('activities/presets/{preset}', [ActivityController::class, 'presets'])->name('activities.presets');
     Route::get('activities/counts-by-preset', [ActivityController::class, 'countsByPreset'])->name('activities.counts-by-preset');
     Route::get('activities/my-open-count', [ActivityController::class, 'myOpenCount'])->name('activities.my-open-count');
+    // Personal task board — urgency buckets for the current user (Сделки — ТЗ §4).
+    Route::get('activities/my-board', [ActivityController::class, 'myBoard'])->name('activities.my-board');
 
     Route::get('activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::post('activities', [ActivityController::class, 'store'])->name('activities.store');

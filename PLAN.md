@@ -335,7 +335,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] Тесты: переходы стадий, расчёт суммы сделки, drag-drop API (253/569 PHPUnit). *(S1.3, 2026-06-12)*
 - [x] **Дашборд продаж** (SalesDashboardService, 5 виджетов ECharts, Excel-экспорт, мультивалютный warning, visibility-scope, DashboardController+Resource). 433/433 PHPUnit, QA PASS. *(S1.7, 2026-06-12)*
 - [ ] Форма отчёта о встрече (MeetingReport) — S1.6 (Activity)
-- [ ] Настройки воронки (CRUD этапов, цвета) — S1.5
+- [x] **Backend-фундамент Kanban-редизайна Сделок (v2-B1 + v2-B2 + board enrichment + my-board):** `deal.nextTask` HasOne relation + `Deal::daysInStage()` + `DealService::board()` enriched (next_task/primary_product batched, amounts_by_currency SQL GROUP BY, ExchangeRate base sum + multi_currency_warning) + `ActivityService::nextTasksForDeals()` (ROW_NUMBER PG / PHP-fallback SQLite) + `ActivityService::myBoard()` urgency-buckets + `ActivityService::stampDealTitles()` + `ActivityType::FollowUp` case + `ActivityType::taskLikeValues()` + `PipelineStage.warn_days/danger_days` migration (reversible) + `DealCardResource` (next_task/primary_product/days_in_stage) + `DealResource` (next_task/days_in_stage) + `PipelineStageResource` (warn_days/danger_days) + `ActivityCardResource` (deal link) + `GET /api/activities/my-board`. 18 новых тестов + глобальный сьют 1567 PASS / 3721 assertions. Миграция применена к dev-БД. 2026-06-16.*
 
 **Acceptance M3:** создание сделки с продуктами; **Kanban drag-drop** меняет стадию и пишет историю; lost-reason при проигрыше; list-view с фильтрами; каталог продуктов подтягивается в line-items. CI зелёный. *(ядро выполнено S1.3 2026-06-12; остаток → S1.5+S1.6)*
 

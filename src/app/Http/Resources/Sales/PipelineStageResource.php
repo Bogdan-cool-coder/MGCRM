@@ -20,6 +20,8 @@ class PipelineStageResource extends JsonResource
             'code' => $this->code,
             'sort_order' => $this->sort_order,
             'color' => $this->color,
+            'warn_days' => $this->warn_days,
+            'danger_days' => $this->danger_days,
             'is_won' => $this->is_won,
             'is_lost' => $this->is_lost,
             'hidden_by_default' => $this->hidden_by_default,

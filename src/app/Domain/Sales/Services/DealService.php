@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Activity\Services\ActivityService;
+use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\CustomFieldService;
 use App\Domain\Iam\Enums\VisibilityScope;
@@ -42,6 +44,8 @@ class DealService
         private readonly VisibilityResolver $visibility,
         private readonly CustomFieldService $customFieldService,
         private readonly DealAuditService $auditService,
+        private readonly ActivityService $activityService,
+        private readonly ExchangeRateService $exchangeRateService,
     ) {}
 
     /**
@@ -87,20 +91,42 @@ class DealService
     /**
      * Kanban board: stages of a pipeline + deals grouped by stage with totals.
      *
+     * Per-column totals (Сделки — ТЗ §3): `amounts_by_currency` holds the raw
+     * per-currency sums in kopecks (no conversion — the frontend renders the
+     * native breakdown popover), while `sum_amount` is the base-currency total
+     * via ExchangeRateService (deals in a currency with no rate are skipped and
+     * `multi_currency_warning` flips true, mirroring SalesDashboardService).
+     *
+     * Each card is enriched with `next_task`, `primary_product` and
+     * `days_in_stage`. The next-task and primary-product lookups are BATCHED
+     * across the whole board (two queries total, not per-card) to avoid N+1.
+     *
      * @return array<string, mixed>
      */
     public function board(int $pipelineId, VisibilityScope $scope, User $user): array
     {
         $pipeline = Pipeline::query()->with('stages')->findOrFail($pipelineId);
+        $baseCurrency = config('crm.currencies.default', 'RUB');
 
-        $columns = [];
+        $multiCurrencyWarning = false;
+
+        $rawColumns = [];
+        $allDealIds = [];
+
         foreach ($pipeline->stages as $stage) {
             $base = $this->scopedQuery($scope, $user)
                 ->where('pipeline_id', $pipelineId)
                 ->where('stage_id', $stage->id);
 
             $total = (clone $base)->count();
-            $sumAmount = (int) (clone $base)->sum('amount');
+
+            // Per-currency native sums (kopecks) — GROUP BY in SQL, no PHP loop.
+            $amountsByCurrency = (clone $base)
+                ->selectRaw('currency, SUM(amount) as total_amount')
+                ->groupBy('currency')
+                ->pluck('total_amount', 'currency')
+                ->map(static fn ($v): int => (int) $v)
+                ->all();
 
             $deals = (clone $base)
                 ->with(['company:id,name', 'owner:id,full_name'])
@@ -108,11 +134,51 @@ class DealService
                 ->limit(self::BOARD_COLUMN_LIMIT)
                 ->get();
 
-            $columns[(string) $stage->id] = [
+            foreach ($deals as $deal) {
+                $allDealIds[] = (int) $deal->id;
+            }
+
+            $rawColumns[(string) $stage->id] = [
                 'stage_id' => $stage->id,
                 'total' => $total,
-                'sum_amount' => $sumAmount,
+                'amounts_by_currency' => $amountsByCurrency,
                 'deals' => $deals,
+            ];
+        }
+
+        // Batched enrichment maps (two queries for the whole board).
+        $nextTasks = $this->activityService->nextTasksForDeals($allDealIds);
+        $primaryProducts = $this->primaryProductsForDeals($allDealIds);
+
+        $columns = [];
+        foreach ($rawColumns as $stageId => $column) {
+            // Base-currency total from the native sums.
+            $sumAmount = 0;
+            foreach ($column['amounts_by_currency'] as $currency => $kopecks) {
+                $converted = $this->safeConvert($kopecks, (string) $currency, $baseCurrency);
+
+                if ($converted === null) {
+                    $multiCurrencyWarning = true;
+
+                    continue;
+                }
+
+                $sumAmount += $converted;
+            }
+
+            // Attach enrichment to the in-memory deal models so the resource can
+            // read it (relations are not loaded — these are precomputed maps).
+            foreach ($column['deals'] as $deal) {
+                $deal->setAttribute('next_task_payload', $nextTasks[(int) $deal->id] ?? null);
+                $deal->setAttribute('primary_product_payload', $primaryProducts[(int) $deal->id] ?? null);
+            }
+
+            $columns[$stageId] = [
+                'stage_id' => $column['stage_id'],
+                'total' => $column['total'],
+                'sum_amount' => $sumAmount,
+                'amounts_by_currency' => $column['amounts_by_currency'],
+                'deals' => $column['deals'],
             ];
         }
 
@@ -120,7 +186,66 @@ class DealService
             'pipeline' => $pipeline,
             'stages' => $pipeline->stages,
             'columns' => $columns,
+            'base_currency' => $baseCurrency,
+            'multi_currency_warning' => $multiCurrencyWarning,
         ];
+    }
+
+    /**
+     * Batched "primary product" lookup for a set of deals (Сделки — ТЗ §5.1,
+     * Variant A): the first line item per deal by sort_order then id. Resolved in
+     * a single query joined to the catalog so the card can show {id, name} with
+     * no N+1.
+     *
+     * @param  list<int>  $dealIds
+     * @return array<int, array{id: int, name: string}>
+     */
+    public function primaryProductsForDeals(array $dealIds): array
+    {
+        if ($dealIds === []) {
+            return [];
+        }
+
+        $rows = DealProduct::query()
+            ->from('deal_products as dp')
+            ->join('catalog_products as cp', 'dp.product_id', '=', 'cp.id')
+            ->whereIn('dp.deal_id', $dealIds)
+            ->orderBy('dp.deal_id')
+            ->orderBy('dp.sort_order')
+            ->orderBy('dp.id')
+            ->get(['dp.deal_id', 'cp.id as product_id', 'cp.name as product_name']);
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $dealId = (int) $row->deal_id;
+
+            // First row per deal wins (the query is ordered sort_order, id).
+            if (isset($map[$dealId])) {
+                continue;
+            }
+
+            $map[$dealId] = [
+                'id' => (int) $row->product_id,
+                'name' => (string) $row->product_name,
+            ];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Safe currency conversion: identity for the base currency, else via
+     * ExchangeRateService. Returns null when the rate is unavailable (the column
+     * total then flags multi_currency_warning instead of silently mis-summing).
+     */
+    private function safeConvert(int $amountKopecks, string $fromCurrency, string $baseCurrency): ?int
+    {
+        if (strtoupper($fromCurrency) === strtoupper($baseCurrency)) {
+            return $amountKopecks;
+        }
+
+        return $this->exchangeRateService->convertAmount($amountKopecks, $fromCurrency, $baseCurrency);
     }
 
     /**

@@ -58,11 +58,43 @@ class DealResource extends JsonResource
             'closed_at' => $this->closed_at?->toIso8601String(),
             'archived_at' => $this->archived_at?->toIso8601String(),
 
+            // Whole days in the current stage — rotting-clock base for the header
+            // (DealPage 2.0 v2 §3.2). Pure compute, always present.
+            'days_in_stage' => $this->daysInStage(),
+
+            // Soonest open task on this deal — the header health chip (DealPage
+            // 2.0 v2 §8 v2-B1). Same shape as the Kanban card's next_task.
+            'next_task' => $this->whenLoaded('nextTask', fn () => $this->nextTaskPayload()),
+
             'products' => DealProductResource::collection($this->whenLoaded('products')),
             'contacts' => DealContactResource::collection($this->whenLoaded('dealContacts')),
 
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Build the next_task chip payload from the loaded nextTask relation. Same
+     * shape as DealCardResource.next_task (id/type/title/due_at/is_overdue) so
+     * the Kanban card and the DealPage header chip read one contract.
+     *
+     * @return array{id: int, type: string, title: string, due_at: ?string, is_overdue: bool}|null
+     */
+    private function nextTaskPayload(): ?array
+    {
+        $task = $this->nextTask;
+
+        if ($task === null) {
+            return null;
+        }
+
+        return [
+            'id' => $task->id,
+            'type' => $task->kind?->value,
+            'title' => $task->title,
+            'due_at' => $task->due_at?->toIso8601String(),
+            'is_overdue' => $task->isOverdue(),
         ];
     }
 }

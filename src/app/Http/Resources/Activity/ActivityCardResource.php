@@ -24,6 +24,7 @@ class ActivityCardResource extends JsonResource
             'target_type' => $this->target_type,
             'target_id' => $this->target_id,
             'title' => $this->title,
+            'body' => $this->body,
             'due_at' => $this->due_at?->toIso8601String(),
             'status' => $this->status?->value,
             'priority' => $this->priority?->value,
@@ -35,6 +36,12 @@ class ActivityCardResource extends JsonResource
                 'id' => $this->responsible->id,
                 'name' => $this->responsible->full_name,
             ]),
+            // Parent deal (id + title) when the task targets a deal — stamped by
+            // ActivityService::myBoard() (batched). null for company/standalone.
+            'deal' => $this->deal_title === null ? null : [
+                'id' => (int) $this->target_id,
+                'title' => $this->deal_title,
+            ],
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

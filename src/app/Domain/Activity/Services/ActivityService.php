@@ -363,11 +363,7 @@ class ActivityService
     {
         $scope = $this->visibility->resolve($user);
 
-        $taskLikeKinds = [
-            ActivityType::Call->value,
-            ActivityType::Meeting->value,
-            ActivityType::Task->value,
-        ];
+        $taskLikeKinds = ActivityType::taskLikeValues();
 
         $query = Deal::query()
             ->where('pipeline_id', $pipelineId)
@@ -454,7 +450,199 @@ class ActivityService
             ->paginate($perPage);
     }
 
+    /**
+     * Batched "next task" lookup for a set of deals — the public contract that
+     * powers the Kanban card health signal (Сделки — ТЗ §5.3). The Sales domain
+     * never queries the activities table directly (DDD §2); it asks here.
+     *
+     * "Next task" = the OPEN, task-like activity (call/meeting/task/follow_up,
+     * is_closed = false, status != done, due_at NOT NULL) targeting the deal with
+     * the soonest due_at — exactly the Deal::nextTask() relation predicate, kept
+     * in lockstep so card and DealPage chip can never drift.
+     *
+     * Returns one map keyed by deal id; absent ids have no open task. The whole
+     * column is resolved in a single query (no N+1) using a window function on
+     * PostgreSQL and a correlated-min fallback on SQLite (test :memory:).
+     *
+     * @param  list<int>  $dealIds
+     * @return array<int, array{id: int, type: string, title: string, due_at: ?string, is_overdue: bool}>
+     */
+    public function nextTasksForDeals(array $dealIds): array
+    {
+        if ($dealIds === []) {
+            return [];
+        }
+
+        $now = now();
+
+        $base = Activity::query()
+            ->where('target_type', ActivityTargetType::Deal->value)
+            ->whereIn('target_id', $dealIds)
+            ->whereIn('kind', ActivityType::taskLikeValues())
+            ->where('is_closed', false)
+            ->where('status', '!=', ActivityStatus::Done->value)
+            ->whereNotNull('due_at');
+
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            // One row per deal: the earliest-due open task via ROW_NUMBER().
+            $ranked = (clone $base)
+                ->selectRaw('id, target_id, kind, title, due_at, '.
+                    'ROW_NUMBER() OVER (PARTITION BY target_id ORDER BY due_at ASC, id ASC) AS rn');
+
+            $rows = Activity::query()
+                ->fromSub($ranked, 'ranked')
+                ->where('rn', 1)
+                ->get();
+        } else {
+            // SQLite fallback: keep the soonest-due task per deal in PHP. The set
+            // is bounded by the board column limit, so this stays cheap.
+            $rows = (clone $base)
+                ->orderBy('due_at')
+                ->orderBy('id')
+                ->get(['id', 'target_id', 'kind', 'title', 'due_at'])
+                ->unique('target_id')
+                ->values();
+        }
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $dueAt = $row->due_at; // Carbon (datetime cast)
+
+            $map[(int) $row->target_id] = [
+                'id' => (int) $row->id,
+                'type' => $row->kind instanceof ActivityType ? $row->kind->value : (string) $row->kind,
+                'title' => (string) $row->title,
+                'due_at' => $dueAt?->toIso8601String(),
+                'is_overdue' => $dueAt !== null && $dueAt->lt($now),
+            ];
+        }
+
+        return $map;
+    }
+
+    /**
+     * "My tasks" grouped by urgency bucket for the personal task board (Сделки —
+     * ТЗ §4). Scoped to the current user's OPEN, task-like activities (those they
+     * are responsible for OR created), bucketed by due_at relative to the app
+     * timezone "today":
+     *
+     *   overdue    — due before today's start (and still open)
+     *   today      — due within today
+     *   tomorrow   — due within tomorrow
+     *   this_week  — due after tomorrow, within the current calendar week (→ Sun)
+     *   next_week  — due within the following calendar week
+     *
+     * Tasks with no due_at fall into this_week (ТЗ §4.2 default). Tasks due beyond
+     * next week are not bucketed (they belong to a later horizon). Every bucket is
+     * an ordered list (soonest first); buckets are always present (possibly empty)
+     * so the frontend can render fixed columns without null checks.
+     *
+     * @return array<string, list<Activity>>
+     */
+    public function myBoard(User $user, ?string $search = null): array
+    {
+        $now = now();
+        $todayStart = $now->copy()->startOfDay();
+        $tomorrowStart = $todayStart->copy()->addDay();
+        $dayAfterTomorrow = $tomorrowStart->copy()->addDay();
+        // Calendar week boundaries (Mon–Sun) in the app timezone.
+        $thisWeekEnd = $todayStart->copy()->endOfWeek()->addSecond(); // exclusive next-week start
+        $nextWeekEnd = $thisWeekEnd->copy()->addWeek();
+
+        $activities = Activity::query()
+            ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
+            ->whereIn('kind', ActivityType::taskLikeValues())
+            ->where('is_closed', false)
+            ->where('status', '!=', ActivityStatus::Done->value)
+            ->where(function (Builder $q) use ($user): void {
+                $q->where('responsible_id', $user->id)
+                    ->orWhere('created_by_id', $user->id);
+            })
+            ->when(
+                $search !== null && $search !== '',
+                fn (Builder $q) => $q->where(function (Builder $inner) use ($search): void {
+                    $inner->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('body', 'like', '%'.$search.'%');
+                }),
+            )
+            ->orderByRaw('due_at is null')
+            ->orderBy('due_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Batch-resolve linked deal titles (TaskCard shows the parent deal —
+        // Сделки — ТЗ §4.3). One query for the whole board, stamped onto each
+        // activity so ActivityCardResource renders it with no N+1.
+        $this->stampDealTitles($activities);
+
+        $buckets = [
+            'overdue' => [],
+            'today' => [],
+            'tomorrow' => [],
+            'this_week' => [],
+            'next_week' => [],
+        ];
+
+        foreach ($activities as $activity) {
+            $due = $activity->due_at;
+
+            // No deadline → "this week" backlog (ТЗ §4.2).
+            if ($due === null) {
+                $buckets['this_week'][] = $activity;
+
+                continue;
+            }
+
+            if ($due->lt($todayStart)) {
+                $buckets['overdue'][] = $activity;
+            } elseif ($due->lt($tomorrowStart)) {
+                $buckets['today'][] = $activity;
+            } elseif ($due->lt($dayAfterTomorrow)) {
+                $buckets['tomorrow'][] = $activity;
+            } elseif ($due->lt($thisWeekEnd)) {
+                $buckets['this_week'][] = $activity;
+            } elseif ($due->lt($nextWeekEnd)) {
+                $buckets['next_week'][] = $activity;
+            }
+            // Beyond next week → not bucketed (out of board horizon).
+        }
+
+        return $buckets;
+    }
+
     // ---- Private ----
+
+    /**
+     * Stamp the linked deal's title onto each deal-targeted activity (batched) so
+     * the personal task board can render the parent-deal line without an N+1.
+     * Non-deal activities get a null deal_title. Mutates the collection in place.
+     *
+     * @param  \Illuminate\Support\Collection<int, Activity>  $activities
+     */
+    private function stampDealTitles(\Illuminate\Support\Collection $activities): void
+    {
+        $dealIds = $activities
+            ->filter(static fn (Activity $a): bool => $a->target_type === ActivityTargetType::Deal->value && $a->target_id !== null)
+            ->pluck('target_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->unique()
+            ->all();
+
+        $titles = $dealIds === []
+            ? []
+            : Deal::query()->whereIn('id', $dealIds)->pluck('title', 'id')->all();
+
+        foreach ($activities as $activity) {
+            $title = null;
+
+            if ($activity->target_type === ActivityTargetType::Deal->value && $activity->target_id !== null) {
+                $title = $titles[(int) $activity->target_id] ?? null;
+            }
+
+            $activity->setAttribute('deal_title', $title);
+        }
+    }
 
     /**
      * The five FTM (first-time meeting) conditions (plan §Б2), single-sourced so

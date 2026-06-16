@@ -70,6 +70,7 @@ class DealController extends Controller
             'stage',
             'company:id,name',
             'owner:id,full_name',
+            'nextTask',
             'products.product:id,code,name',
             'products.plan:id,name',
             'dealContacts.contact:id,full_name,position,email,phone',
@@ -198,7 +199,8 @@ class DealController extends Controller
             $columns[$stageId] = [
                 'stage_id' => $column['stage_id'],
                 'total' => $column['total'],
-                'sum_amount' => $column['sum_amount'],
+                'sum_amount' => $column['sum_amount'], // base currency (kopecks)
+                'amounts_by_currency' => (object) $column['amounts_by_currency'], // native, kopecks
                 'deals' => DealCardResource::collection($column['deals']),
             ];
         }
@@ -209,6 +211,8 @@ class DealController extends Controller
                 'name' => $board['pipeline']->name,
                 'kind' => $board['pipeline']->kind?->value,
             ],
+            'base_currency' => $board['base_currency'],
+            'multi_currency_warning' => $board['multi_currency_warning'],
             'stages' => PipelineStageResource::collection($board['stages']),
             'columns' => $columns,
         ]);
