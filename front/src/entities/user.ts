@@ -31,6 +31,7 @@ export interface User {
   locale: string | null
   totp_enabled: boolean
   created_at: string
+  nav_quick_actions: string[]
 }
 
 /**
@@ -49,6 +50,7 @@ export function mapUser(data: {
   locale: string | null
   totp_enabled: boolean
   created_at: string
+  nav_quick_actions?: string[] | null
 }): User {
   const role = data.role && isValidUserRole(data.role) ? data.role : 'manager'
   return {
@@ -64,5 +66,6 @@ export function mapUser(data: {
     locale: data.locale,
     totp_enabled: data.totp_enabled,
     created_at: data.created_at,
+    nav_quick_actions: data.nav_quick_actions ?? [],
   }
 }

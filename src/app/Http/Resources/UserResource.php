@@ -31,6 +31,7 @@ class UserResource extends JsonResource
             'is_active' => $this->is_active,
             'locale' => $this->locale,
             'salary_currency' => $this->salary_currency,
+            'nav_quick_actions' => $this->nav_quick_actions ?? [],
             'totp_enabled' => $this->totp_enabled,
             'created_at' => $this->created_at?->toIso8601String(),
         ];

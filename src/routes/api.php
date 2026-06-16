@@ -43,6 +43,7 @@ use App\Http\Controllers\Crm\ContactCompanyController;
 use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
+use App\Http\Controllers\Iam\ProfileController;
 use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Inbox\ChannelController;
 use App\Http\Controllers\Inbox\FormController;
@@ -118,6 +119,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::patch('/me/profile', [ProfileController::class, 'update'])->name('me.profile.update');
 
     // 2FA enrolment (requires a fully authenticated session).
     Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);

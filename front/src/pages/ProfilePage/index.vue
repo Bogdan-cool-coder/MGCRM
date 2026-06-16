@@ -214,6 +214,36 @@
               </div>
             </template>
 
+            <!-- Quick actions tab -->
+            <template v-if="activeTab === 'quickActions'">
+              <h2 class="profile-content__heading">{{ t('quickActions.title') }}</h2>
+              <div class="profile-section">
+                <h3 class="profile-section__title">{{ t('quickActions.sectionTitle') }}</h3>
+                <p class="text-muted mb-3">{{ t('quickActions.sectionHint') }}</p>
+
+                <!-- Current selection preview -->
+                <div v-if="currentQuickActions.length > 0" class="quick-actions-preview mb-4">
+                  <div
+                    v-for="action in currentQuickActions"
+                    :key="action.key"
+                    class="quick-actions-preview__item"
+                  >
+                    <i :class="[action.icon, 'quick-actions-preview__icon']" aria-hidden="true" />
+                    <span class="quick-actions-preview__label">{{ t(action.labelKey) }}</span>
+                  </div>
+                </div>
+                <p v-else class="text-muted mb-3">{{ t('quickActions.noneSelected') }}</p>
+
+                <Button
+                  icon="pi pi-cog"
+                  :label="t('quickActions.configure')"
+                  severity="secondary"
+                  outlined
+                  @click="pickerVisible = true"
+                />
+              </div>
+            </template>
+
             <!-- Coming soon tabs -->
             <template v-if="['notifications', 'locale', 'theme', 'calendar', 'signature', 'segments'].includes(activeTab)">
               <h2 class="profile-content__heading">{{ t(`profile.tabs.${activeTab}`) }}</h2>
@@ -266,10 +296,13 @@
       </div>
     </div>
   </div>
+
+  <!-- Quick actions picker dialog (portal) -->
+  <QuickActionsPickerDialog v-model:visible="pickerVisible" />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
@@ -283,10 +316,19 @@ import { localeManager } from '@/application/locale'
 import { getI18nLocale, type AvailableLocales } from '@/plugins/i18n'
 import type { NavMode } from '@/stores/layout'
 import { useProfilePage, type ProfileTab } from './composables/useProfilePage'
+import QuickActionsPickerDialog from './components/QuickActionsPickerDialog.vue'
+import { useUserStore } from '@/stores/user'
+import { resolveQuickActions } from '@/shared/nav/quickActionRegistry'
 
 const { t } = useI18n()
 const layoutStore = useLayoutStore()
 const themeStore = useThemeStore()
+const userStore = useUserStore()
+
+// ─── Quick actions ────────────────────────────────────────────────────────────
+const currentQuickActions = computed(() =>
+  resolveQuickActions(userStore.getNavQuickActions),
+)
 
 // ─── Appearance: theme ────────────────────────────────────────────────────────
 const currentTheme = computed<'light' | 'dark'>({
@@ -362,7 +404,10 @@ const TAB_ICONS: Record<ProfileTab, string> = {
   segments: 'pi pi-tag',
   telegram: 'pi pi-telegram',
   appearance: 'pi pi-sliders-h',
+  quickActions: 'pi pi-bolt',
 }
+
+const pickerVisible = ref(false)
 
 function tabIcon(tab: ProfileTab): string {
   return TAB_ICONS[tab] ?? 'pi pi-circle'
@@ -625,6 +670,34 @@ function tabIcon(tab: ProfileTab): string {
     flex-shrink: 0;
     margin-top: 2px;
   }
+}
+
+// Quick actions preview
+.quick-actions-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.quick-actions-preview__item {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+}
+
+.quick-actions-preview__icon {
+  color: $primary;
+  font-size: 1rem;
+}
+
+.quick-actions-preview__label {
+  font-weight: $font-weight-medium;
+  color: $surface-900;
 }
 
 // Coming soon

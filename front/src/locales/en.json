@@ -77,7 +77,8 @@
       "signature": "Signature",
       "segments": "Segments",
       "telegram": "Telegram",
-      "appearance": "Appearance"
+      "appearance": "Appearance",
+      "quickActions": "Quick actions"
     },
     "fields": {
       "full_name": "Full name",
@@ -2362,6 +2363,21 @@
     "markAllRead": "Mark all as read",
     "navLabel": "Main navigation",
     "profile": "Profile"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "sectionTitle": "Quick action buttons",
+    "sectionHint": "Up to 5 actions will appear as buttons in the Orbit cluster (next to notifications). Drag actions to the right list and set their order.",
+    "configure": "Configure",
+    "noneSelected": "No quick actions selected",
+    "dialogTitle": "Configure quick actions",
+    "dialogHint": "Drag up to 5 actions to the right list. The order in the right list is the order of buttons in Orbit.",
+    "available": "Available",
+    "selected": "Selected",
+    "maxError": "You can select at most {max} actions",
+    "saved": "Quick actions saved",
+    "toggleTheme": "Toggle theme",
+    "openSearch": "Open search"
   },
   "layout": {
     "navMode": "Menu style",

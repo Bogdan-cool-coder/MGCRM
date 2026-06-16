@@ -39,6 +39,8 @@ export const useUserStore = defineStore(
 
     const getAvatarPath = computed<string | null>(() => currentUser.value?.avatar_path ?? null)
 
+    const getNavQuickActions = computed<string[]>(() => currentUser.value?.nav_quick_actions ?? [])
+
     const getAuthCredential = computed<string | null>(() => token.value)
 
     const getIsAuthenticated = computed<boolean>(() => !!token.value)
@@ -79,6 +81,7 @@ export const useUserStore = defineStore(
       getHomePath,
       isTotpEnabled,
       getAvatarPath,
+      getNavQuickActions,
       getAuthCredential,
       getIsAuthenticated,
       // Actions

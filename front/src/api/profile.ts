@@ -5,6 +5,8 @@ export interface UpdateProfileRequest {
   full_name?: string
   locale?: string
   telegram_user_id?: string | null
+  /** PATCH /api/me/profile — set quick actions; null clears, [] empties, omit to leave unchanged */
+  nav_quick_actions?: string[] | null
 }
 
 export interface ChangePasswordRequest {
@@ -19,6 +21,14 @@ export const profileApi = {
    */
   async me(): Promise<MeResponse> {
     const response = await apiClient.get<MeResponse>('/api/me')
+    return response.data
+  },
+
+  /**
+   * PATCH /api/me/profile — обновить профиль (включая nav_quick_actions)
+   */
+  async updateProfile(data: UpdateProfileRequest): Promise<MeResponse> {
+    const response = await apiClient.patch<MeResponse>('/api/me/profile', data)
     return response.data
   },
 

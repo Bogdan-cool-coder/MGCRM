@@ -26,6 +26,8 @@
       @navigate="navigateTo"
     >
       <template #actions>
+        <!-- User-configured quick actions (from profile) -->
+        <QuickActionsCluster :tooltip-options="tooltipOptions" />
         <NotificationsButton
           ref="notificationsRef"
           :tooltip-options="tooltipOptions"
@@ -65,6 +67,7 @@ import OrbitaPanel  from './OrbitaPanel.vue'
 import OrbitaToggle from './OrbitaToggle.vue'
 import NotificationsButton from './NotificationsButton.vue'
 import UserProfileButton   from './UserProfileButton.vue'
+import QuickActionsCluster from './QuickActionsCluster.vue'
 import { useOrbitaDrag }           from './composables/useOrbitaDrag'
 import { useOrbitaOverlays }       from './composables/useOrbitaOverlays'
 import { useOrbitaPanelDirection } from './composables/useOrbitaPanelDirection'

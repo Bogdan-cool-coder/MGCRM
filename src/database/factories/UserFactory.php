@@ -38,6 +38,7 @@ class UserFactory extends Factory
             'manager_id' => null,
             'is_active' => true,
             'locale' => 'ru',
+            'nav_quick_actions' => null,
             'totp_enabled' => false,
             'totp_secret' => null,
             'totp_enabled_at' => null,

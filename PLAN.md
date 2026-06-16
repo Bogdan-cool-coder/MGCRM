@@ -276,8 +276,31 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `AppSidebar.vue` — `useNavPrefetch` подключён; `@mouseenter`/`@focus` на nav-links для обоих блоков (protoype + admin).
 - [x] `index.ts` — экспортированы `CommandPalette`, `HotkeysCheatsheet`, `useNavHotkeys`, `cheatsheetOpen`, `openCheatsheet`, `closeCheatsheet`, `NAV_HOTKEY_ENTRIES`, `useNavPrefetch`.
 - [x] i18n `ru.json`/`en.json` — добавлены `hotkeys.other`, `hotkeys.goToCompanies`, `hotkeys.goToTasks`, `hotkeys.goToDocuments`, `hotkeys.goToApprovals`, `hotkeys.goToCourses`, `hotkeys.showHelp`.
-- **Беклог (deferred по ТЗ §3.4):** Quick-actions синк (`PATCH /api/user/preferences { nav_quick_actions }`) — ждёт backend `User.nav_quick_actions` + эндпоинт. Не реализовано намеренно.
+- **Беклог (deferred по ТЗ §3.4):** ~~Quick-actions синк~~ **РЕАЛИЗОВАН задачей #10 (2026-06-16) — см. Срез 5 ниже.**
 - **PM-статус:** CODE REVIEW PASS. Pending браузерный QA (qa-tester).
+
+#### Навигация — Срез 5: Quick-actions синк в профиль (#10) — QA PASS → pending commit (2026-06-16)
+> backend-specialist + frontend-specialist; QA partial pass → 2 QA-баги исправлены (PickList move-all guard + заголовки через named slots)
+- [x] **Миграция** `2026_06_16_120000_add_nav_quick_actions_to_users_table.php` — `users.nav_quick_actions json nullable`, обратима (`down` dropColumn). Применена к dev Postgres.
+- [x] **`User.php`** — `nav_quick_actions` добавлен в `$fillable` + `casts()` → `'array'`.
+- [x] **`UpdateProfileRequest`** — `nav_quick_actions`: `nullable|array|max:5`, каждый элемент `required|string|max:64|distinct`.
+- [x] **`ProfileController`** — тонкий: `$request->user()` → `ProfileService::update()` → `UserResource::make()`.
+- [x] **`ProfileService`** — `array_key_exists` guard (не трогает поле при отсутствии), `array_values` реиндекс, null — явная очистка.
+- [x] **`UserResource`** — `nav_quick_actions` (`?? []`); не протекает секретов.
+- [x] **`UserFactory`** — `nav_quick_actions => null` по умолчанию.
+- [x] **Роутинг** `PATCH /api/me/profile` — middleware `auth:sanctum|2fa|locale|visibility`, name `me.profile.update`.
+- [x] **Тесты** — 12 Feature (`ProfileUpdateTest`) + 4 Unit (`ProfileServiceTest`) = 16 новых; сьют 1583 зелёный (SQLite :memory:).
+- [x] **`quickActionRegistry.ts`** — единый реестр 10 действий (ключ/i18n/иконка/маршрут); `resolveQuickActions()` безопасно пропускает неизвестные ключи.
+- [x] **`QuickActionsCluster.vue`** — рендер в слоте `#actions` Orbita; иконки с tooltip; `execute()` (router.push / themeStore / commandPalette); a11y (`aria-label`, `focus-visible`).
+- [x] **`QuickActionsPickerDialog.vue`** — PrimeVue PickList + drag-reorder; `move-all` и `move-to-target` под охраной `onMoveToTarget` (откат overflow); named slots `#sourceheader`/`#targetheader` со счётчиком N/5; `useMutation` + toast; `v-model:visible`.
+- [x] **ProfilePage вкладка `quickActions`** — preview выбранных действий; кнопка «Настроить» → пикер-диалог; `pickerVisible` ref; `resolveQuickActions(userStore.getNavQuickActions)`.
+- [x] **`userStore`** — `getNavQuickActions: computed<string[]>` + экспорт.
+- [x] **`user.ts` entity** — `nav_quick_actions: string[]` в `User` интерфейсе; `mapUser` с `?? []` fallback.
+- [x] **`auth.ts` types** — `UserData.nav_quick_actions: string[]`.
+- [x] **`profile.ts` api** — `UpdateProfileRequest.nav_quick_actions?: string[] | null`; `profileApi.updateProfile()` → `PATCH /api/me/profile`.
+- [x] i18n `ru.json`/`en.json` — секция `quickActions.*` (10 ключей) + вкладка `profile.tabs.quickActions`.
+- **Синк реализован через backend:** после save — `PATCH /api/me/profile` → БД → `userStore.setCurrentUser(mapUser(response.data))` → Pinia → Orbita реактивно перерисовывается. LocalStorage не используется.
+- **Лимит ≤5 двойная защита:** бэк — `max:5` в `UpdateProfileRequest` (422 при превышении); фронт — `onMoveToTarget` откатывает overflow немедленно + `validationError` computed блокирует кнопку Save.
 
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
 > **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.

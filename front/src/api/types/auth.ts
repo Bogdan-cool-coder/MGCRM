@@ -21,6 +21,7 @@ export interface UserData {
   locale: string | null
   totp_enabled: boolean
   created_at: string
+  nav_quick_actions: string[]
 }
 
 /**
