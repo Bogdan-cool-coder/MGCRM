@@ -244,13 +244,26 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `main.ts` — инициализация `themeStore` с миграцией из `layoutStore.isDarkMode` (backward compat).
 - [x] i18n: добавлены ключи `account.*`, `orbita.*`, `layout.*`, `commandPalette.*`, `hotkeys.*` в `ru.json` + `en.json`.
 
-#### Навигация — Срез 2 (frontend-specialist, 2026-06-16) — pending QA (PM-ревью 2026-06-16)
-> branch `feat/navigation-redesign` / изменения в рабочем дереве (не закоммичено)
+#### Навигация — Срез 2 (frontend-specialist, 2026-06-16) ✅ PM APPROVE (беклог-замечание не блокер)
+> branch `feat/navigation-redesign` / commit `75dc533`
 - [x] `front/src/components/Orbita/` — НОВАЯ ПАПКА: Orbita.vue / OrbitaPanel.vue / OrbitaToggle.vue / NotificationsButton.vue / UserProfileButton.vue / composables/{useOrbitaDrag,useOrbitaPanelDirection,useOrbitaTooltip,useOrbitaOverlays} / positioning.ts / zIndex.ts / styles/{_tokens.scss,_compact-control.scss} / types.ts / index.ts / locale/{ru,en}.json — 1-в-1 из Vizion Toolbox.
 - [x] `DefaultLayout/index.vue` — `<Orbita v-if="layoutStore.navMode === 'orbit'">` добавлена.
 - [x] `ProfilePage/index.vue` + `composables/useProfilePage.ts` — вкладка «Внешний вид»: `SelectButton` темы + карточки navMode (sidebar/orbit); `setNavMode()`.
 - [x] `locales/{ru,en}.json` — ключ `layout.appearance` добавлен.
-- **PM-статус:** PENDING QA — беклог-замечание: `pi pi-layout-sidebar` не существует в PrimeIcons v7 (нужна замена, не блокер рендера).
+- **Беклог:** `pi pi-layout-sidebar` не существует в PrimeIcons v7 — нужна замена (не блокер рендера).
+
+#### Навигация — Срез 3 (frontend-specialist, 2026-06-16) — pending QA (PM-ревью 2026-06-16)
+> branch `feat/navigation-redesign` / рабочее дерево (uncommitted)
+- [x] `useOrbitaDrag.ts` — drag через `pointer*` events + `setPointerCapture` для надёжности; кламп в viewport (`clampOrbitaPosition`); магнит к краю `snapToEdge()` с CSS `transition 0.2s ease-out` при отпускании; клавиатурный drag (Arrow 16px на grip-ручке, Enter/Space — commit); live позиция без записи в стор во время drag (коммит только на `pointerup`); `resize`-реклэмп; чистый cleanup всех listeners в `onBeforeUnmount`.
+- [x] `Orbita.vue` — DOM-порядок исправлен (Panel перед Toggle → Toggle-якорь крайний справа/снизу); `handleRotate()` — pivot вычисляется по центру `.orbita-toggle` до и после `nextTick`+`rAF` с докладкой позиции; `onMounted` re-clamp; `is-dragging` CSS-класс; `cursor: default` вместо `grab` на весь контейнер.
+- [x] `OrbitaPanel.vue` — `labelSide` computed (`start`/`end`/`center`) по `currentPosition.left < viewport/2`; `data-label-side` на контейнере; CSS: H in-place flex + `max-width` transition; V `flex-direction: row`/`row-reverse` по стороне; `forced-colors` media query.
+- [x] `OrbitaToggle.vue` — rotate-сателлит (`pi pi-sync`; `@click → toggle-orientation`); grip — одиночный (убрана дублирующая вторая grip-группа); `tabindex="0"` + `@keydown` для клавиатурного drag; `isDragging` prop + `.is-dragging` CSS-класс; `focus-visible` стиль; `overflow: hidden` убран (препятствовал выходу `forced-colors` border).
+- [x] `NotificationsButton.vue` — заглушка с пустым Popover-флайаутом (pending backend `GET /api/notifications`).
+- [x] `UserProfileButton.vue` — `@keydown.esc.stop` закрывает AccountMenu через `accountMenuRef.hide()`; `accountMenuRef` ref на `AccountMenu`.
+- [x] `AccountMenu.vue` — `defineExpose({ toggle, hide })` (добавлен `hide` для UserProfileButton Escape-handler).
+- [x] `locales/{ru,en}.json` — добавлены `orbita.navLabel` + `orbita.profile`; `orbita.rotateH` + `orbita.rotateV`.
+- [x] A11y: `<nav aria-label="…">` вокруг nav-кнопок; `aria-label` на всех кнопках toggle; `aria-current="page"` на активной nav-кнопке; `prefers-reduced-motion` блок в `Orbita.vue`; `forced-colors` блоки в `OrbitaPanel.vue` + `OrbitaToggle.vue`; `focus-visible` outline на grip + rotate.
+- **PM-статус:** PENDING QA. Беклог: поворот на мобильном (< 560px H → grid fallback в CSS, но pivot-логика не проверялась); `useOrbitaOverlays` импортирован в index.ts, но не задействован в Orbita.vue (заделан для будущего взаимоисключения оверлеев).
 
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
 > **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.

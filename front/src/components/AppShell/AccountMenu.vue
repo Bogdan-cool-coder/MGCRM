@@ -160,7 +160,11 @@ function toggle(event: Event) {
   popoverRef.value?.toggle(event)
 }
 
-defineExpose({ toggle })
+function hide() {
+  popoverRef.value?.hide()
+}
+
+defineExpose({ toggle, hide })
 </script>
 
 <style lang="scss" scoped>

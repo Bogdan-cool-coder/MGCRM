@@ -1,49 +1,46 @@
 <template>
+  <!--
+    OrbitaPanel — the content panel of Orbita.
+    Button order (H, left→right): [nav items...] [divider] [notifications] [user]
+    In V (top→bottom): same logical order.
+
+    Labels expand edge-aware via CSS var(--orbita-label-side):
+      - V near left edge  → labels expand rightward (start)
+      - V near right edge → labels expand leftward (end)
+      - H (any position)  → labels expand in-place; flex reflows symmetrically
+  -->
   <div
     ref="panelRef"
     class="orbita-panel"
     :data-orientation="orientation"
     :data-direction="direction"
+    :data-label-side="labelSide"
     :class="{ 'is-collapsed': collapsed }"
+    role="none"
   >
-    <!-- Rotate orientation toggle -->
-    <div class="orbita-panel__chrome" :aria-label="t('orbita.drag')">
-      <Button
-        v-tooltip="tooltipOptions(orientationToggleLabel)"
-        :class="[
-          'orbita-panel__button',
-          'orbita-panel__button--orient-toggle',
-          { 'orbita-panel__button--orient-toggle-vertical': orientation === 'vertical' },
-        ]"
-        icon="pi pi-sync"
-        text
-        :aria-label="orientationToggleLabel"
-        @click="emit('toggle-orientation')"
-      />
-    </div>
-
-    <div class="orbita-panel__divider" />
-
     <!-- Navigation items from shared navItems -->
-    <nav aria-label="Основная навигация" class="orbita-panel__group orbita-panel__group--nav">
-      <Button
+    <nav
+      class="orbita-panel__group orbita-panel__group--nav"
+      :aria-label="t('orbita.navLabel')"
+    >
+      <button
         v-for="item in navItems"
         :key="item.key"
-        v-tooltip="tooltipOptions(item.ariaLabel)"
         :class="[
-          'orbita-panel__button',
-          'orbita-panel__button--nav',
+          'orbita-panel__btn',
+          'orbita-panel__btn--nav',
           { 'is-active': item.isActive },
         ]"
-        :icon="item.icon"
-        text
         :aria-label="item.ariaLabel"
         :aria-current="item.isActive ? 'page' : undefined"
         @click="emit('navigate', item.route)"
-      />
+      >
+        <i :class="item.icon" class="orbita-panel__btn-icon" aria-hidden="true" />
+        <span class="orbita-panel__btn-label">{{ item.ariaLabel }}</span>
+      </button>
     </nav>
 
-    <div class="orbita-panel__divider" />
+    <div class="orbita-panel__divider" role="separator" />
 
     <!-- Action slots: notifications, user profile -->
     <div class="orbita-panel__group orbita-panel__group--actions">
@@ -55,33 +52,37 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Button from 'primevue/button'
-import Tooltip from 'primevue/tooltip'
-import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
-import type { OrbitaNavItem, OrbitaOrientation, OrbitaPanelDirection } from './types'
+import type { OrbitaNavItem, OrbitaOrientation, OrbitaPanelDirection, OrbitaPosition } from './types'
 
 interface Props {
-  collapsed: boolean
-  direction: OrbitaPanelDirection
-  navItems: OrbitaNavItem[]
-  orientation: OrbitaOrientation
-  tooltipOptions: (value: string) => OrbitaTooltipOptions
+  collapsed:    boolean
+  direction:    OrbitaPanelDirection
+  navItems:     OrbitaNavItem[]
+  orientation:  OrbitaOrientation
+  currentPosition: OrbitaPosition | null
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   navigate: [route: string]
-  'toggle-orientation': []
 }>()
 
 const { t } = useI18n()
-const vTooltip = Tooltip
 const panelRef = ref<HTMLElement | null>(null)
 
-const orientationToggleLabel = computed(() =>
-  props.orientation === 'horizontal' ? t('orbita.rotateV') : t('orbita.rotateH'),
-)
+/**
+ * Edge-aware label side for vertical orientation.
+ * V near left edge (left < viewport/2) → labels open to the right ('start').
+ * V near right edge → labels open to the left ('end').
+ * H → 'center' (in-place symmetric expansion via flex).
+ */
+const labelSide = computed<'start' | 'end' | 'center'>(() => {
+  if (props.orientation === 'horizontal') return 'center'
+  if (typeof window === 'undefined') return 'start'
+  const left = props.currentPosition?.left ?? 0
+  return left < window.innerWidth / 2 ? 'start' : 'end'
+})
 
 defineExpose({ panelRef })
 </script>
@@ -89,13 +90,14 @@ defineExpose({ panelRef })
 <style lang="scss" scoped>
 @use './styles/tokens' as orbita;
 
+// ─── Panel container ────────────────────────────────────────────────────────
 .orbita-panel {
   position: absolute;
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
+  gap: 0.25rem;
+  padding: 0.5rem 0.625rem;
   border: orbita.$orbita-surface-border;
   border-radius: $radius-lg;
   background: orbita.$orbita-surface-bg;
@@ -107,31 +109,26 @@ defineExpose({ panelRef })
   &.is-collapsed {
     opacity: 0;
     pointer-events: none;
+    user-select: none;
   }
 
   &__group {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-  }
-
-  &__chrome {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
+    gap: 0.25rem;
   }
 
   &__divider {
     width: 1px;
     align-self: stretch;
     background: $surface-200;
+    flex-shrink: 0;
+    margin: 0 0.125rem;
   }
 
-  &__button {
+  // ─── Nav button (icon + expandable label) ─────────────────────────────────
+  &__btn {
     position: relative;
-    z-index: 2;
-    width: orbita.$orbita-control-size;
-    height: orbita.$orbita-control-size;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -139,29 +136,52 @@ defineExpose({ panelRef })
     border-radius: $radius-md;
     background: transparent;
     color: $surface-700;
+    cursor: pointer;
     padding: 0;
-    box-shadow: none;
+    height: orbita.$orbita-control-size;
+    min-width: orbita.$orbita-control-size;
+    // Label expansion: width transitions from icon-only to icon+label
+    max-width: orbita.$orbita-control-size;
+    overflow: hidden;
     transition:
+      max-width 0.18s ease-out,
       background-color $transition-fast,
       border-color $transition-fast,
       color $transition-fast,
       transform $transition-fast;
 
-    :deep(.p-button-icon) {
+    &-icon {
+      flex-shrink: 0;
       font-size: 1rem;
+      line-height: 1;
+      width: orbita.$orbita-control-size;
+      text-align: center;
     }
 
-    &:deep(.p-button-label) {
-      display: none;
+    &-label {
+      font-size: 13px;
+      font-weight: $font-weight-medium;
+      white-space: nowrap;
+      overflow: hidden;
+      // Hidden by default; transitions in via max-width on parent
+      padding-right: 0.625rem;
+      pointer-events: none;
     }
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
+      max-width: 12rem;       // wide enough for any label
       background: $surface-100;
       color: $surface-900;
       transform: translateY(-1px);
+      border-color: rgba($surface-900, 0.08);
+
+      .orbita-panel__btn-label {
+        // visible via max-width expansion on parent
+      }
     }
 
-    &:focus-within {
+    &:focus-visible {
       outline: 2px solid $primary;
       outline-offset: 2px;
     }
@@ -171,76 +191,120 @@ defineExpose({ panelRef })
       border-color: rgba($primary, 0.18);
       color: $primary;
     }
-  }
 
-  &__button--orient-toggle {
-    border: 1px solid rgba($surface-900, 0.08);
-    background: transparent;
-  }
-
-  &__button--orient-toggle-vertical :deep(.p-button-icon) {
-    transform: rotate(90deg);
-  }
-
-  // ─── Horizontal (top placement) ─────────────────────────────────────────────
-  &[data-orientation='horizontal'][data-direction='start'] {
-    top: 50%;
-    right: calc(100% - #{orbita.$orbita-toggle-overlap});
-    transform: translateY(-50%);
-    transform-origin: right center;
-  }
-
-  &[data-orientation='horizontal'][data-direction='end'] {
-    top: 50%;
-    left: calc(100% - #{orbita.$orbita-toggle-overlap});
-    transform: translateY(-50%);
-    transform-origin: left center;
-  }
-
-  &[data-orientation='horizontal'].is-collapsed[data-direction='start'] {
-    transform: translateY(-50%) translateX(0.5rem) scaleX(0.96);
-  }
-
-  &[data-orientation='horizontal'].is-collapsed[data-direction='end'] {
-    transform: translateY(-50%) translateX(-0.5rem) scaleX(0.96);
-  }
-
-  // ─── Vertical (left placement) ──────────────────────────────────────────────
-  &[data-orientation='vertical'][data-direction='up'] {
-    left: 50%;
-    bottom: calc(100% - #{orbita.$orbita-toggle-overlap});
-    flex-direction: column;
-    transform: translateX(-50%);
-    transform-origin: center bottom;
-  }
-
-  &[data-orientation='vertical'][data-direction='down'] {
-    left: 50%;
-    top: calc(100% - #{orbita.$orbita-toggle-overlap});
-    flex-direction: column;
-    transform: translateX(-50%);
-    transform-origin: center top;
-  }
-
-  &[data-orientation='vertical'] .orbita-panel__chrome,
-  &[data-orientation='vertical'] .orbita-panel__group {
-    flex-direction: column;
-  }
-
-  &[data-orientation='vertical'] .orbita-panel__divider {
-    width: 100%;
-    height: 1px;
-  }
-
-  &[data-orientation='vertical'].is-collapsed[data-direction='up'] {
-    transform: translateX(-50%) translateY(0.5rem) scaleY(0.96);
-  }
-
-  &[data-orientation='vertical'].is-collapsed[data-direction='down'] {
-    transform: translateX(-50%) translateY(-0.5rem) scaleY(0.96);
+    &.is-active:hover {
+      background: rgba($primary, 0.18);
+    }
   }
 }
 
+// ─── Horizontal (top placement) ─── panel position relative to toggle ───────
+.orbita-panel[data-orientation='horizontal'][data-direction='start'] {
+  top: 50%;
+  right: calc(100% - #{orbita.$orbita-toggle-overlap});
+  transform: translateY(-50%);
+  transform-origin: right center;
+  flex-direction: row;
+  // In-place symmetric label expansion: center the group
+  .orbita-panel__group--nav {
+    justify-content: center;
+  }
+}
+
+.orbita-panel[data-orientation='horizontal'][data-direction='end'] {
+  top: 50%;
+  left: calc(100% - #{orbita.$orbita-toggle-overlap});
+  transform: translateY(-50%);
+  transform-origin: left center;
+  flex-direction: row;
+  .orbita-panel__group--nav {
+    justify-content: center;
+  }
+}
+
+.orbita-panel[data-orientation='horizontal'].is-collapsed[data-direction='start'] {
+  transform: translateY(-50%) translateX(0.5rem) scaleX(0.96);
+}
+
+.orbita-panel[data-orientation='horizontal'].is-collapsed[data-direction='end'] {
+  transform: translateY(-50%) translateX(-0.5rem) scaleX(0.96);
+}
+
+// ─── Vertical (left/right placement) ─────────────────────────────────────────
+.orbita-panel[data-orientation='vertical'] {
+  flex-direction: column;
+
+  .orbita-panel__group,
+  .orbita-panel__group--nav,
+  .orbita-panel__group--actions {
+    flex-direction: column;
+  }
+
+  .orbita-panel__divider {
+    width: 100%;
+    height: 1px;
+    align-self: auto;
+    margin: 0.125rem 0;
+  }
+
+  // Button layout: icon left, label expands to the right or left based on edge
+  // min-width (not width) so max-width CSS transition can expand the label on hover
+  .orbita-panel__btn {
+    min-width: orbita.$orbita-control-size;
+    justify-content: flex-start;
+  }
+}
+
+// Vertical labels: open toward center of screen
+.orbita-panel[data-orientation='vertical'][data-label-side='start'] {
+  // Near left edge → labels expand to the right
+  .orbita-panel__btn {
+    flex-direction: row;
+    &:hover,
+    &:focus-visible {
+      max-width: 12rem;
+    }
+  }
+}
+
+.orbita-panel[data-orientation='vertical'][data-label-side='end'] {
+  // Near right edge → labels expand to the left
+  .orbita-panel__btn {
+    flex-direction: row-reverse;
+    .orbita-panel__btn-label {
+      padding-right: 0;
+      padding-left: 0.625rem;
+    }
+    &:hover,
+    &:focus-visible {
+      max-width: 12rem;
+    }
+  }
+}
+
+.orbita-panel[data-orientation='vertical'][data-direction='up'] {
+  left: 50%;
+  bottom: calc(100% - #{orbita.$orbita-toggle-overlap});
+  transform: translateX(-50%);
+  transform-origin: center bottom;
+}
+
+.orbita-panel[data-orientation='vertical'][data-direction='down'] {
+  left: 50%;
+  top: calc(100% - #{orbita.$orbita-toggle-overlap});
+  transform: translateX(-50%);
+  transform-origin: center top;
+}
+
+.orbita-panel[data-orientation='vertical'].is-collapsed[data-direction='up'] {
+  transform: translateX(-50%) translateY(0.5rem) scaleY(0.96);
+}
+
+.orbita-panel[data-orientation='vertical'].is-collapsed[data-direction='down'] {
+  transform: translateX(-50%) translateY(-0.5rem) scaleY(0.96);
+}
+
+// ─── Responsive ───────────────────────────────────────────────────────────────
 @media (max-width: 767px) {
   .orbita-panel {
     max-width: calc(100vw - 5rem);
@@ -255,8 +319,8 @@ defineExpose({ panelRef })
     grid-template-columns: repeat(2, max-content);
     justify-content: start;
     align-items: start;
-    column-gap: 0.5rem;
-    row-gap: 0.5rem;
+    column-gap: 0.25rem;
+    row-gap: 0.25rem;
     transform: none;
   }
 
@@ -270,26 +334,28 @@ defineExpose({ panelRef })
     transform-origin: left top;
   }
 
-  .orbita-panel[data-orientation='horizontal'].is-collapsed[data-direction='start'] {
-    transform: translateX(0.5rem) scaleX(0.96);
-  }
-
-  .orbita-panel[data-orientation='horizontal'].is-collapsed[data-direction='end'] {
-    transform: translateX(-0.5rem) scaleX(0.96);
-  }
-
   .orbita-panel[data-orientation='horizontal'] .orbita-panel__divider {
     display: none;
-  }
-
-  .orbita-panel[data-orientation='horizontal'] .orbita-panel__chrome,
-  .orbita-panel[data-orientation='horizontal'] .orbita-panel__group {
-    width: max-content;
   }
 
   .orbita-panel[data-orientation='horizontal'] .orbita-panel__group--nav {
     grid-column: 1 / -1;
     justify-self: center;
+  }
+}
+
+// ─── Accessibility ────────────────────────────────────────────────────────────
+@media (forced-colors: active) {
+  .orbita-panel {
+    border: 1px solid ButtonText;
+  }
+
+  .orbita-panel__btn {
+    &.is-active {
+      border: 2px solid Highlight;
+      color: HighlightText;
+      background: Highlight;
+    }
   }
 }
 </style>

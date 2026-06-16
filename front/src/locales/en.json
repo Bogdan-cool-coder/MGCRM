@@ -2252,7 +2252,9 @@
     "rotateV": "Vertical mode",
     "notifications": "Notifications",
     "noNotifications": "No new notifications",
-    "markAllRead": "Mark all as read"
+    "markAllRead": "Mark all as read",
+    "navLabel": "Main navigation",
+    "profile": "Profile"
   },
   "layout": {
     "navMode": "Menu style",

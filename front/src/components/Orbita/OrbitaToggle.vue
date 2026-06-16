@@ -1,9 +1,27 @@
 <template>
-  <div :class="['orbita-toggle', `orbita-toggle--${orientationClass}`]">
+  <!--
+    OrbitaToggle — the "anchor" widget at the far edge of Orbita.
+    Layout (H horizontal mode, column):
+      [grip dots]  ←  drag satellite (focusable, keyboard-nudge via @keydown)
+      [÷ divider]
+      [+ / × btn] ←  toggle collapse/expand
+      [÷ divider]
+      [↻ rotate]  ←  rotate satellite H↔V
+
+    In V (row mode) the same order runs left→right.
+  -->
+  <div
+    :class="['orbita-toggle', `orbita-toggle--${orientationClass}`, { 'is-dragging': isDragging }]"
+    :aria-label="t('orbita.drag')"
+  >
+    <!-- Drag satellite (focusable for keyboard nudge) -->
     <div
       class="orbita-toggle__grip"
-      :aria-label="moveLabel"
+      tabindex="0"
+      :aria-label="t('orbita.drag')"
+      role="button"
       @pointerdown.stop="emit('start-drag', $event)"
+      @keydown="emit('grip-keydown', $event)"
     >
       <span
         v-for="dot in gripDots"
@@ -15,6 +33,7 @@
 
     <div class="orbita-toggle__divider" aria-hidden="true" />
 
+    <!-- Main toggle button: collapse / expand -->
     <Button
       v-tooltip="tooltipOptions(toggleLabel)"
       class="orbita-toggle__button"
@@ -26,48 +45,56 @@
 
     <div class="orbita-toggle__divider" aria-hidden="true" />
 
-    <div
-      class="orbita-toggle__grip"
-      :aria-label="moveLabel"
-      @pointerdown.stop="emit('start-drag', $event)"
-    >
-      <span
-        v-for="dot in gripDots"
-        :key="`secondary-${dot}`"
-        class="orbita-toggle__grip-dot"
-        aria-hidden="true"
-      />
-    </div>
+    <!-- Rotate satellite H↔V -->
+    <Button
+      v-tooltip="tooltipOptions(rotateLabel)"
+      :class="['orbita-toggle__rotate', { 'orbita-toggle__rotate--vertical': orientation === 'vertical' }]"
+      icon="pi pi-sync"
+      text
+      :aria-label="rotateLabel"
+      @click="emit('toggle-orientation')"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Tooltip from 'primevue/tooltip'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
 import type { OrbitaOrientation } from './types'
 
 interface Props {
-  icon: string
-  moveLabel: string
-  toggleLabel: string
-  orientation: OrbitaOrientation
+  icon:           string
+  moveLabel:      string
+  toggleLabel:    string
+  orientation:    OrbitaOrientation
   tooltipOptions: (value: string) => OrbitaTooltipOptions
+  isDragging?:    boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { isDragging: false })
 
 const emit = defineEmits<{
-  toggle: []
-  'start-drag': [event: PointerEvent]
+  toggle:             []
+  'start-drag':       [event: PointerEvent]
+  'toggle-orientation': []
+  'grip-keydown':     [event: KeyboardEvent]
 }>()
 
+const { t } = useI18n()
 const vTooltip = Tooltip
 const gripDots = Array.from({ length: 2 }, (_, index) => index)
 
-// horizontal → orientation shown top-to-bottom like Vizion 'top' placement
-// vertical → left-to-right like Vizion 'left' placement
-const orientationClass = props.orientation === 'horizontal' ? 'top' : 'left'
+// 'horizontal' uses column layout (top-placement), 'vertical' uses row layout
+const orientationClass = computed(() =>
+  props.orientation === 'horizontal' ? 'top' : 'left',
+)
+
+const rotateLabel = computed(() =>
+  props.orientation === 'horizontal' ? t('orbita.rotateV') : t('orbita.rotateH'),
+)
 </script>
 
 <style lang="scss" scoped>
@@ -82,7 +109,6 @@ const orientationClass = props.orientation === 'horizontal' ? 'top' : 'left'
   border: orbita.$orbita-surface-border;
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
-  overflow: hidden;
   transition:
     border-color $transition-fast,
     box-shadow $transition-fast,
@@ -92,14 +118,19 @@ const orientationClass = props.orientation === 'horizontal' ? 'top' : 'left'
     border-color: orbita.$orbita-surface-border-hover;
   }
 
-  // horizontal mode: toggle is column-oriented (top placement in Vizion)
+  // Horizontal mode: toggle is column-oriented (buttons stacked vertically)
   &--top {
     flex-direction: column;
   }
 
-  // vertical mode: toggle is row-oriented (left placement in Vizion)
+  // Vertical mode: toggle is row-oriented (buttons side by side)
   &--left {
     flex-direction: row;
+  }
+
+  // Grabbing cursor during drag
+  &.is-dragging {
+    cursor: grabbing !important;
   }
 
   &__grip {
@@ -112,6 +143,16 @@ const orientationClass = props.orientation === 'horizontal' ? 'top' : 'left'
     color: $surface-500;
     cursor: grab;
     transition: color $transition-fast;
+    border-radius: $radius-sm;
+
+    &:hover {
+      color: $surface-700;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $primary;
+      outline-offset: 2px;
+    }
   }
 
   &__grip-dot {
@@ -145,7 +186,7 @@ const orientationClass = props.orientation === 'horizontal' ? 'top' : 'left'
     &:hover,
     &:active {
       background: transparent;
-      color: $surface-700;
+      color: $surface-900;
       transform: none;
     }
 
@@ -169,46 +210,107 @@ const orientationClass = props.orientation === 'horizontal' ? 'top' : 'left'
       font-size: 1rem;
     }
   }
+
+  &__rotate {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: $surface-500;
+    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+
+    &:hover,
+    &:active {
+      background: transparent;
+      color: $surface-900;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $primary;
+      outline-offset: 2px;
+    }
+
+    :deep(.p-button-icon) {
+      font-size: 0.85rem;
+    }
+
+    // In vertical mode, rotate icon 90deg to indicate axis
+    &--vertical :deep(.p-button-icon) {
+      transform: rotate(90deg);
+    }
+  }
 }
 
-// Horizontal mode (top)
-.orbita-toggle--top .orbita-toggle__button {
-  width: orbita.$orbita-control-size;
-  height: orbita.$orbita-toggle-main-size;
+// ─── Horizontal mode (--top) sizing ──────────────────────────────────────────
+.orbita-toggle--top {
+  .orbita-toggle__button {
+    width: orbita.$orbita-control-size;
+    height: orbita.$orbita-toggle-main-size;
+  }
+
+  .orbita-toggle__grip {
+    width: orbita.$orbita-control-size;
+    height: orbita.$orbita-grip-size;
+    grid-template-columns: repeat(2, 4px);
+    grid-template-rows: 4px;
+    padding-top: 0.25rem;
+  }
+
+  .orbita-toggle__divider {
+    height: 1px;
+    width: auto;
+    margin: 0 orbita.$orbita-divider-inset;
+    align-self: stretch;
+  }
+
+  .orbita-toggle__rotate {
+    width: orbita.$orbita-control-size;
+    height: orbita.$orbita-grip-size + 0.25rem;
+    padding-bottom: 0.25rem;
+  }
 }
 
-.orbita-toggle--top .orbita-toggle__grip {
-  width: orbita.$orbita-control-size;
-  height: orbita.$orbita-grip-size;
-  grid-template-columns: repeat(2, 4px);
-  grid-template-rows: 4px;
-  padding-top: 0.25rem;
+// ─── Vertical mode (--left) sizing ───────────────────────────────────────────
+.orbita-toggle--left {
+  .orbita-toggle__button {
+    width: orbita.$orbita-toggle-main-size;
+    height: orbita.$orbita-control-size;
+  }
+
+  .orbita-toggle__grip {
+    width: orbita.$orbita-grip-size;
+    height: orbita.$orbita-control-size;
+    grid-template-columns: 4px;
+    grid-template-rows: repeat(2, 4px);
+    padding-left: 0.25rem;
+  }
+
+  .orbita-toggle__divider {
+    width: 1px;
+    align-self: stretch;
+    margin: orbita.$orbita-divider-inset 0;
+  }
+
+  .orbita-toggle__rotate {
+    width: orbita.$orbita-grip-size + 0.25rem;
+    height: orbita.$orbita-control-size;
+    padding-right: 0.25rem;
+  }
 }
 
-.orbita-toggle--top .orbita-toggle__divider {
-  height: 1px;
-  width: auto;
-  margin: 0 orbita.$orbita-divider-inset;
-  align-self: stretch;
-}
+// Accessibility: forced-colors (high contrast mode)
+@media (forced-colors: active) {
+  .orbita-toggle {
+    border: 1px solid ButtonText;
+  }
 
-// Vertical mode (left)
-.orbita-toggle--left .orbita-toggle__button {
-  width: orbita.$orbita-toggle-main-size;
-  height: orbita.$orbita-control-size;
-}
-
-.orbita-toggle--left .orbita-toggle__grip {
-  width: orbita.$orbita-grip-size;
-  height: orbita.$orbita-control-size;
-  grid-template-columns: 4px;
-  grid-template-rows: repeat(2, 4px);
-  padding-left: 0.25rem;
-}
-
-.orbita-toggle--left .orbita-toggle__divider {
-  width: 1px;
-  align-self: stretch;
-  margin: orbita.$orbita-divider-inset 0;
+  .orbita-toggle__grip-dot {
+    background: ButtonText;
+  }
 }
 </style>

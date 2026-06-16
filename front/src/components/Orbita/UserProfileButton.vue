@@ -5,6 +5,7 @@
       class="user-profile-btn__trigger"
       :aria-label="label"
       @click="handleClick"
+      @keydown.esc.stop="accountMenuRef?.hide()"
     >
       <img
         v-if="userStore.getAvatarPath"
