@@ -31,10 +31,14 @@
         <NotificationsButton
           ref="notificationsRef"
           :tooltip-options="tooltipOptions"
+          @toggle-request="handleOverlayToggle('notifications', $event)"
+          @visibility-change="handleOverlayVisibility('notifications', $event)"
         />
         <UserProfileButton
           ref="userProfileRef"
           :tooltip-options="tooltipOptions"
+          @toggle-request="handleOverlayToggle('profile', $event)"
+          @visibility-change="handleOverlayVisibility('profile', $event)"
         />
       </template>
     </OrbitaPanel>
@@ -144,7 +148,7 @@ const { panelDirection } = useOrbitaPanelDirection({
 // Cast needed because component instance type is a superset of OrbitaOverlayControl.
 const notificationsControlRef = notificationsRef as Ref<OrbitaOverlayControl | null>
 const userProfileControlRef   = userProfileRef   as Ref<OrbitaOverlayControl | null>
-useOrbitaOverlays({
+const { handleOverlayToggle, handleOverlayVisibility } = useOrbitaOverlays({
   route,
   controls: {
     notifications: notificationsControlRef,

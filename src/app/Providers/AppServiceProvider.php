@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Activity\Events\ActivityAssigned;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Models\MeetingReportQuestion;
 use App\Domain\Activity\Policies\ActivityPolicy;
@@ -55,8 +56,12 @@ use App\Domain\Inbox\Models\InboundMessage;
 use App\Domain\Inbox\Policies\ChannelPolicy;
 use App\Domain\Inbox\Policies\FormPolicy;
 use App\Domain\Inbox\Policies\InboundMessagePolicy;
+use App\Domain\Notification\Listeners\NotifyActivityAssigneeListener;
+use App\Domain\Notification\Listeners\NotifyApproversListener;
 use App\Domain\Notification\Listeners\NotifyAuthorListener;
 use App\Domain\Notification\Listeners\SendApprovalRequestListener;
+use App\Domain\Notification\Models\Notification;
+use App\Domain\Notification\Policies\NotificationPolicy;
 use App\Domain\Onboarding\Events\CourseCompleted;
 use App\Domain\Onboarding\Listeners\GenerateCertificateListener;
 use App\Domain\Onboarding\Models\Certificate;
@@ -149,6 +154,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Activity::class, ActivityPolicy::class);
         Gate::policy(MeetingReportQuestion::class, MeetingReportQuestionPolicy::class);
 
+        // Notification Policies (task #9 — strictly recipient-scoped)
+        Gate::policy(Notification::class, NotificationPolicy::class);
+
         // Inbox Policies (S1.9)
         Gate::policy(Channel::class, ChannelPolicy::class);
         Gate::policy(Form::class, FormPolicy::class);
@@ -218,6 +226,14 @@ class AppServiceProvider extends ServiceProvider
         // dispatch queued Jobs, so the web request is not blocked by Telegram I/O.
         Event::listen(DocumentSubmittedForApproval::class, SendApprovalRequestListener::class);
         Event::listen(ApprovalDecisionMade::class, NotifyAuthorListener::class);
+
+        // In-app notifications (task #9). Listeners only write a DB row (no
+        // network I/O), so they never block the web request. The actionable
+        // bucket of the navigation flyout is fed from here:
+        //   - ActivityAssigned          → "task assigned" (responsible)
+        //   - DocumentSubmittedForApproval → "approval requested" (each approver)
+        Event::listen(ActivityAssigned::class, NotifyActivityAssigneeListener::class);
+        Event::listen(DocumentSubmittedForApproval::class, NotifyApproversListener::class);
 
         // Onboarding — Certificate generation (S3.6). On CourseCompleted, dispatch
         // GenerateCertificateJob to the queue (never block the HTTP request).

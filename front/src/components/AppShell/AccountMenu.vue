@@ -1,6 +1,6 @@
 <template>
   <!-- Popover provides portal + auto-flip + viewport clamp + Esc + focus return out of the box -->
-  <Popover ref="popoverRef" append-to="body" :pt="{ root: { style: 'z-index: 9999' } }">
+  <Popover ref="popoverRef" append-to="body" :pt="{ root: { style: 'z-index: 9999' } }" @hide="emit('hide')" @show="emit('show')">
     <div class="account-menu">
       <!-- Identity header -->
       <div class="account-menu__identity">
@@ -73,6 +73,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+
+const emit = defineEmits<{
+  show: []
+  hide: []
+}>()
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Popover from 'primevue/popover'

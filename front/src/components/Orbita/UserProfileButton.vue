@@ -16,7 +16,11 @@
       <span v-else class="user-profile-btn__initials">{{ initials }}</span>
     </button>
 
-    <AccountMenu ref="accountMenuRef" />
+    <AccountMenu
+      ref="accountMenuRef"
+      @show="emit('visibility-change', true)"
+      @hide="emit('visibility-change', false)"
+    />
   </div>
 </template>
 
@@ -34,6 +38,11 @@ interface Props {
 }
 
 defineProps<Props>()
+
+const emit = defineEmits<{
+  'toggle-request': [event: MouseEvent]
+  'visibility-change': [visible: boolean]
+}>()
 
 const { t } = useI18n()
 const vTooltip = Tooltip
@@ -53,7 +62,7 @@ const initials = computed(() => {
 })
 
 function handleClick(event: MouseEvent) {
-  accountMenuRef.value?.toggle(event)
+  emit('toggle-request', event)
 }
 
 // ─── OrbitaOverlayControl interface ──────────────────────────────────────────

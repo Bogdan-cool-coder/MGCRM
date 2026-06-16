@@ -1,34 +1,160 @@
 <template>
   <div class="notifications-btn">
+    <!-- Trigger: bell icon + unread badge -->
     <button
       v-tooltip="tooltipOptions(t('orbita.notifications'))"
       class="notifications-btn__trigger"
-      :aria-label="t('orbita.notifications')"
+      :class="{ 'notifications-btn__trigger--has-unread': hasUnread }"
+      :aria-label="badgeAriaLabel"
       @click="handleClick"
     >
       <i class="pi pi-bell notifications-btn__icon" />
+      <span
+        v-if="hasUnread"
+        class="notifications-btn__badge"
+        aria-hidden="true"
+      >{{ badgeLabel }}</span>
     </button>
 
-    <!-- Flyout — stub until backend provides GET /api/notifications -->
-    <Popover ref="popoverRef" append-to="body" :pt="{ root: { style: 'z-index: 9999' } }">
-      <div class="notifications-flyout">
-        <div class="notifications-flyout__header">
-          <span class="notifications-flyout__title">{{ t('orbita.notifications') }}</span>
+    <!-- Flyout Popover -->
+    <Popover
+      ref="popoverRef"
+      append-to="body"
+      :pt="popoverPt"
+      @show="onShow"
+      @hide="onHide"
+    >
+      <div
+        class="nf"
+        role="dialog"
+        :aria-label="t('orbita.notifications')"
+      >
+        <!-- Header -->
+        <div class="nf__header">
+          <span class="nf__title">{{ t('orbita.notifications') }}</span>
+          <Button
+            v-if="hasAnyNotifications"
+            text
+            size="small"
+            :label="t('orbita.markAllRead')"
+            :loading="markAllPending"
+            class="nf__mark-all-btn"
+            @click="markAllRead"
+          />
         </div>
-        <div class="notifications-flyout__empty">
-          <i class="pi pi-bell notifications-flyout__empty-icon" />
+
+        <!-- Loading skeleton -->
+        <div v-if="loadingInitial" class="nf__skeleton-list">
+          <div v-for="n in 3" :key="n" class="nf__skeleton-item" />
+        </div>
+
+        <!-- Error state -->
+        <div v-else-if="loadError" class="nf__empty">
+          <i class="pi pi-exclamation-circle nf__empty-icon nf__empty-icon--error" />
+          <p>{{ t('orbita.notificationsError') }}</p>
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="isEmpty" class="nf__empty">
+          <i class="pi pi-bell nf__empty-icon" />
           <p>{{ t('orbita.noNotifications') }}</p>
         </div>
+
+        <template v-else>
+          <!-- Digest chips -->
+          <div v-if="digestKeys.length > 0" class="nf__digest">
+            <span
+              v-for="key in digestKeys"
+              :key="key"
+              class="nf__digest-chip"
+            >
+              <span class="nf__digest-chip-count">{{ digestCategoryCount(key) }}</span>
+              {{ t(`orbita.digest.${key}`, key) }}
+            </span>
+          </div>
+
+          <!-- Actionable bucket -->
+          <section v-if="actionable.length > 0" class="nf__section">
+            <div class="nf__section-header">
+              <i class="pi pi-bolt nf__section-icon" />
+              <span>{{ t('orbita.sectionActionable') }}</span>
+            </div>
+            <ul class="nf__list" role="list">
+              <li
+                v-for="item in actionable"
+                :key="item.id"
+                class="nf__item"
+                :class="{ 'nf__item--unread': !item.is_read }"
+              >
+                <button
+                  class="nf__item-body"
+                  @click="markRead(item)"
+                >
+                  <span class="nf__item-title">{{ item.title }}</span>
+                  <span v-if="item.body" class="nf__item-body-text">{{ item.body }}</span>
+                  <span class="nf__item-time">{{ formatTime(item.created_at) }}</span>
+                </button>
+                <Button
+                  v-if="item.action_label && item.deep_link"
+                  size="small"
+                  outlined
+                  :label="item.action_label"
+                  class="nf__item-action-btn"
+                  @click="markRead(item)"
+                />
+              </li>
+            </ul>
+          </section>
+
+          <!-- Feed bucket -->
+          <section v-if="feed.length > 0" class="nf__section">
+            <div class="nf__section-header">
+              <i class="pi pi-list nf__section-icon" />
+              <span>{{ t('orbita.sectionFeed') }}</span>
+            </div>
+            <ul class="nf__list" role="list">
+              <li
+                v-for="item in feed"
+                :key="item.id"
+                class="nf__item"
+                :class="{ 'nf__item--unread': !item.is_read }"
+              >
+                <button
+                  class="nf__item-body"
+                  @click="markRead(item)"
+                >
+                  <span class="nf__item-title">{{ item.title }}</span>
+                  <span v-if="item.body" class="nf__item-body-text">{{ item.body }}</span>
+                  <span class="nf__item-time">{{ formatTime(item.created_at) }}</span>
+                </button>
+              </li>
+            </ul>
+
+            <!-- Load more -->
+            <div v-if="hasMoreFeed" class="nf__load-more">
+              <Button
+                text
+                size="small"
+                :label="t('orbita.loadMore')"
+                :loading="loadingMore"
+                @click="loadMore"
+              />
+            </div>
+          </section>
+        </template>
       </div>
     </Popover>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Popover from 'primevue/popover'
+import Button from 'primevue/button'
 import Tooltip from 'primevue/tooltip'
+import { useNotificationsStore } from '@/stores/notificationsStore'
+import { useNotificationsFlyout } from './composables/useNotificationsFlyout'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
 import type { OrbitaOverlayControl } from './types'
 
@@ -38,17 +164,109 @@ interface Props {
 
 defineProps<Props>()
 
+const emit = defineEmits<{
+  'toggle-request': [event: MouseEvent]
+  'visibility-change': [visible: boolean]
+}>()
+
 const { t } = useI18n()
 const vTooltip = Tooltip
+
 const popoverRef = ref<InstanceType<typeof Popover> | null>(null)
 
-function handleClick(event: MouseEvent) {
-  popoverRef.value?.toggle(event)
+const notificationsStore = useNotificationsStore()
+
+const {
+  actionable,
+  feed,
+  digest,
+  hasMoreFeed,
+  isEmpty,
+  loadingInitial,
+  loadingMore,
+  loadError,
+  markAllPending,
+  load,
+  loadMore,
+  markRead,
+  markAllRead,
+  onFlyoutClose,
+} = useNotificationsFlyout()
+
+// ─── Computed ──────────────────────────────────────────────────────────────
+const hasUnread = computed(() => notificationsStore.unreadCount > 0)
+
+const badgeLabel = computed(() => {
+  const c = notificationsStore.unreadCount
+  return c > 99 ? '99+' : String(c)
+})
+
+const badgeAriaLabel = computed(() => {
+  const c = notificationsStore.unreadCount
+  return c > 0
+    ? t('orbita.notificationsUnread', { count: c })
+    : t('orbita.notifications')
+})
+
+const hasAnyNotifications = computed(
+  () => actionable.value.length > 0 || feed.value.length > 0,
+)
+
+// Derive display keys from the by_category sub-object (non-zero entries only).
+// digest.value shape: { unread_total?: number, by_category?: Record<string, number> }
+const digestKeys = computed(() => {
+  const cats = digest.value.by_category ?? {}
+  return Object.keys(cats).filter((k) => (cats[k] ?? 0) > 0)
+})
+
+const digestCategoryCount = (key: string): number =>
+  digest.value.by_category?.[key] ?? 0
+
+// ─── PrimeVue Popover pass-through ────────────────────────────────────────
+const popoverPt = {
+  root: { style: 'z-index: 9999; padding: 0; overflow: hidden;' },
+  content: { style: 'padding: 0;' },
 }
 
-// ─── OrbitaOverlayControl interface ──────────────────────────────────────────
-// Exposed so parent (Orbita.vue) can wire useOrbitaOverlays for mutual exclusion.
-function syncPopover(open: boolean, event?: MouseEvent | null) {
+// ─── Bootstrap: fetch unread count on mount ────────────────────────────────
+onMounted(() => {
+  void notificationsStore.fetchUnreadCount()
+})
+
+// ─── Handlers ─────────────────────────────────────────────────────────────
+function handleClick(event: MouseEvent): void {
+  emit('toggle-request', event)
+}
+
+async function onShow(): Promise<void> {
+  emit('visibility-change', true)
+  await load()
+}
+
+async function onHide(): Promise<void> {
+  emit('visibility-change', false)
+  await onFlyoutClose()
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffMin = Math.floor(diffMs / 60_000)
+  const diffH = Math.floor(diffMin / 60)
+  const diffD = Math.floor(diffH / 24)
+
+  if (diffMin < 1) return t('orbita.timeJustNow')
+  if (diffMin < 60) return t('orbita.timeMinutes', { n: diffMin })
+  if (diffH < 24) return t('orbita.timeHours', { n: diffH })
+  if (diffD < 7) return t('orbita.timeDays', { n: diffD })
+
+  return d.toLocaleDateString()
+}
+
+// ─── OrbitaOverlayControl interface ──────────────────────────────────────
+function syncPopover(open: boolean, event?: MouseEvent | null): void {
   if (!popoverRef.value) return
   if (open && event) {
     popoverRef.value.show(event)
@@ -57,14 +275,15 @@ function syncPopover(open: boolean, event?: MouseEvent | null) {
   }
 }
 
-function realign() {
-  // PrimeVue Popover re-aligns on its own; no-op fallback
+function realign(): void {
+  // PrimeVue Popover re-aligns on its own; no-op
 }
 
 defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 </script>
 
 <style lang="scss" scoped>
+// ─── Trigger ───────────────────────────────────────────────────────────────
 .notifications-btn {
   position: relative;
   display: inline-flex;
@@ -81,6 +300,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   align-items: center;
   justify-content: center;
   padding: 0;
+  position: relative;
   transition:
     background-color $transition-fast,
     border-color $transition-fast;
@@ -101,26 +321,83 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   color: $surface-700;
 }
 
-.notifications-flyout {
-  width: 320px;
-  padding: 0;
+.notifications-btn__badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #FF5A44;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
-.notifications-flyout__header {
+// ─── Flyout panel ──────────────────────────────────────────────────────────
+.nf {
+  width: 360px;
+  // Min-height ensures absolutePosition() flip logic is triggered when the bell
+  // is near the bottom of the viewport (e.g. in Orbita above the MC button).
+  // With min-height=320px and bell at y≈580 on a 900px screen:
+  // 580+44+320=944>900 → Floating UI flips the Popover to open upward.
+  // Reduces max-height slightly so the panel stays compact when open upward.
+  min-height: 320px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $surface-card;
+}
+
+.nf__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: $space-3 $space-4;
   border-bottom: 1px solid $surface-200;
+  flex-shrink: 0;
 }
 
-.notifications-flyout__title {
+.nf__title {
   font-size: 14px;
   font-weight: $font-weight-semibold;
   color: var(--p-text-color);
 }
 
-.notifications-flyout__empty {
+.nf__mark-all-btn {
+  font-size: 12px !important;
+  padding: 0 !important;
+  color: $primary !important;
+}
+
+// ─── Skeleton ──────────────────────────────────────────────────────────────
+.nf__skeleton-list {
+  padding: $space-3 $space-4;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.nf__skeleton-item {
+  height: 48px;
+  border-radius: $radius-md;
+  background: $surface-100;
+  animation: nf-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes nf-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
+
+// ─── Empty / Error ─────────────────────────────────────────────────────────
+.nf__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -134,8 +411,181 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   }
 }
 
-.notifications-flyout__empty-icon {
+.nf__empty-icon {
   font-size: 32px;
   opacity: 0.4;
+
+  &--error {
+    color: $color-danger;
+    opacity: 0.6;
+  }
+}
+
+// ─── Digest chips ──────────────────────────────────────────────────────────
+.nf__digest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  padding: $space-3 $space-4 0;
+  flex-shrink: 0;
+}
+
+.nf__digest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: $surface-100;
+  font-size: $font-size-xs;
+  color: $surface-700;
+  border: 1px solid $surface-200;
+}
+
+.nf__digest-chip-count {
+  font-weight: $font-weight-bold;
+  color: $primary;
+}
+
+// ─── Section ───────────────────────────────────────────────────────────────
+.nf__section {
+  flex-shrink: 0;
+}
+
+.nf__section + .nf__section {
+  border-top: 1px solid $surface-100;
+}
+
+// Scrollable: last section with feed is scrollable
+.nf {
+  > :not(.nf__header, .nf__digest, .nf__skeleton-list, .nf__empty) {
+    overflow-y: auto;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: $surface-300;
+      border-radius: 2px;
+    }
+  }
+}
+
+.nf__section-header {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $surface-500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: $surface-50;
+  border-bottom: 1px solid $surface-100;
+}
+
+.nf__section-icon {
+  font-size: 11px;
+}
+
+// ─── Notification list ─────────────────────────────────────────────────────
+.nf__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nf__item {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $surface-100;
+  transition: background-color $transition-fast;
+  position: relative;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: $surface-50;
+  }
+
+  // Unread indicator: left accent bar
+  &--unread {
+    background: rgba($primary, 0.03);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 60%;
+      background: $primary;
+      border-radius: 0 2px 2px 0;
+    }
+  }
+}
+
+.nf__item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.nf__item-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--p-text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+
+  .nf__item--unread & {
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.nf__item-body-text {
+  font-size: $font-size-xs;
+  color: $surface-500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.nf__item-time {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  margin-top: 2px;
+}
+
+.nf__item-action-btn {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 11px !important;
+}
+
+// ─── Load more ─────────────────────────────────────────────────────────────
+.nf__load-more {
+  display: flex;
+  justify-content: center;
+  padding: $space-2 $space-4;
+  border-top: 1px solid $surface-100;
 }
 </style>

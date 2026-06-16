@@ -50,6 +50,7 @@ use App\Http\Controllers\Inbox\FormController;
 use App\Http\Controllers\Inbox\InboundMessageController;
 use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
+use App\Http\Controllers\Notification\NotificationController;
 use App\Http\Controllers\Notification\TelegramLinkController;
 use App\Http\Controllers\Onboarding\AiTutorController;
 use App\Http\Controllers\Onboarding\AssignmentController;
@@ -270,6 +271,15 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // S2.9 — Telegram link management (owner-only deeplink issue / unlink).
         Route::post('telegram-link', [TelegramLinkController::class, 'issue'])->name('telegram-link');
         Route::delete('telegram', [TelegramLinkController::class, 'unlink'])->name('telegram.unlink');
+    });
+
+    // =========================================================================
+    // Notifications — in-app flyout (task #9). Always scoped to the caller.
+    // =========================================================================
+    Route::prefix('notifications')->name('notifications.')->group(function (): void {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::post('read-all', [NotificationController::class, 'readAll'])->name('read-all');
+        Route::post('{notification}/read', [NotificationController::class, 'read'])->name('read');
     });
 
     // =========================================================================
