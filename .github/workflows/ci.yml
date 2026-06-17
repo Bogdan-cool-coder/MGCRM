@@ -114,6 +114,9 @@ jobs:
           DB_DATABASE: macro_crm_ci
           DB_USERNAME: macro_crm
           DB_PASSWORD: testing
+          # spatie/laravel-permission flushes its cache after migration;
+          # Redis is not available in the CI runner, so use in-memory cache.
+          CACHE_STORE: array
         run: php artisan migrate --force
 
   # ---------------------------------------------------------------------------
