@@ -36,6 +36,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Real superadmin (seeded)
+    |--------------------------------------------------------------------------
+    |
+    | The production/real administrator account, provisioned by AdminSeeder from
+    | env. When ADMIN_EMAIL is set, that user is created/updated with the `admin`
+    | role (password from ADMIN_PASSWORD on first create / when explicitly given;
+    | otherwise the existing hash is preserved on reseed). Left unset in dev,
+    | where the team uses admin@mgcrm.test. This account also survives a clean
+    | reset so the real admin can always log back in.
+    |
+    */
+    'admin' => [
+        'email' => env('ADMIN_EMAIL'),
+        'password' => env('ADMIN_PASSWORD'),
+        'name' => env('ADMIN_NAME'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Currencies
     |--------------------------------------------------------------------------
     |

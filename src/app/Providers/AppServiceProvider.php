@@ -214,6 +214,11 @@ class AppServiceProvider extends ServiceProvider
             strict: true,
         ));
 
+        // System clean-reset gate: "Сброс настроек" wipes all business data and
+        // re-seeds baseline config. Strictly admin-only (NOT director) — it is
+        // the most destructive operation in the app.
+        Gate::define('system-reset', static fn (User $user): bool => $user->role === Role::Admin);
+
         // Named limiter for the public inbound endpoints (form submit + webhook).
         // Per-IP, throttled BEFORE any DB work so a token leak / spam burst can't
         // create a flood of Company/Deal records (S1.9 E5).

@@ -6,6 +6,11 @@
         <img src="/logo.svg" alt="MACRO Global CRM" height="36" />
       </div>
 
+      <!-- Reset notice (shown after DB reset) -->
+      <Message v-if="showResetNotice" severity="info" :closable="false" class="mb-3">
+        {{ t('system.reset.relogin_notice') }}
+      </Message>
+
       <!-- Step 1: Password form -->
       <template v-if="isAwaitingPassword">
         <h1 class="login-card__title">{{ t('auth.login.title') }}</h1>
@@ -145,6 +150,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
@@ -153,6 +160,10 @@ import Message from 'primevue/message'
 import { useLoginPage } from './composables/useLoginPage'
 
 const { t } = useI18n()
+const route = useRoute()
+
+const showResetNotice = computed(() => route.query['reason'] === 'reset')
+
 const {
   email,
   password,

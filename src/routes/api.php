@@ -75,6 +75,7 @@ use App\Http\Controllers\Sales\LostReasonController;
 use App\Http\Controllers\Sales\ManagerCabinetController;
 use App\Http\Controllers\Sales\PipelineController;
 use App\Http\Controllers\Sales\PipelineStageController;
+use App\Http\Controllers\System\SystemResetController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -258,6 +259,11 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('countries', CountryController::class);
         Route::apiResource('cities', CityController::class);
     });
+
+    // =========================================================================
+    // System — clean reset ("Сброс настроек", admin-only, guarded)
+    // =========================================================================
+    Route::post('system/reset', [SystemResetController::class, 'store'])->name('system.reset');
 
     // =========================================================================
     // Manager Cabinet (S1.8) — personal KPI / profile / activity feed
