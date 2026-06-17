@@ -1,0 +1,69 @@
+@use '@/theme/scss/index' as *;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  font-weight: normal;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  color: $surface-800;
+  background: $surface-100;
+  line-height: $line-height-relaxed;
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: $primary-color;
+  text-decoration: none;
+}
+
+// PrimeVue: применяем layer-reset для корректного каскада с Bootstrap
+@layer primevue {
+  // Placeholder для PrimeVue cssLayer
+}
+
+// ВНИМАНИЕ: НЕ добавляй сюда .app-dark { --p-* } оверрайды.
+// Dark-значения токенов задаются в пресете (theme/adapters/primevue/):
+// semantic colorScheme.dark — foundation.ts, компонентные — preset.ts (components).
+// Прямые оверрайды здесь — band-aid: vite в docker может отдавать stale CSS,
+// а компонентные style-таги PrimeVue эмитят те же переменные позже в @layer primeui.
+
+// BUG-ANIM-1: PrimeVue Dialog/Drawer overlay mask can retain pointer-events:auto
+// after animation ends (enter-active phase), blocking clicks in background content.
+// Force pointer-events:none — the dialog itself is unaffected (it sits on top).
+.p-overlay-mask {
+  pointer-events: none;
+}
+
+// S1.3 DealsListView DataTable dark mode — BUG-1 pattern from S1.1
+// DataTable body backgrounds are not toggled by PrimeVue's colorScheme in all versions:
+// we target the component CSS variables in the .app-dark scope.
+.app-dark {
+  --p-datatable-body-background: var(--p-surface-900);
+  --p-datatable-row-odd-background: var(--p-surface-800);
+  --p-datatable-row-hover-background: var(--p-surface-700);
+
+  // BUG-5: odd-row links are nearly invisible in dark because the odd-row bg is
+  // very dark. Force link colour to the primary-light token so text stays legible.
+  .p-datatable .p-datatable-tbody > tr:nth-child(odd) > td a {
+    color: var(--p-primary-300, #7fa8d4);
+  }
+}

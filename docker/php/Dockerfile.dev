@@ -1,0 +1,82 @@
+# Dev PHP-FPM image for MACRO Global CRM.
+#
+# Differences from docker/php/Dockerfile (prod):
+#   - Does NOT copy src/ into the image — source is bind-mounted via compose
+#   - Installs ALL composer deps including --dev (Pint, PHPUnit, Pail)
+#   - opcache.validate_timestamps = 1 so changed files are hot-reloaded
+#   - composer binary kept in the image for convenience
+#
+# The vendor/ directory is managed via a named volume in docker-compose.dev.yml.
+# On first start the volume is empty — the entrypoint installs deps automatically.
+
+FROM php:8.5-fpm
+
+# System dependencies (same set as prod Dockerfile)
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    libzip-dev \
+    libicu-dev \
+    libonig-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    postgresql-client \
+    curl \
+    git \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# PHP extensions (identical to prod)
+RUN docker-php-ext-install -j"$(nproc)" \
+    pdo_pgsql \
+    zip \
+    intl \
+    mbstring \
+    bcmath
+
+RUN docker-php-ext-configure gd --with-jpeg --with-freetype \
+    && docker-php-ext-install -j"$(nproc)" gd
+
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
+# PHP ini — same limits as prod (AI cascades / document generation)
+RUN { \
+        echo "max_execution_time = 600"; \
+        echo "max_input_time = 600"; \
+        echo "memory_limit = 512M"; \
+    } > /usr/local/etc/php/conf.d/macro-crm.ini
+
+# OPcache — validate_timestamps ON for dev (picks up changed files automatically)
+RUN { \
+        echo "opcache.enable = 1"; \
+        echo "opcache.enable_cli = 0"; \
+        echo "opcache.memory_consumption = 128"; \
+        echo "opcache.interned_strings_buffer = 8"; \
+        echo "opcache.max_accelerated_files = 10000"; \
+        echo "opcache.validate_timestamps = 1"; \
+        echo "opcache.revalidate_freq = 0"; \
+    } > /usr/local/etc/php/conf.d/macro-crm-opcache.ini
+
+# PHP-FPM
+RUN { \
+        echo "[www]"; \
+        echo "request_terminate_timeout = 600s"; \
+    } > /usr/local/etc/php-fpm.d/zz-macro-crm.conf
+
+# Composer binary
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# Dev entrypoint:
+#   1. Ensure runtime directories exist (same as prod entrypoint.sh — needed
+#      because the storage/ named volumes start empty on first boot).
+#   2. composer install --dev if vendor/ is missing or stale.
+#   3. Run artisan optimize:clear so stale caches don't mask code changes.
+#   4. Exec the CMD (php-fpm).
+COPY docker/php/entrypoint.dev.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["php-fpm"]

@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Domain\Catalog\Jobs\UpdateExchangeRatesJob;
+use Illuminate\Foundation\Inspiring;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+Artisan::command('inspire', function () {
+    $this->comment(Inspiring::quote());
+})->purpose('Display an inspiring quote');
+
+/*
+|--------------------------------------------------------------------------
+| Scheduled tasks
+|--------------------------------------------------------------------------
+*/
+
+// Daily exchange-rate refresh — runs at 03:00 UTC.
+// The job uses ExchangeRateService::upsertRate() with updateOrCreate()
+// → ON CONFLICT DO UPDATE, no duplicate rows in catalog_exchange_rates.
+Schedule::job(UpdateExchangeRatesJob::class)->dailyAt('03:00');
+
+// Onboarding: mark overdue course assignments — runs daily at midnight UTC.
+// Batch-UPDATE: status → overdue where due_date < now() AND status IN (pending, in_progress).
+Schedule::command('onboarding:mark-overdue')->daily();
+
+// Automation cron triggers (M7 P2) — run hourly. Each scan claims a `pending`
+// AutomationRun per matching deal and queues ExecuteAutomationActionJob; the
+// partial-unique AutomationRun index makes re-running every hour idempotent
+// (no duplicate side-effect), so withoutOverlapping is enough to avoid a slow
+// scan stacking on itself.
+Schedule::command('automation:scan-idle')->hourly()->withoutOverlapping();
+Schedule::command('automation:scan-date-field')->hourly()->withoutOverlapping();
+
+// Automation retention (M7) — nightly prune of the automation_runs journal so the
+// audit / idempotency table stays bounded. Window is config('automation.retention_days')
+// (90); off-peak at 03:00, withoutOverlapping guards against a long delete stacking.
+Schedule::command('automation:prune-runs')->dailyAt('03:00')->withoutOverlapping();

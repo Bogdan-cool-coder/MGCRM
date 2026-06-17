@@ -22,8 +22,24 @@
 # исходники, конфиги, lang/vendor (Laravel-переводы пакетов), .env.example и т.д.
 # (если когда-то внутри examples появится тяжёлый build — добавить точечный ignore вручную)
 
+# === Docker / Compose (корневой .env с секретами compose + runtime-данные) ===
+/.env
+/data/
+
+# === Agent-private memory (машинная, локальная — не коммитим) ===
+**/.claude/agent-memory/
+
 # === OS / IDE ===
 .DS_Store
 *.log
 .idea/
 .vscode/
+
+# === Тестовые docx-фикстуры в корне (QA/dev артефакты, не коммитим) ===
+/*.docx
+
+# === Случайно сброшенные agent-resume scratch в корне (не коммитим) ===
+/4_active/
+
+# QA-скриншоты регресса (артефакты, не коммитим)
+/qa_screenshots_s3/

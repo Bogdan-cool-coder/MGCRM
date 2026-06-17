@@ -1,6 +1,6 @@
 ---
 name: crm-specialist
-description: CRM-ядро MGCRM (Laravel) — Domain/{Crm,Catalog}: Contact v2, Company v2 (ИНН/КПП/юрформа/категория L-S2), ContactPosition, ContactCompanyLink (M2M с ролью), CompanyType, CustomFieldDef (полиморфные кастом-поля для Deal/Lead/Contact/Company/Contract), дедуп/merge, Catalog (Product/ProductPlan/ProductPrice/FxRate + cron курсов exchangerate.host). Use proactively для Domain/Crm, Domain/Catalog и milestone M2.
+description: CRM-ядро MGCRM (Laravel) — Domain/{Crm,Catalog}: Contact v2, Company v2 (ИНН/КПП/юрформа/категория L-S2), ContactPosition, ContactCompanyLink (M2M с ролью), CompanyType, CustomFieldDef (полиморфные кастом-поля для Deal/Contact/Company/Contract), дедуп/merge, Catalog (Product/ProductPlan/ProductPrice/FxRate + cron курсов exchangerate.host). Use proactively для Domain/Crm, Domain/Catalog и milestone M2.
 tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
 model: sonnet
 permissionMode: bypassPermissions
@@ -48,7 +48,7 @@ Main передаёт в первом сообщении:
 
 ### CustomFieldDef — полиморфные кастом-поля
 
-`scope` (enum: `deal`/`lead`/`contact`/`company`/`contract`), `key` (slug, uniq в scope), `label`, `help_text`, `field_type` (PHP enum `CustomFieldType`: `text`/`textarea`/`number`/`date`/`select`/`multiselect`/`boolean`/`url`/`user_ref`), `options` (jsonb для select/multiselect), `default_value`, `required`, `group` (секция формы), `sort_order`, `is_active`. Значения хранятся в `extra_fields` jsonb целевой сущности.
+`scope` (enum: `deal`/`contact`/`company`/`contract`), `key` (slug, uniq в scope), `label`, `help_text`, `field_type` (PHP enum `CustomFieldType`: `text`/`textarea`/`number`/`date`/`select`/`multiselect`/`boolean`/`url`/`user_ref`), `options` (jsonb для select/multiselect), `default_value`, `required`, `group` (секция формы), `sort_order`, `is_active`. Значения хранятся в `extra_fields` jsonb целевой сущности.
 
 ### Domain/Catalog — продукты и валюты
 
@@ -89,7 +89,7 @@ Main передаёт в первом сообщении:
 ## Границы (что НЕ твоё)
 
 - **Pipeline/Deal/Kanban/KPI/мотивация** → `sales-specialist` (M3).
-- **Lead/Inbox/каналы** → `sales-specialist` (M4) + `integration-specialist`.
+- **Inbox/Каналы/Формы (входящее → Компания+Сделка)** → `sales-specialist` + `integration-specialist`.
 - **Subscription/CS** → `cs-specialist`.
 - **Финоперации с валютами** → `finance-specialist` (FxRate из твоего Catalog — только читает).
 - **Общий backend** (User/auth/роли) → `backend-specialist`.

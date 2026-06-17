@@ -3,6 +3,24 @@
 > Мозг проекта **MACRO Global CRM**: переписываем огромную CRM (FastAPI+Next.js) на **жёсткий стек Laravel + PrimeVue по эталону Vizion**, домен за доменом.
 > Этот файл лёгкий и always-injected. Жёсткие паттерны кода — в **`ARCHITECTURE.md`** (закон проекта). План — в `PLAN.md`. Эталон стека целиком лежит в `./examples/vizion/`.
 
+## Brain-vault проекта
+
+**Планы, прогресс, решения, спринт-детализации** — Obsidian-vault **`MG CRM 2026`** (`~/Documents/Obsidian Vault/MG CRM 2026`, путь прописан в `.claude/brain.conf`).
+- В начале рабочей сессии читать `4. Активная работа/SESSION_STATE.md` — там текущий контекст.
+- Спринт-роадмап: `5. Планы/MGCRM (Laravel) — Master Roadmap.md`.
+- Дизайн-система и токены PrimeVue: `6. Справочник/Дизайн-система MG CRM (бренд MACRO Global).md` + `6. Справочник/PrimeVue 4 — тема, токены и тулинг (MGCRM).md`.
+
+Старый vault **`Contracts MACRO`** — **АРХИВ/референс** (старые спеки, аудиты, журналы). НЕ редактировать.
+
+## Ключевые решения (зафиксированы 2026-06-11)
+
+- **Перенос данных не нужен** (в старой базе тестовые данные). `migration-specialist` — только cutover + parity-чеклисты.
+- **Порядок спринтов: Продажи → Документы → Онбординг → CS → Финансы.** Онбординг — отдельный спринт между Документами и CS.
+- **Договоры — генерация PHPWord→Gotenberg→PDF без WYSIWYG-редактора**; на будущее возможна онлайн-правка через Google Docs — прорабатываем ближе к делу.
+- **DEALS 2.0 — нет отдельной сущности Lead.** Лид = сделка в стадии «Новые лиды», воронка строится вокруг **Компании** (Deal-on-Company). `Counterparty`/`Lead` из старого проекта — deprecated, в MGCRM не воскрешаем.
+- **Бренд-ассеты** (`brand/`) — логотип и брендбук MACRO Global. Тема PrimeVue: styled Aura, `definePreset`, primary `#172747`, prefix `p`, darkModeSelector `.app-dark`, cssLayer true, мост через `var(--p-*)` в SCSS.
+- **Google SSO** — не в Фундаменте (там email+пароль+2FA), а на сквозном спринте Интеграций.
+
 ## Структура (корень репозитория = проект MGCRM; работа ведётся нелокально)
 
 ```
@@ -47,7 +65,7 @@ macroglobalcrm/          ← git-репозиторий Bogdan-cool-coder/MGCRM.
 
 ## Стратегия и темп
 
-Strangler, вертикальными срезами, домен за доменом. **Темп — milestone-стиль как Staffory/cloud-terminal:** M0 Bootstrap → … каждый milestone с day/week-оценкой, «копируем Vizion 1-в-1», vertical slice и Acceptance-чеклистом. M9 (финмодуль) — самый большой. M12 — перенос данных + cutover (снос `examples/`). Детали — PLAN.md.
+Strangler, вертикальными срезами, домен за доменом. **Темп — milestone-стиль как Staffory/cloud-terminal:** M0 Bootstrap → … каждый milestone с day/week-оценкой, «копируем Vizion 1-в-1», vertical slice и Acceptance-чеклистом. M9 (финмодуль) — самый большой. M12 — cutover (снос `examples/`) + финальный паритет (перенос данных не нужен — тестовые). Порядок спринтов: Фундамент → Продажи → Документы → Онбординг → CS → Финансы. Детали — PLAN.md §5 и vault `MG CRM 2026`.
 
 ## 17 агентов (`.claude/agents/`)
 
@@ -63,10 +81,11 @@ Strangler, вертикальными срезами, домен за домен
 
 ```
 [задача] → [main определяет агента и порядок] → [рабочий агент(ы): backend→domain→frontend→qa→PM]
-        → [migration-specialist — перенос данных в КОНЦЕ домена, не в начале]
         → [если был UI у frontend-specialist → qa-tester] → [product-manager: саммари+ревью+verify+sync PLAN.md]
         → [апрув юзера] → [ТОЛЬКО по явной просьбе: deploy-engineer push/deploy]
 ```
+
+> `migration-specialist` участвует только в M12 (cutover: снос `examples/` + per-domain parity-чеклисты). Перенос данных не нужен (тестовые).
 
 **qa-tester НЕ нужен** при backend-only, рефакторинге без UI, правках только `.md`/`.yml`/`.json`, правках самих агентов/CLAUDE/PLAN/ARCHITECTURE.
 

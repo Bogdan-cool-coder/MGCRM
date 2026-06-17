@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Resources\Contracts;
+
+use App\Domain\Contracts\Models\Document;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/**
+ * @mixin Document
+ */
+class DocumentResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'kind' => $this->kind?->value,
+            'number' => $this->number,
+            'title' => $this->title,
+            'product_code' => $this->product_code,
+            'country_code' => $this->country_code,
+            'city' => $this->city,
+            'city_code' => $this->city_code,
+            'status' => $this->status?->value,
+            'currency' => $this->currency,
+
+            // Money (kopecks) — raw integers for client-side formatting
+            'subtotal' => $this->subtotal,
+            'discount_pct' => $this->discount_pct,
+            'discount_amount' => $this->discount_amount,
+            'total' => $this->total,
+            'total_rub' => $this->total_rub,
+            'fx_rate' => $this->fx_rate,
+            'fx_rate_date' => $this->fx_rate_date?->toDateString(),
+
+            // Context JSONB
+            'context' => $this->context ?? [],
+            'extra_fields' => $this->extra_fields ?? [],
+
+            // Template / file references — object when the relation is loaded, raw ID otherwise
+            'template_version_id' => $this->template_version,
+            'template_version' => $this->whenLoaded('templateVersion', fn () => $this->templateVersion === null ? null : [
+                'id' => $this->templateVersion->id,
+                'code' => $this->templateVersion->template?->code,
+                'version_number' => $this->templateVersion->version_number,
+            ]),
+            'docx_path' => $this->docx_path,
+            'pdf_path' => $this->pdf_path,
+            'download_urls' => $this->docx_path !== null || $this->pdf_path !== null
+                ? [
+                    'docx' => $this->docx_path !== null ? "/api/documents/{$this->id}/download/docx" : null,
+                    'pdf' => $this->pdf_path !== null ? "/api/documents/{$this->id}/download/pdf" : null,
+                ]
+                : null,
+
+            // Drive links (M11)
+            'drive_folder_url' => $this->drive_folder_url,
+            'drive_docx_url' => $this->drive_docx_url,
+            'drive_pdf_url' => $this->drive_pdf_url,
+
+            // Cross-domain references
+            'source_deal_id' => $this->source_deal_id,
+            'source_company_id' => $this->source_company_id,
+            'source_company' => $this->whenLoaded('sourceCompany', fn () => [
+                'id' => $this->sourceCompany->id,
+                'name' => $this->sourceCompany->name,
+            ]),
+            'author_user_id' => $this->author_user_id,
+            'author' => $this->whenLoaded('author', fn () => [
+                'id' => $this->author->id,
+                'full_name' => $this->author->full_name,
+            ]),
+
+            // Timestamps
+            'signed_at' => $this->signed_at?->toISOString(),
+            'archived_at' => $this->archived_at?->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
+
+            // Conditional relations
+            'items' => DocumentItemResource::collection($this->whenLoaded('items')),
+            'revisions' => DocumentRevisionResource::collection($this->whenLoaded('revisions')),
+            'attachments' => DocumentAttachmentResource::collection($this->whenLoaded('attachments')),
+            'remarks' => DocumentRemarkResource::collection($this->whenLoaded('remarks')),
+        ];
+    }
+}

@@ -1,0 +1,2526 @@
+{
+  "nav": {
+    "dashboard": "Дашборд",
+    "contacts": "Контакты",
+    "companies": "Компании",
+    "deals": "Сделки",
+    "catalog": "Каталог",
+    "documents": "Документы",
+    "tasks": "Задачи",
+    "finance": "Финансы",
+    "team": "Команда",
+    "settings": "Настройки",
+    "analytics": "Аналитика",
+    "profile": "Профиль",
+    "logout": "Выйти",
+    "pipelineSettings": "Настройки воронки",
+    "myTasks": "Мои задачи",
+    "managerCabinet": "Кабинет менеджера",
+    "myApprovals": "Мои согласования",
+    "templates": "Шаблоны",
+    "templateVariables": "Каталог меток",
+    "approvalRoutes": "Маршруты",
+    "messageTemplates": "Рассылки",
+    "myCourses": "Моё обучение",
+    "myCertificates": "Сертификаты",
+    "onboardingAdmin": "Курсы (HR)",
+    "onboardingAssignments": "Назначения",
+    "hrProgress": "Прогресс",
+    "automationRuns": "Журнал автоматизаций",
+    "sections": {
+      "learning": "Обучение"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Вход в систему",
+      "email": "Email",
+      "email_placeholder": "example{'@'}company.com",
+      "password": "Пароль",
+      "password_placeholder": "Введите пароль",
+      "submit": "Войти",
+      "submitting": "Вход...",
+      "error": "Неверный email или пароль",
+      "required_email": "Введите email",
+      "required_password": "Введите пароль",
+      "invalid_email": "Введите корректный email"
+    },
+    "two_factor": {
+      "title": "Двухфакторная аутентификация",
+      "subtitle": "Введите код из приложения аутентификатора",
+      "code_label": "Код TOTP",
+      "code_placeholder": "000000",
+      "backup_label": "Резервный код",
+      "backup_placeholder": "xxxxxxxx",
+      "submit": "Подтвердить",
+      "submitting": "Проверка...",
+      "error": "Неверный код. Попробуйте ещё раз.",
+      "use_backup": "Использовать резервный код",
+      "use_totp": "Использовать код TOTP",
+      "back_to_login": "Вернуться к входу",
+      "required_code": "Введите код"
+    },
+    "logout": {
+      "confirm": "Выйти из системы?",
+      "success": "Вы вышли из системы"
+    }
+  },
+  "profile": {
+    "title": "Профиль",
+    "tabs": {
+      "profile": "Профиль",
+      "security": "Безопасность",
+      "notifications": "Уведомления",
+      "locale": "Язык",
+      "theme": "Тема",
+      "calendar": "Календарь",
+      "signature": "Подпись",
+      "segments": "Сегменты",
+      "telegram": "Telegram",
+      "appearance": "Внешний вид",
+      "quickActions": "Быстрые действия"
+    },
+    "fields": {
+      "full_name": "Полное имя",
+      "email": "Email",
+      "role": "Роль",
+      "department": "Отдел",
+      "telegram": "Telegram ID",
+      "avatar": "Фото профиля"
+    },
+    "avatar": {
+      "upload": "Загрузить фото",
+      "change": "Изменить фото",
+      "remove": "Удалить фото",
+      "hint": "JPG, PNG до 5 МБ"
+    },
+    "security": {
+      "title": "Безопасность",
+      "password_section": "Смена пароля",
+      "current_password": "Текущий пароль",
+      "new_password": "Новый пароль",
+      "confirm_password": "Подтвердите пароль",
+      "change_password": "Изменить пароль",
+      "totp_section": "Двухфакторная аутентификация",
+      "totp_enabled": "2FA включена",
+      "totp_disabled": "2FA выключена",
+      "enable_totp": "Включить 2FA",
+      "disable_totp": "Отключить 2FA",
+      "totp_setup_title": "Настройка 2FA",
+      "totp_scan_qr": "Отсканируйте QR-код приложением аутентификатора",
+      "totp_enter_code": "Введите код для подтверждения",
+      "totp_verify": "Подтвердить",
+      "totp_backup_codes": "Резервные коды",
+      "totp_backup_hint": "Сохраните эти коды в надёжном месте. Каждый код можно использовать только один раз.",
+      "totp_setup_success": "Двухфакторная аутентификация успешно настроена"
+    },
+    "locale": {
+      "title": "Язык интерфейса",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "theme": {
+      "title": "Тема оформления",
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "system": "Системная"
+    },
+    "telegram": {
+      "title": "Telegram-уведомления",
+      "notLinked": "Аккаунт Telegram не привязан",
+      "description": "Привяжите аккаунт Telegram для получения уведомлений о согласованиях",
+      "linkBtn": "Привязать Telegram",
+      "linked": "Telegram привязан",
+      "unlinkBtn": "Отвязать",
+      "linkHint": "Перейдите в бота и нажмите Start для завершения привязки",
+      "linkSuccess": "Telegram успешно привязан!"
+    },
+    "coming_soon": "Скоро",
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "saved": "Изменения сохранены"
+  },
+  "dashboard": {
+    "title": "Дашборд продаж",
+    "export": "Экспорт Excel",
+    "filters": {
+      "period": "Период",
+      "pipeline": "Воронка",
+      "manager": "Менеджер",
+      "allPipelines": "Все воронки",
+      "allManagers": "Все менеджеры"
+    },
+    "periods": {
+      "currentMonth": "Текущий месяц",
+      "lastMonth": "Прошлый месяц",
+      "currentQuarter": "Текущий квартал",
+      "currentYear": "Текущий год"
+    },
+    "statusGroups": {
+      "title": "Статус сделок",
+      "active": "Активные",
+      "won": "Выиграно",
+      "lost": "Проиграно",
+      "total": "Итого",
+      "deals": "сделок",
+      "noTrend": "—"
+    },
+    "funnel": {
+      "title": "Конверсия по стадиям",
+      "stage": "Стадия",
+      "count": "Сделок",
+      "avgDays": "Срок, дн.",
+      "transition": "Переход в следующую"
+    },
+    "topBar": {
+      "title": "Топ-10",
+      "products": "Продукты",
+      "managers": "Менеджеры"
+    },
+    "forecast": {
+      "title": "Прогноз выручки",
+      "totalWeighted": "Взвешенный прогноз",
+      "hot": "HOT-deals",
+      "warm": "Warm",
+      "trial": "Trial / Переговоры"
+    },
+    "dealsWithoutTasks": {
+      "title": "Сделки без задач",
+      "subtitle": "сделок без запланированных задач",
+      "openList": "Открыть список",
+      "allHaveTasks": "Все активные сделки имеют запланированные задачи",
+      "noData": "Нет данных"
+    },
+    "multiCurrencyWarning": "Часть сделок в других валютах не включена в суммы. Добавьте курсы валют в Каталог.",
+    "empty": {
+      "noDeals": "Нет сделок за выбранный период",
+      "noFunnel": "Нет данных по воронке",
+      "noTopData": "Нет данных для отображения",
+      "noForecast": "Нет данных для прогноза",
+      "noPipeline": "Воронка не найдена"
+    },
+    "loading": "Загрузка данных...",
+    "welcome": "Добро пожаловать",
+    "coming_soon": "Здесь появятся виджеты и аналитика"
+  },
+  "roles": {
+    "admin": "Администратор",
+    "director": "Директор",
+    "lawyer": "Юрист",
+    "manager": "Менеджер",
+    "accountant": "Бухгалтер",
+    "cfo": "Финансовый директор"
+  },
+  "errors": {
+    "unauthorized": "Сессия истекла. Пожалуйста, войдите снова.",
+    "server_error": "Произошла ошибка сервера. Попробуйте ещё раз.",
+    "network_error": "Нет подключения к серверу.",
+    "not_found": "Страница не найдена.",
+    "forbidden": "Доступ запрещён.",
+    "validation": "Проверьте правильность заполненных полей.",
+    "unknown": "Произошла неизвестная ошибка.",
+    "required": "Обязательное поле",
+    "duplicate": "Такая запись уже существует"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "back": "Назад",
+    "next": "Далее",
+    "yes": "Да",
+    "no": "Нет",
+    "or": "или",
+    "coming_soon": "Скоро",
+    "expand": "Развернуть",
+    "collapse": "Свернуть",
+    "total": "Итого: {count}",
+    "reset": "Сбросить",
+    "download": "Скачать",
+    "upload": "Загрузить",
+    "archive": "Архивировать",
+    "restore": "Восстановить",
+    "date": "Дата",
+    "open": "Открыть",
+    "saved": "Сохранено",
+    "deleted": "Удалено",
+    "error": "Ошибка",
+    "loadError": "Ошибка загрузки",
+    "required": "Обязательное поле",
+    "invalidValue": "Некорректное значение",
+    "preview": "Предпросмотр",
+    "hidePreview": "Скрыть предпросмотр",
+    "saveFirst": "Сначала сохраните урок для загрузки файла",
+    "retry": "Повторить",
+    "hide": "Скрыть",
+    "show": "Показать"
+  },
+  "contacts": {
+    "page": {
+      "title": "Контакты",
+      "subtitle": "Физлица и компании",
+      "subtitle_companies": "Список компаний",
+      "create": "Создать контакт",
+      "dedup": "Дедуп",
+      "total": "Итого: {count}",
+      "typeSwitch": {
+        "contact": "Физлицо",
+        "company": "Компания"
+      },
+      "columns": {
+        "name": "Название / ФИО",
+        "type": "Тип",
+        "source": "Источник",
+        "country": "Страна",
+        "tags": "Теги",
+        "actions": "Действия"
+      },
+      "filters": {
+        "search": "Поиск по имени...",
+        "companyType": "Тип компании",
+        "source": "Источник",
+        "country": "Страна",
+        "tags": "Теги",
+        "apply": "Применить",
+        "reset": "Сбросить"
+      },
+      "empty": {
+        "title": "Контактов пока нет",
+        "subtitle": "Добавьте первого клиента или контакт",
+        "filtered": "Ничего не найдено",
+        "filteredSub": "Попробуйте изменить фильтры",
+        "resetFilters": "Сбросить фильтры"
+      },
+      "quickCreate": {
+        "title": "Новый контакт",
+        "cancel": "Отмена",
+        "submit": "Создать",
+        "success": "Запись создана",
+        "holdingToggle": "Входит в холдинг",
+        "holdingParent": "Холдинговая компания"
+      },
+      "delete": {
+        "confirm": "Удалить запись?",
+        "detail": "Это действие нельзя отменить.",
+        "accept": "Удалить",
+        "reject": "Отмена",
+        "success": "Запись удалена"
+      },
+      "errors": {
+        "load": "Ошибка загрузки контактов",
+        "create": "Не удалось создать запись",
+        "delete": "Не удалось удалить запись"
+      }
+    },
+    "actions": {
+      "create": "Создать контакт"
+    }
+  },
+  "company": {
+    "page": {
+      "back": "Назад",
+      "newDeal": "Новая сделка",
+      "tabs": {
+        "overview": "Обзор",
+        "contacts": "Контакты",
+        "notes": "Заметки",
+        "tasks": "Задачи",
+        "deals": "Сделки",
+        "files": "Файлы",
+        "holding": "Холдинг",
+        "documents": "Документы"
+      },
+      "sections": {
+        "main": "Основная информация",
+        "requisites": "Реквизиты",
+        "signatory": "Подписант"
+      },
+      "fields": {
+        "name": "Название",
+        "legalForm": "Правовая форма",
+        "fullLegalForm": "Полное наименование",
+        "genderEnding": "Окончание рода",
+        "companyType": "Тип компании",
+        "industry": "Отрасль",
+        "country": "Страна",
+        "city": "Город",
+        "phone": "Телефон",
+        "email": "E-mail",
+        "website": "Сайт",
+        "taxIdLabel": "Вид налогового номера",
+        "taxId": "Номер",
+        "address": "Юр. адрес",
+        "bank": "Банк",
+        "bankCodeLabel": "Вид кода банка",
+        "bankCode": "Код банка",
+        "account": "Счёт",
+        "directorPosition": "Должность директора",
+        "directorGenitive": "ФИО (род. падеж)",
+        "directorShort": "ФИО (сокращ.)",
+        "actsBasis": "Действует на основании",
+        "source": "Источник"
+      },
+      "rail": {
+        "responsible": "Ответственный",
+        "owner": "Владелец",
+        "source": "Источник",
+        "tags": "Теги",
+        "addTag": "Добавить тег",
+        "createdAt": "Создано",
+        "updatedAt": "Изменено"
+      },
+      "employees": {
+        "title": "Сотрудники",
+        "add": "Добавить сотрудника",
+        "addSuccess": "Сотрудник добавлен",
+        "searchHint": "Введите имя контакта",
+        "columns": {
+          "name": "ФИО",
+          "position": "Должность",
+          "status": "Статус",
+          "primary": "Основной"
+        },
+        "status": {
+          "works": "Работает",
+          "left": "Уволен"
+        },
+        "actions": {
+          "setPrimary": "Сделать основным",
+          "changeStatus": "Изменить статус",
+          "unlink": "Отвязать"
+        },
+        "unlinkConfirm": "Отвязать сотрудника?",
+        "empty": "Сотрудники не добавлены"
+      },
+      "holding": {
+        "parent": "Родительская холдинговая",
+        "children": "Дочерние компании",
+        "addChild": "Добавить дочернюю",
+        "stub": "Управление холдингом появится в следующем спринте"
+      },
+      "stub": {
+        "tasks": "Раздел «Задачи» появится в следующем спринте",
+        "deals": "Раздел «Сделки» появится в следующем спринте",
+        "files": "Раздел «Файлы» появится в следующем спринте"
+      },
+      "category": {
+        "L": "L",
+        "M": "M",
+        "S1": "S1",
+        "S2": "S2"
+      },
+      "inlineEdit": {
+        "hint": "Двойной клик для редактирования",
+        "save": "Сохранить",
+        "cancel": "Отмена",
+        "saved": "Сохранено",
+        "error": "Не удалось сохранить"
+      },
+      "errors": {
+        "notFound": "Компания не найдена",
+        "load": "Ошибка загрузки"
+      }
+    }
+  },
+  "contact": {
+    "page": {
+      "back": "Назад",
+      "tabs": {
+        "overview": "Обзор",
+        "companies": "Компании",
+        "notes": "Заметки",
+        "tasks": "Задачи",
+        "files": "Файлы"
+      },
+      "fields": {
+        "fullName": "ФИО",
+        "position": "Должность",
+        "phone": "Телефон",
+        "email": "E-mail",
+        "tgUsername": "Telegram",
+        "source": "Источник",
+        "status": "Статус",
+        "notes": "Заметки"
+      },
+      "status": {
+        "active": "Активен",
+        "inactive": "Неактивен"
+      },
+      "companies": {
+        "title": "Компании",
+        "add": "Привязать компанию",
+        "columns": {
+          "company": "Компания",
+          "position": "Должность",
+          "status": "Статус",
+          "primary": "Основная"
+        },
+        "actions": {
+          "setPrimary": "Сделать основной",
+          "unlink": "Отвязать"
+        },
+        "unlinkConfirm": "Отвязать контакт от компании?",
+        "empty": "Компании не привязаны"
+      },
+      "stub": {
+        "tasks": "Задачи появятся в следующем спринте",
+        "files": "Файлы появятся в следующем спринте"
+      },
+      "errors": {
+        "notFound": "Контакт не найден",
+        "load": "Ошибка загрузки"
+      }
+    }
+  },
+  "catalog": {
+    "products": {
+      "page": {
+        "title": "Каталог продуктов",
+        "subtitle": "Продукты и тарифные планы",
+        "create": "Создать продукт",
+        "import": "Импорт Excel",
+        "importMenu": {
+          "upload": "Загрузить прайс",
+          "template": "Скачать шаблон"
+        },
+        "columns": {
+          "code": "Код",
+          "name": "Название",
+          "group": "Группа",
+          "pricingType": "Тип цены",
+          "isActive": "Активен",
+          "actions": "Действия"
+        },
+        "filters": {
+          "search": "Поиск по названию или коду",
+          "group": "Группа",
+          "pricingType": "Тип цены",
+          "status": "Статус",
+          "statusAll": "Все",
+          "statusActive": "Активные",
+          "statusArchived": "Архивные",
+          "reset": "Сбросить"
+        },
+        "empty": {
+          "title": "Каталог пуст",
+          "subtitle": "Добавьте первый продукт или импортируйте прайс",
+          "filtered": "Ничего не найдено",
+          "filteredSubtitle": "Попробуйте изменить фильтры",
+          "resetFilters": "Сбросить фильтры"
+        },
+        "actions": {
+          "edit": "Редактировать",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить продукт?",
+          "deleteDetail": "Это действие нельзя отменить.",
+          "deleteAccept": "Удалить",
+          "deleteReject": "Отмена",
+          "deleteSuccess": "Продукт удалён",
+          "deleteUsed": "Продукт используется в сделках и не может быть удалён",
+          "toggleSuccess": "Статус обновлён"
+        }
+      },
+      "pricingType": {
+        "fixed": "Фиксированная",
+        "tiered": "По тарифу",
+        "per_minute": "По минутам",
+        "package": "Пакет",
+        "custom": "Индивидуальная"
+      },
+      "unit": {
+        "year": "В год",
+        "one_time": "Единоразово",
+        "minute": "В минуту",
+        "package": "Пакет"
+      }
+    },
+    "product": {
+      "page": {
+        "back": "Назад",
+        "edit": "Редактировать",
+        "tabs": {
+          "prices": "Цены",
+          "deals": "Сделки"
+        },
+        "rail": {
+          "isActive": "Активен",
+          "pricingType": "Тип цены",
+          "templateCode": "Шаблон договора",
+          "createdAt": "Создано",
+          "updatedAt": "Обновлено"
+        },
+        "prices": {
+          "addPlan": "Добавить тарифный план",
+          "basePriceRow": "Базовая",
+          "emptyPlans": "Тарифные планы не добавлены",
+          "inlineEditHint": "Двойной клик для изменения цены",
+          "save": "Сохранить",
+          "cancel": "Отмена",
+          "saved": "Цена обновлена",
+          "saveError": "Не удалось сохранить цену"
+        },
+        "plan": {
+          "createTitle": "Новый тарифный план",
+          "editTitle": "Редактировать план",
+          "fields": {
+            "name": "Название",
+            "code": "Код плана",
+            "unit": "Единица",
+            "sortOrder": "Порядок",
+            "isActive": "Активен"
+          },
+          "hint": "Цены задаются в таблице карточки продукта",
+          "save": "Сохранить план",
+          "cancel": "Отмена",
+          "deleteConfirm": "Удалить тарифный план?",
+          "deleteUsed": "План используется в сделках и не может быть удалён",
+          "deleteSuccess": "План удалён"
+        },
+        "stub": {
+          "deals": "Раздел «Сделки» появится в S1.3"
+        },
+        "errors": {
+          "notFound": "Продукт не найден",
+          "load": "Ошибка загрузки продукта"
+        }
+      },
+      "form": {
+        "createTitle": "Новый продукт",
+        "editTitle": "Редактировать продукт",
+        "fields": {
+          "name": "Название",
+          "code": "Код (slug)",
+          "codeHint": "Латиница, цифры и подчёркивания. Используется как ID продукта.",
+          "description": "Описание",
+          "group": "Группа",
+          "pricingType": "Тип цены",
+          "templateCode": "Код шаблона договора",
+          "sortOrder": "Порядок сортировки",
+          "isActive": "Активен"
+        },
+        "save": "Создать продукт",
+        "update": "Сохранить",
+        "cancel": "Отмена",
+        "createSuccess": "Продукт создан",
+        "updateSuccess": "Продукт обновлён",
+        "errors": {
+          "nameRequired": "Название обязательно",
+          "codeRequired": "Код обязателен",
+          "codeInvalid": "Только a-z, 0-9 и подчёркивания",
+          "codeTaken": "Этот код уже занят",
+          "pricingTypeRequired": "Тип цены обязателен"
+        }
+      }
+    },
+    "import": {
+      "dialog": {
+        "title": "Импорт прайса из Excel",
+        "step1": "Загрузка файла",
+        "step2": "Предпросмотр",
+        "uploadHint": "Перетащите .xlsx / .xls или нажмите для выбора",
+        "uploadMax": "Максимум 10 МБ",
+        "downloadTemplate": "Скачать шаблон",
+        "preview": {
+          "title": "Результат проверки",
+          "wouldInsert": "Создаётся: {n}",
+          "wouldUpdate": "Обновляется: {n}",
+          "skipped": "Пропущено: {n}",
+          "errors": "Ошибки: {n}",
+          "errorsColumns": {
+            "row": "Строка",
+            "message": "Ошибка"
+          },
+          "warningWithErrors": "Строки с ошибками будут пропущены при импорте"
+        },
+        "previewing": "Анализ файла...",
+        "importing": "Импорт...",
+        "submit": "Импортировать",
+        "submitWithErrors": "Импортировать (без ошибок)",
+        "changeFile": "Изменить файл",
+        "cancel": "Отмена",
+        "successToast": "Импорт завершён: создано {inserted}, обновлено {updated}",
+        "errorToast": "Ошибка импорта. Попробуйте ещё раз."
+      }
+    },
+    "exchangeRates": {
+      "page": {
+        "title": "Курсы валют",
+        "subtitle": "Актуальные и исторические курсы",
+        "refresh": "Обновить курсы",
+        "addManual": "Ввести вручную",
+        "columns": {
+          "from": "Из",
+          "to": "В",
+          "rate": "Курс",
+          "date": "Дата",
+          "source": "Источник",
+          "actions": "Действия"
+        },
+        "source": {
+          "api": "API",
+          "manual": "Вручную"
+        },
+        "filters": {
+          "from": "Из валюты",
+          "to": "В валюту",
+          "dateFrom": "Дата с",
+          "dateTo": "Дата по",
+          "reset": "Сбросить"
+        },
+        "ageWarning": {
+          "message": "Последнее обновление более 24 часов назад.",
+          "refreshNow": "Обновить сейчас"
+        },
+        "actions": {
+          "edit": "Изменить",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить курс?",
+          "deleteSuccess": "Курс удалён",
+          "refreshSuccess": "Курсы обновлены",
+          "refreshError": "Не удалось обновить курсы"
+        },
+        "empty": {
+          "title": "Курсы не загружены",
+          "subtitle": "Нажмите «Обновить курсы» для автоматической загрузки"
+        }
+      },
+      "manual": {
+        "title": "Ввести курс вручную",
+        "fields": {
+          "from": "Из валюты",
+          "to": "В валюту",
+          "rate": "Курс",
+          "date": "Дата"
+        },
+        "save": "Сохранить курс",
+        "cancel": "Отмена",
+        "success": "Курс сохранён"
+      }
+    }
+  },
+  "notes": {
+    "placeholder": "Добавьте заметку..."
+  },
+  "dedup": {
+    "dialog": {
+      "title": "Дедупликация",
+      "titleWithCount": "Дедупликация — {count} группы дублей",
+      "scan": {
+        "title": "Поиск дублей",
+        "type": {
+          "company": "Компании",
+          "contact": "Физлица"
+        },
+        "button": "Сканировать дубли",
+        "scanning": "Сканирование...",
+        "empty": "Дублей не обнаружено",
+        "emptySubtitle": "Ваша база данных в порядке",
+        "error": "Ошибка сканирования"
+      },
+      "candidates": {
+        "group": "Группа {n}: {name} ({count} записи)",
+        "merge": "Объединить",
+        "notDuplicate": "Не дубль",
+        "columns": {
+          "id": "ID",
+          "name": "Название / ФИО",
+          "key": "БИН / E-mail",
+          "createdAt": "Создано"
+        }
+      },
+      "merge": {
+        "title": "Объединение записей",
+        "masterLabel": "Выберите главную запись (ID сохранится, остальные будут удалены):",
+        "wholeRecordNote": "Объединение происходит целой записью — все данные берутся из главной записи.",
+        "goldenLabel": "Выберите «золотую» запись (сохранится этот ID):",
+        "fieldsLabel": "Предпросмотр полей записей:",
+        "warning": "После объединения записи ID {id} будут удалены",
+        "columns": {
+          "field": "Поле"
+        },
+        "back": "Назад",
+        "submit": "Объединить записи",
+        "success": "Записи успешно объединены",
+        "dismissSuccess": "Группа отмечена как «не дубль»",
+        "error": "Ошибка при объединении"
+      }
+    }
+  },
+  "activity": {
+    "kinds": {
+      "call": "Звонок",
+      "meeting": "Встреча",
+      "task": "Задача",
+      "note": "Заметка"
+    },
+    "statuses": {
+      "new": "Новая",
+      "in_progress": "В работе",
+      "done": "Выполнено",
+      "rejected": "Отклонено"
+    },
+    "priorities": {
+      "low": "Низкий",
+      "normal": "Норма",
+      "high": "Высокий",
+      "critical": "Критический"
+    },
+    "fields": {
+      "responsible": "Ответственный"
+    },
+    "presets": {
+      "myTasks": "Мои задачи",
+      "myOrders": "Мои поручения",
+      "today": "Сегодня",
+      "overdue": "Просроченные",
+      "thisWeek": "Эта неделя",
+      "pinned": "Закреплённые",
+      "all": "Все задачи"
+    },
+    "overdueBadge": "Просрочено",
+    "form": {
+      "createTitle": "Новая активность",
+      "editTitle": "Редактировать активность",
+      "kind": "Тип",
+      "title": "Название",
+      "titlePlaceholder": "Название активности",
+      "body": "Описание",
+      "responsible": "Исполнитель",
+      "dueAt": "Дедлайн",
+      "priority": "Приоритет",
+      "resultText": "Результат",
+      "resultTextPlaceholder": "Опишите результат...",
+      "ftmDecisionMakerAttended": "ЛПР присутствовал",
+      "ftmPresentationShown": "Презентация показана",
+      "ftmReportUrl": "Ссылка на отчёт",
+      "kindDisabledTooltip": "На этом этапе нельзя создавать активности данного типа",
+      "save": "Сохранить",
+      "create": "Создать",
+      "cancel": "Отмена",
+      "fillMeetingReport": "Заполнить отчёт встречи",
+      "successCreate": "Активность создана",
+      "successUpdate": "Активность сохранена",
+      "confirmDiscard": "Отменить изменения?",
+      "confirmDiscardBody": "Несохранённые изменения будут потеряны."
+    },
+    "actions": {
+      "add": "Добавить активность",
+      "complete": "Выполнить",
+      "reopen": "Переоткрыть",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "pin": "Закрепить",
+      "unpin": "Открепить",
+      "completeSuccess": "Активность выполнена",
+      "reopenSuccess": "Активность переоткрыта",
+      "deleteConfirmHeader": "Удалить активность?",
+      "deleteConfirmBody": "Активность будет удалена без возможности восстановления.",
+      "deleteConfirmAccept": "Удалить",
+      "deleteConfirmReject": "Отмена",
+      "deleteSuccess": "Активность удалена",
+      "pinSuccess": "Закреплено",
+      "unpinSuccess": "Откреплено",
+      "noPermissionComplete": "Нет прав для выполнения этой задачи"
+    },
+    "timeline": {
+      "empty": "Нет активностей",
+      "emptyDeal": "Нет активностей по этой сделке",
+      "emptyCompany": "Нет активностей по этой компании",
+      "emptyCtaDeal": "Добавить первую активность",
+      "loadMore": "Загрузить ещё",
+      "targetDeal": "Сделка: {name}",
+      "overdueBadge": "Просрочено"
+    },
+    "meetingReport": {
+      "dialogTitle": "Отчёт о встрече",
+      "comment": "Комментарий",
+      "commentPlaceholder": "Дополнительные комментарии по встрече...",
+      "save": "Сохранить отчёт",
+      "cancel": "Отмена",
+      "saveSuccess": "Отчёт о встрече сохранён",
+      "emptyQuestions": "Реестр вопросов не настроен. Заполните свободный комментарий.",
+      "errorEmpty": "Заполните хотя бы один ответ или комментарий.",
+      "errorStaleQuestion": "Вопрос устарел. Обновите страницу."
+    },
+    "myTasksPage": {
+      "title": "Мои задачи",
+      "create": "Создать задачу",
+      "filters": {
+        "kind": "Тип",
+        "status": "Статус",
+        "priority": "Приоритет",
+        "dueFrom": "Дата от",
+        "dueTo": "Дата до",
+        "search": "Поиск",
+        "reset": "Сбросить"
+      },
+      "empty": "Нет задач в этом разделе",
+      "emptyOverdue": "Все задачи выполнены вовремя"
+    },
+    "quickAdd": {
+      "tooltip": "Добавить активность к сделке"
+    }
+  },
+  "sales": {
+    "deals": {
+      "page": {
+        "title": "Сделки",
+        "subtitle": "Воронка продаж",
+        "create": "Создать сделку",
+        "viewBoard": "Kanban",
+        "viewList": "Список",
+        "columns": {
+          "id": "#",
+          "title": "Название",
+          "company": "Компания",
+          "stage": "Стадия",
+          "amount": "Сумма",
+          "owner": "Ответственный",
+          "createdAt": "Создано",
+          "actions": "Действия"
+        },
+        "toolbar": {
+          "searchAndFilter": "Поиск и фильтр",
+          "moreMenu": "Ещё"
+        },
+        "menu": {
+          "import": "Импорт",
+          "export": "Экспорт",
+          "duplicates": "Поиск дублей",
+          "bulkActions": "Массовые действия",
+          "sort": "Сортировка",
+          "sortCreatedAt": "По дате создания",
+          "sortTitle": "По названию",
+          "sortAmount": "По бюджету",
+          "sortActivity": "По активности"
+        },
+        "filters": {
+          "search": "Поиск по сделкам",
+          "owner": "Ответственный",
+          "company": "Компания",
+          "stage": "Стадия",
+          "product": "Продукт",
+          "region": "Регион / страна",
+          "city": "Город",
+          "budgetFrom": "Бюджет от",
+          "budgetTo": "до",
+          "tags": "Теги",
+          "tagsSearch": "Поиск тегов",
+          "period": "Период",
+          "reset": "Сбросить",
+          "apply": "Применить",
+          "presets": "Сохранённые пресеты",
+          "properties": "Свойства сделок",
+          "presetOpen": "Открытые сделки",
+          "presetMine": "Только мои",
+          "presetWon": "Успешно завершённые",
+          "presetLost": "Нереализованные",
+          "presetNoTask": "Без задач",
+          "presetOverdue": "С просроченными"
+        },
+        "bulk": {
+          "selected": "Выбрано: {n}",
+          "cancel": "Отмена",
+          "selectAll": "Выбрать все",
+          "assignOwner": "Ответственный",
+          "addTask": "+ Задача",
+          "moveStage": "Этап",
+          "editField": "Поле",
+          "editTags": "Теги",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить {n} сделок?",
+          "deleteDetail": "Это действие нельзя отменить.",
+          "deleteSuccess": "{n} сделок удалено",
+          "assignOwnerSuccess": "Ответственный изменён у {n} сделок",
+          "moveStageSuccess": "Стадия изменена у {n} сделок",
+          "editFieldSuccess": "Поле обновлено у {n} сделок",
+          "tagSuccess": "Теги обновлены у {n} сделок",
+          "addTaskSuccess": "Задача создана для {n} сделок",
+          "assignOwnerDialog": {
+            "title": "Сменить ответственного ({n} сделок)",
+            "owner": "Ответственный",
+            "ownerPlaceholder": "Выберите сотрудника",
+            "ownerRequired": "Выберите ответственного",
+            "apply": "Применить"
+          },
+          "moveStageDialog": {
+            "title": "Сменить стадию ({n} сделок)",
+            "stage": "Стадия",
+            "stagePlaceholder": "Выберите стадию",
+            "stageRequired": "Выберите стадию",
+            "apply": "Применить"
+          },
+          "editFieldDialog": {
+            "title": "Изменить поле ({n} сделок)",
+            "field": "Поле",
+            "fieldPlaceholder": "Выберите поле",
+            "value": "Значение",
+            "valuePlaceholder": "Введите значение",
+            "valueRequired": "Введите значение",
+            "selectFieldHint": "Выберите поле для редактирования",
+            "apply": "Применить"
+          },
+          "tagDialog": {
+            "title": "Изменить теги ({n} сделок)",
+            "hint": "Указанные теги заменят существующие теги у выбранных сделок.",
+            "tags": "Теги",
+            "tagsPlaceholder": "Добавить тег...",
+            "apply": "Применить"
+          },
+          "addTaskDialog": {
+            "title": "Создать задачу для {n} сделок",
+            "apply": "Создать"
+          }
+        },
+        "summary": "{count} сделок · ≈ {total}",
+        "viewTasks": "Задачи",
+        "kanban": {
+          "deals": "{count} сделок",
+          "sum": "{amount}",
+          "loadMore": "Ещё {n}",
+          "hiddenStages": "Скрытые",
+          "daysInStage": "{n} дн.",
+          "addDeal": "Добавить сделку",
+          "colTotal": "≈ {sum}"
+        },
+        "card": {
+          "noTask": "Нет задачи",
+          "scheduleTask": "+ Запланировать",
+          "overdue": "Просрочено: {type} · {when}",
+          "taskOk": "{type} · {when}",
+          "daysInWork": "{n} дн.",
+          "today": "сегодня {time}",
+          "tomorrow": "завтра {time}",
+          "overdueWhen": "{n} день назад | {n} дня назад | {n} дней назад"
+        },
+        "taskTypes": {
+          "call": "Звонок",
+          "meeting": "Встреча",
+          "task": "Задача",
+          "note": "Заметка",
+          "follow_up": "Follow-up",
+          "qualification": "Квалификация",
+          "warm": "Warm",
+          "hot": "HOT"
+        },
+        "currency": {
+          "approx": "≈ {sum}",
+          "tooltipTitle": "Итого: ≈ {sum}",
+          "nativeTooltipTitle": "Суммы по валютам",
+          "noRate": "Курс недоступен"
+        },
+        "empty": {
+          "title": "Сделок пока нет",
+          "subtitle": "Создайте первую сделку на основе компании",
+          "filtered": "По вашим фильтрам ничего не найдено",
+          "filteredSubtitle": "Попробуйте изменить фильтры или сбросить их",
+          "resetFilters": "Сбросить фильтры"
+        },
+        "columns": {
+          "id": "#",
+          "title": "Название",
+          "company": "Компания",
+          "stage": "Стадия",
+          "amount": "Сумма",
+          "owner": "Ответственный",
+          "createdAt": "Создано",
+          "task": "Задача",
+          "daysInStage": "В стадии",
+          "actions": ""
+        },
+        "actions": {
+          "edit": "Редактировать",
+          "changeStage": "Сменить стадию",
+          "delete": "Удалить",
+          "deleteConfirm": "Удалить сделку?",
+          "deleteDetail": "Это действие нельзя отменить. Состав и история будут удалены.",
+          "deleteAccept": "Удалить",
+          "deleteReject": "Отмена",
+          "deleteSuccess": "Сделка удалена",
+          "moveSuccess": "Стадия изменена"
+        }
+      },
+      "form": {
+        "createTitle": "Новая сделка",
+        "fields": {
+          "company": "Компания",
+          "title": "Название",
+          "pipeline": "Воронка",
+          "stage": "Стадия",
+          "stagePlaceholder": "Начальная стадия",
+          "currency": "Валюта",
+          "owner": "Ответственный",
+          "expectedCloseDate": "Ожидаемая дата закрытия"
+        },
+        "save": "Создать сделку",
+        "cancel": "Отмена",
+        "createSuccess": "Сделка создана",
+        "errors": {
+          "companyRequired": "Выберите компанию",
+          "titleRequired": "Название обязательно",
+          "currencyRequired": "Валюта обязательна"
+        }
+      }
+    },
+    "deal": {
+      "page": {
+        "back": "Назад",
+        "changeStage": "Сменить стадию",
+        "tabs": {
+          "overview": "Обзор",
+          "contacts": "Контакты",
+          "activities": "Активности",
+          "tasks": "Активности",
+          "history": "История",
+          "documents": "Документы"
+        },
+        "rail": {
+          "stage": "Стадия",
+          "pipeline": "Воронка",
+          "owner": "Ответственный",
+          "department": "Отдел",
+          "createdAt": "Создано",
+          "updatedAt": "Обновлено",
+          "wonGateWarning": "Требуется договор или оплата для подтверждения победы"
+        },
+        "overview": {
+          "sectionMain": "Информация о сделке",
+          "fields": {
+            "title": "Название",
+            "company": "Компания",
+            "currency": "Валюта",
+            "tags": "Теги",
+            "expectedCloseDate": "Ожид. дата закрытия",
+            "expectedSignDate": "Ожид. дата подписания",
+            "expectedPaymentDate": "Ожид. дата оплаты"
+          }
+        },
+        "products": {
+          "sectionTitle": "Состав сделки",
+          "addProduct": "Добавить продукт",
+          "columns": {
+            "product": "Продукт",
+            "plan": "Тарифный план",
+            "quantity": "Кол-во",
+            "unitPrice": "Цена/ед.",
+            "amount": "Сумма",
+            "actions": ""
+          },
+          "total": "Итого",
+          "empty": {
+            "title": "Состав пуст",
+            "subtitle": "Добавьте продукты из каталога"
+          },
+          "addDialog": {
+            "title": "Добавить продукт",
+            "fields": {
+              "product": "Продукт",
+              "plan": "Тарифный план",
+              "quantity": "Количество",
+              "unitPrice": "Цена/ед. (снимок)",
+              "unitPriceOverrideHint": "Цена изменена вручную"
+            },
+            "preview": "Итого: {amount}",
+            "snapshotHint": "Снимок цены из каталога на момент добавления",
+            "save": "Добавить",
+            "cancel": "Отмена",
+            "addSuccess": "Продукт добавлен",
+            "updateSuccess": "Позиция обновлена",
+            "removeSuccess": "Позиция удалена",
+            "removeConfirm": "Удалить позицию?"
+          }
+        },
+        "contacts": {
+          "sectionTitle": "Контакты сделки",
+          "addContact": "Добавить контакт",
+          "primary": "Основной",
+          "empty": {
+            "title": "Контакты не привязаны",
+            "subtitle": "Добавьте ответственных лиц по сделке"
+          },
+          "addDialog": {
+            "title": "Добавить контакт",
+            "fields": {
+              "contact": "Контакт",
+              "isPrimary": "Основной контакт"
+            },
+            "save": "Добавить",
+            "cancel": "Отмена",
+            "success": "Контакт добавлен",
+            "removeConfirm": "Убрать контакт из сделки?",
+            "removeSuccess": "Контакт удалён"
+          }
+        },
+        "history": {
+          "sectionTitle": "История стадий",
+          "created": "Создание сделки",
+          "from": "из",
+          "empty": {
+            "title": "История переходов пуста"
+          }
+        },
+        "errors": {
+          "notFound": "Сделка не найдена",
+          "noAccess": "Возможно, она была удалена или у вас нет доступа",
+          "load": "Ошибка загрузки сделки",
+          "backToDeals": "Назад к сделкам"
+        },
+        "daysInStage": "дн. в стадии",
+        "changeStage": "Изменить стадию",
+        "clickToChangeStage": "Нажмите, чтобы сменить стадию",
+        "infoPanel": "Инфо",
+        "menu": {
+          "rename": "Переименовать",
+          "changeOwner": "Сменить ответственного",
+          "editTags": "Изменить теги",
+          "moveStage": "Сменить стадию",
+          "duplicate": "Дублировать",
+          "duplicateSoon": "Скоро",
+          "archive": "Архивировать",
+          "archiveConfirm": "Архивировать сделку?",
+          "delete": "Удалить сделку",
+          "deleteConfirm": "Удалить сделку?",
+          "deleteDetail": "Это действие нельзя отменить",
+          "collapseAll": "Свернуть все группы",
+          "expandAll": "Развернуть все группы",
+          "customizeFields": "Настроить поля",
+          "copyLink": "Копировать ссылку"
+        },
+        "feedView": "Лента",
+        "infoView": "Карточка",
+        "health": {
+          "noTask": "Нет задачи",
+          "overdue": "Просрочено",
+          "nextTask": "{kind} · {date}"
+        }
+      },
+      "info": {
+        "tabs": {
+          "main": "Основное",
+          "documents": "Документы",
+          "finances": "Финансы",
+          "stats": "Статистика"
+        },
+        "fields": {
+          "owner": "Ответственный",
+          "amount": "Бюджет",
+          "amountAuto": "Бюджет (авто)",
+          "company": "Компания",
+          "expectedSignDate": "Дата подписания (план)",
+          "expectedPaymentDate": "Дата оплаты (план)",
+          "daysInWork": "Дней в работе"
+        },
+        "groups": {
+          "products": "Продукты",
+          "deal": "Сделка",
+          "contacts": "Контакты",
+          "company": "Данные компании",
+          "customFields": "Дополнительные поля"
+        },
+        "products": {
+          "empty": "Нет позиций",
+          "add": "+ Добавить",
+          "total": "Итого"
+        },
+        "contacts": {
+          "addContact": "+ Добавить контакт",
+          "addChannel": "+ Добавить канал"
+        }
+      },
+      "addChannel": {
+        "title": "Добавить канал связи",
+        "channelType": "Тип канала",
+        "value": "Значение / ID",
+        "placeholders": {
+          "tg": "{'@'}username или числовой ID",
+          "wa": "Номер +7XXXXXXXXXX",
+          "linkedin": "URL профиля LinkedIn",
+          "email": "email@domain.com",
+          "phone": "+7XXXXXXXXXX"
+        },
+        "submit": "Добавить",
+        "success": "Канал добавлен"
+      },
+      "documents": {
+        "generate": "Сформировать PDF",
+        "downloadDocx": "Скачать DOCX",
+        "templateLabel": "Шаблон",
+        "contractFields": "Поля договора",
+        "approval": "Согласование",
+        "finalDocs": "Итоговые документы",
+        "uploadScan": "Загрузить подписанный скан",
+        "signedAt": "Фактическая дата подписания",
+        "empty": {
+          "title": "Нет документов",
+          "subtitle": "Сформируйте первый договор по шаблону"
+        }
+      },
+      "finances": {
+        "stub": "Финансовые условия",
+        "stubHint": "Здесь будут условия оплаты из договора: сроки, периоды, суммы, актирование.",
+        "waitingForDoc": "Ожидает договора"
+      },
+      "stats": {
+        "daysInDeal": "Дней в сделке",
+        "daysInStage": "В стадии",
+        "activities": "Активностей",
+        "stageChanges": "Смен стадий",
+        "documents": "Документов",
+        "lastActivity": "Последняя активность",
+        "daysAgo": "{n} дн. назад"
+      },
+      "feed": {
+        "searchPlaceholder": "Поиск в ленте...",
+        "searchTooltip": "Поиск в ленте",
+        "filterType": "Тип",
+        "reset": "Сбросить",
+        "loadMore": "Загрузить ещё",
+        "viewMenu": {
+          "collapseAll": "Свернуть все группы",
+          "expandAll": "Развернуть все группы",
+          "customizeFields": "Настроить поля карточки",
+          "copyLink": "Копировать ссылку",
+          "print": "Печать / экспорт"
+        },
+        "empty": {
+          "title": "Лента событий пуста",
+          "subtitle": "Создайте задачу или позвоните клиенту"
+        },
+        "types": {
+          "stage_change": "Смена стадии",
+          "field_change": "Изменения полей",
+          "note": "Примечания",
+          "task": "Задачи",
+          "call": "Звонки",
+          "meeting": "Встречи"
+        },
+        "events": {
+          "stageChanged": "Стадия изменена",
+          "dealCreated": "Сделка создана",
+          "fieldsChanged": "Изменены поля",
+          "moreChanges": "ещё {n} изм."
+        }
+      },
+      "composer": {
+        "note": "Примечание",
+        "task": "Задача",
+        "call": "Звонок",
+        "meeting": "Встреча",
+        "notePlaceholder": "Текст примечания...",
+        "titlePlaceholder": "Заголовок...",
+        "participants": "{'@'} Участники",
+        "location": "Место встречи",
+        "save": "Сохранить",
+        "successCreate": "Добавлено в ленту",
+        "taskSubtype": "Тип задачи",
+        "subtypes": {
+          "task": "Задача",
+          "call": "Звонок",
+          "meeting": "Встреча",
+          "follow_up": "Follow-up"
+        }
+      },
+      "actions": {
+        "create": "Создать сделку"
+      }
+    },
+    "move": {
+      "dialog": {
+        "title": "Сменить стадию",
+        "currentStage": "Текущая стадия",
+        "newStage": "Новая стадия",
+        "lostReason": "Причина отказа",
+        "lostComment": "Комментарий (необязательно)",
+        "wonGateHint": "Для перехода в эту стадию требуется активный договор или оплата.",
+        "submit": "Переместить",
+        "cancel": "Отмена",
+        "successToast": "Стадия изменена на «{stage}»",
+        "wonGateWarningToast": "Переход выполнен. Рекомендуется прикрепить договор.",
+        "errors": {
+          "lostReasonRequired": "Укажите причину отказа",
+          "forbidden": "Нет прав для этого действия"
+        }
+      }
+    },
+    "pipeline": {
+      "stages": {
+        "lost": "Сделка проиграна",
+        "new": "Новые лиды",
+        "qualify": "Квалификация",
+        "schedule_meeting": "Назначить встречу",
+        "meeting": "Встреча",
+        "cold": "Холодные (заморозка)",
+        "warm": "Тёплые",
+        "hot": "Горячие",
+        "won": "Успешная сделка",
+        "await_payment": "Ожидаем оплату",
+        "paid": "Оплачено"
+      }
+    },
+    "pipelineEditor": {
+      "pageTitle": "Настройки воронки",
+      "section": {
+        "pipelines": "Воронки продаж",
+        "stages": "Этапы воронки"
+      },
+      "createPipeline": "Создать воронку",
+      "createPipelineDialog": {
+        "title": "Новая воронка",
+        "nameLabel": "Название",
+        "namePlaceholder": "Например, «Продажи»",
+        "autoSeedInfo": "После создания воронка будет содержать три системных этапа: «Новые лиды», «Успешная сделка» и «Сделка проиграна». Вы сможете добавить собственные этапы в редакторе.",
+        "save": "Создать",
+        "cancel": "Отмена",
+        "successToast": "Воронка «{name}» создана",
+        "errorDuplicate": "Воронка с таким названием уже существует"
+      },
+      "renamePipeline": {
+        "successToast": "Воронка переименована",
+        "errorToast": "Ошибка переименования"
+      },
+      "deletePipeline": {
+        "confirmHeader": "Удалить воронку?",
+        "confirmBody": "Воронка будет удалена вместе со всеми этапами. Убедитесь, что в ней нет сделок.",
+        "confirmAccept": "Удалить",
+        "confirmReject": "Отмена",
+        "successToast": "Воронка удалена",
+        "errorWithDeals": "В воронке есть сделки. Перенесите их перед удалением.",
+        "errorLastSales": "Нельзя удалить единственную воронку продаж."
+      },
+      "activeBadge": "активная",
+      "selectPlaceholder": "Выберите воронку"
+    },
+    "stageEditor": {
+      "addStage": "Добавить этап",
+      "createDialog": {
+        "title": "Новый этап",
+        "save": "Создать",
+        "cancel": "Отмена",
+        "successToast": "Этап создан",
+        "errorDuplicateCode": "Такой код уже используется в этой воронке"
+      },
+      "editDrawer": {
+        "title": "Редактировать этап",
+        "save": "Сохранить",
+        "cancel": "Отмена",
+        "successToast": "Этап сохранён",
+        "errorToast": "Ошибка сохранения этапа"
+      },
+      "fields": {
+        "name": "Название",
+        "code": "Код",
+        "codeReadonlyHint": "Код этапа нельзя изменить после создания",
+        "color": "Цвет",
+        "hiddenByDefault": "Скрыть на доске",
+        "wonGate": "Гейт победы",
+        "wonGateHint": "Перед переходом на этот этап рекомендуется прикрепить договор",
+        "slaHours": "SLA (часов)",
+        "slaPlaceholder": "Нет",
+        "stageFeatures": "Возможности этапа",
+        "taskTypes": "Типы задач",
+        "taskTypesHint": "Пусто — все типы разрешены",
+        "requiredFieldsDeal": "Обязательные поля сделки",
+        "requiredFieldsCompany": "Обязательные поля компании",
+        "parentStageId": "Подстатус для",
+        "parentStagePlaceholder": "— Нет (самостоятельный)"
+      },
+      "stageFeatureOptions": {
+        "send_presentation": "Отправить презентацию",
+        "meeting_report": "Отчёт о встрече",
+        "generate_document": "Сгенерировать документ"
+      },
+      "activityTypeOptions": {
+        "call": "Звонок",
+        "meeting": "Встреча",
+        "task": "Задача",
+        "note": "Заметка"
+      },
+      "dealFieldOptions": {
+        "title": "Название",
+        "currency": "Валюта",
+        "contract_id": "Договор",
+        "expected_close_date": "Ожид. дата закрытия",
+        "expected_sign_date": "Ожид. дата подписания",
+        "expected_payment_date": "Ожид. дата оплаты"
+      },
+      "companyFieldOptions": {
+        "name": "Название",
+        "inn": "ИНН",
+        "phone": "Телефон",
+        "email": "Email"
+      },
+      "colorPicker": {
+        "none": "Без цвета"
+      },
+      "systemStageBadge": "системный",
+      "substageBadge": "подстатус",
+      "deleteStage": {
+        "confirmHeader": "Удалить этап?",
+        "confirmBody": "Этот этап будет удалён. На нём не должно быть сделок или подстатусов.",
+        "confirmAccept": "Удалить",
+        "confirmReject": "Отмена",
+        "successToast": "Этап удалён",
+        "errorSystem": "Системный этап нельзя удалить.",
+        "errorWithDeals": "На этапе есть сделки. Перенесите их перед удалением.",
+        "errorWithSubstages": "У этапа есть подстатусы. Удалите их сначала.",
+        "systemTooltip": "Системный этап нельзя удалить"
+      },
+      "reorder": {
+        "errorToast": "Ошибка сохранения порядка. Порядок возвращён."
+      },
+      "emptyStages": {
+        "title": "В воронке нет этапов",
+        "subtitle": "Создайте первый этап"
+      }
+    }
+  },
+  "managerCabinet": {
+    "title": "Кабинет менеджера",
+    "profile": {
+      "unavailable": "Профиль недоступен",
+      "subordinates": "{n} подчинённых",
+      "noSubordinates": "Нет подчинённых",
+      "noManager": "Нет руководителя",
+      "noDepartment": "Отдел не указан"
+    },
+    "stepper": {
+      "label": "Период"
+    },
+    "kpi": {
+      "scorePct": "МК%",
+      "personalSales": "Личные продажи",
+      "ftm": "FTM-встречи",
+      "rank": "Ранг в команде",
+      "plan": "план",
+      "noPlan": "Нет плана",
+      "excellent": "Отлично",
+      "good": "Хорошо",
+      "needsWork": "Нужно улучшить",
+      "ftmLabel": "зачтённых встреч",
+      "unavailable": "Данные KPI недоступны",
+      "incomeSrcNote": "Выручка по закрытым сделкам"
+    },
+    "team": {
+      "title": "Сравнение с командой",
+      "name": "Сотрудник",
+      "scorePct": "МК%",
+      "status": "Статус",
+      "average": "Среднее по команде",
+      "of": "из",
+      "avgLabel": "Среднее",
+      "alone": "Вы единственный в отделе"
+    },
+    "feed": {
+      "title": "Активности за период",
+      "filterAll": "Все",
+      "filterCall": "Звонок",
+      "filterMeeting": "Встреча",
+      "filterTask": "Задача",
+      "filterNote": "Заметка",
+      "ftmOnly": "Только FTM",
+      "date": "Дата",
+      "target": "Объект",
+      "noActivity": "Нет активностей за выбранный период",
+      "resetFilters": "Сбросить фильтры"
+    },
+    "multiCurrencyWarning": "Часть сделок в других валютах не включена в суммы. Добавьте курсы валют в Каталог."
+  },
+  "documents": {
+    "list": {
+      "title": "Документы",
+      "create": "Создать документ",
+      "filters": {
+        "status": "Статус",
+        "kind": "Тип",
+        "product": "Продукт",
+        "country": "Страна",
+        "author": "Автор",
+        "company": "Компания",
+        "search": "Поиск...",
+        "archived": "Показать архивные"
+      },
+      "columns": {
+        "date": "Дата",
+        "company": "Компания"
+      },
+      "empty": "Нет документов",
+      "emptyFiltered": "Ничего не найдено"
+    },
+    "statuses": {
+      "draft": "Черновик",
+      "submitted": "Отправлен",
+      "in_review": "На согласовании",
+      "needs_rework": "На доработке",
+      "approved": "Согласован",
+      "rejected": "Отклонён",
+      "signed": "Подписан",
+      "uploaded": "В Drive",
+      "archived": "Архив"
+    },
+    "kinds": {
+      "contract": "Договор",
+      "invoice": "Счёт",
+      "act": "Акт",
+      "reconciliation": "Сверка",
+      "yaml": "YAML",
+      "docx": "DOCX"
+    },
+    "create": {
+      "title": "Создать документ",
+      "kind": "Тип документа",
+      "company": "Компания",
+      "product": "Продукт",
+      "country": "Страна",
+      "template": "Шаблон",
+      "title_field": "Заголовок (необязательно)",
+      "noTemplates": "Нет шаблонов для данной конфигурации",
+      "submit": "Создать",
+      "cancel": "Отмена"
+    },
+    "card": {
+      "back": "Назад",
+      "tabs": {
+        "context": "Контекст",
+        "items": "Позиции",
+        "revisions": "Ревизии",
+        "remarks": "Ремарки",
+        "attachments": "Вложения"
+      },
+      "actions": {
+        "generate": "Генерировать",
+        "generating": "Генерация...",
+        "downloadDocx": "Скачать .docx",
+        "downloadPdf": "Скачать .pdf",
+        "submit": "На согласование",
+        "resubmit": "Отправить снова",
+        "sign": "Подписать",
+        "unsign": "Отозвать подпись",
+        "archive": "В архив",
+        "unarchive": "Из архива",
+        "duplicate": "Дублировать",
+        "delete": "Удалить"
+      },
+      "autosave": {
+        "saved": "✓ Сохранено",
+        "saving": "Сохранение...",
+        "error": "Ошибка сохранения"
+      },
+      "generateWarning": {
+        "summary": "Шаблон не проверен",
+        "detail": "Документ создан, но AI-проверка шаблона не была пройдена. Рекомендуем перепроверить шаблон."
+      },
+      "wonGate": {
+        "summary": "Нужен согласованный договор",
+        "detail": "Для завершения сделки необходим договор в статусе Согласован, Подписан или В Drive."
+      },
+      "meta": {
+        "created": "Создан",
+        "author": "Автор",
+        "template": "Шаблон",
+        "amount": "Сумма",
+        "discount": "Скидка"
+      },
+      "notFound": "Документ не найден",
+      "backToList": "К списку документов"
+    },
+    "approval": {
+      "title": "Согласование",
+      "stage": "Этап {current} из {total}",
+      "attempt": "Попытка #{n}",
+      "noApproval": "Ещё не отправлен на согласование",
+      "approved": "Согласован",
+      "rejected": "Отклонён",
+      "needs_rework": "На доработке",
+      "pending": "Ожидает",
+      "decide": {
+        "approve": "Согласовать",
+        "reject": "Отклонить",
+        "rework": "Вернуть",
+        "title": "Решение по документу",
+        "commentRequired": "Комментарий обязателен",
+        "commentPlaceholder": "Причина или комментарий..."
+      },
+      "rejectedAlert": "Договор отклонён",
+      "reworkAlert": "Возвращён на доработку",
+      "resubmitBtn": "Я исправил, отправить снова"
+    },
+    "attachments": {
+      "upload": "Загрузить вложение",
+      "kinds": {
+        "signed_scan": "Подписанный скан",
+        "payment": "Документ об оплате",
+        "other": "Другое"
+      },
+      "empty": "Нет вложений",
+      "noScan": "Для подписания нужен скан"
+    },
+    "remarks": {
+      "resolve": "Отметить как решённую",
+      "resolved": "Решена",
+      "open": "Открыта",
+      "empty": "Нет ремарок",
+      "filterAttempt": "Попытка"
+    },
+    "revisions": {
+      "empty": "Нет ревизий",
+      "version": "Версия",
+      "attempt": "Попытка",
+      "note": "Заметка",
+      "author": "Автор"
+    },
+    "items": {
+      "add": "Добавить строку",
+      "product": "Продукт",
+      "qty": "Кол-во мес.",
+      "price": "Цена/мес.",
+      "total": "Итого",
+      "currency": "Валюта",
+      "subtotal": "Субитог",
+      "discount": "Скидка",
+      "toPay": "К оплате",
+      "empty": "Нет позиций"
+    }
+  },
+  "templates": {
+    "list": {
+      "title": "Шаблоны документов",
+      "create": "Создать шаблон",
+      "empty": "Нет шаблонов"
+    },
+    "card": {
+      "back": "Назад",
+      "edit": "Редактировать",
+      "notFound": "Шаблон не найден",
+      "upload": {
+        "title": "Загрузить версию .docx",
+        "btn": "Загрузить .docx",
+        "replace": "Заменить .docx",
+        "limit": "Максимум 10 МБ",
+        "current": "Текущая версия: {v}"
+      },
+      "aiCheck": {
+        "title": "AI-проверка",
+        "statuses": {
+          "pending": "Ожидает проверки",
+          "checking": "Проверяется...",
+          "checked": "Проверен",
+          "failed": "Ошибка проверки"
+        },
+        "pdfOk": "PDF OK",
+        "pdfFail": "PDF: ошибка",
+        "pdfUnknown": "PDF не проверен",
+        "noRemarks": "Замечаний нет",
+        "recheck": "Перепроверить",
+        "override": "Сохранить вопреки замечаниям",
+        "overrideConfirm": "Вы уверены? AI-замечания будут сохранены, но не устранены.",
+        "remarkTypes": {
+          "error": "Ошибка",
+          "warning": "Замечание"
+        }
+      },
+      "versions": {
+        "title": "История версий",
+        "empty": "Нет версий"
+      },
+      "meta": {
+        "title": "Мета-информация",
+        "code": "Код",
+        "products": "Продукты",
+        "countries": "Страны",
+        "categories": "Категории"
+      }
+    }
+  },
+  "templateVariables": {
+    "title": "Каталог переменных",
+    "create": "Добавить переменную",
+    "key": "Ключ (метка)",
+    "type": "Тип",
+    "group": "Группа",
+    "products": "Продукты",
+    "required": "Обязательная",
+    "active": "Активна",
+    "copied": "Скопировано",
+    "empty": "Нет переменных",
+    "types": {
+      "text": "Текст",
+      "textarea": "Текст (много)",
+      "number": "Число",
+      "date": "Дата",
+      "select": "Список",
+      "checkbox": "Флаг"
+    },
+    "dialog": {
+      "createTitle": "Новая переменная",
+      "editTitle": "Редактировать переменную",
+      "key": "Ключ",
+      "label": "Название",
+      "helpText": "Подсказка",
+      "varType": "Тип",
+      "options": "Варианты значений",
+      "defaultValue": "Значение по умолчанию",
+      "required": "Обязательная",
+      "group": "Группа",
+      "productCodes": "Продукты",
+      "countryCodes": "Страны",
+      "sortOrder": "Порядок сортировки",
+      "isActive": "Активна",
+      "addOption": "Добавить вариант"
+    }
+  },
+  "approvalRoutes": {
+    "title": "Маршруты согласования",
+    "create": "Создать маршрут",
+    "empty": "Нет маршрутов",
+    "columns": {
+      "name": "Название",
+      "kind": "Тип документа",
+      "template": "Шаблон",
+      "isDefault": "По умолчанию",
+      "isActive": "Активен"
+    },
+    "drawer": {
+      "title": "Маршрут согласования",
+      "name": "Название",
+      "kind": "Тип документа",
+      "template": "Шаблон (опционально)",
+      "isDefault": "Дефолтный маршрут",
+      "defaultWarning": "Другой дефолтный маршрут для этого типа будет отключён",
+      "stages": "Этапы",
+      "addStage": "Добавить этап",
+      "stage": {
+        "name": "Название этапа",
+        "users": "Согласанты",
+        "minRequired": "Минимум голосов"
+      },
+      "save": "Сохранить",
+      "cancel": "Отмена"
+    }
+  },
+  "myApprovals": {
+    "title": "Мои согласования",
+    "tabs": {
+      "pending": "Ожидают решения",
+      "history": "Мои решения"
+    },
+    "columns": {
+      "document": "Документ",
+      "kind": "Тип",
+      "company": "Компания",
+      "stage": "Этап",
+      "date": "Дата",
+      "decision": "Решение",
+      "comment": "Комментарий"
+    },
+    "empty": {
+      "pending": "Нет ожидающих согласований",
+      "history": "Нет принятых решений"
+    }
+  },
+  "messageTemplates": {
+    "title": "Шаблоны рассылок",
+    "create": "Создать шаблон",
+    "empty": "Нет шаблонов",
+    "columns": {
+      "name": "Название",
+      "bindings": "Биндингов",
+      "isActive": "Активен"
+    },
+    "drawer": {
+      "title": "Шаблон рассылки",
+      "name": "Название",
+      "subject": "Тема",
+      "body": "Текст",
+      "isActive": "Активен",
+      "preview": "Превью",
+      "renderBtn": "Рендерить",
+      "unresolvedKeys": "Нерешённые метки",
+      "bindings": "Биндинги",
+      "addBinding": "Добавить биндинг",
+      "bindingChannel": "Канал",
+      "bindingPipeline": "Воронка",
+      "bindingStage": "Этап воронки",
+      "bindingActivityType": "Тип активности",
+      "bindingSlot": "Слот автоматизации",
+      "catalogHint": "Доступные метки — в Каталоге переменных",
+      "showCatalog": "Показать каталог меток"
+    }
+  },
+  "onboarding": {
+    "courses": {
+      "title": "Курсы онбординга",
+      "create": "Создать курс",
+      "statuses": {
+        "draft": "Черновик",
+        "published": "Опубликован"
+      },
+      "policy": {
+        "informational": "Информационный",
+        "soft_gate": "Обязательный"
+      },
+      "columns": {
+        "title": "Название",
+        "modules": "Модулей",
+        "policy": "Политика",
+        "passingScore": "Балл",
+        "deadline": "Срок",
+        "status": "Статус"
+      },
+      "createDialog": {
+        "title": "Создать курс",
+        "name": "Название",
+        "namePlaceholder": "Название курса...",
+        "description": "Описание",
+        "policyLabel": "Политика завершения",
+        "passingScore": "Проходной балл (%)",
+        "deadlineDays": "Срок прохождения (дн.)",
+        "coverUrl": "URL обложки (опц.)",
+        "submit": "Создать",
+        "cancel": "Отмена"
+      },
+      "publish": "Опубликовать",
+      "unpublish": "Снять с публикации",
+      "unpublishConfirm": "Снять курс с публикации? Студенты не смогут его проходить.",
+      "deleteConfirm": "Удалить курс? Это действие необратимо.",
+      "empty": "Курсов пока нет",
+      "emptyCreate": "Создайте первый курс для онбординга команды",
+      "emptyFiltered": "Ничего не найдено",
+      "filter": {
+        "status": "Статус",
+        "policy": "Политика",
+        "search": "Поиск...",
+        "reset": "Сбросить",
+        "all": "Все"
+      }
+    },
+    "builder": {
+      "back": "Курсы",
+      "save": "Сохранить",
+      "settingsTitle": "Настройки курса",
+      "structureTitle": "Структура курса",
+      "addModule": "+ Добавить модуль",
+      "addLesson": "+ Добавить урок",
+      "noModules": "Модулей нет — добавьте первый",
+      "noLessons": "Уроков нет — добавьте первый",
+      "lessonKinds": {
+        "text": "Текст",
+        "video": "Видео",
+        "pdf": "PDF",
+        "quiz": "Квиз"
+      },
+      "module": {
+        "editTitle": "Модуль",
+        "name": "Название",
+        "deleteConfirm": "Удалить модуль и все его уроки?"
+      },
+      "lesson": {
+        "editTitle": "Урок",
+        "name": "Название",
+        "kind": "Тип",
+        "duration": "Длительность (мин)",
+        "content": "Содержимое",
+        "contentHint": "Markdown-синтаксис. Поддерживаются callout-блоки: > [!info], > [!warning]",
+        "videoUrl": "URL видео",
+        "videoHint": "Поддерживается YouTube, Loom, Vimeo",
+        "pdfUpload": "Загрузить файл",
+        "pdfLink": "Ссылка на PDF",
+        "quizSelect": "Выбрать квиз",
+        "quizCreate": "+ Создать новый квиз",
+        "publish": "Опубликовать урок",
+        "unpublish": "Снять с публикации",
+        "published": "Урок опубликован",
+        "unpublished": "Урок снят с публикации",
+        "deleteConfirm": "Удалить урок?"
+      },
+      "quiz": {
+        "editTitle": "Редактор квиза",
+        "name": "Название",
+        "description": "Описание",
+        "passingScore": "Проходной балл (%)",
+        "timeLimit": "Лимит времени (мин, 0 = без лимита)",
+        "addQuestion": "+ Добавить вопрос",
+        "generateAi": "Сгенерировать из урока",
+        "generating": "Генерируем...",
+        "generatingHint": "AI создаёт черновые вопросы — это займёт несколько секунд",
+        "draftQuestions": "Предложенные AI вопросы (черновики)",
+        "draftHint": "Проверьте и добавьте нужные",
+        "draftAdd": "Добавить в квиз",
+        "draftSkip": "Пропустить",
+        "question": {
+          "kind": "Тип",
+          "kinds": {
+            "single": "Один ответ",
+            "multiple": "Несколько ответов"
+          },
+          "text": "Текст вопроса",
+          "explanation": "Пояснение",
+          "points": "Баллов",
+          "addOption": "+ Добавить вариант",
+          "optionCorrect": "Верный",
+          "deleteConfirm": "Удалить вопрос?"
+        },
+        "validation": {
+          "minQuestion": "Добавьте хотя бы один вопрос",
+          "minOptions": "У каждого вопроса должно быть хотя бы 2 варианта",
+          "noCorrect": "Укажите правильный ответ для каждого вопроса"
+        }
+      },
+      "publishCard": {
+        "title": "Публикация",
+        "status": "Статус"
+      },
+      "assignmentsCard": {
+        "title": "Назначения",
+        "count": "{n} сотрудников",
+        "assign": "+ Назначить сотрудников",
+        "empty": "Никому не назначен"
+      },
+      "metaCard": {
+        "created": "Создан",
+        "lessonsCount": "Уроков",
+        "passingScore": "Минимальный балл"
+      }
+    },
+    "assignments": {
+      "title": "Назначения",
+      "assign": "Назначить курс",
+      "columns": {
+        "employee": "Сотрудник",
+        "course": "Курс",
+        "status": "Статус",
+        "progress": "Прогресс",
+        "deadline": "Дедлайн"
+      },
+      "statuses": {
+        "pending": "Не начат",
+        "in_progress": "В процессе",
+        "completed": "Завершён",
+        "overdue": "Просрочен",
+        "archived": "Архив"
+      },
+      "editDeadline": "Изменить дедлайн",
+      "archive": "Архивировать",
+      "archiveConfirm": "Архивировать назначение?",
+      "delete": "Удалить",
+      "deleteConfirm": "Удалить назначение? (только если нет прогресса)",
+      "drawer": {
+        "title": "Назначить курс",
+        "employees": "Сотрудники",
+        "employeesPlaceholder": "Выберите сотрудников...",
+        "deadline": "Дедлайн",
+        "deadlineHint": "Если не указан, используется срок курса ({n} дн.)",
+        "submit": "Назначить",
+        "cancel": "Отмена",
+        "successSummary": "Назначено: {assigned}",
+        "skippedWarning": "{skipped} сотрудников уже назначены"
+      },
+      "filter": {
+        "course": "Курс",
+        "employee": "Сотрудник",
+        "status": "Статус",
+        "reset": "Сбросить",
+        "all": "Все"
+      },
+      "empty": "Назначений нет",
+      "emptyFiltered": "Ничего не найдено",
+      "newDeadline": "Новый дедлайн"
+    },
+    "hrProgress": {
+      "title": "Прогресс обучения",
+      "kpi": {
+        "total": "Всего назначений",
+        "completed": "Завершено",
+        "inProgress": "В процессе",
+        "overdue": "Просрочено"
+      },
+      "charts": {
+        "byStatus": "Распределение по статусам",
+        "topCourses": "Топ-10 курсов по завершаемости"
+      },
+      "tableTitle": "Матрица прогресса",
+      "columns": {
+        "employee": "Сотрудник",
+        "course": "Курс",
+        "progress": "Прогресс",
+        "status": "Статус",
+        "deadline": "Дедлайн",
+        "avgScore": "Средний балл"
+      },
+      "filter": {
+        "course": "Курс",
+        "employee": "Сотрудник",
+        "status": "Статус",
+        "reset": "Сбросить",
+        "all": "Все"
+      },
+      "empty": "Назначений пока нет"
+    },
+    "myCourses": {
+      "title": "Моё обучение",
+      "tabs": {
+        "active": "Активные",
+        "completed": "Завершённые",
+        "overdue": "Просроченные"
+      },
+      "continue": "Продолжить",
+      "viewCertificate": "Посмотреть сертификат",
+      "deadline": "Дедлайн",
+      "overdueFrom": "Просрочен с",
+      "progress": "{n}% пройдено",
+      "empty": "Вам пока не назначены курсы",
+      "emptyTab": "В этой категории нет курсов"
+    },
+    "coursePage": {
+      "back": "Мои курсы",
+      "prev": "Предыдущий урок",
+      "next": "Следующий урок",
+      "completeBtn": "Завершить курс",
+      "markDone": "Отметить как пройденный",
+      "markViewed": "Отметить как просмотренный",
+      "lessonDone": "Урок пройден!",
+      "openPdf": "Открыть PDF",
+      "downloadPdf": "Скачать PDF",
+      "unsupportedVideo": "Неподдерживаемый формат видео",
+      "quiz": {
+        "title": "Квиз",
+        "passingScore": "Проходной балл",
+        "attempt": "Попытка #{n}",
+        "start": "Начать квиз",
+        "question": "Вопрос {current} из {total}",
+        "submit": "Отправить ответы",
+        "timer": "Осталось",
+        "result": {
+          "passed": "Поздравляем! Тест пройден — {score} из 100 баллов",
+          "failed": "Тест не пройден — {score} из 100 баллов. Нужно не менее {min}%",
+          "review": "Разбор ответов",
+          "correct": "Верно",
+          "incorrect": "Неверно",
+          "answer": "Правильный ответ",
+          "explanation": "Пояснение",
+          "retry": "Пройти снова",
+          "nextLesson": "Следующий урок"
+        }
+      },
+      "complete": {
+        "title": "Курс завершён!",
+        "congrats": "Поздравляем! Вы успешно завершили курс «{title}».",
+        "certPending": "Сертификат готовится...",
+        "certReady": "Сертификат выдан!",
+        "downloadCert": "Скачать сертификат",
+        "backToCourses": "К моим курсам"
+      },
+      "aiTutor": {
+        "title": "AI-тьютор",
+        "btnLabel": "Спросить AI",
+        "placeholder": "Задайте вопрос по уроку...",
+        "send": "Отправить",
+        "clearHistory": "Очистить историю",
+        "clearConfirm": "Очистить историю чата?",
+        "historyCleared": "История очищена",
+        "emptyHistory": "История пуста",
+        "unavailable": "AI временно недоступен",
+        "unavailableDetail": "Попробуйте через несколько секунд.",
+        "adminViewOnly": "Вы просматриваете чужое назначение"
+      }
+    },
+    "certificates": {
+      "title": "Мои сертификаты",
+      "number": "Сертификат",
+      "issuedAt": "Выдан",
+      "download": "Скачать PDF",
+      "empty": "Сертификатов пока нет",
+      "emptyHint": "Завершите курс, чтобы получить сертификат",
+      "goToCourses": "Перейти к обучению"
+    }
+  },
+  "automation": {
+    "wizard": {
+      "titleNew": "Новая автоматизация",
+      "titleEdit": "Редактировать автоматизацию",
+      "step1": {
+        "label": "Действие",
+        "searchPlaceholder": "Поиск действий...",
+        "noResults": "Действий не найдено"
+      },
+      "step2": {
+        "label": "Настройка"
+      },
+      "step3": {
+        "label": "Триггер"
+      },
+      "next": "Далее",
+      "back": "Назад",
+      "create": "Создать",
+      "save": "Сохранить"
+    },
+    "fields": {
+      "name": "Название автоматизации",
+      "namePlaceholder": "Например: Уведомить менеджера при входе...",
+      "isActive": "Автоматизация активна",
+      "recipient": "Получатель",
+      "recipientOwner": "Владелец сделки",
+      "recipientUser": "Конкретный пользователь",
+      "recipientChatId": "Чат-ID (вручную)",
+      "tgChatId": "Telegram Chat ID",
+      "searchUser": "Найти пользователя...",
+      "message": "Текст сообщения",
+      "messagePlaceholder": "Сделка {target_title}...",
+      "placeholders": "Доступные плейсхолдеры",
+      "taskTitle": "Заголовок задачи",
+      "taskTitlePlaceholder": "Позвонить клиенту {target_title}",
+      "taskDesc": "Описание задачи",
+      "dueDays": "Срок (дней от срабатывания)",
+      "dueDaysPlaceholder": "0 = сегодня, 1 = завтра",
+      "dueDaysHint": "0 = сегодня, 1 = завтра, пусто = без срока",
+      "field": "Поле",
+      "value": "Значение",
+      "setFieldNote": "Доступные поля зависят от типа объекта воронки",
+      "template": "Шаблон документа",
+      "searchTemplate": "Найти шаблон...",
+      "attachTo": "Прикрепить к",
+      "attachToDeal": "Сделке",
+      "attachToCompany": "Компании",
+      "generateDocNote": "В MVP: действие записывает событие в timeline сделки. Полная генерация PDF — после интеграции с Документами.",
+      "rule": "Правило распределения",
+      "pool": "Pool пользователей",
+      "poolHint": "Если pool пустой — используется весь отдел продаж",
+      "targetStage": "Целевой этап",
+      "noStages": "Нет доступных стадий",
+      "changeStageNote": "Текущая стадия исключена. Системные стадии «Выиграно»/«Проиграно» помечены.",
+      "stageWon": "Выиграно",
+      "stageLost": "Проиграно",
+      "webhookUrl": "URL",
+      "webhookUrlNote": "Приватные адреса (127.0.0.1, 192.168.x.x) заблокированы",
+      "webhookSecret": "Secret (HMAC-подпись, опционально)",
+      "webhookSecretPlaceholder": "Оставьте пустым, если не нужно",
+      "webhookSecretNote": "Подписывает payload как X-Signature-256",
+      "webhookAdminNote": "Действие доступно только администраторам",
+      "emailTo": "Получатель",
+      "emailManual": "Email вручную",
+      "emailAddress": "Email",
+      "emailAddressPlaceholder": "example{'@'}company.com",
+      "emailSubject": "Тема письма",
+      "emailSubjectPlaceholder": "Ваша сделка {target_title}...",
+      "emailBody": "Текст письма",
+      "emailMvpNote": "В MVP: письмо ставится в очередь. Фактическая отправка — после настройки SMTP в Интеграциях.",
+      "dealField": {
+        "notes": "Заметки",
+        "title": "Название"
+      }
+    },
+    "trigger": {
+      "label": "Триггер — когда срабатывает?",
+      "on_enter_stage": "При входе на этап",
+      "on_enter_stage_desc": "Срабатывает сразу, когда сделка попадает на эту стадию.",
+      "idle_in_stage_days": "Висит на этапе N дней",
+      "idle_desc": "Cron-проверка каждый час.",
+      "date_field_approaching": "Дата приближается",
+      "date_desc": "Cron-проверка каждый час. Срабатывает за N дней до указанного поля даты.",
+      "on_create": "При создании сущности",
+      "on_create_desc": "Срабатывает при создании нового объекта (сделки/лида).",
+      "cronBadge": "Cron",
+      "instantBadge": "Мгновенно",
+      "idleDays": "Количество дней",
+      "dateField": "Поле даты",
+      "daysBeforeDate": "За сколько дней",
+      "targetType": "Тип объекта"
+    },
+    "action": {
+      "tg_notify": "Уведомление в Telegram",
+      "create_task": "Создать задачу",
+      "set_field": "Изменить поле",
+      "generate_document": "Сгенерировать документ",
+      "change_owner": "Сменить ответственного",
+      "change_stage": "Сменить этап",
+      "webhook": "Webhook",
+      "email": "Email"
+    },
+    "actionDesc": {
+      "tg_notify": "Отправить сообщение в Telegram владельцу или конкретному пользователю",
+      "create_task": "Создаёт Activity типа «task» с дедлайном",
+      "set_field": "Обновить поле у сделки (whitelist полей)",
+      "generate_document": "Создать документ по шаблону и прикрепить к сделке",
+      "change_owner": "Переназначить сделку по правилу (round-robin, продукт, страна)",
+      "change_stage": "Перевести сделку на другой этап воронки",
+      "webhook": "Отправить HTTP-запрос на внешний URL",
+      "email": "Отправить письмо на email"
+    },
+    "actionBadge": {
+      "adminOnly": "Только Admin",
+      "requiresSmtp": "Требует SMTP"
+    },
+    "ownerRule": {
+      "round_robin": "По очереди (round-robin)",
+      "by_product": "По продукту",
+      "by_country": "По стране",
+      "by_department": "По отделу"
+    },
+    "dateField": {
+      "expected_close_date": "Дата закрытия",
+      "expected_sign_date": "Дата подписания",
+      "expected_payment_date": "Дата оплаты"
+    },
+    "list": {
+      "toggle": "Автоматизации",
+      "addButton": "Автоматизация",
+      "addFirstButton": "+ Первая автоматизация",
+      "empty": "Нет автоматизаций",
+      "emptyHint": "Добавьте первую автоматизацию для этой воронки",
+      "panelTitle": "Все автоматизации воронки",
+      "filterTrigger": "Все триггеры",
+      "filterAction": "Все действия",
+      "col": {
+        "name": "Название",
+        "stage": "Стадия",
+        "trigger": "Триггер",
+        "action": "Действие",
+        "active": "Активна"
+      }
+    },
+    "toast": {
+      "created": "Автоматизация создана",
+      "saved": "Автоматизация сохранена",
+      "deleted": "Автоматизация удалена",
+      "activated": "Автоматизация активирована",
+      "deactivated": "Автоматизация приостановлена",
+      "deleteConfirm": "Удалить автоматизацию?",
+      "deleteBody": "Все будущие срабатывания будут остановлены. История сохранится."
+    },
+    "runs": {
+      "pageTitle": "Журнал автоматизаций",
+      "empty": "Ещё не было срабатываний",
+      "count": "Строк: {n}",
+      "loadMore": "Загрузить ещё",
+      "applyFilter": "Применить",
+      "retrySuccess": "Повтор запущен",
+      "retry": "Повторить",
+      "targetDeal": "Сделка",
+      "filter": {
+        "automation": "Все автоматизации",
+        "status": "Любой статус",
+        "action": "Любое действие",
+        "period": "Период"
+      },
+      "col": {
+        "automation": "Автоматизация",
+        "action": "Действие",
+        "target": "Объект",
+        "status": "Статус",
+        "startedAt": "Время",
+        "error": "Ошибка"
+      },
+      "status": {
+        "success": "Успех",
+        "failed": "Ошибка",
+        "skipped": "Пропущено",
+        "pending": "В работе",
+        "queued": "В очереди"
+      }
+    },
+    "dryrun": {
+      "button": "Dry-run",
+      "drawerTitle": "Предпросмотр",
+      "matchedCount": "Затронуто записей: {n}",
+      "actionsLabel": "Планируемые действия:",
+      "limitLabel": "Максимум записей",
+      "execute": "Выполнить сейчас",
+      "confirmHeader": "Подтвердить выполнение",
+      "confirmBody": "Выполнить действие для {n} записей?",
+      "noMatches": "Нет совпадающих записей",
+      "resultToast": "Выполнено: {executed} записей, пропущено: {skipped}",
+      "emptyHint": "Нажмите «Dry-run» для предпросмотра",
+      "analyzing": "Анализируем...",
+      "targetDeal": "Сделка для проверки",
+      "targetDealPlaceholder": "Выберите сделку...",
+      "dealSearch": "Поиск сделки...",
+      "targetDealHint": "Для инлайн-триггеров (on_enter_stage, on_create) необходимо выбрать конкретную сделку"
+    },
+    "errors": {
+      "nameRequired": "Введите название автоматизации",
+      "triggerRequired": "Выберите триггер",
+      "idleDaysRequired": "Укажите количество дней (не менее 1)",
+      "dateFieldRequired": "Выберите поле даты",
+      "dateDaysRequired": "Укажите количество дней (не менее 0)",
+      "taskTitleRequired": "Введите название задачи",
+      "messageRequired": "Введите текст сообщения",
+      "templateRequired": "Выберите шаблон договора",
+      "webhookUrlRequired": "Введите URL вебхука",
+      "stageRequired": "Выберите стадию назначения",
+      "fieldRequired": "Выберите поле",
+      "fieldValueRequired": "Введите значение поля"
+    },
+    "canvas": {
+      "modeForm": "Форма",
+      "modeCanvas": "Полотно",
+      "autoLayout": "Авто-раскладка",
+      "autoLayoutHint": "Позиция на полотне косметическая. Порядок стадий — в режиме Форма.",
+      "fitView": "По экрану",
+      "backToForm": "К форме",
+      "paletteTitle": "Действия",
+      "paletteHint": "Перетащите на стадию",
+      "paletteCollapse": "Свернуть палитру",
+      "paletteExpand": "Развернуть палитру",
+      "toolTelegram": "Telegram",
+      "toolTask": "Задача",
+      "toolField": "Поле",
+      "toolDocument": "Документ",
+      "toolOwner": "Владелец",
+      "toolStage": "Стадия",
+      "toolWebhook": "Webhook",
+      "toolEmail": "Email",
+      "anchorLabel": "Вход в воронку",
+      "anchorAutoCount": "on_create: {n}",
+      "stageAutos": "Автоматизаций: {n}",
+      "addAutomation": "+ Автоматизация",
+      "autoActive": "активна",
+      "autoInactive": "неактивна",
+      "emptyNoStages": "Сначала добавьте стадии в режиме «Форма»",
+      "emptyNoAutos": "Перетащите действие из панели слева или нажмите + на стадии",
+      "goToForm": "Перейти к Форме",
+      "noEditStageHere": "Редактируйте стадии в режиме Формы",
+      "layoutSaveError": "Не удалось сохранить раскладку",
+      "layoutSaving": "Сохранение...",
+      "desktopOnly": "Полотно доступно только на широких экранах. Используйте режим Формы.",
+      "deleteConfirmHeader": "Удалить автоматизацию?",
+      "deleteConfirmBody": "Узел и связь будут удалены. История срабатываний сохранится.",
+      "triggerEdge": {
+        "on_enter_stage": "При входе",
+        "idle_in_stage_days": "Висит {n} дн.",
+        "date_field_approaching": "Дата {n} дн.",
+        "on_create": "При создании"
+      }
+    }
+  },
+  "account": {
+    "theme": "Тема",
+    "themeLight": "Светлая",
+    "themeDark": "Тёмная",
+    "language": "Язык",
+    "profileSettings": "Настройки профиля",
+    "logout": "Выйти"
+  },
+  "orbita": {
+    "expand": "Развернуть",
+    "collapse": "Свернуть",
+    "drag": "Перетащить",
+    "rotateH": "Горизонтальный режим",
+    "rotateV": "Вертикальный режим",
+    "notifications": "Уведомления",
+    "notificationsUnread": "Уведомления: {count} непрочитанных",
+    "noNotifications": "Нет новых уведомлений",
+    "notificationsError": "Не удалось загрузить уведомления",
+    "markAllRead": "Отметить все прочитанными",
+    "sectionActionable": "Требует внимания",
+    "sectionFeed": "Лента",
+    "loadMore": "Загрузить ещё",
+    "timeJustNow": "только что",
+    "timeMinutes": "{n} мин. назад",
+    "timeHours": "{n} ч. назад",
+    "timeDays": "{n} дн. назад",
+    "digest": {
+      "unread_total": "Всего непрочитанных",
+      "task": "Задачи",
+      "approval": "Согласования",
+      "deal": "Сделки",
+      "mention": "Упоминания",
+      "system": "Системные"
+    },
+    "navLabel": "Основная навигация",
+    "profile": "Профиль"
+  },
+  "layout": {
+    "navMode": "Вид меню",
+    "navModeSidebar": "Боковое меню",
+    "navModeOrbit": "Орбита",
+    "navModeOrbitHint": "Плавающая панель, которую можно перетащить в любую часть экрана.",
+    "appearance": "Внешний вид"
+  },
+  "quickActions": {
+    "title": "Быстрые действия",
+    "sectionTitle": "Кнопки быстрых действий",
+    "sectionHint": "До 5 действий будут отображаться в кластере Орбиты (рядом с уведомлениями). Перетащите нужные действия в правый список и настройте порядок.",
+    "configure": "Настроить",
+    "noneSelected": "Быстрые действия не выбраны",
+    "dialogTitle": "Настройка быстрых действий",
+    "dialogHint": "Перетащите до 5 действий в правый список. Порядок в правом списке — это порядок кнопок в Орбите.",
+    "available": "Доступные",
+    "selected": "Выбранные",
+    "maxError": "Можно выбрать не более {max} действий",
+    "saved": "Быстрые действия сохранены",
+    "toggleTheme": "Переключить тему",
+    "openSearch": "Открыть поиск"
+  },
+  "commandPalette": {
+    "placeholder": "Поиск страниц и действий...",
+    "sectionPages": "Страницы",
+    "sectionActions": "Действия",
+    "sectionRecent": "Недавние",
+    "empty": "Ничего не найдено",
+    "hint": "↑↓ навигация  · Enter выбрать  · Esc закрыть"
+  },
+  "hotkeys": {
+    "title": "Клавиатурные сокращения",
+    "globalNav": "Навигация",
+    "other": "Другое",
+    "goToDashboard": "Перейти на Дашборд",
+    "goToContacts": "Перейти к Контактам",
+    "goToCompanies": "Перейти к Компаниям",
+    "goToDeals": "Перейти к Сделкам",
+    "goToTasks": "Перейти к Задачам",
+    "goToDocuments": "Перейти к Документам",
+    "goToApprovals": "Перейти к Согласованиям",
+    "goToCourses": "Перейти к Обучению",
+    "openSearch": "Открыть поиск",
+    "showHelp": "Показать шпаргалку"
+  },
+  "tasks": {
+    "board": {
+      "title": "Мои задачи",
+      "searchPlaceholder": "Поиск задач",
+      "addTask": "Задача",
+      "scope": {
+        "label": "Скоуп",
+        "day": "День",
+        "week": "Неделя",
+        "month": "Месяц"
+      },
+      "columns": {
+        "overdue": "Просрочено",
+        "today": "Сегодня",
+        "tomorrow": "Завтра",
+        "this_week": "Эта неделя",
+        "next_week": "Следующая неделя",
+        "noDate": "Без срока",
+        "noTasks": "Нет задач"
+      },
+      "card": {
+        "complete": "Готово",
+        "completed": "Задача выполнена",
+        "overdueSince": "просрочено {when}",
+        "today": "сегодня {time}",
+        "tomorrow": "завтра {time}"
+      },
+      "empty": {
+        "title": "Все задачи выполнены",
+        "subtitle": "Отличная работа! Новые задачи появятся здесь."
+      },
+      "taskTypes": {
+        "call": "Звонок",
+        "meeting": "Встреча",
+        "task": "Задача",
+        "note": "Заметка",
+        "follow_up": "Follow-up",
+        "qualification": "Квалификация",
+        "warm": "Warm",
+        "hot": "HOT"
+      }
+    }
+  }
+}

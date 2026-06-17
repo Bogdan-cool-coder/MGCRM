@@ -1,0 +1,7 @@
+// Overlays: shadows backed by --app-* custom properties
+// Note: border-radius variables ($radius-*) defined in tokens/_radius.scss
+
+$shadow-sm: var(--app-shadow-sm);
+$shadow-card: var(--app-shadow-card);
+$shadow-md: var(--app-shadow-md);
+$shadow-lg: var(--app-shadow-lg);

@@ -1,0 +1,2516 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "contacts": "Contacts",
+    "companies": "Companies",
+    "deals": "Deals",
+    "catalog": "Catalog",
+    "documents": "Documents",
+    "tasks": "Tasks",
+    "finance": "Finance",
+    "team": "Team",
+    "settings": "Settings",
+    "analytics": "Analytics",
+    "profile": "Profile",
+    "logout": "Sign out",
+    "pipelineSettings": "Pipeline settings",
+    "myTasks": "My tasks",
+    "managerCabinet": "Manager Cabinet",
+    "myApprovals": "My approvals",
+    "templates": "Templates",
+    "templateVariables": "Variable catalog",
+    "approvalRoutes": "Approval routes",
+    "messageTemplates": "Message templates",
+    "myCourses": "My learning",
+    "myCertificates": "Certificates",
+    "onboardingAdmin": "Courses (HR)",
+    "onboardingAssignments": "Assignments",
+    "hrProgress": "Progress",
+    "automationRuns": "Automation log",
+    "sections": {
+      "learning": "Learning"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "email": "Email",
+      "email_placeholder": "example{'@'}company.com",
+      "password": "Password",
+      "password_placeholder": "Enter password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "error": "Invalid email or password",
+      "required_email": "Enter email",
+      "required_password": "Enter password",
+      "invalid_email": "Enter a valid email"
+    },
+    "two_factor": {
+      "title": "Two-factor authentication",
+      "subtitle": "Enter the code from your authenticator app",
+      "code_label": "TOTP code",
+      "code_placeholder": "000000",
+      "backup_label": "Backup code",
+      "backup_placeholder": "xxxxxxxx",
+      "submit": "Confirm",
+      "submitting": "Verifying...",
+      "error": "Invalid code. Please try again.",
+      "use_backup": "Use backup code",
+      "use_totp": "Use TOTP code",
+      "back_to_login": "Back to login",
+      "required_code": "Enter code"
+    },
+    "logout": {
+      "confirm": "Sign out?",
+      "success": "You have signed out"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "notifications": "Notifications",
+      "locale": "Language",
+      "theme": "Theme",
+      "calendar": "Calendar",
+      "signature": "Signature",
+      "segments": "Segments",
+      "telegram": "Telegram",
+      "appearance": "Appearance",
+      "quickActions": "Quick actions"
+    },
+    "fields": {
+      "full_name": "Full name",
+      "email": "Email",
+      "role": "Role",
+      "department": "Department",
+      "telegram": "Telegram ID",
+      "avatar": "Profile photo"
+    },
+    "avatar": {
+      "upload": "Upload photo",
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "hint": "JPG, PNG up to 5 MB"
+    },
+    "security": {
+      "title": "Security",
+      "password_section": "Change password",
+      "current_password": "Current password",
+      "new_password": "New password",
+      "confirm_password": "Confirm password",
+      "change_password": "Change password",
+      "totp_section": "Two-factor authentication",
+      "totp_enabled": "2FA enabled",
+      "totp_disabled": "2FA disabled",
+      "enable_totp": "Enable 2FA",
+      "disable_totp": "Disable 2FA",
+      "totp_setup_title": "Set up 2FA",
+      "totp_scan_qr": "Scan the QR code with your authenticator app",
+      "totp_enter_code": "Enter code to confirm",
+      "totp_verify": "Verify",
+      "totp_backup_codes": "Backup codes",
+      "totp_backup_hint": "Save these codes in a safe place. Each code can only be used once.",
+      "totp_setup_success": "Two-factor authentication successfully configured"
+    },
+    "locale": {
+      "title": "Interface language",
+      "ru": "Russian",
+      "en": "English"
+    },
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "telegram": {
+      "title": "Telegram notifications",
+      "notLinked": "Telegram account not linked",
+      "description": "Link your Telegram account to receive approval notifications",
+      "linkBtn": "Link Telegram",
+      "linked": "Telegram linked",
+      "unlinkBtn": "Unlink",
+      "linkHint": "Open the bot and press Start to complete linking",
+      "linkSuccess": "Telegram successfully linked!"
+    },
+    "coming_soon": "Coming soon",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Changes saved"
+  },
+  "dashboard": {
+    "title": "Sales Dashboard",
+    "export": "Export Excel",
+    "filters": {
+      "period": "Period",
+      "pipeline": "Pipeline",
+      "manager": "Manager",
+      "allPipelines": "All pipelines",
+      "allManagers": "All managers"
+    },
+    "periods": {
+      "currentMonth": "Current month",
+      "lastMonth": "Last month",
+      "currentQuarter": "Current quarter",
+      "currentYear": "Current year"
+    },
+    "statusGroups": {
+      "title": "Deal status",
+      "active": "Active",
+      "won": "Won",
+      "lost": "Lost",
+      "total": "Total",
+      "deals": "deals",
+      "noTrend": "—"
+    },
+    "funnel": {
+      "title": "Funnel conversion",
+      "stage": "Stage",
+      "count": "Deals",
+      "avgDays": "Days avg.",
+      "transition": "Conversion to next"
+    },
+    "topBar": {
+      "title": "Top 10",
+      "products": "Products",
+      "managers": "Managers"
+    },
+    "forecast": {
+      "title": "Revenue forecast",
+      "totalWeighted": "Weighted forecast",
+      "hot": "HOT deals",
+      "warm": "Warm",
+      "trial": "Trial / Negotiation"
+    },
+    "dealsWithoutTasks": {
+      "title": "Deals without tasks",
+      "subtitle": "deals without scheduled tasks",
+      "openList": "Open list",
+      "allHaveTasks": "All active deals have scheduled tasks",
+      "noData": "No data"
+    },
+    "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog.",
+    "empty": {
+      "noDeals": "No deals for the selected period",
+      "noFunnel": "No funnel data",
+      "noTopData": "No data to display",
+      "noForecast": "No forecast data",
+      "noPipeline": "Pipeline not found"
+    },
+    "loading": "Loading data...",
+    "welcome": "Welcome",
+    "coming_soon": "Widgets and analytics will appear here"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "director": "Director",
+    "lawyer": "Lawyer",
+    "manager": "Manager",
+    "accountant": "Accountant",
+    "cfo": "CFO"
+  },
+  "errors": {
+    "unauthorized": "Session expired. Please sign in again.",
+    "server_error": "Server error. Please try again.",
+    "network_error": "Cannot connect to server.",
+    "not_found": "Page not found.",
+    "forbidden": "Access denied.",
+    "validation": "Please check the form fields.",
+    "unknown": "An unknown error occurred.",
+    "required": "Required field",
+    "duplicate": "This record already exists"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "back": "Back",
+    "next": "Next",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "coming_soon": "Coming soon",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "total": "Total: {count}",
+    "reset": "Reset",
+    "download": "Download",
+    "upload": "Upload",
+    "archive": "Archive",
+    "restore": "Restore",
+    "date": "Date",
+    "open": "Open",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "error": "Error",
+    "loadError": "Failed to load",
+    "required": "Required field",
+    "invalidValue": "Invalid value",
+    "preview": "Preview",
+    "hidePreview": "Hide preview",
+    "saveFirst": "Save the lesson first to upload a file",
+    "retry": "Retry",
+    "hide": "Hide",
+    "show": "Show"
+  },
+  "contacts": {
+    "page": {
+      "title": "Contacts",
+      "subtitle": "Individuals and companies",
+      "subtitle_companies": "Company list",
+      "create": "New contact",
+      "dedup": "Dedup",
+      "total": "Total: {count}",
+      "typeSwitch": {
+        "contact": "Individual",
+        "company": "Company"
+      },
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "source": "Source",
+        "country": "Country",
+        "tags": "Tags",
+        "actions": "Actions"
+      },
+      "filters": {
+        "search": "Search by name...",
+        "companyType": "Company type",
+        "source": "Source",
+        "country": "Country",
+        "tags": "Tags",
+        "apply": "Apply",
+        "reset": "Reset"
+      },
+      "empty": {
+        "title": "No contacts yet",
+        "subtitle": "Add your first client or contact",
+        "filtered": "Nothing found",
+        "filteredSub": "Try adjusting filters",
+        "resetFilters": "Clear filters"
+      },
+      "quickCreate": {
+        "title": "New contact",
+        "cancel": "Cancel",
+        "submit": "Create",
+        "success": "Record created",
+        "holdingToggle": "Part of a holding",
+        "holdingParent": "Parent company"
+      },
+      "delete": {
+        "confirm": "Delete record?",
+        "detail": "This action cannot be undone.",
+        "accept": "Delete",
+        "reject": "Cancel",
+        "success": "Record deleted"
+      },
+      "errors": {
+        "load": "Failed to load contacts",
+        "create": "Failed to create record",
+        "delete": "Failed to delete record"
+      }
+    },
+    "actions": {
+      "create": "Create contact"
+    }
+  },
+  "company": {
+    "page": {
+      "back": "Back",
+      "newDeal": "New deal",
+      "tabs": {
+        "overview": "Overview",
+        "contacts": "Contacts",
+        "notes": "Notes",
+        "tasks": "Tasks",
+        "deals": "Deals",
+        "files": "Files",
+        "holding": "Holding",
+        "documents": "Documents"
+      },
+      "sections": {
+        "main": "Main information",
+        "requisites": "Requisites",
+        "signatory": "Signatory"
+      },
+      "fields": {
+        "name": "Name",
+        "legalForm": "Legal form",
+        "fullLegalForm": "Full legal name",
+        "genderEnding": "Gender ending",
+        "companyType": "Company type",
+        "industry": "Industry",
+        "country": "Country",
+        "city": "City",
+        "phone": "Phone",
+        "email": "E-mail",
+        "website": "Website",
+        "taxIdLabel": "Tax ID type",
+        "taxId": "Tax ID",
+        "address": "Legal address",
+        "bank": "Bank",
+        "bankCodeLabel": "Bank code type",
+        "bankCode": "Bank code",
+        "account": "Account",
+        "directorPosition": "Director position",
+        "directorGenitive": "Name (genitive)",
+        "directorShort": "Name (short)",
+        "actsBasis": "Acts on basis of",
+        "source": "Source"
+      },
+      "rail": {
+        "responsible": "Responsible",
+        "owner": "Owner",
+        "source": "Source",
+        "tags": "Tags",
+        "addTag": "Add tag",
+        "createdAt": "Created",
+        "updatedAt": "Modified"
+      },
+      "employees": {
+        "title": "Employees",
+        "add": "Add employee",
+        "addSuccess": "Employee added",
+        "searchHint": "Enter contact name",
+        "columns": {
+          "name": "Name",
+          "position": "Position",
+          "status": "Status",
+          "primary": "Primary"
+        },
+        "status": {
+          "works": "Active",
+          "left": "Left"
+        },
+        "actions": {
+          "setPrimary": "Set as primary",
+          "changeStatus": "Change status",
+          "unlink": "Unlink"
+        },
+        "unlinkConfirm": "Unlink employee?",
+        "empty": "No employees added"
+      },
+      "holding": {
+        "parent": "Parent holding",
+        "children": "Subsidiaries",
+        "addChild": "Add subsidiary",
+        "stub": "Holding management coming in next sprint"
+      },
+      "stub": {
+        "tasks": "Tasks section coming in next sprint",
+        "deals": "Deals section coming in next sprint",
+        "files": "Files section coming in next sprint"
+      },
+      "category": {
+        "L": "L",
+        "M": "M",
+        "S1": "S1",
+        "S2": "S2"
+      },
+      "inlineEdit": {
+        "hint": "Double-click to edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saved": "Saved",
+        "error": "Failed to save"
+      },
+      "errors": {
+        "notFound": "Company not found",
+        "load": "Failed to load"
+      }
+    }
+  },
+  "contact": {
+    "page": {
+      "back": "Back",
+      "tabs": {
+        "overview": "Overview",
+        "companies": "Companies",
+        "notes": "Notes",
+        "tasks": "Tasks",
+        "files": "Files"
+      },
+      "fields": {
+        "fullName": "Full name",
+        "position": "Position",
+        "phone": "Phone",
+        "email": "E-mail",
+        "tgUsername": "Telegram",
+        "source": "Source",
+        "status": "Status",
+        "notes": "Notes"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "companies": {
+        "title": "Companies",
+        "add": "Attach company",
+        "columns": {
+          "company": "Company",
+          "position": "Position",
+          "status": "Status",
+          "primary": "Primary"
+        },
+        "actions": {
+          "setPrimary": "Set as primary",
+          "unlink": "Unlink"
+        },
+        "unlinkConfirm": "Unlink contact from company?",
+        "empty": "No companies linked"
+      },
+      "stub": {
+        "tasks": "Tasks coming in next sprint",
+        "files": "Files coming in next sprint"
+      },
+      "errors": {
+        "notFound": "Contact not found",
+        "load": "Failed to load"
+      }
+    }
+  },
+  "catalog": {
+    "products": {
+      "page": {
+        "title": "Product Catalog",
+        "subtitle": "Products and pricing plans",
+        "create": "New product",
+        "import": "Import Excel",
+        "importMenu": {
+          "upload": "Upload price list",
+          "template": "Download template"
+        },
+        "columns": {
+          "code": "Code",
+          "name": "Name",
+          "group": "Group",
+          "pricingType": "Pricing",
+          "isActive": "Active",
+          "actions": "Actions"
+        },
+        "filters": {
+          "search": "Search by name or code",
+          "group": "Group",
+          "pricingType": "Pricing type",
+          "status": "Status",
+          "statusAll": "All",
+          "statusActive": "Active",
+          "statusArchived": "Archived",
+          "reset": "Reset"
+        },
+        "empty": {
+          "title": "Catalog is empty",
+          "subtitle": "Create a product or import a price list",
+          "filtered": "Nothing found",
+          "filteredSubtitle": "Try adjusting the filters",
+          "resetFilters": "Clear filters"
+        },
+        "actions": {
+          "edit": "Edit",
+          "delete": "Delete",
+          "deleteConfirm": "Delete product?",
+          "deleteDetail": "This action cannot be undone.",
+          "deleteAccept": "Delete",
+          "deleteReject": "Cancel",
+          "deleteSuccess": "Product deleted",
+          "deleteUsed": "Product is used in deals and cannot be deleted",
+          "toggleSuccess": "Status updated"
+        }
+      },
+      "pricingType": {
+        "fixed": "Fixed",
+        "tiered": "Tiered",
+        "per_minute": "Per minute",
+        "package": "Package",
+        "custom": "Custom"
+      },
+      "unit": {
+        "year": "Per year",
+        "one_time": "One-time",
+        "minute": "Per minute",
+        "package": "Package"
+      }
+    },
+    "product": {
+      "page": {
+        "back": "Back",
+        "edit": "Edit",
+        "tabs": {
+          "prices": "Prices",
+          "deals": "Deals"
+        },
+        "rail": {
+          "isActive": "Active",
+          "pricingType": "Pricing type",
+          "templateCode": "Contract template",
+          "createdAt": "Created",
+          "updatedAt": "Updated"
+        },
+        "prices": {
+          "addPlan": "Add pricing plan",
+          "basePriceRow": "Base",
+          "emptyPlans": "No pricing plans added",
+          "inlineEditHint": "Double-click to edit price",
+          "save": "Save",
+          "cancel": "Cancel",
+          "saved": "Price updated",
+          "saveError": "Failed to save price"
+        },
+        "plan": {
+          "createTitle": "New pricing plan",
+          "editTitle": "Edit plan",
+          "fields": {
+            "name": "Name",
+            "code": "Plan code",
+            "unit": "Unit",
+            "sortOrder": "Sort order",
+            "isActive": "Active"
+          },
+          "hint": "Prices are set in the product card table",
+          "save": "Save plan",
+          "cancel": "Cancel",
+          "deleteConfirm": "Delete pricing plan?",
+          "deleteUsed": "Plan is used in deals and cannot be deleted",
+          "deleteSuccess": "Plan deleted"
+        },
+        "stub": {
+          "deals": "Deals section will appear in S1.3"
+        },
+        "errors": {
+          "notFound": "Product not found",
+          "load": "Failed to load product"
+        }
+      },
+      "form": {
+        "createTitle": "New product",
+        "editTitle": "Edit product",
+        "fields": {
+          "name": "Name",
+          "code": "Code (slug)",
+          "codeHint": "Lowercase letters, digits and underscores.",
+          "description": "Description",
+          "group": "Group",
+          "pricingType": "Pricing type",
+          "templateCode": "Contract template code",
+          "sortOrder": "Sort order",
+          "isActive": "Active"
+        },
+        "save": "Create product",
+        "update": "Save",
+        "cancel": "Cancel",
+        "createSuccess": "Product created",
+        "updateSuccess": "Product updated",
+        "errors": {
+          "nameRequired": "Name is required",
+          "codeRequired": "Code is required",
+          "codeInvalid": "Only a-z, 0-9 and underscores",
+          "codeTaken": "This code is already taken",
+          "pricingTypeRequired": "Pricing type is required"
+        }
+      }
+    },
+    "import": {
+      "dialog": {
+        "title": "Import price list from Excel",
+        "step1": "Upload file",
+        "step2": "Preview",
+        "uploadHint": "Drag .xlsx / .xls or click to select",
+        "uploadMax": "Max 10 MB",
+        "downloadTemplate": "Download template",
+        "preview": {
+          "title": "Check results",
+          "wouldInsert": "To create: {n}",
+          "wouldUpdate": "To update: {n}",
+          "skipped": "Skipped: {n}",
+          "errors": "Errors: {n}",
+          "errorsColumns": {
+            "row": "Row",
+            "message": "Error"
+          },
+          "warningWithErrors": "Rows with errors will be skipped during import"
+        },
+        "previewing": "Analysing file...",
+        "importing": "Importing...",
+        "submit": "Import",
+        "submitWithErrors": "Import (skip errors)",
+        "changeFile": "Change file",
+        "cancel": "Cancel",
+        "successToast": "Import complete: {inserted} created, {updated} updated",
+        "errorToast": "Import failed. Please try again."
+      }
+    },
+    "exchangeRates": {
+      "page": {
+        "title": "Exchange Rates",
+        "subtitle": "Current and historical rates",
+        "refresh": "Refresh rates",
+        "addManual": "Enter manually",
+        "columns": {
+          "from": "From",
+          "to": "To",
+          "rate": "Rate",
+          "date": "Date",
+          "source": "Source",
+          "actions": "Actions"
+        },
+        "source": {
+          "api": "API",
+          "manual": "Manual"
+        },
+        "filters": {
+          "from": "From currency",
+          "to": "To currency",
+          "dateFrom": "Date from",
+          "dateTo": "Date to",
+          "reset": "Reset"
+        },
+        "ageWarning": {
+          "message": "Rates were last updated more than 24 hours ago.",
+          "refreshNow": "Refresh now"
+        },
+        "actions": {
+          "edit": "Edit",
+          "delete": "Delete",
+          "deleteConfirm": "Delete rate?",
+          "deleteSuccess": "Rate deleted",
+          "refreshSuccess": "Rates refreshed",
+          "refreshError": "Failed to refresh rates"
+        },
+        "empty": {
+          "title": "No rates loaded",
+          "subtitle": "Click «Refresh rates» to load automatically"
+        }
+      },
+      "manual": {
+        "title": "Enter rate manually",
+        "fields": {
+          "from": "From currency",
+          "to": "To currency",
+          "rate": "Rate",
+          "date": "Date"
+        },
+        "save": "Save rate",
+        "cancel": "Cancel",
+        "success": "Rate saved"
+      }
+    }
+  },
+  "notes": {
+    "placeholder": "Add a note..."
+  },
+  "dedup": {
+    "dialog": {
+      "title": "Deduplication",
+      "titleWithCount": "Deduplication — {count} duplicate groups",
+      "scan": {
+        "title": "Find duplicates",
+        "type": {
+          "company": "Companies",
+          "contact": "Individuals"
+        },
+        "button": "Scan for duplicates",
+        "scanning": "Scanning...",
+        "empty": "No duplicates found",
+        "emptySubtitle": "Your database is clean",
+        "error": "Scan error"
+      },
+      "candidates": {
+        "group": "Group {n}: {name} ({count} records)",
+        "merge": "Merge",
+        "notDuplicate": "Not a duplicate",
+        "columns": {
+          "id": "ID",
+          "name": "Name",
+          "key": "Tax ID / Email",
+          "createdAt": "Created"
+        }
+      },
+      "merge": {
+        "title": "Merge records",
+        "masterLabel": "Select the master record (ID will be kept, others will be deleted):",
+        "wholeRecordNote": "Merge is whole-record — all data comes from the master record.",
+        "goldenLabel": "Select the golden record (this ID will be kept):",
+        "fieldsLabel": "Field preview:",
+        "warning": "After merging, records ID {id} will be deleted",
+        "columns": {
+          "field": "Field"
+        },
+        "back": "Back",
+        "submit": "Merge records",
+        "success": "Records merged successfully",
+        "dismissSuccess": "Group marked as not duplicate",
+        "error": "Merge error"
+      }
+    }
+  },
+  "activity": {
+    "kinds": {
+      "call": "Call",
+      "meeting": "Meeting",
+      "task": "Task",
+      "note": "Note"
+    },
+    "statuses": {
+      "new": "New",
+      "in_progress": "In progress",
+      "done": "Done",
+      "rejected": "Rejected"
+    },
+    "priorities": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "fields": {
+      "responsible": "Responsible"
+    },
+    "presets": {
+      "myTasks": "My tasks",
+      "myOrders": "My orders",
+      "today": "Today",
+      "overdue": "Overdue",
+      "thisWeek": "This week",
+      "pinned": "Pinned",
+      "all": "All"
+    },
+    "overdueBadge": "Overdue",
+    "form": {
+      "createTitle": "New activity",
+      "editTitle": "Edit activity",
+      "kind": "Type",
+      "title": "Title",
+      "titlePlaceholder": "Activity title",
+      "body": "Description",
+      "responsible": "Assignee",
+      "dueAt": "Due date",
+      "priority": "Priority",
+      "resultText": "Result",
+      "resultTextPlaceholder": "Describe the result...",
+      "ftmDecisionMakerAttended": "Decision-maker attended",
+      "ftmPresentationShown": "Presentation shown",
+      "ftmReportUrl": "Report URL",
+      "kindDisabledTooltip": "This activity type is not allowed at the current stage",
+      "save": "Save",
+      "create": "Create",
+      "cancel": "Cancel",
+      "fillMeetingReport": "Fill meeting report",
+      "successCreate": "Activity created",
+      "successUpdate": "Activity saved",
+      "confirmDiscard": "Discard changes?",
+      "confirmDiscardBody": "Unsaved changes will be lost."
+    },
+    "actions": {
+      "add": "Add activity",
+      "complete": "Complete",
+      "reopen": "Reopen",
+      "edit": "Edit",
+      "delete": "Delete",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "completeSuccess": "Activity completed",
+      "reopenSuccess": "Activity reopened",
+      "deleteConfirmHeader": "Delete activity?",
+      "deleteConfirmBody": "This activity will be permanently deleted.",
+      "deleteConfirmAccept": "Delete",
+      "deleteConfirmReject": "Cancel",
+      "deleteSuccess": "Activity deleted",
+      "pinSuccess": "Pinned",
+      "unpinSuccess": "Unpinned",
+      "noPermissionComplete": "You don't have permission to complete this task"
+    },
+    "timeline": {
+      "empty": "No activities",
+      "emptyDeal": "No activities for this deal",
+      "emptyCompany": "No activities for this company",
+      "emptyCtaDeal": "Add first activity",
+      "loadMore": "Load more",
+      "targetDeal": "Deal: {name}",
+      "overdueBadge": "Overdue"
+    },
+    "meetingReport": {
+      "dialogTitle": "Meeting report",
+      "comment": "Comment",
+      "commentPlaceholder": "Additional meeting notes...",
+      "save": "Save report",
+      "cancel": "Cancel",
+      "saveSuccess": "Meeting report saved",
+      "emptyQuestions": "No questions configured. Fill in the free comment.",
+      "errorEmpty": "Fill in at least one answer or comment.",
+      "errorStaleQuestion": "Question is outdated. Refresh the page."
+    },
+    "myTasksPage": {
+      "title": "My tasks",
+      "create": "Create task",
+      "filters": {
+        "kind": "Type",
+        "status": "Status",
+        "priority": "Priority",
+        "dueFrom": "From",
+        "dueTo": "To",
+        "search": "Search",
+        "reset": "Reset"
+      },
+      "empty": "No tasks in this section",
+      "emptyOverdue": "All tasks completed on time"
+    },
+    "quickAdd": {
+      "tooltip": "Add activity to deal"
+    }
+  },
+  "sales": {
+    "deals": {
+      "page": {
+        "title": "Deals",
+        "subtitle": "Sales pipeline",
+        "create": "New deal",
+        "viewBoard": "Kanban",
+        "viewList": "List",
+        "viewTasks": "Tasks",
+        "summary": "{count} deals · ≈ {total}",
+        "toolbar": {
+          "searchAndFilter": "Search & Filter",
+          "moreMenu": "More"
+        },
+        "menu": {
+          "import": "Import",
+          "export": "Export",
+          "duplicates": "Find duplicates",
+          "bulkActions": "Bulk actions",
+          "sort": "Sort",
+          "sortCreatedAt": "By date created",
+          "sortTitle": "By name",
+          "sortAmount": "By amount",
+          "sortActivity": "By activity"
+        },
+        "filters": {
+          "search": "Search deals",
+          "owner": "Owner",
+          "company": "Company",
+          "stage": "Stage",
+          "product": "Product",
+          "region": "Region / country",
+          "city": "City",
+          "budgetFrom": "Budget from",
+          "budgetTo": "to",
+          "tags": "Tags",
+          "tagsSearch": "Search tags",
+          "period": "Period",
+          "reset": "Reset",
+          "apply": "Apply",
+          "presets": "Saved presets",
+          "properties": "Deal properties",
+          "presetOpen": "Open deals",
+          "presetMine": "Mine only",
+          "presetWon": "Won",
+          "presetLost": "Lost",
+          "presetNoTask": "No task",
+          "presetOverdue": "Overdue task"
+        },
+        "bulk": {
+          "selected": "Selected: {n}",
+          "cancel": "Cancel",
+          "selectAll": "Select all",
+          "assignOwner": "Assign",
+          "addTask": "+ Task",
+          "moveStage": "Stage",
+          "editField": "Field",
+          "editTags": "Tags",
+          "delete": "Delete",
+          "deleteConfirm": "Delete {n} deals?",
+          "deleteDetail": "This action cannot be undone.",
+          "deleteSuccess": "{n} deals deleted",
+          "assignOwnerSuccess": "Owner changed for {n} deals",
+          "moveStageSuccess": "Stage changed for {n} deals",
+          "editFieldSuccess": "Field updated for {n} deals",
+          "tagSuccess": "Tags updated for {n} deals",
+          "addTaskSuccess": "Task created for {n} deals",
+          "assignOwnerDialog": {
+            "title": "Assign owner ({n} deals)",
+            "owner": "Owner",
+            "ownerPlaceholder": "Select a user",
+            "ownerRequired": "Select an owner",
+            "apply": "Apply"
+          },
+          "moveStageDialog": {
+            "title": "Move stage ({n} deals)",
+            "stage": "Stage",
+            "stagePlaceholder": "Select a stage",
+            "stageRequired": "Select a stage",
+            "apply": "Apply"
+          },
+          "editFieldDialog": {
+            "title": "Edit field ({n} deals)",
+            "field": "Field",
+            "fieldPlaceholder": "Select a field",
+            "value": "Value",
+            "valuePlaceholder": "Enter value",
+            "valueRequired": "Enter a value",
+            "selectFieldHint": "Select a field to edit",
+            "apply": "Apply"
+          },
+          "tagDialog": {
+            "title": "Edit tags ({n} deals)",
+            "hint": "These tags will replace existing tags on the selected deals.",
+            "tags": "Tags",
+            "tagsPlaceholder": "Add tag...",
+            "apply": "Apply"
+          },
+          "addTaskDialog": {
+            "title": "Create task for {n} deals",
+            "apply": "Create"
+          }
+        },
+        "kanban": {
+          "deals": "{count} deals",
+          "sum": "{amount}",
+          "loadMore": "More {n}",
+          "hiddenStages": "Hidden",
+          "daysInStage": "{n}d",
+          "addDeal": "Add deal",
+          "colTotal": "≈ {sum}"
+        },
+        "card": {
+          "noTask": "No task",
+          "scheduleTask": "+ Schedule",
+          "overdue": "Overdue: {type} · {when}",
+          "taskOk": "{type} · {when}",
+          "daysInWork": "{n}d",
+          "today": "today {time}",
+          "tomorrow": "tomorrow {time}",
+          "overdueWhen": "{n} day ago | {n} days ago | {n} days ago"
+        },
+        "taskTypes": {
+          "call": "Call",
+          "meeting": "Meeting",
+          "task": "Task",
+          "note": "Note",
+          "follow_up": "Follow-up",
+          "qualification": "Qualification",
+          "warm": "Warm",
+          "hot": "HOT"
+        },
+        "currency": {
+          "approx": "≈ {sum}",
+          "tooltipTitle": "Total: ≈ {sum}",
+          "nativeTooltipTitle": "Amounts by currency",
+          "noRate": "Rate unavailable"
+        },
+        "columns": {
+          "id": "#",
+          "title": "Title",
+          "company": "Company",
+          "stage": "Stage",
+          "amount": "Amount",
+          "owner": "Owner",
+          "createdAt": "Created",
+          "task": "Task",
+          "daysInStage": "In stage",
+          "actions": "Actions"
+        },
+        "empty": {
+          "title": "No deals yet",
+          "subtitle": "Create your first deal linked to a company",
+          "filtered": "No results for your filters",
+          "filteredSubtitle": "Try adjusting or resetting filters",
+          "resetFilters": "Clear filters"
+        },
+        "actions": {
+          "edit": "Edit",
+          "changeStage": "Change stage",
+          "delete": "Delete",
+          "deleteConfirm": "Delete deal?",
+          "deleteDetail": "This action cannot be undone.",
+          "deleteAccept": "Delete",
+          "deleteReject": "Cancel",
+          "deleteSuccess": "Deal deleted",
+          "moveSuccess": "Stage updated"
+        }
+      },
+      "form": {
+        "createTitle": "New deal",
+        "fields": {
+          "company": "Company",
+          "title": "Title",
+          "pipeline": "Pipeline",
+          "stage": "Stage",
+          "stagePlaceholder": "Initial stage",
+          "currency": "Currency",
+          "owner": "Owner",
+          "expectedCloseDate": "Expected close date"
+        },
+        "save": "Create deal",
+        "cancel": "Cancel",
+        "createSuccess": "Deal created",
+        "errors": {
+          "companyRequired": "Select a company",
+          "titleRequired": "Title is required",
+          "currencyRequired": "Currency is required"
+        }
+      }
+    },
+    "deal": {
+      "page": {
+        "back": "Back",
+        "changeStage": "Change stage",
+        "tabs": {
+          "overview": "Overview",
+          "contacts": "Contacts",
+          "activities": "Activities",
+          "tasks": "Activities",
+          "history": "History",
+          "documents": "Documents"
+        },
+        "rail": {
+          "stage": "Stage",
+          "pipeline": "Pipeline",
+          "owner": "Owner",
+          "department": "Department",
+          "createdAt": "Created",
+          "updatedAt": "Updated",
+          "wonGateWarning": "Contract or payment required to confirm win"
+        },
+        "overview": {
+          "sectionMain": "Deal information",
+          "fields": {
+            "title": "Title",
+            "company": "Company",
+            "currency": "Currency",
+            "tags": "Tags",
+            "expectedCloseDate": "Expected close date",
+            "expectedSignDate": "Expected sign date",
+            "expectedPaymentDate": "Expected payment date"
+          }
+        },
+        "products": {
+          "sectionTitle": "Deal products",
+          "addProduct": "Add product",
+          "columns": {
+            "product": "Product",
+            "plan": "Plan",
+            "quantity": "Qty",
+            "unitPrice": "Unit price",
+            "amount": "Amount",
+            "actions": ""
+          },
+          "total": "Total",
+          "empty": {
+            "title": "No products",
+            "subtitle": "Add products from catalog"
+          },
+          "addDialog": {
+            "title": "Add product",
+            "fields": {
+              "product": "Product",
+              "plan": "Plan",
+              "quantity": "Quantity",
+              "unitPrice": "Unit price (snapshot)",
+              "unitPriceOverrideHint": "Price manually overridden"
+            },
+            "preview": "Total: {amount}",
+            "snapshotHint": "Price snapshot from catalog at time of addition",
+            "save": "Add",
+            "cancel": "Cancel",
+            "addSuccess": "Product added",
+            "updateSuccess": "Item updated",
+            "removeSuccess": "Item removed",
+            "removeConfirm": "Remove item?"
+          }
+        },
+        "contacts": {
+          "sectionTitle": "Deal contacts",
+          "addContact": "Add contact",
+          "primary": "Primary",
+          "empty": {
+            "title": "No contacts linked",
+            "subtitle": "Add responsible persons for this deal"
+          },
+          "addDialog": {
+            "title": "Add contact",
+            "fields": {
+              "contact": "Contact",
+              "isPrimary": "Primary contact"
+            },
+            "save": "Add",
+            "cancel": "Cancel",
+            "success": "Contact added",
+            "removeConfirm": "Remove contact from deal?",
+            "removeSuccess": "Contact removed"
+          }
+        },
+        "history": {
+          "sectionTitle": "Stage history",
+          "created": "Deal created",
+          "from": "from",
+          "empty": {
+            "title": "No stage transitions yet"
+          }
+        },
+        "errors": {
+          "notFound": "Deal not found",
+          "noAccess": "It may have been deleted or you don't have access",
+          "load": "Failed to load deal",
+          "backToDeals": "Back to deals"
+        },
+        "daysInStage": "days in stage",
+        "changeStage": "Change stage",
+        "clickToChangeStage": "Click to change stage",
+        "infoPanel": "Info",
+        "menu": {
+          "rename": "Rename",
+          "changeOwner": "Change owner",
+          "editTags": "Edit tags",
+          "moveStage": "Move stage",
+          "duplicate": "Duplicate",
+          "duplicateSoon": "Coming soon",
+          "archive": "Archive",
+          "archiveConfirm": "Archive deal?",
+          "delete": "Delete deal",
+          "deleteConfirm": "Delete deal?",
+          "deleteDetail": "This action cannot be undone",
+          "collapseAll": "Collapse all groups",
+          "expandAll": "Expand all groups",
+          "customizeFields": "Customize fields",
+          "copyLink": "Copy link"
+        },
+        "feedView": "Feed",
+        "infoView": "Info",
+        "health": {
+          "noTask": "No task",
+          "overdue": "Overdue",
+          "nextTask": "{kind} · {date}"
+        }
+      },
+      "info": {
+        "tabs": {
+          "main": "Main",
+          "documents": "Documents",
+          "finances": "Finances",
+          "stats": "Stats"
+        },
+        "fields": {
+          "owner": "Owner",
+          "amount": "Budget",
+          "amountAuto": "Budget (auto)",
+          "company": "Company",
+          "expectedSignDate": "Expected sign date",
+          "expectedPaymentDate": "Expected payment date",
+          "daysInWork": "Days in progress"
+        },
+        "groups": {
+          "products": "Products",
+          "deal": "Deal",
+          "contacts": "Contacts",
+          "company": "Company data",
+          "customFields": "Custom fields"
+        },
+        "products": {
+          "empty": "No items",
+          "add": "+ Add",
+          "total": "Total"
+        },
+        "contacts": {
+          "addContact": "+ Add contact",
+          "addChannel": "+ Add channel"
+        }
+      },
+      "addChannel": {
+        "title": "Add contact channel",
+        "channelType": "Channel type",
+        "value": "Value / ID",
+        "placeholders": {
+          "tg": "{'@'}username or numeric ID",
+          "wa": "Number +7XXXXXXXXXX",
+          "linkedin": "LinkedIn profile URL",
+          "email": "email@domain.com",
+          "phone": "+7XXXXXXXXXX"
+        },
+        "submit": "Add",
+        "success": "Channel added"
+      },
+      "documents": {
+        "generate": "Generate PDF",
+        "downloadDocx": "Download DOCX",
+        "templateLabel": "Template",
+        "contractFields": "Contract fields",
+        "approval": "Approval",
+        "finalDocs": "Final documents",
+        "uploadScan": "Upload signed scan",
+        "signedAt": "Actual signing date",
+        "empty": {
+          "title": "No documents",
+          "subtitle": "Generate the first contract from a template"
+        }
+      },
+      "finances": {
+        "stub": "Financial terms",
+        "stubHint": "Payment terms from the contract will appear here: deadlines, periods, amounts, acts.",
+        "waitingForDoc": "Waiting for contract"
+      },
+      "stats": {
+        "daysInDeal": "Days in deal",
+        "daysInStage": "In stage",
+        "activities": "Activities",
+        "stageChanges": "Stage changes",
+        "documents": "Documents",
+        "lastActivity": "Last activity",
+        "daysAgo": "{n} days ago"
+      },
+      "feed": {
+        "searchPlaceholder": "Search feed...",
+        "searchTooltip": "Search feed",
+        "filterType": "Type",
+        "reset": "Reset",
+        "loadMore": "Load more",
+        "viewMenu": {
+          "collapseAll": "Collapse all groups",
+          "expandAll": "Expand all groups",
+          "customizeFields": "Customize card fields",
+          "copyLink": "Copy link",
+          "print": "Print / export"
+        },
+        "empty": {
+          "title": "Feed is empty",
+          "subtitle": "Create a task or call the client"
+        },
+        "types": {
+          "stage_change": "Stage change",
+          "field_change": "Field changes",
+          "note": "Notes",
+          "task": "Tasks",
+          "call": "Calls",
+          "meeting": "Meetings"
+        },
+        "events": {
+          "stageChanged": "Stage changed",
+          "dealCreated": "Deal created",
+          "fieldsChanged": "Fields changed",
+          "moreChanges": "{n} more"
+        }
+      },
+      "composer": {
+        "note": "Note",
+        "task": "Task",
+        "call": "Call",
+        "meeting": "Meeting",
+        "notePlaceholder": "Note text...",
+        "titlePlaceholder": "Title...",
+        "participants": "{'@'} Participants",
+        "location": "Location",
+        "save": "Save",
+        "successCreate": "Added to feed",
+        "taskSubtype": "Task type",
+        "subtypes": {
+          "task": "Task",
+          "call": "Call",
+          "meeting": "Meeting",
+          "follow_up": "Follow-up"
+        }
+      },
+      "actions": {
+        "create": "Create deal"
+      }
+    },
+    "move": {
+      "dialog": {
+        "title": "Change stage",
+        "currentStage": "Current stage",
+        "newStage": "New stage",
+        "lostReason": "Lost reason",
+        "lostComment": "Comment (optional)",
+        "wonGateHint": "An active contract or payment is required to move to this stage.",
+        "submit": "Move",
+        "cancel": "Cancel",
+        "successToast": "Stage changed to \"{stage}\"",
+        "wonGateWarningToast": "Stage updated. Consider attaching a contract.",
+        "errors": {
+          "lostReasonRequired": "Specify a lost reason",
+          "forbidden": "Not authorized"
+        }
+      }
+    },
+    "pipeline": {
+      "stages": {
+        "lost": "Deal lost",
+        "new": "New leads",
+        "qualify": "Qualification",
+        "schedule_meeting": "Schedule meeting",
+        "meeting": "Meeting",
+        "cold": "Cold (frozen)",
+        "warm": "Warm",
+        "hot": "Hot",
+        "won": "Won",
+        "await_payment": "Awaiting payment",
+        "paid": "Paid"
+      }
+    },
+    "pipelineEditor": {
+      "pageTitle": "Pipeline settings",
+      "section": {
+        "pipelines": "Sales pipelines",
+        "stages": "Pipeline stages"
+      },
+      "createPipeline": "New pipeline",
+      "createPipelineDialog": {
+        "title": "New pipeline",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. \"Sales\"",
+        "autoSeedInfo": "After creation, the pipeline will contain three system stages: New leads, Won, and Lost. You can add custom stages in the editor.",
+        "save": "Create",
+        "cancel": "Cancel",
+        "successToast": "Pipeline \"{name}\" created",
+        "errorDuplicate": "A pipeline with this name already exists"
+      },
+      "renamePipeline": {
+        "successToast": "Pipeline renamed",
+        "errorToast": "Rename failed"
+      },
+      "deletePipeline": {
+        "confirmHeader": "Delete pipeline?",
+        "confirmBody": "The pipeline and all its stages will be deleted. Make sure there are no deals in it.",
+        "confirmAccept": "Delete",
+        "confirmReject": "Cancel",
+        "successToast": "Pipeline deleted",
+        "errorWithDeals": "This pipeline has deals. Move them before deleting.",
+        "errorLastSales": "Cannot delete the only sales pipeline."
+      },
+      "activeBadge": "active",
+      "selectPlaceholder": "Select pipeline"
+    },
+    "stageEditor": {
+      "addStage": "Add stage",
+      "createDialog": {
+        "title": "New stage",
+        "save": "Create",
+        "cancel": "Cancel",
+        "successToast": "Stage created",
+        "errorDuplicateCode": "This code is already used in this pipeline"
+      },
+      "editDrawer": {
+        "title": "Edit stage",
+        "save": "Save",
+        "cancel": "Cancel",
+        "successToast": "Stage saved",
+        "errorToast": "Failed to save stage"
+      },
+      "fields": {
+        "name": "Name",
+        "code": "Code",
+        "codeReadonlyHint": "Stage code cannot be changed after creation",
+        "color": "Color",
+        "hiddenByDefault": "Hidden on board",
+        "wonGate": "Won gate",
+        "wonGateHint": "Attaching a contract is recommended before reaching this stage",
+        "slaHours": "SLA (hours)",
+        "slaPlaceholder": "None",
+        "stageFeatures": "Stage features",
+        "taskTypes": "Task types",
+        "taskTypesHint": "Empty — all types allowed",
+        "requiredFieldsDeal": "Required deal fields",
+        "requiredFieldsCompany": "Required company fields",
+        "parentStageId": "Sub-status of",
+        "parentStagePlaceholder": "— None (top-level)"
+      },
+      "stageFeatureOptions": {
+        "send_presentation": "Send presentation",
+        "meeting_report": "Meeting report",
+        "generate_document": "Generate document"
+      },
+      "activityTypeOptions": {
+        "call": "Call",
+        "meeting": "Meeting",
+        "task": "Task",
+        "note": "Note"
+      },
+      "dealFieldOptions": {
+        "title": "Title",
+        "currency": "Currency",
+        "contract_id": "Contract",
+        "expected_close_date": "Exp. close date",
+        "expected_sign_date": "Exp. sign date",
+        "expected_payment_date": "Exp. payment date"
+      },
+      "companyFieldOptions": {
+        "name": "Name",
+        "inn": "Tax ID",
+        "phone": "Phone",
+        "email": "Email"
+      },
+      "colorPicker": {
+        "none": "No color"
+      },
+      "systemStageBadge": "system",
+      "substageBadge": "sub-status",
+      "deleteStage": {
+        "confirmHeader": "Delete stage?",
+        "confirmBody": "This stage will be deleted. It must have no deals or sub-statuses.",
+        "confirmAccept": "Delete",
+        "confirmReject": "Cancel",
+        "successToast": "Stage deleted",
+        "errorSystem": "System stage cannot be deleted.",
+        "errorWithDeals": "This stage has deals. Move them before deleting.",
+        "errorWithSubstages": "This stage has sub-statuses. Delete them first.",
+        "systemTooltip": "System stage cannot be deleted"
+      },
+      "reorder": {
+        "errorToast": "Failed to save order. Order reverted."
+      },
+      "emptyStages": {
+        "title": "No stages in this pipeline",
+        "subtitle": "Create the first stage"
+      }
+    }
+  },
+  "managerCabinet": {
+    "title": "Manager Cabinet",
+    "profile": {
+      "unavailable": "Profile unavailable",
+      "subordinates": "{n} subordinates",
+      "noSubordinates": "No subordinates",
+      "noManager": "No manager",
+      "noDepartment": "No department"
+    },
+    "stepper": {
+      "label": "Period"
+    },
+    "kpi": {
+      "scorePct": "KPI%",
+      "personalSales": "Personal sales",
+      "ftm": "FTM meetings",
+      "rank": "Team rank",
+      "plan": "plan",
+      "noPlan": "No plan",
+      "excellent": "Excellent",
+      "good": "Good",
+      "needsWork": "Needs work",
+      "ftmLabel": "counted meetings",
+      "unavailable": "KPI data unavailable",
+      "incomeSrcNote": "Revenue from closed deals"
+    },
+    "team": {
+      "title": "Team comparison",
+      "name": "Member",
+      "scorePct": "KPI%",
+      "status": "Status",
+      "average": "Team average",
+      "of": "of",
+      "avgLabel": "Average",
+      "alone": "You are the only member in this department"
+    },
+    "feed": {
+      "title": "Activity feed",
+      "filterAll": "All",
+      "filterCall": "Call",
+      "filterMeeting": "Meeting",
+      "filterTask": "Task",
+      "filterNote": "Note",
+      "ftmOnly": "FTM only",
+      "date": "Date",
+      "target": "Target",
+      "noActivity": "No activities for the selected period",
+      "resetFilters": "Reset filters"
+    },
+    "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog."
+  },
+  "documents": {
+    "list": {
+      "title": "Documents",
+      "create": "Create document",
+      "filters": {
+        "status": "Status",
+        "kind": "Type",
+        "product": "Product",
+        "country": "Country",
+        "author": "Author",
+        "company": "Company",
+        "search": "Search...",
+        "archived": "Show archived"
+      },
+      "columns": {
+        "date": "Date",
+        "company": "Company"
+      },
+      "empty": "No documents",
+      "emptyFiltered": "Nothing found"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "in_review": "In review",
+      "needs_rework": "Needs rework",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "signed": "Signed",
+      "uploaded": "In Drive",
+      "archived": "Archived"
+    },
+    "kinds": {
+      "contract": "Contract",
+      "invoice": "Invoice",
+      "act": "Act",
+      "reconciliation": "Reconciliation",
+      "yaml": "YAML",
+      "docx": "DOCX"
+    },
+    "create": {
+      "title": "Create document",
+      "kind": "Document type",
+      "company": "Company",
+      "product": "Product",
+      "country": "Country",
+      "template": "Template",
+      "title_field": "Title (optional)",
+      "noTemplates": "No templates for this configuration",
+      "submit": "Create",
+      "cancel": "Cancel"
+    },
+    "card": {
+      "back": "Back",
+      "tabs": {
+        "context": "Context",
+        "items": "Items",
+        "revisions": "Revisions",
+        "remarks": "Remarks",
+        "attachments": "Attachments"
+      },
+      "actions": {
+        "generate": "Generate",
+        "generating": "Generating...",
+        "downloadDocx": "Download .docx",
+        "downloadPdf": "Download .pdf",
+        "submit": "Submit for approval",
+        "resubmit": "Resubmit",
+        "sign": "Sign",
+        "unsign": "Revoke signature",
+        "archive": "Archive",
+        "unarchive": "Unarchive",
+        "duplicate": "Duplicate",
+        "delete": "Delete"
+      },
+      "autosave": {
+        "saved": "✓ Saved",
+        "saving": "Saving...",
+        "error": "Save error"
+      },
+      "generateWarning": {
+        "summary": "Template not verified",
+        "detail": "Document created, but the template has not passed AI verification. We recommend rechecking the template."
+      },
+      "wonGate": {
+        "summary": "Approved contract required",
+        "detail": "To close the deal, a contract in status Approved, Signed or In Drive is required."
+      },
+      "meta": {
+        "created": "Created",
+        "author": "Author",
+        "template": "Template",
+        "amount": "Amount",
+        "discount": "Discount"
+      },
+      "notFound": "Document not found",
+      "backToList": "Back to documents"
+    },
+    "approval": {
+      "title": "Approval",
+      "stage": "Stage {current} of {total}",
+      "attempt": "Attempt #{n}",
+      "noApproval": "Not yet submitted for approval",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "needs_rework": "Needs rework",
+      "pending": "Pending",
+      "decide": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "rework": "Return",
+        "title": "Approval decision",
+        "commentRequired": "Comment is required",
+        "commentPlaceholder": "Reason or comment..."
+      },
+      "rejectedAlert": "Document rejected",
+      "reworkAlert": "Returned for rework",
+      "resubmitBtn": "Fixed, resubmit"
+    },
+    "attachments": {
+      "upload": "Upload attachment",
+      "kinds": {
+        "signed_scan": "Signed scan",
+        "payment": "Payment document",
+        "other": "Other"
+      },
+      "empty": "No attachments",
+      "noScan": "Signed scan required for signing"
+    },
+    "remarks": {
+      "resolve": "Mark as resolved",
+      "resolved": "Resolved",
+      "open": "Open",
+      "empty": "No remarks",
+      "filterAttempt": "Attempt"
+    },
+    "revisions": {
+      "empty": "No revisions",
+      "version": "Version",
+      "attempt": "Attempt",
+      "note": "Note",
+      "author": "Author"
+    },
+    "items": {
+      "add": "Add row",
+      "product": "Product",
+      "qty": "Qty (months)",
+      "price": "Price/month",
+      "total": "Total",
+      "currency": "Currency",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "toPay": "To pay",
+      "empty": "No items"
+    }
+  },
+  "templates": {
+    "list": {
+      "title": "Document templates",
+      "create": "Create template",
+      "empty": "No templates"
+    },
+    "card": {
+      "back": "Back",
+      "edit": "Edit",
+      "notFound": "Template not found",
+      "upload": {
+        "title": "Upload .docx version",
+        "btn": "Upload .docx",
+        "replace": "Replace .docx",
+        "limit": "Maximum 10 MB",
+        "current": "Current version: {v}"
+      },
+      "aiCheck": {
+        "title": "AI check",
+        "statuses": {
+          "pending": "Awaiting check",
+          "checking": "Checking...",
+          "checked": "Verified",
+          "failed": "Check failed"
+        },
+        "pdfOk": "PDF OK",
+        "pdfFail": "PDF: error",
+        "pdfUnknown": "PDF not checked",
+        "noRemarks": "No remarks",
+        "recheck": "Recheck",
+        "override": "Save despite remarks",
+        "overrideConfirm": "Are you sure? AI remarks will be saved but not resolved.",
+        "remarkTypes": {
+          "error": "Error",
+          "warning": "Warning"
+        }
+      },
+      "versions": {
+        "title": "Version history",
+        "empty": "No versions"
+      },
+      "meta": {
+        "title": "Meta",
+        "code": "Code",
+        "products": "Products",
+        "countries": "Countries",
+        "categories": "Categories"
+      }
+    }
+  },
+  "templateVariables": {
+    "title": "Variable catalog",
+    "create": "Add variable",
+    "key": "Key (placeholder)",
+    "type": "Type",
+    "group": "Group",
+    "products": "Products",
+    "required": "Required",
+    "active": "Active",
+    "copied": "Copied",
+    "empty": "No variables",
+    "types": {
+      "text": "Text",
+      "textarea": "Text (long)",
+      "number": "Number",
+      "date": "Date",
+      "select": "Select",
+      "checkbox": "Checkbox"
+    },
+    "dialog": {
+      "createTitle": "New variable",
+      "editTitle": "Edit variable",
+      "key": "Key",
+      "label": "Label",
+      "helpText": "Help text",
+      "varType": "Type",
+      "options": "Options",
+      "defaultValue": "Default value",
+      "required": "Required",
+      "group": "Group",
+      "productCodes": "Products",
+      "countryCodes": "Countries",
+      "sortOrder": "Sort order",
+      "isActive": "Active",
+      "addOption": "Add option"
+    }
+  },
+  "approvalRoutes": {
+    "title": "Approval routes",
+    "create": "Create route",
+    "empty": "No routes",
+    "columns": {
+      "name": "Name",
+      "kind": "Document type",
+      "template": "Template",
+      "isDefault": "Default",
+      "isActive": "Active"
+    },
+    "drawer": {
+      "title": "Approval route",
+      "name": "Name",
+      "kind": "Document type",
+      "template": "Template (optional)",
+      "isDefault": "Default route",
+      "defaultWarning": "Another default route for this type will be disabled",
+      "stages": "Stages",
+      "addStage": "Add stage",
+      "stage": {
+        "name": "Stage name",
+        "users": "Approvers",
+        "minRequired": "Minimum votes"
+      },
+      "save": "Save",
+      "cancel": "Cancel"
+    }
+  },
+  "myApprovals": {
+    "title": "My approvals",
+    "tabs": {
+      "pending": "Awaiting decision",
+      "history": "My decisions"
+    },
+    "columns": {
+      "document": "Document",
+      "kind": "Type",
+      "company": "Company",
+      "stage": "Stage",
+      "date": "Date",
+      "decision": "Decision",
+      "comment": "Comment"
+    },
+    "empty": {
+      "pending": "No pending approvals",
+      "history": "No decisions yet"
+    }
+  },
+  "messageTemplates": {
+    "title": "Message templates",
+    "create": "Create template",
+    "empty": "No templates",
+    "columns": {
+      "name": "Name",
+      "bindings": "Bindings",
+      "isActive": "Active"
+    },
+    "drawer": {
+      "title": "Message template",
+      "name": "Name",
+      "subject": "Subject",
+      "body": "Body",
+      "isActive": "Active",
+      "preview": "Preview",
+      "renderBtn": "Render",
+      "unresolvedKeys": "Unresolved keys",
+      "bindings": "Bindings",
+      "addBinding": "Add binding",
+      "bindingChannel": "Channel",
+      "bindingPipeline": "Pipeline",
+      "bindingStage": "Pipeline stage",
+      "bindingActivityType": "Activity type",
+      "bindingSlot": "Automation slot",
+      "catalogHint": "Available keys — in the Variable catalog",
+      "showCatalog": "Show variable catalog"
+    }
+  },
+  "onboarding": {
+    "courses": {
+      "title": "Onboarding courses",
+      "create": "Create course",
+      "statuses": {
+        "draft": "Draft",
+        "published": "Published"
+      },
+      "policy": {
+        "informational": "Informational",
+        "soft_gate": "Required"
+      },
+      "columns": {
+        "title": "Title",
+        "modules": "Modules",
+        "policy": "Policy",
+        "passingScore": "Score",
+        "deadline": "Deadline",
+        "status": "Status"
+      },
+      "createDialog": {
+        "title": "Create course",
+        "name": "Title",
+        "namePlaceholder": "Course title...",
+        "description": "Description",
+        "policyLabel": "Completion policy",
+        "passingScore": "Passing score (%)",
+        "deadlineDays": "Deadline (days)",
+        "coverUrl": "Cover URL (optional)",
+        "submit": "Create",
+        "cancel": "Cancel"
+      },
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "unpublishConfirm": "Unpublish this course? Students won't be able to take it.",
+      "deleteConfirm": "Delete course? This action cannot be undone.",
+      "empty": "No courses yet",
+      "emptyCreate": "Create your first onboarding course",
+      "emptyFiltered": "Nothing found",
+      "filter": {
+        "status": "Status",
+        "policy": "Policy",
+        "search": "Search...",
+        "reset": "Reset",
+        "all": "All"
+      }
+    },
+    "builder": {
+      "back": "Courses",
+      "save": "Save",
+      "settingsTitle": "Course settings",
+      "structureTitle": "Course structure",
+      "addModule": "+ Add module",
+      "addLesson": "+ Add lesson",
+      "noModules": "No modules — add the first one",
+      "noLessons": "No lessons — add the first one",
+      "lessonKinds": {
+        "text": "Text",
+        "video": "Video",
+        "pdf": "PDF",
+        "quiz": "Quiz"
+      },
+      "module": {
+        "editTitle": "Module",
+        "name": "Title",
+        "deleteConfirm": "Delete module and all its lessons?"
+      },
+      "lesson": {
+        "editTitle": "Lesson",
+        "name": "Title",
+        "kind": "Type",
+        "duration": "Duration (min)",
+        "content": "Content",
+        "contentHint": "Markdown syntax. Callout blocks supported: > [!info], > [!warning]",
+        "videoUrl": "Video URL",
+        "videoHint": "YouTube, Loom, Vimeo supported",
+        "pdfUpload": "Upload file",
+        "pdfLink": "PDF URL",
+        "quizSelect": "Select quiz",
+        "quizCreate": "+ Create new quiz",
+        "publish": "Publish lesson",
+        "unpublish": "Unpublish",
+        "published": "Lesson published",
+        "unpublished": "Lesson unpublished",
+        "deleteConfirm": "Delete lesson?"
+      },
+      "quiz": {
+        "editTitle": "Quiz editor",
+        "name": "Title",
+        "description": "Description",
+        "passingScore": "Passing score (%)",
+        "timeLimit": "Time limit (min, 0 = no limit)",
+        "addQuestion": "+ Add question",
+        "generateAi": "Generate from lesson",
+        "generating": "Generating...",
+        "generatingHint": "AI is creating draft questions — this may take a few seconds",
+        "draftQuestions": "AI suggested questions (drafts)",
+        "draftHint": "Review and add the ones you need",
+        "draftAdd": "Add to quiz",
+        "draftSkip": "Skip",
+        "question": {
+          "kind": "Type",
+          "kinds": {
+            "single": "Single answer",
+            "multiple": "Multiple answers"
+          },
+          "text": "Question text",
+          "explanation": "Explanation",
+          "points": "Points",
+          "addOption": "+ Add option",
+          "optionCorrect": "Correct",
+          "deleteConfirm": "Delete question?"
+        },
+        "validation": {
+          "minQuestion": "Add at least one question",
+          "minOptions": "Each question must have at least 2 options",
+          "noCorrect": "Mark the correct answer for each question"
+        }
+      },
+      "publishCard": {
+        "title": "Publication",
+        "status": "Status"
+      },
+      "assignmentsCard": {
+        "title": "Assignments",
+        "count": "{n} employees",
+        "assign": "+ Assign employees",
+        "empty": "Not assigned to anyone"
+      },
+      "metaCard": {
+        "created": "Created",
+        "lessonsCount": "Lessons",
+        "passingScore": "Minimum score"
+      }
+    },
+    "assignments": {
+      "title": "Assignments",
+      "assign": "Assign course",
+      "columns": {
+        "employee": "Employee",
+        "course": "Course",
+        "status": "Status",
+        "progress": "Progress",
+        "deadline": "Deadline"
+      },
+      "statuses": {
+        "pending": "Not started",
+        "in_progress": "In progress",
+        "completed": "Completed",
+        "overdue": "Overdue",
+        "archived": "Archived"
+      },
+      "editDeadline": "Edit deadline",
+      "archive": "Archive",
+      "archiveConfirm": "Archive this assignment?",
+      "delete": "Delete",
+      "deleteConfirm": "Delete assignment? (only if no progress)",
+      "drawer": {
+        "title": "Assign course",
+        "employees": "Employees",
+        "employeesPlaceholder": "Select employees...",
+        "deadline": "Deadline",
+        "deadlineHint": "If not set, the course deadline ({n} days) will be used",
+        "submit": "Assign",
+        "cancel": "Cancel",
+        "successSummary": "Assigned: {assigned}",
+        "skippedWarning": "{skipped} employees already assigned"
+      },
+      "filter": {
+        "course": "Course",
+        "employee": "Employee",
+        "status": "Status",
+        "reset": "Reset",
+        "all": "All"
+      },
+      "empty": "No assignments",
+      "emptyFiltered": "Nothing found",
+      "newDeadline": "New deadline"
+    },
+    "hrProgress": {
+      "title": "Learning progress",
+      "kpi": {
+        "total": "Total assignments",
+        "completed": "Completed",
+        "inProgress": "In progress",
+        "overdue": "Overdue"
+      },
+      "charts": {
+        "byStatus": "Status distribution",
+        "topCourses": "Top 10 courses by completion"
+      },
+      "tableTitle": "Progress matrix",
+      "columns": {
+        "employee": "Employee",
+        "course": "Course",
+        "progress": "Progress",
+        "status": "Status",
+        "deadline": "Deadline",
+        "avgScore": "Avg score"
+      },
+      "filter": {
+        "course": "Course",
+        "employee": "Employee",
+        "status": "Status",
+        "reset": "Reset",
+        "all": "All"
+      },
+      "empty": "No assignments yet"
+    },
+    "myCourses": {
+      "title": "My learning",
+      "tabs": {
+        "active": "Active",
+        "completed": "Completed",
+        "overdue": "Overdue"
+      },
+      "continue": "Continue",
+      "viewCertificate": "View certificate",
+      "deadline": "Deadline",
+      "overdueFrom": "Overdue since",
+      "progress": "{n}% complete",
+      "empty": "No courses assigned to you yet",
+      "emptyTab": "No courses in this category"
+    },
+    "coursePage": {
+      "back": "My courses",
+      "prev": "Previous lesson",
+      "next": "Next lesson",
+      "completeBtn": "Complete course",
+      "markDone": "Mark as completed",
+      "markViewed": "Mark as viewed",
+      "lessonDone": "Lesson completed!",
+      "openPdf": "Open PDF",
+      "downloadPdf": "Download PDF",
+      "unsupportedVideo": "Unsupported video format",
+      "quiz": {
+        "title": "Quiz",
+        "passingScore": "Passing score",
+        "attempt": "Attempt #{n}",
+        "start": "Start quiz",
+        "question": "Question {current} of {total}",
+        "submit": "Submit answers",
+        "timer": "Time left",
+        "result": {
+          "passed": "Congratulations! Quiz passed — {score} of 100 points",
+          "failed": "Quiz failed — {score} of 100 points. Required: {min}%",
+          "review": "Answer review",
+          "correct": "Correct",
+          "incorrect": "Incorrect",
+          "answer": "Correct answer",
+          "explanation": "Explanation",
+          "retry": "Try again",
+          "nextLesson": "Next lesson"
+        }
+      },
+      "complete": {
+        "title": "Course completed!",
+        "congrats": "Congratulations! You have successfully completed the course «{title}».",
+        "certPending": "Certificate is being generated...",
+        "certReady": "Certificate issued!",
+        "downloadCert": "Download certificate",
+        "backToCourses": "Back to my courses"
+      },
+      "aiTutor": {
+        "title": "AI Tutor",
+        "btnLabel": "Ask AI",
+        "placeholder": "Ask a question about this lesson...",
+        "send": "Send",
+        "clearHistory": "Clear history",
+        "clearConfirm": "Clear chat history?",
+        "historyCleared": "History cleared",
+        "emptyHistory": "History is empty",
+        "unavailable": "AI is temporarily unavailable",
+        "unavailableDetail": "Please try again in a few seconds.",
+        "adminViewOnly": "You are viewing someone else's assignment"
+      }
+    },
+    "certificates": {
+      "title": "My certificates",
+      "number": "Certificate",
+      "issuedAt": "Issued",
+      "download": "Download PDF",
+      "empty": "No certificates yet",
+      "emptyHint": "Complete a course to receive a certificate",
+      "goToCourses": "Go to learning"
+    }
+  },
+  "automation": {
+    "wizard": {
+      "titleNew": "New automation",
+      "titleEdit": "Edit automation",
+      "step1": {
+        "label": "Action",
+        "searchPlaceholder": "Search actions...",
+        "noResults": "No actions found"
+      },
+      "step2": {
+        "label": "Configure"
+      },
+      "step3": {
+        "label": "Trigger"
+      },
+      "next": "Next",
+      "back": "Back",
+      "create": "Create",
+      "save": "Save"
+    },
+    "fields": {
+      "name": "Automation name",
+      "namePlaceholder": "E.g.: Notify manager on stage entry...",
+      "isActive": "Automation active",
+      "recipient": "Recipient",
+      "recipientOwner": "Deal owner",
+      "recipientUser": "Specific user",
+      "recipientChatId": "Chat ID (manual)",
+      "tgChatId": "Telegram Chat ID",
+      "searchUser": "Find user...",
+      "message": "Message",
+      "messagePlaceholder": "Deal {target_title}...",
+      "placeholders": "Available placeholders",
+      "taskTitle": "Task title",
+      "taskTitlePlaceholder": "Call client {target_title}",
+      "taskDesc": "Task description",
+      "dueDays": "Due (days from trigger)",
+      "dueDaysPlaceholder": "0 = today, 1 = tomorrow",
+      "dueDaysHint": "0 = today, 1 = tomorrow, empty = no deadline",
+      "field": "Field",
+      "value": "Value",
+      "setFieldNote": "Available fields depend on pipeline target type",
+      "template": "Document template",
+      "searchTemplate": "Find template...",
+      "attachTo": "Attach to",
+      "attachToDeal": "Deal",
+      "attachToCompany": "Company",
+      "generateDocNote": "MVP: records a timeline event. Full PDF generation after Documents integration.",
+      "rule": "Assignment rule",
+      "pool": "User pool",
+      "poolHint": "If pool is empty — entire sales department is used",
+      "targetStage": "Target stage",
+      "noStages": "No available stages",
+      "changeStageNote": "Current stage excluded. System stages Won/Lost are marked.",
+      "stageWon": "Won",
+      "stageLost": "Lost",
+      "webhookUrl": "URL",
+      "webhookUrlNote": "Private addresses (127.0.0.1, 192.168.x.x) are blocked",
+      "webhookSecret": "Secret (HMAC signature, optional)",
+      "webhookSecretPlaceholder": "Leave empty if not needed",
+      "webhookSecretNote": "Signs the payload as X-Signature-256",
+      "webhookAdminNote": "This action is available to administrators only",
+      "emailTo": "Recipient",
+      "emailManual": "Email manually",
+      "emailAddress": "Email",
+      "emailAddressPlaceholder": "example{'@'}company.com",
+      "emailSubject": "Subject",
+      "emailSubjectPlaceholder": "Your deal {target_title}...",
+      "emailBody": "Body",
+      "emailMvpNote": "MVP: email is queued. Actual sending requires SMTP setup in Integrations.",
+      "dealField": {
+        "notes": "Notes",
+        "title": "Title"
+      }
+    },
+    "trigger": {
+      "label": "Trigger — when does it fire?",
+      "on_enter_stage": "On stage entry",
+      "on_enter_stage_desc": "Fires immediately when a deal enters this stage.",
+      "idle_in_stage_days": "Idle in stage N days",
+      "idle_desc": "Cron check every hour.",
+      "date_field_approaching": "Date approaching",
+      "date_desc": "Cron check every hour. Fires N days before a date field.",
+      "on_create": "On entity create",
+      "on_create_desc": "Fires when a new deal/lead is created.",
+      "cronBadge": "Cron",
+      "instantBadge": "Instant",
+      "idleDays": "Days",
+      "dateField": "Date field",
+      "daysBeforeDate": "Days before",
+      "targetType": "Target type"
+    },
+    "action": {
+      "tg_notify": "Telegram notification",
+      "create_task": "Create task",
+      "set_field": "Set field",
+      "generate_document": "Generate document",
+      "change_owner": "Change owner",
+      "change_stage": "Change stage",
+      "webhook": "Webhook",
+      "email": "Email"
+    },
+    "actionDesc": {
+      "tg_notify": "Send a Telegram message to the owner or a specific user",
+      "create_task": "Creates an Activity of type 'task' with a deadline",
+      "set_field": "Update a whitelisted deal field",
+      "generate_document": "Generate a document from a template and attach it to the deal",
+      "change_owner": "Reassign deal by rule (round-robin, product, country)",
+      "change_stage": "Move the deal to another pipeline stage",
+      "webhook": "Send an HTTP request to an external URL",
+      "email": "Send an email"
+    },
+    "actionBadge": {
+      "adminOnly": "Admin only",
+      "requiresSmtp": "Requires SMTP"
+    },
+    "ownerRule": {
+      "round_robin": "Round-robin",
+      "by_product": "By product",
+      "by_country": "By country",
+      "by_department": "By department"
+    },
+    "dateField": {
+      "expected_close_date": "Close date",
+      "expected_sign_date": "Sign date",
+      "expected_payment_date": "Payment date"
+    },
+    "list": {
+      "toggle": "Automations",
+      "addButton": "Automation",
+      "addFirstButton": "+ First automation",
+      "empty": "No automations",
+      "emptyHint": "Add the first automation for this pipeline",
+      "panelTitle": "All pipeline automations",
+      "filterTrigger": "All triggers",
+      "filterAction": "All actions",
+      "col": {
+        "name": "Name",
+        "stage": "Stage",
+        "trigger": "Trigger",
+        "action": "Action",
+        "active": "Active"
+      }
+    },
+    "toast": {
+      "created": "Automation created",
+      "saved": "Automation saved",
+      "deleted": "Automation deleted",
+      "activated": "Automation enabled",
+      "deactivated": "Automation paused",
+      "deleteConfirm": "Delete automation?",
+      "deleteBody": "All future runs will be stopped. History will be preserved."
+    },
+    "runs": {
+      "pageTitle": "Automation log",
+      "empty": "No runs yet",
+      "count": "Rows: {n}",
+      "loadMore": "Load more",
+      "applyFilter": "Apply",
+      "retrySuccess": "Retry started",
+      "retry": "Retry",
+      "targetDeal": "Deal",
+      "filter": {
+        "automation": "All automations",
+        "status": "Any status",
+        "action": "Any action",
+        "period": "Period"
+      },
+      "col": {
+        "automation": "Automation",
+        "action": "Action",
+        "target": "Target",
+        "status": "Status",
+        "startedAt": "Time",
+        "error": "Error"
+      },
+      "status": {
+        "success": "Success",
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "pending": "Pending",
+        "queued": "Queued"
+      }
+    },
+    "dryrun": {
+      "button": "Dry run",
+      "drawerTitle": "Preview",
+      "matchedCount": "Records matched: {n}",
+      "actionsLabel": "Actions plan:",
+      "limitLabel": "Max records",
+      "execute": "Execute now",
+      "confirmHeader": "Confirm execution",
+      "confirmBody": "Execute action for {n} records?",
+      "noMatches": "No matching records",
+      "resultToast": "Done: {s} success, {f} failed, {sk} skipped",
+      "emptyHint": "Click 'Dry-run' to preview",
+      "analyzing": "Analyzing...",
+      "targetDeal": "Deal to test",
+      "targetDealPlaceholder": "Select a deal...",
+      "dealSearch": "Search deal...",
+      "targetDealHint": "For inline triggers (on_enter_stage, on_create) a specific deal must be selected"
+    },
+    "errors": {
+      "nameRequired": "Enter automation name",
+      "triggerRequired": "Select a trigger",
+      "idleDaysRequired": "Enter number of days (min 1)",
+      "dateFieldRequired": "Select a date field",
+      "dateDaysRequired": "Enter number of days (min 0)",
+      "taskTitleRequired": "Enter task title",
+      "messageRequired": "Enter message text",
+      "templateRequired": "Select a contract template",
+      "webhookUrlRequired": "Enter webhook URL",
+      "stageRequired": "Select a target stage",
+      "fieldRequired": "Select a field",
+      "fieldValueRequired": "Enter field value"
+    },
+    "canvas": {
+      "modeForm": "Form",
+      "modeCanvas": "Canvas",
+      "autoLayout": "Auto layout",
+      "autoLayoutHint": "Canvas position is cosmetic. Stage order is set in Form mode.",
+      "fitView": "Fit view",
+      "backToForm": "Back to form",
+      "paletteTitle": "Actions",
+      "paletteHint": "Drag onto a stage",
+      "paletteCollapse": "Collapse palette",
+      "paletteExpand": "Expand palette",
+      "toolTelegram": "Telegram",
+      "toolTask": "Task",
+      "toolField": "Field",
+      "toolDocument": "Document",
+      "toolOwner": "Owner",
+      "toolStage": "Stage",
+      "toolWebhook": "Webhook",
+      "toolEmail": "Email",
+      "anchorLabel": "Pipeline entry",
+      "anchorAutoCount": "on_create: {n}",
+      "stageAutos": "Automations: {n}",
+      "addAutomation": "+ Automation",
+      "autoActive": "active",
+      "autoInactive": "inactive",
+      "emptyNoStages": "Add stages in Form mode first",
+      "emptyNoAutos": "Drag an action from the left panel or click + on a stage",
+      "goToForm": "Go to Form",
+      "noEditStageHere": "Edit stages in Form mode",
+      "layoutSaveError": "Failed to save layout",
+      "layoutSaving": "Saving...",
+      "desktopOnly": "Canvas is only available on wide screens. Use Form mode.",
+      "deleteConfirmHeader": "Delete automation?",
+      "deleteConfirmBody": "Node and edge will be removed. Run history is kept.",
+      "triggerEdge": {
+        "on_enter_stage": "On entry",
+        "idle_in_stage_days": "Idle {n} d.",
+        "date_field_approaching": "Date {n} d.",
+        "on_create": "On create"
+      }
+    }
+  },
+  "account": {
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "language": "Language",
+    "profileSettings": "Profile settings",
+    "logout": "Log out"
+  },
+  "orbita": {
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "drag": "Drag",
+    "rotateH": "Horizontal mode",
+    "rotateV": "Vertical mode",
+    "notifications": "Notifications",
+    "notificationsUnread": "Notifications: {count} unread",
+    "noNotifications": "No new notifications",
+    "notificationsError": "Failed to load notifications",
+    "markAllRead": "Mark all as read",
+    "sectionActionable": "Needs attention",
+    "sectionFeed": "Feed",
+    "loadMore": "Load more",
+    "timeJustNow": "just now",
+    "timeMinutes": "{n} min ago",
+    "timeHours": "{n} h ago",
+    "timeDays": "{n} d ago",
+    "digest": {
+      "unread_total": "Total unread",
+      "task": "Tasks",
+      "approval": "Approvals",
+      "deal": "Deals",
+      "mention": "Mentions",
+      "system": "System"
+    },
+    "navLabel": "Main navigation",
+    "profile": "Profile"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "sectionTitle": "Quick action buttons",
+    "sectionHint": "Up to 5 actions will appear as buttons in the Orbit cluster (next to notifications). Drag actions to the right list and set their order.",
+    "configure": "Configure",
+    "noneSelected": "No quick actions selected",
+    "dialogTitle": "Configure quick actions",
+    "dialogHint": "Drag up to 5 actions to the right list. The order in the right list is the order of buttons in Orbit.",
+    "available": "Available",
+    "selected": "Selected",
+    "maxError": "You can select at most {max} actions",
+    "saved": "Quick actions saved",
+    "toggleTheme": "Toggle theme",
+    "openSearch": "Open search"
+  },
+  "layout": {
+    "navMode": "Menu style",
+    "navModeSidebar": "Sidebar",
+    "navModeOrbit": "Orbit",
+    "navModeOrbitHint": "A floating panel you can drag anywhere on the screen.",
+    "appearance": "Appearance"
+  },
+  "commandPalette": {
+    "placeholder": "Search pages and actions...",
+    "sectionPages": "Pages",
+    "sectionActions": "Actions",
+    "sectionRecent": "Recent",
+    "empty": "No results found",
+    "hint": "↑↓ navigate  · Enter select  · Esc close"
+  },
+  "hotkeys": {
+    "title": "Keyboard shortcuts",
+    "globalNav": "Navigation",
+    "other": "Other",
+    "goToDashboard": "Go to Dashboard",
+    "goToContacts": "Go to Contacts",
+    "goToCompanies": "Go to Companies",
+    "goToDeals": "Go to Deals",
+    "goToTasks": "Go to My Tasks",
+    "goToDocuments": "Go to Documents",
+    "goToApprovals": "Go to Approvals",
+    "goToCourses": "Go to My Courses",
+    "openSearch": "Open search",
+    "showHelp": "Show shortcuts"
+  },
+  "tasks": {
+    "board": {
+      "title": "My tasks",
+      "searchPlaceholder": "Search tasks",
+      "addTask": "Task",
+      "scope": {
+        "label": "Scope",
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "columns": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "this_week": "This week",
+        "next_week": "Next week",
+        "noDate": "No date",
+        "noTasks": "No tasks"
+      },
+      "card": {
+        "complete": "Done",
+        "completed": "Task completed",
+        "overdueSince": "overdue {when}",
+        "today": "today {time}",
+        "tomorrow": "tomorrow {time}"
+      },
+      "empty": {
+        "title": "All done",
+        "subtitle": "Great work! New tasks will appear here."
+      },
+      "taskTypes": {
+        "call": "Call",
+        "meeting": "Meeting",
+        "task": "Task",
+        "note": "Note",
+        "follow_up": "Follow-up",
+        "qualification": "Qualification",
+        "warm": "Warm",
+        "hot": "HOT"
+      }
+    }
+  }
+}

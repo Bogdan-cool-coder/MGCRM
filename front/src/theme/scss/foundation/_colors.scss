@@ -1,0 +1,132 @@
+// App theme colors backed by --app-* custom properties
+
+// Brand and status
+$primary: var(--app-primary);
+$primary-color: var(--app-primary-color);
+$danger: var(--app-danger);
+$monochrome-white: var(--app-monochrome-white);
+$blue-100: var(--app-blue-100);
+$orange-500: var(--app-orange-500);
+
+// Surfaces and borders
+// $surface-card — реактивный семантический токен карточки (light: #fff, dark: surface dark).
+// Используй $surface-card (не $surface-0) для фона карточек/панелей — он адаптируется к теме.
+$surface-card: var(--app-surface-card);
+$surface-0: var(--app-surface-0);
+$surface-50: var(--app-surface-50);
+$surface-100: var(--app-surface-100);
+$surface-200: var(--app-surface-200);
+$surface-300: var(--app-surface-300);
+$surface-400: var(--app-surface-400);
+$surface-500: var(--app-surface-500);
+$surface-600: var(--app-surface-600);
+$surface-700: var(--app-surface-700);
+$surface-800: var(--app-surface-800);
+$surface-900: var(--app-surface-900);
+$border-radius: var(--app-border-radius);
+$card-border-radius: var(--app-card-border-radius);
+
+// Status triads
+$status-success-bg: var(--app-status-success-bg);
+$status-success-border: var(--app-status-success-border);
+$status-success-text: var(--app-status-success-text);
+$status-danger-bg: var(--app-status-danger-bg);
+$status-danger-border: var(--app-status-danger-border);
+$status-danger-text: var(--app-status-danger-text);
+$status-warning-bg: var(--app-status-warning-bg);
+$status-warning-border: var(--app-status-warning-border);
+$status-warning-text: var(--app-status-warning-text);
+$status-info-bg: var(--app-status-info-bg);
+$status-info-border: var(--app-status-info-border);
+$status-info-text: var(--app-status-info-text);
+
+// Feedback helpers
+$errorBg: var(--app-error-bg);
+$errorBorder: var(--app-error-border);
+$red-50: var(--app-red-50);
+$red-100: var(--app-red-100);
+$red-200: var(--app-red-200);
+$red-500: var(--app-red-500);
+$red-700: var(--app-red-700);
+$green-100: var(--app-green-100);
+$green-900: var(--app-green-900);
+$orange-100: var(--app-orange-100);
+$orange-900: var(--app-orange-900);
+$blue-900: var(--app-blue-900);
+
+// Primary palette
+$primary-100: var(--app-primary-100);
+$primary-400: var(--app-primary-400);
+$primary-500: var(--app-primary-500);
+$primary-600: var(--app-primary-600);
+$primary-900: var(--app-primary-900);
+
+// Compatibility aliases
+$background-color: $surface-100;
+
+// ─── Brand header token ───────────────────────────────────────────────────────
+// Бренд-инвариант: хедер карточки сделки всегда тёмный (из брендбука).
+// НЕ меняется в dark-mode — зафиксировано в ТЗ DealPage 2.0 §1.1.
+$brand-header-bg: #172747;
+
+// ─── Sidebar tokens ──────────────────────────────────────────────────────────
+// Sidebar always stays dark (brand bg), regardless of light/dark theme.
+$sidebar-bg:           #172747;   // brand-primary — static, sidebar never adapts to theme
+$sidebar-hover-bg:     #0E172B;   // brand-primary-dark — replaces hardcoded #0e172b
+$sidebar-active-bg:    rgba(255, 255, 255, 0.08);   // active pill highlight
+$sidebar-active-bar:   #ffffff;                      // 3px left indicator bar
+$sidebar-text:         rgba(255, 255, 255, 0.75);    // default nav text
+$sidebar-text-active:  #ffffff;                      // active nav text
+$sidebar-divider:      rgba(255, 255, 255, 0.08);    // hairline before admin block
+
+// ─── Kanban health-signal colors ─────────────────────────────────────────────
+
+$color-warning:        #FFB38A;
+$color-warning-bg:     #fff0e8;
+$color-warning-border: #ffc8ad;
+$color-warning-text:   #9b4029;
+
+$color-danger:         #FF5A44;
+$color-danger-bg:      #ffe8e6;
+$color-danger-border:  #ffd1cd;
+$color-danger-text:    #9b1917;
+
+// ─── Pipeline stage color palette ────────────────────────────────────────────
+
+// Bright variants (white text, except amber)
+$stage-color-teal:        #1D9E75;
+$stage-color-blue:        #378ADD;
+$stage-color-amber:       #EF9F27;
+$stage-color-pink:        #D4537E;
+$stage-color-purple:      #7F77DD;
+$stage-color-amber-text:  #6B4A00;   // dark text on bright amber
+
+// Soft variants (dark family text)
+$stage-color-soft-teal:   #E1F5EE;
+$stage-color-soft-blue:   #E6F1FB;
+$stage-color-soft-amber:  #FAEEDA;
+$stage-color-soft-pink:   #FBEAF0;
+$stage-color-soft-green:  #EAF3DE;
+
+$stage-text-soft-teal:    #0D5C44;
+$stage-text-soft-blue:    #1A4F8A;
+$stage-text-soft-amber:   #6B4A00;
+$stage-text-soft-pink:    #7A2347;
+$stage-text-soft-green:   #3A6020;
+
+// ─── Task-type tag colors (view 3) ───────────────────────────────────────────
+
+$task-tag-meeting-bg:          #E1F5EE;
+$task-tag-meeting-text:        #0D5C44;
+$task-tag-qualification-bg:    #FAEEDA;
+$task-tag-qualification-text:  #6B4A00;
+$task-tag-warm-bg:             #FBEAF0;
+$task-tag-warm-text:           #7A2347;
+$task-tag-hot-bg:              #ffe8e6;
+$task-tag-hot-text:            #9b1917;
+$task-tag-follow-up-bg:        #E6F1FB;
+$task-tag-follow-up-text:      #1A4F8A;
+$task-tag-call-bg:             #EAF3DE;
+$task-tag-call-text:           #3A6020;
+$task-tag-note-bg:             #f0f0f0;
+$task-tag-note-text:           #555555;

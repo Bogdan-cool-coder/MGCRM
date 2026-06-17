@@ -45,6 +45,7 @@ Main передаёт в первом сообщении:
 ## Стек-указатели (PLAN §3)
 
 - **health/attention/KPI — чистые сервис-методы** (вход: снапшот подписки + список ActivitySnapshot; выход: tier/score/reasons), без side-effect/запросов внутри. `manual_tier_override` уважается всегда; `on_premise=true` → только override + контрактные attention-флаги. Окно расчёта — 30 дней.
+- **Manual-first:** авто-health (A1–A6, расчёт из ActivitySnapshot телеметрии) **отложен** — зависит от внешнего контракта телеметрии (`external_client_id` и формат метрик не согласован). До появления контракта — только ручное управление `manual_tier_override`. Реализуй модель и API, автоматический пересчёт — заглушкой/TODO.
 - attention-флаги (минимум): `no_activity_30d`, `discount_expires_soon`, `low_impl_pct` (B4–B6), `qa_failed`, `tier_dropped`.
 - **Cron-пересчёт** health + daily KPI snapshot — artisan command + Laravel scheduler (`queue:work`, БЕЗ Horizon). Идемпотентно (дата как ключ).
 - **Excel импорт/экспорт реестра** — PhpSpreadsheet. Импорт идемпотентен (insert-missing по натуральным ключам, не затирать ручные правки). Health-tier — ECharts (sparkline/badge) на фронте.
