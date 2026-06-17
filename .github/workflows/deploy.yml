@@ -1,26 +1,41 @@
 name: Deploy
 
-# STUB — rolling-restart template. NOT activated until M12 cutover.
+# Manual trigger only — each deployment is an explicit user action.
+# Trigger via GitHub UI: Actions → Deploy → Run workflow (select branch: main).
 #
-# Activation checklist (deploy-engineer, M12):
-#   1. Set GitHub repository secrets:
-#        SSH_HOST          — VPS IP / hostname
-#        SSH_USER          — deploy user (e.g. macro-crm)
-#        SSH_PRIVATE_KEY   — contents of ~/.ssh/id_ed25519 (private key)
-#        SSH_PORT          — SSH port (default 22)
-#   2. Change `on:` to include `push: branches: [main]` (remove workflow_dispatch-only gate).
-#   3. Confirm CI is green on main before first activation.
-#   4. Run a manual dry-run via `workflow_dispatch` first.
+# PRE-CONDITION (enforced by convention, not automation):
+#   CI workflow must be green on main before triggering this workflow.
+#   Check: https://github.com/<org>/MGCRM/actions/workflows/ci.yml
 #
-# Rolling-restart strategy (like contracts/deploy/rolling-restart.sh):
-#   - New containers are brought up before old ones are stopped.
-#   - Nginx/traefik only routes to healthy containers → zero-downtime window.
-#   - Migrations run once after deploy (idempotent, Laravel migrate --force).
+# Required GitHub Secrets (Settings → Secrets → Actions):
+#   SSH_HOST         — VPS hostname or IP (e.g. 153.80.x.x)
+#   SSH_USER         — SSH login user on VPS (e.g. root or deploy)
+#   SSH_PRIVATE_KEY  — contents of the private SSH key (PEM, no passphrase)
+#   SSH_PORT         — SSH port (usually 22)
 #
-# Requires: appleboy/ssh-action@v1.2.5 on the runner side.
+# Server-specific root .env at /opt/mgcrm/.env — set once on VPS manually:
+#   COMPOSE_PROJECT_NAME  = macro-crm
+#   IMAGE_TAG             = latest
+#   APP_DOMAIN            = mgcrm.macroglobal.tech
+#   TRAEFIK_NETWORK       = <name of Traefik external docker network on this VPS>
+#   TRAEFIK_CERTRESOLVER  = <name of Let's Encrypt resolver in Traefik config>
+#   APP_BIND              = 127.0.0.1
+#   APP_PORT              = 8080
+#   FRONTEND_PORT         = 3000
+#   POSTGRES_HOST_PORT    = 5432
+#   REDIS_HOST_PORT       = 6379
+#   DB_DATABASE           = macro_crm
+#   DB_USERNAME           = macro_crm
+#   DB_PASSWORD           = <strong password>
+#
+# src/.env delivery approach (choose one):
+#   DEFAULT — src/.env is placed on the server manually (once) and is NOT
+#             touched by this workflow. Recommended: only SSH creds go to GH.
+#   OPTION  — store full prod .env as GitHub Secret ENV_PROD and uncomment
+#             the ENV_PROD block in the script below (replaces src/.env on
+#             every deploy — convenient but puts all secrets in GitHub).
 
 on:
-  # Only manual trigger until M12 — prevents accidental prod deployment.
   workflow_dispatch:
 
 concurrency:
@@ -34,8 +49,6 @@ jobs:
     timeout-minutes: 35
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: SSH rolling-restart
         uses: appleboy/ssh-action@v1.2.5
         with:
@@ -43,18 +56,27 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          # 25m covers a full cold rebuild (PHP ext compile, composer install).
-          command_timeout: 25m
+          # 30m covers a full cold rebuild (php ext compile + npm ci + vite build).
+          command_timeout: 30m
           script: |
             set -euo pipefail
 
-            cd /opt/macro-crm
+            cd /opt/mgcrm
+
+            # --- Optional: write prod src/.env from GitHub Secret ---
+            # Uncomment the lines below if you use the ENV_PROD secret approach.
+            # DEFAULT: src/.env is placed on the server manually (never overwritten).
+            #
+            # if [ -n "${ENV_PROD:-}" ]; then
+            #   printf '%s' "$ENV_PROD" > src/.env
+            #   echo "src/.env written from ENV_PROD secret"
+            # fi
 
             # Pull latest source
             git fetch origin main
             git reset --hard origin/main
 
-            # Rolling-restart — see deploy/rolling-restart.sh for strategy notes.
+            # Rolling-restart — see deploy/rolling-restart.sh for strategy notes
             bash deploy/rolling-restart.sh
 
             # Tail recent logs for CI visibility
@@ -64,3 +86,5 @@ jobs:
             docker compose logs --tail=20 queue-worker || true
             echo "--- scheduler logs (last 20 lines) ---"
             docker compose logs --tail=20 scheduler || true
+            echo "--- frontend logs (last 20 lines) ---"
+            docker compose logs --tail=20 frontend || true

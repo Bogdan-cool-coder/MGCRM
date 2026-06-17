@@ -1,14 +1,32 @@
-# Frontend image — PLACEHOLDER.
-# The Vue 3 + PrimeVue SPA is scaffolded in M0.5 (front/). Until then this
-# Dockerfile only exists so `docker compose config` resolves the `frontend`
-# service's build context. The `frontend` service is gated behind the
-# `frontend` compose profile and is NOT started by `docker compose up`.
+# =============================================================================
+# Frontend — multi-stage Dockerfile (Vue 3 + Vite → nginx:alpine SPA)
 #
-# Replace with the real multi-stage node build (npm ci → vite build → nginx
-# static serve) when front/ lands.
-FROM node:22-alpine AS frontend
+# Pattern: direct copy from Vizion examples/vizion/docker/frontend.Dockerfile
+# with MGCRM-specific naming.
+#
+# Stages:
+#   build      — node:22-alpine, npm ci + vite build → /app/dist
+#   production — nginx:alpine, copies dist, serves SPA + proxies /api
+# =============================================================================
+
+# --- Stage 1: build ---
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# front/ does not exist yet (M0.5). This is intentionally a no-op base image.
-CMD ["sh", "-c", "echo 'frontend not yet scaffolded — see M0.5' && sleep infinity"]
+COPY front/package*.json ./
+RUN npm ci
+
+COPY front/ ./
+RUN npm run build
+
+# --- Stage 2: serve SPA ---
+FROM nginx:alpine AS production
+
+# SPA + /api proxy config (history-mode fallback + asset caching)
+COPY docker/nginx/frontend.conf /etc/nginx/conf.d/default.conf
+
+# Copy Vite build output
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
