@@ -19,6 +19,7 @@ use App\Domain\Sales\Models\Deal;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -618,9 +619,9 @@ class ActivityService
      * the personal task board can render the parent-deal line without an N+1.
      * Non-deal activities get a null deal_title. Mutates the collection in place.
      *
-     * @param  \Illuminate\Support\Collection<int, Activity>  $activities
+     * @param  Collection<int, Activity>  $activities
      */
-    private function stampDealTitles(\Illuminate\Support\Collection $activities): void
+    private function stampDealTitles(Collection $activities): void
     {
         $dealIds = $activities
             ->filter(static fn (Activity $a): bool => $a->target_type === ActivityTargetType::Deal->value && $a->target_id !== null)
