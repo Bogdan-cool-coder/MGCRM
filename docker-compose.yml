@@ -16,6 +16,8 @@ services:
     image: macro-crm-app:${IMAGE_TAG:-dev-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-app
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.75
     env_file:
       - src/.env
     environment:
@@ -49,6 +51,8 @@ services:
     image: nginx:alpine
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-nginx
     restart: unless-stopped
+    mem_limit: 96m
+    cpus: 0.25
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       # Read-only access to public/ for favicon, robots.txt (no src bind mount)
@@ -74,6 +78,8 @@ services:
     image: macro-crm-frontend:${IMAGE_TAG:-dev-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-frontend
     restart: unless-stopped
+    mem_limit: 96m
+    cpus: 0.25
     networks:
       - macro-crm-network
       - proxy
@@ -100,6 +106,8 @@ services:
     # If automation jobs grow significantly, extract a dedicated automation-worker service.
     command: php artisan queue:work --queue=default,automation --tries=1 --timeout=600 --max-jobs=50 --memory=256 --sleep=1
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
     env_file:
       - src/.env
     environment:
@@ -139,6 +147,8 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-scheduler
     command: php artisan schedule:work
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
     env_file:
       - src/.env
     environment:
@@ -179,6 +189,8 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-bot
     command: php artisan nutgram:run
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
     env_file:
       - src/.env
     environment:
@@ -202,6 +214,8 @@ services:
     image: gotenberg/gotenberg:8
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-gotenberg
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
     networks:
       - macro-crm-network
     healthcheck:
@@ -215,6 +229,8 @@ services:
     image: postgres:16-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-postgres
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.75
     # No host port published — postgres is internal to macro-crm-network only.
     # For one-off admin access use: docker compose exec postgres psql -U macro_crm
     environment:
@@ -236,6 +252,8 @@ services:
     image: redis:7-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-redis
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
     command: redis-server --appendonly yes
     # No host port published — redis is internal to macro-crm-network only.
     volumes:
