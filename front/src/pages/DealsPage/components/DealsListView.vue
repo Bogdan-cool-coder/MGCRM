@@ -272,14 +272,17 @@ function effectiveDays(deal: DealDto & { days_in_stage?: number | null }): strin
   return String(days)
 }
 
+const FALLBACK_WARN_DAYS = 7
+const FALLBACK_DANGER_DAYS = 14
+
 function rottingClass(deal: DealDto & { days_in_stage?: number | null }): string {
   const days = deal.days_in_stage != null
     ? deal.days_in_stage
     : deal.stage_changed_at
       ? Math.floor((Date.now() - new Date(deal.stage_changed_at).getTime()) / 86400000)
       : 0
-  const warnDays = 7
-  const dangerDays = 14
+  const warnDays = deal.stage?.warn_days ?? FALLBACK_WARN_DAYS
+  const dangerDays = deal.stage?.danger_days ?? FALLBACK_DANGER_DAYS
   if (days >= dangerDays) return 'deals-list__days--rotting'
   if (days >= Math.floor(warnDays * 0.7)) return 'deals-list__days--warn'
   return ''

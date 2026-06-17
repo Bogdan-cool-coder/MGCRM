@@ -13,6 +13,7 @@ import type {
   SaveMeetingReportPayload,
   MyBoardResponse,
 } from '@/entities/activity'
+import type { BulkCreateActivityPayload } from '@/entities/sales'
 
 export type ActivityPreset = 'my_tasks' | 'my_orders' | 'today' | 'overdue' | 'this_week' | 'pinned'
 
@@ -115,5 +116,11 @@ export const activityApi = {
   async getMyBoard(): Promise<MyBoardResponse> {
     const res = await apiClient.get<MyBoardResponse>('/api/activities/my-board')
     return res.data
+  },
+
+  // ── Bulk create (POST /api/activities/bulk) ────────────────────────────────
+
+  async bulkCreateActivities(payload: BulkCreateActivityPayload): Promise<void> {
+    await apiClient.post('/api/activities/bulk', payload)
   },
 }

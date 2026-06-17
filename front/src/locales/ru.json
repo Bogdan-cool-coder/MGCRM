@@ -928,6 +928,7 @@
         "bulk": {
           "selected": "Выбрано: {n}",
           "cancel": "Отмена",
+          "selectAll": "Выбрать все",
           "assignOwner": "Ответственный",
           "addTask": "+ Задача",
           "moveStage": "Этап",
@@ -936,7 +937,47 @@
           "delete": "Удалить",
           "deleteConfirm": "Удалить {n} сделок?",
           "deleteDetail": "Это действие нельзя отменить.",
-          "deleteSuccess": "{n} сделок удалено"
+          "deleteSuccess": "{n} сделок удалено",
+          "assignOwnerSuccess": "Ответственный изменён у {n} сделок",
+          "moveStageSuccess": "Стадия изменена у {n} сделок",
+          "editFieldSuccess": "Поле обновлено у {n} сделок",
+          "tagSuccess": "Теги обновлены у {n} сделок",
+          "addTaskSuccess": "Задача создана для {n} сделок",
+          "assignOwnerDialog": {
+            "title": "Сменить ответственного ({n} сделок)",
+            "owner": "Ответственный",
+            "ownerPlaceholder": "Выберите сотрудника",
+            "ownerRequired": "Выберите ответственного",
+            "apply": "Применить"
+          },
+          "moveStageDialog": {
+            "title": "Сменить стадию ({n} сделок)",
+            "stage": "Стадия",
+            "stagePlaceholder": "Выберите стадию",
+            "stageRequired": "Выберите стадию",
+            "apply": "Применить"
+          },
+          "editFieldDialog": {
+            "title": "Изменить поле ({n} сделок)",
+            "field": "Поле",
+            "fieldPlaceholder": "Выберите поле",
+            "value": "Значение",
+            "valuePlaceholder": "Введите значение",
+            "valueRequired": "Введите значение",
+            "selectFieldHint": "Выберите поле для редактирования",
+            "apply": "Применить"
+          },
+          "tagDialog": {
+            "title": "Изменить теги ({n} сделок)",
+            "hint": "Указанные теги заменят существующие теги у выбранных сделок.",
+            "tags": "Теги",
+            "tagsPlaceholder": "Добавить тег...",
+            "apply": "Применить"
+          },
+          "addTaskDialog": {
+            "title": "Создать задачу для {n} сделок",
+            "apply": "Создать"
+          }
         },
         "summary": "{count} сделок · ≈ {total}",
         "viewTasks": "Задачи",
@@ -972,6 +1013,7 @@
         "currency": {
           "approx": "≈ {sum}",
           "tooltipTitle": "Итого: ≈ {sum}",
+          "nativeTooltipTitle": "Суммы по валютам",
           "noRate": "Курс недоступен"
         },
         "empty": {
@@ -1011,6 +1053,8 @@
           "company": "Компания",
           "title": "Название",
           "pipeline": "Воронка",
+          "stage": "Стадия",
+          "stagePlaceholder": "Начальная стадия",
           "currency": "Валюта",
           "owner": "Ответственный",
           "expectedCloseDate": "Ожидаемая дата закрытия"

@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Activity;
 
 use App\Domain\Activity\Enums\ActivityStatus;
+use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Iam\Enums\VisibilityScope;
+use App\Domain\Sales\Models\Deal;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolveVisibility;
 use App\Http\Requests\Activity\ChangeStatusRequest;
 use App\Http\Requests\Activity\StoreActivityRequest;
+use App\Http\Requests\Activity\StoreBulkActivityRequest;
 use App\Http\Requests\Activity\UpdateActivityRequest;
 use App\Http\Resources\Activity\ActivityCardResource;
 use App\Http\Resources\Activity\ActivityResource;
@@ -66,6 +69,44 @@ class ActivityController extends Controller
         return ActivityResource::make(
             $activity->load(['responsible:id,full_name', 'createdBy:id,full_name'])
         );
+    }
+
+    /**
+     * POST /api/activities/bulk — create one activity/task on EACH of several
+     * deals (board toolbar mass task). Every target deal is authorised up front
+     * (all-or-nothing 403 — no partial create across a foreign card), then each
+     * activity is created through ActivityService::create so the per-deal
+     * task_types gate, department stamping and events all still fire. Returns the
+     * count created.
+     */
+    public function bulkStore(StoreBulkActivityRequest $request): JsonResponse
+    {
+        $dealIds = $request->dealIds();
+        $deals = Deal::query()->whereIn('id', $dealIds)->get();
+
+        if ($deals->count() !== count(array_unique($dealIds))) {
+            abort(403, 'One or more deals are not accessible.');
+        }
+
+        foreach ($deals as $deal) {
+            if (! $request->user()->can('view', $deal)) {
+                abort(403, 'One or more deals are not accessible.');
+            }
+        }
+
+        $payload = $request->taskPayload();
+        $created = 0;
+
+        foreach ($deals as $deal) {
+            $this->service->create(array_merge($payload, [
+                'target_type' => ActivityTargetType::Deal->value,
+                'target_id' => $deal->id,
+            ]), $request->user());
+
+            $created++;
+        }
+
+        return response()->json(['data' => ['created' => $created]]);
     }
 
     public function show(Request $request, Activity $activity): JsonResource

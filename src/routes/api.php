@@ -334,6 +334,13 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     Route::get('deals', [DealController::class, 'index'])->name('deals.index');
     Route::post('deals', [DealController::class, 'store'])->name('deals.store');
+
+    // Bulk + export — MUST precede deals/{deal} so 'bulk'/'export' are not bound
+    // as a {deal} route param. Board toolbar mass actions (Сделки-борд).
+    Route::patch('deals/bulk', [DealController::class, 'bulkUpdate'])->name('deals.bulk.update');
+    Route::delete('deals/bulk', [DealController::class, 'bulkDestroy'])->name('deals.bulk.destroy');
+    Route::get('deals/export', [DealController::class, 'export'])->name('deals.export');
+
     Route::get('deals/{deal}', [DealController::class, 'show'])->name('deals.show');
     Route::patch('deals/{deal}', [DealController::class, 'update'])->name('deals.update');
     Route::delete('deals/{deal}', [DealController::class, 'destroy'])->name('deals.destroy');
@@ -382,6 +389,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
     Route::get('activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::post('activities', [ActivityController::class, 'store'])->name('activities.store');
+    // Bulk create one task on several deals — before /{activity} (board toolbar).
+    Route::post('activities/bulk', [ActivityController::class, 'bulkStore'])->name('activities.bulk.store');
     Route::get('activities/{activity}', [ActivityController::class, 'show'])->name('activities.show');
     Route::patch('activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::delete('activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');

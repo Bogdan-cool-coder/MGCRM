@@ -7,6 +7,18 @@
       text
       @click="emit('cancel')"
     />
+
+    <!-- Select all checkbox -->
+    <div v-if="totalVisible > 0" class="bulk-toolbar__select-all">
+      <Checkbox
+        :model-value="allSelected"
+        :binary="true"
+        :indeterminate="someSelected"
+        @change="onSelectAllChange"
+      />
+      <span class="bulk-toolbar__select-all-label">{{ t('sales.deals.page.bulk.selectAll') }}</span>
+    </div>
+
     <span class="bulk-toolbar__count">
       {{ t('sales.deals.page.bulk.selected', { n: selectedCount }) }}
     </span>
@@ -69,11 +81,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 
-defineProps<{
+const props = defineProps<{
   selectedCount: number
+  totalVisible: number
 }>()
 
 const emit = defineEmits<{
@@ -84,9 +99,22 @@ const emit = defineEmits<{
   editField: []
   editTags: []
   delete: []
+  selectAll: []
+  clearSelection: []
 }>()
 
 const { t } = useI18n()
+
+const allSelected = computed(() => props.totalVisible > 0 && props.selectedCount === props.totalVisible)
+const someSelected = computed(() => props.selectedCount > 0 && props.selectedCount < props.totalVisible)
+
+function onSelectAllChange() {
+  if (allSelected.value) {
+    emit('clearSelection')
+  } else {
+    emit('selectAll')
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -104,6 +132,19 @@ const { t } = useI18n()
     background: rgba(23, 39, 71, 0.25);
     border-bottom-color: rgba(23, 39, 71, 0.5);
   }
+}
+
+.bulk-toolbar__select-all {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.bulk-toolbar__select-all-label {
+  font-size: $font-size-sm;
+  color: $surface-600;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .bulk-toolbar__count {

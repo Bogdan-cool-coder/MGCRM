@@ -76,6 +76,20 @@
         <small v-if="errors.pipeline_id" class="p-error">{{ errors.pipeline_id }}</small>
       </div>
 
+      <!-- Stage (optional pre-select) -->
+      <div v-if="stageOptions.length > 0" class="deal-drawer__field">
+        <label class="deal-drawer__label">{{ t('sales.deals.form.fields.stage') }}</label>
+        <Select
+          v-model="form.stage_id"
+          :options="stageOptions"
+          option-label="name"
+          option-value="id"
+          show-clear
+          :placeholder="t('sales.deals.form.fields.stagePlaceholder')"
+          class="w-full"
+        />
+      </div>
+
       <!-- Currency -->
       <div class="deal-drawer__field">
         <label class="deal-drawer__label">
@@ -156,7 +170,8 @@ import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorStatus, getValidationErrors, getApiErrorMessage } from '@/utils/errors'
 import { CURRENCY_WHITELIST } from '@/utils/currency'
 import { useUserStore } from '@/stores/user'
-import type { PipelineDto, DealDto } from '@/entities/sales'
+import { useSalesStore } from '@/stores/salesStore'
+import type { PipelineDto, DealDto, PipelineStageDto } from '@/entities/sales'
 
 interface CompanyOption {
   id: number
@@ -172,6 +187,7 @@ const props = defineProps<{
   modelValue: boolean
   pipelines: PipelineDto[]
   owners?: OwnerOption[]
+  initialStageId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -182,6 +198,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 const userStore = useUserStore()
+const salesStore = useSalesStore()
 
 const visible = computed({
   get: () => props.modelValue,
@@ -197,6 +214,7 @@ interface DealCreateForm {
   company: CompanyOption | null
   title: string
   pipeline_id: number | null
+  stage_id: number | null
   currency: string
   owner_user_id: number | null
   expected_close_date: Date | null
@@ -206,6 +224,7 @@ const defaultForm = (): DealCreateForm => ({
   company: null,
   title: '',
   pipeline_id: props.pipelines[0]?.id ?? null,
+  stage_id: props.initialStageId ?? null,
   currency: 'KZT',
   owner_user_id: userStore.getUser?.id ?? null,
   expected_close_date: null,
@@ -221,6 +240,12 @@ const saving = computed(() => mutation.isPending.value)
 const currencyOptions = computed(() =>
   CURRENCY_WHITELIST.map((c) => ({ value: c, label: c })),
 )
+
+const stageOptions = computed<PipelineStageDto[]>(() => {
+  const pid = form.value.pipeline_id ?? props.pipelines[0]?.id ?? null
+  if (!pid) return []
+  return salesStore.getCachedStages(pid)
+})
 
 const ownerOptions = computed<OwnerOption[]>(() => {
   if (isManagerRole.value && userStore.getUser) {
@@ -244,6 +269,15 @@ watch(
     if (open) {
       form.value = defaultForm()
       errors.value = {}
+    }
+  },
+)
+
+watch(
+  () => props.initialStageId,
+  (id) => {
+    if (id != null) {
+      form.value.stage_id = id
     }
   },
 )
@@ -312,6 +346,7 @@ async function onSubmit() {
         company_id: form.value.company!.id,
         title: form.value.title,
         pipeline_id: form.value.pipeline_id!,
+        stage_id: form.value.stage_id ?? undefined,
         currency: form.value.currency,
         owner_user_id: form.value.owner_user_id ?? userStore.getUser!.id,
         expected_close_date: formatDate(form.value.expected_close_date),

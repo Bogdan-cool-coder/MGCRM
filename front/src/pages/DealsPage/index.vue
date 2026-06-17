@@ -10,6 +10,7 @@
     <DealsBulkToolbar
       v-if="salesStore.bulkMode"
       :selected-count="salesStore.bulkSelection.length"
+      :total-visible="allVisibleDealIds.length"
       @cancel="salesStore.exitBulkMode()"
       @assign-owner="onBulkAssignOwner"
       @add-task="onBulkAddTask"
@@ -17,6 +18,8 @@
       @edit-field="onBulkEditField"
       @edit-tags="onBulkEditTags"
       @delete="onBulkDelete"
+      @select-all="salesStore.selectAllBulk(allVisibleDealIds)"
+      @clear-selection="salesStore.clearBulkSelection()"
     />
 
     <!-- Main toolbar (amo-style one-liner) -->
@@ -90,7 +93,36 @@
     <DealCreateDrawer
       v-model="createDrawerOpen"
       :pipelines="pipelines"
+      :initial-stage-id="createDrawerStageId"
       @created="onDealCreated"
+    />
+
+    <!-- Bulk dialogs -->
+    <BulkAssignDialog
+      v-model="bulkAssignOpen"
+      :deal-ids="salesStore.bulkSelection"
+      @done="onBulkDone(t('sales.deals.page.bulk.assignOwnerSuccess', { n: salesStore.bulkSelection.length }))"
+    />
+    <BulkMoveStageDialog
+      v-model="bulkMoveStageOpen"
+      :deal-ids="salesStore.bulkSelection"
+      :stages="currentStages"
+      @done="onBulkDone(t('sales.deals.page.bulk.moveStageSuccess', { n: salesStore.bulkSelection.length }))"
+    />
+    <BulkEditFieldDialog
+      v-model="bulkEditFieldOpen"
+      :deal-ids="salesStore.bulkSelection"
+      @done="onBulkDone(t('sales.deals.page.bulk.editFieldSuccess', { n: salesStore.bulkSelection.length }))"
+    />
+    <BulkTagDialog
+      v-model="bulkTagOpen"
+      :deal-ids="salesStore.bulkSelection"
+      @done="onBulkDone(t('sales.deals.page.bulk.tagSuccess', { n: salesStore.bulkSelection.length }))"
+    />
+    <BulkAddTaskDialog
+      v-model="bulkAddTaskOpen"
+      :deal-ids="salesStore.bulkSelection"
+      @done="onBulkDone(t('sales.deals.page.bulk.addTaskSuccess', { n: salesStore.bulkSelection.length }))"
     />
 
     <!-- Move deal dialog (list view action) -->
@@ -125,6 +157,11 @@ import DealsFilterOverlay from './components/DealsFilterOverlay.vue'
 import DealsTaskBoard from './components/DealsTaskBoard.vue'
 import DealCreateDrawer from './components/DealCreateDrawer.vue'
 import MoveDealDialog from './components/MoveDealDialog.vue'
+import BulkAssignDialog from './components/BulkAssignDialog.vue'
+import BulkMoveStageDialog from './components/BulkMoveStageDialog.vue'
+import BulkEditFieldDialog from './components/BulkEditFieldDialog.vue'
+import BulkTagDialog from './components/BulkTagDialog.vue'
+import BulkAddTaskDialog from './components/BulkAddTaskDialog.vue'
 import { useDealsFilters } from './composables/useDealsFilters'
 import { useDealsBoard } from './composables/useDealsBoard'
 import { useDealsList } from './composables/useDealsList'
@@ -276,14 +313,15 @@ const {
 // ── Create drawer ───────────────────────────────────────────────────────────────
 
 const createDrawerOpen = ref(false)
+const createDrawerStageId = ref<number | null>(null)
 
 function onAddDealToStage(stageId: number) {
-  // Pre-select stage in drawer — for now just open it
-  void stageId
+  createDrawerStageId.value = stageId
   createDrawerOpen.value = true
 }
 
 function onDealCreated() {
+  createDrawerStageId.value = null
   void reload()
 }
 
@@ -393,48 +431,124 @@ function confirmDelete(deal: DealDto) {
   })
 }
 
-// ── Bulk actions (stub — endpoints pending) ─────────────────────────────────────
+// ── Bulk dialogs visibility ────────────────────────────────────────────────────
+
+const bulkAssignOpen = ref(false)
+const bulkMoveStageOpen = ref(false)
+const bulkEditFieldOpen = ref(false)
+const bulkTagOpen = ref(false)
+const bulkAddTaskOpen = ref(false)
+
+// ── Computed: all visible deal IDs for select-all ─────────────────────────────
+
+const allVisibleDealIds = computed<number[]>(() => {
+  if (salesStore.activeView === 'kanban') {
+    // Use all locally-loaded columns (including hidden ones) so that
+    // "select all" captures every card currently rendered on screen.
+    // visibleColumns already includes toggled-open hidden stages,
+    // but hiddenColumns still holds the unopened ones; scanning
+    // localColumns once is the simplest authoritative source.
+    return boardComposable.localColumns.value.flatMap((col) => col.deals.map((d) => d.id))
+  }
+  if (salesStore.activeView === 'list') {
+    return deals.value.map((d) => d.id)
+  }
+  return []
+})
+
+// ── Bulk action handlers ───────────────────────────────────────────────────────
 
 function onBulkAssignOwner() {
-  // TODO: BulkAssignDialog — backlog (PATCH /api/deals/bulk)
+  if (salesStore.bulkSelection.length === 0) return
+  bulkAssignOpen.value = true
 }
 
 function onBulkAddTask() {
-  // TODO: ActivityCreateDialog with deal_ids — backlog (POST /api/activities/bulk)
+  if (salesStore.bulkSelection.length === 0) return
+  bulkAddTaskOpen.value = true
 }
 
 function onBulkMoveStage() {
-  // TODO: BulkMoveStageDialog — backlog (PATCH /api/deals/bulk)
+  if (salesStore.bulkSelection.length === 0) return
+  bulkMoveStageOpen.value = true
 }
 
 function onBulkEditField() {
-  // TODO: BulkEditFieldDialog — backlog (PATCH /api/deals/bulk)
+  if (salesStore.bulkSelection.length === 0) return
+  bulkEditFieldOpen.value = true
 }
 
 function onBulkEditTags() {
-  // TODO: BulkTagDialog — backlog (PATCH /api/deals/bulk)
+  if (salesStore.bulkSelection.length === 0) return
+  bulkTagOpen.value = true
 }
 
 function onBulkDelete() {
+  if (salesStore.bulkSelection.length === 0) return
+  const n = salesStore.bulkSelection.length
   confirm.require({
-    header: t('sales.deals.page.bulk.deleteConfirm', { n: salesStore.bulkSelection.length }),
+    header: t('sales.deals.page.bulk.deleteConfirm', { n }),
     message: t('sales.deals.page.bulk.deleteDetail'),
     acceptLabel: t('sales.deals.page.bulk.delete'),
     rejectLabel: t('sales.deals.page.bulk.cancel'),
     acceptClass: 'p-button-danger',
     accept: async () => {
-      // TODO: DELETE /api/deals/bulk — backlog
-      toast.add({ severity: 'info', summary: t('common.coming_soon'), life: 2000 })
-      salesStore.exitBulkMode()
+      try {
+        await salesApi.bulkDeleteDeals({ deal_ids: salesStore.bulkSelection })
+        toast.add({
+          severity: 'success',
+          summary: t('sales.deals.page.bulk.deleteSuccess', { n }),
+          life: 3000,
+        })
+        salesStore.exitBulkMode()
+        void reload()
+      } catch (err) {
+        toast.add({
+          severity: 'error',
+          summary: t('errors.server_error'),
+          detail: getApiErrorMessage(err, t('errors.server_error')),
+          life: 4000,
+        })
+      }
     },
   })
 }
 
+function onBulkDone(successMessage: string) {
+  toast.add({ severity: 'success', summary: successMessage, life: 3000 })
+  salesStore.exitBulkMode()
+  void reload()
+}
+
 // ── Export ─────────────────────────────────────────────────────────────────────
 
-function onExport() {
-  // TODO: GET /api/deals/export — backlog
-  toast.add({ severity: 'info', summary: t('common.coming_soon'), life: 2000 })
+const exportMutation = useMutation<Blob>()
+
+async function onExport() {
+  try {
+    const f = filters.value
+    const blob = await exportMutation.run(() =>
+      salesApi.exportDeals({
+        pipeline_id: currentPipelineId.value ?? undefined,
+        q: f.q || null,
+        owner_id: f.owner_id,
+        stage_id: f.stage_id,
+      }),
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `deals-${new Date().toISOString().slice(0, 10)}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
 }
 
 // ── Tasks view ─────────────────────────────────────────────────────────────────

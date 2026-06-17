@@ -76,6 +76,31 @@ class DealService
     }
 
     /**
+     * Visibility-scoped, filtered Deal query WITHOUT pagination — the single
+     * source the XLSX/CSV export iterates over so the file always matches exactly
+     * what the board/list shows under the same filters (Сделки-борд: экспорт).
+     * Same filter set and same scope as list(), ordered newest first.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Deal>
+     */
+    public function filteredQuery(array $filters, VisibilityScope $scope, User $user): Builder
+    {
+        return $this->scopedQuery($scope, $user)
+            ->with(['pipeline:id,name,kind', 'stage:id,name', 'company:id,name', 'owner:id,full_name'])
+            ->when(isset($filters['pipeline_id']), fn (Builder $q) => $q->where('pipeline_id', $filters['pipeline_id']))
+            ->when(isset($filters['stage_id']), fn (Builder $q) => $q->where('stage_id', $filters['stage_id']))
+            ->when(isset($filters['owner_id']), fn (Builder $q) => $q->where('owner_user_id', $filters['owner_id']))
+            ->when(isset($filters['q']), fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'))
+            ->when(
+                $filters['archived'] ?? false,
+                fn (Builder $q) => $q->whereNotNull('archived_at'),
+                fn (Builder $q) => $q->whereNull('archived_at'),
+            )
+            ->orderByDesc('created_at');
+    }
+
+    /**
      * Resolve the default sales pipeline (first by sort_order) for board views
      * when the request omits pipeline_id. Null only if no sales pipeline exists.
      */
@@ -96,6 +121,13 @@ class DealService
      * native breakdown popover), while `sum_amount` is the base-currency total
      * via ExchangeRateService (deals in a currency with no rate are skipped and
      * `multi_currency_warning` flips true, mirroring SalesDashboardService).
+     *
+     * Each column also carries `rate_available` (bool): false when the column
+     * holds at least one foreign-currency bucket whose rate is missing, so the
+     * base-currency `sum_amount` is incomplete. The frontend then suppresses the
+     * "≈" approximation prefix and shows only the native amounts_by_currency
+     * breakdown for that column (FX fallback — no silent under-counting). Columns
+     * that are pure base-currency, empty, or fully convertible stay true.
      *
      * Each card is enriched with `next_task`, `primary_product` and
      * `days_in_stage`. The next-task and primary-product lookups are BATCHED
@@ -152,13 +184,18 @@ class DealService
 
         $columns = [];
         foreach ($rawColumns as $stageId => $column) {
-            // Base-currency total from the native sums.
+            // Base-currency total from the native sums. rate_available flips false
+            // for this column the moment one of its currency buckets cannot be
+            // converted — the sum_amount is then partial and the frontend must
+            // fall back to amounts_by_currency without an "≈" prefix.
             $sumAmount = 0;
+            $rateAvailable = true;
             foreach ($column['amounts_by_currency'] as $currency => $kopecks) {
                 $converted = $this->safeConvert($kopecks, (string) $currency, $baseCurrency);
 
                 if ($converted === null) {
                     $multiCurrencyWarning = true;
+                    $rateAvailable = false;
 
                     continue;
                 }
@@ -177,6 +214,7 @@ class DealService
                 'stage_id' => $column['stage_id'],
                 'total' => $column['total'],
                 'sum_amount' => $sumAmount,
+                'rate_available' => $rateAvailable,
                 'amounts_by_currency' => $column['amounts_by_currency'],
                 'deals' => $column['deals'],
             ];

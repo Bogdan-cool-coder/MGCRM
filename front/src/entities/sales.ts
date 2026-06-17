@@ -146,6 +146,7 @@ export interface BoardColumnDto {
   currency: string
   amounts_by_currency: Record<string, number>
   multi_currency_warning: boolean
+  fx_rate_available: boolean
   deals: DealCardDto[]
   has_more: boolean
 }
@@ -167,6 +168,7 @@ export interface BoardRawColumnDto {
   base_currency: string
   amounts_by_currency: Record<string, number>
   multi_currency_warning: boolean
+  rate_available?: boolean
   deals: Array<{
     id: number
     title: string
@@ -272,6 +274,7 @@ export interface CreateDealPayload {
   company_id: number
   title: string
   pipeline_id: number
+  stage_id?: number
   currency: string
   owner_user_id: number
   expected_close_date?: string | null
@@ -372,4 +375,34 @@ export interface DealListParams {
   q?: string | null
   page?: number
   per_page?: number
+}
+
+// ─── Bulk payloads (PATCH /api/deals/bulk, DELETE /api/deals/bulk) ────────────
+
+export type BulkDealField = 'owner_id' | 'tags' | 'extra_fields' | 'currency'
+
+export interface BulkPatchDealsPayload {
+  deal_ids: number[]
+  operation: 'change_owner' | 'change_stage' | 'set_field' | 'edit_tags'
+  owner_id?: number | null
+  stage_id?: number | null
+  field?: BulkDealField
+  value?: unknown
+  tags?: string[]
+}
+
+export interface BulkDeleteDealsPayload {
+  deal_ids: number[]
+}
+
+// ─── Bulk activity payload (POST /api/activities/bulk) ───────────────────────
+
+export interface BulkCreateActivityPayload {
+  deal_ids: number[]
+  type: string
+  title: string
+  body?: string | null
+  responsible_id?: number | null
+  due_at?: string | null
+  priority?: string
 }

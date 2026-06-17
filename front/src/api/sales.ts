@@ -28,6 +28,8 @@ import type {
   CreateStagePayload,
   UpdateStagePayload,
   ReorderStageItem,
+  BulkPatchDealsPayload,
+  BulkDeleteDealsPayload,
 } from '@/entities/sales'
 
 // ─── Move response ─────────────────────────────────────────────────────────────
@@ -92,6 +94,7 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
       currency: col.base_currency ?? 'RUB',
       amounts_by_currency: col.amounts_by_currency ?? {},
       multi_currency_warning: col.multi_currency_warning ?? false,
+      fx_rate_available: col.rate_available ?? true,
       deals,
       has_more: col.total > col.deals.length,
     }
@@ -300,5 +303,29 @@ export const salesApi = {
       `/api/deals/${dealId}/history`,
     )
     return res.data.data
+  },
+
+  // ── Bulk operations ────────────────────────────────────────────────────────
+
+  async bulkPatchDeals(payload: BulkPatchDealsPayload): Promise<void> {
+    await apiClient.patch('/api/deals/bulk', payload)
+  },
+
+  async bulkDeleteDeals(payload: BulkDeleteDealsPayload): Promise<void> {
+    await apiClient.delete('/api/deals/bulk', { data: payload })
+  },
+
+  // ── Export ─────────────────────────────────────────────────────────────────
+
+  async exportDeals(params: DealListParams = {}): Promise<Blob> {
+    const clean: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== null && v !== undefined && v !== '') clean[k] = v
+    }
+    const res = await apiClient.get<Blob>('/api/deals/export', {
+      params: clean,
+      responseType: 'blob',
+    })
+    return res.data
   },
 }

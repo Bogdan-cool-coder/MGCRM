@@ -45,7 +45,9 @@
     <Popover ref="popoverRef">
       <div class="kanban-col__currency-popup">
         <div class="kanban-col__currency-title">
-          {{ t('sales.deals.page.currency.tooltipTitle', { sum: plainSum }) }}
+          {{ column.fx_rate_available
+            ? t('sales.deals.page.currency.tooltipTitle', { sum: plainSum })
+            : t('sales.deals.page.currency.nativeTooltipTitle') }}
         </div>
         <div v-if="Object.keys(column.amounts_by_currency).length === 0" class="kanban-col__currency-empty">
           {{ t('sales.deals.page.currency.noRate') }}
@@ -250,7 +252,34 @@ const plainSum = computed(() => {
   return `${Math.round(rub)} ${sign}`
 })
 
-const formattedSum = computed(() => `≈ ${plainSum.value}`)
+// When fx rate is unavailable, show native amounts without the ≈ approximation prefix
+const formattedSum = computed(() => {
+  if (!props.column.fx_rate_available) {
+    // No conversion available — show amounts_by_currency inline if multi-currency,
+    // or the plain native amount without ≈
+    const keys = Object.keys(props.column.amounts_by_currency)
+    if (keys.length === 1 && keys[0]) {
+      const cur = keys[0]
+      const amount = props.column.amounts_by_currency[cur]
+      if (amount !== undefined) {
+        return formatNativeCurrency(amount, cur)
+      }
+    }
+    if (keys.length > 1) {
+      // Multiple currencies, rate unavailable: show first + ellipsis
+      const firstKey = keys[0]
+      if (firstKey) {
+        const amount = props.column.amounts_by_currency[firstKey]
+        if (amount !== undefined) {
+          return `${formatNativeCurrency(amount, firstKey)} …`
+        }
+      }
+    }
+    // Fall back to base amount without ≈
+    return plainSum.value
+  }
+  return `≈ ${plainSum.value}`
+})
 
 const sortedAmountsByCurrency = computed(() => {
   return Object.fromEntries(

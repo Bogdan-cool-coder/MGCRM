@@ -920,6 +920,7 @@
         "bulk": {
           "selected": "Selected: {n}",
           "cancel": "Cancel",
+          "selectAll": "Select all",
           "assignOwner": "Assign",
           "addTask": "+ Task",
           "moveStage": "Stage",
@@ -928,7 +929,47 @@
           "delete": "Delete",
           "deleteConfirm": "Delete {n} deals?",
           "deleteDetail": "This action cannot be undone.",
-          "deleteSuccess": "{n} deals deleted"
+          "deleteSuccess": "{n} deals deleted",
+          "assignOwnerSuccess": "Owner changed for {n} deals",
+          "moveStageSuccess": "Stage changed for {n} deals",
+          "editFieldSuccess": "Field updated for {n} deals",
+          "tagSuccess": "Tags updated for {n} deals",
+          "addTaskSuccess": "Task created for {n} deals",
+          "assignOwnerDialog": {
+            "title": "Assign owner ({n} deals)",
+            "owner": "Owner",
+            "ownerPlaceholder": "Select a user",
+            "ownerRequired": "Select an owner",
+            "apply": "Apply"
+          },
+          "moveStageDialog": {
+            "title": "Move stage ({n} deals)",
+            "stage": "Stage",
+            "stagePlaceholder": "Select a stage",
+            "stageRequired": "Select a stage",
+            "apply": "Apply"
+          },
+          "editFieldDialog": {
+            "title": "Edit field ({n} deals)",
+            "field": "Field",
+            "fieldPlaceholder": "Select a field",
+            "value": "Value",
+            "valuePlaceholder": "Enter value",
+            "valueRequired": "Enter a value",
+            "selectFieldHint": "Select a field to edit",
+            "apply": "Apply"
+          },
+          "tagDialog": {
+            "title": "Edit tags ({n} deals)",
+            "hint": "These tags will replace existing tags on the selected deals.",
+            "tags": "Tags",
+            "tagsPlaceholder": "Add tag...",
+            "apply": "Apply"
+          },
+          "addTaskDialog": {
+            "title": "Create task for {n} deals",
+            "apply": "Create"
+          }
         },
         "kanban": {
           "deals": "{count} deals",
@@ -962,6 +1003,7 @@
         "currency": {
           "approx": "≈ {sum}",
           "tooltipTitle": "Total: ≈ {sum}",
+          "nativeTooltipTitle": "Amounts by currency",
           "noRate": "Rate unavailable"
         },
         "columns": {
@@ -1001,6 +1043,8 @@
           "company": "Company",
           "title": "Title",
           "pipeline": "Pipeline",
+          "stage": "Stage",
+          "stagePlaceholder": "Initial stage",
           "currency": "Currency",
           "owner": "Owner",
           "expectedCloseDate": "Expected close date"

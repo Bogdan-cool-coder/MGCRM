@@ -195,6 +195,52 @@ class DealBoardEnrichmentTest extends TestCase
             ->assertJsonPath('multi_currency_warning', true);
     }
 
+    public function test_board_column_flags_rate_unavailable_when_rate_missing(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $director = User::factory()->create(['role' => Role::Director]);
+        $stageId = $this->stageCodeId($pipeline, 'new');
+
+        // EUR has no EUR→RUB rate seeded → the column total cannot be fully
+        // converted: rate_available must be false so the frontend drops the "≈".
+        Deal::factory()->forOwner($director)->create([
+            'pipeline_id' => $pipeline->id, 'stage_id' => $stageId,
+            'currency' => 'EUR', 'amount' => 1_000,
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson("/api/deals?view=board&pipeline_id={$pipeline->id}")
+            ->assertOk()
+            ->assertJsonPath("columns.{$stageId}.rate_available", false);
+    }
+
+    public function test_board_column_rate_available_true_when_all_rates_present(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $director = User::factory()->create(['role' => Role::Director]);
+        $stageId = $this->stageCodeId($pipeline, 'new');
+
+        Deal::factory()->forOwner($director)->create([
+            'pipeline_id' => $pipeline->id, 'stage_id' => $stageId,
+            'currency' => 'RUB', 'amount' => 100_000,
+        ]);
+        Deal::factory()->forOwner($director)->create([
+            'pipeline_id' => $pipeline->id, 'stage_id' => $stageId,
+            'currency' => 'USD', 'amount' => 1_000,
+        ]);
+        ExchangeRate::factory()->create([
+            'from_code' => 'USD', 'to_code' => 'RUB', 'rate' => '90.000000',
+            'date' => now()->toDateString(),
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson("/api/deals?view=board&pipeline_id={$pipeline->id}")
+            ->assertOk()
+            ->assertJsonPath("columns.{$stageId}.rate_available", true);
+    }
+
     /** Resolve a stage id by code on the seeded sales pipeline. */
     private function stageCodeId($pipeline, string $code): int
     {
