@@ -8,7 +8,7 @@
         <div class="col-auto">
           <nav class="profile-tabs">
             <button
-              v-for="tab in tabs"
+              v-for="tab in visibleTabs"
               :key="tab"
               class="profile-tabs__item"
               :class="{ 'profile-tabs__item--active': activeTab === tab }"
@@ -244,6 +244,33 @@
               </div>
             </template>
 
+            <!-- System tab (admin only) -->
+            <template v-if="activeTab === 'system'">
+              <h2 class="profile-content__heading">{{ t('system.reset.tab_title') }}</h2>
+
+              <div class="profile-section">
+                <h3 class="profile-section__title">{{ t('system.reset.section_title') }}</h3>
+                <p class="text-muted mb-3">{{ t('system.reset.section_hint') }}</p>
+
+                <div class="system-reset-trigger">
+                  <div class="system-reset-trigger__info">
+                    <i class="pi pi-exclamation-triangle system-reset-trigger__icon" aria-hidden="true" />
+                    <div>
+                      <p class="system-reset-trigger__label">{{ t('system.reset.action_label') }}</p>
+                      <p class="system-reset-trigger__desc">{{ t('system.reset.action_desc') }}</p>
+                    </div>
+                  </div>
+                  <Button
+                    :label="t('system.reset.open_dialog_btn')"
+                    severity="danger"
+                    outlined
+                    icon="pi pi-refresh"
+                    @click="systemReset.openDialog()"
+                  />
+                </div>
+              </div>
+            </template>
+
             <!-- Coming soon tabs -->
             <template v-if="['notifications', 'locale', 'theme', 'calendar', 'signature', 'segments'].includes(activeTab)">
               <h2 class="profile-content__heading">{{ t(`profile.tabs.${activeTab}`) }}</h2>
@@ -299,6 +326,20 @@
 
   <!-- Quick actions picker dialog (portal) -->
   <QuickActionsPickerDialog v-model:visible="pickerVisible" />
+
+  <!-- System reset dialog (admin only, portal) -->
+  <SystemResetDialog
+    v-if="isAdmin"
+    :visible="systemReset.dialogVisible.value"
+    :confirm-input="systemReset.confirmInput.value"
+    :is-confirmed="systemReset.isConfirmed.value"
+    :is-pending="systemReset.isPending.value"
+    :RESET_CONFIRM_PHRASE="systemReset.RESET_CONFIRM_PHRASE"
+    @update:visible="(v) => { if (!v) systemReset.closeDialog() }"
+    @update:confirm-input="(v) => { systemReset.confirmInput.value = v }"
+    @confirm="systemReset.executeReset()"
+    @cancel="systemReset.closeDialog()"
+  />
 </template>
 
 <script setup lang="ts">
@@ -317,13 +358,21 @@ import { getI18nLocale, type AvailableLocales } from '@/plugins/i18n'
 import type { NavMode } from '@/stores/layout'
 import { useProfilePage, type ProfileTab } from './composables/useProfilePage'
 import QuickActionsPickerDialog from './components/QuickActionsPickerDialog.vue'
+import SystemResetDialog from './components/SystemResetDialog.vue'
 import { useUserStore } from '@/stores/user'
 import { resolveQuickActions } from '@/shared/nav/quickActionRegistry'
+import { useSystemReset } from './composables/useSystemReset'
 
 const { t } = useI18n()
 const layoutStore = useLayoutStore()
 const themeStore = useThemeStore()
 const userStore = useUserStore()
+
+// ─── Admin guard ──────────────────────────────────────────────────────────────
+const isAdmin = computed(() => userStore.getUserRole === 'admin')
+
+// ─── System reset (admin only) ───────────────────────────────────────────────
+const systemReset = useSystemReset()
 
 // ─── Quick actions ────────────────────────────────────────────────────────────
 const currentQuickActions = computed(() =>
@@ -405,7 +454,13 @@ const TAB_ICONS: Record<ProfileTab, string> = {
   telegram: 'pi pi-telegram',
   appearance: 'pi pi-sliders-h',
   quickActions: 'pi pi-bolt',
+  system: 'pi pi-cog',
 }
+
+// Filter tabs: system tab is admin-only
+const visibleTabs = computed(() =>
+  tabs.filter((tab) => tab !== 'system' || isAdmin.value),
+)
 
 const pickerVisible = ref(false)
 
@@ -698,6 +753,46 @@ function tabIcon(tab: ProfileTab): string {
 .quick-actions-preview__label {
   font-weight: $font-weight-medium;
   color: $surface-900;
+}
+
+// System reset trigger card
+.system-reset-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  padding: $space-4;
+  border: 1px solid $surface-200;
+  border-radius: $radius-md;
+  background: $surface-card;
+
+  &__info {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-3;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__icon {
+    font-size: 1.25rem;
+    color: var(--p-red-500);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $surface-900;
+    margin: 0 0 $space-1;
+  }
+
+  &__desc {
+    font-size: $font-size-sm;
+    color: $surface-500;
+    margin: 0;
+  }
 }
 
 // Coming soon

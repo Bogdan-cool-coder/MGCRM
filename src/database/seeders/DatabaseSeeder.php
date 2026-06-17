@@ -8,29 +8,90 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * BASELINE seeders — system configuration only (roles/permissions, accounts,
+     * product catalog, sales pipeline + stages, lost reasons, meeting-report
+     * question registry, licensor entities, contract templates + variables,
+     * default approval route, message templates). These are re-run by the
+     * "Сброс настроек" clean reset (app:reset-clean).
+     *
+     * NOTE: these are the LEAF baseline seeders, listed directly rather than via
+     * the mixed orchestrators (SalesSeeder / ContractsSeeder), because those
+     * orchestrators also pull in SAMPLE (business) data. Keeping the leaves here
+     * lets the reset run baseline-only without touching deals/documents/etc.
+     *
+     * @var list<class-string<Seeder>>
+     */
+    private const BASELINE_SEEDERS = [
+        RolePermissionSeeder::class,
+        AdminSeeder::class,
+        // Catalog (products + prices).
+        ProductGroupSeeder::class,
+        ProductSeeder::class,
+        // Sales config: pipeline + stages, lost reasons.
+        PipelineSeeder::class,
+        LostReasonSeeder::class,
+        // Activity: meeting-report question registry (config, deps-free).
+        MeetingReportQuestionSeeder::class,
+        // Contracts config: licensor entities, templates, template variables,
+        // default approval route (also creates lawyer/director test accounts),
+        // message templates.
+        LicensorEntitySeeder::class,
+        TemplateSeeder::class,
+        TemplateVariableSeeder::class,
+        ApprovalRouteSeeder::class,
+        MessageTemplateSeeder::class,
+    ];
+
+    /**
+     * SAMPLE seeders — demo business data. NOT re-run by the clean reset.
+     *
+     * @var list<class-string<Seeder>>
+     */
+    private const SAMPLE_SEEDERS = [
+        // Sales: demo deals + deal products.
+        DemoDealsSeeder::class,
+        // Activity: demo activities (depend on demo deals).
+        DemoActivitiesSeeder::class,
+        // Manager Cabinet KPI: department/commission/team-target + won deals +
+        // salary plans + demo contracts (business data).
+        ManagerKpiSeeder::class,
+        // Inbox: demo channel + public form.
+        InboxSeeder::class,
+        // Contracts: demo documents + revisions.
+        DemoDocumentsSeeder::class,
+        // Onboarding: demo course, assignments, quiz (content + progress).
+        OnboardingSeeder::class,
+    ];
+
+    /**
+     * The baseline (config-only) seeder list, shared by app:reset-clean and tests.
+     *
+     * @return list<class-string<Seeder>>
+     */
+    public static function baselineSeeders(): array
+    {
+        return self::BASELINE_SEEDERS;
+    }
+
+    /**
+     * The sample (business-data) seeder list.
+     *
+     * @return list<class-string<Seeder>>
+     */
+    public static function sampleSeeders(): array
+    {
+        return self::SAMPLE_SEEDERS;
+    }
+
     public function run(): void
     {
+        // Full local/staging seed: baseline configuration first, then demo data.
+        // ManagerKpiSeeder must run after PipelineSeeder (won stage) — both are
+        // ordered correctly across the two lists.
         $this->call([
-            RolePermissionSeeder::class,
-            AdminSeeder::class,
-            CatalogSeeder::class,
-            SalesSeeder::class,
-            // Activity (S1.6): meeting-report registry (deps-free) + demo
-            // activities (depend on demo deals seeded above).
-            MeetingReportQuestionSeeder::class,
-            DemoActivitiesSeeder::class,
-            // Manager Cabinet KPI (S1.8): demo managers, salary plans, won deals.
-            ManagerKpiSeeder::class,
-            // Inbox (S1.9): demo channel + public form (deps on pipeline + admin).
-            InboxSeeder::class,
-            // Contracts (S2.1): licensor entities, templates, template variables.
-            ContractsSeeder::class,
-            // Contracts (S2.6): default approval route + test users.
-            ApprovalRouteSeeder::class,
-            // Contracts (S2.7): demo message templates with bindings.
-            MessageTemplateSeeder::class,
-            // Onboarding (S3.1): demo course with 2 modules and 4 lesson kinds.
-            OnboardingSeeder::class,
+            ...self::BASELINE_SEEDERS,
+            ...self::SAMPLE_SEEDERS,
         ]);
     }
 }

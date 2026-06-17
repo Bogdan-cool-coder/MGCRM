@@ -78,7 +78,8 @@
       "segments": "Segments",
       "telegram": "Telegram",
       "appearance": "Appearance",
-      "quickActions": "Quick actions"
+      "quickActions": "Quick actions",
+      "system": "System"
     },
     "fields": {
       "full_name": "Full name",
@@ -1163,7 +1164,6 @@
           "backToDeals": "Back to deals"
         },
         "daysInStage": "days in stage",
-        "changeStage": "Change stage",
         "clickToChangeStage": "Click to change stage",
         "infoPanel": "Info",
         "menu": {
@@ -2511,6 +2511,45 @@
         "warm": "Warm",
         "hot": "HOT"
       }
+    }
+  },
+  "system": {
+    "reset": {
+      "tab_title": "System settings",
+      "section_title": "Database reset",
+      "section_hint": "This operation deletes all business data and restores the database to its baseline state. Use only on a test environment.",
+      "action_label": "Reset to baseline",
+      "action_desc": "Deletes deals, contacts, documents, activities and other business data. Accounts and configuration are preserved.",
+      "open_dialog_btn": "Reset database",
+      "dialog_title": "Confirm database reset",
+      "will_delete_title": "Will be deleted",
+      "will_delete": {
+        "deals": "Deals and sales pipelines",
+        "contacts": "Contacts and companies",
+        "documents": "Documents and revisions",
+        "activities": "Activities and tasks",
+        "automations": "Automations and run history",
+        "onboarding": "Onboarding courses, assignments and progress",
+        "notifications": "Notifications",
+        "custom_fields": "Custom (configurable) fields"
+      },
+      "will_keep_title": "Will be kept",
+      "will_keep": {
+        "accounts": "User accounts (including test accounts)",
+        "roles": "Roles and permissions",
+        "pipelines": "Pipelines and deal stages",
+        "catalog": "Product catalog",
+        "approval_routes": "Approval routes",
+        "lost_reasons": "Lost reasons"
+      },
+      "relogin_notice": "You will need to log in again after the reset — accounts will be recreated with their original passwords.",
+      "confirm_label": "Type «{phrase}» to confirm",
+      "confirm_phrase": "СБРОСИТЬ НАСТРОЙКИ",
+      "confirm_btn": "Reset",
+      "resetting": "Resetting...",
+      "success_title": "Database reset",
+      "success_detail": "Baseline successfully restored. Please log in again.",
+      "error_title": "Reset failed"
     }
   }
 }
