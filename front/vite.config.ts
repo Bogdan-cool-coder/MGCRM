@@ -40,20 +40,53 @@ export default defineConfig(() => ({
         manualChunks(id) {
           if (!id.includes('node_modules')) return
 
-          if (id.includes('primevue') || id.includes('@primevue') || id.includes('@primeuix')) {
+          // PrimeVue (components + icons + utils) — typically the largest chunk
+          if (
+            id.includes('/primevue/') ||
+            id.includes('/@primevue/') ||
+            id.includes('/@primeuix/')
+          ) {
             return 'primevue'
           }
 
+          // ECharts + vue-echarts adapter — heavy data-viz bundle
+          if (id.includes('/echarts/') || id.includes('/vue-echarts/') || id.includes('/zrender/')) {
+            return 'echarts'
+          }
+
+          // Vue-Flow (canvas automation) — heavy but rarely loaded
           if (
-            id.includes('vue') ||
-            id.includes('pinia') ||
-            id.includes('vue-router') ||
-            id.includes('vue-i18n')
+            id.includes('/@vue-flow/') ||
+            id.includes('/d3-') ||
+            id.includes('/dagre/')
+          ) {
+            return 'vue-flow'
+          }
+
+          // Core Vue runtime — kept small, always loaded
+          if (
+            id.includes('/vue/') ||
+            id.includes('/pinia/') ||
+            id.includes('/vue-router/') ||
+            id.includes('/vue-i18n/') ||
+            id.includes('/@vue/') ||
+            id.includes('/@vueuse/')
           ) {
             return 'vue-core'
           }
 
-          if (id.includes('axios') || id.includes('decimal.js')) {
+          // Markdown parser (documents / feed composer)
+          if (id.includes('/marked/')) {
+            return 'vendor-markdown'
+          }
+
+          // Drag-and-drop + other utility libs
+          if (
+            id.includes('/vuedraggable/') ||
+            id.includes('/sortablejs/') ||
+            id.includes('/axios/') ||
+            id.includes('/decimal.js/')
+          ) {
             return 'vendor'
           }
         },

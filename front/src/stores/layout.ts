@@ -9,10 +9,11 @@ export const useLayoutStore = defineStore(
     // ─── State ────────────────────────────────────────────────────────────
     const sidebarCollapsed = ref<boolean>(false)
     /**
-     * isDarkMode kept for backward-compat only.
-     * Theme is now managed by useThemeStore (stores/theme.ts).
-     * This field no longer drives the .app-dark class; themeStore does.
-     * @deprecated use useThemeStore instead
+     * isDarkMode is kept for the one-time boot migration only.
+     * On first launch after upgrade, main.ts reads this value and migrates it
+     * to useThemeStore; after that it is never written again.
+     * Theme is exclusively managed by useThemeStore (stores/theme.ts).
+     * Read-only outside main.ts — do NOT write to this ref.
      */
     const isDarkMode = ref<boolean>(false)
 
@@ -38,26 +39,6 @@ export const useLayoutStore = defineStore(
 
     function setSidebarCollapsed(value: boolean): void {
       sidebarCollapsed.value = value
-    }
-
-    /** @deprecated use useThemeStore.setTheme instead */
-    function toggleDarkMode(): void {
-      isDarkMode.value = !isDarkMode.value
-      if (isDarkMode.value) {
-        document.documentElement.classList.add('app-dark')
-      } else {
-        document.documentElement.classList.remove('app-dark')
-      }
-    }
-
-    /** @deprecated use useThemeStore.setTheme instead */
-    function setDarkMode(value: boolean): void {
-      isDarkMode.value = value
-      if (value) {
-        document.documentElement.classList.add('app-dark')
-      } else {
-        document.documentElement.classList.remove('app-dark')
-      }
     }
 
     function setNavMode(mode: NavMode): void {
@@ -104,8 +85,6 @@ export const useLayoutStore = defineStore(
       // Actions
       toggleSidebar,
       setSidebarCollapsed,
-      toggleDarkMode,
-      setDarkMode,
       setNavMode,
       setOrbitPos,
       setOrbitOrientation,

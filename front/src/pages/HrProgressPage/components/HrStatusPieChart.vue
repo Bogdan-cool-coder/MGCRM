@@ -24,7 +24,7 @@ import Card from 'primevue/card'
 import Skeleton from 'primevue/skeleton'
 import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts'
-import { useLayoutStore } from '@/stores/layout'
+import { useThemeStore } from '@/stores/theme'
 import type { HrProgressSummary } from '@/api/onboardingAdmin'
 
 const props = defineProps<{
@@ -33,8 +33,8 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
-const layoutStore = useLayoutStore()
-const isDark = computed(() => layoutStore.isDarkMode)
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.theme === 'dark')
 
 const pieOption = computed<EChartsOption>(() => ({
   tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },

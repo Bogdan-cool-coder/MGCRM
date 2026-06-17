@@ -10,6 +10,17 @@
  *   - ProfilePage / quick-actions picker
  */
 
+import type { DrawerTrigger } from '@/stores/uiTriggers'
+
+/** How this action is executed */
+export type QuickActionType =
+  /** Navigate to a route */
+  | 'route'
+  /** Open a page-level drawer via uiTriggersStore */
+  | 'drawer'
+  /** Handled inline by the execute() switch (theme toggle, palette open, etc.) */
+  | 'inline'
+
 export interface QuickActionDef {
   /** Unique stable key stored in user profile */
   key: string
@@ -17,8 +28,12 @@ export interface QuickActionDef {
   labelKey: string
   /** PrimeIcons class */
   icon: string
-  /** Route to push, or null if the action has no single route (e.g. theme toggle) */
+  /** Execution mode (defaults to 'route' when route is set, 'inline' otherwise) */
+  actionType: QuickActionType
+  /** Route to push (only for actionType 'route') */
   route?: string
+  /** Drawer trigger key (only for actionType 'drawer') */
+  drawerKey?: DrawerTrigger
 }
 
 /**
@@ -31,55 +46,64 @@ export const QUICK_ACTION_CATALOGUE: QuickActionDef[] = [
     key: 'create_deal',
     labelKey: 'sales.deal.actions.create',
     icon: 'pi pi-briefcase',
-    route: '/deals',
+    actionType: 'drawer',
+    drawerKey: 'deal_create',
   },
   {
     key: 'create_contact',
     labelKey: 'contacts.actions.create',
     icon: 'pi pi-user-plus',
-    route: '/contacts',
+    actionType: 'drawer',
+    drawerKey: 'contact_create',
   },
   // ─── Navigation shortcuts ─────────────────────────────────────────────────────
   {
     key: 'go_dashboard',
     labelKey: 'nav.dashboard',
     icon: 'pi pi-home',
+    actionType: 'route',
     route: '/dashboard',
   },
   {
     key: 'go_deals',
     labelKey: 'nav.deals',
     icon: 'pi pi-briefcase',
+    actionType: 'route',
     route: '/deals',
   },
   {
     key: 'go_contacts',
     labelKey: 'nav.contacts',
     icon: 'pi pi-users',
+    actionType: 'route',
     route: '/contacts',
   },
   {
     key: 'go_companies',
     labelKey: 'nav.companies',
     icon: 'pi pi-building',
+    actionType: 'route',
     route: '/companies',
   },
   {
     key: 'go_tasks',
     labelKey: 'nav.myTasks',
     icon: 'pi pi-check-square',
+    actionType: 'route',
     route: '/my-tasks',
   },
   {
     key: 'go_documents',
     labelKey: 'nav.documents',
     icon: 'pi pi-file-edit',
+    actionType: 'route',
     route: '/documents',
   },
   {
     key: 'go_manager_cabinet',
     labelKey: 'nav.managerCabinet',
     icon: 'pi pi-id-card',
+    actionType: 'route',
     route: '/manager-cabinet',
   },
   // ─── Toggle actions ───────────────────────────────────────────────────────────
@@ -87,11 +111,13 @@ export const QUICK_ACTION_CATALOGUE: QuickActionDef[] = [
     key: 'toggle_theme',
     labelKey: 'quickActions.toggleTheme',
     icon: 'pi pi-moon',
+    actionType: 'inline',
   },
   {
     key: 'open_search',
     labelKey: 'quickActions.openSearch',
     icon: 'pi pi-search',
+    actionType: 'inline',
   },
 ]
 

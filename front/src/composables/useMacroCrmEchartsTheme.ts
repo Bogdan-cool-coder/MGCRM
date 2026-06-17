@@ -1,7 +1,7 @@
 /**
  * Reactive ECharts theme switcher for MACRO CRM.
  *
- * Watches `isDarkMode` from the layout store and re-registers the
+ * Watches `theme` from useThemeStore and re-registers the
  * `macro-crm` ECharts theme so all <VChart theme="macro-crm"> instances
  * pick up the correct axis/legend/tooltip colours.
  *
@@ -9,17 +9,17 @@
  * because `registerTheme` is idempotent.
  */
 import { watch } from 'vue'
-import { useLayoutStore } from '@/stores/layout'
+import { useThemeStore } from '@/stores/theme'
 import { rebuildMacroCrmTheme } from '@/plugins/echarts'
 
 export const useMacroCrmEchartsTheme = (): void => {
-  const layoutStore = useLayoutStore()
+  const themeStore = useThemeStore()
 
   // Immediate: sync theme with current dark-mode state on mount
   watch(
-    () => layoutStore.isDarkMode,
-    (dark) => {
-      rebuildMacroCrmTheme(dark)
+    () => themeStore.theme,
+    (theme) => {
+      rebuildMacroCrmTheme(theme === 'dark')
     },
     { immediate: true },
   )

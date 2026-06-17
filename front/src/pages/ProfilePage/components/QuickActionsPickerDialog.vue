@@ -67,6 +67,7 @@ import { useToast } from 'primevue/usetoast'
 import { useUserStore } from '@/stores/user'
 import { useMutation } from '@/composables/async/useMutation'
 import { profileApi } from '@/api/profile'
+import type { MeResponse } from '@/api/types/auth'
 import { mapUser } from '@/entities/user'
 import {
   QUICK_ACTION_CATALOGUE,
@@ -127,7 +128,7 @@ function onMoveToTarget() {
 }
 
 // ─── Save ─────────────────────────────────────────────────────────────────────
-const saveMutation = useMutation<void>()
+const saveMutation = useMutation<MeResponse>()
 const isSaving = computed(() => saveMutation.isPending.value)
 
 async function save() {
@@ -144,6 +145,7 @@ async function save() {
         life: 2500,
       })
       visible.value = false
+      return response
     },
     {
       onError: (err) => {

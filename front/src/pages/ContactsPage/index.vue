@@ -373,7 +373,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import Button from 'primevue/button'
@@ -393,6 +393,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import MergeDialog from '@/components/crm/dedup/MergeDialog.vue'
 import { useDirectoriesStore } from '@/stores/directories'
+import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { useContactsPageData } from './composables/useContactsPageData'
 import { useContactsPageActions } from './composables/useContactsPageActions'
 import type { Contact, Company } from '@/entities/crm'
@@ -401,6 +402,7 @@ import type { EntityType } from './composables/useContactsPageData'
 const { t } = useI18n()
 const route = useRoute()
 const directoriesStore = useDirectoriesStore()
+const uiTriggers = useUiTriggersStore()
 
 // Определяем начальный тип по маршруту: /companies → 'company', /contacts → 'contact'
 const initialType: EntityType = route.name === 'Companies' ? 'company' : 'contact'
@@ -496,6 +498,23 @@ function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => applyFilter(), 300)
 }
+
+// ── Global UI-trigger: open create drawer from QuickActionsCluster ─────────────
+
+const stopDrawerTrigger = watch(
+  () => uiTriggers.pendingDrawer,
+  (trigger) => {
+    if (trigger === 'contact_create') {
+      openQuickCreate()
+      uiTriggers.clearDrawer()
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  stopDrawerTrigger()
+})
 
 onMounted(() => {
   ensureDirectories()

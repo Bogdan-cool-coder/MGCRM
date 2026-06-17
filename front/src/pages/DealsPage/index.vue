@@ -141,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
@@ -166,6 +166,7 @@ import { useDealsFilters } from './composables/useDealsFilters'
 import { useDealsBoard } from './composables/useDealsBoard'
 import { useDealsList } from './composables/useDealsList'
 import { useSalesStore } from '@/stores/salesStore'
+import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { salesApi } from '@/api/sales'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
@@ -180,6 +181,7 @@ const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const salesStore = useSalesStore()
+const uiTriggers = useUiTriggersStore()
 
 // ── Filter overlay ─────────────────────────────────────────────────────────────
 
@@ -560,6 +562,23 @@ function onTaskCompleted() {
 function onTaskError(message: string) {
   toast.add({ severity: 'error', summary: message, life: 4000 })
 }
+
+// ── Global UI-trigger: open create drawer from QuickActionsCluster ─────────────
+
+const stopDrawerTrigger = watch(
+  () => uiTriggers.pendingDrawer,
+  (trigger) => {
+    if (trigger === 'deal_create') {
+      createDrawerOpen.value = true
+      uiTriggers.clearDrawer()
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  stopDrawerTrigger()
+})
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 

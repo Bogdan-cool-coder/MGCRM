@@ -30,6 +30,7 @@ import Tooltip from 'primevue/tooltip'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { useLayoutStore } from '@/stores/layout'
+import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { resolveQuickActions, type QuickActionDef } from '@/shared/nav/quickActionRegistry'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
 
@@ -45,19 +46,40 @@ const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const layoutStore = useLayoutStore()
+const uiTriggers = useUiTriggersStore()
 
 const resolvedActions = computed<QuickActionDef[]>(() =>
   resolveQuickActions(userStore.getNavQuickActions),
 )
 
+/** Map drawer keys to their owning route so we navigate there first */
+const DRAWER_ROUTES: Record<string, string> = {
+  deal_create: '/deals',
+  contact_create: '/contacts',
+}
+
 function execute(action: QuickActionDef): void {
-  switch (action.key) {
-    case 'toggle_theme':
-      themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light')
+  switch (action.actionType) {
+    case 'drawer':
+      if (action.drawerKey) {
+        // Navigate to the owning page then fire the trigger.
+        // The page watcher runs with { immediate: true } so it picks up the
+        // trigger both on post-navigation mount and when already on the page.
+        const route = DRAWER_ROUTES[action.drawerKey]
+        if (route) {
+          void router.push(route)
+        }
+        uiTriggers.triggerDrawer(action.drawerKey)
+      }
       break
-    case 'open_search':
-      layoutStore.openCommandPalette()
+    case 'inline':
+      if (action.key === 'toggle_theme') {
+        themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light')
+      } else if (action.key === 'open_search') {
+        layoutStore.openCommandPalette()
+      }
       break
+    case 'route':
     default:
       if (action.route) {
         void router.push(action.route)

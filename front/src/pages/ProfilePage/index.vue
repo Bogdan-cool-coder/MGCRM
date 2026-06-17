@@ -273,15 +273,15 @@
                 <div class="d-flex gap-3">
                   <Button
                     :label="t('profile.theme.light')"
-                    :severity="!layoutStore.isDarkMode ? 'primary' : 'secondary'"
+                    :severity="themeStore.theme === 'light' ? 'primary' : 'secondary'"
                     outlined
-                    @click="layoutStore.setDarkMode(false)"
+                    @click="themeStore.setTheme('light')"
                   />
                   <Button
                     :label="t('profile.theme.dark')"
-                    :severity="layoutStore.isDarkMode ? 'primary' : 'secondary'"
+                    :severity="themeStore.theme === 'dark' ? 'primary' : 'secondary'"
                     outlined
-                    @click="layoutStore.setDarkMode(true)"
+                    @click="themeStore.setTheme('dark')"
                   />
                 </div>
               </div>
