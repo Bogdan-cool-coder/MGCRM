@@ -221,4 +221,141 @@ class NotificationApiTest extends TestCase
     {
         $this->getJson('/api/notifications')->assertUnauthorized();
     }
+
+    // ---- GET /api/notifications/count -----------------------------------
+
+    public function test_count_returns_only_unread_count_for_caller(): void
+    {
+        $user = $this->actingUser();
+        $other = User::factory()->create();
+
+        Notification::factory()->for($user)->count(3)->create();
+        Notification::factory()->for($user)->read()->count(2)->create();
+        // Another user's unread items must not bleed into the caller's count.
+        Notification::factory()->for($other)->count(5)->create();
+
+        $this->getJson('/api/notifications/count')
+            ->assertOk()
+            ->assertExactJson(['unread_count' => 3]);
+    }
+
+    public function test_count_is_zero_when_all_read(): void
+    {
+        $user = $this->actingUser();
+        Notification::factory()->for($user)->read()->count(4)->create();
+
+        $this->getJson('/api/notifications/count')
+            ->assertOk()
+            ->assertExactJson(['unread_count' => 0]);
+    }
+
+    public function test_count_requires_authentication(): void
+    {
+        $this->getJson('/api/notifications/count')->assertUnauthorized();
+    }
+
+    // ---- POST /api/notifications/read-batch ------------------------------
+
+    public function test_read_batch_marks_only_provided_own_notifications(): void
+    {
+        $user = $this->actingUser();
+
+        $a = Notification::factory()->for($user)->create();
+        $b = Notification::factory()->for($user)->create();
+        $untouched = Notification::factory()->for($user)->create();
+
+        $this->postJson('/api/notifications/read-batch', ['ids' => [$a->id, $b->id]])
+            ->assertOk()
+            ->assertJsonPath('marked', 2)
+            ->assertJsonPath('unread_count', 1);
+
+        $this->assertNotNull($a->fresh()->read_at);
+        $this->assertNotNull($b->fresh()->read_at);
+        $this->assertNull($untouched->fresh()->read_at);
+    }
+
+    public function test_read_batch_does_not_touch_another_users_notifications(): void
+    {
+        $user = $this->actingUser();
+        $other = User::factory()->create();
+
+        $mine = Notification::factory()->for($user)->create();
+        $theirs = Notification::factory()->for($other)->create();
+
+        // Foreign id is silently skipped (no 403, no leak) — only own row flips.
+        $this->postJson('/api/notifications/read-batch', ['ids' => [$mine->id, $theirs->id]])
+            ->assertOk()
+            ->assertJsonPath('marked', 1);
+
+        $this->assertNotNull($mine->fresh()->read_at);
+        $this->assertNull($theirs->fresh()->read_at);
+    }
+
+    public function test_read_batch_is_idempotent(): void
+    {
+        $user = $this->actingUser();
+
+        $already = Notification::factory()->for($user)->read()->create();
+        $originalReadAt = $already->read_at;
+        $unread = Notification::factory()->for($user)->create();
+
+        // First call flips only the unread one.
+        $this->postJson('/api/notifications/read-batch', ['ids' => [$already->id, $unread->id]])
+            ->assertOk()
+            ->assertJsonPath('marked', 1)
+            ->assertJsonPath('unread_count', 0);
+
+        // Re-sending the same batch marks nothing and does not re-stamp read_at.
+        $this->postJson('/api/notifications/read-batch', ['ids' => [$already->id, $unread->id]])
+            ->assertOk()
+            ->assertJsonPath('marked', 0)
+            ->assertJsonPath('unread_count', 0);
+
+        $this->assertEquals(
+            $originalReadAt->toIso8601String(),
+            $already->fresh()->read_at->toIso8601String(),
+        );
+    }
+
+    public function test_read_batch_requires_ids_array(): void
+    {
+        $this->actingUser();
+
+        $this->postJson('/api/notifications/read-batch', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('ids');
+    }
+
+    public function test_read_batch_rejects_non_integer_ids(): void
+    {
+        $this->actingUser();
+
+        $this->postJson('/api/notifications/read-batch', ['ids' => ['abc']])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('ids.0');
+    }
+
+    public function test_read_batch_rejects_unknown_ids(): void
+    {
+        $this->actingUser();
+
+        $this->postJson('/api/notifications/read-batch', ['ids' => [999999]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('ids.0');
+    }
+
+    public function test_read_batch_rejects_batches_over_the_cap(): void
+    {
+        $this->actingUser();
+
+        $this->postJson('/api/notifications/read-batch', ['ids' => range(1, 201)])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('ids');
+    }
+
+    public function test_read_batch_requires_authentication(): void
+    {
+        $this->postJson('/api/notifications/read-batch', ['ids' => [1]])
+            ->assertUnauthorized();
+    }
 }

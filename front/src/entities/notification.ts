@@ -48,3 +48,15 @@ export interface NotificationsResponse {
   digest: NotificationDigestDto
   unread_count: number
 }
+
+/** Response from GET /api/notifications/count */
+export interface NotificationsCountResponse {
+  unread_count: number
+}
+
+/** Response from POST /api/notifications/read-batch */
+export interface ReadBatchResponse {
+  /** Number of items actually marked (foreign/already-read ids are silently skipped) */
+  marked: number
+  unread_count: number
+}

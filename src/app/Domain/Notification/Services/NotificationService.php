@@ -218,4 +218,29 @@ class NotificationService
             ->unread()
             ->update(['read_at' => now()]);
     }
+
+    /**
+     * Mark a batch of notifications read by id, scoped to the caller.
+     *
+     * Cross-user safety: the user filter is part of the WHERE, so ids that
+     * belong to another recipient are silently skipped — they are never read
+     * nor leaked back (the return is only a count, not the affected ids).
+     * Idempotent: the unread() filter means already-read ids are not re-stamped
+     * and do not inflate the returned count.
+     *
+     * @param  list<int>  $ids
+     * @return int number of rows actually flipped to read
+     */
+    public function markReadBatch(User $user, array $ids): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+
+        return Notification::query()
+            ->forUser($user->id)
+            ->unread()
+            ->whereIn('id', $ids)
+            ->update(['read_at' => now()]);
+    }
 }

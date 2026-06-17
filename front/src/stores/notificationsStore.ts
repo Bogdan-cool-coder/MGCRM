@@ -13,10 +13,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
-  /** Bootstrap: fetch unread count from server */
+  /** Bootstrap: fetch unread count from the lightweight /count endpoint (badge only). */
   async function fetchUnreadCount(): Promise<void> {
     try {
-      const res = await notificationsApi.getNotifications(1)
+      const res = await notificationsApi.getUnreadCount()
       unreadCount.value = res.unread_count
     } catch {
       // non-critical; leave count at 0

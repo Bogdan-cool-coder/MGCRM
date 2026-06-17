@@ -278,6 +278,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     Route::prefix('notifications')->name('notifications.')->group(function (): void {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
+        // Literal routes BEFORE the {notification} wildcard — otherwise `count`
+        // would be matched as a route-bound id and 404 on model resolution.
+        Route::get('count', [NotificationController::class, 'count'])->name('count');
+        Route::post('read-batch', [NotificationController::class, 'readBatch'])->name('read-batch');
         Route::post('read-all', [NotificationController::class, 'readAll'])->name('read-all');
         Route::post('{notification}/read', [NotificationController::class, 'read'])->name('read');
     });

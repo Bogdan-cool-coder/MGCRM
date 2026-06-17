@@ -8,6 +8,7 @@ use App\Domain\Notification\Models\Notification;
 use App\Domain\Notification\Services\NotificationService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Notification\ListNotificationsRequest;
+use App\Http\Requests\Notification\ReadBatchNotificationsRequest;
 use App\Http\Resources\Notification\NotificationFeedResource;
 use App\Http\Resources\Notification\NotificationResource;
 use Illuminate\Http\JsonResponse;
@@ -38,6 +39,35 @@ class NotificationController extends Controller
         return new NotificationFeedResource(
             $this->service->grouped($request->user(), $request->perPage()),
         );
+    }
+
+    /**
+     * Lightweight unread badge counter — {unread_count} only. Polled on mount /
+     * interval by the flyout instead of the heavier grouped() payload.
+     */
+    public function count(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Notification::class);
+
+        return response()->json([
+            'unread_count' => $this->service->unreadCount($request->user()),
+        ]);
+    }
+
+    /**
+     * Mark a set of the caller's notifications read (idempotent). Foreign ids in
+     * the batch are silently skipped by the service's user scope — no leak.
+     */
+    public function readBatch(ReadBatchNotificationsRequest $request): JsonResponse
+    {
+        $this->authorize('viewAny', Notification::class);
+
+        $marked = $this->service->markReadBatch($request->user(), $request->ids());
+
+        return response()->json([
+            'marked' => $marked,
+            'unread_count' => $this->service->unreadCount($request->user()),
+        ]);
     }
 
     /** Mark one notification read (idempotent). */

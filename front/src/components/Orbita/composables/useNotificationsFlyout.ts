@@ -132,7 +132,7 @@ export function useNotificationsFlyout() {
   // ─── Mark-read-on-close ────────────────────────────────────────────────────
   /**
    * Call when the flyout closes.
-   * All unread items that were visible get marked read silently.
+   * All unread items that were visible get marked read in a single batch request.
    */
   async function onFlyoutClose(): Promise<void> {
     const unreadShown = [...actionable.value, ...feed.value].filter(
@@ -140,18 +140,20 @@ export function useNotificationsFlyout() {
     )
     if (unreadShown.length === 0) return
 
-    // Optimistic
+    // Optimistic: mark locally before the request completes
     unreadShown.forEach((n) => { n.is_read = true })
     notificationsStore.decrement(unreadShown.length)
     shownIds.value.clear()
 
-    // Fire-and-forget per-item (bulk read-all would over-mark items not yet loaded)
-    for (const n of unreadShown) {
-      try {
-        await notificationsApi.markRead(n.id)
-      } catch {
-        // best-effort; non-critical
-      }
+    // Single batch request instead of per-item serial calls.
+    // Backend silently skips foreign / already-read ids — no 403 risk.
+    const ids = unreadShown.map((n) => n.id)
+    try {
+      const res = await notificationsApi.markReadBatch(ids)
+      // Authoritative count from server overrides the optimistic decrement
+      notificationsStore.syncCount(res.unread_count)
+    } catch {
+      // best-effort; badge stays at the optimistic value
     }
   }
 
