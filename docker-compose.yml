@@ -1,9 +1,10 @@
 networks:
   macro-crm-network:
     driver: bridge
-  # External Traefik network — name is server-specific, set TRAEFIK_NETWORK in root .env
-  traefik-public:
-    name: ${TRAEFIK_NETWORK:-traefik-public}
+  # External Traefik network — name is server-specific, set TRAEFIK_NETWORK in root .env.
+  # On the production VPS the network is called "proxy" (created by Traefik).
+  proxy:
+    name: ${TRAEFIK_NETWORK:-proxy}
     external: true
 
 services:
@@ -39,18 +40,15 @@ services:
 
   # ---------------------------------------------------------------------------
   # nginx — serves Laravel public/ static assets + proxies PHP-FPM (app:9000).
-  # Internal to macro-crm-network; NOT exposed to host. Only the frontend
-  # container (and Traefik via it) reaches nginx.
+  # Internal to macro-crm-network ONLY; NOT exposed to host.
+  # Traefik never reaches nginx directly — traffic flows:
+  #   internet → Traefik → frontend:80 → nginx:80 → app:9000 (php-fpm)
+  # No host port published: eliminates conflict with port 8080 (amo-assistant-bot).
   # ---------------------------------------------------------------------------
   nginx:
     image: nginx:alpine
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-nginx
     restart: unless-stopped
-    # Bind to loopback only — prevents port conflicts with other VPS services.
-    # In prod the Traefik → frontend → nginx chain handles all HTTP traffic;
-    # this host port is for direct health-checks / debug only.
-    ports:
-      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:80"
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       # Read-only access to public/ for favicon, robots.txt (no src bind mount)
@@ -64,8 +62,9 @@ services:
   # frontend — nginx:alpine serving the compiled Vue 3 SPA.
   #   - Serves /usr/share/nginx/html (Vite dist) with history-mode fallback.
   #   - Proxies /api/* → nginx:80 (backend nginx → php-fpm).
-  #   - Exposed to Traefik via the shared traefik-public network.
-  #   - Host port ${FRONTEND_PORT} bound to loopback for local dev/smoke only.
+  #   - Exposed to Traefik via the external proxy network (no host port published).
+  #   - HTTP→HTTPS redirect is handled globally by Traefik entrypoint args;
+  #     we ONLY define the websecure router here to avoid conflicting middleware.
   # ---------------------------------------------------------------------------
   frontend:
     build:
@@ -75,29 +74,19 @@ services:
     image: macro-crm-frontend:${IMAGE_TAG:-dev-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-frontend
     restart: unless-stopped
-    # Loopback binding — Traefik reaches this via traefik-public network, not the host port.
-    ports:
-      - "${APP_BIND:-127.0.0.1}:${FRONTEND_PORT:-3000}:80"
     networks:
       - macro-crm-network
-      - traefik-public
+      - proxy
     depends_on:
       - nginx
     labels:
       - "traefik.enable=true"
-      # Router — HTTPS on the configured domain
       - "traefik.http.routers.macro-crm.rule=Host(`${APP_DOMAIN:-mgcrm.macroglobal.tech}`)"
       - "traefik.http.routers.macro-crm.entrypoints=websecure"
       - "traefik.http.routers.macro-crm.tls=true"
       - "traefik.http.routers.macro-crm.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
-      # Tell Traefik which internal port to use (container listens on :80)
       - "traefik.http.services.macro-crm.loadbalancer.server.port=80"
-      # HTTP → HTTPS redirect (if Traefik has a web entrypoint)
-      - "traefik.http.routers.macro-crm-http.rule=Host(`${APP_DOMAIN:-mgcrm.macroglobal.tech}`)"
-      - "traefik.http.routers.macro-crm-http.entrypoints=web"
-      - "traefik.http.routers.macro-crm-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-proxy}"
 
   queue-worker:
     build:
@@ -226,10 +215,8 @@ services:
     image: postgres:16-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-postgres
     restart: unless-stopped
-    # Bind to loopback only — prevents port conflicts with other VPS services
-    # and avoids exposing the DB to the public interface.
-    ports:
-      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    # No host port published — postgres is internal to macro-crm-network only.
+    # For one-off admin access use: docker compose exec postgres psql -U macro_crm
     environment:
       POSTGRES_DB: ${DB_DATABASE:-macro_crm}
       POSTGRES_USER: ${DB_USERNAME:-macro_crm}
@@ -250,9 +237,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
-    # Bind to loopback only
-    ports:
-      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    # No host port published — redis is internal to macro-crm-network only.
     volumes:
       - redis_data:/data
     networks:

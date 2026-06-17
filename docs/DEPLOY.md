@@ -12,9 +12,14 @@ via GitHub Actions for **mgcrm.macroglobal.tech**.
 
 | What | Status |
 |---|---|
-| DNS `mgcrm.macroglobal.tech` → VPS IP | already done |
-| Traefik running on VPS (80/443, Let's Encrypt) | assumed (shared VPS) |
-| You know the Traefik external network name and certresolver name | see §2 |
+| DNS A-record `mgcrm.macroglobal.tech` → `153.80.193.132` | **MUST be done before first deploy** — Let's Encrypt cannot issue a certificate without it |
+| Traefik v2.11.42 running on VPS (80/443, Let's Encrypt) | confirmed on server |
+| External docker network `proxy` exists (Traefik created it) | confirmed on server |
+| Traefik certresolver named `letsencrypt` | confirmed on server |
+
+> Port note: frontend, nginx, postgres, and redis do **NOT** publish host ports.
+> Traefik routes traffic to the `frontend` container via the internal `proxy` docker
+> network on port 80. Database admin is done via `docker compose exec postgres psql …`.
 
 ---
 
@@ -27,18 +32,21 @@ ssh <user>@<vps-ip>
 
 ---
 
-## 2. Find Traefik network and certresolver names
+## 2. Confirm Traefik network and certresolver names
 
-```bash
-# External Traefik network name:
-docker network ls | grep traefik
+Already confirmed on this server — no action needed:
 
-# Certresolver name (check Traefik static config):
-cat /opt/traefik/traefik.yml | grep certResolver   # or .toml equivalent
-# Common values: letsencrypt | le | myresolver
+```
+TRAEFIK_NETWORK=proxy
+TRAEFIK_CERTRESOLVER=letsencrypt
 ```
 
-Write these down — you will need them in step 4.
+To re-verify if the server changes:
+
+```bash
+docker network ls | grep proxy        # → proxy
+cat /opt/traefik/traefik.yml | grep certResolver
+```
 
 ---
 
@@ -59,29 +67,25 @@ cp .env.example .env
 nano .env   # or vim
 ```
 
-Fill in:
+Fill in (values for this server are pre-filled; only `DB_PASSWORD` needs a real secret):
 
 ```dotenv
 COMPOSE_PROJECT_NAME=macro-crm
 IMAGE_TAG=latest
-APP_BIND=127.0.0.1
-APP_PORT=8080
-FRONTEND_PORT=3000
-POSTGRES_HOST_PORT=5432
-REDIS_HOST_PORT=6379
 
-# Your domain (DNS already points here)
+# Confirmed values for root@153.80.193.132:
 APP_DOMAIN=mgcrm.macroglobal.tech
-
-# FROM STEP 2:
-TRAEFIK_NETWORK=<traefik network name>     # e.g. traefik-public
-TRAEFIK_CERTRESOLVER=<resolver name>       # e.g. letsencrypt
+TRAEFIK_NETWORK=proxy
+TRAEFIK_CERTRESOLVER=letsencrypt
 
 # DB credentials (keep in sync with src/.env below)
 DB_DATABASE=macro_crm
 DB_USERNAME=macro_crm
 DB_PASSWORD=<generate a strong random password>
 ```
+
+No `APP_PORT`, `FRONTEND_PORT`, `POSTGRES_HOST_PORT`, or `REDIS_HOST_PORT` are
+needed — none of these services publish host ports in production.
 
 ---
 
