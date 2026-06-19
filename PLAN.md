@@ -567,6 +567,87 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### MSP. SalesPulse — надзорный бот продаж (PHP-порт amo-assistant-bot, путь B)
+
+**Статус:** Slice 3 DONE (2026-06-19). Build complete. Cutover-ready (ждёт живой токен + TEAMS_JSON маппинг). Slice 5 (деплой) — по явной просьбе.
+**Ведущие:** `backend-specialist` (схема БД) + `sales-specialist` (движок классификации) + `bot-specialist` (Slice 3-4: nutgram-бот + планировщик). Контекст `SalesPulse`.
+**Спека:** vault `MG CRM 2026/6. Справочник/AMO-бот — спека бизнес-логики (порт на PHP).md`.
+**План по слайсам:** vault `MG CRM 2026/5. Планы/AMO-бот → MGCRM — план миграции.md` §8.
+
+> **Ключевые решения (2026-06-19):**
+> - Путь B: in-process порт, читает БД напрямую через доменные сервисы. API-токен сервис-юзера НЕ нужен.
+> - **КАНОН (переключён):** AMO-воронки «MACRO Global» (sort_order=0) и «MACRO AI Global» (sort_order=1) — PRIMARY sales pipelines. «Продажи» REVERSIBLY ARCHIVED (`is_active=false, sort_order=2`, 11 стадий нетронуты). `DealService::defaultSalesPipelineId()` + `SalesDashboardService::resolvePipeline()` + `PipelineService::defaultSalesPipeline()` — все фильтруют `is_active=true`, дефолт = MACRO Global.
+> - **Фронт-импликация (открытый пункт):** Kanban board теперь по умолчанию показывает 14-стадийную воронку MACRO Global вместо 11-стадийной «Продажи». Ширина колонок и UI board-переключателя могут нуждаться в адаптации. Реализуется отдельно по явной просьбе (`frontend-specialist`).
+> - **Демо-данные:** `SalesPulseDemoSeeder` (SAMPLE — в reset-clean НЕ входит) — today-anchored датасет в обеих AMO-воронках под manager1/2/3@mgcrm.test. collectDay возвращает непустые plan+fact; MetricsService даёт ненулевые метрики. Идемпотентен.
+> - «Success» = переход сделки в `is_won`-стадию (`DealStageHistory`), не активность — announcer читает ДВА источника.
+> - Снапшоты: PLAN write-once, FACT upsert. БД пересоздаётся при cutover (данные регенерируемые).
+> - Маппинг менеджеров (DECISION-2) и токен нового TG-бота — гейтящие входы к Slice 3, не к Slice 0-1.
+
+#### Slice 0 — Фундамент (backend-specialist + sales-specialist) ✅ DONE 2026-06-22
+- [x] 4 миграции: `pulse_snapshots`, `pulse_daily_status`, `pulse_skip_days`, `pulse_announced_events`. FK: `users.id` (cascadeOnDelete), `deals.id` (nullOnDelete), `activities.id` (cascadeOnDelete). Unique-констрейнты: `(manager_id, on_date, kind)` на snapshots; `(manager_id, on_date)` на daily_status; `activity_id` unique на announced_events (де-дуп анонсёра).
+- [x] 4 модели: `PulseSnapshot`, `PulseDailyStatus`, `PulseSkipDay`, `PulseAnnouncedEvent`. Все `$fillable` + typed `casts()` + relations.
+- [x] 3 enum: `SnapKind` (plan/fact), `SnapSource` (manual/auto), `AnnouncedEventType` (meeting_done/success).
+- [x] `StageClassificationService` — движок классификации воронки: `funnelPosition`, `isForwardMove`, `isFunnelDowngrade`, `isStageJump`, `statusSortKey`, `isCold`. Без хардкода id — на `PipelineStage.sort_order` + флагах `is_won`/`is_lost` + code. Мемоизация realRankCache per pipeline_id. Pipeline-агностичен (работает для «Продажи» и AI Global).
+- [x] `Data/PulseTaskRow` — DTO снапшота, `toArray()`/`fromArray()` round-trip, `isRealWork()`/`kindIsRealWork()` через `ActivityType::taskLikeValues()` (library-first), `isClosedToday()`.
+- [x] `Data/StageMeta` — VO эмодзи+SLA per stage.code, `forCode()`/`forStage()`/`label()`.
+- [x] `config/salespulse.php` — cold_stage_codes + карта stages по code (emoji/sla_days/sla_weekly) + stage_default.
+- [x] Тесты: `Feature/SalesPulse/SalesPulseSchemaTest` (6 passed) + `Unit/SalesPulse/StageClassificationServiceTest` (26 passed) = **32 теста зелёных**. Pint clean.
+
+#### Slice 1 — Снапшот + метрики (sales-specialist) ✅ DONE 2026-06-22
+- [x] `DaySnapshotService` (порт `collect_day`): читает activities+deals напрямую через Eloquent, день-окно Asia/Dubai без +4ч AMO-хака, фильтр `responsible_id`+`kind`∈realWork+`target_type=deal`, pipeline-фильтр на стороне Eloquent.
+- [x] `HistoryService` — carryover_days/days_in_stage по 60 дней PLAN-снапшотов (newest-first), обе формулы §1.4 verbatim.
+- [x] `MetricsService` — 6 метрик §1.2 дословно; мутуально-эксклюзивный каскад lost→forward→downgrade.
+- [x] `NotesService` — детект заметок через activity kind=note; `SnapshotRepository` — load/save с PLAN write-once guard.
+- [x] `DayWindowResolver` — окно [00:00:00, 23:59:59.999] Asia/Dubai без хардкода +4ч.
+- [x] `Data/DaySnapshot` — DTO с `toArray()`/`fromArray()`, `leads_by_id` БЕЗ `status_name` (спека §2 verbatim).
+- [x] Тесты: 75 Unit-тестов паритета формул. Сьют 1728+ зелёных.
+
+#### Slice 2 — Отчёты (sales-specialist) ✅ DONE 2026-06-22
+- [x] `PlanRenderer` — plain-text рендер /startday: `📋 План на {ISO} — {name}`, ♻️ carryover, сортировка по statusSortKey (spec §7).
+- [x] `FactRenderer` — HTML рендер /finishday: секции done/not_done_note/not_done_bare/extra + `PulseMetrics::render()` verbatim (spec §7).
+- [x] `ProgressRenderer` — HTML рендер /progress с 5 вариантами строки (vacation/skip/no-plan/zero/live, spec §6.1).
+- [x] `ConversionsRenderer` — рендер /conversions: gates/сквозная/losses/velocity + маркеры «узкое место»/«залипают» (spec §6.2).
+- [x] `DayResultsService` — SYSTEM_PROMPT §5.1 verbatim; payload `closed_today_tasks`/`plan_pending_tasks` с hint-классификацией FLAG/WIN; LLM→Haiku (`quick_qa`); оффлайн-фоллбек verbatim.
+- [x] `WeeklyReportService` + `WeeklyAggregationService` — SYSTEM_PROMPT §5.2 verbatim; forced tool_use `weekly_analysis`; top_movements/top_stuck (сорт по (-delta,company)/(-days,company), топ-5, jump=delta≥2); SLA-пороги §5.2; оффлайн-фоллбек.
+- [x] `ConversionsService` — gates GATES(1,2)..(N-1,N), сквозная воронка, losses rollback, velocity avg/slow (avg≥3); parsePeriod: 0/N/ISO/два-ISO варианта.
+- [x] `PrismPulseLlmClient` — реализует `PulseLlmClient`; реиспользует `AiRetryService` (library-first); `completeText` (dayresults/Haiku), `completeWithTool` (weekly/Sonnet, forced tool_choice); `weeklyAnalysisSchema()` Prism-объекты.
+- [x] `FakePulseLlmClient` — стаб для тестов, без сети. `RuPlural` — плюрализация RU.
+- [x] `ProgressService` — live-пересчёт /progress: done/postponed/in_progress/notes_count из актуального состояния Activity (не снапшота); логика skip/no-plan/zero/live (spec §6.1).
+- [x] Тесты: 108 новых Unit-тестов. Полный сьют 1803 зелёных.
+
+#### Slice 3 — Telegram-бот (bot-specialist) — гейт: токен TG-бота от юзера ✅ DONE
+- [x] Второй nutgram-бот (`SalesPulseBotFactory` + `SalesPulseBot::register()`, `salespulse:run` artisan, гейт `SALESPULSE_RUN_POLLING`; FakeNutgram-fallback при пустом токене).
+- [x] Хендлеры всех команд (/startday, /finishday, /progress, /dayresults, /weeklyreport, /conversions, /skipday, /unskipday, /vacation, /unvacation, /whoami, /help, /start, /announce_now-stub).
+- [x] Team-config (`SALESPULSE_TEAMS_JSON` / `config/salespulse.php`; `TeamResolver` — резолв chatId→team, slug→manager, isAdmin, parseArgs §8).
+- [x] Резолв caller→team→manager + admin-gating (`AdminGate` trait; `CommandContextResolver`). `SalesPulseNotifier` на 2-м токене (без поллинга).
+- [x] `SkipService` (порт skips.py: skip/vacation/unvacation/isTeamSkipped/isManagerSkipped/vacationUntil/isReturningFromVacation); новая миграция `add_kind_to_pulse_skip_days` (kind/vacation_until поверх Slice-0 таблицы).
+- [x] Compose-сервис `salespulse-bot` (replicas:1, отдельно от web/queue rolling-restart) в dev и prod compose.
+- [x] 27 новых тестов на FakeNutgram. Полный сьют 1834 passed.
+- [x] **Private-chat TEST MODE** (`config/salespulse.php` секция `test_mode`): `SALESPULSE_TEST_MODE=false` (off в проде), `SALESPULSE_TEST_ADMINS` (csv). `TestModeResolver` + ветвление в `CommandContextResolver::resolveTestTeam()` — вторая, изолированная ветка резолва только для private-chat от admin. `CommandContext.isTestMode` (default false). `/start` + `/whoami` в DM шлют тест-онбординг. Маппинг pipeline по именам + fallback `all_active_sales`. Email→user_id резолв; отсутствующий аккаунт → пропуск + Log::info. 10 тестов `SalesPulseTestModeTest` + 8 тестов `TestModeResolverTest` = +18. Сьют **209 SalesPulse-тестов зелёных**.
+- [ ] QA (ждёт живого токена + TEAMS_JSON маппинга от юзера).
+- [x] `AmoPipelineSeeder` в BASELINE (после `PipelineSeeder`) — архивирует «Продажи», засевает «MACRO Global» + «MACRO AI Global». Идемпотентен. `DemoDealsSeeder` и `ManagerKpiSeeder` перенаправлены на MACRO Global.
+- [x] `SalesPulseDemoSeeder` в SAMPLE — today-anchored датасет в обеих AMO-воронках под demo-менеджерами. `SalesPulseDemoSeederTest` (5 тестов): collectDay непустой plan+fact; MetricsService ненулевой; идемпотентность; no-op при отсутствии воронок. Полный сьют **1886 passed**, Pint clean.
+- [x] Тесты канона: `AmoPipelineSeederTest` обновлён — `DealService::defaultSalesPipelineId()` возвращает MACRO Global при наличии обеих воронок.
+- **Открытый вопрос к cutover:** получить живой `SALESPULSE_BOT_TOKEN` + MGCRM user_id 5 менеджеров (Рогов/Моисеева/Шомина/Некрасов/Федорин) + chat_id обеих команд для `SALESPULSE_TEAMS_JSON`.
+- **Для обкатки test mode:** `SALESPULSE_TEST_MODE=true` + `SALESPULSE_BOT_TOKEN` (тестовый бот) + поднять `salespulse-bot` polling + `SalesPulseDemoSeeder` + DM `/start` от `@Bogdan_MACRO`.
+
+#### Slice 4 — Планировщик + announcer (bot-specialist) ✅ DONE 2026-06-19
+- [x] Laravel scheduler Asia/Dubai: точные cron-окна §3 (09:30/10:00/10:15/13:00/16:00/19:00/19:30/19:45 пн-пт + 08:30 вт-пт + 20:00 пт + 09:00 пн + */5 ч.9-20). `->between('09:00','20:59')` на announcer.
+- [x] Jobs: `RemindPlanJob` / `AutoCapturePlanJob` / `PostProgressJob` / `RemindFactJob` / `AutoCaptureFactJob` / `PostDayResultsJob(forToday)` / `PostWeeklyReportJob` / `RunAnnouncerJob`. Все ShouldQueue, `tries=1`, weekday+guard в каждой.
+- [x] Announcer: `AnnouncerService::runAll()` — FTM-встреча (activity.is_first_time_meeting+completed_at в окне 15 мин) + переход в `is_won` (`DealStageHistory.created_at` в окне). Insert-first дедуп, ловит unique-violation.
+- [x] Дедуп для Success: миграция `relax_pulse_announced_events_for_success` — `activity_id`→nullable + `deal_stage_history_id` FK nullable, два plain UNIQUE (NULL-distinct на SQLite+Postgres). Модель обновлена.
+- [x] Пропуск: `is_team_skipped` / `is_manager_skipped` в каждой Job; announcer проверяет через `SkipService::isManagerSkipped()`.
+- [x] Тесты: `AnnouncerServiceTest` (11) + `SchedulerJobsTest` (13) + `ScheduleRegistrationTest` (8) = +32. Итого 183 SalesPulse-теста, 1878 passed, Pint clean.
+- [x] Acceptance Slice 4: scheduler зарегистрирован с точными cron-выражениями + Asia/Dubai; announcer детектирует MeetingDone и Success; дедуп переживает рестарт; формат сообщений §4 verbatim.
+
+#### Slice 5 — Деплой/cutover (deploy-engineer — по явной просьбе)
+- [ ] Контейнер `salespulse-bot` (replicas:1, mem/cpu лимиты) + env + rolling-restart отдельно.
+- [ ] Гасим Python amo-bot; поднимаем salespulse-bot. БД с нуля.
+
+**Acceptance MSP:** `/startday` фиксирует план (write-once); `/finishday` постит 6 метрик verbatim; `/dayresults` генерирует LLM-нарратив Haiku; планировщик тригерит по расписанию Asia/Dubai; announcer дедуп-постит meeting_done и success; `/skipday` блокирует команду; тесты Unit+Feature зелёные; CI зелёный.
+
+---
+
 ### 🧹 M12. Cutover (1 неделя)
 
 **Ведущие:** `migration-specialist` (cutover) + `product-manager` (финальный паритет).

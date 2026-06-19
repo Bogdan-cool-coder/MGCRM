@@ -21,8 +21,13 @@ use Illuminate\Database\Seeder;
 /**
  * INSERT-MISSING demo deals spread across stages so the Kanban board is alive on
  * a fresh dev DB. Idempotent: deals are keyed by a stable title; re-running does
- * not duplicate. Depends on PipelineSeeder (stages), AdminSeeder (owner) and
+ * not duplicate. Depends on AmoPipelineSeeder (stages), AdminSeeder (owner) and
  * ProductSeeder (catalog prices for the snapshot). Tests do NOT run this seeder.
+ *
+ * CANON: seeds into "MACRO Global" — the default board view since the SalesPulse
+ * cutover (the legacy "Продажи" funnel is archived). Stage codes below are the AMO
+ * "MACRO Global" codes (unsorted/qualification/schedule/meeting/warm/hot/success),
+ * NOT the old "Продажи" codes.
  */
 class DemoDealsSeeder extends Seeder
 {
@@ -32,19 +37,20 @@ class DemoDealsSeeder extends Seeder
 
     /**
      * Demo deals: [stage code, title, currency, [[product code, plan code|null, qty], ...]].
+     * Stage codes are "MACRO Global" (AMO) codes.
      *
      * @var list<array{0: string, 1: string, 2: string, 3: list<array{0: string, 1: ?string, 2: float}>}>
      */
     private const DEALS = [
-        ['new', 'ООО «Ромашка» — внедрение CRM', 'RUB', [['macro_crm', null, 1]]],
-        ['new', 'Acme Corp — AI assistant pilot', 'USD', [['macro_ai_assistant', 'per_min', 1000]]],
-        ['qualify', 'ТехноПарк — MACRO AI Core', 'RUB', [['macro_ai_core', 'start_annual', 1]]],
-        ['schedule_meeting', 'Глобус Логистик — интеграции', 'RUB', [['macro_integration_kit', 'basic_pkg', 1]]],
+        ['unsorted', 'ООО «Ромашка» — внедрение CRM', 'RUB', [['macro_crm', null, 1]]],
+        ['unsorted', 'Acme Corp — AI assistant pilot', 'USD', [['macro_ai_assistant', 'per_min', 1000]]],
+        ['qualification', 'ТехноПарк — MACRO AI Core', 'RUB', [['macro_ai_core', 'start_annual', 1]]],
+        ['schedule', 'Глобус Логистик — интеграции', 'RUB', [['macro_integration_kit', 'basic_pkg', 1]]],
         ['meeting', 'СтройИнвест — комплекс', 'RUB', [['macro_crm', null, 1], ['implementation_standard', null, 1]]],
         ['warm', 'Альфа Финанс — MACRO AI Core Business', 'RUB', [['macro_ai_core', 'business_annual', 1]]],
         ['hot', 'Берёзка Ритейл — Enterprise', 'RUB', [['macro_ai_core', 'enterprise_annual', 1]]],
-        ['won', 'Восток Трейд — закрытая', 'RUB', [['macro_crm', null, 2]]],
-        ['await_payment', 'Север Холдинг — ожидаем оплату', 'RUB', [['macro_integration_kit', 'pro_pkg', 1]]],
+        ['success', 'Восток Трейд — закрытая', 'RUB', [['macro_crm', null, 2]]],
+        ['trial', 'Север Холдинг — пробный период', 'RUB', [['macro_integration_kit', 'pro_pkg', 1]]],
     ];
 
     public function run(): void
@@ -55,7 +61,7 @@ class DemoDealsSeeder extends Seeder
         }
 
         $pipeline = Pipeline::where('kind', PipelineKind::Sales->value)
-            ->where('name', 'Продажи')
+            ->where('name', 'MACRO Global')
             ->with('stages')
             ->first();
         if ($pipeline === null) {

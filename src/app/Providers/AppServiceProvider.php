@@ -94,6 +94,11 @@ use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Policies\DealPolicy;
 use App\Domain\Sales\Policies\LostReasonPolicy;
 use App\Domain\Sales\Policies\PipelinePolicy;
+use App\Domain\SalesPulse\Contracts\PulseLlmClient;
+use App\Domain\SalesPulse\Services\PrismPulseLlmClient;
+use App\Domain\SalesPulse\Services\SalesPulseNotifier;
+use App\Domain\SalesPulse\Telegram\SalesPulseBot;
+use App\Domain\SalesPulse\Telegram\SalesPulseBotFactory;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -125,6 +130,28 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(Google2FA::class, static fn (): Google2FA => new Google2FA);
+
+        // SalesPulse report layer: the LLM seam (spec §5) — production binding drives
+        // AiRetryService; tests bind a fake to stay offline.
+        $this->app->bind(PulseLlmClient::class, PrismPulseLlmClient::class);
+
+        // SalesPulse Telegram bot (Slice 3) — a SECOND, separate Nutgram instance on
+        // its OWN token (config('salespulse.bot.token')), distinct from the contract
+        // bot's nutgram/laravel singleton. Built once with all handlers registered;
+        // an empty token falls back to a FakeNutgram (idle) so the `salespulse-bot`
+        // container never crash-loops without a token. The named binding is shared by
+        // `salespulse:run` (polling) and SalesPulseNotifier (outbound, no polling).
+        $this->app->singleton(SalesPulseBot::BINDING, static function ($app) {
+            $bot = $app->make(SalesPulseBotFactory::class)->make();
+            $app->make(SalesPulseBot::class)->register($bot);
+
+            return $bot;
+        });
+
+        $this->app->singleton(
+            SalesPulseNotifier::class,
+            static fn ($app): SalesPulseNotifier => new SalesPulseNotifier($app->make(SalesPulseBot::BINDING)),
+        );
 
         // Automation: tag the action handlers and feed them into the dispatcher.
         $this->app->tag(self::AUTOMATION_ACTION_HANDLERS, 'automation.actions');

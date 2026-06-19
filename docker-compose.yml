@@ -210,6 +210,48 @@ services:
       app:
         condition: service_started
 
+  # ---------------------------------------------------------------------------
+  # SalesPulse bot — long-polling in a SINGLE process, on its OWN token.
+  #
+  # CRITICAL: replicas:1 — never scale. SalesPulse runs on SALESPULSE_BOT_TOKEN,
+  # a DIFFERENT token than the contract bot, so the two getUpdates streams are
+  # independent (they never 409 each other). But the per-token invariant holds:
+  # exactly ONE process may poll the SalesPulse token. SALESPULSE_RUN_POLLING=true
+  # is set ONLY here; web/queue resolve the singleton purely as an outbound client
+  # (SalesPulseNotifier). Empty token → FakeNutgram fallback (idle, no crash-loop).
+  # Deploy note: restarts on its OWN, NOT part of the web/queue rolling restart:
+  #   docker compose up -d --force-recreate salespulse-bot
+  # ---------------------------------------------------------------------------
+  salespulse-bot:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: app
+    image: macro-crm-app:${IMAGE_TAG:-dev-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-salespulse-bot
+    command: php artisan salespulse:run
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    env_file:
+      - src/.env
+    environment:
+      SALESPULSE_RUN_POLLING: "true"
+    volumes:
+      - storage_app:/var/www/html/storage/app
+      - storage_framework:/var/www/html/storage/framework
+      - storage_logs:/var/www/html/storage/logs
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+    networks:
+      - macro-crm-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+
   gotenberg:
     image: gotenberg/gotenberg:8
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-gotenberg

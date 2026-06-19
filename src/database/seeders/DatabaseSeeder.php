@@ -30,6 +30,9 @@ class DatabaseSeeder extends Seeder
         ProductSeeder::class,
         // Sales config: pipeline + stages, lost reasons.
         PipelineSeeder::class,
+        // SalesPulse: the two AMO mirror funnels (MACRO Global / MACRO AI Global)
+        // — independent of the locked "Продажи" funnel above.
+        AmoPipelineSeeder::class,
         LostReasonSeeder::class,
         // Activity: meeting-report question registry (config, deps-free).
         MeetingReportQuestionSeeder::class,
@@ -56,6 +59,10 @@ class DatabaseSeeder extends Seeder
         // Manager Cabinet KPI: department/commission/team-target + won deals +
         // salary plans + demo contracts (business data).
         ManagerKpiSeeder::class,
+        // SalesPulse: today-anchored deals/activities/stage-history in the two AMO
+        // funnels for the three demo managers, so the oversight bot commands show
+        // live numbers. Runs after ManagerKpiSeeder (shares the manager accounts).
+        SalesPulseDemoSeeder::class,
         // Inbox: demo channel + public form.
         InboxSeeder::class,
         // Contracts: demo documents + revisions.

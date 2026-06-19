@@ -117,9 +117,10 @@ class ManagerKpiSeeder extends Seeder
             ],
         ];
 
-        // Find won stage
+        // Find the won stage of the default funnel (MACRO Global — the active
+        // primary pipeline since the SalesPulse cutover; "Продажи" is archived).
         $pipeline = Pipeline::query()
-            ->where('name', 'Продажи')
+            ->where('name', 'MACRO Global')
             ->with(['stages' => fn ($q) => $q->where('is_won', true)])
             ->first();
 
