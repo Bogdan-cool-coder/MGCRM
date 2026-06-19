@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Crm;
 
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\CompanyService;
+use App\Domain\Sales\Services\DealService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\StoreCompanyRequest;
 use App\Http\Requests\Crm\UpdateCompanyRequest;
@@ -27,6 +28,7 @@ class CompanyController extends Controller
 {
     public function __construct(
         private readonly CompanyService $service,
+        private readonly DealService $dealService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -49,9 +51,12 @@ class CompanyController extends Controller
     {
         $this->authorize('view', $company);
 
+        // B6: aggregate deal totals (cross-domain via public DealService method)
+        $dealTotals = $this->dealService->aggregateForCompany($company);
+
         return CompanyResource::make(
             $company->load(['companyType', 'responsibleUser', 'ownerUser', 'contactLinks.contact'])
-        );
+        )->additional(['deal_totals' => $dealTotals->toArray()]);
     }
 
     public function update(UpdateCompanyRequest $request, Company $company): JsonResource

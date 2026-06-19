@@ -7,10 +7,13 @@ namespace App\Domain\Sales\Services;
 use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\CustomFieldService;
+use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
+use App\Domain\Sales\Data\DealTotalsDTO;
 use App\Domain\Sales\Events\DealCreated;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
@@ -46,7 +49,21 @@ class DealService
         private readonly DealAuditService $auditService,
         private readonly ActivityService $activityService,
         private readonly ExchangeRateService $exchangeRateService,
+        private readonly EngagementService $engagementService,
     ) {}
+
+    /**
+     * Stamp last_activity_at = now() on the deal's company and every linked
+     * contact (the deal's engagement surface — Контакты 2.0 §B2). The single
+     * Sales-side entry point for the deal → {company, contacts} engagement
+     * fan-out, called from significant deal mutations (create / update) and from
+     * DealMoveService::move(); the deal → ids resolution lives once in
+     * Deal::engagementTargets() so it is never duplicated.
+     */
+    public function touchEngagement(Deal $deal): void
+    {
+        $this->engagementService->touchForDeal($deal->engagementTargets());
+    }
 
     /**
      * Paginated, visibility-scoped list of deals.
@@ -101,13 +118,17 @@ class DealService
     }
 
     /**
-     * Resolve the default sales pipeline (first by sort_order) for board views
-     * when the request omits pipeline_id. Null only if no sales pipeline exists.
+     * Resolve the default sales pipeline (first ACTIVE pipeline by sort_order) for
+     * board views and deal creation when the request omits pipeline_id. Archived
+     * pipelines (is_active=false, e.g. the legacy "Продажи" funnel) are excluded so
+     * they can never become the default. Null only if no active sales pipeline
+     * exists. Mirrors PipelineService::defaultSalesPipeline().
      */
     public function defaultSalesPipelineId(): ?int
     {
         return Pipeline::query()
             ->sales()
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
             ->value('id');
@@ -329,6 +350,9 @@ class DealService
             'created_at' => $deal->created_at,
         ]);
 
+        // Creating a deal is engagement on its company (contacts are linked later).
+        $this->touchEngagement($deal);
+
         return $deal;
     }
 
@@ -388,6 +412,9 @@ class DealService
                 'created_at' => $deal->created_at,
             ]);
 
+            // An inbound lead is fresh engagement on its company.
+            $this->touchEngagement($deal);
+
             DealCreated::dispatch($deal);
 
             return $deal;
@@ -444,6 +471,9 @@ class DealService
             $actor,
             $this->buildAuditDiff($original, $data, $extraChanged, $extraBefore, $deal->extra_fields ?? []),
         );
+
+        // A meaningful deal edit is engagement on its company + contacts.
+        $this->touchEngagement($deal);
 
         return $deal;
     }
@@ -521,6 +551,89 @@ class DealService
         }
 
         return $diff;
+    }
+
+    /**
+     * Paginated list of deals associated with a specific contact (cross-domain B4).
+     * Called by ContactDealsController in the Http layer.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listForContact(Contact $contact, array $filters = []): LengthAwarePaginator
+    {
+        return Deal::query()
+            ->whereHas('dealContacts', static fn (Builder $q) => $q->where('contact_id', $contact->id))
+            ->with(['pipeline:id,name', 'stage:id,name,color,is_won,is_lost', 'company:id,name', 'owner:id,full_name'])
+            ->orderByDesc('created_at')
+            ->paginate((int) ($filters['per_page'] ?? 15));
+    }
+
+    /**
+     * Paginated list of deals belonging to a specific company (cross-domain B4).
+     * Called by CompanyDealsController in the Http layer.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listForCompany(Company $company, array $filters = []): LengthAwarePaginator
+    {
+        return Deal::query()
+            ->where('company_id', $company->id)
+            ->with(['pipeline:id,name', 'stage:id,name,color,is_won,is_lost', 'owner:id,full_name'])
+            ->orderByDesc('created_at')
+            ->paginate((int) ($filters['per_page'] ?? 15));
+    }
+
+    /**
+     * Aggregate deal financials for a Company (cross-domain B6).
+     * Called by CompanyController::show() via DDD cross-domain public Service method.
+     *
+     * Returns per-currency subtotals (kopecks) + converted base total.
+     * Only open (non-closed) deals are included.
+     * float is FORBIDDEN — all arithmetic in integer kopecks.
+     */
+    public function aggregateForCompany(Company $company): DealTotalsDTO
+    {
+        $baseCurrency = strtoupper((string) config('crm.currencies.default', 'RUB'));
+
+        // Fetch open (non-closed) deals; "closed" = stage has is_won OR is_lost
+        $deals = Deal::query()
+            ->where('company_id', $company->id)
+            ->whereNull('closed_at')
+            ->whereHas('stage', static fn (Builder $q) => $q->where('is_won', false)->where('is_lost', false))
+            ->with('stage:id,is_won,is_lost')
+            ->get(['id', 'amount', 'currency']);
+
+        // Group by currency, sum kopecks (integer only)
+        $perCurrency = [];
+        foreach ($deals as $deal) {
+            $currency = strtoupper((string) ($deal->currency ?? $baseCurrency));
+            $perCurrency[$currency] = ($perCurrency[$currency] ?? 0) + (int) $deal->amount;
+        }
+
+        // Convert to base currency — all arithmetic stays integer
+        $baseTotal = 0;
+        $conversionFailed = false;
+
+        foreach ($perCurrency as $currency => $amountKopecks) {
+            if ($currency === $baseCurrency) {
+                $baseTotal += $amountKopecks;
+            } else {
+                $converted = $this->exchangeRateService->convertAmount($amountKopecks, $currency, $baseCurrency);
+                if ($converted === null) {
+                    $conversionFailed = true;
+                } else {
+                    $baseTotal += $converted;
+                }
+            }
+        }
+
+        return new DealTotalsDTO(
+            per_currency: $perCurrency,
+            base_total: $conversionFailed ? null : $baseTotal,
+            base_currency: $baseCurrency,
+            open_count: $deals->count(),
+            as_of_date: now()->toIso8601String(),
+        );
     }
 
     /**

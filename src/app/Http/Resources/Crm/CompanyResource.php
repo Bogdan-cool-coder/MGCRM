@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Crm;
 
+use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -81,12 +82,45 @@ class CompanyResource extends JsonResource
             'turnover_rub' => $this->turnover_rub,
             'category_recalc_at' => $this->category_recalc_at?->toIso8601String(),
 
+            // Engagement (B2)
+            'last_activity_at' => $this->last_activity_at?->toIso8601String(),
+            'engagement_tier' => $this->computeEngagementTier()->value,
+
             // Contact links (when loaded)
-            'contact_links' => $this->whenLoaded('contactLinks', fn () => ContactCompanyLinkResource::collection($this->contactLinks)
-            ),
+            'contact_links' => $this->whenLoaded('contactLinks', fn () => ContactCompanyLinkResource::collection($this->contactLinks)),
+
+            // Deal totals (when set via ->additional(['deal_totals' => ...]) — B6)
+            'deal_totals' => $this->additional['deal_totals'] ?? null,
 
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Compute engagement tier as a pure function of last_activity_at and config thresholds.
+     * No DB query — safe inside Resource::toArray(). Mirrors EngagementService::computeTier().
+     */
+    private function computeEngagementTier(): EngagementTier
+    {
+        $lastActivity = $this->last_activity_at;
+
+        if ($lastActivity === null) {
+            return EngagementTier::Cold;
+        }
+
+        $warmDays = (int) config('crm.engagement.company.warm_days', 30);
+        $coldDays = (int) config('crm.engagement.company.cold_days', 90);
+        $days = (int) $lastActivity->copy()->startOfDay()->diffInDays(now()->startOfDay());
+
+        if ($days <= $warmDays) {
+            return EngagementTier::Fresh;
+        }
+
+        if ($days <= $coldDays) {
+            return EngagementTier::Cooling;
+        }
+
+        return EngagementTier::Cold;
     }
 }

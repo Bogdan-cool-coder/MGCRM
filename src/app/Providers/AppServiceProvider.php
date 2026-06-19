@@ -46,8 +46,10 @@ use App\Domain\Contracts\Policies\TemplatePolicy;
 use App\Domain\Contracts\Policies\TemplateVariablePolicy;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Models\ContactRelation;
 use App\Domain\Crm\Policies\CompanyPolicy;
 use App\Domain\Crm\Policies\ContactPolicy;
+use App\Domain\Crm\Policies\ContactRelationPolicy;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Inbox\Models\Channel;
@@ -139,6 +141,7 @@ class AppServiceProvider extends ServiceProvider
         // CRM Policies (ARCHITECTURE.md §3 — no inline role checks)
         Gate::policy(Company::class, CompanyPolicy::class);
         Gate::policy(Contact::class, ContactPolicy::class);
+        Gate::policy(ContactRelation::class, ContactRelationPolicy::class);
 
         // Catalog Policies
         Gate::policy(Product::class, ProductPolicy::class);

@@ -8,4 +8,5 @@ enum HoldingRole: string
 {
     case Parent = 'parent';
     case Subsidiary = 'subsidiary';
+    case Affiliate = 'affiliate';
 }

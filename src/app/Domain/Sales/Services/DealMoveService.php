@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sales\Services;
 
 use App\Domain\Contracts\Services\DocumentService;
+use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Exceptions\WonGateException;
 use App\Domain\Sales\Models\Deal;
@@ -31,6 +32,7 @@ class DealMoveService
 {
     public function __construct(
         private readonly DocumentService $documents,
+        private readonly EngagementService $engagement,
     ) {}
 
     public function move(
@@ -127,6 +129,10 @@ class DealMoveService
         //    committed state. Only on a real transition ($fromStageId set by the
         //    transaction); no-op and rolled-back moves leave it null.
         if ($fromStageId !== null) {
+            // A real stage transition is engagement on the deal's company +
+            // contacts (no-op / rolled-back moves leave $fromStageId null).
+            $this->engagement->touchForDeal($result->engagementTargets());
+
             DealStageChanged::dispatch(
                 $result,
                 $fromStageId,

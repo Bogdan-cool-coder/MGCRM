@@ -12,6 +12,7 @@ use App\Domain\Activity\Events\ActivityCreated;
 use App\Domain\Activity\Events\ActivityStatusChanged;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
@@ -42,6 +43,7 @@ class ActivityService
 
     public function __construct(
         private readonly VisibilityResolver $visibility,
+        private readonly EngagementService $engagement,
     ) {}
 
     /**
@@ -158,6 +160,11 @@ class ActivityService
 
         $activity = Activity::create($data);
 
+        // Logging an activity is engagement on its target's Crm surface (Контакты
+        // 2.0 §B2): a company-targeted activity touches the company; a
+        // deal-targeted one touches the deal's company + its linked contacts.
+        $this->touchTargetEngagement($activity);
+
         ActivityCreated::dispatch($activity);
 
         if ($activity->responsible_id !== null) {
@@ -211,6 +218,9 @@ class ActivityService
             'progress_pct' => 100,
         ]);
         $activity->refresh();
+
+        // Completing a call/meeting/task is fresh engagement on its target.
+        $this->touchTargetEngagement($activity);
 
         ActivityStatusChanged::dispatch($activity, $from, ActivityStatus::Done);
 
@@ -613,6 +623,40 @@ class ActivityService
     }
 
     // ---- Private ----
+
+    /**
+     * Stamp last_activity_at on the Crm entities behind an activity's target
+     * (Контакты 2.0 §B2 engagement signal). A company target touches the company
+     * directly; a deal target fans out to the deal's company + linked contacts.
+     * Standalone (target-less) personal tasks touch nothing. The deal → {company,
+     * contacts} resolution lives once in Deal::engagementTargets(), so neither the
+     * Sales nor the Activity domain duplicates the deal_contacts lookup. Crossing
+     * into the Crm domain goes through EngagementService (a public service method),
+     * never a foreign-table query.
+     */
+    private function touchTargetEngagement(Activity $activity): void
+    {
+        $targetType = $activity->target_type;
+        $targetId = $activity->target_id !== null ? (int) $activity->target_id : null;
+
+        if ($targetType === null || $targetId === null) {
+            return; // standalone personal task — no Crm entity to touch
+        }
+
+        if ($targetType === ActivityTargetType::Company->value) {
+            $this->engagement->touch('company', $targetId);
+
+            return;
+        }
+
+        if ($targetType === ActivityTargetType::Deal->value) {
+            $deal = Deal::find($targetId);
+
+            if ($deal !== null) {
+                $this->engagement->touchForDeal($deal->engagementTargets());
+            }
+        }
+    }
 
     /**
      * Stamp the linked deal's title onto each deal-targeted activity (batched) so
