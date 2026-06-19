@@ -105,7 +105,7 @@ const emit = defineEmits<{
   dealArchived: []
   openAddProduct: []
   openAddContact: []
-  updateProduct: [id: number, payload: { quantity?: number; unit_price?: number }]
+  updateProduct: [id: number, payload: { quantity?: number; unit_price?: number; discount?: number }]
   removeProduct: [id: number]
   removeContact: [contactId: number]
   amountChanged: [total: number]

@@ -37,7 +37,7 @@ export function useDealProducts(dealId: () => number) {
     return item
   }
 
-  async function update(id: number, payload: { quantity?: number; unit_price?: number }) {
+  async function update(id: number, payload: { quantity?: number; unit_price?: number; discount?: number }) {
     updatingId.value = id
     try {
       const updated = await updateMutation.run(() =>

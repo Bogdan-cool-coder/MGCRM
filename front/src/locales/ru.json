@@ -10,10 +10,13 @@
     "finance": "Финансы",
     "team": "Команда",
     "settings": "Настройки",
+    "settingsGroup": "Настройки",
+    "onboarding": "Онбординг",
     "analytics": "Аналитика",
     "profile": "Профиль",
     "logout": "Выйти",
     "pipelineSettings": "Настройки воронки",
+    "tasks": "Задачи",
     "myTasks": "Мои задачи",
     "managerCabinet": "Кабинет менеджера",
     "myApprovals": "Мои согласования",
@@ -32,6 +35,10 @@
     }
   },
   "auth": {
+    "brand_panel": {
+      "tagline": "Управляйте продажами",
+      "accent": "умнее и быстрее"
+    },
     "login": {
       "title": "Вход в систему",
       "email": "Email",
@@ -222,6 +229,36 @@
     "unknown": "Произошла неизвестная ошибка.",
     "required": "Обязательное поле",
     "duplicate": "Такая запись уже существует"
+  },
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Управление параметрами системы",
+    "sections": {
+      "pipeline": {
+        "title": "Настройки воронки",
+        "desc": "Стадии, воронки продаж и автоматизация сделок"
+      },
+      "templates": {
+        "title": "Шаблоны",
+        "desc": "Шаблоны документов и договоров"
+      },
+      "templateVariables": {
+        "title": "Каталог меток",
+        "desc": "Переменные и метки для подстановки в шаблоны"
+      },
+      "approvalRoutes": {
+        "title": "Маршруты согласования",
+        "desc": "Настройка маршрутов согласования документов"
+      },
+      "messageTemplates": {
+        "title": "Рассылки",
+        "desc": "Шаблоны сообщений для уведомлений и рассылок"
+      },
+      "automationRuns": {
+        "title": "Журнал автоматизаций",
+        "desc": "История запусков и результаты автоматических сценариев"
+      }
+    }
   },
   "common": {
     "loading": "Загрузка...",
@@ -1248,19 +1285,22 @@
           "company": "Компания",
           "expectedSignDate": "Дата подписания (план)",
           "expectedPaymentDate": "Дата оплаты (план)",
-          "daysInWork": "Дней в работе"
+          "daysInWork": "Дней в работе",
+          "plannedContract": "План договора",
+          "plannedPayment": "План оплаты"
         },
         "groups": {
           "products": "Продукты",
           "deal": "Сделка",
           "contacts": "Контакты",
-          "company": "Данные компании",
+          "company": "Компания",
           "customFields": "Дополнительные поля"
         },
         "products": {
           "empty": "Нет позиций",
           "add": "+ Добавить",
-          "total": "Итого"
+          "total": "Итого",
+          "discount": "Скидка"
         },
         "contacts": {
           "addContact": "+ Добавить контакт",
@@ -2700,7 +2740,11 @@
         "companies": "Компании",
         "dealsParticipation": "Участвует в сделках",
         "customFields": "Доп. поля",
-        "dealsEmpty": "Сделок нет"
+        "dealsEmpty": "Сделок нет",
+        "notes": "Заметки"
+      },
+      "notes": {
+        "placeholder": "Добавьте заметку о контакте..."
       },
       "channels": {
         "phone": "Телефон",

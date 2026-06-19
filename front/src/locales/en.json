@@ -10,10 +10,13 @@
     "finance": "Finance",
     "team": "Team",
     "settings": "Settings",
+    "settingsGroup": "Settings",
+    "onboarding": "Onboarding",
     "analytics": "Analytics",
     "profile": "Profile",
     "logout": "Sign out",
     "pipelineSettings": "Pipeline settings",
+    "tasks": "Tasks",
     "myTasks": "My tasks",
     "managerCabinet": "Manager Cabinet",
     "myApprovals": "My approvals",
@@ -32,6 +35,10 @@
     }
   },
   "auth": {
+    "brand_panel": {
+      "tagline": "Manage your sales",
+      "accent": "smarter and faster"
+    },
     "login": {
       "title": "Sign in",
       "email": "Email",
@@ -222,6 +229,36 @@
     "unknown": "An unknown error occurred.",
     "required": "Required field",
     "duplicate": "This record already exists"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage system configuration",
+    "sections": {
+      "pipeline": {
+        "title": "Pipeline settings",
+        "desc": "Deal stages, sales funnels and deal automation"
+      },
+      "templates": {
+        "title": "Templates",
+        "desc": "Document and contract templates"
+      },
+      "templateVariables": {
+        "title": "Variable catalog",
+        "desc": "Variables and labels for template substitution"
+      },
+      "approvalRoutes": {
+        "title": "Approval routes",
+        "desc": "Configure document approval workflows"
+      },
+      "messageTemplates": {
+        "title": "Message templates",
+        "desc": "Message templates for notifications and mailings"
+      },
+      "automationRuns": {
+        "title": "Automation log",
+        "desc": "Run history and results of automated scenarios"
+      }
+    }
   },
   "common": {
     "loading": "Loading...",
@@ -1248,19 +1285,22 @@
           "company": "Company",
           "expectedSignDate": "Expected sign date",
           "expectedPaymentDate": "Expected payment date",
-          "daysInWork": "Days in progress"
+          "daysInWork": "Days in progress",
+          "plannedContract": "Planned contract",
+          "plannedPayment": "Planned payment"
         },
         "groups": {
           "products": "Products",
           "deal": "Deal",
           "contacts": "Contacts",
-          "company": "Company data",
+          "company": "Company",
           "customFields": "Custom fields"
         },
         "products": {
           "empty": "No items",
           "add": "+ Add",
-          "total": "Total"
+          "total": "Total",
+          "discount": "Discount"
         },
         "contacts": {
           "addContact": "+ Add contact",
@@ -2700,7 +2740,11 @@
         "companies": "Companies",
         "dealsParticipation": "Involved in deals",
         "customFields": "Custom fields",
-        "dealsEmpty": "No deals"
+        "dealsEmpty": "No deals",
+        "notes": "Notes"
+      },
+      "notes": {
+        "placeholder": "Add a note about this contact..."
       },
       "channels": {
         "phone": "Phone",

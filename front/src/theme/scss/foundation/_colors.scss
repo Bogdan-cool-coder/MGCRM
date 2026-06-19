@@ -101,18 +101,19 @@ $stage-color-pink:        #D4537E;
 $stage-color-purple:      #7F77DD;
 $stage-color-amber-text:  #6B4A00;   // dark text on bright amber
 
-// Soft variants (dark family text)
-$stage-color-soft-teal:   #E1F5EE;
-$stage-color-soft-blue:   #E6F1FB;
-$stage-color-soft-amber:  #FAEEDA;
-$stage-color-soft-pink:   #FBEAF0;
-$stage-color-soft-green:  #EAF3DE;
+// Soft variants — saturated mid-tone fills for punchy kanban column headers.
+// These are intentionally more vivid than the old pastel set; dark text for WCAG AA contrast.
+$stage-color-soft-teal:   #52D4A4;
+$stage-color-soft-blue:   #5AAAE8;
+$stage-color-soft-amber:  #F5C15A;
+$stage-color-soft-pink:   #E87AAD;
+$stage-color-soft-green:  #92CF5F;
 
-$stage-text-soft-teal:    #0D5C44;
-$stage-text-soft-blue:    #1A4F8A;
-$stage-text-soft-amber:   #6B4A00;
-$stage-text-soft-pink:    #7A2347;
-$stage-text-soft-green:   #3A6020;
+$stage-text-soft-teal:    #0A3D28;
+$stage-text-soft-blue:    #0B2E5A;
+$stage-text-soft-amber:   #5A3200;
+$stage-text-soft-pink:    #5A0F2C;
+$stage-text-soft-green:   #1E4010;
 
 // ─── Task-type tag colors (view 3) ───────────────────────────────────────────
 

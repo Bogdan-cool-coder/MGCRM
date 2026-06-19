@@ -160,6 +160,25 @@
                         />
                       </InfoPanel>
 
+                      <!-- Заметки -->
+                      <InfoPanel
+                        :title="t('crm.contact.sections.notes')"
+                        icon="pi-comment"
+                        panel-key="contact-notes"
+                        :default-collapsed="false"
+                      >
+                        <div class="contact-page-v2__notes-field">
+                          <InlineEditableField
+                            :model-value="contact.notes"
+                            field-key="notes"
+                            field-type="textarea"
+                            :saving="isSaving"
+                            :placeholder="t('crm.contact.notes.placeholder')"
+                            @save="patchField"
+                          />
+                        </div>
+                      </InfoPanel>
+
                       <!-- Доп. поля -->
                       <InfoPanel
                         :title="t('crm.contact.sections.customFields')"
@@ -274,6 +293,7 @@ import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
 import CustomFieldRenderer from '@/components/crm/entity/CustomFieldRenderer.vue'
+import InlineEditableField from '@/components/crm/InlineEditableField.vue'
 import ContactChannelsBlock from './components/ContactChannelsBlock.vue'
 import ContactCompaniesPanel from './components/ContactCompaniesPanel.vue'
 import ContactRelationsPanel from './components/ContactRelationsPanel.vue'
@@ -373,9 +393,8 @@ onMounted(async () => {
   await loadAll()
 })
 
-// suppress unused warning — isSaving used by patchField internally
+// suppress unused warning — isSaving used by InlineEditableField internally via patchField
 void isSaving
-void patchField
 void attachCompanyId
 void attachCompanyStatus
 </script>
@@ -487,6 +506,12 @@ void attachCompanyStatus
   .app-dark & {
     border-color: var(--p-surface-700);
   }
+}
+
+// ── Notes field ───────────────────────────────────────────────────────────────
+
+.contact-page-v2__notes-field {
+  padding: $space-1 0;
 }
 
 // ── Attach company dialog ────────────────────────────────────────────────────

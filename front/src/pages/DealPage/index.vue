@@ -114,7 +114,7 @@
         v-if="isTablet"
         v-model:visible="infoPanelOpen"
         position="left"
-        :style="{ width: '320px' }"
+        :style="{ width: '380px' }"
         :modal="true"
         :header="deal.title"
       >
@@ -416,7 +416,7 @@ function onAmountChanged(newTotal: number) {
 }
 
 // Product events forwarded from DealInfoPanel → DealTabMain → DealProductsGroup
-async function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number }) {
+async function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number; discount?: number }) {
   await dealProductsComposable.update(id, payload)
   // Recalculate amount
   if (deal.value) {
@@ -512,14 +512,14 @@ onMounted(async () => {
 
   @media (min-width: 1280px) {
     .deal-page-v2__left {
-      width: 320px;
+      width: 420px;
     }
   }
 
   // ── Standard desktop 1024–1279px ──────────────────────────────────────────
 
   &__left {
-    width: 290px;
+    width: 380px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;

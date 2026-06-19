@@ -71,11 +71,11 @@ const BRIGHT_COLORS = [
 ]
 
 const SOFT_COLORS = [
-  { hex: '#E1F5EE', label: 'Soft Teal', checkColor: '#0D5C44', borderHex: '#0D5C4433' },
-  { hex: '#E6F1FB', label: 'Soft Blue', checkColor: '#1A4F8A', borderHex: '#1A4F8A33' },
-  { hex: '#FAEEDA', label: 'Soft Amber', checkColor: '#6B4A00', borderHex: '#6B4A0033' },
-  { hex: '#FBEAF0', label: 'Soft Pink', checkColor: '#7A2347', borderHex: '#7A234733' },
-  { hex: '#EAF3DE', label: 'Soft Green', checkColor: '#3A6020', borderHex: '#3A602033' },
+  { hex: '#52D4A4', label: 'Soft Teal', checkColor: '#0A3D28', borderHex: '#0A3D2833' },
+  { hex: '#5AAAE8', label: 'Soft Blue', checkColor: '#0B2E5A', borderHex: '#0B2E5A33' },
+  { hex: '#F5C15A', label: 'Soft Amber', checkColor: '#5A3200', borderHex: '#5A320033' },
+  { hex: '#E87AAD', label: 'Soft Pink', checkColor: '#5A0F2C', borderHex: '#5A0F2C33' },
+  { hex: '#92CF5F', label: 'Soft Green', checkColor: '#1E4010', borderHex: '#1E401033' },
 ]
 </script>
 
