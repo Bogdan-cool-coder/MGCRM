@@ -101,6 +101,7 @@ api/<domain>.ts            (axios-клиент + типизированные ф
 
 - **PHPUnit + SQLite `:memory:`**, тройная изоляция как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`). Тесты НИКОГДА не ходят в живую БД.
 - **Feature-тест на каждый endpoint**, **Unit-тест на каждый Service**. AI/HTTP — мокать. Pest запрещён (только PHPUnit).
+- **`AiRetryService` (Prism-каскад):** `executeWithRetry(chatType, system, messages, tools)` — стандартный вызов без tool_choice; `executeWithRetryAndToolChoice(...)` — расширение для forced `tool_use` (weekly-отчёт Sonnet). Базовый метод делегирует в расширенный с `toolChoice=null` — non-breaking для всех существующих потребителей. Новые задачи Prism с tool_use обязательно используют `executeWithRetryAndToolChoice`; без tool_use — `executeWithRetry`.
 
 ## 6.1 Frontend — PrimeVue тема (конвенции)
 

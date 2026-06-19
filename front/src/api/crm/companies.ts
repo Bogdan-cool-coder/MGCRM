@@ -1,5 +1,11 @@
 import { apiClient } from '@/api/client'
-import type { Company, ContactCompanyLink, PaginatedResponse, EmploymentStatus } from '@/entities/crm'
+import type {
+  Company,
+  ContactCompanyLink,
+  HoldingTreeDto,
+  PaginatedResponse,
+  EmploymentStatus,
+} from '@/entities/crm'
 
 export interface CompanyListParams {
   page?: number
@@ -9,6 +15,22 @@ export interface CompanyListParams {
   source?: string
   country_code?: string
   tags?: string[]
+  engagement_tier?: 'fresh' | 'cooling' | 'cold'
+  sort?: string
+  direction?: 'asc' | 'desc'
+}
+
+export interface BulkCompanyPayload {
+  company_ids: number[]
+  operation: 'assign_responsible' | 'set_tags' | 'add_tag' | 'remove_tag'
+  responsible_user_id?: number
+  tags?: string[]
+  tag?: string
+}
+
+export interface AttachHoldingPayload {
+  parent_id: number
+  holding_role: 'parent' | 'subsidiary'
 }
 
 export interface CreateCompanyPayload {
@@ -109,9 +131,53 @@ export const companiesApi = {
     return res.data.data
   },
 
-  async getHolding(companyId: number): Promise<{ data: Company[]; stub?: boolean }> {
-    const res = await apiClient.get<{ data: Company[]; stub?: boolean }>(
+  async getHolding(companyId: number): Promise<HoldingTreeDto | null> {
+    const res = await apiClient.get<{ data: HoldingTreeDto }>(
       `/api/companies/${companyId}/holding`,
+    )
+    return res.data.data ?? null
+  },
+
+  async attachHolding(companyId: number, payload: AttachHoldingPayload): Promise<void> {
+    await apiClient.post(`/api/companies/${companyId}/holding`, payload)
+  },
+
+  async detachHolding(companyId: number): Promise<void> {
+    await apiClient.delete(`/api/companies/${companyId}/holding`)
+  },
+
+  // ── Company Deals (real, Slice 1 API) ──────────────────────────────────────
+
+  async getDeals(companyId: number, params: { page?: number; per_page?: number } = {}): Promise<PaginatedResponse<import('@/entities/sales').DealDto>> {
+    const res = await apiClient.get<PaginatedResponse<import('@/entities/sales').DealDto>>(
+      `/api/companies/${companyId}/deals`,
+      { params },
+    )
+    return res.data
+  },
+
+  // ── Bulk operations ────────────────────────────────────────────────────────
+
+  async bulkPatch(payload: BulkCompanyPayload): Promise<{ affected: number }> {
+    const res = await apiClient.patch<{ affected: number }>('/api/companies/bulk', payload)
+    return res.data
+  },
+
+  async bulkDelete(companyIds: number[]): Promise<{ deleted: number }> {
+    const res = await apiClient.delete<{ deleted: number }>('/api/companies/bulk', {
+      data: { company_ids: companyIds },
+    })
+    return res.data
+  },
+
+  async exportXlsx(
+    companyIds: number[],
+    filters: Record<string, unknown> = {},
+  ): Promise<Blob> {
+    const res = await apiClient.post<Blob>(
+      '/api/companies/export',
+      { company_ids: companyIds, filters },
+      { responseType: 'blob' },
     )
     return res.data
   },

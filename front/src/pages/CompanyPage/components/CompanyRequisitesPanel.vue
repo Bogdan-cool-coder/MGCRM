@@ -1,0 +1,222 @@
+<template>
+  <InfoPanel
+    :title="t('crm.company.sections.requisites')"
+    icon="pi-building"
+    panel-key="company-requisites"
+    :default-collapsed="false"
+  >
+    <KeyFactsBlock>
+      <KeyFactsItem :label="t('company.page.fields.taxIdLabel')">
+        <InlineEditableField
+          :model-value="company.tax_id_label"
+          field-key="tax_id_label"
+          field-type="text"
+          placeholder="БИН / ИНН / TIN"
+          :saving="isSaving"
+          @save="onSave"
+        />
+      </KeyFactsItem>
+
+      <KeyFactsItem :label="t('company.page.fields.taxId')">
+        <InlineEditableField
+          :model-value="company.tax_id"
+          field-key="tax_id"
+          field-type="text"
+          :saving="isSaving"
+          @save="onSave"
+        />
+      </KeyFactsItem>
+
+      <KeyFactsItem :label="t('company.page.fields.legalForm')">
+        <InlineEditableField
+          :model-value="company.legal_form"
+          field-key="legal_form"
+          field-type="text"
+          :saving="isSaving"
+          @save="onSave"
+        />
+      </KeyFactsItem>
+
+      <KeyFactsItem :label="t('company.page.fields.fullLegalForm')">
+        <InlineEditableField
+          :model-value="company.full_legal_form"
+          field-key="full_legal_form"
+          field-type="text"
+          :saving="isSaving"
+          @save="onSave"
+        />
+      </KeyFactsItem>
+
+      <template v-if="showAll">
+        <KeyFactsItem :label="t('company.page.fields.directorPosition')">
+          <InlineEditableField
+            :model-value="company.director_position"
+            field-key="director_position"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
+
+        <KeyFactsItem :label="t('company.page.fields.bank')">
+          <InlineEditableField
+            :model-value="company.bank"
+            field-key="bank"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
+
+        <KeyFactsItem :label="t('company.page.fields.account')">
+          <InlineEditableField
+            :model-value="company.account"
+            field-key="account"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
+
+        <KeyFactsItem :label="t('company.page.fields.address')">
+          <InlineEditableField
+            :model-value="company.address"
+            field-key="address"
+            field-type="textarea"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
+
+        <KeyFactsItem :label="t('company.page.fields.website')">
+          <span class="company-requisites__url-wrap">
+            <a
+              v-if="company.website"
+              :href="company.website"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="company-requisites__url-link"
+            >
+              {{ truncateUrl(company.website) }}
+              <i class="pi pi-external-link company-requisites__url-icon" />
+            </a>
+            <InlineEditableField
+              :model-value="company.website"
+              field-key="website"
+              field-type="text"
+              :saving="isSaving"
+              @save="onSave"
+            />
+          </span>
+        </KeyFactsItem>
+
+        <KeyFactsItem :label="t('company.page.fields.phone')">
+          <InlineEditableField
+            :model-value="company.phone"
+            field-key="phone"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
+
+        <KeyFactsItem :label="t('company.page.fields.email')">
+          <InlineEditableField
+            :model-value="company.email"
+            field-key="email"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
+      </template>
+    </KeyFactsBlock>
+
+    <button
+      type="button"
+      class="company-requisites__toggle"
+      @click="showAll = !showAll"
+    >
+      <i :class="['pi', showAll ? 'pi-chevron-up' : 'pi-chevron-down']" />
+      {{ showAll ? t('common.showLess') : t('common.showMore') }}
+    </button>
+  </InfoPanel>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import InlineEditableField from '@/components/crm/InlineEditableField.vue'
+import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
+import KeyFactsBlock from '@/components/crm/entity/KeyFactsBlock.vue'
+import KeyFactsItem from '@/components/crm/entity/KeyFactsItem.vue'
+import type { Company } from '@/entities/crm'
+
+defineProps<{
+  company: Company
+  isSaving: boolean
+}>()
+
+const emit = defineEmits<{
+  save: [fieldKey: string, value: unknown]
+}>()
+
+const { t } = useI18n()
+const showAll = ref(false)
+
+function onSave(fieldKey: string, value: string | number | null) {
+  emit('save', fieldKey, value)
+}
+
+function truncateUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return u.hostname + (u.pathname !== '/' ? u.pathname : '')
+  } catch {
+    return url.slice(0, 40)
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.company-requisites__toggle {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: $space-2 0;
+  font-size: $font-size-xs;
+  color: var(--p-primary-color);
+  font-weight: $font-weight-medium;
+
+  i {
+    font-size: $font-size-xs;
+  }
+}
+
+.company-requisites__url-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  width: 100%;
+}
+
+.company-requisites__url-link {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-sm;
+  color: var(--p-primary-color);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.company-requisites__url-icon {
+  font-size: 10px;
+}
+</style>

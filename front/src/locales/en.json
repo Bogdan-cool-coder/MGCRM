@@ -261,7 +261,13 @@
     "saveFirst": "Save the lesson first to upload a file",
     "retry": "Retry",
     "hide": "Hide",
-    "show": "Show"
+    "show": "Show",
+    "apply": "Apply",
+    "remove": "Remove",
+    "success": "Done",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "actions": "Actions"
   },
   "contacts": {
     "page": {
@@ -281,7 +287,14 @@
         "source": "Source",
         "country": "Country",
         "tags": "Tags",
-        "actions": "Actions"
+        "actions": "Actions",
+        "density": "Density",
+        "choose": "Column chooser"
+      },
+      "density": {
+        "compact": "Compact",
+        "normal": "Normal",
+        "comfortable": "Comfortable"
       },
       "filters": {
         "search": "Search by name...",
@@ -336,12 +349,14 @@
         "deals": "Deals",
         "files": "Files",
         "holding": "Holding",
-        "documents": "Documents"
+        "documents": "Documents",
+        "employees": "Employees"
       },
       "sections": {
         "main": "Main information",
         "requisites": "Requisites",
-        "signatory": "Signatory"
+        "signatory": "Signatory",
+        "employees": "Employees"
       },
       "fields": {
         "name": "Name",
@@ -366,7 +381,8 @@
         "directorGenitive": "Name (genitive)",
         "directorShort": "Name (short)",
         "actsBasis": "Acts on basis of",
-        "source": "Source"
+        "source": "Source",
+        "category": "Category"
       },
       "rail": {
         "responsible": "Responsible",
@@ -398,7 +414,8 @@
           "unlink": "Unlink"
         },
         "unlinkConfirm": "Unlink employee?",
-        "empty": "No employees added"
+        "empty": "No employees added",
+        "seeAll": "All employees ({count})"
       },
       "holding": {
         "parent": "Parent holding",
@@ -427,6 +444,31 @@
       "errors": {
         "notFound": "Company not found",
         "load": "Failed to load"
+      },
+      "menu": {
+        "createDeal": "Create deal",
+        "addTask": "Add task",
+        "addNote": "Add note",
+        "call": "Call",
+        "email": "Send email",
+        "copyLink": "Copy link",
+        "export": "Export",
+        "deleteConfirm": "Delete company? This action is irreversible.",
+        "deleteSuccess": "Company deleted"
+      },
+      "deals": {
+        "empty": "No deals",
+        "createDeal": "Create deal",
+        "openCount": "{count} open",
+        "seeAll": "All deals"
+      },
+      "totals": {
+        "empty": "No completed deals",
+        "total": "Total ({currency})",
+        "asOf": "As of {date}"
+      },
+      "documents": {
+        "seeAll": "All documents ({count})"
       }
     }
   },
@@ -438,7 +480,8 @@
         "companies": "Companies",
         "notes": "Notes",
         "tasks": "Tasks",
-        "files": "Files"
+        "files": "Files",
+        "deals": "Deals"
       },
       "fields": {
         "fullName": "Full name",
@@ -1319,6 +1362,20 @@
       },
       "actions": {
         "create": "Create deal"
+      },
+      "list": {
+        "columns": {
+          "title": "Title",
+          "stage": "Stage",
+          "amount": "Amount",
+          "status": "Status",
+          "owner": "Owner"
+        }
+      },
+      "statuses": {
+        "open": "Open",
+        "won": "Won",
+        "lost": "Lost"
       }
     },
     "move": {
@@ -2551,5 +2608,187 @@
       "success_detail": "Baseline successfully restored. Please log in again.",
       "error_title": "Reset failed"
     }
+  },
+  "crm": {
+    "entity": {
+      "author": "Created by",
+      "worksWithCompany": "Account owner",
+      "engagement": {
+        "fresh": "Fresh",
+        "cooling": "Cooling",
+        "cold": "Cold",
+        "tooltip": "Last contact: {days} days ago"
+      },
+      "row": {
+        "primary": "Primary",
+        "setPrimary": "Set as primary"
+      }
+    },
+    "company": {
+      "tabs": {
+        "employees": "Employees",
+        "activity": "Activity",
+        "payments": "Payments",
+        "files": "Files"
+      },
+      "sections": {
+        "requisites": "Requisites",
+        "employees": "Employees",
+        "holding": "Holding",
+        "deals": "Deals",
+        "totals": "Totals",
+        "payments": "Payments"
+      },
+      "rail": {
+        "author": "Created by",
+        "worksWithCompany": "Account owner"
+      },
+      "fields": {
+        "director": "Director",
+        "bankName": "Bank",
+        "bankAccount": "Account",
+        "annualRevenue": "Annual revenue"
+      },
+      "holding": {
+        "youAreHere": "You are here",
+        "parentCompany": "Parent company",
+        "addParent": "Add parent company",
+        "noHolding": "Not part of a group",
+        "roleParent": "Parent",
+        "roleChild": "Subsidiary",
+        "detach": "Remove from group",
+        "attached": "Company added to group",
+        "detached": "Company removed from group",
+        "cyclicError": "Cannot create a cyclic dependency"
+      },
+      "payments": {
+        "placeholder": "Payments are available after connecting the finance module (M9)",
+        "hint": "The finance module will be available in release M9"
+      }
+    },
+    "contact": {
+      "tabs": {
+        "activity": "Activity",
+        "files": "Files"
+      },
+      "sections": {
+        "channels": "Channels",
+        "relations": "Relations",
+        "companies": "Companies",
+        "dealsParticipation": "Involved in deals",
+        "customFields": "Custom fields",
+        "dealsEmpty": "No deals"
+      },
+      "channels": {
+        "phone": "Phone",
+        "email": "Email",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "addChannel": "Add channel",
+        "selectType": "Channel type",
+        "valuePlaceholder": "Value",
+        "call": "Call",
+        "sendEmail": "Send email",
+        "empty": "No channels added",
+        "added": "Channel added",
+        "deleted": "Channel deleted",
+        "deleteConfirm": "Delete this channel?"
+      },
+      "relations": {
+        "add": "Add relation",
+        "type": {
+          "partner": "Partner",
+          "friend": "Friend",
+          "colleague": "Colleague",
+          "referrer": "Referrer",
+          "investor": "Investor",
+          "mentor": "Mentor",
+          "other": "Other"
+        },
+        "empty": "No relations",
+        "contactLabel": "Contact",
+        "typeLabel": "Relation type",
+        "noteLabel": "Note",
+        "notePlaceholder": "Optional",
+        "selectContact": "Select contact",
+        "selectType": "Select type",
+        "selfError": "Cannot add a relation to yourself",
+        "added": "Relation added",
+        "deleted": "Relation deleted",
+        "deleteConfirm": "Delete this relation?"
+      },
+      "deleteConfirm": "Delete contact?",
+      "deleted": "Contact deleted",
+      "menu": {
+        "addTask": "Add task",
+        "addNote": "Add note",
+        "call": "Call",
+        "email": "Send email",
+        "addRelation": "Add relation",
+        "copyLink": "Copy link",
+        "delete": "Delete"
+      }
+    },
+    "contacts_page": {
+      "savedViews": {
+        "my": "My segments",
+        "team": "Team",
+        "default": "Default",
+        "save": "Save current view",
+        "manage": "Manage segments",
+        "duplicates": "Duplicates"
+      },
+      "bulk": {
+        "merge": "Merge",
+        "exportXlsx": "Export XLSX",
+        "assignResponsible": "Assign owner",
+        "addTag": "Add tag"
+      },
+      "columns": {
+        "engagement": "Activity",
+        "lastTouch": "Last contact",
+        "openDeals": "Deals"
+      },
+      "filters": {
+        "engagement": "Engagement",
+        "lastTouchFrom": "Contact from",
+        "lastTouchTo": "Contact to",
+        "openDealsMin": "Deals min.",
+        "openDealsMax": "Deals max."
+      },
+      "empty": {
+        "duplicates": "No duplicates found",
+        "noRecords": "No contacts yet",
+        "noResults": "Nothing found",
+        "noSegment": "This segment is empty"
+      }
+    },
+    "customFields": {
+      "schemaError": "Failed to load custom fields schema",
+      "empty": "No custom fields configured"
+    }
+  },
+  "contacts_filter": {
+    "presets": {
+      "mine": "Mine",
+      "active": "Active",
+      "withDeals": "With open deals",
+      "noTask": "No task"
+    },
+    "col": {
+      "who": "Who",
+      "what": "What",
+      "when": "When"
+    },
+    "city": "City",
+    "createdAt": "Created at",
+    "changeFilters": "Change filters"
+  },
+  "contacts_columns": {
+    "title": "Column chooser",
+    "required": "Required"
+  },
+  "contacts_company": {
+    "employees": "Employees"
   }
 }

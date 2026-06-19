@@ -210,6 +210,62 @@ export type ContactListItem = Contact & { _type: 'contact' }
 export type CompanyListItem = Company & { _type: 'company' }
 export type CrmListItem = ContactListItem | CompanyListItem
 
+// ─── Engagement ───────────────────────────────────────────────────────────────
+
+export type EngagementTier = 'fresh' | 'cooling' | 'cold'
+
+// Extended Contact with Slice 1 fields
+export interface ContactExtended extends Contact {
+  last_activity_at: string | null
+  engagement_tier: EngagementTier | null
+  /** loaded via /api/contacts/{id} show (not list) */
+  channels?: ContactChannel[]
+}
+
+// Extended Company with Slice 1 fields
+export interface CompanyExtended extends Company {
+  last_activity_at: string | null
+  engagement_tier: EngagementTier | null
+  deal_totals?: DealTotalsDto | null
+}
+
+export interface DealTotalsDto {
+  per_currency: Record<string, number>  // kopecks
+  base_total: number                     // kopecks
+  base_currency: string
+  open_count: number
+  as_of_date: string
+}
+
+// ─── Contact Relation (Slice 1) ───────────────────────────────────────────────
+
+export type RelationType = 'partner' | 'referrer' | 'colleague' | 'friend' | 'investor' | 'mentor' | 'other'
+
+export interface ContactRelation {
+  id: number
+  relation_type: RelationType
+  note: string | null
+  contact: { id: number; full_name: string }
+  related_contact: { id: number; full_name: string }
+  created_by?: { id: number; full_name: string } | null
+  created_at: string
+}
+
+// ─── Holding Tree ─────────────────────────────────────────────────────────────
+
+export interface HoldingCompanyNode {
+  id: number
+  name: string
+  holding_role: HoldingRole | null
+  you_are_here: boolean
+}
+
+export interface HoldingTreeDto {
+  company: HoldingCompanyNode
+  ancestors: HoldingCompanyNode[]
+  children: HoldingCompanyNode[]
+}
+
 // ─── Contact Channel (Phase G) ────────────────────────────────────────────────
 
 export type ChannelType = 'phone' | 'email' | 'tg' | 'wa' | 'linkedin' | 'instagram' | 'viber'
@@ -227,7 +283,17 @@ export interface ContactChannel {
 // ─── Custom Field Definition (scope=deal|company) ─────────────────────────────
 
 export type CustomFieldScope = 'deal' | 'company' | 'contact'
-export type CustomFieldType = 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'date' | 'url' | 'bool'
+export type CustomFieldType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'select'
+  | 'multiselect'
+  | 'date'
+  | 'url'
+  | 'bool'
+  | 'boolean'
+  | 'user_ref'
 
 export interface CustomFieldDef {
   id: number

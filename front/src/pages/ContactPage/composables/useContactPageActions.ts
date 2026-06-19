@@ -2,30 +2,29 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import { useRouter } from 'vue-router'
 import { useMutation } from '@/composables/async/useMutation'
 import { contactsApi } from '@/api/crm/contacts'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { Contact, ContactCompanyLink } from '@/entities/crm'
+import type { ContactExtended, ContactCompanyLink, ContactRelation, ContactChannel } from '@/entities/crm'
 
 export const useContactPageActions = (opts: {
   contactId: { value: number }
-  contact: { value: Contact | null }
+  contact: { value: ContactExtended | null }
   companies: { value: ContactCompanyLink[] }
+  relations: { value: ContactRelation[] }
   loadCompanies: () => Promise<void>
+  loadRelations: () => Promise<void>
 }) => {
   const { t } = useI18n()
   const toast = useToast()
   const confirm = useConfirm()
+  const router = useRouter()
 
-  const patchMutation = useMutation<Contact>()
+  const patchMutation = useMutation<ContactExtended>()
   const linkMutation = useMutation<ContactCompanyLink>()
 
-  // Attach company dialog
-  const attachCompanyOpen = ref(false)
-  const attachCompanySearch = ref('')
-  const attachCompanyId = ref<number | null>(null)
-  const attachCompanyPosition = ref('')
-  const attachCompanyStatus = ref<'works' | 'left'>('works')
+  // ── Inline field save ─────────────────────────────────────────────────────
 
   async function patchField(fieldKey: string, value: unknown) {
     if (!opts.contactId.value) return
@@ -36,7 +35,7 @@ export const useContactPageActions = (opts: {
     }
 
     await patchMutation.run(
-      () => contactsApi.update(opts.contactId.value, { [fieldKey]: value }),
+      () => contactsApi.update(opts.contactId.value, { [fieldKey]: value }) as Promise<ContactExtended>,
       {
         onSuccess(updated) {
           if (opts.contact.value) Object.assign(opts.contact.value, updated)
@@ -54,6 +53,20 @@ export const useContactPageActions = (opts: {
       },
     )
   }
+
+  async function saveExtraField(code: string, value: unknown) {
+    if (!opts.contact.value) return
+    const extra = { ...(opts.contact.value.extra_fields ?? {}), [code]: value }
+    await patchField('extra_fields', extra)
+  }
+
+  // ── Attach company dialog ─────────────────────────────────────────────────
+
+  const attachCompanyOpen = ref(false)
+  const attachCompanySearch = ref('')
+  const attachCompanyId = ref<number | null>(null)
+  const attachCompanyPosition = ref('')
+  const attachCompanyStatus = ref<'works' | 'left'>('works')
 
   function openAttachCompany() {
     attachCompanyOpen.value = true
@@ -80,7 +93,7 @@ export const useContactPageActions = (opts: {
         onSuccess() {
           attachCompanyOpen.value = false
           void opts.loadCompanies()
-          toast.add({ severity: 'success', summary: t('contact.page.companies.add', 'Компания привязана'), life: 3000 })
+          toast.add({ severity: 'success', summary: t('contact.page.companies.add'), life: 3000 })
         },
         onError(err) {
           toast.add({
@@ -97,7 +110,7 @@ export const useContactPageActions = (opts: {
   async function setPrimaryCompany(companyId: number) {
     await contactsApi.setPrimaryCompany(opts.contactId.value, companyId)
     await opts.loadCompanies()
-    toast.add({ severity: 'success', summary: t('contact.page.companies.actions.setPrimary', 'Обновлено'), life: 3000 })
+    toast.add({ severity: 'success', summary: t('contact.page.companies.actions.setPrimary'), life: 3000 })
   }
 
   function confirmDetachCompany(companyId: number) {
@@ -114,8 +127,56 @@ export const useContactPageActions = (opts: {
     })
   }
 
+  // ── Channels (inline mutations from child component) ──────────────────────
+
+  function onChannelsUpdated(updated: ContactChannel[]) {
+    if (opts.contact.value) {
+      opts.contact.value.channels = updated
+    }
+  }
+
+  // ── Relations (inline mutations from child component) ─────────────────────
+
+  function onRelationsUpdated(updated: ContactRelation[]) {
+    opts.relations.value = updated
+  }
+
+  // ── Delete contact ────────────────────────────────────────────────────────
+
+  function confirmDeleteContact() {
+    confirm.require({
+      message: t('crm.contact.deleteConfirm'),
+      header: t('common.confirm'),
+      icon: 'pi pi-exclamation-triangle',
+      acceptClass: 'p-button-danger',
+      accept: async () => {
+        try {
+          await contactsApi.remove(opts.contactId.value)
+          toast.add({ severity: 'success', summary: t('crm.contact.deleted'), life: 3000 })
+          void router.push('/contacts')
+        } catch (err) {
+          toast.add({
+            severity: 'error',
+            summary: t('errors.server_error'),
+            detail: getApiErrorMessage(err, t('errors.server_error')),
+            life: 4000,
+          })
+        }
+      },
+    })
+  }
+
+  // ── Copy link ─────────────────────────────────────────────────────────────
+
+  function copyLink() {
+    const url = window.location.href
+    void navigator.clipboard.writeText(url)
+    toast.add({ severity: 'success', summary: t('common.linkCopied'), life: 2000 })
+  }
+
   return {
     patchField,
+    saveExtraField,
     isSaving: patchMutation.isPending,
     attachCompanyOpen,
     attachCompanySearch,
@@ -128,5 +189,9 @@ export const useContactPageActions = (opts: {
     submitAttachCompany,
     setPrimaryCompany,
     confirmDetachCompany,
+    onChannelsUpdated,
+    onRelationsUpdated,
+    confirmDeleteContact,
+    copyLink,
   }
 }

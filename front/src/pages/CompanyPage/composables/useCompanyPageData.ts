@@ -3,8 +3,11 @@ import { computed } from 'vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { companiesApi } from '@/api/crm/companies'
 import { contactsApi } from '@/api/crm/contacts'
+import { getDocuments } from '@/api/documents'
 import { useDirectoriesStore } from '@/stores/directories'
-import type { Company, ContactCompanyLink } from '@/entities/crm'
+import type { Company, ContactCompanyLink, HoldingTreeDto } from '@/entities/crm'
+import type { DealDto } from '@/entities/sales'
+import type { DocumentListItemDto } from '@/entities/document'
 
 export const useCompanyPageData = () => {
   const route = useRoute()
@@ -14,6 +17,9 @@ export const useCompanyPageData = () => {
 
   const companyResource = useAsyncResource<Company | null>(null)
   const employeesResource = useAsyncResource<ContactCompanyLink[]>([])
+  const holdingResource = useAsyncResource<HoldingTreeDto | null>(null)
+  const dealsResource = useAsyncResource<DealDto[]>([])
+  const documentsResource = useAsyncResource<DocumentListItemDto[]>([])
 
   async function loadCompany() {
     if (!companyId.value) return
@@ -28,8 +34,35 @@ export const useCompanyPageData = () => {
     await employeesResource.run(() => companiesApi.getEmployees(companyId.value))
   }
 
+  async function loadHolding() {
+    if (!companyId.value) return
+    await holdingResource.run(() => companiesApi.getHolding(companyId.value))
+  }
+
+  async function loadDeals() {
+    if (!companyId.value) return
+    await dealsResource.run(async () => {
+      const result = await companiesApi.getDeals(companyId.value, { per_page: 50 })
+      return result.data
+    })
+  }
+
+  async function loadDocuments() {
+    if (!companyId.value) return
+    await documentsResource.run(async () => {
+      const result = await getDocuments({ source_company_id: companyId.value, per_page: 20 })
+      return result.data
+    })
+  }
+
   async function loadAll() {
-    await Promise.all([loadCompany(), loadEmployees()])
+    await Promise.all([
+      loadCompany(),
+      loadEmployees(),
+      loadHolding(),
+      loadDeals(),
+      loadDocuments(),
+    ])
   }
 
   return {
@@ -39,9 +72,17 @@ export const useCompanyPageData = () => {
     companyError: companyResource.error,
     employees: employeesResource.data,
     employeesLoading: employeesResource.loading,
+    holding: holdingResource.data,
+    holdingLoading: holdingResource.loading,
+    deals: dealsResource.data,
+    dealsLoading: dealsResource.loading,
+    documents: documentsResource.data,
+    documentsLoading: documentsResource.loading,
     loadAll,
     loadCompany,
     loadEmployees,
+    loadHolding,
+    loadDeals,
     directoriesStore,
     contactsApi,
   }
