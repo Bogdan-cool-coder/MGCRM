@@ -19,13 +19,18 @@
       v-else
       :active-view="activeView"
       :saved-views="savedViews.views.value"
+      :default-view-id="savedViews.defaultViewId.value"
       :entity-type="entityType"
       :total="total"
       :search="filter.search"
       :active-filter-count="activeFilterCount"
       :density="view.density.value"
+      :saved-views-loading="savedViews.isLoading.value"
       @set-view="onSetView"
       @save-view="onSaveView"
+      @delete-view="onDeleteView"
+      @set-default-view="onSetDefaultView"
+      @rename-view="onRenameView"
       @set-entity-type="entityType = $event"
       @search="onSearch"
       @open-filter="filterOverlayOpen = true"
@@ -721,7 +726,7 @@ const selectedRows = computed({
 
 // ── Saved views ───────────────────────────────────────────────────────────────
 
-const savedViews = useSavedViews()
+const savedViews = useSavedViews({ entityType })
 const activeView = ref<string>('default')
 
 function onSetView(viewId: string) {
@@ -744,7 +749,7 @@ function onSetView(viewId: string) {
   }
 }
 
-function onSaveView(name: string, type: 'personal' | 'team') {
+function onSaveView(name: string, type: 'personal' | 'team', makeDefault: boolean) {
   const state: SavedViewState = {
     visibleFields: [...view.visibleFields.value],
     sort: null,
@@ -752,7 +757,24 @@ function onSaveView(name: string, type: 'personal' | 'team') {
     filters: { ...overlayFilters.value },
     search: filter.value.search,
   }
-  savedViews.addView(name, type, state)
+  void savedViews.addView(name, type, state, makeDefault)
+}
+
+function onDeleteView(id: string) {
+  void savedViews.removeView(id).then(() => {
+    if (activeView.value === id) {
+      activeView.value = 'default'
+      resetFilter()
+    }
+  })
+}
+
+function onSetDefaultView(id: string) {
+  void savedViews.setDefault(id)
+}
+
+function onRenameView(id: string, name: string) {
+  void savedViews.updateView(id, { name })
 }
 
 // ── Filter overlay ────────────────────────────────────────────────────────────
@@ -962,6 +984,7 @@ onMounted(() => {
   ensureDirectories()
   void loadUsers()
   void load()
+  void savedViews.load()
 })
 </script>
 

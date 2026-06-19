@@ -10,6 +10,7 @@ use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -108,6 +109,14 @@ class ActivityFactory extends Factory
             'target_type' => ActivityTargetType::Company->value,
             'target_id' => $company->id,
             'department_id' => $company->department_id,
+        ]);
+    }
+
+    public function forContact(Contact $contact): static
+    {
+        return $this->state([
+            'target_type' => ActivityTargetType::Contact->value,
+            'target_id' => $contact->id,
         ]);
     }
 

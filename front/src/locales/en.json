@@ -2610,6 +2610,29 @@
     }
   },
   "crm": {
+    "saved_views": {
+      "default": "Default",
+      "duplicates": "Duplicates",
+      "my": "My segments",
+      "team": "Team",
+      "save": "Save current view",
+      "manage": "Manage segments",
+      "nameLabel": "Segment name",
+      "namePlaceholder": "E.g. Warm leads",
+      "setAsDefault": "Set as default",
+      "unsetDefault": "Remove as default",
+      "rename": "Rename",
+      "toast": {
+        "created": "Segment saved",
+        "createError": "Failed to save segment",
+        "updated": "Segment updated",
+        "updateError": "Failed to update segment",
+        "deleted": "Segment deleted",
+        "deleteError": "Failed to delete segment",
+        "defaultSet": "Default view set",
+        "defaultError": "Failed to set default view"
+      }
+    },
     "entity": {
       "author": "Created by",
       "worksWithCompany": "Account owner",

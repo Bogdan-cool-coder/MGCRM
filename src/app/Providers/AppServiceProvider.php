@@ -47,9 +47,11 @@ use App\Domain\Contracts\Policies\TemplateVariablePolicy;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactRelation;
+use App\Domain\Crm\Models\SavedView;
 use App\Domain\Crm\Policies\CompanyPolicy;
 use App\Domain\Crm\Policies\ContactPolicy;
 use App\Domain\Crm\Policies\ContactRelationPolicy;
+use App\Domain\Crm\Policies\SavedViewPolicy;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Inbox\Models\Channel;
@@ -142,6 +144,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Company::class, CompanyPolicy::class);
         Gate::policy(Contact::class, ContactPolicy::class);
         Gate::policy(ContactRelation::class, ContactRelationPolicy::class);
+        Gate::policy(SavedView::class, SavedViewPolicy::class);
 
         // Catalog Policies
         Gate::policy(Product::class, ProductPolicy::class);

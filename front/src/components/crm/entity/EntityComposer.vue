@@ -158,8 +158,8 @@ const taskForm = ref({
 })
 
 // Map entityType to activity target_type
-function targetType(): 'company' | 'deal' {
-  return props.entityType === 'company' ? 'company' : 'deal'
+function targetType(): 'company' | 'contact' | 'deal' {
+  return props.entityType === 'company' ? 'company' : 'contact'
 }
 
 async function doCreate(payload: CreateActivityPayload) {

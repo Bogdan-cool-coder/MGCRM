@@ -12,6 +12,7 @@ use App\Domain\Activity\Events\ActivityCreated;
 use App\Domain\Activity\Events\ActivityStatusChanged;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
@@ -627,12 +628,13 @@ class ActivityService
     /**
      * Stamp last_activity_at on the Crm entities behind an activity's target
      * (Контакты 2.0 §B2 engagement signal). A company target touches the company
-     * directly; a deal target fans out to the deal's company + linked contacts.
-     * Standalone (target-less) personal tasks touch nothing. The deal → {company,
-     * contacts} resolution lives once in Deal::engagementTargets(), so neither the
-     * Sales nor the Activity domain duplicates the deal_contacts lookup. Crossing
-     * into the Crm domain goes through EngagementService (a public service method),
-     * never a foreign-table query.
+     * directly; a contact target touches that contact directly; a deal target fans
+     * out to the deal's company + linked contacts. Standalone (target-less)
+     * personal tasks touch nothing. The deal → {company, contacts} resolution lives
+     * once in Deal::engagementTargets(), so neither the Sales nor the Activity
+     * domain duplicates the deal_contacts lookup. Crossing into the Crm domain goes
+     * through EngagementService (a public service method), never a foreign-table
+     * query.
      */
     private function touchTargetEngagement(Activity $activity): void
     {
@@ -645,6 +647,15 @@ class ActivityService
 
         if ($targetType === ActivityTargetType::Company->value) {
             $this->engagement->touch('company', $targetId);
+
+            return;
+        }
+
+        if ($targetType === ActivityTargetType::Contact->value) {
+            // A directly contact-targeted activity stamps that contact only — it is
+            // NOT routed through the deal_contacts fan-out (that path stays reserved
+            // for deal-targeted activities).
+            $this->engagement->touch('contact', $targetId);
 
             return;
         }
@@ -794,6 +805,7 @@ class ActivityService
         $model = match ($type) {
             ActivityTargetType::Deal => Deal::find($targetId),
             ActivityTargetType::Company => Company::find($targetId),
+            ActivityTargetType::Contact => Contact::find($targetId),
         };
 
         if ($model === null || ! Gate::forUser($user)->allows('view', $model)) {

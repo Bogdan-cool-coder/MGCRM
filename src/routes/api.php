@@ -48,6 +48,7 @@ use App\Http\Controllers\Crm\ContactRelationController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
 use App\Http\Controllers\Crm\HoldingController;
+use App\Http\Controllers\Crm\SavedViewController;
 use App\Http\Controllers\Iam\ProfileController;
 use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Inbox\ChannelController;
@@ -231,6 +232,17 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
             'update' => 'crm.custom-fields.update',
             'destroy' => 'crm.custom-fields.destroy',
         ]);
+
+    // =========================================================================
+    // CRM — Saved Views (server-persisted list presets, backlog-3)
+    // =========================================================================
+    Route::prefix('crm/saved-views')->name('crm.saved-views.')->group(function (): void {
+        Route::get('/', [SavedViewController::class, 'index'])->name('index');
+        Route::post('/', [SavedViewController::class, 'store'])->name('store');
+        Route::patch('{savedView}', [SavedViewController::class, 'update'])->name('update');
+        Route::delete('{savedView}', [SavedViewController::class, 'destroy'])->name('destroy');
+        Route::post('{savedView}/default', [SavedViewController::class, 'setDefault'])->name('set-default');
+    });
 
     // =========================================================================
     // Catalog — Product Groups

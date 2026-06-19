@@ -4,9 +4,15 @@
     <SavedViewsDropdown
       :model-value="activeView"
       :saved-views="savedViews"
-      :default-view-id="null"
+      :default-view-id="defaultViewId"
+      :is-loading="savedViewsLoading"
+      :is-saving="savedViewsSaving"
+      :is-updating="savedViewsUpdating"
       @update:model-value="emit('setView', $event)"
-      @save="(name, type) => emit('saveView', name, type)"
+      @save="(name, type, makeDefault) => emit('saveView', name, type, makeDefault)"
+      @delete="emit('deleteView', $event)"
+      @set-default="emit('setDefaultView', $event)"
+      @rename="(id, name) => emit('renameView', id, name)"
     />
 
     <!-- Record count -->
@@ -114,16 +120,23 @@ import type { ContactsDensity } from '../composables/useContactsView'
 const props = defineProps<{
   activeView: string
   savedViews: SavedView[]
+  defaultViewId: string | null
   entityType: EntityType
   total: number
   search: string
   activeFilterCount: number
   density: ContactsDensity
+  savedViewsLoading?: boolean
+  savedViewsSaving?: boolean
+  savedViewsUpdating?: boolean
 }>()
 
 const emit = defineEmits<{
   setView: [value: string]
-  saveView: [name: string, type: 'personal' | 'team']
+  saveView: [name: string, type: 'personal' | 'team', makeDefault: boolean]
+  deleteView: [id: string]
+  setDefaultView: [id: string]
+  renameView: [id: string, name: string]
   setEntityType: [type: EntityType]
   search: [query: string]
   openFilter: []

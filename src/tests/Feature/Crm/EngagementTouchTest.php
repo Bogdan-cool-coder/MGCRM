@@ -6,8 +6,10 @@ namespace Tests\Feature\Crm;
 
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Services\ActivityService;
+use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealContact;
 use App\Domain\Sales\Services\DealMoveService;
@@ -102,6 +104,63 @@ class EngagementTouchTest extends TestCase
         $this->activities->complete($activity, $director);
 
         $this->assertNotNull($deal->company->fresh()->last_activity_at);
+        $this->assertNotNull($contact->fresh()->last_activity_at);
+    }
+
+    public function test_creating_contact_activity_touches_contact_only(): void
+    {
+        $director = $this->director();
+        $contact = $this->contactFor($director);
+        $other = $this->contactFor($director);
+
+        $this->assertNull($contact->last_activity_at);
+
+        $this->activities->create([
+            'kind' => 'call',
+            'title' => 'Called the contact',
+            'target_type' => 'contact',
+            'target_id' => $contact->id,
+        ], $director);
+
+        $this->assertNotNull($contact->fresh()->last_activity_at, 'targeted contact touched');
+        $this->assertNull($other->fresh()->last_activity_at, 'unrelated contact NOT touched');
+    }
+
+    public function test_creating_contact_activity_refreshes_engagement_tier(): void
+    {
+        $director = $this->director();
+        // A long-stale last_activity_at => the contact starts off Cold.
+        $contact = Contact::factory()->create([
+            'owner_id' => $director->id,
+            'last_activity_at' => now()->subDays(120),
+        ]);
+
+        $engagement = app(EngagementService::class);
+        $this->assertSame(EngagementTier::Cold, $engagement->tierForContact($contact));
+
+        $this->activities->create([
+            'kind' => 'call',
+            'title' => 'Reactivated the contact',
+            'target_type' => 'contact',
+            'target_id' => $contact->id,
+        ], $director);
+
+        // After a direct contact activity the stamp is now() => tier flips to Fresh.
+        $this->assertSame(EngagementTier::Fresh, $engagement->tierForContact($contact->fresh()));
+    }
+
+    public function test_completing_contact_activity_touches_contact(): void
+    {
+        $director = $this->director();
+        $contact = $this->contactFor($director);
+
+        $activity = Activity::factory()->task()->forContact($contact)->responsibleOf($director)->create();
+
+        // Isolate complete(): clear the stamp the factory-created row may carry.
+        Contact::query()->whereKey($contact->id)->update(['last_activity_at' => null]);
+
+        $this->activities->complete($activity, $director);
+
         $this->assertNotNull($contact->fresh()->last_activity_at);
     }
 
