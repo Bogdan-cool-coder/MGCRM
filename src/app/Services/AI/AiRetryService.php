@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\AI;
 
 use Illuminate\Support\Str;
+use Prism\Prism\Enums\ToolChoice;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Text\Response as PrismResponse;
 use Prism\Prism\ValueObjects\Messages\AssistantMessage;
@@ -50,10 +51,30 @@ class AiRetryService
         array $messages,
         array $tools = [],
     ): PrismResponse {
+        return $this->executeWithRetryAndToolChoice($chatType, $systemPrompt, $messages, $tools, null);
+    }
+
+    /**
+     * Same cascade as executeWithRetry() but with an optional forced tool_choice
+     * (Anthropic {type:'tool', name}). Kept as a separate method so the public
+     * executeWithRetry() signature stays stable for subclass/test overrides.
+     *
+     * @param  array<int, UserMessage|AssistantMessage>  $messages
+     * @param  array<int, mixed>  $tools
+     *
+     * @throws \Exception When all attempts in the cascade are exhausted
+     */
+    public function executeWithRetryAndToolChoice(
+        string $chatType,
+        string $systemPrompt,
+        array $messages,
+        array $tools = [],
+        string|ToolChoice|null $toolChoice = null,
+    ): PrismResponse {
         $provider = config('ai.provider', 'anthropic');
 
         try {
-            return $this->runProviderCascade($provider, $chatType, $systemPrompt, $messages, $tools);
+            return $this->runProviderCascade($provider, $chatType, $systemPrompt, $messages, $tools, $toolChoice);
         } catch (\Throwable $e) {
             $fallback = $this->contextOverflowFallbackProvider($provider, $e);
             if ($fallback === null) {
@@ -67,7 +88,7 @@ class AiRetryService
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->runProviderCascade($fallback, $chatType, $systemPrompt, $messages, $tools);
+            return $this->runProviderCascade($fallback, $chatType, $systemPrompt, $messages, $tools, $toolChoice);
         }
     }
 
@@ -81,6 +102,7 @@ class AiRetryService
         string $systemPrompt,
         array $messages,
         array $tools,
+        string|ToolChoice|null $toolChoice = null,
     ): PrismResponse {
         $providers = config('ai.providers', []);
         $providerConfig = $providers[$provider] ?? $providers['anthropic'];
@@ -122,6 +144,7 @@ class AiRetryService
                         $messages,
                         $tools,
                         $stageTimeout,
+                        $toolChoice,
                     );
                 } catch (\Throwable $e) {
                     $lastError = $e;
@@ -246,6 +269,7 @@ class AiRetryService
         array $messages,
         array $tools,
         int $timeout = 420,
+        string|ToolChoice|null $toolChoice = null,
     ): PrismResponse {
         $request = Prism::text()
             ->using($provider, $model)
@@ -258,6 +282,10 @@ class AiRetryService
 
         if (! empty($tools)) {
             $request = $request->withTools($tools);
+        }
+
+        if ($toolChoice !== null) {
+            $request = $request->withToolChoice($toolChoice);
         }
 
         return $request->asText();

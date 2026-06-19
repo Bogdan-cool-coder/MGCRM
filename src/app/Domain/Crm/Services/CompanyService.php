@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Crm\Services;
 
+use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -51,7 +53,29 @@ class CompanyService
             ->when(isset($filters['category_code']), function (Builder $q) use ($filters): void {
                 $q->where('category_code', $filters['category_code']);
             })
-            ->orderByDesc('created_at');
+            ->when(isset($filters['engagement_tier']), function (Builder $q) use ($filters): void {
+                [$from, $to] = $this->engagementTierDateRange(
+                    EngagementTier::from((string) $filters['engagement_tier']),
+                    'company',
+                );
+                if ($from === null && $to === null) {
+                    $q->where(function (Builder $inner): void {
+                        $coldCutoff = now()->subDays((int) config('crm.engagement.company.cold_days', 90));
+                        $inner->whereNull('last_activity_at')
+                            ->orWhere('last_activity_at', '<', $coldCutoff);
+                    });
+                } elseif ($from !== null && $to !== null) {
+                    $q->whereBetween('last_activity_at', [$from, $to]);
+                } elseif ($from !== null) {
+                    $q->where('last_activity_at', '>=', $from);
+                }
+            })
+            ->when(isset($filters['sort']) && $filters['sort'] === 'last_activity_at', function (Builder $q) use ($filters): void {
+                $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+                $q->orderBy('last_activity_at', $direction);
+            }, function (Builder $q): void {
+                $q->orderByDesc('created_at');
+            });
 
         return $query->paginate($perPage);
     }
@@ -143,6 +167,25 @@ class CompanyService
         ContactCompanyLink::where('company_id', $company->id)
             ->where('contact_id', $contactId)
             ->delete();
+    }
+
+    /**
+     * @return array{0: Carbon|null, 1: Carbon|null}
+     */
+    private function engagementTierDateRange(EngagementTier $tier, string $entityType): array
+    {
+        $warmDays = (int) config("crm.engagement.{$entityType}.warm_days", 30);
+        $coldDays = (int) config("crm.engagement.{$entityType}.cold_days", 90);
+
+        $now = now();
+        $warmCutoff = $now->copy()->subDays($warmDays);
+        $coldCutoff = $now->copy()->subDays($coldDays);
+
+        return match ($tier) {
+            EngagementTier::Fresh => [$warmCutoff, $now],
+            EngagementTier::Cooling => [$coldCutoff, $warmCutoff],
+            EngagementTier::Cold => [null, null],
+        };
     }
 
     /**

@@ -87,7 +87,7 @@ export const QUICK_ACTION_CATALOGUE: QuickActionDef[] = [
   },
   {
     key: 'go_tasks',
-    labelKey: 'nav.myTasks',
+    labelKey: 'nav.tasks',
     icon: 'pi pi-check-square',
     actionType: 'route',
     route: '/my-tasks',

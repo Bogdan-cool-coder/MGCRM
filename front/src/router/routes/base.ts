@@ -99,7 +99,7 @@ export const routes: RouteRecordRaw[] = [
     path: '/my-tasks',
     name: 'MyTasks',
     component: () => import('@/pages/MyTasksPage/index.vue'),
-    meta: { requiresAuth: true, title: 'nav.myTasks' },
+    meta: { requiresAuth: true, title: 'nav.tasks' },
   },
 
   // ─── Sales: Manager Cabinet ───────────────────────────────────────────────
@@ -110,7 +110,13 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'nav.managerCabinet' },
   },
 
-  // ─── Settings: Pipeline ───────────────────────────────────────────────────
+  // ─── Settings ────────────────────────────────────────────────────────────────
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('@/pages/SettingsPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.settings' },
+  },
   {
     path: '/settings/pipeline',
     name: 'PipelineSettings',

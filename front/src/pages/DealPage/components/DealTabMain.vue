@@ -28,37 +28,6 @@
           </RouterLink>
         </div>
       </div>
-
-      <!-- Budget (auto) + primary product chip -->
-      <div class="deal-tab-main__quick-row">
-        <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.amountAuto') }}</span>
-        <div class="deal-tab-main__quick-value">
-          <span class="deal-tab-main__budget">{{ formatCurrency(deal.amount, deal.currency) }}</span>
-          <Tag
-            v-if="primaryProductName"
-            :value="primaryProductName"
-            severity="secondary"
-            size="small"
-            class="ms-1"
-          />
-        </div>
-      </div>
-
-      <!-- Days in work with rotting indicator -->
-      <div class="deal-tab-main__quick-row">
-        <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.daysInWork') }}</span>
-        <div class="deal-tab-main__quick-value">
-          <span
-            class="deal-tab-main__days-badge"
-            :class="{
-              'deal-tab-main__days-badge--warn': daysWarning && !daysDanger,
-              'deal-tab-main__days-badge--danger': daysDanger,
-            }"
-          >
-            {{ daysInStage }} {{ t('sales.deal.page.daysInStage') }}
-          </span>
-        </div>
-      </div>
     </div>
 
     <!-- ── Group: Products (accent, open by default) ──────────────────────────── -->
@@ -84,40 +53,7 @@
       @remove-contact="onRemoveContact"
     />
 
-    <!-- ── Group: Deal dates (quiet, collapsed by default) ───────────────────── -->
-    <DealFieldGroup
-      ref="datesGroupRef"
-      :title="t('sales.deal.info.groups.deal')"
-      icon="pi-calendar"
-      group-key="deal-dates"
-      :default-collapsed="true"
-    >
-      <!-- Expected sign date -->
-      <div class="deal-tab-main__date-row">
-        <span class="deal-tab-main__date-label">{{ t('sales.deal.info.fields.expectedSignDate') }}</span>
-        <div class="deal-tab-main__date-value">
-          <DateEditField
-            :value="deal.expected_sign_date"
-            :saving="dateSaving === 'expected_sign_date'"
-            @save="(v) => saveDealDate('expected_sign_date', v)"
-          />
-        </div>
-      </div>
-
-      <!-- Expected payment date -->
-      <div class="deal-tab-main__date-row">
-        <span class="deal-tab-main__date-label">{{ t('sales.deal.info.fields.expectedPaymentDate') }}</span>
-        <div class="deal-tab-main__date-value">
-          <DateEditField
-            :value="deal.expected_payment_date"
-            :saving="dateSaving === 'expected_payment_date'"
-            @save="(v) => saveDealDate('expected_payment_date', v)"
-          />
-        </div>
-      </div>
-    </DealFieldGroup>
-
-    <!-- ── Group: Company data (quiet, collapsed by default) ─────────────────── -->
+    <!-- ── Group: Company (quiet, collapsed by default) ─────────────────────── -->
     <DealCompanyGroup
       v-if="companyFull"
       ref="companyGroupRef"
@@ -151,12 +87,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent, h, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
-import Tag from 'primevue/tag'
-import DatePicker from 'primevue/datepicker'
 import DealFieldGroup from './DealFieldGroup.vue'
 import DealFieldRow from './DealFieldRow.vue'
 import DealProductsGroup from './DealProductsGroup.vue'
@@ -167,78 +101,9 @@ import { salesApi } from '@/api/sales'
 import { companiesApi } from '@/api/crm/companies'
 import { useMutation } from '@/composables/async/useMutation'
 import { useDealCustomFields } from '../composables/useDealCustomFields'
-import { formatCurrency } from '@/utils/currency'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { DealDto, DealProductDto, DealContactDto } from '@/entities/sales'
 import type { Company, CustomFieldDef } from '@/entities/crm'
-
-// ── Local DateEditField component ──────────────────────────────────────────────
-
-const DateEditField = defineComponent({
-  name: 'DateEditField',
-  props: {
-    value: { type: String as () => string | null, default: null },
-    saving: { type: Boolean, default: false },
-  },
-  emits: ['save'],
-  setup(props, { emit: emitField }) {
-    const isEditing = ref(false)
-    const localDate = ref<Date | null>(null)
-
-    function startEdit() {
-      localDate.value = props.value ? new Date(props.value) : null
-      isEditing.value = true
-    }
-
-    function formatDisplay(val: string | null): string {
-      if (!val) return '—'
-      const d = new Date(val)
-      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    }
-
-    function submitDate() {
-      if (localDate.value) {
-        const d = localDate.value
-        const y = d.getFullYear()
-        const m = String(d.getMonth() + 1).padStart(2, '0')
-        const day = String(d.getDate()).padStart(2, '0')
-        emitField('save', `${y}-${m}-${day}`)
-      } else {
-        emitField('save', null)
-      }
-      isEditing.value = false
-    }
-
-    return () => {
-      if (!isEditing.value) {
-        return h('div', { class: 'date-edit-field' }, [
-          h('span', {
-            class: ['date-edit-field__value', props.value ? '' : 'date-edit-field__value--empty'],
-            onClick: startEdit,
-          }, formatDisplay(props.value)),
-          props.saving
-            ? h('i', { class: 'pi pi-spin pi-spinner', style: 'font-size:11px;color:var(--p-primary-400)' })
-            : h('i', { class: 'pi pi-pencil date-edit-field__icon', onClick: startEdit }),
-        ])
-      }
-      return h('div', { class: 'date-edit-field' }, [
-        h(DatePicker, {
-          modelValue: localDate.value,
-          dateFormat: 'dd.mm.yy',
-          showClear: true,
-          showIcon: true,
-          style: 'width: 160px',
-          'onUpdate:modelValue': (v: Date | null) => { localDate.value = v },
-          onDateSelect: submitDate,
-          onKeydown: (e: KeyboardEvent) => {
-            if (e.key === 'Enter') submitDate()
-            if (e.key === 'Escape') { isEditing.value = false }
-          },
-        }),
-      ])
-    }
-  },
-})
 
 // ── Props / emits ──────────────────────────────────────────────────────────────
 
@@ -260,7 +125,7 @@ const emit = defineEmits<{
   dealUpdated: [updates: Partial<DealDto>]
   openAddProduct: []
   openAddContact: []
-  updateProduct: [id: number, payload: { quantity?: number; unit_price?: number }]
+  updateProduct: [id: number, payload: { quantity?: number; unit_price?: number; discount?: number }]
   removeProduct: [id: number]
   removeContact: [contactId: number]
   amountChanged: [total: number]
@@ -273,7 +138,6 @@ const toast = useToast()
 
 const productsGroupRef = ref<InstanceType<typeof DealProductsGroup> | null>(null)
 const contactsGroupRef = ref<InstanceType<typeof DealContactsGroup> | null>(null)
-const datesGroupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
 const companyGroupRef = ref<InstanceType<typeof DealCompanyGroup> | null>(null)
 const customGroupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
 
@@ -282,12 +146,8 @@ watch(
   () => props.collapseAllSignal,
   (val, old) => {
     if (val !== old && val !== undefined && val > 0) {
-      // collapse all field groups
-      datesGroupRef.value?.collapse?.()
       companyGroupRef.value?.collapse?.()
       customGroupRef.value?.collapse?.()
-      // Note: products/contacts groups go through DealProductsGroup/DealContactsGroup
-      // which wrap DealFieldGroup — we'd need refs into them. They stay open (accent groups).
     }
   },
 )
@@ -296,24 +156,11 @@ watch(
   () => props.expandAllSignal,
   (val, old) => {
     if (val !== old && val !== undefined && val > 0) {
-      datesGroupRef.value?.expand?.()
       companyGroupRef.value?.expand?.()
       customGroupRef.value?.expand?.()
     }
   },
 )
-
-// ── Rotting thresholds ─────────────────────────────────────────────────────────
-
-const warnDays = computed(() => props.deal.stage.warn_days ?? 7)
-const dangerDays = computed(() => props.deal.stage.danger_days ?? 14)
-
-const daysWarning = computed(() => props.daysInStage >= warnDays.value)
-const daysDanger = computed(() => props.daysInStage >= dangerDays.value)
-
-// ── Primary product chip ───────────────────────────────────────────────────────
-
-const primaryProductName = computed(() => props.products[0]?.product?.name ?? null)
 
 // ── Owner save ─────────────────────────────────────────────────────────────────
 
@@ -338,34 +185,9 @@ async function saveOwner(_key: string, value: string | number | null) {
   }
 }
 
-// ── Date fields ────────────────────────────────────────────────────────────────
-
-const dateSaving = ref<string | null>(null)
-const dateMutation = useMutation<DealDto>()
-
-async function saveDealDate(field: 'expected_sign_date' | 'expected_payment_date', value: string | null) {
-  dateSaving.value = field
-  try {
-    const updated = await dateMutation.run(() =>
-      salesApi.updateDeal(props.deal.id, { [field]: value }),
-    )
-    emit('dealUpdated', { [field]: updated[field] })
-    toast.add({ severity: 'success', summary: t('common.saved'), life: 2000 })
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      detail: getApiErrorMessage(err, t('errors.server_error')),
-      life: 4000,
-    })
-  } finally {
-    dateSaving.value = null
-  }
-}
-
 // ── Products ───────────────────────────────────────────────────────────────────
 
-function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number }) {
+function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number; discount?: number }) {
   emit('updateProduct', id, payload)
 }
 
@@ -511,97 +333,5 @@ watch(() => props.deal.company.id, (newId, oldId) => {
   }
 }
 
-.deal-tab-main__budget {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-bold;
-  color: $primary-color;
-  padding: $space-1 $space-2;
-}
 
-.deal-tab-main__days-badge {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: $surface-600;
-  padding: $space-1 $space-2;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
-
-  &--warn {
-    color: var(--p-yellow-600);
-
-    .app-dark & {
-      color: var(--p-yellow-400);
-    }
-  }
-
-  &--danger {
-    color: var(--p-red-600);
-    font-weight: $font-weight-bold;
-
-    .app-dark & {
-      color: var(--p-red-400);
-    }
-  }
-}
-
-// ── Date fields ────────────────────────────────────────────────────────────────
-
-.deal-tab-main__date-row {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  align-items: center;
-  gap: $space-2;
-  padding: $space-2 $space-4;
-}
-
-.deal-tab-main__date-label {
-  font-size: $font-size-xs;
-  color: $surface-500;
-  line-height: 1.4;
-}
-
-.deal-tab-main__date-value {
-  display: flex;
-  align-items: center;
-}
-</style>
-
-<style lang="scss">
-// Unscoped — date-edit-field is rendered by the render function
-.date-edit-field {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-  cursor: pointer;
-}
-
-.date-edit-field__value {
-  font-size: $font-size-sm;
-  color: $surface-800;
-  padding: 4px 6px;
-  border-radius: $radius-sm;
-  border: 1px solid transparent;
-  transition: border-color var(--app-transition-fast);
-
-  &:hover {
-    border-color: $surface-200;
-    background: $surface-50;
-  }
-
-  &--empty {
-    color: $surface-400;
-  }
-}
-
-.date-edit-field__icon {
-  font-size: $font-size-xs;
-  color: $surface-400;
-  cursor: pointer;
-
-  &:hover {
-    color: $primary-color;
-  }
-}
 </style>

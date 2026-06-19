@@ -26,9 +26,12 @@
     >
       <Column :header="t('company.page.employees.columns.name')">
         <template #body="{ data }">
-          <span class="employees-tab__name">
+          <RouterLink
+            :to="`/contacts/${data.contact_id}`"
+            class="employees-tab__name employees-tab__name--link"
+          >
             {{ data.contact?.full_name ?? `#${data.contact_id}` }}
-          </span>
+          </RouterLink>
         </template>
       </Column>
 
@@ -83,6 +86,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { RouterLink } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
@@ -174,6 +178,19 @@ function getMenuItems(data: ContactCompanyLink) {
 .employees-tab__name {
   font-weight: $font-weight-medium;
   color: $surface-900;
+
+  .app-dark & {
+    color: var(--p-surface-100);
+  }
+
+  &--link {
+    text-decoration: none;
+    color: var(--p-primary-color);
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .employees-tab__star {

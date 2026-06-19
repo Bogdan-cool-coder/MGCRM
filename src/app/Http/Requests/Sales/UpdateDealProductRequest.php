@@ -18,6 +18,7 @@ class UpdateDealProductRequest extends FormRequest
         return [
             'quantity' => ['sometimes', 'numeric', 'min:0'],
             'unit_price' => ['sometimes', 'integer', 'min:0'],
+            'discount' => ['sometimes', 'integer', 'min:0'],
             'sort_order' => ['sometimes', 'integer'],
         ];
     }

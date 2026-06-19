@@ -5,12 +5,13 @@
       class="kanban-col__header"
       :style="headerStyle"
     >
+      <!-- Title row: count (left) · stage name (centre) · add button (right) -->
       <div class="kanban-col__title-row">
-        <span class="kanban-col__name" :style="{ color: headerTextColor }">
-          {{ column.stage.name }}
-        </span>
         <span class="kanban-col__count" :style="{ color: headerTextColorMuted }">
           {{ column.total }}
+        </span>
+        <span class="kanban-col__name" :style="{ color: headerTextColor }">
+          {{ column.stage.name }}
         </span>
         <Button
           icon="pi pi-plus"
@@ -22,6 +23,7 @@
           @click="emit('addDeal', column.stage.id)"
         />
       </div>
+      <!-- Sum row: centred -->
       <div class="kanban-col__sum-row">
         <span
           ref="sumRef"
@@ -168,21 +170,22 @@ const BRIGHT_COLORS = new Set([
   '#1D9E75', '#378ADD', '#EF9F27', '#D4537E', '#7F77DD',
 ])
 
+// Saturated soft set — medium-vivid fills with near-black dark text for WCAG AA contrast.
 const SOFT_TEXT_MAP: Record<string, string> = {
-  '#E1F5EE': '#0D5C44',
-  '#E6F1FB': '#1A4F8A',
-  '#FAEEDA': '#6B4A00',
-  '#FBEAF0': '#7A2347',
-  '#EAF3DE': '#3A6020',
+  '#52D4A4': '#0A3D28',
+  '#5AAAE8': '#0B2E5A',
+  '#F5C15A': '#5A3200',
+  '#E87AAD': '#5A0F2C',
+  '#92CF5F': '#1E4010',
 }
 
 // Bright border colour to use in dark mode for each soft colour (same hue family)
 const SOFT_DARK_BORDER_MAP: Record<string, string> = {
-  '#E1F5EE': '#1D9E75',
-  '#E6F1FB': '#378ADD',
-  '#FAEEDA': '#EF9F27',
-  '#FBEAF0': '#D4537E',
-  '#EAF3DE': '#3A6020',
+  '#52D4A4': '#1D9E75',
+  '#5AAAE8': '#378ADD',
+  '#F5C15A': '#EF9F27',
+  '#E87AAD': '#D4537E',
+  '#92CF5F': '#1D9E75',
 }
 
 const stageColor = computed(() => props.column.stage.color ?? null)
@@ -329,7 +332,7 @@ function hidePopover() {
 
 .kanban-col__header {
   padding: $space-3 $space-3 $space-2;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
   background: $surface-50;
 
@@ -339,6 +342,7 @@ function hidePopover() {
   }
 }
 
+// Title row: count pill (left) · stage name (centred, fills remaining space) · add button (right)
 .kanban-col__title-row {
   display: flex;
   align-items: center;
@@ -347,24 +351,28 @@ function hidePopover() {
 }
 
 .kanban-col__name {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $surface-700;
+  // Large, bold, centred — the visual anchor of the column header
+  flex: 1;
+  text-align: center;
+  font-size: $font-size-md;       // 16px — up from 14px
+  font-weight: $font-weight-bold; // 700 — up from 600
+  line-height: $line-height-tight;
+  color: $surface-800;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
 
   :global(.app-dark) & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-0);
   }
 }
 
 .kanban-col__count {
-  font-size: $font-size-xs;
+  font-size: $font-size-xs;        // 12px — compact counter
   color: $surface-500;
-  font-weight: $font-weight-medium;
+  font-weight: $font-weight-bold;
   flex-shrink: 0;
+  min-width: 1.5rem;               // reserve width so name stays centred
 
   :global(.app-dark) & {
     color: var(--p-surface-300);
@@ -373,16 +381,18 @@ function hidePopover() {
 
 .kanban-col__add-btn {
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.75;
 
   &:hover {
     opacity: 1;
   }
 }
 
+// Sum row: centred under the name
 .kanban-col__sum-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: $space-1;
 }
 

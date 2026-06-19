@@ -97,6 +97,8 @@ export interface DealDto {
   days_in_stage?: number | null
   products?: DealProductDto[]
   contacts?: DealContactDto[]
+  /** Sum of all per-line discounts (kopecks). Present when products relation is loaded. */
+  discount_total?: number
 }
 
 // ─── Activity type (used in NextTaskDto) ─────────────────────────────────────
@@ -214,6 +216,9 @@ export interface DealProductDto {
   plan: PlanRefDto | null
   quantity: number
   unit_price: number
+  /** Per-line manual discount, kopecks, default 0 */
+  discount: number
+  /** NET amount = max(0, round(quantity*unit_price) - discount), kopecks */
   amount: number
   created_at: string
   updated_at: string
@@ -307,6 +312,8 @@ export interface AddDealProductPayload {
 export interface UpdateDealProductPayload {
   quantity?: number
   unit_price?: number
+  /** Per-line manual discount, kopecks, min 0 */
+  discount?: number
 }
 
 export interface AddDealContactPayload {

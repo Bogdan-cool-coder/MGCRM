@@ -115,4 +115,69 @@ class DealProductTest extends TestCase
         $deal->refresh();
         $this->assertSame(0, $deal->amount);
     }
+
+    public function test_add_product_with_discount_returns_net_amount(): void
+    {
+        [$deal, $product] = $this->setupDealAndProduct(500_00);
+
+        // gross 2 * 500_00 = 1_000_00, discount 200_00 -> net 800_00
+        $this->postJson("/api/deals/{$deal->id}/products", [
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'discount' => 200_00,
+        ])->assertCreated()
+            ->assertJsonPath('data.discount', 200_00)
+            ->assertJsonPath('data.amount', 800_00);
+
+        $deal->refresh();
+        $this->assertSame(800_00, $deal->amount);
+    }
+
+    public function test_update_product_discount_recalcs_line_and_deal(): void
+    {
+        [$deal, $product] = $this->setupDealAndProduct(300_00);
+
+        $line = $this->postJson("/api/deals/{$deal->id}/products", [
+            'product_id' => $product->id,
+            'quantity' => 3, // gross 900_00
+        ])->json('data.id');
+
+        $this->patchJson("/api/deals/{$deal->id}/products/{$line}", ['discount' => 100_00])
+            ->assertOk()
+            ->assertJsonPath('data.discount', 100_00)
+            ->assertJsonPath('data.amount', 800_00);
+
+        $deal->refresh();
+        $this->assertSame(800_00, $deal->amount);
+    }
+
+    public function test_deal_resource_exposes_discount_total(): void
+    {
+        [$deal, $product] = $this->setupDealAndProduct(500_00);
+
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'product_id' => $product->id,
+            'quantity' => 1, 'unit_price' => 500_00, 'discount' => 100_00, 'amount' => 400_00, 'currency' => 'RUB',
+        ]);
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'product_id' => $product->id,
+            'quantity' => 1, 'unit_price' => 500_00, 'discount' => 50_00, 'amount' => 450_00, 'currency' => 'RUB',
+        ]);
+
+        $this->getJson("/api/deals/{$deal->id}")
+            ->assertOk()
+            ->assertJsonPath('data.discount_total', 150_00);
+    }
+
+    public function test_discount_rejects_negative_value(): void
+    {
+        [$deal, $product] = $this->setupDealAndProduct(500_00);
+
+        $this->postJson("/api/deals/{$deal->id}/products", [
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'discount' => -10,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrorFor('discount');
+    }
 }

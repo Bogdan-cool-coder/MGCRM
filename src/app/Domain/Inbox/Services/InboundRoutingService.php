@@ -118,9 +118,14 @@ class InboundRoutingService
     {
         $pipelineId = $channel->default_pipeline_id;
         if ($pipelineId === null) {
+            // No channel default: fall back to the first ACTIVE sales pipeline by
+            // sort_order/id. Archived pipelines (is_active=false, e.g. the legacy
+            // "Продажи" funnel) are excluded so they can never become the routing
+            // default — mirrors DealService::defaultSalesPipelineId() /
+            // PipelineService::defaultSalesPipeline() / SalesDashboardService.
             $pipelineId = Pipeline::query()
                 ->sales()
-                ->orderByRaw("CASE WHEN name = 'Продажи' THEN 0 ELSE 1 END")
+                ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('id')
                 ->value('id');

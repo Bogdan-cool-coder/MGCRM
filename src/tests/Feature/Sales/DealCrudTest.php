@@ -124,6 +124,48 @@ class DealCrudTest extends TestCase
             ->assertJsonPath('data.title', 'Renamed');
     }
 
+    public function test_create_deal_persists_planned_contract_and_payment_dates(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $company = Company::factory()->create();
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Manager]), ['*']);
+
+        // expected_sign_date = planned CONTRACT date; expected_payment_date = planned PAYMENT date.
+        $this->postJson('/api/deals', [
+            'company_id' => $company->id,
+            'pipeline_id' => $pipeline->id,
+            'title' => 'Dated deal',
+            'currency' => 'RUB',
+            'expected_sign_date' => '2026-07-15',
+            'expected_payment_date' => '2026-08-01',
+        ])->assertCreated()
+            ->assertJsonPath('data.expected_sign_date', '2026-07-15')
+            ->assertJsonPath('data.expected_payment_date', '2026-08-01');
+    }
+
+    public function test_update_deal_planned_dates_round_trip_via_show(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'expected_sign_date' => null,
+            'expected_payment_date' => null,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", [
+            'expected_sign_date' => '2026-09-10',
+            'expected_payment_date' => '2026-09-20',
+        ])->assertOk();
+
+        $this->getJson("/api/deals/{$deal->id}")
+            ->assertOk()
+            ->assertJsonPath('data.expected_sign_date', '2026-09-10')
+            ->assertJsonPath('data.expected_payment_date', '2026-09-20');
+    }
+
     public function test_delete_deal_is_soft_and_hides_from_listing(): void
     {
         $pipeline = $this->seedSalesPipeline();

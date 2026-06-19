@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Crm\Services;
 
+use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -48,7 +50,32 @@ class ContactService
                     $inner->where('company_id', $filters['company_id']);
                 });
             })
-            ->orderByDesc('created_at');
+            ->when(isset($filters['engagement_tier']), function (Builder $q) use ($filters): void {
+                // Normalise engagement tier filter to a date range comparison in PHP
+                // (portable across PG and SQLite — no DB::raw with NOW()).
+                [$from, $to] = $this->engagementTierDateRange(
+                    EngagementTier::from((string) $filters['engagement_tier']),
+                    'contact',
+                );
+                if ($from === null && $to === null) {
+                    // Cold: null OR older than cold_days
+                    $q->where(function (Builder $inner): void {
+                        $coldCutoff = now()->subDays((int) config('crm.engagement.contact.cold_days', 45));
+                        $inner->whereNull('last_activity_at')
+                            ->orWhere('last_activity_at', '<', $coldCutoff);
+                    });
+                } elseif ($from !== null && $to !== null) {
+                    $q->whereBetween('last_activity_at', [$from, $to]);
+                } elseif ($from !== null) {
+                    $q->where('last_activity_at', '>=', $from);
+                }
+            })
+            ->when(isset($filters['sort']) && $filters['sort'] === 'last_activity_at', function (Builder $q) use ($filters): void {
+                $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+                $q->orderBy('last_activity_at', $direction);
+            }, function (Builder $q): void {
+                $q->orderByDesc('created_at');
+            });
 
         return $query->paginate($perPage);
     }
@@ -79,6 +106,33 @@ class ContactService
         DB::transaction(function () use ($contact): void {
             $contact->delete();
         });
+    }
+
+    /**
+     * Compute the date range (Carbon|null, Carbon|null) for a given engagement tier
+     * relative to "now". Done in PHP for portability (SQLite doesn't support NOW() offset).
+     *
+     * Returns [from, to]:
+     *   Fresh  → [warmCutoff, now]  (last_activity_at >= warmCutoff)
+     *   Cooling → [coldCutoff, warmCutoff)
+     *   Cold   → [null, null] special-cased in caller: NULL or older than coldCutoff
+     *
+     * @return array{0: Carbon|null, 1: Carbon|null}
+     */
+    private function engagementTierDateRange(EngagementTier $tier, string $entityType): array
+    {
+        $warmDays = (int) config("crm.engagement.{$entityType}.warm_days", 14);
+        $coldDays = (int) config("crm.engagement.{$entityType}.cold_days", 45);
+
+        $now = now();
+        $warmCutoff = $now->copy()->subDays($warmDays);
+        $coldCutoff = $now->copy()->subDays($coldDays);
+
+        return match ($tier) {
+            EngagementTier::Fresh => [$warmCutoff, $now],
+            EngagementTier::Cooling => [$coldCutoff, $warmCutoff],
+            EngagementTier::Cold => [null, null],
+        };
     }
 
     /**

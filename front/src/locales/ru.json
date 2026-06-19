@@ -10,10 +10,13 @@
     "finance": "Финансы",
     "team": "Команда",
     "settings": "Настройки",
+    "settingsGroup": "Настройки",
+    "onboarding": "Онбординг",
     "analytics": "Аналитика",
     "profile": "Профиль",
     "logout": "Выйти",
     "pipelineSettings": "Настройки воронки",
+    "tasks": "Задачи",
     "myTasks": "Мои задачи",
     "managerCabinet": "Кабинет менеджера",
     "myApprovals": "Мои согласования",
@@ -32,6 +35,10 @@
     }
   },
   "auth": {
+    "brand_panel": {
+      "tagline": "Управляйте продажами",
+      "accent": "умнее и быстрее"
+    },
     "login": {
       "title": "Вход в систему",
       "email": "Email",
@@ -223,6 +230,36 @@
     "required": "Обязательное поле",
     "duplicate": "Такая запись уже существует"
   },
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Управление параметрами системы",
+    "sections": {
+      "pipeline": {
+        "title": "Настройки воронки",
+        "desc": "Стадии, воронки продаж и автоматизация сделок"
+      },
+      "templates": {
+        "title": "Шаблоны",
+        "desc": "Шаблоны документов и договоров"
+      },
+      "templateVariables": {
+        "title": "Каталог меток",
+        "desc": "Переменные и метки для подстановки в шаблоны"
+      },
+      "approvalRoutes": {
+        "title": "Маршруты согласования",
+        "desc": "Настройка маршрутов согласования документов"
+      },
+      "messageTemplates": {
+        "title": "Рассылки",
+        "desc": "Шаблоны сообщений для уведомлений и рассылок"
+      },
+      "automationRuns": {
+        "title": "Журнал автоматизаций",
+        "desc": "История запусков и результаты автоматических сценариев"
+      }
+    }
+  },
   "common": {
     "loading": "Загрузка...",
     "save": "Сохранить",
@@ -261,7 +298,13 @@
     "saveFirst": "Сначала сохраните урок для загрузки файла",
     "retry": "Повторить",
     "hide": "Скрыть",
-    "show": "Показать"
+    "show": "Показать",
+    "apply": "Применить",
+    "remove": "Убрать",
+    "success": "Готово",
+    "showMore": "Показать ещё",
+    "showLess": "Свернуть",
+    "actions": "Действия"
   },
   "contacts": {
     "page": {
@@ -281,7 +324,14 @@
         "source": "Источник",
         "country": "Страна",
         "tags": "Теги",
-        "actions": "Действия"
+        "actions": "Действия",
+        "density": "Плотность",
+        "choose": "Выбор колонок"
+      },
+      "density": {
+        "compact": "Компактный",
+        "normal": "Обычный",
+        "comfortable": "Широкий"
       },
       "filters": {
         "search": "Поиск по имени...",
@@ -336,12 +386,14 @@
         "deals": "Сделки",
         "files": "Файлы",
         "holding": "Холдинг",
-        "documents": "Документы"
+        "documents": "Документы",
+        "employees": "Сотрудники"
       },
       "sections": {
         "main": "Основная информация",
         "requisites": "Реквизиты",
-        "signatory": "Подписант"
+        "signatory": "Подписант",
+        "employees": "Сотрудники"
       },
       "fields": {
         "name": "Название",
@@ -366,7 +418,8 @@
         "directorGenitive": "ФИО (род. падеж)",
         "directorShort": "ФИО (сокращ.)",
         "actsBasis": "Действует на основании",
-        "source": "Источник"
+        "source": "Источник",
+        "category": "Категория"
       },
       "rail": {
         "responsible": "Ответственный",
@@ -398,7 +451,8 @@
           "unlink": "Отвязать"
         },
         "unlinkConfirm": "Отвязать сотрудника?",
-        "empty": "Сотрудники не добавлены"
+        "empty": "Сотрудники не добавлены",
+        "seeAll": "Все сотрудники ({count})"
       },
       "holding": {
         "parent": "Родительская холдинговая",
@@ -427,6 +481,31 @@
       "errors": {
         "notFound": "Компания не найдена",
         "load": "Ошибка загрузки"
+      },
+      "menu": {
+        "createDeal": "Создать сделку",
+        "addTask": "Добавить задачу",
+        "addNote": "Добавить заметку",
+        "call": "Позвонить",
+        "email": "Отправить email",
+        "copyLink": "Копировать ссылку",
+        "export": "Экспорт",
+        "deleteConfirm": "Удалить компанию? Это действие необратимо.",
+        "deleteSuccess": "Компания удалена"
+      },
+      "deals": {
+        "empty": "Нет сделок",
+        "createDeal": "Создать сделку",
+        "openCount": "{count} открытых",
+        "seeAll": "Все сделки"
+      },
+      "totals": {
+        "empty": "Нет завершённых сделок",
+        "total": "Итого ({currency})",
+        "asOf": "По состоянию на {date}"
+      },
+      "documents": {
+        "seeAll": "Все документы ({count})"
       }
     }
   },
@@ -438,7 +517,8 @@
         "companies": "Компании",
         "notes": "Заметки",
         "tasks": "Задачи",
-        "files": "Файлы"
+        "files": "Файлы",
+        "deals": "Сделки"
       },
       "fields": {
         "fullName": "ФИО",
@@ -1205,19 +1285,22 @@
           "company": "Компания",
           "expectedSignDate": "Дата подписания (план)",
           "expectedPaymentDate": "Дата оплаты (план)",
-          "daysInWork": "Дней в работе"
+          "daysInWork": "Дней в работе",
+          "plannedContract": "План договора",
+          "plannedPayment": "План оплаты"
         },
         "groups": {
           "products": "Продукты",
           "deal": "Сделка",
           "contacts": "Контакты",
-          "company": "Данные компании",
+          "company": "Компания",
           "customFields": "Дополнительные поля"
         },
         "products": {
           "empty": "Нет позиций",
           "add": "+ Добавить",
-          "total": "Итого"
+          "total": "Итого",
+          "discount": "Скидка"
         },
         "contacts": {
           "addContact": "+ Добавить контакт",
@@ -1319,6 +1402,20 @@
       },
       "actions": {
         "create": "Создать сделку"
+      },
+      "list": {
+        "columns": {
+          "title": "Название",
+          "stage": "Стадия",
+          "amount": "Сумма",
+          "status": "Статус",
+          "owner": "Ответственный"
+        }
+      },
+      "statuses": {
+        "open": "Открыта",
+        "won": "Выиграна",
+        "lost": "Проиграна"
       }
     },
     "move": {
@@ -2551,5 +2648,214 @@
       "success_detail": "Baseline успешно восстановлен. Войдите заново.",
       "error_title": "Ошибка сброса"
     }
+  },
+  "crm": {
+    "saved_views": {
+      "default": "По умолчанию",
+      "duplicates": "Дубликаты",
+      "my": "Мои сегменты",
+      "team": "Командные",
+      "save": "Сохранить текущий вид",
+      "manage": "Управлять сегментами",
+      "nameLabel": "Название сегмента",
+      "namePlaceholder": "Например: Тёплые клиенты",
+      "setAsDefault": "Сделать видом по умолчанию",
+      "unsetDefault": "Убрать из умолчания",
+      "rename": "Переименовать",
+      "toast": {
+        "created": "Сегмент сохранён",
+        "createError": "Не удалось сохранить сегмент",
+        "updated": "Сегмент обновлён",
+        "updateError": "Не удалось обновить сегмент",
+        "deleted": "Сегмент удалён",
+        "deleteError": "Не удалось удалить сегмент",
+        "defaultSet": "Вид по умолчанию установлен",
+        "defaultError": "Не удалось установить вид по умолчанию"
+      }
+    },
+    "entity": {
+      "author": "Автор",
+      "worksWithCompany": "Работает с компанией",
+      "engagement": {
+        "fresh": "Свежий",
+        "cooling": "Остывает",
+        "cold": "Холодный",
+        "tooltip": "Последний контакт: {days} дн. назад"
+      },
+      "row": {
+        "primary": "Основной",
+        "setPrimary": "Сделать основным"
+      }
+    },
+    "company": {
+      "tabs": {
+        "employees": "Сотрудники",
+        "activity": "Активность",
+        "payments": "Платежи",
+        "files": "Файлы"
+      },
+      "sections": {
+        "requisites": "Реквизиты",
+        "employees": "Сотрудники",
+        "holding": "Холдинг",
+        "deals": "Сделки",
+        "totals": "Итоги",
+        "payments": "Платежи"
+      },
+      "rail": {
+        "author": "Автор",
+        "worksWithCompany": "Работает с компанией"
+      },
+      "fields": {
+        "director": "Директор",
+        "bankName": "Банк",
+        "bankAccount": "Расчётный счёт",
+        "annualRevenue": "Оборот в год"
+      },
+      "holding": {
+        "youAreHere": "Вы здесь",
+        "parentCompany": "Головная компания",
+        "addParent": "Указать головную компанию",
+        "noHolding": "Не входит в группу",
+        "roleParent": "Головная",
+        "roleChild": "Дочерняя",
+        "detach": "Отвязать от группы",
+        "attached": "Компания добавлена в группу",
+        "detached": "Компания отвязана от группы",
+        "cyclicError": "Нельзя создать циклическую зависимость"
+      },
+      "payments": {
+        "placeholder": "Платежи доступны после подключения финансового модуля (M9)",
+        "hint": "Финансовый модуль будет доступен в релизе M9"
+      }
+    },
+    "contact": {
+      "tabs": {
+        "activity": "Активность",
+        "files": "Файлы"
+      },
+      "sections": {
+        "channels": "Каналы связи",
+        "relations": "Связи",
+        "companies": "Компании",
+        "dealsParticipation": "Участвует в сделках",
+        "customFields": "Доп. поля",
+        "dealsEmpty": "Сделок нет",
+        "notes": "Заметки"
+      },
+      "notes": {
+        "placeholder": "Добавьте заметку о контакте..."
+      },
+      "channels": {
+        "phone": "Телефон",
+        "email": "Email",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "addChannel": "Добавить канал",
+        "selectType": "Тип канала",
+        "valuePlaceholder": "Значение",
+        "call": "Позвонить",
+        "sendEmail": "Написать email",
+        "empty": "Каналы связи не указаны",
+        "added": "Канал добавлен",
+        "deleted": "Канал удалён",
+        "deleteConfirm": "Удалить этот канал связи?"
+      },
+      "relations": {
+        "add": "Добавить связь",
+        "type": {
+          "partner": "Партнёр",
+          "friend": "Друг",
+          "colleague": "Коллега",
+          "referrer": "Рекомендатель",
+          "investor": "Инвестор",
+          "mentor": "Ментор",
+          "other": "Другое"
+        },
+        "empty": "Связи не указаны",
+        "contactLabel": "Контакт",
+        "typeLabel": "Тип связи",
+        "noteLabel": "Заметка",
+        "notePlaceholder": "Необязательно",
+        "selectContact": "Выберите контакт",
+        "selectType": "Выберите тип",
+        "selfError": "Нельзя добавить связь с самим собой",
+        "added": "Связь добавлена",
+        "deleted": "Связь удалена",
+        "deleteConfirm": "Удалить эту связь?"
+      },
+      "deleteConfirm": "Удалить контакт?",
+      "deleted": "Контакт удалён",
+      "menu": {
+        "addTask": "Добавить задачу",
+        "addNote": "Добавить заметку",
+        "call": "Позвонить",
+        "email": "Отправить email",
+        "addRelation": "Добавить связь",
+        "copyLink": "Копировать ссылку",
+        "delete": "Удалить"
+      }
+    },
+    "contacts_page": {
+      "savedViews": {
+        "my": "Мои сегменты",
+        "team": "Командные",
+        "default": "По умолчанию",
+        "save": "Сохранить текущий вид",
+        "manage": "Управлять сегментами",
+        "duplicates": "Дубликаты"
+      },
+      "bulk": {
+        "merge": "Объединить",
+        "exportXlsx": "Экспорт XLSX",
+        "assignResponsible": "Назначить ответственного",
+        "addTag": "Добавить тег"
+      },
+      "columns": {
+        "engagement": "Активность",
+        "lastTouch": "Последний контакт",
+        "openDeals": "Сделки"
+      },
+      "filters": {
+        "engagement": "Вовлечённость",
+        "lastTouchFrom": "Касание с",
+        "lastTouchTo": "Касание по",
+        "openDealsMin": "Сделок мин.",
+        "openDealsMax": "Сделок макс."
+      },
+      "empty": {
+        "duplicates": "Дубликатов не обнаружено",
+        "noRecords": "Контакты ещё не добавлены",
+        "noResults": "Ничего не найдено",
+        "noSegment": "В этом сегменте пусто"
+      }
+    },
+    "customFields": {
+      "schemaError": "Не удалось загрузить схему дополнительных полей",
+      "empty": "Дополнительные поля не настроены"
+    }
+  },
+  "contacts_filter": {
+    "presets": {
+      "mine": "Мои",
+      "active": "Активные",
+      "withDeals": "С открытыми сделками",
+      "noTask": "Без задач"
+    },
+    "col": {
+      "who": "Кто",
+      "what": "Что",
+      "when": "Когда"
+    },
+    "city": "Город",
+    "createdAt": "Дата создания",
+    "changeFilters": "Изменить фильтры"
+  },
+  "contacts_columns": {
+    "title": "Выбор колонок",
+    "required": "Обязат."
+  },
+  "contacts_company": {
+    "employees": "Сотрудников"
   }
 }

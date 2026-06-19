@@ -36,13 +36,19 @@ use App\Http\Controllers\Crm\Admin\CompanyTypeController;
 use App\Http\Controllers\Crm\Admin\ContactPositionController;
 use App\Http\Controllers\Crm\Admin\CountryController;
 use App\Http\Controllers\Crm\Admin\SourceController;
+use App\Http\Controllers\Crm\CompanyBulkController;
 use App\Http\Controllers\Crm\CompanyController;
 use App\Http\Controllers\Crm\CompanyEmployeeController;
+use App\Http\Controllers\Crm\ContactBulkController;
 use App\Http\Controllers\Crm\ContactChannelController;
 use App\Http\Controllers\Crm\ContactCompanyController;
 use App\Http\Controllers\Crm\ContactController;
+use App\Http\Controllers\Crm\ContactRelationController;
+use App\Http\Controllers\Crm\CrmFeedController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
+use App\Http\Controllers\Crm\HoldingController;
+use App\Http\Controllers\Crm\SavedViewController;
 use App\Http\Controllers\Iam\ProfileController;
 use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Inbox\ChannelController;
@@ -64,6 +70,8 @@ use App\Http\Controllers\Onboarding\QuizController;
 use App\Http\Controllers\Onboarding\QuizOptionController;
 use App\Http\Controllers\Onboarding\QuizQuestionController;
 use App\Http\Controllers\Onboarding\StudentCourseController;
+use App\Http\Controllers\Sales\CompanyDealsController;
+use App\Http\Controllers\Sales\ContactDealsController;
 use App\Http\Controllers\Sales\DashboardController;
 use App\Http\Controllers\Sales\DealContactController;
 use App\Http\Controllers\Sales\DealController;
@@ -136,6 +144,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // CRM — Contacts
     // =========================================================================
+    // CRITICAL: bulk + export routes MUST be declared BEFORE apiResource('contacts')
+    // so that 'bulk'/'export' are NOT bound as a {contact} route param.
+    Route::patch('contacts/bulk', [ContactBulkController::class, 'apply'])->name('contacts.bulk.apply');
+    Route::delete('contacts/bulk', [ContactBulkController::class, 'delete'])->name('contacts.bulk.delete');
+    Route::post('contacts/export', [ContactBulkController::class, 'export'])->name('contacts.export');
+
     Route::apiResource('contacts', ContactController::class);
     Route::prefix('contacts/{contact}')->name('contacts.')->group(function (): void {
         Route::apiResource('companies', ContactCompanyController::class)
@@ -154,25 +168,43 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::patch('channels/{channel}', [ContactChannelController::class, 'update'])->name('channels.update');
         Route::delete('channels/{channel}', [ContactChannelController::class, 'destroy'])->name('channels.destroy');
 
-        // deals sub-resource stub (S1.3)
-        Route::get('deals', static fn () => response()->json(['data' => [], 'stub' => true]))
-            ->name('deals.index');
+        // Contact relations (contact-to-contact, B1)
+        Route::get('relations', [ContactRelationController::class, 'index'])->name('relations.index');
+        Route::post('relations', [ContactRelationController::class, 'store'])->name('relations.store');
+        Route::patch('relations/{relation}', [ContactRelationController::class, 'update'])->name('relations.update');
+        Route::delete('relations/{relation}', [ContactRelationController::class, 'destroy'])->name('relations.destroy');
+
+        // Deals linked to a contact (real implementation replacing stub — B4)
+        Route::get('deals', [ContactDealsController::class, 'index'])->name('deals.index');
+
+        // Unified activity feed for contact card (mirrors deals/{deal}/feed) — S5
+        Route::get('feed', [CrmFeedController::class, 'contactFeed'])->name('feed.index');
     });
 
     // =========================================================================
     // CRM — Companies
     // =========================================================================
+    // CRITICAL: bulk + export routes MUST be declared BEFORE apiResource('companies').
+    Route::patch('companies/bulk', [CompanyBulkController::class, 'apply'])->name('companies.bulk.apply');
+    Route::delete('companies/bulk', [CompanyBulkController::class, 'delete'])->name('companies.bulk.delete');
+    Route::post('companies/export', [CompanyBulkController::class, 'export'])->name('companies.export');
+
     Route::apiResource('companies', CompanyController::class);
     Route::prefix('companies/{company}')->name('companies.')->group(function (): void {
         Route::get('employees', [CompanyEmployeeController::class, 'index'])->name('employees.index');
         Route::post('employees', [CompanyEmployeeController::class, 'store'])->name('employees.store');
         Route::delete('employees/{contact}', [CompanyEmployeeController::class, 'destroy'])->name('employees.destroy');
-        // deals stub (S1.3)
-        Route::get('deals', static fn () => response()->json(['data' => [], 'stub' => true]))
-            ->name('deals.index');
-        // holding links stub
-        Route::get('holding', static fn () => response()->json(['data' => [], 'stub' => true]))
-            ->name('holding.index');
+
+        // Deals belonging to a company (real implementation replacing stub — B4)
+        Route::get('deals', [CompanyDealsController::class, 'index'])->name('deals.index');
+
+        // Holding tree (real implementation replacing stub — B5)
+        Route::get('holding', [HoldingController::class, 'show'])->name('holding.show');
+        Route::post('holding', [HoldingController::class, 'attach'])->name('holding.attach');
+        Route::delete('holding', [HoldingController::class, 'detach'])->name('holding.detach');
+
+        // Unified activity feed for company card (mirrors deals/{deal}/feed) — S5
+        Route::get('feed', [CrmFeedController::class, 'companyFeed'])->name('feed.index');
     });
 
     // =========================================================================
@@ -187,6 +219,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // CRM — Custom Fields
     // =========================================================================
+    // CRITICAL: /schema MUST be declared BEFORE apiResource to avoid routing clash.
+    Route::get('crm/custom-fields/schema', [CustomFieldDefController::class, 'schema'])
+        ->name('crm.custom-fields.schema');
+
     Route::apiResource('crm/custom-fields', CustomFieldDefController::class)
         ->parameter('custom-fields', 'customFieldDef')
         ->names([
@@ -196,6 +232,17 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
             'update' => 'crm.custom-fields.update',
             'destroy' => 'crm.custom-fields.destroy',
         ]);
+
+    // =========================================================================
+    // CRM — Saved Views (server-persisted list presets, backlog-3)
+    // =========================================================================
+    Route::prefix('crm/saved-views')->name('crm.saved-views.')->group(function (): void {
+        Route::get('/', [SavedViewController::class, 'index'])->name('index');
+        Route::post('/', [SavedViewController::class, 'store'])->name('store');
+        Route::patch('{savedView}', [SavedViewController::class, 'update'])->name('update');
+        Route::delete('{savedView}', [SavedViewController::class, 'destroy'])->name('destroy');
+        Route::post('{savedView}/default', [SavedViewController::class, 'setDefault'])->name('set-default');
+    });
 
     // =========================================================================
     // Catalog — Product Groups

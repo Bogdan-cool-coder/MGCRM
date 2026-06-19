@@ -14,7 +14,9 @@ use Illuminate\Validation\ValidationException;
 /**
  * DealProductService — line-item CRUD. unit_price is a snapshot taken from the
  * Catalog (ProductService::getPriceSnapshot, kopecks) at add time, with an
- * optional manual override. Every mutation re-derives Deal.amount.
+ * optional manual override. discount is a manual per-line reduction (kopecks):
+ * amount = max(0, round(quantity * unit_price) - discount). Every mutation
+ * re-derives Deal.amount.
  */
 class DealProductService
 {
@@ -62,7 +64,8 @@ class DealProductService
             }
 
             $quantity = (float) ($data['quantity'] ?? 1);
-            $amount = (int) round($quantity * $unitPrice);
+            $discount = isset($data['discount']) ? (int) $data['discount'] : 0;
+            $amount = $this->netAmount($quantity, $unitPrice, $discount);
 
             $product = DealProduct::create([
                 'deal_id' => $deal->id,
@@ -70,6 +73,7 @@ class DealProductService
                 'plan_id' => isset($data['plan_id']) ? (int) $data['plan_id'] : null,
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
+                'discount' => $discount,
                 'currency' => $currency,
                 'amount' => $amount,
                 'sort_order' => (int) ($data['sort_order'] ?? 0),
@@ -82,7 +86,8 @@ class DealProductService
     }
 
     /**
-     * Update a line item (quantity/unit_price/sort_order). Recomputes amount and Deal.amount.
+     * Update a line item (quantity/unit_price/discount/sort_order). Recomputes
+     * amount and Deal.amount.
      *
      * @param  array<string, mixed>  $data
      */
@@ -95,11 +100,18 @@ class DealProductService
             if (array_key_exists('unit_price', $data) && $data['unit_price'] !== null) {
                 $dealProduct->unit_price = (int) $data['unit_price'];
             }
+            if (array_key_exists('discount', $data) && $data['discount'] !== null) {
+                $dealProduct->discount = (int) $data['discount'];
+            }
             if (array_key_exists('sort_order', $data)) {
                 $dealProduct->sort_order = (int) $data['sort_order'];
             }
 
-            $dealProduct->amount = (int) round((float) $dealProduct->quantity * (int) $dealProduct->unit_price);
+            $dealProduct->amount = $this->netAmount(
+                (float) $dealProduct->quantity,
+                (int) $dealProduct->unit_price,
+                (int) $dealProduct->discount,
+            );
             $dealProduct->save();
 
             $deal = $dealProduct->deal()->first();
@@ -121,5 +133,17 @@ class DealProductService
                 $this->deals->recalcAmount($deal);
             }
         });
+    }
+
+    /**
+     * Net line-item total in kopecks: gross (round(quantity * unit_price)) minus
+     * the manual discount, clamped to >= 0 so a discount never produces a
+     * negative line. Single source of truth for both add and update.
+     */
+    private function netAmount(float $quantity, int $unitPrice, int $discount): int
+    {
+        $gross = (int) round($quantity * $unitPrice);
+
+        return max(0, $gross - $discount);
     }
 }

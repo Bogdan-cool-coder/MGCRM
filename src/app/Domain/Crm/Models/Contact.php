@@ -42,6 +42,7 @@ class Contact extends Model
         'tags',
         'extra_fields',
         'owner_id',
+        'last_activity_at',
     ];
 
     protected function casts(): array
@@ -50,6 +51,7 @@ class Contact extends Model
             'status' => ContactStatus::class,
             'tags' => 'array',
             'extra_fields' => 'array',
+            'last_activity_at' => 'datetime',
         ];
     }
 
@@ -91,5 +93,21 @@ class Contact extends Model
     public function primaryCompanyLink(): HasMany
     {
         return $this->hasMany(ContactCompanyLink::class)->where('is_primary', true);
+    }
+
+    /**
+     * Contact-to-contact relations where this contact is the "left" side (contact_id).
+     */
+    public function contactRelations(): HasMany
+    {
+        return $this->hasMany(ContactRelation::class, 'contact_id');
+    }
+
+    /**
+     * Contact-to-contact relations where this contact is the "right" side (related_contact_id).
+     */
+    public function relatedContactRelations(): HasMany
+    {
+        return $this->hasMany(ContactRelation::class, 'related_contact_id');
     }
 }

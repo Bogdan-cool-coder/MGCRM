@@ -28,6 +28,35 @@ class CustomFieldDefController extends Controller
     ) {}
 
     /**
+     * GET /crm/custom-fields/schema?entity_scope=contact|company
+     *
+     * Returns field definitions grouped by `group` and sorted by `sort_order`.
+     * Designed for CustomFieldRenderer.vue — provides everything needed to render
+     * a form for any entity scope without the front having to group manually.
+     *
+     * MUST be declared BEFORE apiResource (route order matters).
+     */
+    public function schema(Request $request): JsonResponse
+    {
+        $request->validate([
+            'entity_scope' => ['required', 'string', Rule::enum(CustomFieldScope::class)],
+        ]);
+
+        $scope = CustomFieldScope::from($request->query('entity_scope'));
+        $defs = $this->service->defsForScope($scope);
+
+        // Group by `group` field, sorted by sort_order within each group
+        $grouped = $defs->groupBy('group')->map(static function ($fields, string $group): array {
+            return [
+                'group' => $group,
+                'fields' => CustomFieldDefResource::collection($fields)->resolve(),
+            ];
+        })->values();
+
+        return response()->json(['data' => $grouped]);
+    }
+
+    /**
      * GET /crm/custom-fields?scope=company|contact
      */
     public function index(Request $request): AnonymousResourceCollection

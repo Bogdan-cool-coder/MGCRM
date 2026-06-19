@@ -1,5 +1,11 @@
 import { apiClient } from '@/api/client'
-import type { Contact, ContactChannel, ContactCompanyLink, PaginatedResponse } from '@/entities/crm'
+import type {
+  Contact,
+  ContactChannel,
+  ContactCompanyLink,
+  ContactRelation,
+  PaginatedResponse,
+} from '@/entities/crm'
 
 export interface ContactListParams {
   page?: number
@@ -9,6 +15,28 @@ export interface ContactListParams {
   country_code?: string
   tags?: string[]
   company_id?: number
+  engagement_tier?: 'fresh' | 'cooling' | 'cold'
+  sort?: string
+  direction?: 'asc' | 'desc'
+}
+
+export interface BulkContactPayload {
+  contact_ids: number[]
+  operation: 'assign_owner' | 'set_tags' | 'add_tag' | 'remove_tag'
+  owner_id?: number
+  tags?: string[]
+  tag?: string
+}
+
+export interface CreateContactRelationPayload {
+  related_contact_id: number
+  relation_type: 'partner' | 'referrer' | 'colleague' | 'friend' | 'investor' | 'mentor' | 'other'
+  note?: string | null
+}
+
+export interface UpdateContactRelationPayload {
+  relation_type?: 'partner' | 'referrer' | 'colleague' | 'friend' | 'investor' | 'mentor' | 'other'
+  note?: string | null
 }
 
 export interface CreateContactPayload {
@@ -125,5 +153,77 @@ export const contactsApi = {
 
   async deleteChannel(contactId: number, channelId: number): Promise<void> {
     await apiClient.delete(`/api/contacts/${contactId}/channels/${channelId}`)
+  },
+
+  // ── Contact Relations (Slice 1 API) ────────────────────────────────────────
+
+  async getRelations(contactId: number): Promise<ContactRelation[]> {
+    const res = await apiClient.get<{ data: ContactRelation[] }>(
+      `/api/contacts/${contactId}/relations`,
+    )
+    return res.data.data ?? []
+  },
+
+  async addRelation(
+    contactId: number,
+    payload: CreateContactRelationPayload,
+  ): Promise<ContactRelation> {
+    const res = await apiClient.post<{ data: ContactRelation }>(
+      `/api/contacts/${contactId}/relations`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async updateRelation(
+    contactId: number,
+    relationId: number,
+    payload: UpdateContactRelationPayload,
+  ): Promise<ContactRelation> {
+    const res = await apiClient.patch<{ data: ContactRelation }>(
+      `/api/contacts/${contactId}/relations/${relationId}`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async deleteRelation(contactId: number, relationId: number): Promise<void> {
+    await apiClient.delete(`/api/contacts/${contactId}/relations/${relationId}`)
+  },
+
+  // ── Contact Deals (real, Slice 1 API) ──────────────────────────────────────
+
+  async getDeals(contactId: number, params: { page?: number; per_page?: number } = {}): Promise<PaginatedResponse<import('@/entities/sales').DealDto>> {
+    const res = await apiClient.get<PaginatedResponse<import('@/entities/sales').DealDto>>(
+      `/api/contacts/${contactId}/deals`,
+      { params },
+    )
+    return res.data
+  },
+
+  // ── Bulk operations ────────────────────────────────────────────────────────
+
+  async bulkPatch(payload: BulkContactPayload): Promise<{ affected: number }> {
+    const res = await apiClient.patch<{ affected: number }>('/api/contacts/bulk', payload)
+    return res.data
+  },
+
+  async bulkDelete(contactIds: number[]): Promise<{ deleted: number }> {
+    const res = await apiClient.delete<{ deleted: number }>('/api/contacts/bulk', {
+      data: { contact_ids: contactIds },
+    })
+    return res.data
+  },
+
+  async exportXlsx(
+    contactIds: number[],
+    filters: Record<string, unknown> = {},
+  ): Promise<Blob> {
+    const res = await apiClient.post<Blob>(
+      '/api/contacts/export',
+      { contact_ids: contactIds, filters },
+      { responseType: 'blob' },
+    )
+    return res.data
   },
 }

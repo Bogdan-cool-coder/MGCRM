@@ -45,7 +45,7 @@ class ContactController extends Controller
     {
         $this->authorize('view', $contact);
 
-        return ContactResource::make($contact->load(['owner', 'companyLinks.company']));
+        return ContactResource::make($contact->load(['owner', 'companyLinks.company', 'channels']));
     }
 
     public function update(UpdateContactRequest $request, Contact $contact): JsonResource

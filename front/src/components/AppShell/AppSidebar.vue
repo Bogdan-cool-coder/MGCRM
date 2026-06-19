@@ -51,6 +51,7 @@
       </ul>
 
       <ul v-else class="app-sidebar__nav-list" role="list">
+        <!-- Main nav items -->
         <li
           v-for="item in visibleNavItems"
           :key="item.key"
@@ -96,13 +97,14 @@
           </router-link>
         </li>
 
-        <!-- Admin-only section with hairline divider -->
-        <template v-if="isAdminOrDirector && visibleAdminNavItems.length">
-          <li class="app-sidebar__nav-divider" role="separator">
-            <hr class="app-sidebar__admin-divider" />
+        <!-- Onboarding group (admin/director only) -->
+        <template v-if="isAdminOrDirector">
+          <!-- Group label -->
+          <li v-if="!collapsed" class="app-sidebar__group-label" role="presentation">
+            <span class="app-sidebar__group-label-text">{{ t('nav.onboarding') }}</span>
           </li>
           <li
-            v-for="item in visibleAdminNavItems"
+            v-for="item in onboardingItems"
             :key="item.key"
             class="app-sidebar__nav-item"
           >
@@ -118,6 +120,27 @@
               <i :class="['app-sidebar__nav-icon', item.icon]" />
               <span v-if="!collapsed" class="app-sidebar__nav-label">
                 {{ t(item.labelKey) }}
+              </span>
+            </router-link>
+          </li>
+
+          <!-- Settings item -->
+          <li v-if="!collapsed" class="app-sidebar__group-label" role="presentation">
+            <span class="app-sidebar__group-label-text">{{ t('nav.settingsGroup') }}</span>
+          </li>
+          <li class="app-sidebar__nav-item">
+            <router-link
+              :to="settingsItem.route"
+              class="app-sidebar__nav-link"
+              active-class="app-sidebar__nav-link--active"
+              :aria-label="t(settingsItem.labelKey)"
+              :title="collapsed ? t(settingsItem.labelKey) : undefined"
+              @mouseenter="prefetch(settingsItem.route)"
+              @focus="prefetch(settingsItem.route)"
+            >
+              <i :class="['app-sidebar__nav-icon', settingsItem.icon]" />
+              <span v-if="!collapsed" class="app-sidebar__nav-label">
+                {{ t(settingsItem.labelKey) }}
               </span>
             </router-link>
           </li>
@@ -181,7 +204,12 @@ import { useUserStore } from '@/stores/user'
 import { useActivityStore } from '@/stores/activityStore'
 import { useApprovalsStore } from '@/stores/approvalsStore'
 import { useOnboardingStore } from '@/stores/onboardingStore'
-import { prototypeNavItems, adminNavItems } from '@/shared/nav/navItems'
+import {
+  prototypeNavItems,
+  onboardingNavGroup,
+  settingsNavItem,
+  filterNavByRole,
+} from '@/shared/nav/navItems'
 import type { NavItemBadge } from '@/shared/nav/navItems'
 import AccountMenu from './AccountMenu.vue'
 import { useNavPrefetch } from '@/components/Orbita/composables/useNavPrefetch'
@@ -203,18 +231,25 @@ const onboardingStore = useOnboardingStore()
 const accountMenuRef = ref<InstanceType<typeof AccountMenu> | null>(null)
 
 // ─── Nav ready: пользователь загружен (не null) ───────────────────────────────
-// Пока getUser === null (bootstrap ещё загружает /me) — показываем скелетон.
 const isNavReady = computed<boolean>(() => userStore.getUser !== null)
 
-// ─── Nav items (prototype set) ────────────────────────────────────────────────
-const visibleNavItems = computed(() => prototypeNavItems)
+// ─── Main nav items ────────────────────────────────────────────────────────────
+const visibleNavItems = computed(() =>
+  filterNavByRole(prototypeNavItems, userStore.getUserRole ?? null),
+)
 
 const isAdminOrDirector = computed<boolean>(() => {
   const role = userStore.getUserRole
   return role === 'admin' || role === 'director'
 })
 
-const visibleAdminNavItems = computed(() => adminNavItems)
+// ─── Onboarding group items ───────────────────────────────────────────────────
+const onboardingItems = computed(() =>
+  filterNavByRole(onboardingNavGroup.items, userStore.getUserRole ?? null),
+)
+
+// ─── Settings nav item ────────────────────────────────────────────────────────
+const settingsItem = settingsNavItem
 
 // ─── Badge counts ──────────────────────────────────────────────────────────────
 function getBadgeCount(source: NavItemBadge['source']): number {
@@ -424,6 +459,28 @@ onMounted(() => {
   // no extra margin — pill handles its own margin
 }
 
+// Group label (expanded mode only)
+.app-sidebar__group-label {
+  list-style: none;
+  padding: $space-3 $space-4 $space-1;
+
+  &:not(:first-of-type) {
+    padding-top: $space-4;
+  }
+}
+
+.app-sidebar__group-label-text {
+  font-size: 10px;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
 // Pill nav link
 .app-sidebar__nav-link {
   display: flex;
@@ -529,17 +586,6 @@ onMounted(() => {
   &--danger {
     background: #FF5A44;
   }
-}
-
-// Admin section divider
-.app-sidebar__nav-divider {
-  list-style: none;
-}
-
-.app-sidebar__admin-divider {
-  margin: 8px 16px;
-  border: none;
-  border-top: 1px solid $sidebar-divider;
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────

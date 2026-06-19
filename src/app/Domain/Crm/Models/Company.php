@@ -69,6 +69,7 @@ class Company extends Model
         'category_code',
         'turnover_rub',
         'category_recalc_at',
+        'last_activity_at',
     ];
 
     protected function casts(): array
@@ -79,6 +80,7 @@ class Company extends Model
             'holding_role' => HoldingRole::class,
             'category_code' => CategoryCode::class,
             'category_recalc_at' => 'datetime',
+            'last_activity_at' => 'datetime',
         ];
     }
 

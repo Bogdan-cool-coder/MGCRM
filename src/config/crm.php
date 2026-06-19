@@ -8,6 +8,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Engagement Tiers (Contacts 2.0 — B2)
+    |--------------------------------------------------------------------------
+    |
+    | Thresholds (in days since last_activity_at) for computing the engagement
+    | tier of a Contact or Company. Tier algorithm:
+    |   days <= warm_days  → 'fresh'
+    |   days <= cold_days  → 'cooling'
+    |   days >  cold_days (or null) → 'cold'
+    |
+    | Override via env: ENGAGEMENT_CONTACT_WARM_DAYS, ENGAGEMENT_CONTACT_COLD_DAYS,
+    |                   ENGAGEMENT_COMPANY_WARM_DAYS, ENGAGEMENT_COMPANY_COLD_DAYS.
+    |
+    */
+    'engagement' => [
+        'contact' => [
+            'warm_days' => (int) env('ENGAGEMENT_CONTACT_WARM_DAYS', 14),
+            'cold_days' => (int) env('ENGAGEMENT_CONTACT_COLD_DAYS', 45),
+        ],
+        'company' => [
+            'warm_days' => (int) env('ENGAGEMENT_COMPANY_WARM_DAYS', 30),
+            'cold_days' => (int) env('ENGAGEMENT_COMPANY_COLD_DAYS', 90),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Roles
     |--------------------------------------------------------------------------
     |

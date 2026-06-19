@@ -9,7 +9,7 @@
 #   5. Stop and remove old replica.
 #   6. Run migrations (idempotent, --force) + Laravel prod optimisations.
 #   7. Bring up remaining services (nginx, frontend, queue-worker, scheduler, gotenberg).
-#   8. Restart bot separately (single-replica, must not be scaled).
+#   8. Bot is NOT started automatically (set START_BOT=true to override) — see step notes.
 #
 # nginx/Traefik excludes non-healthy containers from routing, so traffic is
 # always served by a live replica during the swap window.
@@ -84,17 +84,35 @@ docker compose exec -T app php artisan view:cache
 echo "==> Bring up remaining services (nginx, frontend, queue-worker, scheduler, gotenberg)"
 docker compose up -d --no-deps nginx frontend queue-worker scheduler gotenberg
 
-echo "==> Restart bot (single-replica — force-recreate to pick up new image)"
-docker compose up -d --no-deps --force-recreate bot
+# Bot is intentionally NOT started automatically during deploy.
+# It is held back (nutgram:run exits with 409 Conflict when a second polling
+# instance hits Telegram — e.g. a stale webhook or another container).
+# Start manually when needed:  docker compose up -d bot
+# To enable auto-start set START_BOT=true before running this script.
+START_BOT="${START_BOT:-false}"
+if [ "$START_BOT" = "true" ]; then
+  echo "==> Starting bot (START_BOT=true)"
+  docker compose up -d --no-deps --force-recreate bot
+else
+  echo "==> Bot skipped (START_BOT=${START_BOT}); start manually when ready"
+fi
 
-echo "==> Health-check: https://${APP_DOMAIN:-mgcrm.macroglobal.tech}/api/up (via local port)"
+# Health-check runs entirely inside the Docker network — no host-port required.
+# nginx sits in front of app (php-fpm) and listens on :80 inside the mgcrm_net network;
+# we exec into the app container and curl the nginx upstream directly.
+echo "==> Health-check: GET http://nginx/up (via app container, internal network)"
 for i in $(seq 1 30); do
-  STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${APP_PORT:-8080}/up" 2>/dev/null || echo "000")
+  STATUS=$(docker compose exec -T app curl -fsS -o /dev/null -w "%{http_code}" \
+    http://nginx/up 2>/dev/null || echo "000")
   if [ "$STATUS" = "200" ]; then
     echo "    /up -> 200 OK"
     break
   fi
   echo "    /up -> $STATUS (attempt $i/30)"
+  if [ "$i" -eq 30 ]; then
+    echo "ERROR: health-check did not pass after 30 attempts"
+    exit 1
+  fi
   sleep 2
 done
 

@@ -37,10 +37,27 @@
       @stage-click="onSegmentClick"
     />
 
-    <!-- Days in stage info -->
+    <!-- Days in stage info (just N дн., no deal name duplication) -->
     <p class="deal-header__days-hint">
-      {{ deal.stage.name }} · {{ daysInStage }} {{ t('sales.deal.page.daysInStage') }}
+      {{ daysInStage }} {{ t('sales.deal.page.daysInStage') }}
     </p>
+
+    <!-- Planned dates row -->
+    <div class="deal-header__planned-dates">
+      <div class="deal-header__planned-date-block">
+        <span class="deal-header__planned-date-label">{{ t('sales.deal.info.fields.plannedContract') }}</span>
+        <span class="deal-header__planned-date-value" :class="{ 'deal-header__planned-date-value--empty': !deal.expected_sign_date }">
+          {{ formatDate(deal.expected_sign_date) }}
+        </span>
+      </div>
+      <div class="deal-header__planned-date-sep" />
+      <div class="deal-header__planned-date-block">
+        <span class="deal-header__planned-date-label">{{ t('sales.deal.info.fields.plannedPayment') }}</span>
+        <span class="deal-header__planned-date-value" :class="{ 'deal-header__planned-date-value--empty': !deal.expected_payment_date }">
+          {{ formatDate(deal.expected_payment_date) }}
+        </span>
+      </div>
+    </div>
 
     <!-- Dialogs: rename, tags -->
     <Dialog
@@ -108,6 +125,12 @@ import { useMutation } from '@/composables/async/useMutation'
 import { salesApi } from '@/api/sales'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { DealDto, PipelineStageDto, NextTaskDto } from '@/entities/sales'
+
+function formatDate(val: string | null | undefined): string {
+  if (!val) return '—'
+  const d = new Date(val)
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 
 interface MenuUser {
   id: number
@@ -381,6 +404,50 @@ function confirmDelete() {
   color: rgba(255, 255, 255, 0.6);
   font-size: $font-size-xs;
   margin: 0;
+}
+
+.deal-header__planned-dates {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-top: $space-1;
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.deal-header__planned-date-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $space-2 $space-3;
+}
+
+.deal-header__planned-date-sep {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.deal-header__planned-date-label {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deal-header__planned-date-value {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: #fff;
+
+  &--empty {
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: $font-weight-normal;
+  }
 }
 
 .deal-header__dialog-body {

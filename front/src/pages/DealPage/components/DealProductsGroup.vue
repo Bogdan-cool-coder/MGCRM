@@ -47,10 +47,22 @@
         />
       </div>
 
-      <!-- Total -->
-      <div class="deal-products-group__total">
-        <span class="deal-products-group__total-label">{{ t('sales.deal.info.products.total') }}</span>
-        <span class="deal-products-group__total-amount">{{ formatCurrency(totalAmount, currency) }}</span>
+      <!-- Net total + discount summary shown below the list -->
+      <div class="deal-products-group__summary">
+        <template v-if="totalDiscount > 0">
+          <div class="deal-products-group__summary-row deal-products-group__summary-row--discount">
+            <span class="deal-products-group__summary-label">{{ t('sales.deal.info.products.discount') }}</span>
+            <span class="deal-products-group__summary-value deal-products-group__summary-value--discount">
+              −{{ formatCurrency(totalDiscount, currency) }}
+            </span>
+          </div>
+        </template>
+        <div class="deal-products-group__summary-row deal-products-group__summary-row--total">
+          <span class="deal-products-group__summary-label">{{ t('sales.deal.info.products.total') }}</span>
+          <span class="deal-products-group__summary-value deal-products-group__summary-value--total">
+            {{ formatCurrency(totalAmount, currency) }}
+          </span>
+        </div>
       </div>
     </template>
   </DealFieldGroup>
@@ -75,7 +87,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   addProduct: []
-  updateItem: [id: number, payload: { quantity?: number; unit_price?: number }]
+  updateItem: [id: number, payload: { quantity?: number; unit_price?: number; discount?: number }]
   removeItem: [id: number]
   amountChanged: [newTotal: number]
 }>()
@@ -84,6 +96,10 @@ const { t } = useI18n()
 
 const totalAmount = computed(() =>
   props.items.reduce((sum, item) => sum + item.amount, 0),
+)
+
+const totalDiscount = computed(() =>
+  props.items.reduce((sum, item) => sum + (item.discount ?? 0), 0),
 )
 </script>
 
@@ -112,11 +128,7 @@ const totalAmount = computed(() =>
   // compact — product rows render as compact rows
 }
 
-.deal-products-group__total {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $space-2 $space-4;
+.deal-products-group__summary {
   border-top: 1px solid var(--p-surface-200);
   background: var(--p-surface-50);
 
@@ -126,7 +138,24 @@ const totalAmount = computed(() =>
   }
 }
 
-.deal-products-group__total-label {
+.deal-products-group__summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-1 $space-4;
+
+  &--total {
+    padding-top: $space-2;
+    padding-bottom: $space-2;
+  }
+
+  &--discount {
+    padding-top: $space-2;
+    padding-bottom: 0;
+  }
+}
+
+.deal-products-group__summary-label {
   font-size: $font-size-xs;
   color: $surface-500;
   font-weight: $font-weight-semibold;
@@ -134,9 +163,21 @@ const totalAmount = computed(() =>
   letter-spacing: 0.05em;
 }
 
-.deal-products-group__total-amount {
+.deal-products-group__summary-value {
   font-size: $font-size-sm;
   font-weight: $font-weight-bold;
-  color: var(--p-primary-color);
+
+  &--total {
+    color: var(--p-primary-color);
+  }
+
+  &--discount {
+    color: var(--p-green-600);
+    font-weight: $font-weight-medium;
+
+    .app-dark & {
+      color: var(--p-green-400);
+    }
+  }
 }
 </style>

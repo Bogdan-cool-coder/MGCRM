@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Activity;
 
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
@@ -61,5 +62,10 @@ trait ActivityTestHelpers
             'owner_user_id' => $owner->id,
             'department_id' => $owner->department_id,
         ]);
+    }
+
+    protected function contactFor(User $owner): Contact
+    {
+        return Contact::factory()->create(['owner_id' => $owner->id]);
     }
 }

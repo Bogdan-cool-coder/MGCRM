@@ -265,7 +265,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] A11y: `<nav aria-label="…">` вокруг nav-кнопок; `aria-label` на всех кнопках toggle; `aria-current="page"` на активной nav-кнопке; `prefers-reduced-motion` блок в `Orbita.vue`; `forced-colors` блоки в `OrbitaPanel.vue` + `OrbitaToggle.vue`; `focus-visible` outline на grip + rotate.
 - **Беклог:** поворот на мобильном (< 560px H → grid fallback в CSS, pivot-логика не проверялась).
 
-#### Навигация — Срез 4 (frontend-specialist, 2026-06-16) — PM CODE REVIEW (uncommitted, pending QA)
+#### Навигация — Срез 4 (frontend-specialist, 2026-06-16) ✅ PM APPROVE (commit e7328a8)
 > Scope: CommandPalette + useNavHotkeys + useNavPrefetch + overlay mutual exclusion + AppSidebar prefetch + canvas fixes
 - [x] `CommandPalette.vue` — PrimeVue Dialog + нативный `<input>` (без PrimeVue InputText, нет VeeValidate); fuzzy-match (prefix>contains>char-scatter); группировка Pages/Actions/Recent; клавишная навигация ↑↓ Enter Esc; `layoutStore.pushRecentRoute()` при навигации; `layoutStore.closeCommandPalette()` при Escape/выборе; focus на input при открытии; `@after-hide` сброс состояния.
 - [x] `HotkeysCheatsheet.vue` — PrimeVue Dialog; таблица ключей через `NAV_HOTKEY_ENTRIES`; разделение nav/other секций; `<kbd>` элементы; dark mode через `:global(.app-dark)`.
@@ -277,9 +277,9 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `index.ts` — экспортированы `CommandPalette`, `HotkeysCheatsheet`, `useNavHotkeys`, `cheatsheetOpen`, `openCheatsheet`, `closeCheatsheet`, `NAV_HOTKEY_ENTRIES`, `useNavPrefetch`.
 - [x] i18n `ru.json`/`en.json` — добавлены `hotkeys.other`, `hotkeys.goToCompanies`, `hotkeys.goToTasks`, `hotkeys.goToDocuments`, `hotkeys.goToApprovals`, `hotkeys.goToCourses`, `hotkeys.showHelp`.
 - **Беклог (deferred по ТЗ §3.4):** ~~Quick-actions синк~~ **РЕАЛИЗОВАН задачей #10 (2026-06-16) — см. Срез 5 ниже.**
-- **PM-статус:** CODE REVIEW PASS. Pending браузерный QA (qa-tester).
+- **PM-статус:** QA PASS. Committed (`e7328a8`). Ветка feat/deals-redesign, pending merge в main.
 
-#### Навигация — Срез 5: Quick-actions синк в профиль (#10) — QA PASS → pending commit (2026-06-16)
+#### Навигация — Срез 5: Quick-actions синк в профиль (#10) ✅ PM APPROVE (commit 1041ce8, 2026-06-17)
 > backend-specialist + frontend-specialist; QA partial pass → 2 QA-баги исправлены (PickList move-all guard + заголовки через named slots)
 - [x] **Миграция** `2026_06_16_120000_add_nav_quick_actions_to_users_table.php` — `users.nav_quick_actions json nullable`, обратима (`down` dropColumn). Применена к dev Postgres.
 - [x] **`User.php`** — `nav_quick_actions` добавлен в `$fillable` + `casts()` → `'array'`.
@@ -301,6 +301,21 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] i18n `ru.json`/`en.json` — секция `quickActions.*` (10 ключей) + вкладка `profile.tabs.quickActions`.
 - **Синк реализован через backend:** после save — `PATCH /api/me/profile` → БД → `userStore.setCurrentUser(mapUser(response.data))` → Pinia → Orbita реактивно перерисовывается. LocalStorage не используется.
 - **Лимит ≤5 двойная защита:** бэк — `max:5` в `UpdateProfileRequest` (422 при превышении); фронт — `onMoveToTarget` откатывает overflow немедленно + `validationError` computed блокирует кнопку Save.
+
+#### Навигация — Срез 4 ✅ ФИНАЛЬНЫЙ STATUS (commit e7328a8, браузерный QA PASS)
+> Все 4 среза навигации (commit 3543b49 / 75dc533 / 28a1963 / e7328a8) запушены на ветке feat/deals-redesign. QA пройден. Pending merge в main.
+
+#### Уведомления in-app (#9) ✅ PM APPROVE (commit 21fdd73, 2026-06-17)
+- [x] `Domain/Notification/` — модель `Notification`, `NotificationCategory` enum (task/approval/deal/mention/system), `NotificationService` (createForUser/dispatch/grouped/markRead/markAllRead/unreadCount/digest/markReadBatch), `NotificationPolicy` (recipient-scoped), `NotificationController` (GET /api/notifications, GET /api/notifications/count, POST /api/notifications/read-batch, POST /api/notifications/{id}/read, POST /api/notifications/read-all), `NotificationFeedResource`+`NotificationResource`, `ReadBatchNotificationsRequest`, `NotifyActivityAssigneeListener` (ActivityAssigned), `NotifyApproversListener` (DocumentSubmittedForApproval). Миграции: `create_notifications_table` + `add_action_label_to_notifications_table` (applied dev Postgres). Frontend: `notificationsStore` (fetchUnreadCount через GET /count, decrement, clear), `useNotificationsFlyout` (load/loadMore/markRead/markAllRead/onFlyoutClose batch), `NotificationsButton.vue` flyout в Орбите. 63 теста PHPUnit; suite 1601 PASS.
+
+#### Техдолг bulk/export/select-all (A) ✅ PM APPROVE (commit 77adb5c, 2026-06-17)
+- [x] Backend: `BulkDealService` (all-or-nothing, Policy per-deal, DB::transaction), `BulkDealActionRequest` (4 операции: change_owner/change_stage/set_field/edit_tags), `BulkDealDeleteRequest`, `DealExportService` (filteredQuery + chunkById 500, XLSX). Маршруты `PATCH /api/deals/bulk` + `DELETE /api/deals/bulk` (перед `deals/{deal}`). 8 тестов `DealBulkTest` + 3 теста `DealExportTest`. Frontend: select-all Checkbox (indeterminate), `allVisibleDealIds` computed (kanban/list/tasks), 5 bulk-диалогов (BulkAssignDialog/BulkMoveStageDialog/BulkEditFieldDialog/BulkTagDialog/BulkAddTaskDialog), preselect via salesStore. Беклог (не блокер): `rate_available`↔`fx_rate_available` несовпадение ключа; rottingClass хардкод 7/14; preselect через URL-query не реализован.
+
+#### Техдолг unread count + read-batch (B) ✅ PM APPROVE (commit f8c8c55, 2026-06-17)
+- [x] `GET /api/notifications/count` — lightweight badge bootstrap (без grouped агрегации). `POST /api/notifications/read-batch` — пакетная отметка (max 200 ids, user-scope guard в service). Frontend `notificationsStore` переведён на GET /count для badge; read-batch на close flyout.
+
+#### Техдолг фронт-клинап (C) ✅ PM APPROVE (commit 04c45bb, 2026-06-17)
+- [x] `uiTriggersStore` (stores/uiTriggers.ts, NEW Pinia, НЕ persist) — event-bus для create-drawer триггеров. `quickActionRegistry.ts` — actionType: 'route'|'drawer'|'inline' + drawerKey; `create_deal`/`create_contact` → actionType: 'drawer'. `QuickActionsCluster::execute()` — switch на actionType вместо switch на key. `DealsPage` + `ContactsPage` — watcher pendingDrawer + clearDrawer on unmount. `useMutation<void>` → `useMutation<MeResponse>` в QuickActionsPickerDialog. `toggleDarkMode/setDarkMode` удалены из layoutStore (isDarkMode ref сохранён для boot-migrate в main.ts). `ProfilePage/index.vue` — layoutStore.setDarkMode() → themeStore.setTheme(). `HrStatusPieChart` + `useMacroCrmEchartsTheme` — layoutStore.isDarkMode → themeStore.theme. vite manualChunks — path-паттерны уточнены, чанки echarts/vue-flow/vendor-markdown добавлены.
 
 #### M0.7 — CI/CD + smoke (deploy-engineer + qa-tester)
 > **Реальный Vizion `ci.yml`:** поднимает сервис `postgres:16-alpine` и гоняет `migrate --force` на pgsql, при этом `php artisan test` уходит в sqlite (через `phpunit.xml force="true"`). **Pint-шага у Vizion НЕТ**, lint — `continue-on-error: true`, PHP `8.3`. Наш CI отличается осознанно.
@@ -345,6 +360,41 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### M2+. Контакты + Компании 2.0 (апгрейд до планки Сделок 2.0)
+
+**Статус:** DONE (2026-06-19). PM-апрув получен, ветка feat/deals-redesign, ожидает пуша в main.
+**Ведущие:** `crm-specialist` (backend) + `frontend-specialist` (UI) + `qa-tester`.
+**ТЗ:** `MG CRM 2026 / 5. Планы / Контакты + Компании 2.0 — ТЗ (единая карточка + список).md`
+
+**Суть:** апгрейд работающего M2, не стройка с нуля. Единая система компонентов (обобщить из Сделок 2.0), полноширинный layout (убрать правый рейл), новые данные.
+
+**Решения PO (зафиксированы 2026-06-19):**
+- Тёмная шапка `EntityInfoHeader` — `$brand-header-bg` (#172747) как в DealPage v2 (принято).
+- Дефолтные пороги engagement: контакт 14/45 дней, компания 30/90 дней (config/crm.php, env-override).
+- Таб Холдинг — всегда видим (не скрывать при пустой иерархии, empty-state).
+- `RelationType` — 7 значений: partner/referrer/colleague/friend/investor/mentor/other (принято).
+
+**Слайсы:**
+
+- [x] **Слайс 1 — Backend (crm-specialist):** 3 миграции (crm_contact_relations, last_activity_at contacts/companies) + ContactRelation (B1) + EngagementService + touchForDeal + tierFor* (B2) + channels в ContactResource (B3) + ContactDealsController/CompanyDealsController — реальные сделки (B4) + HoldingService::buildTree/ancestors/setParent/detectParentConflict + HoldingController (B5) + DealTotalsDTO + DealService::aggregateForCompany (B6) + BulkContactService/BulkCompanyService/ContactExportService/CompanyExportService (B7) + Gate dedup-scan-all в AppServiceProvider (B9). 1719 тестов зелёные. Migrate dev-Postgres PASS (all 3 migrations ran).
+- [x] **Слайс 2 — Список 2.0 (frontend-specialist):** ContactsToolbar + ContactsFilterOverlay + ContactsActiveFiltersBar + ContactsBulkToolbar + SavedViewsDropdown + EngagementChip (точка в колонке) + frozen первая колонка + inline-edit ответственного/тегов + 4 empty states + density/column-chooser. tsc+lint+build clean.
+- [x] **Слайс 3 — Карточка компании (frontend-specialist):** EntityInfoHeader (тёмная шапка) + EntityActionMenu + EntityTabs + InfoPanel + EngagementChip (полный) + EmployeeRowCard + KeyFactsBlock + HoldingTree + MiniPipelinePanel + MultiCurrencyTotals + CompanyDocumentsPanel + CompanyDealsTab + layout col-12 (RightRail убран) + адаптив 4 брейкпоинта. tsc+lint+build clean.
+- [x] **Слайс 4 — Карточка контакта (frontend-specialist):** EntityInfoHeader + ContactChannelsBlock + ContactRelationsPanel + панели Обзора (компании, связи, сделки, кастом-поля) + EntityActivitiesTab. tsc+lint+build clean.
+- [x] **Слайс 5 — Компоненты (frontend-specialist):** `front/src/components/crm/entity/` — 9 компонентов (EntityInfoHeader, EntityActionMenu, EntityTabs, InfoPanel, EntityRow, KeyFactsBlock/Item, EngagementChip, CustomFieldRenderer, EntityActivitiesTab, EntityComposer) + composable useEntityFeed. i18n namespace `crm` (RU+EN). tsc+lint+build clean.
+- [x] **Слайс 6 — QA (qa-tester):** браузерный smoke PASS. 0 console errors. Регрессия DealPage чистая.
+- [x] **Слайс 7 — PM-ревью (product-manager):** PASS 2026-06-19. Беклог-хвосты зафиксированы.
+- [x] **Интеграция engagement:** EngagementService::touch() мёртвым кодом больше не является. ActivityService вызывает touchTargetEngagement() на create()/complete(); DealService/DealMoveService вызывают touchEngagement(). 8 integration-тестов EngagementTouchTest. Circular DI исключён: ActivityService → EngagementService (через Crm), DealService → EngagementService; ActivityService НЕ инжектит DealService (circular-guard). Deal::engagementTargets() — единственный резолвер deal→{company_id, contact_ids}.
+
+**Беклог (не блокеры, следующая сессия):**
+- Engagement touch покрытие: ActivityTargetType::Contact теперь есть (добавлен в enum), но direct-contact touch в ActivityService::touchTargetEngagement() — только deal и company. Уточнить: нужно ли stampить contact.last_activity_at при создании Activity с target_type='contact' напрямую.
+- HoldingTree многоуровневость > 2 уровней — PHP BFS без CTE, работает, но при больших деревьях (10+ уровней) N+1 (один DB::whereIn на уровень). Пометить для оптимизации при реальных данных.
+- Saved Views backend (`crm_saved_views` таблица) — UI работает на localStorage-заглушке; backend TBD отдельным слайсом.
+- `rate_available`↔`fx_rate_available` несовпадение ключа (беклог Сделок-борд, не этот спринт).
+
+**Зависимости:** Финансы M9 для панели Платежи (плейсхолдер до тех пор); Договоры M5 для панели Документов (данные уже работают).
+
+---
+
 ### M3. Sales / Kanban (2-3 недели)
 
 **Ведущие:** `sales-specialist` + `catalog` (в его зоне) + `frontend-specialist` + `designer`. Контекст `Sales` + `Catalog`.
@@ -359,11 +409,22 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] **Дашборд продаж** (SalesDashboardService, 5 виджетов ECharts, Excel-экспорт, мультивалютный warning, visibility-scope, DashboardController+Resource). 433/433 PHPUnit, QA PASS. *(S1.7, 2026-06-12)*
 - [ ] Форма отчёта о встрече (MeetingReport) — S1.6 (Activity)
 - [x] **Backend-фундамент Kanban-редизайна Сделок (v2-B1 + v2-B2 + board enrichment + my-board):** `deal.nextTask` HasOne relation + `Deal::daysInStage()` + `DealService::board()` enriched (next_task/primary_product batched, amounts_by_currency SQL GROUP BY, ExchangeRate base sum + multi_currency_warning) + `ActivityService::nextTasksForDeals()` (ROW_NUMBER PG / PHP-fallback SQLite) + `ActivityService::myBoard()` urgency-buckets + `ActivityService::stampDealTitles()` + `ActivityType::FollowUp` case + `ActivityType::taskLikeValues()` + `PipelineStage.warn_days/danger_days` migration (reversible) + `DealCardResource` (next_task/primary_product/days_in_stage) + `DealResource` (next_task/days_in_stage) + `PipelineStageResource` (warn_days/danger_days) + `ActivityCardResource` (deal link) + `GET /api/activities/my-board`. 18 новых тестов + глобальный сьют 1567 PASS / 3721 assertions. Миграция применена к dev-БД. 2026-06-16.*
-- [x] **Kanban-редизайн Сделок — Срез 1 (карточка-гибрид) + Срез 2 (тулбар/хром страницы).** `DealsKanbanCard.vue` — полная переработка: health-сигнал (кант + нижняя плашка ok/no-task/overdue), rotting-счётчик (warn/rotting по warn_days/danger_days из stage), аватар менеджера, чип primary_product, bulk-чекбокс. `DealsKanbanColumn.vue` — заливка шапки из `stage.color` (10 вариантов: 5 bright/5 soft), мульти-валютный Popover, кнопка «+» в шапке. `DealsToolbar.vue` (NEW) — amo-style одна строка (поиск+фильтр / сводка / 3 вида / ⋯ меню / + Новая). `DealsFilterOverlay.vue` (NEW) — фиксированный оверлей с backdrop, 3 блока (пресеты ToggleButton / свойства / теги). `DealsBulkToolbar.vue` (NEW) — 6 действий + счётчик + отмена. `DealsTaskBoard.vue` (NEW) + `TaskCard.vue` (NEW) + `useTaskBoard.ts` (NEW) — персональный канбан задач, вид 3. `StageColorPicker.vue` (NEW) — палитра 10 кружков. `salesStore` — DealsView 'kanban'|'list'|'tasks' + BoardSort + bulkMode + localStorage persist. `entities/sales.ts` — NextTaskDto / PrimaryProductDto / BoardColumnDto multi-currency. `useDealsFilters.ts` — расширен на overlay-фильтры. `_colors.scss` — health + stage + task-tag цветовые токены. i18n: sales.deals.page.{toolbar,menu,bulk,card,taskTypes,currency,columns} + tasks.board.* (RU+EN). PM APPROVE, pending QA. 2026-06-16.*
+- [x] **Kanban-редизайн Сделок — Срез 1 (карточка-гибрид) + Срез 2 (тулбар/хром страницы). PM APPROVE (commit dbc3b44, 2026-06-17).** `DealsKanbanCard.vue` — полная переработка: health-сигнал (кант + нижняя плашка ok/no-task/overdue), rotting-счётчик (warn/rotting по warn_days/danger_days из stage), аватар менеджера, чип primary_product, bulk-чекбокс. `DealsKanbanColumn.vue` — заливка шапки из `stage.color` (10 вариантов: 5 bright/5 soft), мульти-валютный Popover, кнопка «+» в шапке. `DealsToolbar.vue` (NEW) — amo-style одна строка (поиск+фильтр / сводка / 3 вида / ⋯ меню / + Новая). `DealsFilterOverlay.vue` (NEW) — фиксированный оверлей с backdrop, 3 блока (пресеты ToggleButton / свойства / теги). `DealsBulkToolbar.vue` (NEW) — 6 действий + счётчик + отмена. `DealsTaskBoard.vue` (NEW) + `TaskCard.vue` (NEW) + `useTaskBoard.ts` (NEW) — персональный канбан задач, вид 3. `StageColorPicker.vue` (NEW) — палитра 10 кружков. `salesStore` — DealsView 'kanban'|'list'|'tasks' + BoardSort + bulkMode + localStorage persist. `entities/sales.ts` — NextTaskDto / PrimaryProductDto / BoardColumnDto multi-currency. `useDealsFilters.ts` — расширен на overlay-фильтры. `_colors.scss` — health + stage + task-tag цветовые токены. i18n: sales.deals.page.{toolbar,menu,bulk,card,taskTypes,currency,columns} + tasks.board.* (RU+EN). PM APPROVE, pending QA. 2026-06-16.*
 - [x] **Тех-долг Сделки-борд (bulk-операции + select-all + preselect + FxRate-fallback) — backend-specialist + frontend-specialist, 2026-06-17.** Backend: `BulkDealService` (all-or-nothing 403, каждая сделка авторизуется по `update`/`delete` ability, DB::transaction, делегация в DealService::update/DealMoveService::move/DealService::delete), `BulkDealActionRequest` (4 операции change_owner/change_stage/set_field/edit_tags, whitelist `DIRECT_SET_FIELDS`, currency-whitelist в withValidator), `BulkDealDeleteRequest`, `DealExportService` (filteredQuery + chunkById 500, visibility-scope, `Amount (kopecks)` raw-колонка, scope-тест). Маршруты: `PATCH /api/deals/bulk` + `DELETE /api/deals/bulk` (перед `deals/{deal}` чтобы 'bulk' не биндился как id). 8 тестов `DealBulkTest` + 3 теста `DealExportTest`. Frontend: `DealsBulkToolbar.vue` (select-all Checkbox + indeterminate + selectAll/clearSelection emit), `allVisibleDealIds` computed (kanban = localColumns.flatMap, list = deals, tasks = []); bulk-диалоги 5 шт. (BulkAssignDialog/BulkMoveStageDialog/BulkEditFieldDialog/BulkTagDialog/BulkAddTaskDialog) через `salesApi.bulkPatchDeals`/`bulkDeleteDeals`; preselect via `salesStore.bulkSelection` из Pinia. Беклог (не блокер): (1) ❗ поле `rate_available` (бэк) ↔ `fx_rate_available` (фронт-адаптер) — несовпадение ключа; `?? true` в адаптере маскирует; ≈-префикс всегда показывается, даже когда курс недоступен — требует фикса в `BoardRawColumnDto`; (2) `DealsListView.vue::rottingClass` использует захардкоженные 7/14 дней вместо `stage.warn_days/danger_days` (list-view не получает PipelineStageDto с порогами); (3) preselect через URL-query (cross-page) — не реализован (текущий preselect — только через Pinia в рамках страницы).
-- [x] **DealPage 2.0 v2 — детальная карточка сделки, корректировки (frontend uncommitted, pending QA).** `DealInfoHeader.vue` — `$brand-header-bg` токен вместо `#172747`; убран подзаголовок `#ID · Компания` (оставлен `#ID` в top-row); стадия кликабельна (кнопка-обёртка + `pi-chevron-down` + tooltip); убрана отдельная кнопка «Изменить стадию»; меню ⋮ новый состав (убраны changeOwner/moveStage/duplicate/archive; добавлены collapseAll/expandAll/customizeFields/copyLink); `DealHealthChip.vue` (NEW) — чип next_task (ok/overdue/no-task). `DealTabMain.vue` — prop `daysInStage`; строка «Дней в работе» с rotting-цветами (warn/danger через `stage.warn_days/danger_days`); чип основного продукта у бюджета; Продукты и Контакты — акцентный хедер (accent=true, count, totalLabel); Даты/Компания/Кастом — `defaultCollapsed: true`; watch `collapseAllSignal`/`expandAllSignal`. `DealFieldGroup.vue` — props `accent`, `count`, `totalLabel`; `defineExpose({ collapse, expand })`. `DealCompanyGroup.vue` — prop `defaultCollapsed`; expose `collapse/expand`. `DealProductRow.vue` — `<div>` flex-layout вместо `<tr>/<td>`; кнопки по hover. `DealFeed.vue` — убран постоянный тулбар → топбар с `pi-search` + `FeedSearchOverlay.vue` (NEW); убран отдельный ⋮; системные события — без card border/bg. `DealFeedItem.vue` — `feed-item--system` class; кнопки по hover (`.feed-item__hover-btn`); «Выполнить» всегда; `pi-user` иконка у responsible. `DealComposer.vue` — убраны Tabs, заменены `<Select>` дропдауном типа; убраны MultiSelect участники и поле location; call/meeting объединены с task формой. `DealInfoPanel.vue` — пробрасывает `nextTask`, `collapseAllSignal`/`expandAllSignal`, expose `onCollapseAll/onExpandAll`. `index.vue` — `useBreakpoints.ts` (NEW) (isMobile/isTablet); `min-width:1100px` убран; 4 брейкпоинта (≥1280/1024-1279/768-1023/<768); `<Drawer>` для планшета; SelectButton «Карточка/Лента» на мобильном; mobile-bar/tablet-bar; composer sticky на мобильном. `entities/sales.ts` — `DealDto.next_task/days_in_stage` (опц.); `DealPage/index.vue` предпочитает `deal.days_in_stage` от бэка. i18n: `clickToChangeStage`, `infoPanel`, `menu.collapseAll/expandAll/customizeFields/copyLink`, `health.noTask/overdue`, `info.fields.daysInWork`, `feed.searchTooltip`. 2026-06-16.*
+- [x] **UI-апдейт Sprint (frontend-specialist + sales-specialist, 2026-06-20). PM APPROVE, QA PASS.** Пять независимых срезов:
+  - **Login-сплит:** `LoginPage/index.vue` — two-column split layout (левая тёмная брендовая панель `$brand-header-bg` + правая форма), 3 брейкпоинта (≥768 side-by-side, 480–767 compact-top-banner, <480 панель скрыта + мобильный логотип в карточке). Форма/composable/auth-логика не затронуты. i18n `auth.brand_panel.tagline/accent` (RU+EN). tsc+lint+build clean.
+  - **Меню (nav/menu):** `navItems.ts` — «Задачи» переименован, добавлена группа «Онбординг» (admin/director), `SettingsPage` hub-страница создана, `adminNavItems` разделитель убран. tsc+lint+build clean.
+  - **Навигация/заметки (nav/notes):** три точечных фикса — навигация по именам (contact notes visibility). tsc+lint+build clean.
+  - **Визуал воронки (funnel):** `DealsKanbanColumn.vue` — шапка колонки: насыщенные мягкие цвета + центрированное жирное название стадии. tsc+lint+build clean.
+  - **Редизайн карточки сделки + бэкенд (card+backend):**
+    - Frontend: `DealInfoPanel.vue` — панель расширена (~30%, 290→380px/320→420px). `DealInfoHeader.vue` — плановые даты (договор + оплата) в тёмную шапку двухколоночным блоком, строки «Бюджет» и «Дней в работе» убраны из шапки. Группа «Сделка» (даты) удалена из `DealTabMain`. `DealProductRow.vue` — просмотр: бейдж скидки + нетто-сумма; редактирование: `InputNumber` для скидки в копейках. `DealProductsGroup.vue` — строка скидки (−N, зелёная) + нетто-итог вместо старого единственного Total. Группа «Данные компании» → «Компания». Строка прогресса стадии — только «N дн.» без дублирования имени стадии. tsc+lint+build clean.
+    - Backend (`sales-specialist`, `Domain/Sales`): миграция `2026_06_23_120000_add_discount_to_deal_products_table` (reversible, `unsignedBigInteger discount default 0`). `DealProduct.$fillable` + `casts()` + factory. `DealProductService::netAmount()` — `max(0, round(qty*price) - discount)`, clamp no-negative. `StoreDealProductRequest` + `UpdateDealProductRequest` — `discount nullable|integer|min:0`. `DealProductResource` — `discount` + `amount` (netto). `DealResource` — `discount_total` (сумма скидок по loaded products, без extra query). Плановые даты: `expected_sign_date` (договор) + `expected_payment_date` (оплата) — подтверждено присутствие в fillable/casts/requests/resource (schema-change не требовалась). 6 unit (`DealAmountTest`: net/discount/clamp) + 9 feature (`DealProductTest` discount, `DealCrudTest` planned-dates round-trip). 29 целевых тестов PASS; миграция проверена (up/rollback/re-up на dev-Postgres). Pint clean (11 файлов).
+- [x] **DealPage 2.0 v2 — детальная карточка сделки, корректировки. PM APPROVE (commit cd80982, 2026-06-17).** `DealInfoHeader.vue` — `$brand-header-bg` токен вместо `#172747`; убран подзаголовок `#ID · Компания` (оставлен `#ID` в top-row); стадия кликабельна (кнопка-обёртка + `pi-chevron-down` + tooltip); убрана отдельная кнопка «Изменить стадию»; меню ⋮ новый состав (убраны changeOwner/moveStage/duplicate/archive; добавлены collapseAll/expandAll/customizeFields/copyLink); `DealHealthChip.vue` (NEW) — чип next_task (ok/overdue/no-task). `DealTabMain.vue` — prop `daysInStage`; строка «Дней в работе» с rotting-цветами (warn/danger через `stage.warn_days/danger_days`); чип основного продукта у бюджета; Продукты и Контакты — акцентный хедер (accent=true, count, totalLabel); Даты/Компания/Кастом — `defaultCollapsed: true`; watch `collapseAllSignal`/`expandAllSignal`. `DealFieldGroup.vue` — props `accent`, `count`, `totalLabel`; `defineExpose({ collapse, expand })`. `DealCompanyGroup.vue` — prop `defaultCollapsed`; expose `collapse/expand`. `DealProductRow.vue` — `<div>` flex-layout вместо `<tr>/<td>`; кнопки по hover. `DealFeed.vue` — убран постоянный тулбар → топбар с `pi-search` + `FeedSearchOverlay.vue` (NEW); убран отдельный ⋮; системные события — без card border/bg. `DealFeedItem.vue` — `feed-item--system` class; кнопки по hover (`.feed-item__hover-btn`); «Выполнить» всегда; `pi-user` иконка у responsible. `DealComposer.vue` — убраны Tabs, заменены `<Select>` дропдауном типа; убраны MultiSelect участники и поле location; call/meeting объединены с task формой. `DealInfoPanel.vue` — пробрасывает `nextTask`, `collapseAllSignal`/`expandAllSignal`, expose `onCollapseAll/onExpandAll`. `index.vue` — `useBreakpoints.ts` (NEW) (isMobile/isTablet); `min-width:1100px` убран; 4 брейкпоинта (≥1280/1024-1279/768-1023/<768); `<Drawer>` для планшета; SelectButton «Карточка/Лента» на мобильном; mobile-bar/tablet-bar; composer sticky на мобильном. `entities/sales.ts` — `DealDto.next_task/days_in_stage` (опц.); `DealPage/index.vue` предпочитает `deal.days_in_stage` от бэка. i18n: `clickToChangeStage`, `infoPanel`, `menu.collapseAll/expandAll/customizeFields/copyLink`, `health.noTask/overdue`, `info.fields.daysInWork`, `feed.searchTooltip`. 2026-06-16.*
 
 **Acceptance M3:** создание сделки с продуктами; **Kanban drag-drop** меняет стадию и пишет историю; lost-reason при проигрыше; list-view с фильтрами; каталог продуктов подтягивается в line-items. CI зелёный. *(ядро выполнено S1.3 2026-06-12; остаток → S1.5+S1.6)*
+
+**Беклог M3 (специальный таск, отложен, НЕ реализовывать сейчас):**
+- [ ] **ОТЛОЖЕН: Логика красной подсветки отложенных задач (Task-overdue-red).** Если менеджер ставит задачу или переносит дедлайн на срок 1 месяц и более вперёд — подсвечивать такую задачу красным (привлечение внимания; борьба с немотивированными переносами). **Исключение:** стадии воронки, где будущие даты легитимны (напр. стадия типа COLD), исключаются из красной подсветки. **Механизм управления:** per-stage флаг в конструкторе воронки (PipelineStage) — тумблер «включить красную подсветку на этой стадии». **Зависимость:** прокачка задачника (Activity/Task — логика создания/редактирования задач, M6); реализовать в привязке к M6 или позже. Schema: добавить `bool warn_on_far_deadline (default true)` в `pipeline_stages` (отдельная миграция при реализации). **Зона:** `sales-specialist` (бэк) + `frontend-specialist` (UI в Kanban-карточке + конструктор воронки).
 
 ---
 
@@ -514,6 +575,87 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [ ] Тесты: GCal-sync (мок Google), webhook HMAC + retry, rate-limit, бот-команды.
 
 **Acceptance M11:** вход через Google работает; событие из CRM улетает в GCal и обратно; webhook доставляется с подписью и ретраит при сбое; API-токен лимитируется; Telegram-бот аппрувит согласование и линкует аккаунт. CI зелёный.
+
+---
+
+### MSP. SalesPulse — надзорный бот продаж (PHP-порт amo-assistant-bot, путь B)
+
+**Статус:** Slice 3 DONE (2026-06-19). Build complete. Cutover-ready (ждёт живой токен + TEAMS_JSON маппинг). Slice 5 (деплой) — по явной просьбе.
+**Ведущие:** `backend-specialist` (схема БД) + `sales-specialist` (движок классификации) + `bot-specialist` (Slice 3-4: nutgram-бот + планировщик). Контекст `SalesPulse`.
+**Спека:** vault `MG CRM 2026/6. Справочник/AMO-бот — спека бизнес-логики (порт на PHP).md`.
+**План по слайсам:** vault `MG CRM 2026/5. Планы/AMO-бот → MGCRM — план миграции.md` §8.
+
+> **Ключевые решения (2026-06-19):**
+> - Путь B: in-process порт, читает БД напрямую через доменные сервисы. API-токен сервис-юзера НЕ нужен.
+> - **КАНОН (переключён):** AMO-воронки «MACRO Global» (sort_order=0) и «MACRO AI Global» (sort_order=1) — PRIMARY sales pipelines. «Продажи» REVERSIBLY ARCHIVED (`is_active=false, sort_order=2`, 11 стадий нетронуты). `DealService::defaultSalesPipelineId()` + `SalesDashboardService::resolvePipeline()` + `PipelineService::defaultSalesPipeline()` — все фильтруют `is_active=true`, дефолт = MACRO Global.
+> - **Фронт-импликация (открытый пункт):** Kanban board теперь по умолчанию показывает 14-стадийную воронку MACRO Global вместо 11-стадийной «Продажи». Ширина колонок и UI board-переключателя могут нуждаться в адаптации. Реализуется отдельно по явной просьбе (`frontend-specialist`).
+> - **Демо-данные:** `SalesPulseDemoSeeder` (SAMPLE — в reset-clean НЕ входит) — today-anchored датасет в обеих AMO-воронках под manager1/2/3@mgcrm.test. collectDay возвращает непустые plan+fact; MetricsService даёт ненулевые метрики. Идемпотентен.
+> - «Success» = переход сделки в `is_won`-стадию (`DealStageHistory`), не активность — announcer читает ДВА источника.
+> - Снапшоты: PLAN write-once, FACT upsert. БД пересоздаётся при cutover (данные регенерируемые).
+> - Маппинг менеджеров (DECISION-2) и токен нового TG-бота — гейтящие входы к Slice 3, не к Slice 0-1.
+
+#### Slice 0 — Фундамент (backend-specialist + sales-specialist) ✅ DONE 2026-06-22
+- [x] 4 миграции: `pulse_snapshots`, `pulse_daily_status`, `pulse_skip_days`, `pulse_announced_events`. FK: `users.id` (cascadeOnDelete), `deals.id` (nullOnDelete), `activities.id` (cascadeOnDelete). Unique-констрейнты: `(manager_id, on_date, kind)` на snapshots; `(manager_id, on_date)` на daily_status; `activity_id` unique на announced_events (де-дуп анонсёра).
+- [x] 4 модели: `PulseSnapshot`, `PulseDailyStatus`, `PulseSkipDay`, `PulseAnnouncedEvent`. Все `$fillable` + typed `casts()` + relations.
+- [x] 3 enum: `SnapKind` (plan/fact), `SnapSource` (manual/auto), `AnnouncedEventType` (meeting_done/success).
+- [x] `StageClassificationService` — движок классификации воронки: `funnelPosition`, `isForwardMove`, `isFunnelDowngrade`, `isStageJump`, `statusSortKey`, `isCold`. Без хардкода id — на `PipelineStage.sort_order` + флагах `is_won`/`is_lost` + code. Мемоизация realRankCache per pipeline_id. Pipeline-агностичен (работает для «Продажи» и AI Global).
+- [x] `Data/PulseTaskRow` — DTO снапшота, `toArray()`/`fromArray()` round-trip, `isRealWork()`/`kindIsRealWork()` через `ActivityType::taskLikeValues()` (library-first), `isClosedToday()`.
+- [x] `Data/StageMeta` — VO эмодзи+SLA per stage.code, `forCode()`/`forStage()`/`label()`.
+- [x] `config/salespulse.php` — cold_stage_codes + карта stages по code (emoji/sla_days/sla_weekly) + stage_default.
+- [x] Тесты: `Feature/SalesPulse/SalesPulseSchemaTest` (6 passed) + `Unit/SalesPulse/StageClassificationServiceTest` (26 passed) = **32 теста зелёных**. Pint clean.
+
+#### Slice 1 — Снапшот + метрики (sales-specialist) ✅ DONE 2026-06-22
+- [x] `DaySnapshotService` (порт `collect_day`): читает activities+deals напрямую через Eloquent, день-окно Asia/Dubai без +4ч AMO-хака, фильтр `responsible_id`+`kind`∈realWork+`target_type=deal`, pipeline-фильтр на стороне Eloquent.
+- [x] `HistoryService` — carryover_days/days_in_stage по 60 дней PLAN-снапшотов (newest-first), обе формулы §1.4 verbatim.
+- [x] `MetricsService` — 6 метрик §1.2 дословно; мутуально-эксклюзивный каскад lost→forward→downgrade.
+- [x] `NotesService` — детект заметок через activity kind=note; `SnapshotRepository` — load/save с PLAN write-once guard.
+- [x] `DayWindowResolver` — окно [00:00:00, 23:59:59.999] Asia/Dubai без хардкода +4ч.
+- [x] `Data/DaySnapshot` — DTO с `toArray()`/`fromArray()`, `leads_by_id` БЕЗ `status_name` (спека §2 verbatim).
+- [x] Тесты: 75 Unit-тестов паритета формул. Сьют 1728+ зелёных.
+
+#### Slice 2 — Отчёты (sales-specialist) ✅ DONE 2026-06-22
+- [x] `PlanRenderer` — plain-text рендер /startday: `📋 План на {ISO} — {name}`, ♻️ carryover, сортировка по statusSortKey (spec §7).
+- [x] `FactRenderer` — HTML рендер /finishday: секции done/not_done_note/not_done_bare/extra + `PulseMetrics::render()` verbatim (spec §7).
+- [x] `ProgressRenderer` — HTML рендер /progress с 5 вариантами строки (vacation/skip/no-plan/zero/live, spec §6.1).
+- [x] `ConversionsRenderer` — рендер /conversions: gates/сквозная/losses/velocity + маркеры «узкое место»/«залипают» (spec §6.2).
+- [x] `DayResultsService` — SYSTEM_PROMPT §5.1 verbatim; payload `closed_today_tasks`/`plan_pending_tasks` с hint-классификацией FLAG/WIN; LLM→Haiku (`quick_qa`); оффлайн-фоллбек verbatim.
+- [x] `WeeklyReportService` + `WeeklyAggregationService` — SYSTEM_PROMPT §5.2 verbatim; forced tool_use `weekly_analysis`; top_movements/top_stuck (сорт по (-delta,company)/(-days,company), топ-5, jump=delta≥2); SLA-пороги §5.2; оффлайн-фоллбек.
+- [x] `ConversionsService` — gates GATES(1,2)..(N-1,N), сквозная воронка, losses rollback, velocity avg/slow (avg≥3); parsePeriod: 0/N/ISO/два-ISO варианта.
+- [x] `PrismPulseLlmClient` — реализует `PulseLlmClient`; реиспользует `AiRetryService` (library-first); `completeText` (dayresults/Haiku), `completeWithTool` (weekly/Sonnet, forced tool_choice); `weeklyAnalysisSchema()` Prism-объекты.
+- [x] `FakePulseLlmClient` — стаб для тестов, без сети. `RuPlural` — плюрализация RU.
+- [x] `ProgressService` — live-пересчёт /progress: done/postponed/in_progress/notes_count из актуального состояния Activity (не снапшота); логика skip/no-plan/zero/live (spec §6.1).
+- [x] Тесты: 108 новых Unit-тестов. Полный сьют 1803 зелёных.
+
+#### Slice 3 — Telegram-бот (bot-specialist) — гейт: токен TG-бота от юзера ✅ DONE
+- [x] Второй nutgram-бот (`SalesPulseBotFactory` + `SalesPulseBot::register()`, `salespulse:run` artisan, гейт `SALESPULSE_RUN_POLLING`; FakeNutgram-fallback при пустом токене).
+- [x] Хендлеры всех команд (/startday, /finishday, /progress, /dayresults, /weeklyreport, /conversions, /skipday, /unskipday, /vacation, /unvacation, /whoami, /help, /start, /announce_now-stub).
+- [x] Team-config (`SALESPULSE_TEAMS_JSON` / `config/salespulse.php`; `TeamResolver` — резолв chatId→team, slug→manager, isAdmin, parseArgs §8).
+- [x] Резолв caller→team→manager + admin-gating (`AdminGate` trait; `CommandContextResolver`). `SalesPulseNotifier` на 2-м токене (без поллинга).
+- [x] `SkipService` (порт skips.py: skip/vacation/unvacation/isTeamSkipped/isManagerSkipped/vacationUntil/isReturningFromVacation); новая миграция `add_kind_to_pulse_skip_days` (kind/vacation_until поверх Slice-0 таблицы).
+- [x] Compose-сервис `salespulse-bot` (replicas:1, отдельно от web/queue rolling-restart) в dev и prod compose.
+- [x] 27 новых тестов на FakeNutgram. Полный сьют 1834 passed.
+- [x] **Private-chat TEST MODE** (`config/salespulse.php` секция `test_mode`): `SALESPULSE_TEST_MODE=false` (off в проде), `SALESPULSE_TEST_ADMINS` (csv). `TestModeResolver` + ветвление в `CommandContextResolver::resolveTestTeam()` — вторая, изолированная ветка резолва только для private-chat от admin. `CommandContext.isTestMode` (default false). `/start` + `/whoami` в DM шлют тест-онбординг. Маппинг pipeline по именам + fallback `all_active_sales`. Email→user_id резолв; отсутствующий аккаунт → пропуск + Log::info. 10 тестов `SalesPulseTestModeTest` + 8 тестов `TestModeResolverTest` = +18. Сьют **209 SalesPulse-тестов зелёных**.
+- [ ] QA (ждёт живого токена + TEAMS_JSON маппинга от юзера).
+- [x] `AmoPipelineSeeder` в BASELINE (после `PipelineSeeder`) — архивирует «Продажи», засевает «MACRO Global» + «MACRO AI Global». Идемпотентен. `DemoDealsSeeder` и `ManagerKpiSeeder` перенаправлены на MACRO Global.
+- [x] `SalesPulseDemoSeeder` в SAMPLE — today-anchored датасет в обеих AMO-воронках под demo-менеджерами. `SalesPulseDemoSeederTest` (5 тестов): collectDay непустой plan+fact; MetricsService ненулевой; идемпотентность; no-op при отсутствии воронок. Полный сьют **1886 passed**, Pint clean.
+- [x] Тесты канона: `AmoPipelineSeederTest` обновлён — `DealService::defaultSalesPipelineId()` возвращает MACRO Global при наличии обеих воронок.
+- **Открытый вопрос к cutover:** получить живой `SALESPULSE_BOT_TOKEN` + MGCRM user_id 5 менеджеров (Рогов/Моисеева/Шомина/Некрасов/Федорин) + chat_id обеих команд для `SALESPULSE_TEAMS_JSON`.
+- **Для обкатки test mode:** `SALESPULSE_TEST_MODE=true` + `SALESPULSE_BOT_TOKEN` (тестовый бот) + поднять `salespulse-bot` polling + `SalesPulseDemoSeeder` + DM `/start` от `@Bogdan_MACRO`.
+
+#### Slice 4 — Планировщик + announcer (bot-specialist) ✅ DONE 2026-06-19
+- [x] Laravel scheduler Asia/Dubai: точные cron-окна §3 (09:30/10:00/10:15/13:00/16:00/19:00/19:30/19:45 пн-пт + 08:30 вт-пт + 20:00 пт + 09:00 пн + */5 ч.9-20). `->between('09:00','20:59')` на announcer.
+- [x] Jobs: `RemindPlanJob` / `AutoCapturePlanJob` / `PostProgressJob` / `RemindFactJob` / `AutoCaptureFactJob` / `PostDayResultsJob(forToday)` / `PostWeeklyReportJob` / `RunAnnouncerJob`. Все ShouldQueue, `tries=1`, weekday+guard в каждой.
+- [x] Announcer: `AnnouncerService::runAll()` — FTM-встреча (activity.is_first_time_meeting+completed_at в окне 15 мин) + переход в `is_won` (`DealStageHistory.created_at` в окне). Insert-first дедуп, ловит unique-violation.
+- [x] Дедуп для Success: миграция `relax_pulse_announced_events_for_success` — `activity_id`→nullable + `deal_stage_history_id` FK nullable, два plain UNIQUE (NULL-distinct на SQLite+Postgres). Модель обновлена.
+- [x] Пропуск: `is_team_skipped` / `is_manager_skipped` в каждой Job; announcer проверяет через `SkipService::isManagerSkipped()`.
+- [x] Тесты: `AnnouncerServiceTest` (11) + `SchedulerJobsTest` (13) + `ScheduleRegistrationTest` (8) = +32. Итого 183 SalesPulse-теста, 1878 passed, Pint clean.
+- [x] Acceptance Slice 4: scheduler зарегистрирован с точными cron-выражениями + Asia/Dubai; announcer детектирует MeetingDone и Success; дедуп переживает рестарт; формат сообщений §4 verbatim.
+
+#### Slice 5 — Деплой/cutover (deploy-engineer — по явной просьбе)
+- [ ] Контейнер `salespulse-bot` (replicas:1, mem/cpu лимиты) + env + rolling-restart отдельно.
+- [ ] Гасим Python amo-bot; поднимаем salespulse-bot. БД с нуля.
+
+**Acceptance MSP:** `/startday` фиксирует план (write-once); `/finishday` постит 6 метрик verbatim; `/dayresults` генерирует LLM-нарратив Haiku; планировщик тригерит по расписанию Asia/Dubai; announcer дедуп-постит meeting_done и success; `/skipday` блокирует команду; тесты Unit+Feature зелёные; CI зелёный.
 
 ---
 

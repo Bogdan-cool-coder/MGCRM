@@ -198,4 +198,25 @@ class Deal extends Model
             ->whereNotNull('due_at')
             ->orderBy('due_at');
     }
+
+    /**
+     * The Crm entities whose engagement (last_activity_at) this deal touches: its
+     * company and every linked contact (deal_contacts). Single source for the
+     * deal → {company, contacts} fan-out, reused by the Sales (deal mutations)
+     * and Activity (deal-targeted activities) domains so neither duplicates the
+     * deal_contacts lookup. Fed verbatim into EngagementService::touchForDeal().
+     *
+     * @return array{company_id: ?int, contact_ids: list<int>}
+     */
+    public function engagementTargets(): array
+    {
+        return [
+            'company_id' => $this->company_id !== null ? (int) $this->company_id : null,
+            'contact_ids' => DealContact::query()
+                ->where('deal_id', $this->id)
+                ->pluck('contact_id')
+                ->map(static fn ($id): int => (int) $id)
+                ->all(),
+        ];
+    }
 }

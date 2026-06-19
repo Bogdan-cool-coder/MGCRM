@@ -2,8 +2,12 @@
  * Unified navigation source.
  * Both sidebar and Orbita pull items from here.
  *
- * Prototype set (2026-06-16): only Sales module items.
- * Full list is commented below — uncomment when modules are ready.
+ * Structure:
+ *  - prototypeNavItems: main 5 items always shown
+ *  - onboardingNavGroup: group shown to admin/director below main items
+ *  - settingsNavItem: single "Settings" entry shown to admin/director
+ *  - allNavItems: flat list used by CommandPalette for search
+ *  - adminNavItems: flat list used by CommandPalette for admin search
  */
 
 export interface NavItemBadge {
@@ -35,7 +39,20 @@ export interface NavItem {
   adminOnly?: boolean
 }
 
-// ─── Prototype set: Sales module (5 items) ───────────────────────────────────
+export interface NavGroup {
+  /** Unique slug for the group */
+  key: string
+  /** i18n key for group label */
+  labelKey: string
+  /** PrimeIcons class for group icon (used in collapsed tooltip) */
+  icon: string
+  /** Items inside the group */
+  items: NavItem[]
+  /** If set — group is visible only for ['admin', 'director'] */
+  adminOnly?: boolean
+}
+
+// ─── Main navigation (always visible) ────────────────────────────────────────
 export const prototypeNavItems: NavItem[] = [
   {
     key: 'dashboard',
@@ -56,10 +73,10 @@ export const prototypeNavItems: NavItem[] = [
     labelKey: 'nav.deals',
   },
   {
-    key: 'my-tasks',
+    key: 'tasks',
     route: '/my-tasks',
     icon: 'pi pi-check-square',
-    labelKey: 'nav.myTasks',
+    labelKey: 'nav.tasks',
     badge: { source: 'activityStore.myOpenCount', variant: 'warning' },
   },
   {
@@ -70,7 +87,47 @@ export const prototypeNavItems: NavItem[] = [
   },
 ]
 
-// ─── Full set (for future use after module cleanup) ───────────────────────────
+// ─── Onboarding group (admin/director only) ───────────────────────────────────
+export const onboardingNavGroup: NavGroup = {
+  key: 'onboarding',
+  labelKey: 'nav.onboarding',
+  icon: 'pi pi-graduation-cap',
+  adminOnly: true,
+  items: [
+    {
+      key: 'onboarding-courses',
+      route: '/admin/onboarding/courses',
+      icon: 'pi pi-graduation-cap',
+      labelKey: 'nav.onboardingAdmin',
+      adminOnly: true,
+    },
+    {
+      key: 'onboarding-assignments',
+      route: '/admin/onboarding/assignments',
+      icon: 'pi pi-users',
+      labelKey: 'nav.onboardingAssignments',
+      adminOnly: true,
+    },
+    {
+      key: 'hr-progress',
+      route: '/admin/onboarding/progress',
+      icon: 'pi pi-chart-bar',
+      labelKey: 'nav.hrProgress',
+      adminOnly: true,
+    },
+  ],
+}
+
+// ─── Settings entry (admin/director only) ─────────────────────────────────────
+export const settingsNavItem: NavItem = {
+  key: 'settings',
+  route: '/settings',
+  icon: 'pi pi-cog',
+  labelKey: 'nav.settings',
+  adminOnly: true,
+}
+
+// ─── Full flat set (for CommandPalette search) ────────────────────────────────
 export const allNavItems: NavItem[] = [
   {
     key: 'dashboard',
@@ -97,10 +154,10 @@ export const allNavItems: NavItem[] = [
     labelKey: 'nav.deals',
   },
   {
-    key: 'my-tasks',
+    key: 'tasks',
     route: '/my-tasks',
     icon: 'pi pi-check-square',
-    labelKey: 'nav.myTasks',
+    labelKey: 'nav.tasks',
     badge: { source: 'activityStore.myOpenCount', variant: 'warning' },
   },
   {
@@ -143,7 +200,15 @@ export const allNavItems: NavItem[] = [
   },
 ]
 
+// ─── Admin flat set (for CommandPalette search) ───────────────────────────────
 export const adminNavItems: NavItem[] = [
+  {
+    key: 'settings',
+    route: '/settings',
+    icon: 'pi pi-cog',
+    labelKey: 'nav.settings',
+    adminOnly: true,
+  },
   {
     key: 'pipeline-settings',
     route: '/settings/pipeline',
@@ -223,4 +288,13 @@ export function filterNavByRole(items: NavItem[], role: string | null): NavItem[
     }
     return true
   })
+}
+
+/**
+ * Filter nav groups by user role.
+ */
+export function filterGroupByRole(group: NavGroup, role: string | null): boolean {
+  const isAdmin = role === 'admin' || role === 'director'
+  if (group.adminOnly) return isAdmin
+  return true
 }

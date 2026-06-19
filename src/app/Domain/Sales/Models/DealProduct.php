@@ -13,7 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * DealProduct — line item on a deal. unit_price/currency are a price snapshot
- * taken at add time (kopecks). amount = round(quantity * unit_price).
+ * taken at add time (kopecks). discount is a manual per-line reduction (kopecks).
+ * amount = max(0, round(quantity * unit_price) - discount) — net of discount.
  * Deal.amount is denormalised from the sum of these rows (DealService::recalcAmount).
  */
 class DealProduct extends Model
@@ -34,6 +35,7 @@ class DealProduct extends Model
         'plan_id',
         'quantity',
         'unit_price',
+        'discount',
         'currency',
         'amount',
         'sort_order',
@@ -44,7 +46,8 @@ class DealProduct extends Model
         return [
             'quantity' => 'decimal:2',
             'unit_price' => 'integer', // kopecks
-            'amount' => 'integer',     // kopecks
+            'discount' => 'integer',   // kopecks (manual per-line discount)
+            'amount' => 'integer',     // kopecks (net of discount)
             'sort_order' => 'integer',
         ];
     }

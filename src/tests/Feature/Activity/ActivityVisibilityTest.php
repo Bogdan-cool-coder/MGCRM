@@ -100,7 +100,9 @@ class ActivityVisibilityTest extends TestCase
 
     public function test_target_type_enum_is_whitelisted(): void
     {
-        // Sanity: only deal/company are valid target types.
-        $this->assertSame(['deal', 'company'], ActivityTargetType::values());
+        // Sanity: deal/company/contact are valid target types.
+        // Contact was added in S5 (CRM entity feed) — extending the whitelist
+        // requires no migration (polymorphic string column, no FK).
+        $this->assertSame(['deal', 'company', 'contact'], ActivityTargetType::values());
     }
 }
