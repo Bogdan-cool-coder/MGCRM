@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Activity;
 
 use App\Domain\Activity\Enums\ActivityPriority;
+use App\Domain\Activity\Enums\ActivityType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,6 +19,9 @@ class UpdateActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // kind (task type) is editable inline from the task list; the deal
+            // stage task_types gate is re-applied in ActivityService::update().
+            'kind' => ['sometimes', 'string', Rule::in(ActivityType::values())],
             'title' => ['sometimes', 'string', 'max:255'],
             'body' => ['sometimes', 'nullable', 'string'],
             'due_at' => ['sometimes', 'nullable', 'date'],

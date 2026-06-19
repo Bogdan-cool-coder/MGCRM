@@ -36,14 +36,6 @@
         :title="t('sales.deals.page.viewList')"
         @click="emit('setView', 'list')"
       />
-      <Button
-        icon="pi pi-check-square"
-        :class="['deals-toolbar__view-btn', { 'deals-toolbar__view-btn--active': activeView === 'tasks' }]"
-        :severity="activeView === 'tasks' ? 'primary' : 'secondary'"
-        text
-        :title="t('sales.deals.page.viewTasks')"
-        @click="emit('setView', 'tasks')"
-      />
     </div>
 
     <!-- More menu -->

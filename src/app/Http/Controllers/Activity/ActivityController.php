@@ -13,6 +13,8 @@ use App\Domain\Sales\Models\Deal;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolveVisibility;
 use App\Http\Requests\Activity\ChangeStatusRequest;
+use App\Http\Requests\Activity\CompleteActivityRequest;
+use App\Http\Requests\Activity\RescheduleActivityRequest;
 use App\Http\Requests\Activity\StoreActivityRequest;
 use App\Http\Requests\Activity\StoreBulkActivityRequest;
 use App\Http\Requests\Activity\UpdateActivityRequest;
@@ -136,14 +138,29 @@ class ActivityController extends Controller
         return response()->noContent();
     }
 
-    public function complete(Request $request, Activity $activity): JsonResource
+    public function complete(CompleteActivityRequest $request, Activity $activity): JsonResource
     {
-        $this->authorize('complete', $activity);
-
-        $completed = $this->service->complete($activity, $request->user());
+        $completed = $this->service->complete(
+            $activity,
+            $request->user(),
+            $request->validated('result_text'),
+        );
 
         return ActivityResource::make(
             $completed->load(['responsible:id,full_name', 'createdBy:id,full_name', 'completedBy:id,full_name'])
+        );
+    }
+
+    /**
+     * Quick due-date shift from the task list — POST a {preset} of tomorrow /
+     * next_week / next_month; the service computes due_at in the app timezone.
+     */
+    public function reschedule(RescheduleActivityRequest $request, Activity $activity): JsonResource
+    {
+        $rescheduled = $this->service->reschedule($activity, $request->validated('preset'));
+
+        return ActivityResource::make(
+            $rescheduled->load(['responsible:id,full_name', 'createdBy:id,full_name', 'completedBy:id,full_name'])
         );
     }
 

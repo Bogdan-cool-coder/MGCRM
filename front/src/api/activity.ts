@@ -118,6 +118,20 @@ export const activityApi = {
     return res.data
   },
 
+  // ── Inline status change (PATCH /api/activities/{id}/status) ─────────────
+
+  async changeStatus(
+    id: number,
+    status: import('@/entities/activity').ActivityStatus,
+    resultText?: string | null,
+  ): Promise<ActivityDto> {
+    const res = await apiClient.patch<{ data: ActivityDto }>(`/api/activities/${id}/status`, {
+      status,
+      result_text: resultText ?? null,
+    })
+    return res.data.data
+  },
+
   // ── Bulk create (POST /api/activities/bulk) ────────────────────────────────
 
   async bulkCreateActivities(payload: BulkCreateActivityPayload): Promise<void> {

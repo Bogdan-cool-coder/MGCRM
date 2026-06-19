@@ -80,15 +80,6 @@
       />
     </div>
 
-    <!-- Tasks view (view 3) -->
-    <div v-else class="deals-page__tasks-wrap">
-      <DealsTaskBoard
-        @add-task="createDrawerOpen = true"
-        @task-completed="onTaskCompleted"
-        @error="onTaskError"
-      />
-    </div>
-
     <!-- Create deal drawer -->
     <DealCreateDrawer
       v-model="createDrawerOpen"
@@ -154,7 +145,6 @@ import DealsListView from './components/DealsListView.vue'
 import DealsToolbar from './components/DealsToolbar.vue'
 import DealsBulkToolbar from './components/DealsBulkToolbar.vue'
 import DealsFilterOverlay from './components/DealsFilterOverlay.vue'
-import DealsTaskBoard from './components/DealsTaskBoard.vue'
 import DealCreateDrawer from './components/DealCreateDrawer.vue'
 import MoveDealDialog from './components/MoveDealDialog.vue'
 import BulkAssignDialog from './components/BulkAssignDialog.vue'
@@ -240,7 +230,6 @@ function onSetView(view: DealsView) {
     listFilters.resetPage()
     void listComposable.load()
   }
-  // tasks view loads via DealsTaskBoard onMounted
 }
 
 function onSetSort(sort: BoardSort) {
@@ -251,7 +240,7 @@ function onSetSort(sort: BoardSort) {
 // Sync URL
 onMounted(() => {
   const urlView = route.query.view as string
-  if (urlView === 'list' || urlView === 'kanban' || urlView === 'tasks') {
+  if (urlView === 'list' || urlView === 'kanban') {
     salesStore.setActiveView(urlView as DealsView)
   }
 })
@@ -553,16 +542,6 @@ async function onExport() {
   }
 }
 
-// ── Tasks view ─────────────────────────────────────────────────────────────────
-
-function onTaskCompleted() {
-  toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 3000 })
-}
-
-function onTaskError(message: string) {
-  toast.add({ severity: 'error', summary: message, life: 4000 })
-}
-
 // ── Global UI-trigger: open create drawer from QuickActionsCluster ─────────────
 
 const stopDrawerTrigger = watch(
@@ -641,12 +620,4 @@ onMounted(async () => {
   padding: $space-4 $space-6;
 }
 
-.deals-page__tasks-wrap {
-  flex: 1;
-  overflow: hidden;
-  padding: 0 $space-6 $space-4;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
 </style>

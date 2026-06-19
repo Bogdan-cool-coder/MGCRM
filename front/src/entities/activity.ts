@@ -18,6 +18,24 @@ export interface ActivityUserRefDto {
   avatar_path: string | null
 }
 
+// ─── Deal context (stamped by ActivityService::stampDealContext) ──────────────
+
+export interface ActivityDealContextDto {
+  id: number
+  title: string
+  stage: {
+    id: number
+    name: string
+    color: string | null
+    is_won: boolean
+    is_lost: boolean
+  } | null
+  company: {
+    id: number
+    name: string
+  } | null
+}
+
 // ─── Target ref ───────────────────────────────────────────────────────────────
 
 export interface ActivityTargetRefDto {
@@ -45,6 +63,8 @@ export interface ActivityDto {
   target_label: string | null
   responsible: ActivityUserRefDto | null
   creator: ActivityUserRefDto | null
+  // Deal context (batch-stamped by ActivityService on list responses; absent on timeline/show)
+  deal?: ActivityDealContextDto | null
   // Meeting fields
   ftm_decision_maker_attended: boolean
   ftm_presentation_shown: boolean
@@ -137,6 +157,7 @@ export interface CreateActivityPayload {
 }
 
 export interface UpdateActivityPayload {
+  kind?: ActivityKind
   title?: string
   body?: string | null
   responsible_id?: number | null

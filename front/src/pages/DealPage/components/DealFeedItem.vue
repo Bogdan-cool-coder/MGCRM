@@ -144,11 +144,25 @@
           {{ item.activity.body }}
         </p>
 
+        <!-- Inline complete form (task quick form) -->
+        <Transition name="tqf-slide">
+          <TaskQuickForm
+            v-if="showCompleteForm && !item.activity.is_closed"
+            mode="complete"
+            :activity="item.activity"
+            :closable="true"
+            class="feed-item__quick-complete"
+            @completed="onQuickCompleted"
+            @delete="onDelete"
+            @cancel="showCompleteForm = false"
+          />
+        </Transition>
+
         <!-- Actions -->
         <div class="feed-item__actions">
           <!-- Always visible: complete CTA for active tasks -->
           <Button
-            v-if="!item.activity.is_closed && item.activity.status !== 'done'"
+            v-if="!item.activity.is_closed && item.activity.status !== 'done' && item.activity.kind !== 'note'"
             icon="pi pi-check"
             :label="t('activity.actions.complete')"
             severity="success"
@@ -156,7 +170,7 @@
             outlined
             :loading="completingId === item.activity.id"
             class="feed-item__complete-btn"
-            @click="onComplete"
+            @click="showCompleteForm = !showCompleteForm"
           />
           <!-- Hover-only actions -->
           <Button
@@ -229,6 +243,7 @@ import Tag from 'primevue/tag'
 import Menu from 'primevue/menu'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import MeetingReportDialog from '@/components/MeetingReportDialog.vue'
+import TaskQuickForm from '@/components/tasks/TaskQuickForm.vue'
 import { statusSeverity, prioritySeverity, formatDueDate } from '@/utils/activity'
 import type { FeedItem } from '../composables/useDealFeed'
 import type { ActivityDto } from '@/entities/activity'
@@ -243,7 +258,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  complete: [id: number]
   reopen: [id: number]
   remove: [id: number]
   updated: [activity: ActivityDto]
@@ -261,6 +275,7 @@ const formDialogOpen = ref(false)
 const editingActivityId = ref<number | null>(null)
 const meetingReportOpen = ref(false)
 const changesExpanded = ref(false)
+const showCompleteForm = ref(false)
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 
@@ -376,10 +391,10 @@ function onEdit() {
   }
 }
 
-function onComplete() {
-  if (props.item.activity) {
-    emit('complete', props.item.activity.id)
-  }
+function onQuickCompleted(activity: ActivityDto) {
+  showCompleteForm.value = false
+  emit('updated', activity)
+  toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 3000 })
 }
 
 function onReopen() {
@@ -656,6 +671,30 @@ function onActivityUpdated(activity: ActivityDto) {
   .app-dark & {
     color: var(--p-surface-300);
   }
+}
+
+.feed-item__quick-complete {
+  margin-top: $space-2;
+  margin-bottom: $space-1;
+}
+
+// tqf-slide transition (same as kanban board)
+.tqf-slide-enter-active,
+.tqf-slide-leave-active {
+  transition: all 0.18s ease;
+  overflow: hidden;
+}
+
+.tqf-slide-enter-from,
+.tqf-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.tqf-slide-enter-to,
+.tqf-slide-leave-from {
+  opacity: 1;
+  max-height: 300px;
 }
 
 .feed-item__actions {

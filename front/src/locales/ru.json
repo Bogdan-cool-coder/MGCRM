@@ -16,7 +16,6 @@
     "profile": "Профиль",
     "logout": "Выйти",
     "pipelineSettings": "Настройки воронки",
-    "tasks": "Задачи",
     "myTasks": "Мои задачи",
     "managerCabinet": "Кабинет менеджера",
     "myApprovals": "Мои согласования",
@@ -866,7 +865,8 @@
       "call": "Звонок",
       "meeting": "Встреча",
       "task": "Задача",
-      "note": "Заметка"
+      "note": "Заметка",
+      "follow_up": "Follow-up"
     },
     "statuses": {
       "new": "Новая",
@@ -2646,6 +2646,44 @@
         "warm": "Warm",
         "hot": "HOT"
       }
+    },
+    "page": {
+      "viewKanban": "Канбан",
+      "viewList": "Список"
+    },
+    "list": {
+      "col": {
+        "dueAt": "Дата исполнения",
+        "responsible": "Ответственный",
+        "dealCompany": "Компания / Сделка",
+        "kind": "Тип задачи",
+        "dealStage": "Статус сделки",
+        "status": "Статус",
+        "title": "Текст задачи"
+      },
+      "placeholder": {
+        "date": "Выберите дату",
+        "responsible": "Не назначен",
+        "kind": "Тип...",
+        "status": "Статус...",
+        "title": "Текст задачи"
+      },
+      "patchSuccess": "Изменение сохранено",
+      "stageWon": "Выигранная сделка",
+      "stageLost": "Проигранная сделка"
+    },
+    "quick": {
+      "titlePlaceholder": "Текст задачи",
+      "resultPlaceholder": "Добавить результат...",
+      "changeKind": "Тип задачи",
+      "markDone": "Отметить выполненным",
+      "tomorrow": "Завтра",
+      "nextWeek": "Через неделю",
+      "nextMonth": "Через месяц",
+      "pickDate": "Выбрать дату",
+      "create": "Создать",
+      "complete": "Выполнить",
+      "delete": "Удалить"
     }
   },
   "system": {

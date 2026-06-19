@@ -34,15 +34,26 @@ class ActivityCardResource extends JsonResource
             'responsible_id' => $this->responsible_id,
             'responsible' => $this->whenLoaded('responsible', fn () => [
                 'id' => $this->responsible->id,
-                'name' => $this->responsible->full_name,
+                'full_name' => $this->responsible->full_name,
             ]),
-            // Parent deal (id + title) when the task targets a deal — stamped by
-            // ActivityService::myBoard() (batched). null for company/standalone.
-            'deal' => $this->deal_title === null ? null : [
-                'id' => (int) $this->target_id,
-                'title' => $this->deal_title,
-            ],
+            // Parent deal context (id + title + stage + company) when the task
+            // targets a deal — batch-stamped by ActivityService (myBoard/list). null
+            // for company/contact/standalone targets.
+            'deal' => $this->dealContext(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * The batched deal-context attribute stamped by ActivityService. Returns null
+     * when not resolved or when the target is not a deal.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function dealContext(): ?array
+    {
+        $context = $this->resource->getAttribute('deal_context');
+
+        return is_array($context) ? $context : null;
     }
 }

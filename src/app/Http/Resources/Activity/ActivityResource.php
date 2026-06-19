@@ -20,6 +20,12 @@ class ActivityResource extends JsonResource
             'target_type' => $this->target_type,
             'target_id' => $this->target_id,
 
+            // Linked deal context (id + title + stage + company) for the task list
+            // columns "связанная сделка / компания / статус сделки". Batch-stamped
+            // by ActivityService::list() (no N+1); present only on list responses,
+            // null for company/contact/standalone targets.
+            'deal' => $this->dealContext(),
+
             'title' => $this->title,
             'body' => $this->body,
 
@@ -65,5 +71,19 @@ class ActivityResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * The batched deal-context attribute stamped by ActivityService::list().
+     * Returns null when it was not resolved (timeline/show responses) or when the
+     * target is not a deal — the frontend treats null as "no linked deal".
+     *
+     * @return array<string, mixed>|null
+     */
+    private function dealContext(): ?array
+    {
+        $context = $this->resource->getAttribute('deal_context');
+
+        return is_array($context) ? $context : null;
     }
 }

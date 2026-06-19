@@ -6,7 +6,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { PipelineStageDto, LostReasonDto } from '@/entities/sales'
 
-export type DealsView = 'kanban' | 'list' | 'tasks'
+export type DealsView = 'kanban' | 'list'
 export type BoardSort = 'created_at_desc' | 'title_asc' | 'amount_desc' | 'last_activity_desc'
 
 const DEALS_VIEW_KEY = 'deals_active_view'
@@ -15,8 +15,11 @@ export const useSalesStore = defineStore('sales', () => {
   // Active pipeline selection
   const activePipelineId = ref<number | null>(null)
 
-  // Kanban / List / Tasks view preference (persisted in localStorage)
-  const _savedView = localStorage.getItem(DEALS_VIEW_KEY) as DealsView | null
+  // Kanban / List view preference (persisted in localStorage)
+  // Guard: 'tasks' was removed from DealsView — fall back to 'kanban'
+  const _rawSavedView = localStorage.getItem(DEALS_VIEW_KEY)
+  const _savedView: DealsView | null =
+    _rawSavedView === 'kanban' || _rawSavedView === 'list' ? _rawSavedView : null
   const activeView = ref<DealsView>(_savedView ?? 'kanban')
 
   // Board sort order

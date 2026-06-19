@@ -79,7 +79,6 @@
               :deal-id="dealId"
               :completing-id="completingId"
               :reopening-id="reopeningId"
-              @complete="onComplete"
               @reopen="onReopen"
               @remove="onRemove"
               @updated="onUpdated"
@@ -159,16 +158,6 @@ function formatGroupDate(dateStr: string): string {
 }
 
 // ─── Activity action handlers ─────────────────────────────────────────────────
-
-async function onComplete(id: number) {
-  completingId.value = id
-  try {
-    await props.feed.completeActivity(id)
-    toast.add({ severity: 'success', summary: t('activity.actions.complete'), life: 2000 })
-  } finally {
-    completingId.value = null
-  }
-}
 
 async function onReopen(id: number) {
   reopeningId.value = id

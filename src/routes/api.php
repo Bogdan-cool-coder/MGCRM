@@ -458,6 +458,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::post('activities/{activity}/complete', [ActivityController::class, 'complete'])->name('activities.complete');
     Route::post('activities/{activity}/reopen', [ActivityController::class, 'reopen'])->name('activities.reopen');
     Route::patch('activities/{activity}/status', [ActivityController::class, 'status'])->name('activities.status');
+    // Quick due-date shift (tomorrow / next_week / next_month) — computed server-side.
+    Route::post('activities/{activity}/reschedule', [ActivityController::class, 'reschedule'])->name('activities.reschedule');
 
     // =========================================================================
     // Activity — Meeting report question registry

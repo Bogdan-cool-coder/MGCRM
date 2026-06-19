@@ -56,7 +56,7 @@ class ActivityService
      */
     public function list(array $filters, VisibilityScope $scope, User $user, int $perPage = 25): LengthAwarePaginator
     {
-        return $this->scopedQuery($scope, $user)
+        $page = $this->scopedQuery($scope, $user)
             ->with(['responsible:id,full_name', 'createdBy:id,full_name', 'completedBy:id,full_name'])
             ->when(isset($filters['target_type']), fn (Builder $q) => $q->where('target_type', $filters['target_type']))
             ->when(isset($filters['target_id']), fn (Builder $q) => $q->where('target_id', (int) $filters['target_id']))
@@ -68,6 +68,14 @@ class ActivityService
             ->when(isset($filters['q']), fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'))
             ->orderByDesc('created_at')
             ->paginate($perPage);
+
+        // Stamp the linked deal context (title + stage + company) onto every
+        // deal-targeted row in the page in ONE pair of queries, so the task list
+        // columns "связанная сделка / компания / статус сделки" render with no
+        // N+1 (Задачник 2.0 §список).
+        $this->stampDealContext($page->getCollection());
+
+        return $page;
     }
 
     /**
@@ -179,11 +187,22 @@ class ActivityService
      * Partial update. status and target_* are stripped here (status only via
      * changeStatus()/complete()/reopen(); target is immutable after create).
      *
+     * `kind` (task type) is editable inline from the task list — when the activity
+     * targets a deal, a kind change is re-gated against the stage task_types
+     * whitelist (E1) so an inline edit cannot smuggle in a kind the stage forbids.
+     *
      * @param  array<string, mixed>  $data
      */
     public function update(Activity $activity, array $data): Activity
     {
         unset($data['status'], $data['target_type'], $data['target_id'], $data['created_by_id']);
+
+        // Inline kind change: re-apply the deal stage task_types gate (E1).
+        if (array_key_exists('kind', $data)
+            && $activity->target_type === ActivityTargetType::Deal->value
+            && $activity->target_id !== null) {
+            $this->assertKindAllowedOnDeal((int) $activity->target_id, (string) $data['kind']);
+        }
 
         $previousResponsible = $activity->responsible_id;
 
@@ -201,23 +220,40 @@ class ActivityService
     /**
      * Mark an activity done (E2). Idempotent — completing an already-done
      * activity is a no-op that returns it unchanged. Notes cannot be completed.
+     *
+     * An optional $resultText ("Добавить результат" from the task list) is saved
+     * onto the activity's result_text in the same write. A null $resultText leaves
+     * any existing result untouched (it is only stamped when explicitly provided),
+     * so completing without a result never wipes a previously entered one.
      */
-    public function complete(Activity $activity, User $user): Activity
+    public function complete(Activity $activity, User $user, ?string $resultText = null): Activity
     {
         $this->assertCompletable($activity);
 
         if ($activity->status === ActivityStatus::Done && $activity->completed_at !== null) {
+            // Already done: still allow a late result to be recorded.
+            if ($resultText !== null) {
+                $activity->update(['result_text' => $resultText]);
+                $activity->refresh();
+            }
+
             return $activity; // idempotent
         }
 
         $from = $activity->status;
 
-        $activity->update([
+        $payload = [
             'status' => ActivityStatus::Done,
             'completed_at' => now(),
             'completed_by_id' => $user->id,
             'progress_pct' => 100,
-        ]);
+        ];
+
+        if ($resultText !== null) {
+            $payload['result_text'] = $resultText;
+        }
+
+        $activity->update($payload);
         $activity->refresh();
 
         // Completing a call/meeting/task is fresh engagement on its target.
@@ -251,6 +287,39 @@ class ActivityService
         $activity->refresh();
 
         ActivityStatusChanged::dispatch($activity, $from, ActivityStatus::InProgress);
+
+        return $activity;
+    }
+
+    /**
+     * Quick due-date shift from the task list ("завтра / через неделю / через
+     * месяц"). The new due_at is computed server-side in the app timezone so the
+     * preset means the same thing regardless of the client clock — start of the
+     * target day (Дубай-окно, no client +4h hack). Notes (no deadline) are
+     * rejected via assertCompletable. Returns the rescheduled activity.
+     *
+     * Presets:
+     *   tomorrow   → start of tomorrow
+     *   next_week  → start of the day one week from today
+     *   next_month → start of the day one month from today
+     */
+    public function reschedule(Activity $activity, string $preset): Activity
+    {
+        $this->assertCompletable($activity);
+
+        $todayStart = now()->startOfDay();
+
+        $due = match ($preset) {
+            'tomorrow' => $todayStart->copy()->addDay(),
+            'next_week' => $todayStart->copy()->addWeek(),
+            'next_month' => $todayStart->copy()->addMonthNoOverflow(),
+            default => throw ValidationException::withMessages([
+                'preset' => "Unknown reschedule preset: {$preset}.",
+            ]),
+        };
+
+        $activity->update(['due_at' => $due]);
+        $activity->refresh();
 
         return $activity;
     }
@@ -315,13 +384,17 @@ class ActivityService
     {
         $this->assertKnownPreset($preset);
 
-        return $this->scopedQuery($scope, $user)
+        $page = $this->scopedQuery($scope, $user)
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
             ->where(fn (Builder $q) => $this->applyPreset($q, $preset, $user))
             ->orderByRaw('due_at is null')
             ->orderBy('due_at')
             ->orderByDesc('created_at')
             ->paginate($perPage);
+
+        $this->stampDealContext($page->getCollection());
+
+        return $page;
     }
 
     /**
@@ -583,10 +656,11 @@ class ActivityService
             ->orderByDesc('created_at')
             ->get();
 
-        // Batch-resolve linked deal titles (TaskCard shows the parent deal —
-        // Сделки — ТЗ §4.3). One query for the whole board, stamped onto each
-        // activity so ActivityCardResource renders it with no N+1.
-        $this->stampDealTitles($activities);
+        // Batch-resolve the linked deal context (title + stage + company) for the
+        // whole board in one pair of queries, stamped onto each activity so
+        // ActivityCardResource renders the parent deal / its company / its stage
+        // with no N+1 (Сделки — ТЗ §4.3 + Задачник 2.0 §карточка).
+        $this->stampDealContext($activities);
 
         $buckets = [
             'overdue' => [],
@@ -670,13 +744,21 @@ class ActivityService
     }
 
     /**
-     * Stamp the linked deal's title onto each deal-targeted activity (batched) so
-     * the personal task board can render the parent-deal line without an N+1.
-     * Non-deal activities get a null deal_title. Mutates the collection in place.
+     * Stamp the linked deal context onto every deal-targeted activity in a set,
+     * batched into one Deal query (eager-loading its stage + company) so both the
+     * task list and the personal task board render the columns "связанная сделка /
+     * компания / статус сделки" with no N+1. Mutates the collection in place.
+     *
+     * Each deal-targeted activity gets a `deal_context` attribute:
+     *   { id, title, stage: {id,name,color,is_won,is_lost}|null,
+     *     company: {id,name}|null }
+     * Non-deal (company/contact/standalone) activities get a null deal_context.
+     * The Activity domain reads the Deal model only through its own batched lookup
+     * (no foreign-table coupling beyond the already-imported Sales models).
      *
      * @param  Collection<int, Activity>  $activities
      */
-    private function stampDealTitles(Collection $activities): void
+    private function stampDealContext(Collection $activities): void
     {
         $dealIds = $activities
             ->filter(static fn (Activity $a): bool => $a->target_type === ActivityTargetType::Deal->value && $a->target_id !== null)
@@ -685,18 +767,41 @@ class ActivityService
             ->unique()
             ->all();
 
-        $titles = $dealIds === []
-            ? []
-            : Deal::query()->whereIn('id', $dealIds)->pluck('title', 'id')->all();
+        /** @var Collection<int, Deal> $deals */
+        $deals = $dealIds === []
+            ? collect()
+            : Deal::query()
+                ->whereIn('id', $dealIds)
+                ->with(['stage:id,name,color,is_won,is_lost', 'company:id,name'])
+                ->get()
+                ->keyBy('id');
 
         foreach ($activities as $activity) {
-            $title = null;
+            $context = null;
 
             if ($activity->target_type === ActivityTargetType::Deal->value && $activity->target_id !== null) {
-                $title = $titles[(int) $activity->target_id] ?? null;
+                $deal = $deals->get((int) $activity->target_id);
+
+                if ($deal !== null) {
+                    $context = [
+                        'id' => (int) $deal->id,
+                        'title' => $deal->title,
+                        'stage' => $deal->stage === null ? null : [
+                            'id' => (int) $deal->stage->id,
+                            'name' => $deal->stage->name,
+                            'color' => $deal->stage->color,
+                            'is_won' => (bool) $deal->stage->is_won,
+                            'is_lost' => (bool) $deal->stage->is_lost,
+                        ],
+                        'company' => $deal->company === null ? null : [
+                            'id' => (int) $deal->company->id,
+                            'name' => $deal->company->name,
+                        ],
+                    ];
+                }
             }
 
-            $activity->setAttribute('deal_title', $title);
+            $activity->setAttribute('deal_context', $context);
         }
     }
 

@@ -16,7 +16,6 @@
     "profile": "Profile",
     "logout": "Sign out",
     "pipelineSettings": "Pipeline settings",
-    "tasks": "Tasks",
     "myTasks": "My tasks",
     "managerCabinet": "Manager Cabinet",
     "myApprovals": "My approvals",
@@ -866,7 +865,8 @@
       "call": "Call",
       "meeting": "Meeting",
       "task": "Task",
-      "note": "Note"
+      "note": "Note",
+      "follow_up": "Follow-up"
     },
     "statuses": {
       "new": "New",
@@ -2646,6 +2646,44 @@
         "warm": "Warm",
         "hot": "HOT"
       }
+    },
+    "page": {
+      "viewKanban": "Kanban",
+      "viewList": "List"
+    },
+    "list": {
+      "col": {
+        "dueAt": "Due date",
+        "responsible": "Assignee",
+        "dealCompany": "Company / Deal",
+        "kind": "Task type",
+        "dealStage": "Deal stage",
+        "status": "Status",
+        "title": "Task text"
+      },
+      "placeholder": {
+        "date": "Pick a date",
+        "responsible": "Unassigned",
+        "kind": "Type...",
+        "status": "Status...",
+        "title": "Task text"
+      },
+      "patchSuccess": "Change saved",
+      "stageWon": "Won deal",
+      "stageLost": "Lost deal"
+    },
+    "quick": {
+      "titlePlaceholder": "Task text",
+      "resultPlaceholder": "Add result...",
+      "changeKind": "Task type",
+      "markDone": "Mark as done",
+      "tomorrow": "Tomorrow",
+      "nextWeek": "Next week",
+      "nextMonth": "Next month",
+      "pickDate": "Pick a date",
+      "create": "Create",
+      "complete": "Complete",
+      "delete": "Delete"
     }
   },
   "system": {
