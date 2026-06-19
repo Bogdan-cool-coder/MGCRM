@@ -27,6 +27,7 @@ class DealProductFactory extends Factory
             'plan_id' => null,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
+            'discount' => 0,
             'currency' => 'RUB',
             'amount' => $quantity * $unitPrice,
             'sort_order' => 0,

@@ -23,6 +23,7 @@ class StoreDealProductRequest extends FormRequest
             'plan_id' => ['nullable', 'integer', 'exists:catalog_product_plans,id'],
             'quantity' => ['required', 'numeric', 'min:0'],
             'unit_price' => ['nullable', 'integer', 'min:0'], // kopecks override
+            'discount' => ['nullable', 'integer', 'min:0'], // kopecks, manual per-line discount
             'currency' => ['nullable', 'string', Rule::in($currencies)],
             'sort_order' => ['nullable', 'integer'],
         ];

@@ -28,7 +28,6 @@ class CrmFeedService
     public const TYPE_ACTIVITY = 'activity';
 
     /**
-     * @param  Company|Contact               $entity
      * @param  array{types?: array<int, string>}  $filters
      * @return array{data: array<int, array<string, mixed>>, meta: array{total: int, per_page: int, current_page: int}}
      */

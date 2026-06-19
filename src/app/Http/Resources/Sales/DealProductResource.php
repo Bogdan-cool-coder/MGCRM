@@ -28,8 +28,9 @@ class DealProductResource extends JsonResource
             'plan_id' => $this->plan_id,
             'quantity' => (float) $this->quantity,
             'unit_price' => $this->unit_price,
+            'discount' => $this->discount, // kopecks, manual per-line discount
             'currency' => $this->currency,
-            'amount' => $this->amount,
+            'amount' => $this->amount, // kopecks, net of discount
             'sort_order' => $this->sort_order,
         ];
     }

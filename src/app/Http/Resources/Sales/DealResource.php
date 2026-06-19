@@ -67,6 +67,12 @@ class DealResource extends JsonResource
             'next_task' => $this->whenLoaded('nextTask', fn () => $this->nextTaskPayload()),
 
             'products' => DealProductResource::collection($this->whenLoaded('products')),
+            // Sum of per-line discounts (kopecks). Computed from the already
+            // loaded products relation — no extra query (ARCHITECTURE.md §3 N+1).
+            'discount_total' => $this->whenLoaded(
+                'products',
+                fn (): int => (int) $this->products->sum('discount'),
+            ),
             'contacts' => DealContactResource::collection($this->whenLoaded('dealContacts')),
 
             'created_at' => $this->created_at?->toIso8601String(),
