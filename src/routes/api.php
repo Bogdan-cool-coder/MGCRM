@@ -358,6 +358,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::get('pipelines/{pipeline}', [PipelineController::class, 'show'])->name('pipelines.show');
     Route::patch('pipelines/{pipeline}', [PipelineController::class, 'update'])->name('pipelines.update');
     Route::delete('pipelines/{pipeline}', [PipelineController::class, 'destroy'])->name('pipelines.destroy');
+    // Deep-copy a pipeline (stages + automations) into a new inactive funnel;
+    // also serves "create from template" (the front picks the source).
+    Route::post('pipelines/{pipeline}/duplicate', [PipelineController::class, 'duplicate'])->name('pipelines.duplicate');
 
     // Stage editor (S1.5). reorder MUST be declared before {stage} (else it
     // matches as {stage}=reorder). Stage writes are gated on the pipeline.

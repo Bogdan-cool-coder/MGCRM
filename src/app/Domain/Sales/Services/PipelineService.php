@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Sales\Enums\PipelineKind;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
@@ -153,6 +154,101 @@ class PipelineService
             }
 
             return $pipeline->load('stages');
+        });
+    }
+
+    /**
+     * Stage columns carried over verbatim when duplicating a pipeline. Excludes
+     * the identity (id), the parent link (remapped separately) and timestamps;
+     * pipeline_id is set to the new pipeline. System won/lost flags are copied as
+     * data so the clone is a faithful, immediately-usable funnel (the editor still
+     * refuses to mutate them later).
+     *
+     * @var list<string>
+     */
+    private const DUPLICATED_STAGE_FIELDS = [
+        'name', 'code', 'sort_order', 'color', 'warn_days', 'danger_days',
+        'is_won', 'is_lost', 'hidden_by_default', 'stage_features', 'task_types',
+        'required_fields', 'won_gate', 'won_gate_contract_required', 'sla_hours',
+        'visible_department_ids', 'visible_user_ids',
+    ];
+
+    /**
+     * Automation columns carried over when duplicating a pipeline. pipeline_id /
+     * stage_id are remapped to the clone; the rotation cursor and run cursor are
+     * reset (a fresh funnel has no run history), created_by is preserved.
+     *
+     * @var list<string>
+     */
+    private const DUPLICATED_AUTOMATION_FIELDS = [
+        'name', 'description', 'trigger_kind', 'trigger_config',
+        'action_kind', 'action_config', 'is_active', 'created_by_user_id',
+    ];
+
+    /**
+     * Deep-copy a pipeline into a new, inactive funnel: every stage (colors,
+     * order, system flags, rotting thresholds, gates, visibility, sub-statuses)
+     * and every attached automation are cloned. Done in one transaction so a
+     * partial clone can never surface.
+     *
+     * The clone is created inactive: defaultSalesPipeline() only picks active
+     * pipelines, so a fresh copy never silently steals the default-funnel slot
+     * before an admin has reviewed it. Stage `code` is reused verbatim — it is
+     * unique per (pipeline_id, code), and the new pipeline_id keeps it distinct.
+     * parent_stage_id and automation stage_id are remapped old->new id so the
+     * clone is fully self-contained with no dangling references to the original.
+     */
+    public function duplicate(Pipeline $pipeline): Pipeline
+    {
+        return DB::transaction(function () use ($pipeline): Pipeline {
+            $copy = Pipeline::create([
+                'name' => $pipeline->name.' (копия)',
+                'kind' => $pipeline->kind->value,
+                'settings' => $pipeline->settings ?? [],
+                'graph_layout' => $pipeline->graph_layout,
+                'visible_role' => $pipeline->visible_role,
+                'visible_user_ids' => $pipeline->visible_user_ids,
+                'is_active' => false,
+                'sort_order' => $pipeline->sort_order,
+            ]);
+
+            // Two passes: create every stage first (so parents exist), then wire
+            // up parent_stage_id from the old->new id map. A stage cannot be
+            // nested deeper than one level (assertParentIsValid), so a single
+            // remap pass is sufficient.
+            $stageIdMap = [];
+            $sourceStages = $pipeline->stages()->get();
+
+            foreach ($sourceStages as $stage) {
+                $clone = PipelineStage::create([
+                    ...$stage->only(self::DUPLICATED_STAGE_FIELDS),
+                    'pipeline_id' => $copy->id,
+                ]);
+                $stageIdMap[$stage->id] = $clone->id;
+            }
+
+            foreach ($sourceStages as $stage) {
+                if ($stage->parent_stage_id !== null) {
+                    PipelineStage::query()
+                        ->whereKey($stageIdMap[$stage->id])
+                        ->update(['parent_stage_id' => $stageIdMap[$stage->parent_stage_id]]);
+                }
+            }
+
+            foreach ($pipeline->automations()->get() as $automation) {
+                PipelineAutomation::create([
+                    ...$automation->only(self::DUPLICATED_AUTOMATION_FIELDS),
+                    'pipeline_id' => $copy->id,
+                    // NULL stage_id = whole-pipeline rule; only remap concrete stages.
+                    'stage_id' => $automation->stage_id === null
+                        ? null
+                        : ($stageIdMap[$automation->stage_id] ?? null),
+                    'round_robin_cursor' => 0,
+                    'last_run_at' => null,
+                ]);
+            }
+
+            return $copy->load('stages');
         });
     }
 

@@ -45,8 +45,11 @@
           :pipeline="pipeline"
           :is-active="pipeline.id === selectedPipelineId"
           :saving="savingId === pipeline.id"
+          :duplicating="duplicatingId === pipeline.id"
+          :highlighted="highlightedId === pipeline.id"
           @select="emit('select', pipeline.id)"
           @rename="(id, name) => emit('rename', id, name)"
+          @duplicate="(id) => emit('duplicate', id)"
           @delete="(id) => emit('delete', id)"
         />
       </div>
@@ -68,12 +71,15 @@ defineProps<{
   selectedPipelineId: number | null
   loading?: boolean
   savingId?: number | null
+  duplicatingId?: number | null
+  highlightedId?: number | null
 }>()
 
 const emit = defineEmits<{
   create: []
   select: [id: number]
   rename: [id: number, name: string]
+  duplicate: [id: number]
   delete: [id: number]
 }>()
 

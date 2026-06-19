@@ -14,17 +14,26 @@
         </label>
         <AutoComplete
           v-model="selectedContact"
-          :suggestions="contactSuggestions"
+          :suggestions="augmentedSuggestions"
           option-label="full_name"
           force-selection
           dropdown
           class="w-full"
           :class="{ 'p-invalid': errors.contact_id }"
           :delay="300"
-          @complete="searchContacts($event.query)"
+          @complete="onComplete($event.query)"
         >
           <template #option="{ option }">
-            <div class="add-contact-dialog__contact-option">
+            <!-- "create contact" sentinel -->
+            <div
+              v-if="option.__create"
+              class="add-contact-dialog__create-option"
+            >
+              <i class="pi pi-user-plus add-contact-dialog__create-icon" />
+              <span>{{ option.full_name }}</span>
+            </div>
+            <!-- regular contact option -->
+            <div v-else class="add-contact-dialog__contact-option">
               <span>{{ option.full_name }}</span>
               <span v-if="option.email || option.position" class="add-contact-dialog__contact-meta">
                 {{ [option.position, option.email].filter(Boolean).join(' · ') }}
@@ -56,15 +65,23 @@
         icon="pi pi-plus"
         :label="t('sales.deal.page.contacts.addDialog.save')"
         :loading="saving"
-        :disabled="!selectedContact"
+        :disabled="!selectedContact || !!selectedContact.__create"
         @click="onSubmit"
       />
     </template>
   </Dialog>
+
+  <!-- Inline create contact dialog -->
+  <CreateContactInlineDialog
+    v-model="createInlineOpen"
+    :initial-name="lastQuery"
+    :show-is-primary="true"
+    @created="onInlineContactCreated"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Dialog from 'primevue/dialog'
@@ -74,13 +91,17 @@ import Button from 'primevue/button'
 import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage, getApiErrorStatus, getValidationErrors } from '@/utils/errors'
 import { contactsApi } from '@/api/crm/contacts'
+import CreateContactInlineDialog from '@/components/crm/CreateContactInlineDialog.vue'
 import type { DealContactDto } from '@/entities/sales'
+import type { Contact } from '@/entities/crm'
 
 interface ContactOption {
   id: number
   full_name: string
   email: string | null
   position: string | null
+  /** Sentinel flag — this item opens the inline create dialog */
+  __create?: true
 }
 
 const props = defineProps<{
@@ -107,11 +128,34 @@ const selectedContact = ref<ContactOption | null>(null)
 const contactSuggestions = ref<ContactOption[]>([])
 const isPrimary = ref(false)
 const errors = ref<Record<string, string>>({})
+const lastQuery = ref('')
+const createInlineOpen = ref(false)
+
+/** Append the "create" sentinel at the bottom of every suggestion list */
+const augmentedSuggestions = computed<ContactOption[]>(() => {
+  const sentinel: ContactOption = {
+    id: -1,
+    full_name: t('contacts.inline_create.create_option'),
+    email: null,
+    position: null,
+    __create: true,
+  }
+  return [...contactSuggestions.value, sentinel]
+})
 
 const mutation = useMutation<DealContactDto>()
 const saving = computed(() => mutation.isPending.value)
 
-async function searchContacts(query: string) {
+// Watch for sentinel selection → open inline create
+watch(selectedContact, (opt) => {
+  if (opt?.__create) {
+    selectedContact.value = null
+    createInlineOpen.value = true
+  }
+})
+
+async function onComplete(query: string) {
+  lastQuery.value = query
   if (!query) {
     contactSuggestions.value = []
     return
@@ -128,8 +172,41 @@ async function searchContacts(query: string) {
   }
 }
 
+/** Called when inline dialog creates a contact — attach it to the deal */
+async function onInlineContactCreated(contact: Contact, _position: string, inlinePrimary: boolean) {
+  errors.value = {}
+  try {
+    const dealContact = await mutation.run(() =>
+      props.onAdd(props.dealId, {
+        contact_id: contact.id,
+        is_primary: inlinePrimary,
+      }),
+    )
+    toast.add({
+      severity: 'success',
+      summary: t('sales.deal.page.contacts.addDialog.success'),
+      life: 3000,
+    })
+    emit('added', dealContact)
+    visible.value = false
+    isPrimary.value = false
+  } catch (err) {
+    const status = getApiErrorStatus(err)
+    if (status === 409) {
+      errors.value.contact_id = t('errors.conflict') ?? 'Контакт уже привязан'
+      return
+    }
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
+
 async function onSubmit() {
-  if (!selectedContact.value) return
+  if (!selectedContact.value || selectedContact.value.__create) return
   errors.value = {}
 
   try {
@@ -170,6 +247,7 @@ async function onSubmit() {
     })
   }
 }
+
 </script>
 
 <style lang="scss" scoped>
@@ -207,6 +285,19 @@ async function onSubmit() {
 .add-contact-dialog__contact-meta {
   font-size: $font-size-xs;
   color: $surface-400;
+}
+
+.add-contact-dialog__create-option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  color: $primary-color;
+  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+}
+
+.add-contact-dialog__create-icon {
+  font-size: $font-size-sm;
 }
 
 .req {

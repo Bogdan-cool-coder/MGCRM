@@ -144,6 +144,11 @@ export const salesApi = {
     await apiClient.delete(`/api/pipelines/${id}`)
   },
 
+  async duplicatePipeline(id: number): Promise<PipelineDto> {
+    const res = await apiClient.post<{ data: PipelineDto }>(`/api/pipelines/${id}/duplicate`)
+    return res.data.data
+  },
+
   // ── Stage CRUD (S1.5) ──────────────────────────────────────────────────────
 
   async createStage(pipelineId: number, payload: CreateStagePayload): Promise<PipelineStageDto> {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Models;
 
+use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Sales\Enums\PipelineKind;
 use Database\Factories\Sales\PipelineFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -71,6 +72,11 @@ class Pipeline extends Model
     public function deals(): HasMany
     {
         return $this->hasMany(Deal::class);
+    }
+
+    public function automations(): HasMany
+    {
+        return $this->hasMany(PipelineAutomation::class);
     }
 
     // ---- Scopes ----

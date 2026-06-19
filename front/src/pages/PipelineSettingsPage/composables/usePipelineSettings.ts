@@ -26,6 +26,8 @@ export function usePipelineSettings() {
   const pipelines = ref<PipelineDto[]>([])
   const selectedPipelineId = ref<number | null>(null)
   const stages = ref<PipelineStageDto[]>([])
+  /** ID of the most-recently duplicated pipeline — used to flash-highlight in the list */
+  const highlightedPipelineId = ref<number | null>(null)
 
   const pipelinesLoading = ref(false)
   const stagesLoading = ref(false)
@@ -206,6 +208,34 @@ export function usePipelineSettings() {
     }
   }
 
+  async function duplicatePipeline(id: number): Promise<PipelineDto | null> {
+    try {
+      const cloned = await salesApi.duplicatePipeline(id)
+      pipelines.value = [...pipelines.value, cloned]
+      // Highlight the new pipeline briefly
+      highlightedPipelineId.value = cloned.id
+      setTimeout(() => {
+        if (highlightedPipelineId.value === cloned.id) highlightedPipelineId.value = null
+      }, 2500)
+      toast.add({
+        severity: 'success',
+        summary: t('sales.pipelineEditor.duplicatePipeline.successToast', { name: cloned.name }),
+        life: 3000,
+      })
+      // Auto-select the cloned pipeline so its stages load
+      await selectPipeline(cloned.id)
+      return cloned
+    } catch (e: unknown) {
+      toast.add({
+        severity: 'error',
+        summary: t('errors.server_error'),
+        detail: extractMessage(e),
+        life: 5000,
+      })
+      return null
+    }
+  }
+
   // ─── Stage mutations ───────────────────────────────────────────────────────
 
   async function createStage(payload: CreateStagePayload): Promise<PipelineStageDto> {
@@ -336,6 +366,7 @@ export function usePipelineSettings() {
     // State
     pipelines,
     selectedPipelineId,
+    highlightedPipelineId,
     stages,
     pipelinesLoading,
     stagesLoading,
@@ -353,6 +384,7 @@ export function usePipelineSettings() {
     createPipeline,
     renamePipeline,
     deletePipeline,
+    duplicatePipeline,
     // Stage mutations
     createStage,
     updateStage,

@@ -1,7 +1,7 @@
 <template>
   <div
     class="pipeline-item"
-    :class="{ 'pipeline-item--active': isActive }"
+    :class="{ 'pipeline-item--active': isActive, 'pipeline-item--highlight': highlighted }"
     @click="emit('select')"
   >
     <!-- Color dot -->
@@ -57,6 +57,15 @@
         @click="startRename"
       />
       <Button
+        icon="pi pi-copy"
+        severity="secondary"
+        text
+        size="small"
+        :loading="duplicating"
+        :title="t('sales.pipelineEditor.duplicatePipeline.buttonTitle')"
+        @click="emit('duplicate', pipeline.id)"
+      />
+      <Button
         icon="pi pi-trash"
         severity="danger"
         outlined
@@ -80,11 +89,14 @@ const props = defineProps<{
   pipeline: PipelineDto
   isActive?: boolean
   saving?: boolean
+  duplicating?: boolean
+  highlighted?: boolean
 }>()
 
 const emit = defineEmits<{
   select: []
   rename: [id: number, name: string]
+  duplicate: [id: number]
   delete: [id: number]
 }>()
 
@@ -201,6 +213,26 @@ async function commitRename() {
 
   &:hover &__actions {
     opacity: 1;
+  }
+
+  // Flash-highlight for newly duplicated pipeline
+  @keyframes pipeline-item-highlight {
+    0%   { background-color: var(--p-primary-100); }
+    70%  { background-color: var(--p-primary-50); }
+    100% { background-color: transparent; }
+  }
+
+  &--highlight {
+    animation: pipeline-item-highlight 2.4s ease-out forwards;
+
+    .app-dark & {
+      @keyframes pipeline-item-highlight-dark {
+        0%   { background-color: var(--p-surface-700); }
+        70%  { background-color: var(--p-surface-800); }
+        100% { background-color: transparent; }
+      }
+      animation-name: pipeline-item-highlight-dark;
+    }
   }
 }
 </style>

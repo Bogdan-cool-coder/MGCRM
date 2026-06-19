@@ -372,6 +372,33 @@
     },
     "actions": {
       "create": "Создать контакт"
+    },
+    "inline_create": {
+      "title": "Создать контакт",
+      "create_option": "+ Создать контакт",
+      "submit": "Создать контакт",
+      "cancel": "Отмена",
+      "success": "Контакт создан",
+      "fields": {
+        "full_name": "ФИО",
+        "phone": "Телефон",
+        "email": "Email",
+        "position": "Должность",
+        "notes": "Заметка",
+        "is_primary": "Основной контакт"
+      },
+      "placeholders": {
+        "full_name": "Иванов Иван Иванович",
+        "phone": "+7 (999) 000-00-00",
+        "email": "example{'@'}company.com",
+        "position": "Руководитель отдела",
+        "notes": "Дополнительная информация..."
+      },
+      "validation": {
+        "full_name_required": "Укажите ФИО",
+        "phone_required": "Укажите телефон",
+        "position_required": "Укажите должность"
+      }
     }
   },
   "company": {
@@ -1460,10 +1487,17 @@
       "createPipeline": "Создать воронку",
       "createPipelineDialog": {
         "title": "Новая воронка",
+        "modeEmpty": "Пустая воронка",
+        "modeTemplate": "Из шаблона",
         "nameLabel": "Название",
         "namePlaceholder": "Например, «Продажи»",
+        "templateLabel": "Источник (воронка-шаблон)",
+        "templatePlaceholder": "Выберите воронку",
+        "templateEmpty": "Нет воронок для копирования",
         "autoSeedInfo": "После создания воронка будет содержать три системных этапа: «Новые лиды», «Успешная сделка» и «Сделка проиграна». Вы сможете добавить собственные этапы в редакторе.",
+        "templateInfo": "Будет создана копия выбранной воронки со всеми её этапами. Новая воронка будет неактивной.",
         "save": "Создать",
+        "saveDuplicate": "Скопировать",
         "cancel": "Отмена",
         "successToast": "Воронка «{name}» создана",
         "errorDuplicate": "Воронка с таким названием уже существует"
@@ -1471,6 +1505,10 @@
       "renamePipeline": {
         "successToast": "Воронка переименована",
         "errorToast": "Ошибка переименования"
+      },
+      "duplicatePipeline": {
+        "buttonTitle": "Копировать воронку",
+        "successToast": "Создана копия воронки «{name}»"
       },
       "deletePipeline": {
         "confirmHeader": "Удалить воронку?",

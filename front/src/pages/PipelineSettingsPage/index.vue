@@ -41,9 +41,12 @@
         :pipelines="pipelines"
         :selected-pipeline-id="selectedPipelineId"
         :loading="pipelinesLoading"
+        :duplicating-id="duplicatingPipelineId"
+        :highlighted-id="highlightedPipelineId"
         @create="showCreatePipeline = true"
         @select="selectPipeline"
         @rename="handleRenamePipeline"
+        @duplicate="handleDuplicatePipeline"
         @delete="handleDeletePipeline"
       />
 
@@ -120,7 +123,9 @@
     <CreatePipelineDialog
       v-model:visible="showCreatePipeline"
       :saving="creatingPipeline"
+      :pipelines="pipelines"
       @create="handleCreatePipeline"
+      @duplicate="handleDuplicateFromTemplate"
     />
 
     <!-- Create Stage Dialog -->
@@ -239,6 +244,7 @@ function extractErrorStatus(e: unknown): number | null {
 const {
   pipelines,
   selectedPipelineId,
+  highlightedPipelineId,
   stages,
   pipelinesLoading,
   stagesLoading,
@@ -250,6 +256,7 @@ const {
   createPipeline,
   renamePipeline,
   deletePipeline,
+  duplicatePipeline,
   createStage,
   updateStage,
   deleteStage,
@@ -262,6 +269,7 @@ const pipelineAutomations = usePipelineAutomations()
 
 const showCreatePipeline = ref(false)
 const creatingPipeline = ref(false)
+const duplicatingPipelineId = ref<number | null>(null)
 
 const showCreateStage = ref(false)
 const creatingStage = ref(false)
@@ -293,6 +301,27 @@ async function handleCreatePipeline(name: string) {
 
 async function handleRenamePipeline(id: number, name: string) {
   await renamePipeline(id, name)
+}
+
+/** Duplicate triggered from the inline "Copy" button on a list item */
+async function handleDuplicatePipeline(id: number) {
+  duplicatingPipelineId.value = id
+  try {
+    await duplicatePipeline(id)
+  } finally {
+    duplicatingPipelineId.value = null
+  }
+}
+
+/** Duplicate triggered from the "Create" dialog's "from template" mode */
+async function handleDuplicateFromTemplate(sourceId: number) {
+  creatingPipeline.value = true
+  try {
+    const result = await duplicatePipeline(sourceId)
+    if (result !== null) showCreatePipeline.value = false
+  } finally {
+    creatingPipeline.value = false
+  }
 }
 
 function handleDeletePipeline(id: number) {

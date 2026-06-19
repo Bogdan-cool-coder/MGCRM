@@ -284,16 +284,25 @@
           <label class="company-page-v2__label">{{ t('contacts.page.columns.name') }} *</label>
           <AutoComplete
             v-model="addEmployeeSearch"
-            :suggestions="addEmployeeSuggestions"
+            :suggestions="augmentedEmployeeSuggestions"
             option-label="full_name"
             :placeholder="t('common.search')"
             class="w-full"
             force-selection
-            @complete="searchEmployeeContacts($event.query)"
-            @option-select="onEmployeeSelect($event.value)"
+            @complete="(e) => { createContactInlineQuery = e.query; searchEmployeeContacts(e.query) }"
+            @option-select="onEmployeeOptionSelect($event.value)"
           >
             <template #option="{ option }">
-              <div class="company-page-v2__contact-option">
+              <!-- "create contact" sentinel -->
+              <div
+                v-if="option.__create"
+                class="company-page-v2__create-option"
+              >
+                <i class="pi pi-user-plus company-page-v2__create-icon" />
+                <span>{{ option.full_name }}</span>
+              </div>
+              <!-- regular contact -->
+              <div v-else class="company-page-v2__contact-option">
                 <span class="company-page-v2__contact-name">{{ option.full_name }}</span>
                 <span v-if="option.email || option.phone" class="company-page-v2__contact-meta">
                   {{ [option.email, option.phone].filter(Boolean).join(' · ') }}
@@ -359,6 +368,14 @@
       </template>
     </Dialog>
 
+    <!-- Inline contact creation from employee autocomplete -->
+    <CreateContactInlineDialog
+      v-model="createContactInlineOpen"
+      :initial-name="createContactInlineQuery"
+      :show-is-primary="true"
+      @created="onInlineEmployeeCreated"
+    />
+
     <Toast position="top-right" />
     <ConfirmDialog />
   </div>
@@ -387,6 +404,7 @@ import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
 import CustomFieldRenderer from '@/components/crm/entity/CustomFieldRenderer.vue'
+import CreateContactInlineDialog from '@/components/crm/CreateContactInlineDialog.vue'
 import CompanyRequisitesPanel from './components/CompanyRequisitesPanel.vue'
 import CompanyEmployeesPanel from './components/CompanyEmployeesPanel.vue'
 import CompanyEmployeesTab from './components/CompanyEmployeesTab.vue'
@@ -401,7 +419,7 @@ import { useCompanyPageActions } from './composables/useCompanyPageActions'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { CompanyExtended, EmploymentStatus, Company } from '@/entities/crm'
+import type { CompanyExtended, EmploymentStatus, Company, Contact } from '@/entities/crm'
 import type { MenuItem } from 'primevue/menuitem'
 
 const { t } = useI18n()
@@ -413,6 +431,10 @@ const { isTablet, isMobile } = useBreakpoints()
 const activeTab = ref('overview')
 const employeeSearch = ref('')
 const showAttachHolding = ref(false)
+
+// Inline contact creation (from employee autocomplete)
+const createContactInlineOpen = ref(false)
+const createContactInlineQuery = ref('')
 const holdingParentSearch = ref('')
 const holdingParentId = ref<number | null>(null)
 const holdingParentSuggestions = ref<Array<{ id: number; name: string }>>([])
@@ -649,6 +671,57 @@ const statusOptions = [
   { label: t('company.page.employees.status.works'), value: 'works' as EmploymentStatus },
   { label: t('company.page.employees.status.left'), value: 'left' as EmploymentStatus },
 ]
+
+/** Employee suggestions augmented with the "create contact" sentinel at the bottom */
+const augmentedEmployeeSuggestions = computed(() => {
+  const sentinel = {
+    id: -1,
+    full_name: t('contacts.inline_create.create_option'),
+    email: null as string | null,
+    phone: null as string | null,
+    __create: true as const,
+  }
+  return [...addEmployeeSuggestions.value, sentinel]
+})
+
+/** Handle option selected in employee autocomplete — intercept sentinel */
+function onEmployeeOptionSelect(option: Contact & { __create?: true }) {
+  if (option.__create) {
+    // Close the regular add-employee dialog and open inline create
+    addEmployeeSearch.value = ''
+    addEmployeeContactId.value = null
+    closeAddEmployee()
+    createContactInlineOpen.value = true
+    return
+  }
+  onEmployeeSelect(option)
+}
+
+/** Called after inline create dialog creates a contact — attach to company */
+async function onInlineEmployeeCreated(contact: Contact, position: string, _isPrimary: boolean) {
+  if (!companyId.value) return
+  try {
+    await companiesApi.attachEmployee(companyId.value, {
+      contact_id: contact.id,
+      position: position || undefined,
+      employment_status: 'works',
+      is_primary: _isPrimary,
+    })
+    await loadEmployees()
+    toast.add({
+      severity: 'success',
+      summary: t('company.page.employees.addSuccess', 'Сотрудник добавлен'),
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
 
 function onSubmitEmployee() {
   if (addEmployeeContactId.value) {
@@ -894,6 +967,19 @@ onMounted(async () => {
 .company-page-v2__contact-meta {
   font-size: $font-size-xs;
   color: $surface-500;
+}
+
+.company-page-v2__create-option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  color: $primary-color;
+  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+}
+
+.company-page-v2__create-icon {
+  font-size: $font-size-sm;
 }
 
 .w-full {

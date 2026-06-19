@@ -372,6 +372,33 @@
     },
     "actions": {
       "create": "Create contact"
+    },
+    "inline_create": {
+      "title": "Create contact",
+      "create_option": "+ Create contact",
+      "submit": "Create contact",
+      "cancel": "Cancel",
+      "success": "Contact created",
+      "fields": {
+        "full_name": "Full name",
+        "phone": "Phone",
+        "email": "Email",
+        "position": "Position",
+        "notes": "Notes",
+        "is_primary": "Primary contact"
+      },
+      "placeholders": {
+        "full_name": "John Smith",
+        "phone": "+1 (555) 000-0000",
+        "email": "example{'@'}company.com",
+        "position": "Department head",
+        "notes": "Additional information..."
+      },
+      "validation": {
+        "full_name_required": "Full name is required",
+        "phone_required": "Phone is required",
+        "position_required": "Position is required"
+      }
     }
   },
   "company": {
@@ -1460,10 +1487,17 @@
       "createPipeline": "New pipeline",
       "createPipelineDialog": {
         "title": "New pipeline",
+        "modeEmpty": "Blank pipeline",
+        "modeTemplate": "From template",
         "nameLabel": "Name",
         "namePlaceholder": "e.g. \"Sales\"",
+        "templateLabel": "Source (template pipeline)",
+        "templatePlaceholder": "Select a pipeline",
+        "templateEmpty": "No pipelines available to copy",
         "autoSeedInfo": "After creation, the pipeline will contain three system stages: New leads, Won, and Lost. You can add custom stages in the editor.",
+        "templateInfo": "A copy of the selected pipeline will be created with all its stages. The new pipeline will be inactive.",
         "save": "Create",
+        "saveDuplicate": "Copy",
         "cancel": "Cancel",
         "successToast": "Pipeline \"{name}\" created",
         "errorDuplicate": "A pipeline with this name already exists"
@@ -1471,6 +1505,10 @@
       "renamePipeline": {
         "successToast": "Pipeline renamed",
         "errorToast": "Rename failed"
+      },
+      "duplicatePipeline": {
+        "buttonTitle": "Duplicate pipeline",
+        "successToast": "Pipeline \"{name}\" copied"
       },
       "deletePipeline": {
         "confirmHeader": "Delete pipeline?",
