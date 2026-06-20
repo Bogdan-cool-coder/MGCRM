@@ -521,10 +521,15 @@
         "deleteSuccess": "Company deleted"
       },
       "deals": {
-        "empty": "No deals",
+        "empty": "No open deals",
+        "emptyHint": "Create the first deal for this company",
+        "noWonDeals": "No won deals",
         "createDeal": "Create deal",
         "openCount": "{count} open",
         "seeAll": "All deals"
+      },
+      "holding": {
+        "childrenCount": "{count} companies in holding"
       },
       "totals": {
         "empty": "No completed deals",
@@ -534,9 +539,29 @@
       "documents": {
         "seeAll": "All documents ({count})"
       }
+    },
+    "kpi": {
+      "openDeals": "Open deals",
+      "dealsSum": "Deals amount",
+      "employees": "Employees",
+      "documents": "Documents",
+      "lastActivity": "Last activity"
+    },
+    "requisites": {
+      "section": {
+        "legal": "Legal data",
+        "bank": "Bank",
+        "contacts": "Contacts & Segmentation"
+      }
     }
   },
   "contact": {
+    "kpi": {
+      "deals": "Deals",
+      "lastContact": "Last contact",
+      "openTasks": "Open tasks",
+      "companies": "Companies"
+    },
     "page": {
       "back": "Back",
       "tabs": {
@@ -1888,6 +1913,7 @@
     "title": "Variable catalog",
     "create": "Add variable",
     "key": "Key (placeholder)",
+    "label": "Name",
     "type": "Type",
     "group": "Group",
     "products": "Products",
@@ -2784,6 +2810,23 @@
       "row": {
         "primary": "Primary",
         "setPrimary": "Set as primary"
+      },
+      "nowStrip": {
+        "label": "Now",
+        "lastContact": "Last contact",
+        "openTasks": "Open tasks",
+        "overdue": "Overdue"
+      },
+      "miniTimeline": {
+        "title": "Timeline",
+        "goToLog": "View log",
+        "empty": "No history yet",
+        "daysAgo": "{n}d ago"
+      },
+      "kpiStrip": {
+        "label": "KPI",
+        "never": "None",
+        "daysAgo": "{n}d"
       }
     },
     "company": {

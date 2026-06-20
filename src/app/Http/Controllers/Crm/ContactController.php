@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Crm;
 
+use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\ContactService;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Thin CRM Contact controller (ARCHITECTURE.md §1).
@@ -23,6 +25,7 @@ class ContactController extends Controller
 {
     public function __construct(
         private readonly ContactService $service,
+        private readonly ActivityService $activityService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -45,7 +48,25 @@ class ContactController extends Controller
     {
         $this->authorize('view', $contact);
 
-        return ContactResource::make($contact->load(['owner', 'companyLinks.company', 'channels']));
+        // KPI: deal participation count (via deal_contacts join), open tasks count.
+        // Both are single aggregate queries — zero N+1.
+        $dealsCount = (int) DB::table('deal_contacts')
+            ->join('deals', 'deals.id', '=', 'deal_contacts.deal_id')
+            ->where('deal_contacts.contact_id', $contact->id)
+            ->whereNull('deals.deleted_at')
+            ->count();
+
+        $openTasksCount = $this->activityService->openTasksCountForContact((int) $contact->id);
+
+        return ContactResource::make(
+            $contact->load(['owner', 'companyLinks.company', 'channels'])
+        )->additional([
+            'kpi' => [
+                'deals_count' => $dealsCount,
+                'last_touch_at' => $contact->last_activity_at?->toIso8601String(),
+                'open_tasks_count' => $openTasksCount,
+            ],
+        ]);
     }
 
     public function update(UpdateContactRequest $request, Contact $contact): JsonResource

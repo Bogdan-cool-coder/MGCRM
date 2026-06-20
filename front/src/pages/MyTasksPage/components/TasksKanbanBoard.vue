@@ -67,6 +67,7 @@
         v-for="bucket in taskBoard.bucketsData.value"
         :key="bucket.key"
         class="task-board__col"
+        :class="{ 'task-board__col--overdue': bucket.key === 'overdue' && bucket.tasks.length > 0 }"
       >
         <!-- Column header -->
         <div
@@ -248,6 +249,14 @@ onMounted(() => { void taskBoard.load() })
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+
+  &--overdue .task-board__col-body {
+    border-left: 3px solid $color-danger;
+
+    :global(.app-dark) & {
+      border-left-color: var(--p-red-400);
+    }
+  }
 }
 
 .task-board__col-header {

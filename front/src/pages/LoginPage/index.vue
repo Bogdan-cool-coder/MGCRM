@@ -313,6 +313,10 @@ const {
   align-items: center;
   justify-content: center;
   padding: $space-8 $space-4;
+
+  :global(.app-dark) & {
+    background-color: var(--p-surface-900);
+  }
 }
 
 .login-panel__card {
@@ -325,6 +329,12 @@ const {
   display: flex;
   flex-direction: column;
   gap: $space-5;
+
+  :global(.app-dark) & {
+    background-color: var(--p-surface-800);
+    border: 1px solid var(--p-surface-700);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  }
 }
 
 // Mobile-only logo (hidden on desktop where brand panel is visible)

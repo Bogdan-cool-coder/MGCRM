@@ -18,42 +18,76 @@
       <EntityActionMenu ref="menuRef" :items="menuItems" />
     </div>
 
-    <!-- Title + engagement chip -->
-    <div class="entity-header__title-row">
-      <h2 class="entity-header__title">{{ title }}</h2>
-      <EngagementChip
-        v-if="engagementTier"
-        :tier="engagementTier"
-        :last-activity-at="lastActivityAt"
-        class="entity-header__engagement"
-      />
-    </div>
+    <!-- Top section: avatar + info column -->
+    <div class="entity-header__top-section">
+      <!-- Avatar -->
+      <div class="entity-header__avatar-col">
+        <EntityAvatar
+          :entity-id="entityId"
+          :initials="resolvedInitials"
+          size="md"
+        />
+      </div>
 
-    <!-- Metadata row: slot for custom chips/labels -->
-    <div class="entity-header__meta-row">
-      <!-- Category chip (company only) -->
-      <Tag
-        v-if="categoryCode"
-        :value="categoryCode"
-        :severity="categorySeverity"
-        size="small"
-        class="entity-header__category-tag"
-      />
-      <!-- Author -->
-      <span class="entity-header__meta-item">
-        <span class="entity-header__meta-label">{{ t('crm.entity.author') }}:</span>
-        <span class="entity-header__meta-value">{{ authorName || '—' }}</span>
-      </span>
-      <!-- Works with (company only) -->
-      <span v-if="worksWithName !== undefined" class="entity-header__meta-item">
-        <span class="entity-header__meta-label">{{ t('crm.entity.worksWithCompany') }}:</span>
-        <span class="entity-header__meta-value">{{ worksWithName || '—' }}</span>
-      </span>
-      <!-- Position (contact only, via subtitle) -->
-      <span v-if="subtitle" class="entity-header__meta-item">
-        <span class="entity-header__meta-value entity-header__meta-value--subtitle">{{ subtitle }}</span>
-      </span>
-      <slot name="meta" />
+      <!-- Info column -->
+      <div class="entity-header__info-col">
+        <!-- Title + engagement chip -->
+        <div class="entity-header__title-row">
+          <h2 class="entity-header__title">{{ title }}</h2>
+          <EngagementChip
+            v-if="engagementTier"
+            :tier="engagementTier"
+            :last-activity-at="lastActivityAt"
+            class="entity-header__engagement"
+          />
+        </div>
+
+        <!-- Metadata row -->
+        <div class="entity-header__meta-row">
+          <!-- Category chip (company only) -->
+          <Tag
+            v-if="categoryCode"
+            :value="categoryCode"
+            :severity="categorySeverity"
+            size="small"
+            class="entity-header__category-tag"
+          />
+          <!-- Author -->
+          <span class="entity-header__meta-item">
+            <span class="entity-header__meta-label">{{ t('crm.entity.author') }}:</span>
+            <span class="entity-header__meta-value">{{ authorName || '—' }}</span>
+          </span>
+          <!-- Works with (company only) -->
+          <span v-if="worksWithName !== undefined" class="entity-header__meta-item">
+            <span class="entity-header__meta-label">{{ t('crm.entity.worksWithCompany') }}:</span>
+            <span class="entity-header__meta-value">{{ worksWithName || '—' }}</span>
+          </span>
+          <!-- Position (contact only, via subtitle) -->
+          <span v-if="subtitle" class="entity-header__meta-item">
+            <span class="entity-header__meta-value entity-header__meta-value--subtitle">{{ subtitle }}</span>
+          </span>
+          <slot name="meta" />
+        </div>
+
+        <!-- Tags row (max 3 + +N) -->
+        <div v-if="tags && tags.length > 0" class="entity-header__tags-row">
+          <Tag
+            v-for="tag in visibleTags"
+            :key="tag"
+            :value="tag"
+            severity="secondary"
+            size="small"
+            class="entity-header__tag"
+          />
+          <Tag
+            v-if="hiddenTagsCount > 0"
+            :value="`+${hiddenTagsCount}`"
+            severity="secondary"
+            size="small"
+            class="entity-header__tag"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -64,9 +98,12 @@ import { useI18n } from 'vue-i18n'
 import Tag from 'primevue/tag'
 import EngagementChip from './EngagementChip.vue'
 import EntityActionMenu from './EntityActionMenu.vue'
+import EntityAvatar from './EntityAvatar.vue'
 import type { EngagementTier } from './EngagementChip.vue'
 import type { MenuItem } from 'primevue/menuitem'
 import type { CategoryCode } from '@/entities/crm'
+
+const MAX_TAGS = 3
 
 const props = withDefaults(
   defineProps<{
@@ -84,6 +121,10 @@ const props = withDefaults(
     engagementTier?: EngagementTier | null
     lastActivityAt?: string | null
     menuItems: MenuItem[]
+    /** Tags list — renders Tag severity="secondary" badges (max 3 + +N) */
+    tags?: string[]
+    /** Override initials for avatar (auto-computed from title if omitted) */
+    avatarInitials?: string
   }>(),
   {
     subtitle: null,
@@ -91,6 +132,8 @@ const props = withDefaults(
     categoryCode: null,
     engagementTier: null,
     lastActivityAt: null,
+    tags: () => [],
+    avatarInitials: undefined,
   },
 )
 
@@ -111,6 +154,21 @@ const categorySeverity = computed((): 'danger' | 'warning' | 'success' | 'info' 
   }
   return props.categoryCode ? map[props.categoryCode] : 'secondary'
 })
+
+/** Compute initials from title if not overridden */
+const resolvedInitials = computed(() => {
+  if (props.avatarInitials) return props.avatarInitials
+  return props.title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase() || '?'
+})
+
+const visibleTags = computed(() => (props.tags ?? []).slice(0, MAX_TAGS))
+const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - MAX_TAGS))
 </script>
 
 <style lang="scss" scoped>
@@ -162,6 +220,29 @@ const categorySeverity = computed((): 'danger' | 'warning' | 'success' | 'info' 
   }
 }
 
+// ── Top section: avatar + info col ─────────────────────────────────────────────
+
+.entity-header__top-section {
+  display: flex;
+  gap: $space-3;
+  align-items: flex-start;
+}
+
+.entity-header__avatar-col {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.entity-header__info-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+// ── Title row ──────────────────────────────────────────────────────────────────
+
 .entity-header__title-row {
   display: flex;
   align-items: flex-start;
@@ -188,6 +269,8 @@ const categorySeverity = computed((): 'danger' | 'warning' | 'success' | 'info' 
   margin-top: 3px;
 }
 
+// ── Meta row ───────────────────────────────────────────────────────────────────
+
 .entity-header__meta-row {
   display: flex;
   align-items: center;
@@ -207,15 +290,34 @@ const categorySeverity = computed((): 'danger' | 'warning' | 'success' | 'info' 
 }
 
 .entity-header__meta-label {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .entity-header__meta-value {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.75);
   font-weight: $font-weight-medium;
+  transition: opacity 0.15s;
+
+  &:hover {
+    color: rgba(255, 255, 255, 1);
+  }
 
   &--subtitle {
     color: rgba(255, 255, 255, 0.6);
   }
+}
+
+// ── Tags row ───────────────────────────────────────────────────────────────────
+
+.entity-header__tags-row {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  flex-wrap: wrap;
+  margin-top: $space-1;
+}
+
+.entity-header__tag {
+  flex-shrink: 0;
 }
 </style>

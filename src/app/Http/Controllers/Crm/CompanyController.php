@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Crm;
 
+use App\Domain\Crm\Enums\EmploymentStatus;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\CompanyService;
 use App\Domain\Sales\Services\DealService;
@@ -15,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Thin CRM Company controller (ARCHITECTURE.md §1):
@@ -51,12 +53,40 @@ class CompanyController extends Controller
     {
         $this->authorize('view', $company);
 
-        // B6: aggregate deal totals (cross-domain via public DealService method)
+        // B6: aggregate deal totals (cross-domain via public DealService method).
         $dealTotals = $this->dealService->aggregateForCompany($company);
+
+        // KPI: employees (current contact links — excludes people who left),
+        // direct subsidiaries, documents. All aggregate queries — zero N+1.
+        $employeesCount = (int) DB::table('crm_contact_company_links')
+            ->where('company_id', $company->id)
+            ->where('employment_status', EmploymentStatus::Works->value)
+            ->count();
+
+        $holdingCompanyCount = (int) DB::table('crm_companies')
+            ->where('holding_id', $company->id)
+            ->whereNull('deleted_at')
+            ->count();
+
+        $documentsCount = (int) DB::table('documents')
+            ->where('source_company_id', $company->id)
+            ->whereNull('archived_at')
+            ->count();
 
         return CompanyResource::make(
             $company->load(['companyType', 'responsibleUser', 'ownerUser', 'contactLinks.contact'])
-        )->additional(['deal_totals' => $dealTotals->toArray()]);
+        )->additional([
+            'deal_totals' => $dealTotals->toArray(),
+            'kpi' => [
+                'open_deals_count' => $dealTotals->open_count,
+                'deals_sum' => $dealTotals->base_total,
+                'deals_sum_currency' => $dealTotals->base_currency,
+                'employees_count' => $employeesCount,
+                'documents_count' => $documentsCount,
+                'last_activity_at' => $company->last_activity_at?->toIso8601String(),
+            ],
+            'holding_company_count' => $holdingCompanyCount,
+        ]);
     }
 
     public function update(UpdateCompanyRequest $request, Company $company): JsonResource

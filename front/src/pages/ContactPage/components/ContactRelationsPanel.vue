@@ -9,7 +9,7 @@
     <!-- List -->
     <template v-else>
       <EntityRow
-        v-for="rel in relations"
+        v-for="rel in sortedRelations"
         :key="rel.id"
         :title="relatedName(rel)"
         :link-to="`/contacts/${relatedId(rel)}`"
@@ -20,6 +20,7 @@
             :value="relationTypeLabel(rel.relation_type)"
             :severity="relationTypeSeverity(rel.relation_type)"
             size="small"
+            :icon="`pi ${relationTypeIcon(rel.relation_type)}`"
           />
           <span v-if="rel.note" class="contact-relations__note">{{ rel.note }}</span>
         </template>
@@ -36,9 +37,13 @@
       </EntityRow>
 
       <!-- Empty -->
-      <div v-if="relations.length === 0" class="contact-relations__empty">
+      <div v-if="sortedRelations.length === 0" class="contact-relations__empty">
         <i class="pi pi-share-alt contact-relations__empty-icon" />
         <p class="contact-relations__empty-text">{{ t('crm.contact.relations.empty') }}</p>
+        <button class="contact-relations__add-btn contact-relations__add-btn--cta" @click="openDialog = true">
+          <i class="pi pi-plus" />
+          {{ t('crm.contact.relations.add') }}
+        </button>
       </div>
 
       <!-- Add button -->
@@ -104,6 +109,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -161,6 +167,35 @@ function relationTypeSeverity(type: RelationType): 'success' | 'info' | 'warning
   }
   return map[type] ?? 'secondary'
 }
+
+const RELATION_SORT_ORDER: Record<RelationType, number> = {
+  partner: 1,
+  referrer: 2,
+  investor: 3,
+  colleague: 4,
+  mentor: 5,
+  friend: 6,
+  other: 7,
+}
+
+function relationTypeIcon(type: RelationType): string {
+  const map: Record<RelationType, string> = {
+    partner: 'pi-handshake',
+    referrer: 'pi-share-alt',
+    investor: 'pi-chart-bar',
+    colleague: 'pi-users',
+    friend: 'pi-heart',
+    mentor: 'pi-graduation-cap',
+    other: 'pi-link',
+  }
+  return map[type] ?? 'pi-link'
+}
+
+const sortedRelations: ComputedRef<typeof props.relations> = computed(() =>
+  [...props.relations].sort(
+    (a, b) => (RELATION_SORT_ORDER[a.relation_type] ?? 99) - (RELATION_SORT_ORDER[b.relation_type] ?? 99),
+  ),
+)
 
 const relationTypeOptions = computed(() => [
   { value: 'partner', label: t('crm.contact.relations.type.partner') },
@@ -270,7 +305,7 @@ function onDelete(rel: ContactRelation) {
 }
 
 .contact-relations__empty-icon {
-  font-size: 1.5rem;
+  font-size: 2rem;
   color: $surface-300;
 }
 
@@ -300,6 +335,18 @@ function onDelete(rel: ContactRelation) {
 
   i {
     font-size: 11px;
+  }
+
+  &--cta {
+    margin-top: $space-2;
+    border: 1px solid var(--p-primary-color);
+    border-radius: $radius-sm;
+    padding: $space-1 $space-3;
+
+    &:hover {
+      background: rgba(var(--p-primary-500-rgb, 23, 39, 71), 0.06);
+      opacity: 1;
+    }
   }
 }
 

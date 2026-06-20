@@ -556,7 +556,7 @@ onMounted(async () => {
     border-right: 1px solid var(--p-surface-200);
     background: var(--p-card-background);
 
-    .app-dark & {
+    :global(.app-dark) & {
       border-right-color: var(--p-surface-700);
     }
   }
@@ -569,7 +569,7 @@ onMounted(async () => {
     background: var(--p-surface-50);
     overflow: hidden;
 
-    .app-dark & {
+    :global(.app-dark) & {
       background: var(--p-surface-900);
     }
   }
@@ -619,7 +619,7 @@ onMounted(async () => {
     background: var(--p-card-background);
     flex-shrink: 0;
 
-    .app-dark & {
+    :global(.app-dark) & {
       border-bottom-color: var(--p-surface-700);
     }
   }

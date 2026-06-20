@@ -44,6 +44,13 @@ class ContactResource extends JsonResource
             // Company links (when loaded)
             'company_links' => $this->whenLoaded('companyLinks', fn () => ContactCompanyLinkResource::collection($this->companyLinks)),
 
+            // KPI block (available on show() only — set via ->additional(['kpi' => ...]))
+            // Fields:
+            //   deals_count     — total number of deals this contact participates in (via deal_contacts)
+            //   last_touch_at   — ISO 8601 timestamp of last engagement (mirrors last_activity_at column)
+            //   open_tasks_count— number of open (not closed, not done) task-like activities targeting this contact
+            'kpi' => $this->additional['kpi'] ?? null,
+
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

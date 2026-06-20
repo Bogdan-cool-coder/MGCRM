@@ -12,7 +12,6 @@ export type ProfileTab =
   | 'security'
   | 'notifications'
   | 'locale'
-  | 'theme'
   | 'calendar'
   | 'signature'
   | 'segments'
@@ -26,7 +25,6 @@ const VALID_TABS: ProfileTab[] = [
   'security',
   'notifications',
   'locale',
-  'theme',
   'calendar',
   'signature',
   'segments',

@@ -92,6 +92,20 @@ class CompanyResource extends JsonResource
             // Deal totals (when set via ->additional(['deal_totals' => ...]) — B6)
             'deal_totals' => $this->additional['deal_totals'] ?? null,
 
+            // KPI block (available on show() only — set via ->additional(['kpi' => ...]))
+            // Fields:
+            //   open_deals_count  — number of open (non-closed) deals linked to this company
+            //   deals_sum         — base-currency total of open deals (kopecks); null if FX rate unavailable
+            //   deals_sum_currency— ISO 4217 base currency for deals_sum
+            //   employees_count   — number of contact links (employees) for this company
+            //   documents_count   — number of non-archived documents linked to this company
+            //   last_activity_at  — ISO 8601 timestamp of last engagement (from crm_companies column)
+            'kpi' => $this->additional['kpi'] ?? null,
+
+            // Number of direct subsidiary companies in the holding group (preview chip).
+            // Available on show() only (set via ->additional(['holding_company_count' => ...])).
+            'holding_company_count' => $this->additional['holding_company_count'] ?? null,
+
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

@@ -249,6 +249,7 @@
               :severity="statusSeverity(data.status)"
               :value="t(`activity.statuses.${data.status}`)"
               size="small"
+              :pt="{ root: { class: `task-status-tag--${data.status}` } }"
             />
             <i class="pi pi-pencil tasks-cell__edit-icon" />
           </div>
@@ -773,6 +774,7 @@ onMounted(() => {
     flex-shrink: 0;
   }
 
+
   &__stage-name {
     font-size: $font-size-sm;
     color: $surface-700;
@@ -797,5 +799,19 @@ onMounted(() => {
       color: var(--p-red-500);
     }
   }
+}
+
+// ── Status tag dark overrides ─────────────────────────────────────────────────
+// PrimeVue Tag severity=info in dark can have low contrast — boost it per-status
+:global(.app-dark) .task-status-tag--new {
+  background: var(--p-blue-900);
+  color: var(--p-blue-200);
+  border-color: transparent;
+}
+
+:global(.app-dark) .task-status-tag--in_progress {
+  background: var(--p-yellow-900);
+  color: var(--p-yellow-200);
+  border-color: transparent;
 }
 </style>

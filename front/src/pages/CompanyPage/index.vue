@@ -51,8 +51,15 @@
         :category-code="company.category_code"
         :engagement-tier="(company as CompanyExtended).engagement_tier ?? undefined"
         :last-activity-at="(company as CompanyExtended).last_activity_at"
+        :tags="company.tags"
         :menu-items="menuItems"
         @back="router.back()"
+      />
+
+      <!-- KPI strip -->
+      <EntityKpiStrip
+        :items="companyKpiItems"
+        :loading="companyLoading"
       />
 
       <!-- Tabs body -->
@@ -174,6 +181,20 @@
                       :entity-id="company.id"
                       :extra-fields="company.extra_fields"
                       :on-save="saveCustomField"
+                    />
+                  </InfoPanel>
+
+                  <!-- Mini timeline -->
+                  <InfoPanel
+                    :title="t('crm.entity.miniTimeline.title')"
+                    icon="pi-history"
+                    panel-key="company-mini-timeline"
+                    :default-collapsed="false"
+                  >
+                    <EntityMiniTimeline
+                      :log="companyLog"
+                      :max-items="5"
+                      :on-go-to-log="() => goToTab('log')"
                     />
                   </InfoPanel>
                 </div>
@@ -409,6 +430,8 @@ import AutoComplete from 'primevue/autocomplete'
 import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
+import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
+import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
 import EntityLogTab, { type LogMetric } from '@/components/crm/entity/EntityLogTab.vue'
@@ -520,6 +543,85 @@ const companySubtitle = computed(() => {
 })
 
 const openDealsCount = computed(() => deals.value.filter((d) => d.status === 'open').length)
+
+// ── KPI strip ──────────────────────────────────────────────────────────────────
+
+function lastActivityAccent(lastAt: string | null): KpiItem['accent'] {
+  if (!lastAt) return 'neutral'
+  const days = Math.floor((Date.now() - new Date(lastAt).getTime()) / 86_400_000)
+  if (days > 30) return 'danger'
+  if (days > 7) return 'warning'
+  return 'success'
+}
+
+function formatRelativeActivity(lastAt: string | null): string {
+  if (!lastAt) return t('crm.entity.kpiStrip.never', 'Нет')
+  const days = Math.floor((Date.now() - new Date(lastAt).getTime()) / 86_400_000)
+  if (days === 0) return t('common.today', 'Сегодня')
+  if (days === 1) return t('common.yesterday', 'Вчера')
+  return t('crm.entity.kpiStrip.daysAgo', { n: days }, `${days}д`)
+}
+
+function formatKopecks(kopecks: number | null | undefined): string {
+  if (kopecks == null) return '—'
+  const units = Math.round(kopecks / 100)
+  if (units >= 1_000_000) return `${(units / 1_000_000).toFixed(1)}M`
+  if (units >= 1_000) return `${(units / 1_000).toFixed(0)}K`
+  return units.toLocaleString('ru-RU')
+}
+
+const companyKpiItems = computed((): KpiItem[] => {
+  const ext = company.value as CompanyExtended | null
+  const lastAt = ext?.last_activity_at ?? null
+  const kpi = (ext as (CompanyExtended & { kpi?: { open_count?: number; base_total?: number; employees_count?: number; documents_count?: number } | null }) | null)?.kpi ?? null
+  const openCount = kpi?.open_count ?? openDealsCount.value
+  const dealsSum = kpi?.base_total ?? null
+  const employeesCount = kpi?.employees_count ?? employees.value.length
+  const documentsCount = kpi?.documents_count ?? documents.value.length
+  return [
+    {
+      key: 'open_deals',
+      icon: 'pi-briefcase',
+      label: 'company.kpi.openDeals',
+      value: openCount,
+      accent: openCount === 0 ? 'neutral' : undefined,
+      clickable: true,
+      onClick: () => goToTab('deals'),
+    },
+    {
+      key: 'deals_sum',
+      icon: 'pi-chart-line',
+      label: 'company.kpi.dealsSum',
+      value: formatKopecks(dealsSum),
+      accent: 'neutral',
+    },
+    {
+      key: 'employees',
+      icon: 'pi-users',
+      label: 'company.kpi.employees',
+      value: employeesCount,
+      accent: 'neutral',
+      clickable: true,
+      onClick: () => goToTab('contacts'),
+    },
+    {
+      key: 'documents',
+      icon: 'pi-file',
+      label: 'company.kpi.documents',
+      value: documentsCount,
+      accent: 'neutral',
+      clickable: true,
+      onClick: () => goToTab('documents'),
+    },
+    {
+      key: 'last_activity',
+      icon: 'pi-clock',
+      label: 'company.kpi.lastActivity',
+      value: formatRelativeActivity(lastAt),
+      accent: lastActivityAccent(lastAt),
+    },
+  ]
+})
 
 const filteredEmployees = computed(() => {
   if (!employeeSearch.value) return employees.value

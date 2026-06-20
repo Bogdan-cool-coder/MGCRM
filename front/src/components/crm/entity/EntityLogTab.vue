@@ -103,8 +103,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
+import { useEntityLogFormat } from './composables/useEntityLogFormat'
 import type { UseEntityLogReturn } from '@/composables/crm/useEntityLog'
-import type { EntityLogEventType } from '@/entities/crm'
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -127,52 +127,9 @@ const { t } = useI18n()
 
 const visibleMetrics = computed(() => props.metrics ?? [])
 
-// ── Icon map ─────────────────────────────────────────────────────────────────
+// ── Shared log formatting ────────────────────────────────────────────────────
 
-const EVENT_ICONS: Record<EntityLogEventType, string> = {
-  created: 'pi-plus-circle',
-  updated: 'pi-pencil',
-  stage_changed: 'pi-arrow-right-arrow-left',
-  contact_added: 'pi-user-plus',
-  contact_removed: 'pi-user-minus',
-  task_completed: 'pi-check-circle',
-  meeting_held: 'pi-video',
-  note_added: 'pi-comment',
-  document_created: 'pi-file',
-  document_signed: 'pi-file-check',
-  finance_added: 'pi-wallet',
-  status_changed: 'pi-flag',
-  employee_added: 'pi-user-plus',
-  employee_removed: 'pi-user-minus',
-  relation_added: 'pi-share-alt',
-  relation_removed: 'pi-minus-circle',
-  custom_field_changed: 'pi-sliders-h',
-}
-
-function eventIcon(type: EntityLogEventType): string {
-  return EVENT_ICONS[type] ?? 'pi-info-circle'
-}
-
-// ── Event label ───────────────────────────────────────────────────────────────
-
-function eventLabel(type: EntityLogEventType): string {
-  return t(`crm.log.events.${type}`, type)
-}
-
-// ── Date formatter ────────────────────────────────────────────────────────────
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso))
-  } catch {
-    return iso
-  }
-}
+const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
 </script>
 
 <style lang="scss" scoped>

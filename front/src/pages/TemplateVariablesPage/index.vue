@@ -57,7 +57,7 @@
           </Column>
 
           <!-- Label -->
-          <Column header="Название">
+          <Column :header="t('templateVariables.label')">
             <template #body="{ data }">{{ data.label }}</template>
           </Column>
 

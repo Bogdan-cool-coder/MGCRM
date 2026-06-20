@@ -124,11 +124,13 @@
             :size="1.5"
             pattern-color="var(--p-surface-border)"
           />
-          <Controls :show-interactive="false" />
-          <MiniMap
-            :mask-color="isDark ? 'var(--p-surface-800)' : 'var(--p-surface-200)'"
-            :node-color="isDark ? 'var(--p-surface-400)' : 'var(--p-surface-300)'"
-          />
+          <template v-if="nodesReady">
+            <Controls :show-interactive="false" />
+            <MiniMap
+              :mask-color="isDark ? 'var(--p-surface-800)' : 'var(--p-surface-200)'"
+              :node-color="isDark ? 'var(--p-surface-400)' : 'var(--p-surface-300)'"
+            />
+          </template>
         </VueFlow>
       </div>
 
@@ -266,6 +268,12 @@ onBeforeUnmount(() => {
 
 const loading = ref(false)
 const error = ref<string | null>(null)
+
+// ─── Controls/MiniMap visibility guard (no skeleton ghost) ───────────────────
+// Controls and MiniMap render immediately with VueFlow but may flash as
+// unstyled artifacts before nodes are measured. Hide them until nodes are ready.
+
+const nodesReady = ref(false)
 
 // ─── Mutable graph layout (merged with saved) ─────────────────────────────────
 
@@ -436,6 +444,7 @@ function startFit(): void {
 }
 
 function onNodesReady(): void {
+  nodesReady.value = true
   startFit()
 }
 

@@ -239,6 +239,8 @@ function cancel() {
   &__hint {
     color: var(--p-text-muted-color);
     font-size: $font-size-xs;
+    position: relative;
+    z-index: 0;
   }
 
   &__info {

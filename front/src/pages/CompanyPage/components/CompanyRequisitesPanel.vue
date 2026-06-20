@@ -5,49 +5,53 @@
     panel-key="company-requisites"
     :default-collapsed="false"
   >
-    <KeyFactsBlock>
-      <KeyFactsItem :label="t('company.page.fields.taxIdLabel')">
-        <InlineEditableField
-          :model-value="company.tax_id_label"
-          field-key="tax_id_label"
-          field-type="text"
-          placeholder="БИН / ИНН / TIN"
-          :saving="isSaving"
-          @save="onSave"
-        />
-      </KeyFactsItem>
+    <!-- Section: Legal data -->
+    <div class="requisites__section">
+      <div class="requisites__section-divider">
+        <span>{{ t('company.requisites.section.legal') }}</span>
+      </div>
+      <KeyFactsBlock>
+        <KeyFactsItem :label="t('company.page.fields.taxIdLabel')">
+          <InlineEditableField
+            :model-value="company.tax_id_label"
+            field-key="tax_id_label"
+            field-type="text"
+            placeholder="БИН / ИНН / TIN"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
 
-      <KeyFactsItem :label="t('company.page.fields.taxId')">
-        <InlineEditableField
-          :model-value="company.tax_id"
-          field-key="tax_id"
-          field-type="text"
-          :saving="isSaving"
-          @save="onSave"
-        />
-      </KeyFactsItem>
+        <KeyFactsItem :label="t('company.page.fields.taxId')">
+          <InlineEditableField
+            :model-value="company.tax_id"
+            field-key="tax_id"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
 
-      <KeyFactsItem :label="t('company.page.fields.legalForm')">
-        <InlineEditableField
-          :model-value="company.legal_form"
-          field-key="legal_form"
-          field-type="text"
-          :saving="isSaving"
-          @save="onSave"
-        />
-      </KeyFactsItem>
+        <KeyFactsItem :label="t('company.page.fields.legalForm')">
+          <InlineEditableField
+            :model-value="company.legal_form"
+            field-key="legal_form"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
 
-      <KeyFactsItem :label="t('company.page.fields.fullLegalForm')">
-        <InlineEditableField
-          :model-value="company.full_legal_form"
-          field-key="full_legal_form"
-          field-type="text"
-          :saving="isSaving"
-          @save="onSave"
-        />
-      </KeyFactsItem>
+        <KeyFactsItem :label="t('company.page.fields.fullLegalForm')">
+          <InlineEditableField
+            :model-value="company.full_legal_form"
+            field-key="full_legal_form"
+            field-type="text"
+            :saving="isSaving"
+            @save="onSave"
+          />
+        </KeyFactsItem>
 
-      <template v-if="showAll">
         <KeyFactsItem :label="t('company.page.fields.directorPosition')">
           <InlineEditableField
             :model-value="company.director_position"
@@ -57,7 +61,15 @@
             @save="onSave"
           />
         </KeyFactsItem>
+      </KeyFactsBlock>
+    </div>
 
+    <!-- Section: Bank -->
+    <div class="requisites__section">
+      <div class="requisites__section-divider">
+        <span>{{ t('company.requisites.section.bank') }}</span>
+      </div>
+      <KeyFactsBlock>
         <KeyFactsItem :label="t('company.page.fields.bank')">
           <InlineEditableField
             :model-value="company.bank"
@@ -77,7 +89,15 @@
             @save="onSave"
           />
         </KeyFactsItem>
+      </KeyFactsBlock>
+    </div>
 
+    <!-- Section: Contacts & Segmentation -->
+    <div class="requisites__section">
+      <div class="requisites__section-divider">
+        <span>{{ t('company.requisites.section.contacts') }}</span>
+      </div>
+      <KeyFactsBlock>
         <KeyFactsItem :label="t('company.page.fields.address')">
           <InlineEditableField
             :model-value="company.address"
@@ -129,22 +149,12 @@
             @save="onSave"
           />
         </KeyFactsItem>
-      </template>
-    </KeyFactsBlock>
-
-    <button
-      type="button"
-      class="company-requisites__toggle"
-      @click="showAll = !showAll"
-    >
-      <i :class="['pi', showAll ? 'pi-chevron-up' : 'pi-chevron-down']" />
-      {{ showAll ? t('common.showLess') : t('common.showMore') }}
-    </button>
+      </KeyFactsBlock>
+    </div>
   </InfoPanel>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import InlineEditableField from '@/components/crm/InlineEditableField.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
@@ -162,7 +172,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const showAll = ref(false)
 
 function onSave(fieldKey: string, value: string | number | null) {
   emit('save', fieldKey, value)
@@ -179,20 +188,40 @@ function truncateUrl(url: string): string {
 </script>
 
 <style lang="scss" scoped>
-.company-requisites__toggle {
+.requisites__section {
+  &:not(:first-child) {
+    margin-top: $space-4;
+  }
+}
+
+.requisites__section-divider {
   display: flex;
   align-items: center;
-  gap: $space-1;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: $space-2 0;
-  font-size: $font-size-xs;
-  color: var(--p-primary-color);
-  font-weight: $font-weight-medium;
+  gap: $space-2;
+  margin-bottom: $space-3;
 
-  i {
-    font-size: $font-size-xs;
+  span {
+    font-size: 10px;
+    font-weight: $font-weight-bold;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $surface-400;
+    white-space: nowrap;
+
+    .app-dark & {
+      color: var(--p-surface-500);
+    }
+  }
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--p-surface-200);
+
+    .app-dark & {
+      background: var(--p-surface-700);
+    }
   }
 }
 

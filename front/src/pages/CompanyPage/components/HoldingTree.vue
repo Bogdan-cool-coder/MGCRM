@@ -3,6 +3,7 @@
     :title="t('crm.company.sections.holding')"
     icon="pi-sitemap"
     panel-key="company-holding"
+    :count="childrenCount || undefined"
     :default-collapsed="true"
   >
     <!-- Loading -->
@@ -99,15 +100,16 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
-import type { HoldingTreeDto, HoldingRole } from '@/entities/crm'
+import type { HoldingTreeDto, HoldingRole, HoldingCompanyNode } from '@/entities/crm'
 
-defineProps<{
+const props = defineProps<{
   tree: HoldingTreeDto | null
   loading: boolean
 }>()
@@ -118,6 +120,22 @@ defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+/** Recursively count all descendant nodes in tree.children */
+function countNodes(node: HoldingCompanyNode & { children?: HoldingCompanyNode[] }): number {
+  return 1 + ((node as { children?: HoldingCompanyNode[] }).children ?? []).reduce(
+    (s: number, c: HoldingCompanyNode) => s + countNodes(c as HoldingCompanyNode & { children?: HoldingCompanyNode[] }),
+    0,
+  )
+}
+
+const childrenCount = computed(() => {
+  if (!props.tree) return 0
+  return (props.tree.children ?? []).reduce(
+    (s, c) => s + countNodes(c as HoldingCompanyNode & { children?: HoldingCompanyNode[] }),
+    0,
+  )
+})
 
 function holdingRoleLabel(role: HoldingRole | null): string {
   if (role === 'parent') return t('crm.company.holding.roleParent')

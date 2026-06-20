@@ -1,7 +1,10 @@
 <template>
   <span
     class="engagement-chip"
-    :class="[`engagement-chip--${tier}`, { 'engagement-chip--dot': dotOnly }]"
+    :class="[
+      `engagement-chip--${tier}`,
+      { 'engagement-chip--dot': dotOnly, 'engagement-chip--neutral': isNeutralCold },
+    ]"
     v-tooltip.bottom="tooltipText"
   >
     <i :class="['pi', chipIcon]" />
@@ -30,7 +33,13 @@ const props = withDefaults(
 
 const { t } = useI18n()
 
+// cold + no activity history = neutral (new contact, never contacted)
+const isNeutralCold = computed(
+  () => props.tier === 'cold' && props.lastActivityAt === null,
+)
+
 const chipIcon = computed((): string => {
+  if (isNeutralCold.value) return 'pi-circle'
   if (props.tier === 'cold') return 'pi-exclamation-circle'
   return 'pi-circle-fill'
 })
@@ -78,6 +87,12 @@ const tooltipText = computed((): string => {
   &--cold {
     color: var(--p-red-400);
     background: rgba(239, 68, 68, 0.15);
+  }
+
+  // Neutral: cold tier but never contacted — no alarm styling
+  &--neutral {
+    color: var(--p-surface-400);
+    background: transparent;
   }
 
   // ── Dot-only mode (list view) ───────────────────────────────────────────────

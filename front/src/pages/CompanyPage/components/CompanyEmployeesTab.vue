@@ -1,15 +1,5 @@
 <template>
   <div class="employees-tab">
-    <div class="employees-tab__header">
-      <Button
-        icon="pi pi-user-plus"
-        :label="t('company.page.employees.add')"
-        severity="secondary"
-        outlined
-        @click="$emit('addEmployee')"
-      />
-    </div>
-
     <!-- Empty state -->
     <div v-if="employees.length === 0" class="employees-tab__empty">
       <i class="pi pi-users employees-tab__empty-icon" />
@@ -94,6 +84,8 @@ import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import type { ContactCompanyLink, EmploymentStatus } from '@/entities/crm'
 
+// Note: 'addEmployee' emit kept for compatibility — now only triggered via the toolbar in index.vue
+
 defineProps<{
   employees: ContactCompanyLink[]
   loading: boolean
@@ -148,11 +140,6 @@ function getMenuItems(data: ContactCompanyLink) {
   display: flex;
   flex-direction: column;
   gap: $space-4;
-}
-
-.employees-tab__header {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .employees-tab__empty {

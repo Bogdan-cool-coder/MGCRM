@@ -187,6 +187,7 @@
                   :options="themeOptions"
                   option-label="label"
                   option-value="value"
+                  :pt="{ root: { class: 'theme-selectbtn' } }"
                 />
               </div>
 
@@ -272,7 +273,7 @@
             </template>
 
             <!-- Coming soon tabs -->
-            <template v-if="['notifications', 'locale', 'theme', 'calendar', 'signature', 'segments'].includes(activeTab)">
+            <template v-if="['notifications', 'locale', 'calendar', 'signature', 'segments'].includes(activeTab)">
               <h2 class="profile-content__heading">{{ t(`profile.tabs.${activeTab}`) }}</h2>
 
               <!-- Locale switcher -->
@@ -290,25 +291,6 @@
                     :severity="currentLocale === 'en' ? 'primary' : 'secondary'"
                     outlined
                     @click="setLocale('en')"
-                  />
-                </div>
-              </div>
-
-              <!-- Theme switcher -->
-              <div v-else-if="activeTab === 'theme'">
-                <p class="mb-3">{{ t('profile.theme.title') }}</p>
-                <div class="d-flex gap-3">
-                  <Button
-                    :label="t('profile.theme.light')"
-                    :severity="themeStore.theme === 'light' ? 'primary' : 'secondary'"
-                    outlined
-                    @click="themeStore.setTheme('light')"
-                  />
-                  <Button
-                    :label="t('profile.theme.dark')"
-                    :severity="themeStore.theme === 'dark' ? 'primary' : 'secondary'"
-                    outlined
-                    @click="themeStore.setTheme('dark')"
                   />
                 </div>
               </div>
@@ -447,7 +429,6 @@ const TAB_ICONS: Record<ProfileTab, string> = {
   security: 'pi pi-lock',
   notifications: 'pi pi-bell',
   locale: 'pi pi-globe',
-  theme: 'pi pi-palette',
   calendar: 'pi pi-calendar',
   signature: 'pi pi-pen-to-square',
   segments: 'pi pi-tag',
@@ -793,6 +774,13 @@ function tabIcon(tab: ProfileTab): string {
     color: $surface-500;
     margin: 0;
   }
+}
+
+// Theme SelectButton dark override
+:global(.app-dark) :deep(.theme-selectbtn .p-togglebutton.p-togglebutton-checked) {
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+  border-color: var(--p-primary-color);
 }
 
 // Coming soon

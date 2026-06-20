@@ -521,10 +521,15 @@
         "deleteSuccess": "Компания удалена"
       },
       "deals": {
-        "empty": "Нет сделок",
+        "empty": "Нет открытых сделок",
+        "emptyHint": "Создайте первую сделку для этой компании",
+        "noWonDeals": "Нет завершённых сделок",
         "createDeal": "Создать сделку",
         "openCount": "{count} открытых",
         "seeAll": "Все сделки"
+      },
+      "holding": {
+        "childrenCount": "{count} компаний в холдинге"
       },
       "totals": {
         "empty": "Нет завершённых сделок",
@@ -534,9 +539,29 @@
       "documents": {
         "seeAll": "Все документы ({count})"
       }
+    },
+    "kpi": {
+      "openDeals": "Открытые сделки",
+      "dealsSum": "Сумма сделок",
+      "employees": "Сотрудники",
+      "documents": "Документы",
+      "lastActivity": "Посл. активность"
+    },
+    "requisites": {
+      "section": {
+        "legal": "Юр. данные",
+        "bank": "Банк",
+        "contacts": "Контакты и сегментация"
+      }
     }
   },
   "contact": {
+    "kpi": {
+      "deals": "Сделки",
+      "lastContact": "Посл. контакт",
+      "openTasks": "Открытых задач",
+      "companies": "Компании"
+    },
     "page": {
       "back": "Назад",
       "tabs": {
@@ -1888,6 +1913,7 @@
     "title": "Каталог переменных",
     "create": "Добавить переменную",
     "key": "Ключ (метка)",
+    "label": "Название",
     "type": "Тип",
     "group": "Группа",
     "products": "Продукты",
@@ -2784,6 +2810,23 @@
       "row": {
         "primary": "Основной",
         "setPrimary": "Сделать основным"
+      },
+      "nowStrip": {
+        "label": "Сейчас",
+        "lastContact": "Посл. контакт",
+        "openTasks": "Открытых задач",
+        "overdue": "Просрочено"
+      },
+      "miniTimeline": {
+        "title": "Хронология",
+        "goToLog": "Открыть лог",
+        "empty": "История пуста",
+        "daysAgo": "{n}д назад"
+      },
+      "kpiStrip": {
+        "label": "KPI",
+        "never": "Нет",
+        "daysAgo": "{n}д"
       }
     },
     "company": {

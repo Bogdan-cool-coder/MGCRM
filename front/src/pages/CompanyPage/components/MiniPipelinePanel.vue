@@ -27,6 +27,7 @@
     <div v-else-if="deals.length === 0" class="mini-pipeline__empty">
       <i class="pi pi-briefcase mini-pipeline__empty-icon" />
       <p class="mini-pipeline__empty-text">{{ t('company.page.deals.empty') }}</p>
+      <p class="mini-pipeline__empty-hint">{{ t('company.page.deals.emptyHint') }}</p>
       <Button
         icon="pi pi-plus"
         :label="t('company.page.deals.createDeal')"
@@ -180,6 +181,16 @@ function formatAmount(kopecks: number): string {
   font-size: $font-size-sm;
   color: $surface-500;
   margin: 0;
+}
+
+.mini-pipeline__empty-hint {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  margin: 0;
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
 }
 
 .mini-pipeline__stages {

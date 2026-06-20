@@ -440,6 +440,27 @@ class ActivityService
     }
 
     /**
+     * Count of OPEN (not closed, status != done) task-like activities targeting a
+     * specific contact — the KPI card signal for ContactResource.
+     *
+     * "Task-like" mirrors taskLikeValues() (call/meeting/task/follow_up/presentation).
+     * No visibility scope here: the count is shown to anyone who can view the contact
+     * (the controller already gates access via Policy).
+     *
+     * Single DB query — safe to call from ContactController::show() without N+1.
+     */
+    public function openTasksCountForContact(int $contactId): int
+    {
+        return Activity::query()
+            ->where('target_type', ActivityTargetType::Contact->value)
+            ->where('target_id', $contactId)
+            ->whereIn('kind', ActivityType::taskLikeValues())
+            ->where('is_closed', false)
+            ->where('status', '!=', ActivityStatus::Done->value)
+            ->count();
+    }
+
+    /**
      * Number of OPEN deals (stage not won/lost) in a pipeline, within the user's
      * visibility scope, that have NO open task-like activity (S1.7 dashboard
      * "deals without tasks" widget, BQ1).

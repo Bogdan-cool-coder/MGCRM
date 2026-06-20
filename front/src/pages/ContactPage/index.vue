@@ -43,8 +43,15 @@
         :author-name="contact.owner?.full_name"
         :engagement-tier="contact.engagement_tier ?? undefined"
         :last-activity-at="contact.last_activity_at"
+        :tags="contact.tags"
         :menu-items="menuItems"
         @back="router.back()"
+      />
+
+      <!-- KPI strip -->
+      <EntityKpiStrip
+        :items="contactKpiItems"
+        :loading="contactLoading"
       />
 
       <!-- Body: mobile tab select + tab panels -->
@@ -180,6 +187,20 @@
                         </div>
                       </InfoPanel>
 
+                      <!-- Мини-хронология -->
+                      <InfoPanel
+                        :title="t('crm.entity.miniTimeline.title')"
+                        icon="pi-history"
+                        panel-key="contact-mini-timeline"
+                        :default-collapsed="false"
+                      >
+                        <EntityMiniTimeline
+                          :log="contactLog"
+                          :max-items="5"
+                          :on-go-to-log="() => { activeTab = 'log' }"
+                        />
+                      </InfoPanel>
+
                       <!-- Доп. поля -->
                       <InfoPanel
                         :title="t('crm.contact.sections.customFields')"
@@ -298,6 +319,8 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
+import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
+import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
 import EntityLogTab, { type LogMetric } from '@/components/crm/entity/EntityLogTab.vue'
@@ -369,6 +392,62 @@ const contactMetrics = computed((): LogMetric[] => [
   { key: 'deals', label: t('crm.log.metrics.deals'), metricValue: deals.value.length },
   { key: 'companies', label: t('crm.log.metrics.companies'), metricValue: companies.value.length },
 ])
+
+// ── KPI strip ──────────────────────────────────────────────────────────────────
+
+function contactLastActivityAccent(lastAt: string | null): KpiItem['accent'] {
+  if (!lastAt) return 'neutral'
+  const days = Math.floor((Date.now() - new Date(lastAt).getTime()) / 86_400_000)
+  if (days > 30) return 'danger'
+  if (days > 7) return 'warning'
+  return 'success'
+}
+
+function formatRelativeContact(lastAt: string | null): string {
+  if (!lastAt) return t('crm.entity.kpiStrip.never', 'Нет')
+  const days = Math.floor((Date.now() - new Date(lastAt).getTime()) / 86_400_000)
+  if (days === 0) return t('common.today', 'Сегодня')
+  if (days === 1) return t('common.yesterday', 'Вчера')
+  return t('crm.entity.kpiStrip.daysAgo', { n: days }, `${days}д`)
+}
+
+const contactKpiItems = computed((): KpiItem[] => {
+  const ext = contact.value as (typeof contact.value & { last_activity_at?: string | null; kpi?: { deals_count?: number; last_touch_at?: string | null; open_tasks_count?: number } | null }) | null
+  const lastAt = ext?.last_activity_at ?? ext?.kpi?.last_touch_at ?? null
+  const openTasksCount = ext?.kpi?.open_tasks_count ?? 0
+  return [
+    {
+      key: 'deals',
+      icon: 'pi-briefcase',
+      label: 'contact.kpi.deals',
+      value: ext?.kpi?.deals_count ?? deals.value.length,
+      accent: 'neutral',
+      clickable: true,
+      onClick: () => { activeTab.value = 'deals' },
+    },
+    {
+      key: 'last_contact',
+      icon: 'pi-clock',
+      label: 'contact.kpi.lastContact',
+      value: formatRelativeContact(lastAt),
+      accent: contactLastActivityAccent(lastAt),
+    },
+    {
+      key: 'open_tasks',
+      icon: 'pi-check-square',
+      label: 'contact.kpi.openTasks',
+      value: openTasksCount,
+      accent: openTasksCount > 0 ? 'info' : 'neutral',
+    },
+    {
+      key: 'companies',
+      icon: 'pi-building',
+      label: 'contact.kpi.companies',
+      value: companies.value.length,
+      accent: 'neutral',
+    },
+  ]
+})
 
 // ── Deals pagination ──────────────────────────────────────────────────────────
 

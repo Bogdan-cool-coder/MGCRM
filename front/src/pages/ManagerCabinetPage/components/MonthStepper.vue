@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import type { KpiPeriod } from '@/entities/managerCabinet'
@@ -29,6 +30,8 @@ defineProps<{
 const emit = defineEmits<{
   'update:period': [KpiPeriod]
 }>()
+
+const { locale } = useI18n()
 
 interface MonthItem {
   value: KpiPeriod
@@ -44,7 +47,7 @@ const months = computed<MonthItem[]>(() =>
     const value: KpiPeriod = isCurrent
       ? 'current_month'
       : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    const shortMonth = d.toLocaleString('ru', { month: 'short' })
+    const shortMonth = d.toLocaleString(locale.value, { month: 'short' })
     // Show year only for the first button if it's in a prior year
     const showYear = i === 0 && d.getFullYear() < new Date().getFullYear()
     const displayLabel = showYear ? `${shortMonth} '${d.getFullYear()}` : shortMonth
