@@ -1,9 +1,20 @@
 <template>
-  <div class="notifications-btn">
+  <!--
+    Inline-label wrapper follows the same orbita-panel__btn expand pattern as nav
+    buttons. In vertical mode the label expands edge-aware (start→right, end→left).
+    In horizontal mode it expands rightward (same as nav, symmetric flex reflow).
+    v-tooltip is intentionally removed — it rendered under the toggle (z-order issue).
+  -->
+  <div
+    class="notifications-btn"
+    :class="[
+      'orbita-action-btn',
+      panelOrientation === 'vertical' ? `orbita-action-btn--${labelSide}` : 'orbita-action-btn--h',
+    ]"
+  >
     <!-- Trigger: bell icon + unread badge -->
     <button
-      v-tooltip="tooltipOptions(t('orbita.notifications'))"
-      class="notifications-btn__trigger"
+      class="notifications-btn__trigger orbita-action-btn__trigger"
       :class="{ 'notifications-btn__trigger--has-unread': hasUnread }"
       :aria-label="badgeAriaLabel"
       @click="handleClick"
@@ -15,6 +26,8 @@
         aria-hidden="true"
       >{{ badgeLabel }}</span>
     </button>
+    <!-- Inline label — expands on hover, edge-aware -->
+    <span class="orbita-action-btn__label" aria-hidden="true">{{ t('orbita.notifications') }}</span>
 
     <!-- Flyout Popover -->
     <Popover
@@ -148,21 +161,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, toRefs } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Popover from 'primevue/popover'
 import Button from 'primevue/button'
-import Tooltip from 'primevue/tooltip'
 import { useNotificationsStore } from '@/stores/notificationsStore'
 import { useNotificationsFlyout } from './composables/useNotificationsFlyout'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
-import type { OrbitaOverlayControl } from './types'
+import type { OrbitaOverlayControl, OrbitaOrientation } from './types'
 
 interface Props {
   tooltipOptions: (value: string) => OrbitaTooltipOptions
+  /** Edge-aware label side forwarded from OrbitaPanel scoped slot */
+  labelSide?: 'start' | 'end' | 'center'
+  /** Panel orientation forwarded from OrbitaPanel scoped slot */
+  panelOrientation?: OrbitaOrientation
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const { panelOrientation, labelSide } = toRefs(props)
 
 const emit = defineEmits<{
   'toggle-request': [event: MouseEvent]
@@ -170,7 +188,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const vTooltip = Tooltip
 
 const popoverRef = ref<InstanceType<typeof Popover> | null>(null)
 
@@ -283,10 +300,88 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 </script>
 
 <style lang="scss" scoped>
+@use './styles/tokens' as orbita;
+
+// ─── Inline-label action button wrapper ────────────────────────────────────
+// Mirrors orbita-panel__btn expand pattern. The wrapper is a flex row that
+// grows on hover; the icon trigger stays pinned; the label fades in from hidden.
+.orbita-action-btn {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  height: orbita.$orbita-control-size;
+  min-width: orbita.$orbita-control-size;
+  max-width: orbita.$orbita-control-size;
+  border-radius: $radius-md;
+  transition: max-width 0.18s ease-out;
+
+  &:hover,
+  &:focus-within {
+    max-width: 14rem;
+
+    .orbita-action-btn__label {
+      max-width: 10rem;
+      opacity: 1;
+      padding-inline-end: 0.625rem;
+    }
+  }
+
+  // Vertical, left edge → icon left, label expands rightward
+  &--start {
+    flex-direction: row;
+  }
+
+  // Vertical, right edge → icon right, label expands leftward
+  &--end {
+    flex-direction: row-reverse;
+
+    &:hover,
+    &:focus-within {
+      .orbita-action-btn__label {
+        padding-inline-end: 0;
+        padding-inline-start: 0.625rem;
+      }
+    }
+  }
+
+  // Horizontal → icon + label expand rightward (matches nav)
+  &--h {
+    flex-direction: row;
+  }
+
+  // center = horizontal, same as --h
+  &--center {
+    flex-direction: row;
+  }
+}
+
+.orbita-action-btn__trigger {
+  // Icon square stays fixed; never shrinks as label appears
+  flex-shrink: 0;
+  width: orbita.$orbita-control-size;
+  min-width: orbita.$orbita-control-size;
+}
+
+.orbita-action-btn__label {
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  pointer-events: none;
+  display: block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-inline: 0;
+  color: $surface-700;
+  transition:
+    max-width 0.18s ease-out,
+    opacity 0.14s ease-out,
+    padding-inline 0.18s ease-out;
+}
+
 // ─── Trigger ───────────────────────────────────────────────────────────────
 .notifications-btn {
   position: relative;
-  display: inline-flex;
 }
 
 .notifications-btn__trigger {
@@ -587,5 +682,37 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   justify-content: center;
   padding: $space-2 $space-4;
   border-top: 1px solid $surface-100;
+}
+
+// ─── Dark mode ────────────────────────────────────────────────────────────────
+:global(.app-dark) {
+  .orbita-action-btn__label {
+    color: $surface-300;
+  }
+
+  .notifications-btn__trigger {
+    &:hover {
+      background: $surface-800;
+      border-color: rgba($surface-100, 0.1);
+    }
+  }
+
+  .notifications-btn__icon {
+    color: $surface-300;
+  }
+}
+
+// ─── Accessibility ────────────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .orbita-action-btn,
+  .orbita-action-btn__label {
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .orbita-action-btn__label {
+    color: ButtonText;
+  }
 }
 </style>
