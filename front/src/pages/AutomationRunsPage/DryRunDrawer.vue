@@ -3,6 +3,7 @@
     :visible="visible"
     position="right"
     :style="{ width: '480px' }"
+    :show-close-icon="false"
     @update:visible="$emit('update:visible', $event)"
   >
     <template #header>

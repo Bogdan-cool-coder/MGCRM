@@ -5,6 +5,7 @@
     :style="{ width: '640px' }"
     :modal="true"
     :dismissable="true"
+    :show-close-icon="false"
     @hide="onHide"
   >
     <template #header>

@@ -3,6 +3,7 @@
     v-model:visible="visible"
     position="right"
     style="width: 500px"
+    :show-close-icon="false"
     @hide="onHide"
   >
     <template #header>

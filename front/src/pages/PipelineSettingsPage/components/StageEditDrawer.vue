@@ -3,6 +3,7 @@
     v-model:visible="visible"
     position="right"
     style="width: 560px"
+    :show-close-icon="false"
   >
     <template #header>
       <div class="stage-drawer__header">

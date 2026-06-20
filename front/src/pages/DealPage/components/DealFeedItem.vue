@@ -106,7 +106,7 @@
           </div>
           <div class="feed-item__header-right">
             <Tag
-              v-if="item.type !== 'note'"
+              v-if="item.activity?.kind !== 'note'"
               :severity="statusSeverity(item.activity.status)"
               :value="t(`activity.statuses.${item.activity.status}`)"
               size="small"
@@ -137,7 +137,7 @@
             {{ item.activity.responsible.full_name }}
           </span>
           <Tag
-            v-if="item.type !== 'note' && item.activity.priority"
+            v-if="item.activity?.kind !== 'note' && item.activity.priority"
             :severity="prioritySeverity(item.activity.priority)"
             :value="t(`activity.priorities.${item.activity.priority}`)"
             size="small"
@@ -145,7 +145,7 @@
         </div>
 
         <!-- Body preview for note -->
-        <p v-if="item.activity.body && item.type === 'note'" class="feed-item__body">
+        <p v-if="item.activity.body && item.activity?.kind === 'note'" class="feed-item__body">
           {{ item.activity.body }}
         </p>
 

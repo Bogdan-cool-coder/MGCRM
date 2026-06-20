@@ -141,12 +141,12 @@ const lastActivityLabel = computed((): string => {
 })
 
 const dealMetrics = computed((): LogMetric[] => [
-  { key: 'daysInDeal', label: t('sales.deal.stats.daysInDeal'), value: daysInDeal.value },
-  { key: 'daysInStage', label: t('sales.deal.stats.daysInStage'), value: props.daysInStage },
-  { key: 'activities', label: t('sales.deal.stats.activities'), value: props.activities.length },
-  { key: 'stageChanges', label: t('sales.deal.stats.stageChanges'), value: props.history.length },
-  { key: 'documents', label: t('sales.deal.stats.documents'), value: docsCount.value },
-  { key: 'lastActivity', label: t('sales.deal.stats.lastActivity'), value: lastActivityLabel.value },
+  { key: 'daysInDeal', label: t('sales.deal.stats.daysInDeal'), metricValue: daysInDeal.value },
+  { key: 'daysInStage', label: t('sales.deal.stats.daysInStage'), metricValue: props.daysInStage },
+  { key: 'activities', label: t('sales.deal.stats.activities'), metricValue: props.activities.length },
+  { key: 'stageChanges', label: t('sales.deal.stats.stageChanges'), metricValue: props.history.length },
+  { key: 'documents', label: t('sales.deal.stats.documents'), metricValue: docsCount.value },
+  { key: 'lastActivity', label: t('sales.deal.stats.lastActivity'), metricValue: lastActivityLabel.value },
 ])
 
 // ── Docs count ────────────────────────────────────────────────────────────────

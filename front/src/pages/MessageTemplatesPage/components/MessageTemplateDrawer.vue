@@ -3,6 +3,7 @@
     v-model:visible="visible"
     position="right"
     style="width: 680px"
+    :show-close-icon="false"
     @hide="emit('update:modelValue', false)"
   >
     <template #header>

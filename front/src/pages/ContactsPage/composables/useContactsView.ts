@@ -49,7 +49,7 @@ export function useContactsView(entityType: { value: EntityType }) {
     { field: 'full_name', header: t('contacts.page.columns.name'), required: true, sortable: true, frozen: true },
     { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: false, width: 100 },
     { field: 'position', header: t('contact.page.fields.position', 'Должность'), sortable: true },
-    { field: 'company', header: t('company.page.fields.name', 'Компания'), sortable: false },
+    { field: 'company', header: t('contacts.page.columns.company'), sortable: false },
     { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
     { field: 'open_deals_count', header: t('crm.contacts_page.columns.openDeals'), sortable: true, width: 120 },
     { field: 'owner', header: t('crm.entity.author'), sortable: false },

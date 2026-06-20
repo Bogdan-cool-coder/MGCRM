@@ -15,20 +15,37 @@
  *   ?       Open hotkeys cheatsheet dialog
  *
  * Muted when:
- *   - Focus is in input / textarea / [contenteditable]
+ *   - Focus is in input / textarea / select / [contenteditable]
  *   - Any [role=dialog][aria-modal="true"] is open
+ *   - Active element is NOT the document body (i.e. some other element has focus
+ *     but wasn't caught by the interactive-selector check — e.g. a button or link).
+ *     Hotkeys only fire when focus is on body (no interactive element focused)
+ *     OR when gPending is already active (user deliberately started a sequence).
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const SEQUENCE_TIMEOUT_MS = 1500
-const INTERACTIVE_SELECTORS = ['INPUT', 'TEXTAREA', 'SELECT']
+/** Elements where ALL hotkeys (including Ctrl+K and '?') are suppressed */
+const ALWAYS_MUTED_SELECTORS = ['INPUT', 'TEXTAREA', 'SELECT']
+/** Elements where navigation sequences (g→X) are suppressed but Ctrl+K / '?' still work */
+const SEQUENCE_MUTED_SELECTORS = ['BUTTON', 'A', 'SUMMARY', 'DETAILS']
 
 function isInteractiveFocus(): boolean {
   const el = document.activeElement
   if (!el) return false
-  if (INTERACTIVE_SELECTORS.includes(el.tagName)) return true
+  if (ALWAYS_MUTED_SELECTORS.includes(el.tagName)) return true
   if ((el as HTMLElement).isContentEditable) return true
+  return false
+}
+
+/** Returns true when focus is on a UI element that should NOT trigger navigation sequences */
+function isSequenceMutedFocus(): boolean {
+  const el = document.activeElement
+  if (!el) return false
+  if (SEQUENCE_MUTED_SELECTORS.includes(el.tagName)) return true
+  // Any focusable element other than body/html mutes sequences
+  if (el !== document.body && el !== document.documentElement) return true
   return false
 }
 
@@ -97,18 +114,23 @@ export function useNavHotkeys(options: UseNavHotkeysOptions) {
   }
 
   function onKeydown(e: KeyboardEvent) {
-    // Guard: muted if focus is in an input-like element
+    // Guard: only trust real user key events (block synthetic/programmatic events)
+    if (!e.isTrusted) return
+
+    // Guard: skip IME composition input
+    if (e.isComposing) return
+
+    // Guard: muted completely if focus is in a text input element
     if (isInteractiveFocus()) return
 
-    // Guard: muted if a modal is open (except we let Esc through in modals —
-    // but hotkeys below don't conflict with Esc)
+    // Guard: muted if a modal is open
     if (isModalOpen()) return
 
     const key = e.key
     const isMacOs = isMac()
     const cmdOrCtrl = isMacOs ? e.metaKey : e.ctrlKey
 
-    // Ctrl/Cmd + K → command palette
+    // Ctrl/Cmd + K → command palette (works even with focus on non-text UI element)
     if (key === 'k' && cmdOrCtrl && !e.shiftKey && !e.altKey) {
       e.preventDefault()
       clearSequence()
@@ -116,24 +138,26 @@ export function useNavHotkeys(options: UseNavHotkeysOptions) {
       return
     }
 
-    // '?' → cheatsheet (only without modifiers)
-    if (key === '?' && !cmdOrCtrl && !e.altKey) {
+    // '?' → cheatsheet — only when NOT focused on a button/link (avoid double-action)
+    if (key === '?' && !cmdOrCtrl && !e.altKey && !isSequenceMutedFocus()) {
       e.preventDefault()
       clearSequence()
       options.onOpenCheatsheet()
       return
     }
 
-    // g → start sequence
-    if (key === 'g' && !cmdOrCtrl && !e.altKey && !e.shiftKey) {
+    // g → start sequence — requires body focus (no UI element focused) to prevent
+    // accidental navigation when user presses 'g' while clicking around the page
+    if (key === 'g' && !cmdOrCtrl && !e.altKey && !e.shiftKey && !isSequenceMutedFocus()) {
       clearSequence()
       gPending = true
       gTimer = setTimeout(clearSequence, SEQUENCE_TIMEOUT_MS)
       return
     }
 
-    // Second key of g→X sequence
-    if (gPending) {
+    // Second key of g→X sequence — also guarded by isSequenceMutedFocus to prevent
+    // phantom completions if focus moved to a button between first and second key
+    if (gPending && !isSequenceMutedFocus()) {
       const route = G_SEQUENCES[key.toLowerCase()]
       if (route) {
         e.preventDefault()
@@ -143,6 +167,11 @@ export function useNavHotkeys(options: UseNavHotkeysOptions) {
         clearSequence()
       }
       return
+    }
+
+    // If gPending but focus moved to an interactive element, cancel the sequence
+    if (gPending) {
+      clearSequence()
     }
   }
 

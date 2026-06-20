@@ -319,6 +319,7 @@
       },
       "columns": {
         "name": "Name",
+        "company": "Company",
         "type": "Type",
         "source": "Source",
         "country": "Country",
@@ -1096,7 +1097,9 @@
           "daysInWork": "{n}d",
           "today": "today {time}",
           "tomorrow": "tomorrow {time}",
-          "overdueWhen": "{n} day ago | {n} days ago | {n} days ago"
+          "overdueWhen_one": "{n} day ago",
+          "overdueWhen_few": "{n} days ago",
+          "overdueWhen_many": "{n} days ago"
         },
         "taskTypes": {
           "call": "Call",
@@ -2591,7 +2594,9 @@
     "maxError": "You can select at most {max} actions",
     "saved": "Quick actions saved",
     "toggleTheme": "Toggle theme",
-    "openSearch": "Open search"
+    "openSearch": "Open search",
+    "noAvailable": "No available actions",
+    "noSelected": "No selected actions"
   },
   "layout": {
     "navMode": "Menu style",

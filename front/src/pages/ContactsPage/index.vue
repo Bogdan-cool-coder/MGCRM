@@ -423,7 +423,7 @@
       v-model:visible="quickCreateOpen"
       position="right"
       style="width: 420px"
-      :closable="false"
+      :show-close-icon="false"
     >
       <template #header>
         <div class="contacts-page__drawer-header">

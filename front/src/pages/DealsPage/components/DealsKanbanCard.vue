@@ -114,7 +114,7 @@ const emit = defineEmits<{
   titleChange: [cardId: number, title: string]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const activityStore = useActivityStore()
 const salesStore = useSalesStore()
@@ -256,8 +256,20 @@ const overdueWhen = computed(() => {
   const task = props.card.next_task
   if (!task?.due_at) return ''
   const d = new Date(task.due_at)
-  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000)
-  return t('sales.deals.page.card.overdueWhen', diffDays)
+  const n = Math.max(1, Math.floor((Date.now() - d.getTime()) / 86400000))
+  // Select plural form in JS to avoid vue-i18n lazy-compile crash on '|' in locale strings
+  let formKey: string
+  if (locale.value === 'ru') {
+    const mod10 = n % 10
+    const mod100 = n % 100
+    if (mod100 >= 11 && mod100 <= 19) formKey = 'overdueWhen_many'
+    else if (mod10 === 1) formKey = 'overdueWhen_one'
+    else if (mod10 >= 2 && mod10 <= 4) formKey = 'overdueWhen_few'
+    else formKey = 'overdueWhen_many'
+  } else {
+    formKey = n === 1 ? 'overdueWhen_one' : 'overdueWhen_many'
+  }
+  return t(`sales.deals.page.card.${formKey}`, { n })
 })
 
 // ── Actions ────────────────────────────────────────────────────────────────────

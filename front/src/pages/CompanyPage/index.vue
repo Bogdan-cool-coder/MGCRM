@@ -500,9 +500,9 @@ const {
 const companyLog = useEntityLog('company', () => companyId.value ?? null)
 
 const companyMetrics = computed((): LogMetric[] => [
-  { key: 'openDeals', label: t('crm.log.metrics.openDeals'), value: openDealsCount.value },
-  { key: 'employees', label: t('crm.log.metrics.employees'), value: employees.value.length },
-  { key: 'documents', label: t('crm.log.metrics.documents'), value: documents.value.length },
+  { key: 'openDeals', label: t('crm.log.metrics.openDeals'), metricValue: openDealsCount.value },
+  { key: 'employees', label: t('crm.log.metrics.employees'), metricValue: employees.value.length },
+  { key: 'documents', label: t('crm.log.metrics.documents'), metricValue: documents.value.length },
 ])
 
 // ── Computed ───────────────────────────────────────────────────────────────────

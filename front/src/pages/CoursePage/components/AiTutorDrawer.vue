@@ -3,9 +3,9 @@
     v-model:visible="visible"
     position="right"
     style="width: 440px"
-    :header="t('onboarding.coursePage.aiTutor.title')"
     :modal="true"
     :dismissable="true"
+    :show-close-icon="false"
     class="ai-tutor-drawer"
   >
     <template #header>

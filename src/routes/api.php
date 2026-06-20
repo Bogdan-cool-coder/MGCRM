@@ -92,8 +92,10 @@ use Illuminate\Support\Facades\Route;
 | Public routes
 |--------------------------------------------------------------------------
 | No token required. Login may hand back a limited temp token (2FA on).
+| `locale` runs here (despite no user) so a failed-login 422 is localized from
+| the SPA's Accept-Language instead of always falling to the app default (ru).
 */
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('locale')->post('/login', [AuthController::class, 'login']);
 
 /*
 |--------------------------------------------------------------------------
@@ -117,7 +119,7 @@ Route::middleware('throttle:inbound')->group(function (): void {
 | temp token issued at /login is exactly what /2fa/validate consumes to upgrade
 | to a full token.
 */
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'locale'])->group(function (): void {
     Route::post('/2fa/validate', [TwoFactorController::class, 'validateCode']);
 });
 

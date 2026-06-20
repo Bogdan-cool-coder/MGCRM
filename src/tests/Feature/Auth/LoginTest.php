@@ -57,6 +57,62 @@ class LoginTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrorFor('email');
     }
 
+    public function test_failed_login_error_is_localized_to_english_via_accept_language(): void
+    {
+        User::factory()->create([
+            'email' => 'manager@mgcrm.test',
+            'password' => Hash::make('secret-pass'),
+        ]);
+
+        // A failed login has no authenticated user, so the locale must come from
+        // the SPA's Accept-Language header — otherwise the message always renders
+        // in the app default (ru). See SetLocale middleware on the /login route.
+        $response = $this->postJson('/api/login', [
+            'email' => 'manager@mgcrm.test',
+            'password' => 'wrong-pass',
+        ], ['Accept-Language' => 'en-US,en;q=0.9']);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('email')
+            ->assertJsonPath('errors.email.0', __('auth.failed', [], 'en'));
+    }
+
+    public function test_failed_login_error_is_localized_to_russian_via_accept_language(): void
+    {
+        User::factory()->create([
+            'email' => 'manager@mgcrm.test',
+            'password' => Hash::make('secret-pass'),
+        ]);
+
+        $response = $this->postJson('/api/login', [
+            'email' => 'manager@mgcrm.test',
+            'password' => 'wrong-pass',
+        ], ['Accept-Language' => 'ru-RU,ru;q=0.9']);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('email')
+            ->assertJsonPath('errors.email.0', __('auth.failed', [], 'ru'));
+    }
+
+    public function test_failed_login_error_falls_back_to_app_default_for_unsupported_language(): void
+    {
+        User::factory()->create([
+            'email' => 'manager@mgcrm.test',
+            'password' => Hash::make('secret-pass'),
+        ]);
+
+        // An unsupported language (de) is ignored by the whitelist, so the app
+        // default (config/app.php locale = ru) stands.
+        $response = $this->postJson('/api/login', [
+            'email' => 'manager@mgcrm.test',
+            'password' => 'wrong-pass',
+        ], ['Accept-Language' => 'de-DE,de;q=0.9']);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('email')
+            ->assertJsonPath('errors.email.0', __('auth.failed', [], config('app.locale')));
+    }
+
     public function test_login_requires_email_and_password(): void
     {
         $this->postJson('/api/login', [])
@@ -95,5 +151,26 @@ class LoginTest extends TestCase
             ->assertJsonPath('two_factor_required', true)
             ->assertJsonStructure(['data', 'temp_token'])
             ->assertJsonMissingPath('token');
+    }
+
+    public function test_issued_api_token_does_not_expire_by_default(): void
+    {
+        // Guards the prod incident where tokens died after 1-3 minutes: with
+        // sanctum.expiration null and no expires_at set at creation, the session
+        // token must never carry an expiry. A blank SANCTUM_TOKEN_EXPIRATION env
+        // must coerce to null here, not to a truthy "expire after 0 minutes".
+        $this->assertNull(config('sanctum.expiration'));
+
+        $user = User::factory()->create([
+            'email' => 'manager@mgcrm.test',
+            'password' => Hash::make('secret-pass'),
+        ]);
+
+        $this->postJson('/api/login', [
+            'email' => 'manager@mgcrm.test',
+            'password' => 'secret-pass',
+        ])->assertOk();
+
+        $this->assertNull($user->tokens()->sole()->expires_at);
     }
 }

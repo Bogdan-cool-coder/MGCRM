@@ -16,6 +16,7 @@
       :show-source-controls="false"
       :show-target-controls="true"
       :target-list-props="{ 'aria-label': t('quickActions.selected') }"
+
       class="quick-actions-picklist"
       @move-to-target="onMoveToTarget"
       @move-all-to-target="onMoveToTarget"
@@ -63,6 +64,7 @@ import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import PickList from 'primevue/picklist'
+import { usePrimeVue } from 'primevue/config'
 import { useToast } from 'primevue/usetoast'
 import { useUserStore } from '@/stores/user'
 import { useMutation } from '@/composables/async/useMutation'
@@ -78,9 +80,21 @@ import { getApiErrorMessage } from '@/utils/errors'
 
 const MAX_ACTIONS = 5
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const toast = useToast()
 const userStore = useUserStore()
+const primevue = usePrimeVue()
+
+// Sync PrimeVue emptyMessage locale with vue-i18n so PickList shows translated "no items" text
+watch(
+  locale,
+  () => {
+    if (primevue.config.locale) {
+      primevue.config.locale.emptyMessage = t('quickActions.noAvailable')
+    }
+  },
+  { immediate: true },
+)
 
 // ─── v-model:visible ─────────────────────────────────────────────────────────
 const modelVisible = defineModel<boolean>('visible', { default: false })

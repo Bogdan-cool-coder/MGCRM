@@ -366,8 +366,8 @@ const {
 const contactLog = useEntityLog('contact', () => contactId.value ?? null)
 
 const contactMetrics = computed((): LogMetric[] => [
-  { key: 'deals', label: t('crm.log.metrics.deals'), value: deals.value.length },
-  { key: 'companies', label: t('crm.log.metrics.companies'), value: companies.value.length },
+  { key: 'deals', label: t('crm.log.metrics.deals'), metricValue: deals.value.length },
+  { key: 'companies', label: t('crm.log.metrics.companies'), metricValue: companies.value.length },
 ])
 
 // ── Deals pagination ──────────────────────────────────────────────────────────

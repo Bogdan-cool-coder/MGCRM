@@ -176,15 +176,15 @@ function getMenuItems(data: ContactCompanyLink) {
 }
 
 .employees-tab__name {
+  // Use semantic text token so the name stays readable in both light and dark themes
   font-weight: $font-weight-medium;
-  color: $surface-900;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
+  color: var(--p-text-color);
 
   &--link {
     text-decoration: none;
+    // var(--p-primary-color) adapts per theme:
+    //   light → {primary.900} = #172747  (dark navy, readable on white)
+    //   dark  → {primary.400} = #6f87bc  (steel blue, readable on dark bg)
     color: var(--p-primary-color);
 
     &:hover {

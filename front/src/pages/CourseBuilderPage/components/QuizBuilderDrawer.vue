@@ -2,8 +2,8 @@
   <Drawer
     v-model:visible="visible"
     position="right"
-    :header="t('onboarding.builder.quiz.editTitle')"
     :style="{ width: '680px' }"
+    :show-close-icon="false"
     @hide="onHide"
   >
     <template #header>

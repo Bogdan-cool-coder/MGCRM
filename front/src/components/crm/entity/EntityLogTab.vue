@@ -1,19 +1,19 @@
 <template>
   <div class="entity-log-tab">
     <!-- Compact metrics bar -->
-    <div v-if="metrics" class="entity-log-tab__metrics">
+    <div v-if="visibleMetrics.length > 0" class="entity-log-tab__metrics">
       <div
         v-for="m in visibleMetrics"
         :key="m.key"
         class="entity-log-tab__metric"
       >
-        <span class="entity-log-tab__metric-value">{{ m.value }}</span>
+        <span class="entity-log-tab__metric-value">{{ m.metricValue }}</span>
         <span class="entity-log-tab__metric-label">{{ m.label }}</span>
       </div>
     </div>
 
     <!-- Divider -->
-    <div v-if="metrics" class="entity-log-tab__divider" />
+    <div v-if="visibleMetrics.length > 0" class="entity-log-tab__divider" />
 
     <!-- Log header -->
     <div class="entity-log-tab__header">
@@ -111,7 +111,8 @@ import type { EntityLogEventType } from '@/entities/crm'
 export interface LogMetric {
   key: string
   label: string
-  value: string | number
+  /** Renamed from `value` to avoid Vue 3 template ref-unwrapping confusion on property named `value` */
+  metricValue: string | number
 }
 
 const props = defineProps<{

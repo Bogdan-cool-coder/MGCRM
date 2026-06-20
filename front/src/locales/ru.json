@@ -319,6 +319,7 @@
       },
       "columns": {
         "name": "Название / ФИО",
+        "company": "Компания",
         "type": "Тип",
         "source": "Источник",
         "country": "Страна",
@@ -1108,7 +1109,9 @@
           "daysInWork": "{n} дн.",
           "today": "сегодня {time}",
           "tomorrow": "завтра {time}",
-          "overdueWhen": "{n} день назад | {n} дня назад | {n} дней назад"
+          "overdueWhen_one": "{n} день назад",
+          "overdueWhen_few": "{n} дня назад",
+          "overdueWhen_many": "{n} дней назад"
         },
         "taskTypes": {
           "call": "Звонок",
@@ -2598,7 +2601,9 @@
     "maxError": "Можно выбрать не более {max} действий",
     "saved": "Быстрые действия сохранены",
     "toggleTheme": "Переключить тему",
-    "openSearch": "Открыть поиск"
+    "openSearch": "Открыть поиск",
+    "noAvailable": "Нет доступных действий",
+    "noSelected": "Нет выбранных действий"
   },
   "commandPalette": {
     "placeholder": "Поиск страниц и действий...",
