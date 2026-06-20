@@ -303,7 +303,10 @@
     "success": "Done",
     "showMore": "Show more",
     "showLess": "Show less",
-    "actions": "Actions"
+    "actions": "Actions",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "copied": "Copied"
   },
   "contacts": {
     "page": {
@@ -2826,7 +2829,8 @@
       "kpiStrip": {
         "label": "KPI",
         "never": "None",
-        "daysAgo": "{n}d"
+        "daysAgo": "{n}d",
+        "daysUnit": "d"
       }
     },
     "company": {

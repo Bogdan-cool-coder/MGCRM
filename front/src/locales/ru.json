@@ -303,7 +303,10 @@
     "success": "Готово",
     "showMore": "Показать ещё",
     "showLess": "Свернуть",
-    "actions": "Действия"
+    "actions": "Действия",
+    "today": "Сегодня",
+    "yesterday": "Вчера",
+    "copied": "Скопировано"
   },
   "contacts": {
     "page": {
@@ -2826,7 +2829,8 @@
       "kpiStrip": {
         "label": "KPI",
         "never": "Нет",
-        "daysAgo": "{n}д"
+        "daysAgo": "{n}д",
+        "daysUnit": "д"
       }
     },
     "company": {

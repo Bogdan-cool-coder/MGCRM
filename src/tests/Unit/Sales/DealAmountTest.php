@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Sales;
 
+use App\Domain\Catalog\Models\Product;
+use App\Domain\Catalog\Models\ProductPrice;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
@@ -115,5 +117,72 @@ class DealAmountTest extends TestCase
         $recalced = app(DealService::class)->recalcAmount($deal);
 
         $this->assertSame(200_00, $recalced->amount);
+    }
+
+    public function test_locked_budget_recalc_does_not_overwrite_amount(): void
+    {
+        // N3: a locked budget is a fixed figure — adding a line item (which
+        // re-runs recalcAmount via DealProductService) must NOT touch amount,
+        // even though the line items now sum to a different number.
+        $deal = $this->makeDeal();
+        $deal->update(['amount' => 500_00, 'amount_locked' => true]);
+
+        // Line item worth 999_00 — irrelevant while the budget is locked.
+        app(DealProductService::class)->addProduct($deal, [
+            'product_id' => $this->makeProductId(),
+            'quantity' => 1,
+            'unit_price' => 999_00,
+        ]);
+
+        // amount stays at the locked budget; it deliberately != sum(products).
+        $this->assertSame(500_00, (int) $deal->fresh()->amount);
+    }
+
+    public function test_locked_budget_recalc_amount_returns_early_unchanged(): void
+    {
+        // Direct service call: recalcAmount short-circuits on a locked deal even
+        // when there are real line items that would otherwise sum differently.
+        $deal = $this->makeDeal();
+        DealProduct::factory()->create(['deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 100_00, 'amount' => 100_00]);
+        $deal->update(['amount' => 777_00, 'amount_locked' => true]);
+
+        $recalced = app(DealService::class)->recalcAmount($deal);
+
+        $this->assertSame(777_00, (int) $recalced->amount);
+        $this->assertSame(777_00, (int) $deal->fresh()->amount);
+    }
+
+    public function test_unlocked_budget_still_recalculates_from_line_items(): void
+    {
+        // Regression: the default (amount_locked = false) path is unchanged —
+        // adding a line still re-derives amount from the line-item sum.
+        $deal = $this->makeDeal();
+        $deal->update(['amount' => 0, 'amount_locked' => false]);
+
+        app(DealProductService::class)->addProduct($deal, [
+            'product_id' => $this->makeProductId(),
+            'quantity' => 3,
+            'unit_price' => 100_00,
+        ]);
+
+        $this->assertSame(300_00, (int) $deal->fresh()->amount);
+    }
+
+    /**
+     * Create a minimal RUB-priced catalog product (plan_id = null, matching how
+     * DealProductService::addProduct resolves the price snapshot) and return its
+     * id. The 100_00 price keeps the explicit unit_price-free add path resolvable.
+     */
+    private function makeProductId(): int
+    {
+        $product = Product::factory()->create();
+        ProductPrice::factory()->create([
+            'product_id' => $product->id,
+            'plan_id' => null,
+            'currency_code' => 'RUB',
+            'amount' => 100_00,
+        ]);
+
+        return (int) $product->id;
     }
 }

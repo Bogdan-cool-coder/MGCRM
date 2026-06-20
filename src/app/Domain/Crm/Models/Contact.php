@@ -38,6 +38,7 @@ class Contact extends Model
         'tg_username',
         'notes',
         'source',
+        'acquisition_channel_id',
         'status',
         'tags',
         'extra_fields',
@@ -48,10 +49,11 @@ class Contact extends Model
     protected function casts(): array
     {
         return [
-            'status' => ContactStatus::class,
-            'tags' => 'array',
-            'extra_fields' => 'array',
-            'last_activity_at' => 'datetime',
+            'status'                 => ContactStatus::class,
+            'tags'                   => 'array',
+            'extra_fields'           => 'array',
+            'last_activity_at'       => 'datetime',
+            'acquisition_channel_id' => 'integer',
         ];
     }
 
@@ -109,5 +111,10 @@ class Contact extends Model
     public function relatedContactRelations(): HasMany
     {
         return $this->hasMany(ContactRelation::class, 'related_contact_id');
+    }
+
+    public function acquisitionChannel(): BelongsTo
+    {
+        return $this->belongsTo(AcquisitionChannel::class, 'acquisition_channel_id');
     }
 }

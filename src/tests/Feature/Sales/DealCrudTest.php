@@ -166,6 +166,90 @@ class DealCrudTest extends TestCase
             ->assertJsonPath('data.expected_payment_date', '2026-09-20');
     }
 
+    public function test_update_deal_persists_actual_signed_and_paid_dates(): void
+    {
+        // N3 — the «Факт» half of the «План / Факт» pairs: signed_at / paid_at are
+        // settable on update and round-trip as date strings via show().
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", [
+            'signed_at' => '2026-07-01',
+            'paid_at' => '2026-07-20',
+        ])->assertOk()
+            ->assertJsonPath('data.signed_at', '2026-07-01')
+            ->assertJsonPath('data.paid_at', '2026-07-20');
+
+        $this->getJson("/api/deals/{$deal->id}")
+            ->assertOk()
+            ->assertJsonPath('data.signed_at', '2026-07-01')
+            ->assertJsonPath('data.paid_at', '2026-07-20');
+    }
+
+    public function test_update_deal_rejects_invalid_actual_dates(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", ['signed_at' => 'not-a-date'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('signed_at');
+    }
+
+    public function test_update_deal_persists_amount_locked_and_perpetual_license(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", [
+            'amount_locked' => true,
+            'perpetual_license' => true,
+        ])->assertOk()
+            ->assertJsonPath('data.amount_locked', true)
+            ->assertJsonPath('data.perpetual_license', true);
+
+        $this->assertDatabaseHas('deals', [
+            'id' => $deal->id,
+            'amount_locked' => true,
+            'perpetual_license' => true,
+        ]);
+    }
+
+    public function test_deal_defaults_have_unlocked_budget_and_no_perpetual_license(): void
+    {
+        // The defaults the migration installs: a fresh deal is not budget-locked
+        // and not a perpetual licence — the resource exposes them as false.
+        $pipeline = $this->seedSalesPipeline();
+        $company = Company::factory()->create();
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Manager]), ['*']);
+
+        $this->postJson('/api/deals', [
+            'company_id' => $company->id,
+            'pipeline_id' => $pipeline->id,
+            'title' => 'Defaults deal',
+            'currency' => 'RUB',
+        ])->assertCreated()
+            ->assertJsonPath('data.amount_locked', false)
+            ->assertJsonPath('data.perpetual_license', false)
+            ->assertJsonPath('data.signed_at', null)
+            ->assertJsonPath('data.paid_at', null);
+    }
+
     public function test_delete_deal_is_soft_and_hides_from_listing(): void
     {
         $pipeline = $this->seedSalesPipeline();

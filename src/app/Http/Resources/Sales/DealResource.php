@@ -17,7 +17,12 @@ class DealResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'amount' => $this->amount, // kopecks
+            // When true, amount is a fixed budget and is NOT re-derived from line
+            // items (it may differ from sum(products) by design).
+            'amount_locked' => (bool) $this->amount_locked,
             'currency' => $this->currency,
+            // «Вечная лицензия» / «Коробка / on-premise» (price logic in N4).
+            'perpetual_license' => (bool) $this->perpetual_license,
             'status' => $this->status(),
 
             'pipeline_id' => $this->pipeline_id,
@@ -53,6 +58,10 @@ class DealResource extends JsonResource
             'expected_close_date' => $this->expected_close_date?->toDateString(),
             'expected_sign_date' => $this->expected_sign_date?->toDateString(),
             'expected_payment_date' => $this->expected_payment_date?->toDateString(),
+
+            // Actual fact dates — the «Факт» half of the «План / Факт» pairs.
+            'signed_at' => $this->signed_at?->toDateString(),
+            'paid_at' => $this->paid_at?->toDateString(),
 
             'kp_sent_at' => $this->kp_sent_at?->toIso8601String(),
             'contract_sent_at' => $this->contract_sent_at?->toIso8601String(),

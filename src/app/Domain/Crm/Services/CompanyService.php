@@ -41,6 +41,7 @@ class CompanyService
 
     public function __construct(
         private readonly EntityLogService $entityLog,
+        private readonly AcquisitionChannelHistoryService $channelHistory,
     ) {}
 
     /**
@@ -64,6 +65,12 @@ class CompanyService
             })
             ->when(isset($filters['company_type_id']), function (Builder $q) use ($filters): void {
                 $q->where('company_type_id', $filters['company_type_id']);
+            })
+            ->when(isset($filters['specialization']), function (Builder $q) use ($filters): void {
+                $q->where('specialization', $filters['specialization']);
+            })
+            ->when(isset($filters['acquisition_channel_id']), function (Builder $q) use ($filters): void {
+                $q->where('acquisition_channel_id', $filters['acquisition_channel_id']);
             })
             ->when(isset($filters['source']), function (Builder $q) use ($filters): void {
                 $q->where('source', $filters['source']);
@@ -121,12 +128,30 @@ class CompanyService
      */
     public function update(Company $company, array $data, ?User $actor = null): Company
     {
+        // Capture old acquisition_channel_id before update for history tracking.
+        $oldChannelId = $company->acquisition_channel_id;
+
         // Snapshot only the logged fields about to change (getOriginal reflects
         // the current DB values), so the entity-log diff is computed before save.
         $original = array_intersect_key($company->getOriginal(), array_flip(self::LOGGED_FIELDS));
 
         $company->update($data);
         $company->refresh();
+
+        // Record acquisition channel history if it changed.
+        if (array_key_exists('acquisition_channel_id', $data)) {
+            $newChannelId = $data['acquisition_channel_id'] !== null
+                ? (int) $data['acquisition_channel_id']
+                : null;
+
+            $this->channelHistory->record(
+                'company',
+                (int) $company->id,
+                $oldChannelId,
+                $newChannelId,
+                $actor?->id,
+            );
+        }
 
         $changes = $this->diffLoggedFields($original, $data);
 
@@ -168,10 +193,10 @@ class CompanyService
                 ->update(['is_primary' => false]);
 
             ContactCompanyLink::create([
-                'contact_id' => $contactId,
-                'company_id' => $company->id,
+                'contact_id'        => $contactId,
+                'company_id'        => $company->id,
                 'employment_status' => 'works',
-                'is_primary' => true,
+                'is_primary'        => true,
             ]);
 
             return $company->load('companyType');
@@ -212,9 +237,9 @@ class CompanyService
                     $actor,
                     LogAction::ContactAdded,
                     [
-                        'contact_id' => $contactId,
+                        'contact_id'   => $contactId,
                         'contact_name' => Contact::query()->whereKey($contactId)->value('full_name'),
-                        'is_primary' => (bool) ($linkData['is_primary'] ?? false),
+                        'is_primary'   => (bool) ($linkData['is_primary'] ?? false),
                     ],
                 );
             }
@@ -276,9 +301,9 @@ class CompanyService
         $coldCutoff = $now->copy()->subDays($coldDays);
 
         return match ($tier) {
-            EngagementTier::Fresh => [$warmCutoff, $now],
+            EngagementTier::Fresh   => [$warmCutoff, $now],
             EngagementTier::Cooling => [$coldCutoff, $warmCutoff],
-            EngagementTier::Cold => [null, null],
+            EngagementTier::Cold    => [null, null],
         };
     }
 

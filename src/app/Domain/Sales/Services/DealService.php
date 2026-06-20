@@ -792,10 +792,22 @@ class DealService
     }
 
     /**
-     * Recompute Deal.amount as the sum of its line items (kopecks).
+     * Recompute Deal.amount as the sum of its line items (kopecks). The single
+     * point of amount denormalisation — called exclusively from
+     * DealProductService on every line-item mutation.
+     *
+     * When the deal's budget is LOCKED (amount_locked = true) the amount is a
+     * fixed figure (negotiated/imported budget) and must NOT be overwritten by
+     * the line-item sum — return early, leaving amount untouched. amount may then
+     * differ from sum(deal_products) by design; analytics/finance/KPI treat
+     * Deal.amount as the authoritative budget (see migration cross-domain note).
      */
     public function recalcAmount(Deal $deal): Deal
     {
+        if ($deal->amount_locked === true) {
+            return $deal;
+        }
+
         $sum = (int) DealProduct::query()
             ->where('deal_id', $deal->id)
             ->sum('amount');

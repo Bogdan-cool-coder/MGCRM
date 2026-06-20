@@ -93,6 +93,16 @@
                   <div class="col-12">
                     <div class="contact-page-v2__panels">
 
+                      <!-- «Сейчас» strip -->
+                      <InfoPanel
+                        :title="t('crm.entity.nowStrip.label')"
+                        icon="pi-bolt"
+                        panel-key="contact-now-strip"
+                        :default-collapsed="false"
+                      >
+                        <EntityNowStrip :items="contactNowItems" />
+                      </InfoPanel>
+
                       <!-- Каналы связи -->
                       <InfoPanel
                         :title="t('crm.contact.sections.channels')"
@@ -320,6 +330,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
+import EntityNowStrip, { type NowItem } from '@/components/crm/entity/EntityNowStrip.vue'
 import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
@@ -421,7 +432,7 @@ const contactKpiItems = computed((): KpiItem[] => {
       icon: 'pi-briefcase',
       label: 'contact.kpi.deals',
       value: ext?.kpi?.deals_count ?? deals.value.length,
-      accent: 'neutral',
+      accent: 'info',
       clickable: true,
       onClick: () => { activeTab.value = 'deals' },
     },
@@ -437,14 +448,59 @@ const contactKpiItems = computed((): KpiItem[] => {
       icon: 'pi-check-square',
       label: 'contact.kpi.openTasks',
       value: openTasksCount,
-      accent: openTasksCount > 0 ? 'info' : 'neutral',
+      accent: openTasksCount > 0 ? 'amber' : 'neutral',
     },
     {
       key: 'companies',
       icon: 'pi-building',
       label: 'contact.kpi.companies',
       value: companies.value.length,
-      accent: 'neutral',
+      accent: 'teal',
+    },
+  ]
+})
+
+// ── Now strip ──────────────────────────────────────────────────────────────────
+
+const contactNowItems = computed((): NowItem[] => {
+  const ext = contact.value as (typeof contact.value & { last_activity_at?: string | null; kpi?: { last_touch_at?: string | null; open_tasks_count?: number; overdue_tasks_count?: number } | null }) | null
+  const lastAt = ext?.last_activity_at ?? ext?.kpi?.last_touch_at ?? null
+  const lastDays = lastAt
+    ? Math.floor((Date.now() - new Date(lastAt).getTime()) / 86_400_000)
+    : null
+  const lastContactLabel = lastDays === null
+    ? t('crm.entity.kpiStrip.never', 'Нет')
+    : lastDays === 0
+      ? t('common.today', 'Сегодня')
+      : lastDays === 1
+        ? t('common.yesterday', 'Вчера')
+        : `${lastDays}${t('crm.entity.kpiStrip.daysUnit', 'д')}`
+  const lastContactSeverity: NowItem['severity'] = lastDays === null
+    ? 'neutral'
+    : lastDays > 30
+      ? 'danger'
+      : lastDays > 7
+        ? 'warning'
+        : 'success'
+
+  const openTasks = ext?.kpi?.open_tasks_count ?? 0
+  const overdue = ext?.kpi?.overdue_tasks_count ?? 0
+
+  return [
+    {
+      label: t('crm.entity.nowStrip.lastContact'),
+      value: lastContactLabel,
+      severity: lastContactSeverity,
+    },
+    {
+      label: t('crm.entity.nowStrip.openTasks'),
+      value: openTasks,
+      severity: openTasks > 0 ? 'warning' : 'neutral',
+    },
+    {
+      label: t('crm.entity.nowStrip.overdue'),
+      value: overdue,
+      severity: overdue > 0 ? 'danger' : 'neutral',
     },
   ]
 })

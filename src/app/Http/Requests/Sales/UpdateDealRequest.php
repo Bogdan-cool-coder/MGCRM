@@ -29,6 +29,14 @@ class UpdateDealRequest extends FormRequest
             'expected_close_date' => ['sometimes', 'nullable', 'date'],
             'expected_sign_date' => ['sometimes', 'nullable', 'date'],
             'expected_payment_date' => ['sometimes', 'nullable', 'date'],
+            // Actual fact dates (the «Факт» half of «План / Факт»): contract signed
+            // / payment received. Date, symmetric with the expected_* rules.
+            'signed_at' => ['sometimes', 'nullable', 'date'],
+            'paid_at' => ['sometimes', 'nullable', 'date'],
+            // Budget lock: freezes amount against line-item recompute.
+            'amount_locked' => ['sometimes', 'boolean'],
+            // «Вечная лицензия» / «Коробка / on-premise» flag (price effect in N4).
+            'perpetual_license' => ['sometimes', 'boolean'],
             // stage_id is forbidden here — use POST /deals/{id}/move (see prepareForValidation).
             'stage_id' => ['prohibited'],
         ];

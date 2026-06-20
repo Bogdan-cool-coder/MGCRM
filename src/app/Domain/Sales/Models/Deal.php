@@ -49,6 +49,13 @@ class Deal extends Model
         'company_id',
         'title',
         'amount',
+        // When true, amount is a fixed budget and is NOT re-derived from
+        // deal_products (DealService::recalcAmount returns early). amount may then
+        // differ from sum(deal_products) — see the migration's cross-domain note.
+        'amount_locked',
+        // «Вечная лицензия» / «Коробка / on-premise» (one field). The price effect
+        // on line items is wired in N4 (DealProductService::applyLicenseMode).
+        'perpetual_license',
         'currency',
         'owner_user_id',
         'department_id',
@@ -60,6 +67,11 @@ class Deal extends Model
         'expected_close_date',
         'expected_sign_date',
         'expected_payment_date',
+        // ACTUAL dates (the «Факт» half of the «План / Факт» pairs): contract
+        // signed / payment received. Date, symmetric with the expected_* planned
+        // dates above.
+        'signed_at',
+        'paid_at',
         'kp_sent_at',
         'contract_sent_at',
         'stage_changed_at',
@@ -71,11 +83,16 @@ class Deal extends Model
     {
         return [
             'amount' => 'integer', // kopecks
+            'amount_locked' => 'boolean',
+            'perpetual_license' => 'boolean',
             'tags' => 'array',
             'extra_fields' => 'array',
             'expected_close_date' => 'date',
             'expected_sign_date' => 'date',
             'expected_payment_date' => 'date',
+            // Actual fact dates — date, symmetric with the expected_* casts.
+            'signed_at' => 'date',
+            'paid_at' => 'date',
             'kp_sent_at' => 'datetime',
             'contract_sent_at' => 'datetime',
             'stage_changed_at' => 'datetime',

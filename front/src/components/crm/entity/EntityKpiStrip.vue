@@ -19,7 +19,7 @@
           role="listitem"
           @click="item.clickable && item.onClick ? item.onClick() : undefined"
         >
-          <i :class="['pi', item.icon, 'entity-kpi-strip__icon']" />
+          <i :class="['pi', item.icon, 'entity-kpi-strip__icon', accentIconClass(item.accent)]" />
           <span
             class="entity-kpi-strip__value"
             :class="accentClass(item.accent)"
@@ -40,7 +40,7 @@ export interface KpiItem {
   icon: string
   label: string
   value: string | number
-  accent?: 'success' | 'warning' | 'danger' | 'info' | 'neutral'
+  accent?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'brand' | 'teal' | 'amber'
   clickable?: boolean
   onClick?: () => void
 }
@@ -58,6 +58,20 @@ function accentClass(accent?: string): string {
     case 'warning': return 'entity-kpi-strip__value--warning'
     case 'danger':  return 'entity-kpi-strip__value--danger'
     case 'info':    return 'entity-kpi-strip__value--info'
+    case 'brand':   return 'entity-kpi-strip__value--brand'
+    case 'teal':    return 'entity-kpi-strip__value--teal'
+    case 'amber':   return 'entity-kpi-strip__value--amber'
+    default:        return ''
+  }
+}
+
+function accentIconClass(accent?: string): string {
+  switch (accent) {
+    case 'success': return 'entity-kpi-strip__icon--success'
+    case 'info':    return 'entity-kpi-strip__icon--info'
+    case 'brand':   return 'entity-kpi-strip__icon--brand'
+    case 'teal':    return 'entity-kpi-strip__icon--teal'
+    case 'amber':   return 'entity-kpi-strip__icon--amber'
     default:        return ''
   }
 }
@@ -74,8 +88,8 @@ function accentClass(accent?: string): string {
   flex-wrap: wrap;
 
   .app-dark & {
-    background: var(--p-surface-100);
-    border-bottom-color: var(--p-surface-300);
+    background: var(--p-surface-950);
+    border-bottom-color: var(--p-surface-700);
   }
 
   @media (max-width: 767px) {
@@ -146,6 +160,31 @@ function accentClass(accent?: string): string {
   .app-dark & {
     color: var(--p-surface-500);
   }
+
+  &--info {
+    color: var(--p-blue-500);
+    .app-dark & { color: var(--p-blue-400); }
+  }
+
+  &--brand {
+    color: var(--p-primary-color);
+    .app-dark & { color: var(--p-blue-300); }
+  }
+
+  &--teal {
+    color: var(--p-teal-500);
+    .app-dark & { color: var(--p-teal-400); }
+  }
+
+  &--amber {
+    color: var(--p-amber-500);
+    .app-dark & { color: var(--p-orange-400); }
+  }
+
+  &--success {
+    color: var(--p-green-500);
+    .app-dark & { color: var(--p-green-400); }
+  }
 }
 
 .entity-kpi-strip__value {
@@ -166,7 +205,23 @@ function accentClass(accent?: string): string {
   }
 
   &--info {
-    color: var(--p-blue-400);
+    color: var(--p-blue-500);
+    .app-dark & { color: var(--p-blue-400); }
+  }
+
+  &--brand {
+    color: var(--p-primary-color);
+    .app-dark & { color: var(--p-blue-300); }
+  }
+
+  &--teal {
+    color: var(--p-teal-500);
+    .app-dark & { color: var(--p-teal-400); }
+  }
+
+  &--amber {
+    color: var(--p-amber-500);
+    .app-dark & { color: var(--p-orange-400); }
   }
 }
 

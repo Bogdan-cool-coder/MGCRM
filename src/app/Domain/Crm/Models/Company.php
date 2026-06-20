@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Crm\Models;
 
 use App\Domain\Crm\Enums\CategoryCode;
+use App\Domain\Crm\Enums\CompanySpecialization;
 use App\Domain\Crm\Enums\HoldingRole;
 use App\Domain\Iam\Models\User;
 use App\Domain\Org\Models\Department;
@@ -58,6 +59,8 @@ class Company extends Model
         'city',
         'source',
         'industry',
+        'specialization',
+        'acquisition_channel_id',
         'company_type_id',
         'holding_id',
         'holding_role',
@@ -75,12 +78,14 @@ class Company extends Model
     protected function casts(): array
     {
         return [
-            'tags' => 'array',
-            'extra_fields' => 'array',
-            'holding_role' => HoldingRole::class,
-            'category_code' => CategoryCode::class,
-            'category_recalc_at' => 'datetime',
-            'last_activity_at' => 'datetime',
+            'tags'                   => 'array',
+            'extra_fields'           => 'array',
+            'holding_role'           => HoldingRole::class,
+            'category_code'          => CategoryCode::class,
+            'specialization'         => CompanySpecialization::class,
+            'acquisition_channel_id' => 'integer',
+            'category_recalc_at'     => 'datetime',
+            'last_activity_at'       => 'datetime',
         ];
     }
 
@@ -137,5 +142,10 @@ class Company extends Model
     public function contactLinks(): HasMany
     {
         return $this->hasMany(ContactCompanyLink::class);
+    }
+
+    public function acquisitionChannel(): BelongsTo
+    {
+        return $this->belongsTo(AcquisitionChannel::class, 'acquisition_channel_id');
     }
 }
