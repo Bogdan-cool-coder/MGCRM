@@ -1,18 +1,18 @@
 <template>
-  <div v-if="items.length > 0" class="entity-now-strip">
+  <div class="entity-now-strip">
     <span class="entity-now-strip__label">{{ t('crm.entity.nowStrip.label') }}:</span>
-    <template v-for="(item, idx) in items" :key="idx">
-      <span v-if="idx > 0" class="entity-now-strip__dot" aria-hidden="true">·</span>
-      <span
-        class="entity-now-strip__item"
-        :class="severityClass(item.severity)"
-        :style="item.onClick ? 'cursor: pointer' : undefined"
-        @click="item.onClick ? item.onClick() : undefined"
-      >
-        <span class="entity-now-strip__item-label">{{ item.label }}:</span>
-        <span class="entity-now-strip__item-value">{{ item.value }}</span>
-      </span>
-    </template>
+    <span
+      v-for="(item, idx) in items"
+      :key="idx"
+      class="entity-now-strip__chip"
+      :class="chipClass(item.severity)"
+      :style="item.onClick ? 'cursor: pointer' : undefined"
+      @click="item.onClick ? item.onClick() : undefined"
+    >
+      <i :class="['pi', chipIcon(item.severity), 'entity-now-strip__chip-icon']" aria-hidden="true" />
+      <span class="entity-now-strip__chip-label">{{ item.label }}:</span>
+      <span class="entity-now-strip__chip-value">{{ item.value }}</span>
+    </span>
   </div>
 </template>
 
@@ -32,12 +32,21 @@ defineProps<{
 
 const { t } = useI18n()
 
-function severityClass(severity?: string): string {
+function chipClass(severity?: string): string {
   switch (severity) {
-    case 'danger':  return 'entity-now-strip__item--danger'
-    case 'warning': return 'entity-now-strip__item--warning'
-    case 'success': return 'entity-now-strip__item--success'
-    default:        return ''
+    case 'danger':  return 'entity-now-strip__chip--danger'
+    case 'warning': return 'entity-now-strip__chip--warning'
+    case 'success': return 'entity-now-strip__chip--success'
+    default:        return 'entity-now-strip__chip--neutral'
+  }
+}
+
+function chipIcon(severity?: string): string {
+  switch (severity) {
+    case 'danger':  return 'pi-exclamation-circle'
+    case 'warning': return 'pi-list-check'
+    case 'success': return 'pi-calendar-check'
+    default:        return 'pi-minus-circle'
   }
 }
 </script>
@@ -52,54 +61,110 @@ function severityClass(severity?: string): string {
 }
 
 .entity-now-strip__label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: $surface-500;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 
   .app-dark & {
     color: var(--p-surface-400);
   }
 }
 
-.entity-now-strip__dot {
-  color: $surface-400;
-  opacity: 0.3;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.entity-now-strip__item {
-  display: flex;
+// Base pill chip
+.entity-now-strip__chip {
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
   font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: opacity var(--app-transition-fast, 0.15s);
 
-  &--danger .entity-now-strip__item-value {
-    color: var(--p-red-400);
-    font-weight: 600;
+  &[style*='cursor: pointer']:hover {
+    opacity: 0.8;
   }
 
-  &--warning .entity-now-strip__item-value {
-    color: var(--p-orange-400);
-    font-weight: 600;
+  // Neutral / gray — always shown
+  &--neutral {
+    background: var(--p-surface-100);
+    color: var(--p-surface-600);
+
+    .app-dark & {
+      background: var(--p-surface-700);
+      color: var(--p-surface-300);
+    }
+
+    .entity-now-strip__chip-icon {
+      color: var(--p-surface-400);
+      .app-dark & { color: var(--p-surface-400); }
+    }
   }
 
-  &--success .entity-now-strip__item-value {
-    color: var(--p-green-500);
+  // Success / teal-green — "Посл. контакт" ≤7 дней
+  &--success {
+    background: var(--p-green-50);
+    color: var(--p-green-700);
+
+    .app-dark & {
+      background: var(--p-green-900);
+      color: var(--p-green-200);
+    }
+
+    .entity-now-strip__chip-icon {
+      color: var(--p-green-500);
+      .app-dark & { color: var(--p-green-400); }
+    }
+  }
+
+  // Warning / blue-info — "Открытых задач" > 0
+  &--warning {
+    background: var(--p-blue-50);
+    color: var(--p-blue-700);
+
+    .app-dark & {
+      background: var(--p-blue-900);
+      color: var(--p-blue-200);
+    }
+
+    .entity-now-strip__chip-icon {
+      color: var(--p-blue-500);
+      .app-dark & { color: var(--p-blue-400); }
+    }
+  }
+
+  // Danger / red — "Просрочено" > 0 or "Посл. контакт" > 30 дней
+  &--danger {
+    background: var(--p-red-50);
+    color: var(--p-red-700);
+
+    .app-dark & {
+      background: var(--p-red-900);
+      color: var(--p-red-200);
+    }
+
+    .entity-now-strip__chip-icon {
+      color: var(--p-red-500);
+      .app-dark & { color: var(--p-red-400); }
+    }
   }
 }
 
-.entity-now-strip__item-label {
-  color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+.entity-now-strip__chip-icon {
+  font-size: 11px;
+  flex-shrink: 0;
 }
 
-.entity-now-strip__item-value {
-  color: var(--p-text-color);
+.entity-now-strip__chip-label {
   font-weight: 500;
+  opacity: 0.8;
+}
+
+.entity-now-strip__chip-value {
+  font-weight: 700;
 }
 </style>

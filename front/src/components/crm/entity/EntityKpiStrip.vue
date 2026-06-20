@@ -88,7 +88,7 @@ function accentIconClass(accent?: string): string {
   flex-wrap: wrap;
 
   .app-dark & {
-    background: var(--p-surface-950);
+    background: var(--p-surface-100);
     border-bottom-color: var(--p-surface-700);
   }
 
@@ -194,14 +194,17 @@ function accentIconClass(accent?: string): string {
 
   &--success {
     color: var(--p-green-500);
+    .app-dark & { color: var(--p-green-400); }
   }
 
   &--warning {
     color: var(--p-orange-400);
+    .app-dark & { color: var(--p-orange-300); }
   }
 
   &--danger {
     color: var(--p-red-400);
+    .app-dark & { color: var(--p-red-300); }
   }
 
   &--info {
