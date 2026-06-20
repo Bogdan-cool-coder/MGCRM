@@ -74,8 +74,8 @@ function accentClass(accent?: string): string {
   flex-wrap: wrap;
 
   .app-dark & {
-    background: var(--p-surface-950);
-    border-bottom-color: var(--p-surface-700);
+    background: var(--p-surface-100);
+    border-bottom-color: var(--p-surface-300);
   }
 
   @media (max-width: 767px) {
