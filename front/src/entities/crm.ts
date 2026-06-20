@@ -310,3 +310,49 @@ export interface DealCustomFieldsResponse {
   definitions: CustomFieldDef[]
   values: Record<string, unknown>
 }
+
+// ─── Entity Log (action log / audit trail) ────────────────────────────────────
+
+export type EntityLogEventType =
+  | 'created'
+  | 'updated'
+  | 'stage_changed'
+  | 'contact_added'
+  | 'contact_removed'
+  | 'task_completed'
+  | 'meeting_held'
+  | 'note_added'
+  | 'document_created'
+  | 'document_signed'
+  | 'finance_added'
+  | 'status_changed'
+  | 'employee_added'
+  | 'employee_removed'
+  | 'relation_added'
+  | 'relation_removed'
+  | 'custom_field_changed'
+
+export interface EntityLogEntry {
+  id: number
+  event_type: EntityLogEventType
+  /** Human-readable description from backend */
+  description: string | null
+  /** Old value (for field changes / stage changes) */
+  old_value: string | null
+  /** New value (for field changes / stage changes) */
+  new_value: string | null
+  /** Extra metadata (arbitrary key-value pairs from backend) */
+  meta: Record<string, unknown> | null
+  user: { id: number; full_name: string } | null
+  created_at: string
+}
+
+export interface EntityLogPaginatedResponse {
+  data: EntityLogEntry[]
+  meta: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+  }
+}

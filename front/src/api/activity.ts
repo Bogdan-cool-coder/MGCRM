@@ -85,8 +85,10 @@ export const activityApi = {
 
   // ── Status transitions ─────────────────────────────────────────────────────
 
-  async completeActivity(id: number): Promise<ActivityDto> {
-    const res = await apiClient.post<{ data: ActivityDto }>(`/api/activities/${id}/complete`)
+  async completeActivity(id: number, resultText?: string | null): Promise<ActivityDto> {
+    const body: Record<string, unknown> = {}
+    if (resultText != null) body.result_text = resultText
+    const res = await apiClient.post<{ data: ActivityDto }>(`/api/activities/${id}/complete`, body)
     return res.data.data
   },
 

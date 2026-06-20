@@ -14,6 +14,7 @@
       @deal-archived="$emit('dealArchived')"
       @collapse-all-groups="onCollapseAll"
       @expand-all-groups="onExpandAll"
+      @scroll-to-feed-type="(type) => $emit('scrollToFeedType', type)"
     />
 
     <DealInfoTabs class="deal-info-panel__tabs">
@@ -51,13 +52,10 @@
         <DealTabFinances />
       </template>
 
-      <template #stats>
-        <DealTabStats
-          :deal="deal"
-          :history="history"
-          :activities="activities"
-          :documents-count="docsCount"
-          :days-in-stage="daysInStage"
+      <template #log>
+        <EntityLogTab
+          :log="entityLog"
+          :metrics="dealMetrics"
         />
       </template>
     </DealInfoTabs>
@@ -65,14 +63,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DealInfoHeader from './DealInfoHeader.vue'
 import DealInfoTabs from './DealInfoTabs.vue'
 import DealTabMain from './DealTabMain.vue'
 import DealTabDocuments from './DealTabDocuments.vue'
 import DealTabFinances from './DealTabFinances.vue'
-import DealTabStats from './DealTabStats.vue'
-import type { DealDto, DealProductDto, DealContactDto, PipelineStageDto, DealStageHistoryDto, NextTaskDto } from '@/entities/sales'
+import EntityLogTab, { type LogMetric } from '@/components/crm/entity/EntityLogTab.vue'
+import { useEntityLog } from '@/composables/crm/useEntityLog'
+import type { DealDto, DealProductDto, DealContactDto, PipelineStageDto, DealStageHistoryDto, NextTaskDto, KeyActionType } from '@/entities/sales'
 import type { ActivityDto } from '@/entities/activity'
 
 interface MenuUser {
@@ -80,7 +80,7 @@ interface MenuUser {
   name: string
 }
 
-defineProps<{
+const props = defineProps<{
   deal: DealDto
   stages: PipelineStageDto[]
   usersList: MenuUser[]
@@ -111,14 +111,51 @@ const emit = defineEmits<{
   amountChanged: [total: number]
   collapseAllGroups: []
   expandAllGroups: []
+  scrollToFeedType: [type: KeyActionType]
 }>()
 
-// docsCount is managed internally: DealTabDocuments emits it,
-// DealTabStats reads it from this local ref.
+const { t } = useI18n()
+
+// ── Entity log ────────────────────────────────────────────────────────────────
+
+const entityLog = useEntityLog('deal', () => props.deal.id)
+
+// Load on mount (deal ID is always available here)
+entityLog.load()
+
+// ── Compact metrics bar ───────────────────────────────────────────────────────
+
+const daysInDeal = computed((): number => {
+  const diff = Date.now() - new Date(props.deal.created_at).getTime()
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
+})
+
+const lastActivityLabel = computed((): string => {
+  const last = props.activities[0]
+  if (!last) return '—'
+  const dateRef = last.due_at ?? last.created_at
+  const diffDays = Math.floor(
+    (Date.now() - new Date(dateRef).getTime()) / (1000 * 60 * 60 * 24),
+  )
+  return `${diffDays} ${t('sales.deal.stats.daysAgoShort')}`
+})
+
+const dealMetrics = computed((): LogMetric[] => [
+  { key: 'daysInDeal', label: t('sales.deal.stats.daysInDeal'), value: daysInDeal.value },
+  { key: 'daysInStage', label: t('sales.deal.stats.daysInStage'), value: props.daysInStage },
+  { key: 'activities', label: t('sales.deal.stats.activities'), value: props.activities.length },
+  { key: 'stageChanges', label: t('sales.deal.stats.stageChanges'), value: props.history.length },
+  { key: 'documents', label: t('sales.deal.stats.documents'), value: docsCount.value },
+  { key: 'lastActivity', label: t('sales.deal.stats.lastActivity'), value: lastActivityLabel.value },
+])
+
+// ── Docs count ────────────────────────────────────────────────────────────────
+
+// docsCount is managed internally: DealTabDocuments emits it
 const docsCount = ref(0)
 
-// Signals to DealTabMain to collapse/expand all groups.
-// Each bump triggers the watcher in DealTabMain.
+// ── Collapse / expand signals ─────────────────────────────────────────────────
+
 const collapseAllSignal = ref(0)
 const expandAllSignal = ref(0)
 

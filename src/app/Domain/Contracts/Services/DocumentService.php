@@ -6,11 +6,17 @@ namespace App\Domain\Contracts\Services;
 
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Contracts\Enums\ContractStatus;
+use App\Domain\Contracts\Enums\DocumentKind;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
+use App\Domain\Iam\Models\User;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Services\DealService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -29,6 +35,8 @@ class DocumentService
 {
     public function __construct(
         private readonly AttachmentService $attachmentService,
+        private readonly EntityLogService $entityLog,
+        private readonly DealService $dealService,
     ) {}
 
     /**
@@ -260,7 +268,63 @@ class DocumentService
             $doc->status = $to;
         });
 
+        // Polymorphic action log: a contract lifecycle transition is recorded on
+        // the document's source subject(s). This is the Contracts extension point
+        // for the entity log — it fires only when a deal/company source is linked
+        // (a free-standing document simply produces no entity-log row).
+        $this->recordContractEvent($doc, $to, $userId, $note);
+
         return $doc->fresh();
+    }
+
+    /**
+     * Record a contract_event on the document's source deal and/or company. Soft
+     * by design: when neither a source deal nor a source company is linked, no
+     * log row is written (no subject to attribute it to). The action vocabulary
+     * is shared (LogAction::ContractEvent); the document status lives in meta so
+     * the deal/company card can read the contract lifecycle without coupling to
+     * the Contracts tables.
+     */
+    private function recordContractEvent(Document $doc, ContractStatus $to, int $userId, ?string $note): void
+    {
+        $actor = User::find($userId);
+
+        $meta = [
+            'document_id' => (int) $doc->id,
+            'number' => $doc->number,
+            'kind' => $doc->kind instanceof \BackedEnum ? $doc->kind->value : $doc->kind,
+            'status' => $to->value,
+            'note' => $note,
+        ];
+
+        if ($doc->source_deal_id !== null) {
+            $this->entityLog->record(
+                LogSubjectType::Deal,
+                (int) $doc->source_deal_id,
+                $actor,
+                LogAction::ContractEvent,
+                $meta,
+            );
+
+            // Auto key action: a contract Document entering `submitted` (sent into
+            // the flow) marks the source deal's contract as sent — idempotent
+            // (first send only, never clobbers a manually-entered date). Other
+            // document kinds (invoice/act/...) do not feed this signal.
+            $docKind = $doc->kind instanceof DocumentKind ? $doc->kind : DocumentKind::tryFrom((string) $doc->kind);
+            if ($docKind === DocumentKind::Contract && $to === ContractStatus::Submitted) {
+                $this->dealService->markContractSentFromDocument((int) $doc->source_deal_id, $actor);
+            }
+        }
+
+        if ($doc->source_company_id !== null) {
+            $this->entityLog->record(
+                LogSubjectType::Company,
+                (int) $doc->source_company_id,
+                $actor,
+                LogAction::ContractEvent,
+                $meta,
+            );
+        }
     }
 
     /**

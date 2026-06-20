@@ -132,7 +132,8 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
   return null
 }
 
-function groupByDate(items: FeedItem[], existingGroups: FeedGroup[]): FeedGroup[] {
+
+function groupByDateEntity(items: FeedItem[], existingGroups: FeedGroup[]): FeedGroup[] {
   const groupMap = new Map<string, FeedGroup>()
   for (const g of existingGroups) {
     groupMap.set(g.date, { ...g, items: [] })
@@ -145,7 +146,8 @@ function groupByDate(items: FeedItem[], existingGroups: FeedGroup[]): FeedGroup[
       groupMap.set(item.date, { date: item.date, items: [item], collapsed: false })
     }
   }
-  return Array.from(groupMap.values()).sort((a, b) => b.date.localeCompare(a.date))
+  // Sort asc (oldest first) — bottom-up feed layout
+  return Array.from(groupMap.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
 // ─── Composable ───────────────────────────────────────────────────────────────
@@ -169,10 +171,41 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
   const reopenMutation = useMutation<ActivityDto>()
   const deleteMutation = useMutation()
 
+  /** Open (non-closed) task/call/meeting/follow_up — shown above composer */
+  const openTasks = computed((): ActivityDto[] => {
+    const result: ActivityDto[] = []
+    for (const item of allItems.value) {
+      if (
+        (item.type === 'task' || item.type === 'call' || item.type === 'meeting' || item.type === 'follow_up') &&
+        item.activity &&
+        !item.activity.is_closed
+      ) {
+        result.push(item.activity)
+      }
+    }
+    return result.slice().sort((a, b) => {
+      if (a.due_at && b.due_at) return a.due_at.localeCompare(b.due_at)
+      if (a.due_at && !b.due_at) return -1
+      if (!a.due_at && b.due_at) return 1
+      return a.created_at.localeCompare(b.created_at)
+    })
+  })
+
   // ─── Filtered ───────────────────────────────────────────────────────────────
 
   const filteredItems = computed((): FeedItem[] => {
-    let items = allItems.value
+    // Exclude open tasks — they go to openTasks list above composer
+    let items = allItems.value.filter((i) => {
+      if (
+        (i.type === 'task' || i.type === 'call' || i.type === 'meeting' || i.type === 'follow_up') &&
+        i.activity &&
+        !i.activity.is_closed
+      ) {
+        return false
+      }
+      return true
+    })
+
     const q = searchQuery.value.trim().toLowerCase()
     const type = filterType.value
 
@@ -198,7 +231,7 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
   })
 
   function recomputeGroups() {
-    groups.value = groupByDate(filteredItems.value, groups.value)
+    groups.value = groupByDateEntity(filteredItems.value, groups.value)
   }
 
   // ─── API load ────────────────────────────────────────────────────────────────
@@ -347,6 +380,7 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
 
   return {
     groups,
+    openTasks,
     loading,
     hasMore,
     searchQuery,

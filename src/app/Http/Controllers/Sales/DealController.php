@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Sales;
 
+use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Services\BulkDealService;
@@ -39,6 +40,7 @@ class DealController extends Controller
         private readonly DealMoveService $mover,
         private readonly BulkDealService $bulk,
         private readonly DealExportService $exporter,
+        private readonly ActivityService $activities,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection|JsonResponse
@@ -72,16 +74,28 @@ class DealController extends Controller
     {
         $this->authorize('view', $deal);
 
-        return DealResource::make($deal->load([
+        $deal->load([
             'pipeline:id,name,kind',
             'stage',
+            // Highest reached stage for the max_stage key action (ref shape).
+            'maxStage:id,name,color',
             'company:id,name',
             'owner:id,full_name',
             'nextTask',
             'products.product:id,code,name',
             'products.plan:id,name',
             'dealContacts.contact:id,full_name,position,email,phone',
-        ]));
+        ]);
+
+        // Derived key-action dates (last presentation / touch / event) from the
+        // Activity timeline — stamped onto the model for the DealResource. Only
+        // computed on the single-deal card (not on list/board payloads).
+        $deal->setAttribute(
+            'key_action_dates',
+            $this->activities->keyActionDatesForDeal((int) $deal->id),
+        );
+
+        return DealResource::make($deal);
     }
 
     public function update(UpdateDealRequest $request, Deal $deal): JsonResource
@@ -180,6 +194,35 @@ class DealController extends Controller
         );
     }
 
+    /**
+     * POST /api/deals/{deal}/kp-sent — mark the КП (commercial proposal) as sent.
+     * Stamps kp_sent_at = now() and appends a kp_sent log row. Returns the deal
+     * with its key-action header refreshed.
+     */
+    public function markKpSent(Request $request, Deal $deal): JsonResource
+    {
+        $this->authorize('update', $deal);
+
+        $this->service->markKpSent($deal, $request->user());
+
+        return $this->keyActionResponse($deal);
+    }
+
+    /**
+     * POST /api/deals/{deal}/contract-sent — mark the contract as sent. Stamps
+     * contract_sent_at = now() and appends a contract_sent log row. Returns the
+     * deal with its key-action header refreshed. (Contracts can also stamp this
+     * automatically when a contract Document reaches `submitted`.)
+     */
+    public function markContractSent(Request $request, Deal $deal): JsonResource
+    {
+        $this->authorize('update', $deal);
+
+        $this->service->markContractSent($deal, $request->user());
+
+        return $this->keyActionResponse($deal);
+    }
+
     /** Cache TTL for replaying an idempotent move result (HD1, Q1: 24h). */
     private const IDEMPOTENCY_TTL_SECONDS = 86_400;
 
@@ -215,6 +258,29 @@ class DealController extends Controller
     }
 
     // ---- Private ----
+
+    /**
+     * Render a deal after a key-action mutation (kp-sent / contract-sent): reload
+     * the display + maxStage relations and re-derive the key-action dates so the
+     * returned card header is fully current. Same shape as show().
+     */
+    private function keyActionResponse(Deal $deal): JsonResource
+    {
+        $deal->load([
+            'pipeline:id,name,kind',
+            'stage',
+            'maxStage:id,name,color',
+            'company:id,name',
+            'owner:id,full_name',
+        ]);
+
+        $deal->setAttribute(
+            'key_action_dates',
+            $this->activities->keyActionDatesForDeal((int) $deal->id),
+        );
+
+        return DealResource::make($deal);
+    }
 
     /**
      * Build the idempotency cache key from the Idempotency-Key header, scoped to

@@ -75,6 +75,7 @@
               />
             </Tab>
             <Tab value="files">{{ t('crm.contact.tabs.files') }}</Tab>
+            <Tab value="log">{{ t('crm.contact.tabs.log') }}</Tab>
           </TabList>
 
           <TabPanels>
@@ -230,6 +231,13 @@
                 <p class="contact-page-v2__placeholder-text">{{ t('contact.page.stub.files') }}</p>
               </div>
             </TabPanel>
+
+            <!-- ── Log ──────────────────────────────────────────────────────── -->
+            <TabPanel value="log">
+              <div class="contact-page-v2__tab-body">
+                <EntityLogTab :log="contactLog" :metrics="contactMetrics" />
+              </div>
+            </TabPanel>
           </TabPanels>
         </Tabs>
       </div>
@@ -292,8 +300,10 @@ import InputText from 'primevue/inputtext'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
+import EntityLogTab, { type LogMetric } from '@/components/crm/entity/EntityLogTab.vue'
 import CustomFieldRenderer from '@/components/crm/entity/CustomFieldRenderer.vue'
 import InlineEditableField from '@/components/crm/InlineEditableField.vue'
+import { useEntityLog } from '@/composables/crm/useEntityLog'
 import ContactChannelsBlock from './components/ContactChannelsBlock.vue'
 import ContactCompaniesPanel from './components/ContactCompaniesPanel.vue'
 import ContactRelationsPanel from './components/ContactRelationsPanel.vue'
@@ -351,6 +361,15 @@ const {
   copyLink,
 } = useContactPageActions({ contactId, contact, companies, relations, loadCompanies, loadRelations })
 
+// ── Entity log ────────────────────────────────────────────────────────────────
+
+const contactLog = useEntityLog('contact', () => contactId.value ?? null)
+
+const contactMetrics = computed((): LogMetric[] => [
+  { key: 'deals', label: t('crm.log.metrics.deals'), value: deals.value.length },
+  { key: 'companies', label: t('crm.log.metrics.companies'), value: companies.value.length },
+])
+
 // ── Deals pagination ──────────────────────────────────────────────────────────
 
 const dealsLoadingMore = ref(false)
@@ -384,6 +403,7 @@ const tabOptions = computed(() => [
   { value: 'activity', label: t('crm.contact.tabs.activity') },
   { value: 'deals', label: t('contact.page.tabs.deals') },
   { value: 'files', label: t('crm.contact.tabs.files') },
+  { value: 'log', label: t('crm.contact.tabs.log') },
 ])
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -391,6 +411,7 @@ const tabOptions = computed(() => [
 onMounted(async () => {
   if (!directoriesStore.loaded) void directoriesStore.fetchAll()
   await loadAll()
+  if (contactId.value) void contactLog.load()
 })
 
 // suppress unused warning — isSaving used by InlineEditableField internally via patchField

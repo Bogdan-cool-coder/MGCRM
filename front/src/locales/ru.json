@@ -1303,7 +1303,8 @@
           "main": "Основное",
           "documents": "Документы",
           "finances": "Финансы",
-          "stats": "Статистика"
+          "stats": "Статистика",
+          "log": "Лог"
         },
         "fields": {
           "owner": "Ответственный",
@@ -1374,7 +1375,8 @@
         "stageChanges": "Смен стадий",
         "documents": "Документов",
         "lastActivity": "Последняя активность",
-        "daysAgo": "{n} дн. назад"
+        "daysAgo": "{n} дн. назад",
+        "daysAgoShort": "дн. назад"
       },
       "feed": {
         "searchPlaceholder": "Поиск в ленте...",
@@ -1382,6 +1384,7 @@
         "filterType": "Тип",
         "reset": "Сбросить",
         "loadMore": "Загрузить ещё",
+        "changedField": "изменил поле",
         "viewMenu": {
           "collapseAll": "Свернуть все группы",
           "expandAll": "Развернуть все группы",
@@ -1392,6 +1395,9 @@
         "empty": {
           "title": "Лента событий пуста",
           "subtitle": "Создайте задачу или позвоните клиенту"
+        },
+        "openTasks": {
+          "title": "Открытые задачи: {n}"
         },
         "types": {
           "stage_change": "Смена стадии",
@@ -1443,6 +1449,18 @@
         "open": "Открыта",
         "won": "Выиграна",
         "lost": "Проиграна"
+      },
+      "keyActions": {
+        "lastPresentationTooltip": "Последняя презентация: {date}",
+        "maxStageTooltip": "Макс. стадия: {stage}",
+        "kpSentTooltip": "КП отправлено: {date}",
+        "contractSentTooltip": "Договор отправлен: {date}",
+        "lastTouchTooltip": "Последнее касание: {date}",
+        "lastEventTooltip": "Последнее событие: {date}",
+        "markKpTooltip": "Отметить КП как отправленное",
+        "markContractTooltip": "Отметить договор как отправленный",
+        "kpMarked": "КП отмечено как отправленное",
+        "contractMarked": "Договор отмечен как отправленный"
       }
     },
     "move": {
@@ -2768,7 +2786,8 @@
         "employees": "Сотрудники",
         "activity": "Активность",
         "payments": "Платежи",
-        "files": "Файлы"
+        "files": "Файлы",
+        "log": "Лог"
       },
       "sections": {
         "requisites": "Реквизиты",
@@ -2808,7 +2827,8 @@
     "contact": {
       "tabs": {
         "activity": "Активность",
-        "files": "Файлы"
+        "files": "Файлы",
+        "log": "Лог"
       },
       "sections": {
         "channels": "Каналы связи",
@@ -2870,6 +2890,41 @@
         "addRelation": "Добавить связь",
         "copyLink": "Копировать ссылку",
         "delete": "Удалить"
+      }
+    },
+    "log": {
+      "title": "История действий",
+      "system": "Система",
+      "loadMore": "Загрузить ещё",
+      "empty": {
+        "title": "История пуста",
+        "hint": "Действия появятся здесь по мере работы с записью"
+      },
+      "events": {
+        "created": "создал запись",
+        "updated": "изменил поле",
+        "stage_changed": "переместил в стадию",
+        "contact_added": "добавил контакт",
+        "contact_removed": "удалил контакт",
+        "task_completed": "выполнил задачу",
+        "meeting_held": "провёл встречу",
+        "note_added": "добавил заметку",
+        "document_created": "создал документ",
+        "document_signed": "подписал документ",
+        "finance_added": "добавил финансовое условие",
+        "status_changed": "изменил статус",
+        "employee_added": "добавил сотрудника",
+        "employee_removed": "удалил сотрудника",
+        "relation_added": "добавил связь",
+        "relation_removed": "удалил связь",
+        "custom_field_changed": "изменил доп. поле"
+      },
+      "metrics": {
+        "openDeals": "Открытых сделок",
+        "employees": "Сотрудников",
+        "documents": "Документов",
+        "deals": "Сделок",
+        "companies": "Компаний"
       }
     },
     "contacts_page": {

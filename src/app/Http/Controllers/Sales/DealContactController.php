@@ -38,6 +38,7 @@ class DealContactController extends Controller
             $deal,
             (int) $request->validated('contact_id'),
             (bool) $request->validated('is_primary', false),
+            $request->user(),
         );
 
         return DealContactResource::make($dealContact);

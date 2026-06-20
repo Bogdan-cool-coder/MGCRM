@@ -6,8 +6,12 @@ namespace App\Domain\Crm\Services;
 
 use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Services\EntityLogService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -19,6 +23,26 @@ use Illuminate\Support\Facades\DB;
  */
 class CompanyService
 {
+    /** Company fields whose direct changes are recorded as data_changed events. */
+    private const LOGGED_FIELDS = [
+        'name',
+        'legal_name',
+        'tax_id',
+        'email',
+        'phone',
+        'website',
+        'source',
+        'country_code',
+        'category_code',
+        'company_type_id',
+        'responsible_user_id',
+        'owner_user_id',
+    ];
+
+    public function __construct(
+        private readonly EntityLogService $entityLog,
+    ) {}
+
     /**
      * Paginated list of companies with eager-loaded relations.
      *
@@ -95,10 +119,27 @@ class CompanyService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function update(Company $company, array $data): Company
+    public function update(Company $company, array $data, ?User $actor = null): Company
     {
+        // Snapshot only the logged fields about to change (getOriginal reflects
+        // the current DB values), so the entity-log diff is computed before save.
+        $original = array_intersect_key($company->getOriginal(), array_flip(self::LOGGED_FIELDS));
+
         $company->update($data);
         $company->refresh();
+
+        $changes = $this->diffLoggedFields($original, $data);
+
+        // Polymorphic action log: a key-field data change (skip empty diffs).
+        if ($changes !== []) {
+            $this->entityLog->record(
+                LogSubjectType::Company,
+                (int) $company->id,
+                $actor,
+                LogAction::DataChanged,
+                ['changes' => $changes],
+            );
+        }
 
         return $company;
     }
@@ -143,19 +184,42 @@ class CompanyService
      *
      * @param  array<string, mixed>  $linkData
      */
-    public function addEmployee(Company $company, int $contactId, array $linkData): ContactCompanyLink
+    public function addEmployee(Company $company, int $contactId, array $linkData, ?User $actor = null): ContactCompanyLink
     {
-        return DB::transaction(function () use ($company, $contactId, $linkData): ContactCompanyLink {
+        return DB::transaction(function () use ($company, $contactId, $linkData, $actor): ContactCompanyLink {
             if (! empty($linkData['is_primary'])) {
                 ContactCompanyLink::where('contact_id', $contactId)
                     ->where('is_primary', true)
                     ->update(['is_primary' => false]);
             }
 
-            return ContactCompanyLink::updateOrCreate(
+            // A brand-new link is a "contact_added" event; an update to an
+            // existing link is not re-logged.
+            $existed = ContactCompanyLink::query()
+                ->where('contact_id', $contactId)
+                ->where('company_id', $company->id)
+                ->exists();
+
+            $link = ContactCompanyLink::updateOrCreate(
                 ['contact_id' => $contactId, 'company_id' => $company->id],
                 $linkData + ['contact_id' => $contactId, 'company_id' => $company->id],
             );
+
+            if (! $existed) {
+                $this->entityLog->record(
+                    LogSubjectType::Company,
+                    (int) $company->id,
+                    $actor,
+                    LogAction::ContactAdded,
+                    [
+                        'contact_id' => $contactId,
+                        'contact_name' => Contact::query()->whereKey($contactId)->value('full_name'),
+                        'is_primary' => (bool) ($linkData['is_primary'] ?? false),
+                    ],
+                );
+            }
+
+            return $link;
         });
     }
 
@@ -167,6 +231,36 @@ class CompanyService
         ContactCompanyLink::where('company_id', $company->id)
             ->where('contact_id', $contactId)
             ->delete();
+    }
+
+    /**
+     * Build the compact {field, old, new} change list for the entity-log meta,
+     * keeping only logged fields that actually changed.
+     *
+     * @param  array<string, mixed>  $original  pre-update DB values, keyed by field
+     * @param  array<string, mixed>  $data  applied update values
+     * @return list<array{field: string, old: mixed, new: mixed}>
+     */
+    private function diffLoggedFields(array $original, array $data): array
+    {
+        $changes = [];
+
+        foreach (self::LOGGED_FIELDS as $field) {
+            if (! array_key_exists($field, $data)) {
+                continue;
+            }
+
+            $old = $original[$field] ?? null;
+            $new = $data[$field];
+
+            if ($old === $new) {
+                continue;
+            }
+
+            $changes[] = ['field' => $field, 'old' => $old, 'new' => $new];
+        }
+
+        return $changes;
     }
 
     /**

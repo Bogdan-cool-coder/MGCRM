@@ -245,6 +245,7 @@ function taskTypeIcon(type: ActivityType): string {
     task: 'pi pi-check-square',
     note: 'pi pi-file-edit',
     follow_up: 'pi pi-arrow-right-arrow-left',
+    presentation: 'pi pi-desktop',
   }
   return map[type] ?? 'pi pi-check-square'
 }

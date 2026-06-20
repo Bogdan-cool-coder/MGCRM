@@ -5,7 +5,11 @@
       'feed-item--done': isActivity && item.activity?.is_closed,
       'feed-item--deal-created': item.type === 'deal_created',
       'feed-item--system': isSystem,
+      'feed-item--highlight': isHighlighted,
     }"
+    :data-feed-id="item.id"
+    :data-feed-type="item.type"
+    :data-activity-kind="item.activity?.kind ?? null"
   >
     <!-- Timeline dot -->
     <div
@@ -102,6 +106,7 @@
           </div>
           <div class="feed-item__header-right">
             <Tag
+              v-if="item.type !== 'note'"
               :severity="statusSeverity(item.activity.status)"
               :value="t(`activity.statuses.${item.activity.status}`)"
               size="small"
@@ -144,37 +149,11 @@
           {{ item.activity.body }}
         </p>
 
-        <!-- Inline complete form (task quick form) -->
-        <Transition name="tqf-slide">
-          <TaskQuickForm
-            v-if="showCompleteForm && !item.activity.is_closed"
-            mode="complete"
-            :activity="item.activity"
-            :closable="true"
-            class="feed-item__quick-complete"
-            @completed="onQuickCompleted"
-            @delete="onDelete"
-            @cancel="showCompleteForm = false"
-          />
-        </Transition>
-
-        <!-- Actions -->
+        <!-- Actions (hover-only; no "Complete" btn — open tasks live above composer) -->
         <div class="feed-item__actions">
-          <!-- Always visible: complete CTA for active tasks -->
+          <!-- Reopen: shown when task was completed (done) -->
           <Button
-            v-if="!item.activity.is_closed && item.activity.status !== 'done' && item.activity.kind !== 'note'"
-            icon="pi pi-check"
-            :label="t('activity.actions.complete')"
-            severity="success"
-            size="small"
-            outlined
-            :loading="completingId === item.activity.id"
-            class="feed-item__complete-btn"
-            @click="showCompleteForm = !showCompleteForm"
-          />
-          <!-- Hover-only actions -->
-          <Button
-            v-if="item.activity.status === 'done'"
+            v-if="item.activity.status === 'done' && item.activity.kind !== 'note'"
             icon="pi pi-refresh"
             :label="t('activity.actions.reopen')"
             severity="secondary"
@@ -184,7 +163,9 @@
             class="feed-item__hover-btn"
             @click="onReopen"
           />
+          <!-- Edit -->
           <Button
+            v-if="item.activity.kind !== 'note'"
             icon="pi pi-pencil"
             severity="secondary"
             size="small"
@@ -192,6 +173,7 @@
             class="feed-item__hover-btn"
             @click="onEdit"
           />
+          <!-- More menu (pin / delete) -->
           <Button
             icon="pi pi-ellipsis-v"
             severity="secondary"
@@ -243,7 +225,6 @@ import Tag from 'primevue/tag'
 import Menu from 'primevue/menu'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import MeetingReportDialog from '@/components/MeetingReportDialog.vue'
-import TaskQuickForm from '@/components/tasks/TaskQuickForm.vue'
 import { statusSeverity, prioritySeverity, formatDueDate } from '@/utils/activity'
 import type { FeedItem } from '../composables/useDealFeed'
 import type { ActivityDto } from '@/entities/activity'
@@ -255,6 +236,8 @@ const props = defineProps<{
   dealId: number
   completingId: number | null
   reopeningId: number | null
+  /** True when the key-actions bar triggered a scroll-to on this item */
+  isHighlighted?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -275,7 +258,6 @@ const formDialogOpen = ref(false)
 const editingActivityId = ref<number | null>(null)
 const meetingReportOpen = ref(false)
 const changesExpanded = ref(false)
-const showCompleteForm = ref(false)
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 
@@ -285,7 +267,8 @@ const isActivity = computed(
     props.item.type === 'task' ||
     props.item.type === 'call' ||
     props.item.type === 'meeting' ||
-    props.item.type === 'follow_up',
+    props.item.type === 'follow_up' ||
+    props.item.type === 'presentation',
 )
 
 const isSystem = computed(
@@ -317,6 +300,7 @@ const itemIcon = computed((): string => {
     case 'call': return 'pi-phone'
     case 'meeting': return 'pi-users'
     case 'follow_up': return 'pi-reply'
+    case 'presentation': return 'pi-desktop'
     default: return 'pi-circle'
   }
 })
@@ -389,12 +373,6 @@ function onEdit() {
     editingActivityId.value = props.item.activity.id
     formDialogOpen.value = true
   }
-}
-
-function onQuickCompleted(activity: ActivityDto) {
-  showCompleteForm.value = false
-  emit('updated', activity)
-  toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 3000 })
 }
 
 function onReopen() {
@@ -635,8 +613,9 @@ function onActivityUpdated(activity: ActivityDto) {
   overflow: hidden;
   text-overflow: ellipsis;
 
+  // Dark mode: use semantic text token to avoid invisible text on dark card bg
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-text-color);
   }
 
   &--done {
@@ -673,30 +652,6 @@ function onActivityUpdated(activity: ActivityDto) {
   }
 }
 
-.feed-item__quick-complete {
-  margin-top: $space-2;
-  margin-bottom: $space-1;
-}
-
-// tqf-slide transition (same as kanban board)
-.tqf-slide-enter-active,
-.tqf-slide-leave-active {
-  transition: all 0.18s ease;
-  overflow: hidden;
-}
-
-.tqf-slide-enter-from,
-.tqf-slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-}
-
-.tqf-slide-enter-to,
-.tqf-slide-leave-from {
-  opacity: 1;
-  max-height: 300px;
-}
-
 .feed-item__actions {
   display: flex;
   align-items: center;
@@ -730,6 +685,19 @@ function onActivityUpdated(activity: ActivityDto) {
     border: none;
     padding: $space-1 $space-2;
     box-shadow: none;
+  }
+}
+
+// Key-actions bar highlight — flash animation
+@keyframes feed-item-flash {
+  0%   { background-color: rgba(var(--p-primary-color-rgb, 23, 39, 71), 0.18); }
+  60%  { background-color: rgba(var(--p-primary-color-rgb, 23, 39, 71), 0.12); }
+  100% { background-color: transparent; }
+}
+
+.feed-item--highlight {
+  .feed-item__card {
+    animation: feed-item-flash 1.6s ease-out forwards;
   }
 }
 </style>

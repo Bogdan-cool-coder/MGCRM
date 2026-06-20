@@ -56,6 +56,7 @@ use App\Http\Controllers\Inbox\FormController;
 use App\Http\Controllers\Inbox\InboundMessageController;
 use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
+use App\Http\Controllers\Log\EntityLogController;
 use App\Http\Controllers\Notification\NotificationController;
 use App\Http\Controllers\Notification\TelegramLinkController;
 use App\Http\Controllers\Onboarding\AiTutorController;
@@ -179,6 +180,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Unified activity feed for contact card (mirrors deals/{deal}/feed) — S5
         Route::get('feed', [CrmFeedController::class, 'contactFeed'])->name('feed.index');
+
+        // Polymorphic action/event log for the contact card.
+        Route::get('log', [EntityLogController::class, 'contactLog'])->name('log.index');
     });
 
     // =========================================================================
@@ -205,6 +209,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Unified activity feed for company card (mirrors deals/{deal}/feed) — S5
         Route::get('feed', [CrmFeedController::class, 'companyFeed'])->name('feed.index');
+
+        // Polymorphic action/event log for the company card.
+        Route::get('log', [EntityLogController::class, 'companyLog'])->name('log.index');
     });
 
     // =========================================================================
@@ -407,6 +414,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // Stage change — the ONLY path that mutates stage_id (security boundary).
     Route::post('deals/{deal}/move', [DealController::class, 'move'])->name('deals.move');
 
+    // Key actions (deal-card header): mark КП / contract as sent. Each stamps the
+    // *_sent_at timestamp + a log row and returns the deal with its key_actions
+    // block refreshed.
+    Route::post('deals/{deal}/kp-sent', [DealController::class, 'markKpSent'])->name('deals.kp-sent');
+    Route::post('deals/{deal}/contract-sent', [DealController::class, 'markContractSent'])->name('deals.contract-sent');
+
     // Archive / restore (archived ≠ deleted: stamps archived_at, stays in
     // ?archived=true; delete is a separate soft delete on deals.destroy).
     Route::post('deals/{deal}/archive', [DealController::class, 'archive'])->name('deals.archive');
@@ -429,6 +442,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Unified event feed (stage changes + activities + field changes).
         Route::get('feed', [DealFeedController::class, 'index'])->name('feed.index');
+
+        // Polymorphic action/event log (created, stage_changed, contact_added,
+        // meeting_held, task_completed, data_changed, ...).
+        Route::get('log', [EntityLogController::class, 'dealLog'])->name('log.index');
 
         // Custom-field definitions (scope=deal) enriched with current values.
         Route::get('custom-fields', [DealCustomFieldController::class, 'index'])->name('custom-fields.index');

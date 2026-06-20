@@ -16,6 +16,12 @@ namespace App\Domain\Activity\Enums;
  * the Kanban card and a coloured tag on the personal task board. Adding it does
  * not change existing rows (the column is a plain string) — fully backward
  * compatible. It is task-like for scheduling (carries a due_at, can be completed).
+ *
+ * `presentation` is additive too (DealPage 2.0 — «ключевые действия»): a distinct
+ * kind for a held product presentation. The deal-card header surfaces the date of
+ * the last COMPLETED presentation (last_presentation_at). It is task-like
+ * (carries a due_at, can be completed); adding the case does not touch existing
+ * rows (plain string column).
  */
 enum ActivityType: string
 {
@@ -24,6 +30,7 @@ enum ActivityType: string
     case Task = 'task';
     case Note = 'note';
     case FollowUp = 'follow_up';
+    case Presentation = 'presentation';
 
     /**
      * @return list<string>
@@ -35,8 +42,8 @@ enum ActivityType: string
 
     /**
      * Task-like kinds carry a deadline and a "next task" health signal on a deal
-     * (call/meeting/task/follow_up). A note is documentation only — it never
-     * surfaces as next_task. Single-sourced so the board enrichment, the
+     * (call/meeting/task/follow_up/presentation). A note is documentation only —
+     * it never surfaces as next_task. Single-sourced so the board enrichment, the
      * "deals without tasks" widget and the my-tasks board stay in lockstep.
      *
      * @return list<string>
@@ -48,6 +55,41 @@ enum ActivityType: string
             self::Meeting->value,
             self::Task->value,
             self::FollowUp->value,
+            self::Presentation->value,
+        ];
+    }
+
+    /**
+     * "Touch" kinds — a direct reach-out to the client (звонок / переписка): a
+     * call or a follow-up. Powers the deal-card header `last_touch_at` (the date
+     * of the last completed touch). Single-sourced so the header and any future
+     * touch-based reporting share one definition.
+     *
+     * @return list<string>
+     */
+    public static function touchValues(): array
+    {
+        return [
+            self::Call->value,
+            self::FollowUp->value,
+        ];
+    }
+
+    /**
+     * "Event" kinds — any client-facing event (звонок / переписка / встреча):
+     * touches plus meetings and presentations. Powers the deal-card header
+     * `last_event_at` (the date of the last completed event). A superset of
+     * touchValues(), single-sourced for the same reason.
+     *
+     * @return list<string>
+     */
+    public static function eventValues(): array
+    {
+        return [
+            self::Call->value,
+            self::FollowUp->value,
+            self::Meeting->value,
+            self::Presentation->value,
         ];
     }
 }

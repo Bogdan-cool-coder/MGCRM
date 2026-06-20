@@ -54,6 +54,16 @@ class DealResource extends JsonResource
             'expected_sign_date' => $this->expected_sign_date?->toDateString(),
             'expected_payment_date' => $this->expected_payment_date?->toDateString(),
 
+            'kp_sent_at' => $this->kp_sent_at?->toIso8601String(),
+            'contract_sent_at' => $this->contract_sent_at?->toIso8601String(),
+            'max_stage_id' => $this->max_stage_id,
+
+            // Deal-card header "ключевые действия" — six { type, date|null, ref? }
+            // entries. A null date means the action has not happened (the
+            // frontend hides the icon). Always present so the header can render a
+            // fixed icon row. See keyActions().
+            'key_actions' => $this->keyActions(),
+
             'stage_changed_at' => $this->stage_changed_at?->toIso8601String(),
             'closed_at' => $this->closed_at?->toIso8601String(),
             'archived_at' => $this->archived_at?->toIso8601String(),
@@ -77,6 +87,79 @@ class DealResource extends JsonResource
 
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * The deal-card header "ключевые действия" block: six entries, each
+     * { type, date|null, ref? }. Order is the header's icon order. A null date =
+     * the action never happened (the frontend hides the icon).
+     *
+     * Sources:
+     *   - last_presentation / last_touch / last_event — derived live from the
+     *     Activity timeline, stamped onto the model as `key_action_dates` by the
+     *     controller (DealController::show); absent on list payloads → null dates.
+     *   - max_stage — the loaded maxStage relation (id/name/color in `ref`).
+     *   - kp_sent / contract_sent — the deal's own columns.
+     *
+     * @return list<array{type: string, date: ?string, ref?: array<string, mixed>}>
+     */
+    private function keyActions(): array
+    {
+        $dates = $this->resource->getAttribute('key_action_dates') ?? [];
+
+        return [
+            [
+                'type' => 'last_presentation',
+                'date' => $dates['last_presentation_at'] ?? null,
+            ],
+            [
+                'type' => 'max_stage',
+                'date' => null,
+                'ref' => $this->maxStageRef(),
+            ],
+            [
+                'type' => 'kp_sent',
+                'date' => $this->kp_sent_at?->toIso8601String(),
+            ],
+            [
+                'type' => 'contract_sent',
+                'date' => $this->contract_sent_at?->toIso8601String(),
+            ],
+            [
+                'type' => 'last_touch',
+                'date' => $dates['last_touch_at'] ?? null,
+            ],
+            [
+                'type' => 'last_event',
+                'date' => $dates['last_event_at'] ?? null,
+            ],
+        ];
+    }
+
+    /**
+     * The max_stage `ref` payload {stage_id, name, color}, or null when the deal
+     * has no recorded high-water mark or the maxStage relation is not loaded (the
+     * frontend then hides the chip). Reads the loaded relation — no extra query.
+     *
+     * @return array{stage_id: int, name: string, color: ?string}|null
+     */
+    private function maxStageRef(): ?array
+    {
+        if ($this->max_stage_id === null || ! $this->resource->relationLoaded('maxStage')) {
+            return null;
+        }
+
+        $stage = $this->maxStage;
+
+        if ($stage === null) {
+            return null;
+        }
+
+        return [
+            'stage_id' => (int) $stage->id,
+            'name' => $stage->name,
+            'color' => $stage->color,
         ];
     }
 

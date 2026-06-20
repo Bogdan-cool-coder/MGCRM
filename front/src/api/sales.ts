@@ -251,6 +251,18 @@ export const salesApi = {
     return res.data
   },
 
+  /** Mark КП (commercial proposal) as sent — stamps kp_sent_at and appends a log row. */
+  async markKpSent(id: number): Promise<DealDto> {
+    const res = await apiClient.post<{ data: DealDto }>(`/api/deals/${id}/kp-sent`)
+    return res.data.data
+  },
+
+  /** Mark contract as sent — stamps contract_sent_at and appends a log row. */
+  async markContractSent(id: number): Promise<DealDto> {
+    const res = await apiClient.post<{ data: DealDto }>(`/api/deals/${id}/contract-sent`)
+    return res.data.data
+  },
+
   // ── Deal Products ──────────────────────────────────────────────────────────
 
   async getDealProducts(dealId: number): Promise<DealProductDto[]> {

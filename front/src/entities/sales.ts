@@ -99,11 +99,44 @@ export interface DealDto {
   contacts?: DealContactDto[]
   /** Sum of all per-line discounts (kopecks). Present when products relation is loaded. */
   discount_total?: number
+  /**
+   * Key-action bar — 6 entries in stable order (DealPage 2.0).
+   * Always present on show/mark endpoints; dates are null on list payloads.
+   */
+  key_actions?: DealKeyAction[]
+  /** ISO timestamp of КП submission; null when not yet sent. */
+  kp_sent_at?: string | null
+  /** ISO timestamp of contract submission; null when not yet sent. */
+  contract_sent_at?: string | null
 }
 
 // ─── Activity type (used in NextTaskDto) ─────────────────────────────────────
 
-export type ActivityType = 'call' | 'meeting' | 'task' | 'note' | 'follow_up'
+export type ActivityType = 'call' | 'meeting' | 'task' | 'note' | 'follow_up' | 'presentation'
+
+// ─── Key actions (DealPage 2.0 header bar) ────────────────────────────────────
+
+export type KeyActionType =
+  | 'last_presentation'
+  | 'max_stage'
+  | 'kp_sent'
+  | 'contract_sent'
+  | 'last_touch'
+  | 'last_event'
+
+export interface MaxStageRef {
+  stage_id: number
+  name: string
+  color: string | null
+}
+
+export interface DealKeyAction {
+  type: KeyActionType
+  /** ISO date-time or null when the action never happened */
+  date: string | null
+  /** Populated only for max_stage — the high-water mark stage ref */
+  ref?: MaxStageRef | null
+}
 
 // ─── Next task (board card health signal) ─────────────────────────────────────
 

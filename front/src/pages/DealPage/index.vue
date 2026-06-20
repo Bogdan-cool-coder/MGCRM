@@ -106,6 +106,7 @@
           @amount-changed="onAmountChanged"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
+          @scroll-to-feed-type="onScrollToFeedType"
         />
       </div>
 
@@ -147,6 +148,7 @@
           @amount-changed="onAmountChanged"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
+          @scroll-to-feed-type="onScrollToFeedType"
         />
       </Drawer>
 
@@ -184,20 +186,30 @@
           @amount-changed="onAmountChanged"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
+          @scroll-to-feed-type="onScrollToFeedType"
         />
       </div>
 
-      <!-- Right panel: feed + composer -->
+      <!-- Right panel: feed + open tasks list + composer -->
       <div
         v-if="!isMobile || mobileView === 'feed'"
         class="deal-page-v2__right"
         :class="{ 'deal-page-v2__right--mobile-active': isMobile }"
       >
         <DealFeed
+          ref="dealFeedRef"
           :deal-id="deal.id"
           :feed="feedComposable"
           class="deal-page-v2__feed"
           @open-composer-tab="onOpenComposerTab"
+        />
+        <!-- Open tasks list — above composer, AMO-style -->
+        <OpenTasksList
+          :tasks="feedComposable.openTasks.value"
+          target-type="deal"
+          :target-id="deal.id"
+          @completed="onTaskCompleted"
+          @deleted="onTaskDeleted"
         />
         <DealComposer
           ref="composerRef"
@@ -259,6 +271,7 @@ import DealComposer from './components/DealComposer.vue'
 import DealAddProductDialog from './components/DealAddProductDialog.vue'
 import DealAddContactDialog from './components/DealAddContactDialog.vue'
 import MoveDealDialog from '../DealsPage/components/MoveDealDialog.vue'
+import OpenTasksList from '@/components/crm/entity/OpenTasksList.vue'
 import { useDealPage } from './composables/useDealPage'
 import { useDealProducts } from './composables/useDealProducts'
 import { useDealContacts } from './composables/useDealContacts'
@@ -271,7 +284,7 @@ import { useSalesStore } from '@/stores/salesStore'
 import { salesApi } from '@/api/sales'
 import { usersApi } from '@/api/users'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
-import type { DealDto, DealProductDto, PipelineStageDto } from '@/entities/sales'
+import type { DealDto, DealProductDto, PipelineStageDto, KeyActionType } from '@/entities/sales'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
 const { t } = useI18n()
@@ -329,8 +342,9 @@ const feedComposable = useDealFeed(
   () => deal.value?.created_at ?? null,
 )
 
-// ── Composer ───────────────────────────────────────────────────────────────────────
+// ── Composer + Feed ref ────────────────────────────────────────────────────────────
 
+const dealFeedRef = ref<InstanceType<typeof DealFeed> | null>(null)
 const composerRef = ref<InstanceType<typeof DealComposer> | null>(null)
 const composerInitialTab = ref<ActivityKind>('note')
 
@@ -339,8 +353,23 @@ function onOpenComposerTab(tab: ActivityKind) {
   composerRef.value?.setTab(tab)
 }
 
+function onScrollToFeedType(type: KeyActionType) {
+  dealFeedRef.value?.scrollToFeedItem(type)
+}
+
 function onActivityCreated(activity: ActivityDto) {
   feedComposable.prependLocal(activity)
+  // Scroll feed to bottom so new event is visible
+  dealFeedRef.value?.scrollToBottom()
+}
+
+// Open-task complete/delete handlers (wired to OpenTasksList)
+function onTaskCompleted(activity: ActivityDto) {
+  feedComposable.updateActivityLocal(activity)
+}
+
+function onTaskDeleted(activityId: number) {
+  feedComposable.removeActivityLocal(activityId)
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────────────

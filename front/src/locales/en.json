@@ -1303,7 +1303,8 @@
           "main": "Main",
           "documents": "Documents",
           "finances": "Finances",
-          "stats": "Stats"
+          "stats": "Stats",
+          "log": "Log"
         },
         "fields": {
           "owner": "Owner",
@@ -1374,7 +1375,8 @@
         "stageChanges": "Stage changes",
         "documents": "Documents",
         "lastActivity": "Last activity",
-        "daysAgo": "{n} days ago"
+        "daysAgo": "{n} days ago",
+        "daysAgoShort": "days ago"
       },
       "feed": {
         "searchPlaceholder": "Search feed...",
@@ -1382,6 +1384,7 @@
         "filterType": "Type",
         "reset": "Reset",
         "loadMore": "Load more",
+        "changedField": "changed field",
         "viewMenu": {
           "collapseAll": "Collapse all groups",
           "expandAll": "Expand all groups",
@@ -1392,6 +1395,9 @@
         "empty": {
           "title": "Feed is empty",
           "subtitle": "Create a task or call the client"
+        },
+        "openTasks": {
+          "title": "Open tasks: {n}"
         },
         "types": {
           "stage_change": "Stage change",
@@ -1443,6 +1449,18 @@
         "open": "Open",
         "won": "Won",
         "lost": "Lost"
+      },
+      "keyActions": {
+        "lastPresentationTooltip": "Last presentation: {date}",
+        "maxStageTooltip": "Max stage: {stage}",
+        "kpSentTooltip": "Proposal sent: {date}",
+        "contractSentTooltip": "Contract sent: {date}",
+        "lastTouchTooltip": "Last touch: {date}",
+        "lastEventTooltip": "Last event: {date}",
+        "markKpTooltip": "Mark proposal as sent",
+        "markContractTooltip": "Mark contract as sent",
+        "kpMarked": "Proposal marked as sent",
+        "contractMarked": "Contract marked as sent"
       }
     },
     "move": {
@@ -2768,7 +2786,8 @@
         "employees": "Employees",
         "activity": "Activity",
         "payments": "Payments",
-        "files": "Files"
+        "files": "Files",
+        "log": "Log"
       },
       "sections": {
         "requisites": "Requisites",
@@ -2808,7 +2827,8 @@
     "contact": {
       "tabs": {
         "activity": "Activity",
-        "files": "Files"
+        "files": "Files",
+        "log": "Log"
       },
       "sections": {
         "channels": "Channels",
@@ -2870,6 +2890,41 @@
         "addRelation": "Add relation",
         "copyLink": "Copy link",
         "delete": "Delete"
+      }
+    },
+    "log": {
+      "title": "Action history",
+      "system": "System",
+      "loadMore": "Load more",
+      "empty": {
+        "title": "History is empty",
+        "hint": "Actions will appear here as you work with this record"
+      },
+      "events": {
+        "created": "created the record",
+        "updated": "changed field",
+        "stage_changed": "moved to stage",
+        "contact_added": "added contact",
+        "contact_removed": "removed contact",
+        "task_completed": "completed task",
+        "meeting_held": "held meeting",
+        "note_added": "added note",
+        "document_created": "created document",
+        "document_signed": "signed document",
+        "finance_added": "added finance terms",
+        "status_changed": "changed status",
+        "employee_added": "added employee",
+        "employee_removed": "removed employee",
+        "relation_added": "added relation",
+        "relation_removed": "removed relation",
+        "custom_field_changed": "changed custom field"
+      },
+      "metrics": {
+        "openDeals": "Open deals",
+        "employees": "Employees",
+        "documents": "Documents",
+        "deals": "Deals",
+        "companies": "Companies"
       }
     },
     "contacts_page": {

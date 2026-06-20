@@ -46,6 +46,8 @@ class DealFactory extends Factory
             'expected_close_date' => null,
             'expected_sign_date' => null,
             'expected_payment_date' => null,
+            'kp_sent_at' => null,
+            'contract_sent_at' => null,
             'stage_changed_at' => now(),
             'closed_at' => null,
         ];

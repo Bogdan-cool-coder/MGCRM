@@ -32,7 +32,7 @@ class CompanyServiceFindForDedupTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CompanyService;
+        $this->service = app(CompanyService::class);
         $this->actor = User::factory()->create();
     }
 

@@ -45,6 +45,7 @@ class Deal extends Model
     protected $fillable = [
         'pipeline_id',
         'stage_id',
+        'max_stage_id',
         'company_id',
         'title',
         'amount',
@@ -59,6 +60,8 @@ class Deal extends Model
         'expected_close_date',
         'expected_sign_date',
         'expected_payment_date',
+        'kp_sent_at',
+        'contract_sent_at',
         'stage_changed_at',
         'closed_at',
         'archived_at',
@@ -73,6 +76,8 @@ class Deal extends Model
             'expected_close_date' => 'date',
             'expected_sign_date' => 'date',
             'expected_payment_date' => 'date',
+            'kp_sent_at' => 'datetime',
+            'contract_sent_at' => 'datetime',
             'stage_changed_at' => 'datetime',
             'closed_at' => 'datetime',
             'archived_at' => 'datetime',
@@ -124,6 +129,17 @@ class Deal extends Model
     public function stage(): BelongsTo
     {
         return $this->belongsTo(PipelineStage::class, 'stage_id');
+    }
+
+    /**
+     * The HIGHEST pipeline stage this deal has ever reached (by sort_order), kept
+     * even after a roll-back to an earlier stage — the deal-card header
+     * `max_stage` key action. Maintained by DealMoveService::move() /
+     * DealService::create(); eager-load with('maxStage') for the DealResource.
+     */
+    public function maxStage(): BelongsTo
+    {
+        return $this->belongsTo(PipelineStage::class, 'max_stage_id');
     }
 
     public function company(): BelongsTo

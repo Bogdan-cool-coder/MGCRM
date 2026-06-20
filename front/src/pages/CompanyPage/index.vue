@@ -91,6 +91,7 @@
             <Tab value="payments">{{ t('crm.company.tabs.payments') }}</Tab>
             <Tab value="holding">{{ t('company.page.tabs.holding') }}</Tab>
             <Tab value="files">{{ t('crm.company.tabs.files') }}</Tab>
+            <Tab value="log">{{ t('crm.company.tabs.log') }}</Tab>
           </TabList>
 
           <TabPanels>
@@ -267,6 +268,13 @@
                 <p class="company-page-v2__files-text">{{ t('company.page.stub.files') }}</p>
               </div>
             </TabPanel>
+
+            <!-- ── Log tab ───────────────────────────────────────────── -->
+            <TabPanel value="log">
+              <div class="company-page-v2__tab-content">
+                <EntityLogTab :log="companyLog" :metrics="companyMetrics" />
+              </div>
+            </TabPanel>
           </TabPanels>
         </Tabs>
       </div>
@@ -403,8 +411,10 @@ import { useToast } from 'primevue/usetoast'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
+import EntityLogTab, { type LogMetric } from '@/components/crm/entity/EntityLogTab.vue'
 import CustomFieldRenderer from '@/components/crm/entity/CustomFieldRenderer.vue'
 import CreateContactInlineDialog from '@/components/crm/CreateContactInlineDialog.vue'
+import { useEntityLog } from '@/composables/crm/useEntityLog'
 import CompanyRequisitesPanel from './components/CompanyRequisitesPanel.vue'
 import CompanyEmployeesPanel from './components/CompanyEmployeesPanel.vue'
 import CompanyEmployeesTab from './components/CompanyEmployeesTab.vue'
@@ -431,6 +441,7 @@ const { isTablet, isMobile } = useBreakpoints()
 const activeTab = ref('overview')
 const employeeSearch = ref('')
 const showAttachHolding = ref(false)
+
 
 // Inline contact creation (from employee autocomplete)
 const createContactInlineOpen = ref(false)
@@ -483,6 +494,16 @@ const {
   employees,
   loadEmployees,
 })
+
+// ── Entity log ─────────────────────────────────────────────────────────────────
+
+const companyLog = useEntityLog('company', () => companyId.value ?? null)
+
+const companyMetrics = computed((): LogMetric[] => [
+  { key: 'openDeals', label: t('crm.log.metrics.openDeals'), value: openDealsCount.value },
+  { key: 'employees', label: t('crm.log.metrics.employees'), value: employees.value.length },
+  { key: 'documents', label: t('crm.log.metrics.documents'), value: documents.value.length },
+])
 
 // ── Computed ───────────────────────────────────────────────────────────────────
 
@@ -571,6 +592,7 @@ const tabOptions = computed(() => [
   { label: t('crm.company.tabs.payments'), value: 'payments' },
   { label: t('company.page.tabs.holding'), value: 'holding' },
   { label: t('crm.company.tabs.files'), value: 'files' },
+  { label: t('crm.company.tabs.log'), value: 'log' },
 ])
 
 // ── Actions ────────────────────────────────────────────────────────────────────
@@ -734,6 +756,8 @@ function onSubmitEmployee() {
 onMounted(async () => {
   if (!directoriesStore.loaded) void directoriesStore.fetchAll()
   await loadAll()
+  // Load entity log (company may now be loaded)
+  if (companyId.value) void companyLog.load()
 })
 </script>
 

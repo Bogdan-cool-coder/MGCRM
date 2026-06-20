@@ -11,6 +11,7 @@ use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Models\User;
+use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\Pipeline;
@@ -32,7 +33,7 @@ class ChangeStageActionTest extends TestCase
         $documents = Mockery::mock(DocumentService::class);
         $documents->shouldReceive('hasActiveContractForDeal')->andReturn(true)->byDefault();
 
-        return new ChangeStageAction(new DealMoveService($documents, new EngagementService));
+        return new ChangeStageAction(new DealMoveService($documents, new EngagementService, app(EntityLogService::class)));
     }
 
     public function test_kind(): void

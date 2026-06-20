@@ -6,6 +6,10 @@ namespace App\Domain\Sales\Services;
 
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\ContactService;
+use App\Domain\Iam\Models\User;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealContact;
 use Illuminate\Database\Eloquent\Collection;
@@ -22,6 +26,7 @@ class DealContactService
 {
     public function __construct(
         private readonly ContactService $contacts,
+        private readonly EntityLogService $entityLog,
     ) {}
 
     /**
@@ -42,9 +47,9 @@ class DealContactService
      * deal's company. Duplicate (deal, contact) → 409. Primary uniqueness is
      * guaranteed by un-setting any existing primary inside the transaction.
      */
-    public function addContact(Deal $deal, int $contactId, bool $isPrimary = false): DealContact
+    public function addContact(Deal $deal, int $contactId, bool $isPrimary = false, ?User $actor = null): DealContact
     {
-        return DB::transaction(function () use ($deal, $contactId, $isPrimary): DealContact {
+        return DB::transaction(function () use ($deal, $contactId, $isPrimary, $actor): DealContact {
             $exists = DealContact::query()
                 ->where('deal_id', $deal->id)
                 ->where('contact_id', $contactId)
@@ -74,6 +79,20 @@ class DealContactService
             if ($contact !== null) {
                 $this->contacts->linkCompany($contact, (int) $deal->company_id, []);
             }
+
+            // Polymorphic action log: a contact was linked to the deal (who/when
+            // + the contact's name so the timeline reads without a lookup).
+            $this->entityLog->record(
+                LogSubjectType::Deal,
+                (int) $deal->id,
+                $actor,
+                LogAction::ContactAdded,
+                [
+                    'contact_id' => $contactId,
+                    'contact_name' => $contact?->full_name,
+                    'is_primary' => $isPrimary,
+                ],
+            );
 
             return $dealContact->load('contact:id,full_name,position,email,phone');
         });

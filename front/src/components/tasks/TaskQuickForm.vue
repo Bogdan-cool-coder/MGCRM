@@ -5,7 +5,10 @@
          mode="create"  — new task card (title + kind + due shortcut)
          mode="complete"— execute existing task (result + reschedule)
        Entity-agnostic: pass targetType/targetId for context binding.
+
+       Single root wrapper required so <Transition> can animate correctly.
   ══════════════════════════════════════════════════════════════════ -->
+  <div class="tqf-root">
   <div class="tqf" :class="{ 'tqf--completing': mode === 'complete' }">
     <!-- ── Header row ─────────────────────────────────────────────── -->
     <div class="tqf__header">
@@ -175,6 +178,7 @@
 
   <!-- Kind picker popover (create mode) -->
   <Menu ref="kindMenuRef" :model="kindMenuItems" popup />
+  </div><!-- /.tqf-root -->
 </template>
 
 <script setup lang="ts">
@@ -426,7 +430,7 @@ async function doComplete() {
         result_text: resultText,
       })
     }
-    return activityApi.changeStatus(props.activity!.id, 'done', resultText)
+    return activityApi.completeActivity(props.activity!.id, resultText)
   })
 
   emit('completed', result)
@@ -455,24 +459,21 @@ onMounted(async () => {
       if (el instanceof HTMLElement) el.focus()
     }
   }
-  // Prefill due_at for complete mode from existing activity
-  if (props.mode === 'complete' && props.activity?.due_at) {
-    form.value.due_at = new Date(props.activity.due_at)
-  }
+  // In complete mode do NOT pre-fill due_at — the date picker is used only
+  // when the user explicitly wants to reschedule. Pre-filling caused doComplete()
+  // to reschedule (instead of complete) for every task that had a due_at set.
 })
 
-// When activity prop changes (e.g. in complete mode), sync due_at
-watch(
-  () => props.activity,
-  (a) => {
-    if (props.mode === 'complete' && a?.due_at) {
-      form.value.due_at = new Date(a.due_at)
-    }
-  },
-)
+// No watcher needed for complete mode due_at sync (intentionally removed).
 </script>
 
 <style lang="scss" scoped>
+// Single-root wrapper — needed so <Transition> in parent has a single element root.
+// Overflow hidden allows the tqf-slide max-height animation to work correctly.
+.tqf-root {
+  overflow: hidden;
+}
+
 .tqf {
   background: $surface-card;
   border: 1px solid $surface-200;

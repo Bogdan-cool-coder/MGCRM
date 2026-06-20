@@ -8,6 +8,7 @@ use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Models\User;
+use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Exceptions\WonGateException;
 use App\Domain\Sales\Models\Deal;
@@ -65,7 +66,7 @@ class DealMoveServiceTest extends TestCase
             $documents->shouldReceive('hasActiveContractForDeal')->andReturn($hasContract);
         }
 
-        return new DealMoveService($documents, new EngagementService);
+        return new DealMoveService($documents, new EngagementService, app(EntityLogService::class));
     }
 
     public function test_redundant_move_is_noop(): void

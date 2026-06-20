@@ -17,6 +17,9 @@ use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Models\Deal;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -45,6 +48,7 @@ class ActivityService
     public function __construct(
         private readonly VisibilityResolver $visibility,
         private readonly EngagementService $engagement,
+        private readonly EntityLogService $entityLog,
     ) {}
 
     /**
@@ -244,6 +248,7 @@ class ActivityService
 
         $payload = [
             'status' => ActivityStatus::Done,
+            'is_closed' => true,
             'completed_at' => now(),
             'completed_by_id' => $user->id,
             'progress_pct' => 100,
@@ -258,6 +263,12 @@ class ActivityService
 
         // Completing a call/meeting/task is fresh engagement on its target.
         $this->touchTargetEngagement($activity);
+
+        // Polymorphic action log on the activity's target subject: a meeting is a
+        // meeting_held event, any other task-like kind is task_completed. A note
+        // never reaches here (assertCompletable), and a standalone (target-less)
+        // task has no subject to log against → recordCompletionOnTarget no-ops.
+        $this->recordCompletionOnTarget($activity, $user);
 
         ActivityStatusChanged::dispatch($activity, $from, ActivityStatus::Done);
 
@@ -607,6 +618,68 @@ class ActivityService
     }
 
     /**
+     * Key-action timeline dates for a single deal's card header (DealPage 2.0 —
+     * «ключевые действия»). The Sales domain never queries the activities table
+     * directly (DDD §2); it asks the Activity domain through this method.
+     *
+     * Returns the dates (ISO-8601, or null) of:
+     *   - last_presentation_at — the last COMPLETED presentation activity;
+     *   - last_touch_at        — the last COMPLETED touch (call / follow-up);
+     *   - last_event_at        — the last COMPLETED event (call / follow-up /
+     *                            meeting / presentation).
+     *
+     * "Completed" = status = done with a completed_at timestamp; the latest is the
+     * max completed_at. The three kind-sets are single-sourced on ActivityType so
+     * the header can never drift from the timeline. Resolved in one query (per
+     * deal) ordered by completed_at desc.
+     *
+     * @return array{last_presentation_at: ?string, last_touch_at: ?string, last_event_at: ?string}
+     */
+    public function keyActionDatesForDeal(int $dealId): array
+    {
+        $eventKinds = ActivityType::eventValues();
+        $touchKinds = ActivityType::touchValues();
+
+        // One query: the completed event-class activities on this deal, newest
+        // first. The set is small (a deal's lifetime touches), so deriving the
+        // three "last" dates in PHP avoids three separate aggregate queries.
+        $rows = Activity::query()
+            ->where('target_type', ActivityTargetType::Deal->value)
+            ->where('target_id', $dealId)
+            ->where('status', ActivityStatus::Done->value)
+            ->whereNotNull('completed_at')
+            ->whereIn('kind', $eventKinds)
+            ->orderByDesc('completed_at')
+            ->get(['kind', 'completed_at']);
+
+        $lastPresentation = null;
+        $lastTouch = null;
+        $lastEvent = null;
+
+        foreach ($rows as $row) {
+            $completedAt = $row->completed_at; // Carbon (datetime cast)
+            $kind = $row->kind instanceof ActivityType ? $row->kind->value : (string) $row->kind;
+
+            // Rows are completed_at desc → the first match per bucket is the latest.
+            $lastEvent ??= $completedAt;
+
+            if ($lastTouch === null && in_array($kind, $touchKinds, true)) {
+                $lastTouch = $completedAt;
+            }
+
+            if ($lastPresentation === null && $kind === ActivityType::Presentation->value) {
+                $lastPresentation = $completedAt;
+            }
+        }
+
+        return [
+            'last_presentation_at' => $lastPresentation?->toIso8601String(),
+            'last_touch_at' => $lastTouch?->toIso8601String(),
+            'last_event_at' => $lastEvent?->toIso8601String(),
+        ];
+    }
+
+    /**
      * "My tasks" grouped by urgency bucket for the personal task board (Сделки —
      * ТЗ §4). Scoped to the current user's OPEN, task-like activities (those they
      * are responsible for OR created), bucketed by due_at relative to the app
@@ -698,6 +771,56 @@ class ActivityService
     }
 
     // ---- Private ----
+
+    /**
+     * Record a completion event on the activity's target subject's entity-log.
+     * A meeting completion is meeting_held; any other task-like kind (call /
+     * task / follow_up) is task_completed. The target_type → LogSubjectType map
+     * is 1:1 (deal/company/contact). A standalone (target-less) personal task
+     * has no subject and is intentionally NOT logged (no card to show it on).
+     * A note can never reach here (assertCompletable rejects it first).
+     */
+    private function recordCompletionOnTarget(Activity $activity, User $actor): void
+    {
+        $subjectType = $this->targetSubjectType($activity->target_type);
+        $targetId = $activity->target_id !== null ? (int) $activity->target_id : null;
+
+        if ($subjectType === null || $targetId === null) {
+            return; // standalone personal task — nothing to log against
+        }
+
+        $kind = $activity->kind instanceof ActivityType ? $activity->kind : ActivityType::tryFrom((string) $activity->kind);
+
+        $action = $kind === ActivityType::Meeting
+            ? LogAction::MeetingHeld
+            : LogAction::TaskCompleted;
+
+        $this->entityLog->record(
+            $subjectType,
+            $targetId,
+            $actor,
+            $action,
+            [
+                'activity_id' => (int) $activity->id,
+                'kind' => $kind?->value,
+                'title' => $activity->title,
+            ],
+        );
+    }
+
+    /**
+     * Map an Activity target_type string to the matching entity-log subject type.
+     * The two enums share the same string values (deal/company/contact), so the
+     * mapping is a direct tryFrom; an unknown/null type yields null.
+     */
+    private function targetSubjectType(?string $targetType): ?LogSubjectType
+    {
+        if ($targetType === null) {
+            return null;
+        }
+
+        return LogSubjectType::tryFrom($targetType);
+    }
 
     /**
      * Stamp last_activity_at on the Crm entities behind an activity's target

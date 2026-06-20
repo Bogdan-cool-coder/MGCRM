@@ -5,7 +5,7 @@
         <Tab value="main">{{ t('sales.deal.info.tabs.main') }}</Tab>
         <Tab value="documents">{{ t('sales.deal.info.tabs.documents') }}</Tab>
         <Tab value="finances">{{ t('sales.deal.info.tabs.finances') }}</Tab>
-        <Tab value="stats">{{ t('sales.deal.info.tabs.stats') }}</Tab>
+        <Tab value="log">{{ t('sales.deal.info.tabs.log') }}</Tab>
       </TabList>
       <TabPanels class="deal-info-tabs__panels">
         <TabPanel value="main">
@@ -17,8 +17,8 @@
         <TabPanel value="finances">
           <slot name="finances" />
         </TabPanel>
-        <TabPanel value="stats">
-          <slot name="stats" />
+        <TabPanel value="log">
+          <slot name="log" />
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -36,7 +36,7 @@ import TabPanel from 'primevue/tabpanel'
 
 const { t } = useI18n()
 
-const activeTab = ref<'main' | 'documents' | 'finances' | 'stats'>('main')
+const activeTab = ref<'main' | 'documents' | 'finances' | 'log'>('main')
 </script>
 
 <style lang="scss" scoped>

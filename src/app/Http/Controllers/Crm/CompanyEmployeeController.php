@@ -42,7 +42,7 @@ class CompanyEmployeeController extends Controller
         $this->authorize('manageEmployees', $company);
 
         $contactId = (int) $request->input('contact_id');
-        $link = $this->service->addEmployee($company, $contactId, $request->validated());
+        $link = $this->service->addEmployee($company, $contactId, $request->validated(), $request->user());
 
         return ContactCompanyLinkResource::make($link->load(['contact', 'company']));
     }

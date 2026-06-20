@@ -6,6 +6,10 @@ namespace App\Domain\Sales\Services;
 
 use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Crm\Services\EngagementService;
+use App\Domain\Iam\Models\User;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Exceptions\WonGateException;
 use App\Domain\Sales\Models\Deal;
@@ -33,6 +37,7 @@ class DealMoveService
     public function __construct(
         private readonly DocumentService $documents,
         private readonly EngagementService $engagement,
+        private readonly EntityLogService $entityLog,
     ) {}
 
     public function move(
@@ -96,6 +101,13 @@ class DealMoveService
             $locked->stage_id = $toStage->id;
             $locked->stage_changed_at = now();
 
+            // Maintain max_stage_id — the highest stage ever reached (by
+            // sort_order), kept even when the deal later rolls back. The
+            // deal-card header reads it as the `max_stage` key action. Bumped
+            // only when the target stage outranks the current high-water mark
+            // (or none is set yet); a backward move leaves it untouched.
+            $this->bumpMaxStage($locked, $toStage);
+
             if ($toStage->is_won || $toStage->is_lost) {
                 $locked->closed_at = now();
             } else {
@@ -133,6 +145,21 @@ class DealMoveService
             // contacts (no-op / rolled-back moves leave $fromStageId null).
             $this->engagement->touchForDeal($result->engagementTargets());
 
+            // Polymorphic action log: stage moved from→to (ids + names so the
+            // card renders the transition without an extra lookup).
+            $this->entityLog->record(
+                LogSubjectType::Deal,
+                (int) $result->id,
+                User::find($userId),
+                LogAction::StageChanged,
+                [
+                    'from_stage_id' => $fromStageId,
+                    'to_stage_id' => (int) $result->stage_id,
+                    'from_stage_name' => PipelineStage::query()->whereKey($fromStageId)->value('name'),
+                    'to_stage_name' => $result->stage?->name,
+                ],
+            );
+
             DealStageChanged::dispatch(
                 $result,
                 $fromStageId,
@@ -153,6 +180,34 @@ class DealMoveService
      * Semantics: "field is not null / not empty string". amount = 0 is NOT blank
      * (0 passes) — a "> 0" rule is a different concern, not required_fields (E).
      */
+    /**
+     * Raise the deal's high-water mark to $toStage when it outranks the current
+     * max_stage (by sort_order), or set it when none exists yet. A backward move
+     * (target ranks at or below the current max) is a no-op — the deal-card
+     * `max_stage` key action always reflects the FURTHEST progress, never the
+     * latest position. Mutates the in-memory deal; the caller persists via save().
+     */
+    private function bumpMaxStage(Deal $deal, PipelineStage $toStage): void
+    {
+        if ($deal->max_stage_id === null) {
+            $deal->max_stage_id = $toStage->id;
+
+            return;
+        }
+
+        if ((int) $deal->max_stage_id === (int) $toStage->id) {
+            return;
+        }
+
+        $currentMaxSort = PipelineStage::query()
+            ->whereKey($deal->max_stage_id)
+            ->value('sort_order');
+
+        if ($currentMaxSort === null || (int) $toStage->sort_order > (int) $currentMaxSort) {
+            $deal->max_stage_id = $toStage->id;
+        }
+    }
+
     private function assertRequiredFields(Deal $deal, PipelineStage $toStage): void
     {
         $required = $toStage->required_fields ?? [];

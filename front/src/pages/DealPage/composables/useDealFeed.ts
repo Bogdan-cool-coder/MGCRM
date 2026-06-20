@@ -25,6 +25,7 @@ export type FeedItemType =
   | 'call'
   | 'meeting'
   | 'follow_up'
+  | 'presentation'
 
 export interface FeedActor {
   id: number
@@ -218,8 +219,12 @@ function groupByDate(items: FeedItem[], existingGroups: FeedGroup[]): FeedGroup[
       groupMap.set(item.date, { date: item.date, items: [item], collapsed: false })
     }
   }
-  // Sort groups desc (most recent first)
-  return Array.from(groupMap.values()).sort((a, b) => b.date.localeCompare(a.date))
+  // Sort items within each group ascending (oldest at top, newest at bottom near composer)
+  for (const g of groupMap.values()) {
+    g.items.sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+  }
+  // Sort groups asc (oldest first) — feed renders bottom-up (column-reverse scroll)
+  return Array.from(groupMap.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
 // ─── Composable ───────────────────────────────────────────────────────────────
@@ -234,6 +239,27 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
 
   const hasMore = computed(() => allItems.value.length < total.value)
 
+  /** Open (non-closed) task/call/meeting/follow_up activities — shown above composer */
+  const openTasks = computed((): ActivityDto[] => {
+    const result: ActivityDto[] = []
+    for (const item of allItems.value) {
+      if (
+        (item.type === 'task' || item.type === 'call' || item.type === 'meeting' || item.type === 'follow_up') &&
+        item.activity &&
+        !item.activity.is_closed
+      ) {
+        result.push(item.activity)
+      }
+    }
+    // Sort by due_at asc (nulls last), then created_at asc
+    return result.slice().sort((a, b) => {
+      if (a.due_at && b.due_at) return a.due_at.localeCompare(b.due_at)
+      if (a.due_at && !b.due_at) return -1
+      if (!a.due_at && b.due_at) return 1
+      return a.created_at.localeCompare(b.created_at)
+    })
+  })
+
   const searchQuery = ref('')
   const filterType = ref<FeedItemType | ''>('')
 
@@ -242,9 +268,20 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
   const reopenMutation = useMutation<ActivityDto>()
   const deleteMutation = useMutation()
 
-  // Filtered flat list (client-side)
+  // Filtered flat list (client-side) — only completed activities + system events (no open tasks)
   const filteredItems = computed((): FeedItem[] => {
-    let items = allItems.value
+    // Exclude open (non-closed) task/call/meeting/follow_up from the feed — they go to openTasks
+    let items = allItems.value.filter((i) => {
+      if (
+        (i.type === 'task' || i.type === 'call' || i.type === 'meeting' || i.type === 'follow_up') &&
+        i.activity &&
+        !i.activity.is_closed
+      ) {
+        return false
+      }
+      return true
+    })
+
     const q = searchQuery.value.trim().toLowerCase()
     const type = filterType.value
 
@@ -474,6 +511,7 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
   return {
     // State
     groups,
+    openTasks,
     loading,
     hasMore,
     searchQuery,

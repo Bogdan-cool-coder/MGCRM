@@ -13,6 +13,9 @@ use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Data\DealTotalsDTO;
 use App\Domain\Sales\Events\DealCreated;
 use App\Domain\Sales\Models\Deal;
@@ -50,6 +53,7 @@ class DealService
         private readonly ActivityService $activityService,
         private readonly ExchangeRateService $exchangeRateService,
         private readonly EngagementService $engagementService,
+        private readonly EntityLogService $entityLog,
     ) {}
 
     /**
@@ -63,6 +67,86 @@ class DealService
     public function touchEngagement(Deal $deal): void
     {
         $this->engagementService->touchForDeal($deal->engagementTargets());
+    }
+
+    /**
+     * Mark the КП (commercial proposal) as sent on a deal — the `kp_sent_at` key
+     * action (DealPage 2.0 header). Stamps kp_sent_at = now() and appends a
+     * kp_sent entity-log row. Returns the refreshed deal.
+     *
+     * $onlyIfUnset (default false): when true the stamp is skipped if kp_sent_at
+     * is already set — the idempotent path reserved for any future auto-trigger
+     * (e.g. a КП document event), so an existing first-sent date is never
+     * overwritten. The manual endpoint passes false (re-marking updates to now,
+     * reflecting a re-send).
+     */
+    public function markKpSent(Deal $deal, ?User $actor = null, bool $onlyIfUnset = false): Deal
+    {
+        if ($onlyIfUnset && $deal->kp_sent_at !== null) {
+            return $deal;
+        }
+
+        $deal->update(['kp_sent_at' => now()]);
+        $deal->refresh();
+
+        $this->entityLog->record(
+            LogSubjectType::Deal,
+            (int) $deal->id,
+            $actor,
+            LogAction::KpSent,
+            ['kp_sent_at' => $deal->kp_sent_at?->toIso8601String()],
+        );
+
+        return $deal;
+    }
+
+    /**
+     * Mark the contract as sent on a deal — the `contract_sent_at` key action
+     * (DealPage 2.0 header). Stamps contract_sent_at = now() and appends a
+     * contract_sent entity-log row. Returns the refreshed deal.
+     *
+     * $onlyIfUnset (default false): the auto path (a contract Document reaching
+     * `submitted`, wired from DocumentService) passes true so it stamps the FIRST
+     * send only and never clobbers a manually-entered date. The manual endpoint
+     * passes false (re-marking updates to now).
+     */
+    public function markContractSent(Deal $deal, ?User $actor = null, bool $onlyIfUnset = false): Deal
+    {
+        if ($onlyIfUnset && $deal->contract_sent_at !== null) {
+            return $deal;
+        }
+
+        $deal->update(['contract_sent_at' => now()]);
+        $deal->refresh();
+
+        $this->entityLog->record(
+            LogSubjectType::Deal,
+            (int) $deal->id,
+            $actor,
+            LogAction::ContractSent,
+            ['contract_sent_at' => $deal->contract_sent_at?->toIso8601String()],
+        );
+
+        return $deal;
+    }
+
+    /**
+     * Auto-mark contract_sent from the Contracts domain when a contract Document
+     * reaches `submitted` (DocumentService::recordContractEvent). Resolves the
+     * deal by id and stamps idempotently (first send only); a missing deal is a
+     * silent no-op so the contract transition never fails on a Sales-side concern.
+     * Cross-domain entry point — Contracts calls this instead of touching deals
+     * directly (DDD §2).
+     */
+    public function markContractSentFromDocument(int $dealId, ?User $actor = null): void
+    {
+        $deal = Deal::find($dealId);
+
+        if ($deal === null) {
+            return;
+        }
+
+        $this->markContractSent($deal, $actor, onlyIfUnset: true);
     }
 
     /**
@@ -337,6 +421,9 @@ class DealService
         }
 
         $data['stage_id'] = $firstStage->id;
+        // The entry stage is the initial high-water mark for the max_stage key
+        // action; DealMoveService::bumpMaxStage advances it on later moves.
+        $data['max_stage_id'] = $firstStage->id;
         $data['stage_changed_at'] = now();
 
         $deal = Deal::create($data);
@@ -349,6 +436,21 @@ class DealService
             'user_id' => $creator->id,
             'created_at' => $deal->created_at,
         ]);
+
+        // Polymorphic action log: deal created (who/when + entry point).
+        $this->entityLog->record(
+            LogSubjectType::Deal,
+            (int) $deal->id,
+            $creator,
+            LogAction::Created,
+            [
+                'title' => $deal->title,
+                'pipeline_id' => (int) $deal->pipeline_id,
+                'stage_id' => (int) $firstStage->id,
+                'company_id' => $deal->company_id !== null ? (int) $deal->company_id : null,
+            ],
+            $deal->created_at,
+        );
 
         // Creating a deal is engagement on its company (contacts are linked later).
         $this->touchEngagement($deal);
@@ -392,6 +494,8 @@ class DealService
             $deal = Deal::create([
                 'pipeline_id' => $pipelineId,
                 'stage_id' => $stageId,
+                // The landing stage is the initial max_stage high-water mark.
+                'max_stage_id' => $stageId,
                 'company_id' => $company->id,
                 'title' => $opts['title'] ?? "Лид: {$company->name}",
                 'currency' => $opts['currency'] ?? config('crm.currencies.default', 'RUB'),
@@ -411,6 +515,23 @@ class DealService
                 'user_id' => null,
                 'created_at' => $deal->created_at,
             ]);
+
+            // Polymorphic action log: deal created via inbound routing. actor is
+            // null (no authenticated user behind an anonymous submission).
+            $this->entityLog->record(
+                LogSubjectType::Deal,
+                (int) $deal->id,
+                null,
+                LogAction::Created,
+                [
+                    'title' => $deal->title,
+                    'pipeline_id' => $pipelineId,
+                    'stage_id' => $stageId,
+                    'company_id' => (int) $company->id,
+                    'source' => 'inbound',
+                ],
+                $deal->created_at,
+            );
 
             // An inbound lead is fresh engagement on its company.
             $this->touchEngagement($deal);
@@ -466,11 +587,22 @@ class DealService
         $deal->update($data);
         $deal->refresh();
 
-        $this->auditService->record(
-            $deal,
-            $actor,
-            $this->buildAuditDiff($original, $data, $extraChanged, $extraBefore, $deal->extra_fields ?? []),
-        );
+        $diff = $this->buildAuditDiff($original, $data, $extraChanged, $extraBefore, $deal->extra_fields ?? []);
+
+        $this->auditService->record($deal, $actor, $diff);
+
+        // Polymorphic action log: a key-field data change (only when something
+        // actually changed — empty diffs never pollute the log). The per-field
+        // detail lives in meta.changes so the card can render the diff.
+        if ($diff !== []) {
+            $this->entityLog->record(
+                LogSubjectType::Deal,
+                (int) $deal->id,
+                $actor,
+                LogAction::DataChanged,
+                ['changes' => $this->summariseDiff($diff)],
+            );
+        }
 
         // A meaningful deal edit is engagement on its company + contacts.
         $this->touchEngagement($deal);
@@ -551,6 +683,29 @@ class DealService
         }
 
         return $diff;
+    }
+
+    /**
+     * Flatten an audit diff ([field => ['old' => .., 'new' => ..]]) into the
+     * compact list the entity-log meta carries: one {field, old, new} entry per
+     * changed field. Kept JSON-friendly (no model instances) for the meta column.
+     *
+     * @param  array<string, array{old: mixed, new: mixed}>  $diff
+     * @return list<array{field: string, old: mixed, new: mixed}>
+     */
+    private function summariseDiff(array $diff): array
+    {
+        $out = [];
+
+        foreach ($diff as $field => $change) {
+            $out[] = [
+                'field' => $field,
+                'old' => $change['old'] ?? null,
+                'new' => $change['new'] ?? null,
+            ];
+        }
+
+        return $out;
     }
 
     /**

@@ -59,6 +59,16 @@
       </div>
     </div>
 
+    <!-- Key actions bar -->
+    <DealKeyActionsBar
+      v-if="deal.key_actions && deal.key_actions.length > 0"
+      :deal-id="deal.id"
+      :key-actions="deal.key_actions"
+      class="deal-header__key-actions"
+      @deal-updated="onKeyActionsDealUpdated"
+      @scroll-to-type="(type) => $emit('scrollToFeedType', type)"
+    />
+
     <!-- Dialogs: rename, tags -->
     <Dialog
       v-model:visible="renameDialogVisible"
@@ -121,10 +131,11 @@ import AutoComplete from 'primevue/autocomplete'
 import DealStageTag from './DealStageTag.vue'
 import DealStageProgressBar from './DealStageProgressBar.vue'
 import DealHealthChip from './DealHealthChip.vue'
+import DealKeyActionsBar from './DealKeyActionsBar.vue'
 import { useMutation } from '@/composables/async/useMutation'
 import { salesApi } from '@/api/sales'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { DealDto, PipelineStageDto, NextTaskDto } from '@/entities/sales'
+import type { DealDto, PipelineStageDto, NextTaskDto, DealKeyAction, KeyActionType } from '@/entities/sales'
 
 function formatDate(val: string | null | undefined): string {
   if (!val) return '—'
@@ -154,6 +165,7 @@ const emit = defineEmits<{
   dealArchived: []
   collapseAllGroups: []
   expandAllGroups: []
+  scrollToFeedType: [type: KeyActionType]
 }>()
 
 const { t } = useI18n()
@@ -272,6 +284,12 @@ async function submitTags() {
       life: 4000,
     })
   }
+}
+
+// ── Key actions bar ──────────────────────────────────────────────────────────────
+function onKeyActionsDealUpdated(keyActions: DealKeyAction[]) {
+  // Merge key_actions back into deal by emitting a partial update
+  emit('dealUpdated', { ...props.deal, key_actions: keyActions })
 }
 
 // ── Segment click ────────────────────────────────────────────────────────────────
@@ -448,6 +466,10 @@ function confirmDelete() {
     color: rgba(255, 255, 255, 0.35);
     font-weight: $font-weight-normal;
   }
+}
+
+.deal-header__key-actions {
+  margin-top: $space-1;
 }
 
 .deal-header__dialog-body {
