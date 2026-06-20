@@ -131,6 +131,11 @@ defineExpose({ panelRef })
   }
 
   // ─── Nav button (icon + expandable label) ─────────────────────────────────
+  //
+  // Rest state: button is exactly $orbita-control-size square; label is
+  // invisible (max-width:0, opacity:0, padding:0) so zero pixels bleed through.
+  // Hover/focus: button expands via max-width + label fades in; neighbours are
+  // pushed aside by flex reflow (no absolute positioning needed).
   &__btn {
     position: relative;
     display: inline-flex;
@@ -143,8 +148,10 @@ defineExpose({ panelRef })
     cursor: pointer;
     padding: 0;
     height: orbita.$orbita-control-size;
+    // min-width pins the icon square; max-width drives expansion on hover.
+    // width:auto so max-width is the sole constraint (no competing fixed width).
+    width: auto;
     min-width: orbita.$orbita-control-size;
-    // Label expansion: width transitions from icon-only to icon+label
     max-width: orbita.$orbita-control-size;
     overflow: hidden;
     transition:
@@ -158,7 +165,9 @@ defineExpose({ panelRef })
       flex-shrink: 0;
       font-size: 1rem;
       line-height: 1;
+      // Fixed square so icon is always centered inside the button at rest
       width: orbita.$orbita-control-size;
+      min-width: orbita.$orbita-control-size;
       text-align: center;
     }
 
@@ -166,10 +175,20 @@ defineExpose({ panelRef })
       font-size: 13px;
       font-weight: $font-weight-medium;
       white-space: nowrap;
-      overflow: hidden;
-      // Hidden by default; transitions in via max-width on parent
-      padding-right: 0.625rem;
       pointer-events: none;
+      // *** KEY FIX: label occupies zero space at rest ***
+      // max-width+opacity transition is the source of truth for reveal;
+      // overflow:hidden on the label itself ensures no bleed from padding.
+      display: block;
+      max-width: 0;
+      overflow: hidden;
+      opacity: 0;
+      // Padding also starts at 0 so no gap bleeds between icon and invisible text
+      padding-inline: 0;
+      transition:
+        max-width 0.18s ease-out,
+        opacity 0.14s ease-out,
+        padding-inline 0.18s ease-out;
     }
 
     &:hover,
@@ -181,7 +200,9 @@ defineExpose({ panelRef })
       border-color: rgba($surface-900, 0.08);
 
       .orbita-panel__btn-label {
-        // visible via max-width expansion on parent
+        max-width: 10rem;
+        opacity: 1;
+        padding-inline-end: 0.625rem;
       }
     }
 
@@ -251,10 +272,13 @@ defineExpose({ panelRef })
     margin: 0.125rem 0;
   }
 
-  // Button layout: icon left, label expands to the right or left based on edge
-  // min-width (not width) so max-width CSS transition can expand the label on hover
+  // Button layout: icon left, label expands to the right or left based on edge.
+  // In vertical mode we override width:auto (unset fixed width from base) so the
+  // max-width transition can drive expansion without fighting a fixed width value.
   .orbita-panel__btn {
+    width: auto;
     min-width: orbita.$orbita-control-size;
+    max-width: orbita.$orbita-control-size;  // still icon-only at rest
     justify-content: flex-start;
   }
 }
@@ -272,16 +296,19 @@ defineExpose({ panelRef })
 }
 
 .orbita-panel[data-orientation='vertical'][data-label-side='end'] {
-  // Near right edge → labels expand to the left
+  // Near right edge → labels expand to the left (row-reverse)
   .orbita-panel__btn {
     flex-direction: row-reverse;
-    .orbita-panel__btn-label {
-      padding-right: 0;
-      padding-left: 0.625rem;
-    }
+
     &:hover,
     &:focus-visible {
       max-width: 12rem;
+
+      .orbita-panel__btn-label {
+        // Override: padding goes to the start side (= left in row-reverse = visual right of label)
+        padding-inline-end: 0;
+        padding-inline-start: 0.625rem;
+      }
     }
   }
 }
@@ -349,6 +376,13 @@ defineExpose({ panelRef })
 }
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .orbita-panel__btn,
+  .orbita-panel__btn-label {
+    transition: none !important;
+  }
+}
+
 @media (forced-colors: active) {
   .orbita-panel {
     border: 1px solid ButtonText;
