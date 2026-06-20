@@ -31,14 +31,20 @@ use App\Http\Controllers\Contracts\MessageTemplateController;
 use App\Http\Controllers\Contracts\TemplateController;
 use App\Http\Controllers\Contracts\TemplateVariableController;
 use App\Http\Controllers\Contracts\TemplateVersionController;
+use App\Http\Controllers\Contracts\TerminationDocumentController;
+use App\Http\Controllers\Crm\AcquisitionChannelHistoryController;
+use App\Http\Controllers\Crm\Admin\AcquisitionChannelController;
 use App\Http\Controllers\Crm\Admin\CityController;
 use App\Http\Controllers\Crm\Admin\CompanyTypeController;
 use App\Http\Controllers\Crm\Admin\ContactPositionController;
 use App\Http\Controllers\Crm\Admin\CountryController;
+use App\Http\Controllers\Crm\Admin\DisconnectReasonController;
 use App\Http\Controllers\Crm\Admin\SourceController;
 use App\Http\Controllers\Crm\CompanyBulkController;
+use App\Http\Controllers\Crm\CompanyClientStatusController;
 use App\Http\Controllers\Crm\CompanyController;
 use App\Http\Controllers\Crm\CompanyEmployeeController;
+use App\Http\Controllers\Crm\CompanyRequisiteController;
 use App\Http\Controllers\Crm\ContactBulkController;
 use App\Http\Controllers\Crm\ContactChannelController;
 use App\Http\Controllers\Crm\ContactCompanyController;
@@ -185,6 +191,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Polymorphic action/event log for the contact card.
         Route::get('log', [EntityLogController::class, 'contactLog'])->name('log.index');
+
+        // Acquisition channel change history for a contact.
+        Route::get('channel-history', [AcquisitionChannelHistoryController::class, 'forContact'])->name('channel-history.index');
     });
 
     // =========================================================================
@@ -214,6 +223,23 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Polymorphic action/event log for the company card.
         Route::get('log', [EntityLogController::class, 'companyLog'])->name('log.index');
+
+        // Acquisition channel change history for a company.
+        Route::get('channel-history', [AcquisitionChannelHistoryController::class, 'forCompany'])->name('channel-history.index');
+
+        // Client lifecycle status log (N5)
+        Route::get('status-log', [CompanyClientStatusController::class, 'statusLog'])->name('status-log.index');
+        Route::post('disconnect', [CompanyClientStatusController::class, 'disconnect'])->name('disconnect');
+        Route::post('reconnect', [CompanyClientStatusController::class, 'reconnect'])->name('reconnect');
+
+        // Requisites (multiple legal sets per company — N2)
+        // CRITICAL: /requisites/resolve must come BEFORE {requisite} param routes
+        Route::get('requisites/resolve', [CompanyRequisiteController::class, 'resolve'])->name('requisites.resolve');
+        Route::get('requisites', [CompanyRequisiteController::class, 'index'])->name('requisites.index');
+        Route::post('requisites', [CompanyRequisiteController::class, 'store'])->name('requisites.store');
+        Route::patch('requisites/{requisite}', [CompanyRequisiteController::class, 'update'])->name('requisites.update');
+        Route::delete('requisites/{requisite}', [CompanyRequisiteController::class, 'destroy'])->name('requisites.destroy');
+        Route::post('requisites/{requisite}/set-current', [CompanyRequisiteController::class, 'setCurrent'])->name('requisites.set-current');
     });
 
     // =========================================================================
@@ -314,6 +340,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('sources', SourceController::class);
         Route::apiResource('countries', CountryController::class);
         Route::apiResource('cities', CityController::class);
+        Route::apiResource('acquisition-channels', AcquisitionChannelController::class)
+            ->parameter('acquisition-channels', 'acquisitionChannel');
+        Route::apiResource('disconnect-reasons', DisconnectReasonController::class)
+            ->parameter('disconnect-reasons', 'disconnectReason');
     });
 
     // =========================================================================
@@ -564,6 +594,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
     // Company → document generate entry point (S2.4).
     Route::post('companies/{company}/documents/generate', [CompanyDocumentController::class, 'generate'])->name('companies.documents.generate');
+
+    // N6: ДС о расторжении — create (draft) or create+generate in one call.
+    Route::post('companies/{company}/termination-documents', [TerminationDocumentController::class, 'store'])->name('companies.termination-documents.store');
+    Route::post('companies/{company}/termination-documents/generate', [TerminationDocumentController::class, 'generate'])->name('companies.termination-documents.generate');
 
     // =========================================================================
     // Contracts — S2.6: Approval routes (CRUD) + approval-related document actions

@@ -28,6 +28,9 @@ class DatabaseSeeder extends Seeder
         // Catalog (products + prices).
         ProductGroupSeeder::class,
         ProductSeeder::class,
+        // CRM directories: acquisition channels, disconnect reasons.
+        AcquisitionChannelSeeder::class,
+        DisconnectReasonSeeder::class,
         // Sales config: pipeline + stages, lost reasons.
         PipelineSeeder::class,
         // SalesPulse: the two AMO mirror funnels (MACRO Global / MACRO AI Global)
@@ -69,6 +72,10 @@ class DatabaseSeeder extends Seeder
         DemoDocumentsSeeder::class,
         // Onboarding: demo course, assignments, quiz (content + progress).
         OnboardingSeeder::class,
+        // Migration: AMO fallback import service account (DEC-C). Service user,
+        // not config — hence SAMPLE, not baseline. Needs the spatie roles
+        // (RolePermissionSeeder, baseline) to exist first.
+        AmoImportUserSeeder::class,
     ];
 
     /**

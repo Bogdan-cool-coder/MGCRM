@@ -31,6 +31,13 @@ class TemplateSeeder extends Seeder
                 'category' => null,
             ],
             [
+                'code' => 'termination_agreement',
+                'kind' => 'docx',
+                'title' => 'ДС о расторжении',
+                'content' => '',
+                'category' => 'cancellation',
+            ],
+            [
                 'code' => 'product_macrocrm',
                 'kind' => 'yaml',
                 'title' => 'MacroCRM — продуктовый оверлей',

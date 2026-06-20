@@ -480,6 +480,102 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### M2+++. AMO-поля → нативные фичи MGCRM (дизайн-контракт)
+
+**Статус:** N1–N7 DONE. PM-апрув получен по всем слайсам (N1–N5 2026-06-20, N6–N7 2026-06-20). Весь бэкенд милстоуна завершён. Хвосты: фронт всех фич (N1–N7), ETL-фаза (N7 Фаза 1–3), юр-текст DOCX ДС (от юзера), финальная доводка amo_migration-карт.
+**Ведущие:** `crm-specialist` (N1, N2, N5-crm, N6-crm) + `sales-specialist` (N3, N4, N5-sales) + `contract-specialist` (N6-contract) + `migration-specialist` (N7). ТЗ: vault `MG CRM 2026/5. Планы/AMO-поля → нативные фичи MGCRM (дизайн).md` (N6) + `AMO→MGCRM — полный план миграции (build).md` (N7).
+
+**N1 — CRM: специализация + канал привлечения (crm-specialist) ✅ DONE 2026-06-20**
+- [x] Enum `CompanySpecialization` (6 значений: real_estate_agency/developer/builder/contractor/supplier/partner) + миграция `2026_06_20_200000_add_specialization_to_crm_companies` (reversible, string(32) nullable).
+- [x] Справочник `acquisition_channels` (миграция `200001`, модель `AcquisitionChannel`, seeder `AcquisitionChannelSeeder` 7 baseline-каналов, idempotent `firstOrCreate`).
+- [x] FK `acquisition_channel_id` на `crm_companies` + `crm_contacts` (миграция `200002`, nullable, `nullOnDelete`).
+- [x] История канала: таблица `acquisition_channel_history` (миграция `200003`) + модель `AcquisitionChannelHistory` + `AcquisitionChannelHistoryService::record()` — пишет ТОЛЬКО при `old_channel_id ≠ new_channel_id` И ТОЛЬКО если ключ `acquisition_channel_id` присутствует в payload (двойной guard через `array_key_exists`).
+- [x] История вызывается из `CompanyService::update()` и `ContactService::update()` (через `array_key_exists` guard; `create()` — не вызывается, история не нужна при создании).
+- [x] Эндпоинты `GET /api/companies/{id}/channel-history` + `GET /api/contacts/{id}/channel-history` (`AcquisitionChannelHistoryController`, authorize view-policy).
+- [x] Админ-CRUD `/api/admin/acquisition-channels` (в группе `prefix('admin')` — та же группа что company-types/contact-positions/sources/countries/cities); write: `admin-write` gate (admin/director), read: любой auth.
+- [x] `StoreAcquisitionChannelRequest` + `UpdateAcquisitionChannelRequest` (name/sort_order/is_active).
+- [x] `AcquisitionChannelResource` + `AcquisitionChannelHistoryResource` (old_channel/new_channel/changed_by eager-loaded).
+- [x] `CompanyResource` и `ContactResource` обновлены: `specialization` (enum.value), `acquisition_channel_id`.
+- [x] `StoreCompanyRequest`/`UpdateCompanyRequest` + `UpdateContactRequest`: `specialization` Rule::enum + `acquisition_channel_id` exists:acquisition_channels,id.
+- [x] 267 CRM-тестов зелёных. Pint clean. 4 миграции применены на dev-Postgres.
+
+**N3 — Sales: фактические даты + блокировка бюджета (sales-specialist) ✅ DONE 2026-06-20**
+- [x] Миграция `2026_06_25_120000_add_actual_dates_and_budget_flags_to_deals_table` (reversible): `signed_at date nullable`, `paid_at date nullable`, `amount_locked boolean default false`, `perpetual_license boolean default false`.
+- [x] `Deal.$fillable` + `casts()` обновлены. `DealResource` — `signed_at`/`paid_at` (toDateString), `amount_locked` (bool cast), `perpetual_license` (bool cast).
+- [x] `UpdateDealRequest` — `signed_at`/`paid_at` (sometimes|nullable|date), `amount_locked`/`perpetual_license` (sometimes|boolean).
+- [x] `DealService::recalcAmount()` — ранний return при `amount_locked === true` (единственная точка пересчёта, атомарное изменение).
+- [x] **Контракт `amount_locked` для cross-domain (зафиксировано):** при `amount_locked = true` `Deal.amount` — авторитетный бюджет (negotiated/imported), может отличаться от `sum(deal_products)` по дизайну. Analytics/Finance/KPI/Commission **обязаны** читать `Deal.amount` как единственный авторитетный бюджет (не пересчитывать из продуктов). `DealResource` явно экспонирует `amount_locked: bool` — потребители обязаны учитывать флаг. Зафиксировано в docblock миграции и в комментарии модели.
+- [x] 7 новых тестов `DealCrudTest` (signed_at/paid_at/amount_locked round-trip, defaults, validation) + 2 Unit-теста `DealAmountTest` (locked_budget_recalc_does_not_overwrite + unlocked_regression). Сьют 2031 PASS / Pint clean.
+
+**N2 — CRM: множественные реквизиты компании (crm-specialist) ✅ DONE 2026-06-20**
+- [x] Таблица `company_requisites` (модель `CompanyRequisite`): поля юр.лица, директора, налог. ID, гео, `bank_details` JSON, `is_current`, `valid_from/to`, `label/note`. FK `company_id` → `crm_companies` cascadeOnDelete.
+- [x] Partial-unique «один current на компанию»: Postgres — partial index `WHERE is_current = TRUE`; SQLite — сервис-guard в `setCurrent()` транзакции.
+- [x] Денорм-стратегия: источник истины = `company_requisites`; current зеркалится на `crm_companies` (12 полей + bank разложение) через `CompanyRequisiteService::mirrorToCompany()` при `setCurrent()` и `update()` (если is_current). list/search/dedup читают `Company.tax_id` — не сломаны.
+- [x] Дата-миграция `2026_06_26_100001_seed_company_requisites_from_companies` — создаёт current-набор из текущих полей каждой компании (chunk 200, down() no-op).
+- [x] `CompanyRequisiteService`: list/current/create/update/setCurrent (транзакция)/delete (guard: единственный current; привязанные документы)/`resolveForNewDocument` (1→авто, >1→needs_selection).
+- [x] Пины: `deals.company_requisite_id` + `documents.company_requisite_id` (FK nullable nullOnDelete, миграция `100002`). Модели Deal+Document: `$fillable` + `belongsTo(CompanyRequisite)`.
+- [x] Роуты `/companies/{c}/requisites` (index/store/update/destroy) + set-current + resolve. `/resolve` объявлен **до** `{requisite}` param-роута.
+- [x] `CompanyResource`: `current_requisite` (whenLoaded) + `requisites` (whenLoaded). `CompanyRequisiteResource`: все поля.
+- [x] 17 тестов `CompanyRequisiteTest` — CRUD, setCurrent/зеркало, инвариант «один current», гарды удаления, resolver, smoke-тест дата-миграции, пин сделки. Сьют 875 PASS.
+
+**N4 — Catalog: вечная лицензия (crm-specialist + sales-specialist) ✅ DONE 2026-06-20**
+- [x] `BillingUnit::Perpetual` (enum case `'perpetual'`, label «Вечная лицензия»; без новой миграции — varchar поле.
+- [x] `ProductService::getPerpetualPlan(Product|int): ?ProductPlan` — возвращает первый perpetual-план продукта.
+- [x] `ProductService::createPlan()` — guard «один perpetual-план на продукт»: abort(422) при попытке создать второй.
+- [x] `DealProductService::applyLicenseMode(Deal, bool)` — пересчёт unit_price всех позиций сделки в одной транзакции (perpetual→PerpetualPlan цена; false→base price plan_id=null). Продукт без perpetual-плана или без цены — пропускается (не падает, не обнуляет). `recalcAmount` в конце самоуважает `amount_locked` (N3×N4 пересечение).
+- [x] `DealProductService::addProduct()` — при `perpetual_license=true` и отсутствии явного `plan_id` авто-резолвит perpetual-план; если нет — base-план (null). Явный `plan_id` всегда приоритетнее.
+- [x] Wire в `DealService::update()`: при смене `perpetual_license` флага вызывается `app(DealProductService::class)->applyLicenseMode()` в той же транзакции. Ленивый `app()` resolve для обхода DI-цикла (DealProductService→DealService).
+- [x] 16 catalog-тестов (`PerpetualPlanTest`) + 9 sales-тестов (`DealPerpetualLicenseTest`).
+
+**N5 — Жизненный цикл клиента (crm-specialist + sales-specialist) ✅ DONE 2026-06-20**
+- [x] Enum `ClientStatus` (`prospect`/`active`/`disconnected`) + справочник `disconnect_reasons` (миграция `2026_06_27_100000`, admin-CRUD).
+- [x] Миграция `100001` на `crm_companies`: `client_status` string(16) default `prospect`; `unique_client_since` date nullable; `disconnected_at` timestamp nullable; `disconnect_reason_id` FK nullOnDelete; `disconnect_doc_id` unsignedBigInteger nullable (без FK — добавит N6/contract).
+- [x] Таблица `company_client_status_log` (миграция `100002`): append-only лог смен статуса (company_id/old_status/new_status/changed_by/changed_at/reason_id/meta). Без `updated_at`.
+- [x] `CompanyService::markAsUniqueClient(Company, CarbonInterface, ?int)` — идемпотентен (guard по `unique_client_since`); пишет лог-запись.
+- [x] `CompanyService::disconnect(Company, int $reasonId, ?int $docId, ?int $userId)` — статус+дата+reason; пишет лог.
+- [x] `CompanyService::reconnect(Company, ?int $userId)` — если `unique_client_since` set → active, иначе → prospect; чистит disconnect-поля; пишет лог.
+- [x] `DealMoveService::detectUniqueClient(Deal, int)` — на won-переходе: lockForUpdate company, `isFirstWon = unique_client_since === null` → markAsUniqueClient + `is_primary_deal = true`; иначе upsell (`is_primary_deal = false`). DDD-граница: статус компании пишется ТОЛЬКО через `CompanyService`.
+- [x] `deals.is_primary_deal` (миграция `120000`, boolean default false): true = сделка-конвертер (первая win); false = стандарт или upsell. `is_upsell` derived: won && !is_primary_deal — нет отдельного столбца.
+- [x] Авто-пин `deals.company_requisite_id` при создании: `DealService::create()` и `openInboundLead()` вызывают `$this->requisites->current($company)?->id`; null-кейс (0 реквизитов) — nullable без ошибки.
+- [x] Артизан-команда `sales:backfill-unique-clients [--dry-run]`: ретроспективный stamp is_primary_deal + unique_client_since из имеющихся won-сделок (COALESCE(signed_at,closed_at) asc, id asc tie-break); идемпотентна.
+- [x] Роуты: `GET /companies/{company}/status-log`, `POST /companies/{company}/disconnect`, `POST /companies/{company}/reconnect`; `apiResource disconnect-reasons` (admin-CRUD).
+- [x] `CompanyClientStatusController` + `DisconnectReasonController` (admin-gate).
+- [x] 26 crm-тестов (`ClientStatusTest`) + 3 N5-sales-тестов (`DealUniqueClientTest`) + 5 тестов (`BackfillUniqueClientsTest`).
+
+**N6 — ДС расторжения + контур отключения (contract-specialist + crm-specialist) ✅ DONE 2026-06-20**
+- [x] `DocumentKind::TerminationAgreement` + enum-метод `terminationVariableKeys()` (5 ключей scope-guard).
+- [x] Шаблон `termination_agreement` (placeholder docx, юр-текст — TODO юристу) + 5 TemplateVariable группы «Расторжение» (original_contract_number/date, termination_date/reason/signatory).
+- [x] `ContractGenerationService` параметризован по kind (resolveTemplate → template по kind/code, не хардкод master_skeleton).
+- [x] `TerminationDocumentService::create()` — создаёт ДС (draft), пинит реквизит, автозаполняет оригинальный договор, хранит disconnect_reason_id + termination_date + termination_reason в context.custom.
+- [x] `ContractContextBuilder::buildSublicensee()` переключён с legacy extra_fields на `Document.company_requisite_id → CompanyRequisite` (приоритет: пин → current → Company-колонки). Исправлен pre-existing баг (extra_fields-путь).
+- [x] ДС-required scoping: `terminationVariableKeys()` применяются как required ТОЛЬКО при kind=termination_agreement; обычные договоры не 422-ят — прод-регрессия поймана и исправлена.
+- [x] FK `disconnect_doc_id → documents.id` nullOnDelete (миграция `2026_06_27_200001`).
+- [x] Событие `TerminationAgreementSigned` (emits только Contracts; payload: documentId/companyId/signedAt). Диспетчится в `DocumentService::dispatchTerminationSignedIfNeeded()` — строго после коммита транзакции.
+- [x] `CompanyDisconnectService::initiate()` — создаёт ДС через `TerminationDocumentService`, НЕ меняет client_status, embed reason_id/date/name в context.custom. Возвращает Document.
+- [x] Листенер `DisconnectCompanyOnTerminationSigned` в `Domain/Crm/Listeners/` — слушает событие Contracts, вызывает `CompanyService::disconnect()`. Идемпотентен (already-disconnected → no-op + Log::info). Зарегистрирован в `AppServiceProvider::boot()`.
+- [x] `POST /companies/{id}/disconnect` переосмыслен в initiate (возвращает Document, не меняет статус компании).
+- [x] `CompanyService::reconnect()` — reverses disconnect, чистит disconnect_*, status→active/prospect по unique_client_since.
+- [x] 384 contracts-тестов + 386 crm-тестов зелёных.
+
+**N7 — Инфра миграции AMO (Фаза 0) (migration-specialist) ✅ DONE 2026-06-20**
+- [x] Таблица `external_refs` (миграция `2026_06_28_120000`): UNIQUE(source, entity_type, external_id) — идемпотентность ETL; FK-less полиморф; `external_payload jsonb`.
+- [x] Таблица `migration_maps` (миграция `120001`): UNIQUE(map_type, amo_id, amo_parent_id) — карты custom-полей/опций.
+- [x] Таблица `amo_product_mappings` (миграция `120002`): UNIQUE(amo_enum_id); FK catalog_product_id/catalog_plan_id nullOnDelete; action: map/skip/other.
+- [x] Модели `Domain/Migration/{ExternalRef, MigrationMap, AmoProductMapping}`.
+- [x] `created_by_id` FK nullable nullOnDelete на deals/crm_contacts/crm_companies (миграция `120003`); relation `creator()` на Deal/Contact/Company.
+- [x] `is_service` boolean default false + index на users (миграция `120004`); в User `$fillable` + casts.
+- [x] `AmoImportUserSeeder` — SAMPLE (не в reset-clean); email `import-amo@mgcrm.local`; is_service=true, is_active=false, роль Manager; idempotent (пароль не сбрасывается при повторном запуске).
+- [x] `config/amo_migration.php` — скелет карт (pipelines/status_map/user_map TODO перед load-фазой).
+- [x] 20 migration-тестов (MigrationSchemaTest + AmoImportUserSeederTest + AmoMigrationConfigTest) зелёных.
+
+**Открытые хвосты (беклог, не блокеры для текущих спринтов):**
+- Фронт N1–N7 (все UI-срезы специализации, каналов, реквизитов, disconnect-flow, is_primary_deal, вечной лицензии, жизненного цикла клиента) — откладывается на фронт-спринт.
+- ETL-фазы N7 (Фаза 1–3: extract/transform/load AMO → MGCRM) — отдельная задача migration-specialist после заполнения config-карт юзером.
+- Юр-текст DOCX ДС расторжения — TODO от юзера (юристу); placeholder-шаблон уже создан, placeholder docx — загрузить через `/api/templates/{id}/upload`.
+- Finance/Analytics (M9/M10) при расчётах: читать `Deal.amount` + проверять `amount_locked`; `is_primary_deal=true` = новый клиент, `won && !is_primary_deal` = upsell. `finance-specialist` и `analytics-specialist` должны получить этот контракт при старте M9/M10.
+
+---
+
 ### M4. Inbox / Каналы / Формы (1-2 недели)
 
 **Ведущие:** `sales-specialist` + `integration-specialist`. Контекст `Inbox`.

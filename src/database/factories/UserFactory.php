@@ -37,6 +37,7 @@ class UserFactory extends Factory
             'department_id' => null,
             'manager_id' => null,
             'is_active' => true,
+            'is_service' => false,
             'locale' => 'ru',
             'nav_quick_actions' => null,
             'totp_enabled' => false,

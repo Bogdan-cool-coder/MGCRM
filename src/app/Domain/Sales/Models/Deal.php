@@ -9,6 +9,7 @@ use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyRequisite;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Models\User;
 use App\Domain\Org\Models\Department;
@@ -47,6 +48,7 @@ class Deal extends Model
         'stage_id',
         'max_stage_id',
         'company_id',
+        'company_requisite_id',
         'title',
         'amount',
         // When true, amount is a fixed budget and is NOT re-derived from
@@ -56,8 +58,15 @@ class Deal extends Model
         // «Вечная лицензия» / «Коробка / on-premise» (one field). The price effect
         // on line items is wired in N4 (DealProductService::applyLicenseMode).
         'perpetual_license',
+        // True on the FIRST won deal that converted the company into a unique
+        // client (set by DealMoveService on the won-transition). false on
+        // non-won deals and later won deals (upsell = won && !is_primary_deal).
+        'is_primary_deal',
         'currency',
         'owner_user_id',
+        // First-class author of the card (distinct from owner). Populated by the
+        // AMO import; nullable for legacy/system-created rows.
+        'created_by_id',
         'department_id',
         'contract_id',
         'lost_reason',
@@ -85,6 +94,7 @@ class Deal extends Model
             'amount' => 'integer', // kopecks
             'amount_locked' => 'boolean',
             'perpetual_license' => 'boolean',
+            'is_primary_deal' => 'boolean',
             'tags' => 'array',
             'extra_fields' => 'array',
             'expected_close_date' => 'date',
@@ -164,9 +174,21 @@ class Deal extends Model
         return $this->belongsTo(Company::class, 'company_id');
     }
 
+    /** Pinned requisite set used when this deal was created / the contract generated. */
+    public function companyRequisite(): BelongsTo
+    {
+        return $this->belongsTo(CompanyRequisite::class, 'company_requisite_id');
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    /** The user who originally created this deal (distinct from the current owner). */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
     }
 
     public function department(): BelongsTo

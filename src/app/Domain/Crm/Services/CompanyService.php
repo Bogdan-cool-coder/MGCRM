@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Domain\Crm\Services;
 
+use App\Domain\Crm\Enums\ClientStatus;
 use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyClientStatusLog;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Services\EntityLogService;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -193,10 +196,10 @@ class CompanyService
                 ->update(['is_primary' => false]);
 
             ContactCompanyLink::create([
-                'contact_id'        => $contactId,
-                'company_id'        => $company->id,
+                'contact_id' => $contactId,
+                'company_id' => $company->id,
                 'employment_status' => 'works',
-                'is_primary'        => true,
+                'is_primary' => true,
             ]);
 
             return $company->load('companyType');
@@ -237,9 +240,9 @@ class CompanyService
                     $actor,
                     LogAction::ContactAdded,
                     [
-                        'contact_id'   => $contactId,
+                        'contact_id' => $contactId,
                         'contact_name' => Contact::query()->whereKey($contactId)->value('full_name'),
-                        'is_primary'   => (bool) ($linkData['is_primary'] ?? false),
+                        'is_primary' => (bool) ($linkData['is_primary'] ?? false),
                     ],
                 );
             }
@@ -256,6 +259,134 @@ class CompanyService
         ContactCompanyLink::where('company_id', $company->id)
             ->where('contact_id', $contactId)
             ->delete();
+    }
+
+    // =========================================================================
+    // Client lifecycle (N5)
+    // =========================================================================
+
+    /**
+     * Mark the company as a unique client (first won deal).
+     *
+     * Idempotent: if `unique_client_since` is already set OR status is already
+     * `active` (or beyond), this is a no-op — no duplicate log entries are written.
+     *
+     * Called by DealMoveService (sales domain) on the won-transition.
+     * MUST be called inside the caller's DB::transaction (DealMoveService does this).
+     *
+     * @param  CarbonInterface  $signedAt  The `signed_at` date of the first won deal.
+     * @param  int|null  $userId  Actor ID (null = system/job).
+     */
+    public function markAsUniqueClient(Company $company, CarbonInterface $signedAt, ?int $userId): void
+    {
+        // Idempotency guard — unique_client_since set means we already ran.
+        if ($company->unique_client_since !== null) {
+            return;
+        }
+
+        $oldStatus = $company->client_status ?? ClientStatus::Prospect;
+
+        $company->update([
+            'client_status' => ClientStatus::Active,
+            'unique_client_since' => $signedAt->toDateString(),
+        ]);
+
+        $this->writeStatusLog($company, $oldStatus, ClientStatus::Active, $userId, null, [
+            'source' => 'first_won_deal',
+            'signed_at' => $signedAt->toDateString(),
+        ]);
+    }
+
+    /**
+     * Mark the company as disconnected (расторжение ДС).
+     *
+     * Sets `client_status=disconnected`, `disconnected_at=now()`,
+     * `disconnect_reason_id`, and optionally `disconnect_doc_id`.
+     * Writes a status-log entry.
+     *
+     * The obligation that a signed scan (docId) exists before calling this method
+     * is enforced by the N6 contract flow; here docId is simply stored as-is.
+     *
+     * @param  int  $reasonId  FK to disconnect_reasons.
+     * @param  int|null  $docId  FK to the signed scan document (nullable until N6).
+     * @param  int|null  $userId  Actor who triggered the disconnect.
+     */
+    public function disconnect(Company $company, int $reasonId, ?int $docId, ?int $userId): void
+    {
+        $oldStatus = $company->client_status ?? ClientStatus::Prospect;
+
+        DB::transaction(function () use ($company, $reasonId, $docId, $oldStatus, $userId): void {
+            $company->update([
+                'client_status' => ClientStatus::Disconnected,
+                'disconnected_at' => now(),
+                'disconnect_reason_id' => $reasonId,
+                'disconnect_doc_id' => $docId,
+            ]);
+
+            $this->writeStatusLog(
+                $company,
+                $oldStatus,
+                ClientStatus::Disconnected,
+                $userId,
+                $reasonId,
+                $docId !== null ? ['disconnect_doc_id' => $docId] : null,
+            );
+        });
+    }
+
+    /**
+     * Revert a disconnected company back to its prior active state.
+     *
+     * If the company has ever been a unique client (`unique_client_since` is set),
+     * it returns to `active`; otherwise it returns to `prospect`.
+     * Clears disconnect metadata. Writes a status-log entry.
+     *
+     * @param  int|null  $userId  Actor who triggered the reconnect.
+     */
+    public function reconnect(Company $company, ?int $userId): void
+    {
+        $oldStatus = $company->client_status ?? ClientStatus::Disconnected;
+
+        $newStatus = $company->unique_client_since !== null
+            ? ClientStatus::Active
+            : ClientStatus::Prospect;
+
+        DB::transaction(function () use ($company, $oldStatus, $newStatus, $userId): void {
+            $company->update([
+                'client_status' => $newStatus,
+                'disconnected_at' => null,
+                'disconnect_reason_id' => null,
+                'disconnect_doc_id' => null,
+            ]);
+
+            $this->writeStatusLog($company, $oldStatus, $newStatus, $userId, null, [
+                'source' => 'reconnect',
+            ]);
+        });
+    }
+
+    /**
+     * Append a single row to company_client_status_log.
+     *
+     * @param  array<string, mixed>|null  $meta
+     */
+    private function writeStatusLog(
+        Company $company,
+        ClientStatus $oldStatus,
+        ClientStatus $newStatus,
+        ?int $userId,
+        ?int $reasonId,
+        ?array $meta,
+    ): void {
+        CompanyClientStatusLog::create([
+            'company_id' => $company->id,
+            'old_status' => $oldStatus->value,
+            'new_status' => $newStatus->value,
+            'changed_by' => $userId,
+            'changed_at' => now(),
+            'reason_id' => $reasonId,
+            'meta' => $meta,
+        ]);
     }
 
     /**
@@ -301,9 +432,9 @@ class CompanyService
         $coldCutoff = $now->copy()->subDays($coldDays);
 
         return match ($tier) {
-            EngagementTier::Fresh   => [$warmCutoff, $now],
+            EngagementTier::Fresh => [$warmCutoff, $now],
             EngagementTier::Cooling => [$coldCutoff, $warmCutoff],
-            EngagementTier::Cold    => [null, null],
+            EngagementTier::Cold => [null, null],
         };
     }
 

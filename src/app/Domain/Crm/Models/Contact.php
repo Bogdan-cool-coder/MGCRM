@@ -43,16 +43,19 @@ class Contact extends Model
         'tags',
         'extra_fields',
         'owner_id',
+        // First-class author of the card. Populated by the AMO import; nullable
+        // for legacy/system-created rows.
+        'created_by_id',
         'last_activity_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'status'                 => ContactStatus::class,
-            'tags'                   => 'array',
-            'extra_fields'           => 'array',
-            'last_activity_at'       => 'datetime',
+            'status' => ContactStatus::class,
+            'tags' => 'array',
+            'extra_fields' => 'array',
+            'last_activity_at' => 'datetime',
             'acquisition_channel_id' => 'integer',
         ];
     }
@@ -62,6 +65,12 @@ class Contact extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /** The user who originally created this contact (distinct from owner). */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
     }
 
     /**

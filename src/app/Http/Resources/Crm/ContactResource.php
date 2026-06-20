@@ -15,22 +15,22 @@ class ContactResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'full_name'   => $this->full_name,
-            'position'    => $this->position,
-            'phone'       => $this->phone,
-            'email'       => $this->email,
+            'id' => $this->id,
+            'full_name' => $this->full_name,
+            'position' => $this->position,
+            'phone' => $this->phone,
+            'email' => $this->email,
             'tg_username' => $this->tg_username,
-            'notes'       => $this->notes,
-            'source'      => $this->source,
-            'status'      => $this->status?->value,
-            'tags'        => $this->tags ?? [],
+            'notes' => $this->notes,
+            'source' => $this->source,
+            'status' => $this->status?->value,
+            'tags' => $this->tags ?? [],
             'extra_fields' => $this->extra_fields ?? [],
-            'owner_id'    => $this->owner_id,
+            'owner_id' => $this->owner_id,
 
             // Marketing — acquisition channel
             'acquisition_channel_id' => $this->acquisition_channel_id,
-            'acquisition_channel'    => $this->whenLoaded(
+            'acquisition_channel' => $this->whenLoaded(
                 'acquisitionChannel',
                 fn () => $this->acquisitionChannel
                     ? ['id' => $this->acquisitionChannel->id, 'name' => $this->acquisitionChannel->name]
@@ -39,11 +39,11 @@ class ContactResource extends JsonResource
 
             // Engagement (B2)
             'last_activity_at' => $this->last_activity_at?->toIso8601String(),
-            'engagement_tier'  => $this->computeEngagementTier()->value,
+            'engagement_tier' => $this->computeEngagementTier()->value,
 
             // User (when loaded)
             'owner' => $this->whenLoaded('owner', fn () => [
-                'id'        => $this->owner->id,
+                'id' => $this->owner->id,
                 'full_name' => $this->owner->full_name,
             ]),
 

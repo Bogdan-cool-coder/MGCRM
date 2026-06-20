@@ -6,6 +6,7 @@ namespace Tests\Unit\Sales;
 
 use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Services\CompanyService;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Services\EntityLogService;
@@ -66,7 +67,7 @@ class DealMoveServiceTest extends TestCase
             $documents->shouldReceive('hasActiveContractForDeal')->andReturn($hasContract);
         }
 
-        return new DealMoveService($documents, new EngagementService, app(EntityLogService::class));
+        return new DealMoveService($documents, new EngagementService, app(EntityLogService::class), app(CompanyService::class));
     }
 
     public function test_redundant_move_is_noop(): void

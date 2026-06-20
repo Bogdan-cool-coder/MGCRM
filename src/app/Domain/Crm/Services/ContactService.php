@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ContactService
 {
+    public function __construct(
+        private readonly AcquisitionChannelHistoryService $channelHistory,
+    ) {}
+
     /**
      * Paginated list of contacts with eager-loaded relations.
      *
@@ -41,6 +45,9 @@ class ContactService
             })
             ->when(isset($filters['source']), function (Builder $q) use ($filters): void {
                 $q->where('source', $filters['source']);
+            })
+            ->when(isset($filters['acquisition_channel_id']), function (Builder $q) use ($filters): void {
+                $q->where('acquisition_channel_id', $filters['acquisition_channel_id']);
             })
             ->when(isset($filters['owner_id']), function (Builder $q) use ($filters): void {
                 $q->where('owner_id', $filters['owner_id']);
@@ -93,10 +100,28 @@ class ContactService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function update(Contact $contact, array $data): Contact
+    public function update(Contact $contact, array $data, ?User $actor = null): Contact
     {
+        // Capture old acquisition_channel_id before update for history tracking.
+        $oldChannelId = $contact->acquisition_channel_id;
+
         $contact->update($data);
         $contact->refresh();
+
+        // Record acquisition channel history if the field was included and changed.
+        if (array_key_exists('acquisition_channel_id', $data)) {
+            $newChannelId = $data['acquisition_channel_id'] !== null
+                ? (int) $data['acquisition_channel_id']
+                : null;
+
+            $this->channelHistory->record(
+                'contact',
+                (int) $contact->id,
+                $oldChannelId,
+                $newChannelId,
+                $actor?->id,
+            );
+        }
 
         return $contact;
     }

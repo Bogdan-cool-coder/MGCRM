@@ -71,7 +71,7 @@ class ContactController extends Controller
 
     public function update(UpdateContactRequest $request, Contact $contact): JsonResource
     {
-        $updated = $this->service->update($contact, $request->validated());
+        $updated = $this->service->update($contact, $request->validated(), $request->user());
 
         return ContactResource::make($updated->load(['owner', 'companyLinks.company']));
     }

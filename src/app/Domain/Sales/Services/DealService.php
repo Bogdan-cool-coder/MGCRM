@@ -8,6 +8,7 @@ use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Services\CompanyRequisiteService;
 use App\Domain\Crm\Services\CustomFieldService;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
@@ -54,6 +55,7 @@ class DealService
         private readonly ExchangeRateService $exchangeRateService,
         private readonly EngagementService $engagementService,
         private readonly EntityLogService $entityLog,
+        private readonly CompanyRequisiteService $requisites,
     ) {}
 
     /**
@@ -426,6 +428,18 @@ class DealService
         $data['max_stage_id'] = $firstStage->id;
         $data['stage_changed_at'] = now();
 
+        // Auto-pin the company's current requisite set (N5/Фича 7): a deal records
+        // which requisites it was opened with so a later requisite change does not
+        // retroactively alter it. Only when the caller did not pin one explicitly
+        // and the company actually has a current set — 0 requisites leaves it null
+        // (resolveForNewDocument-null backlog flag) without failing.
+        if (empty($data['company_requisite_id']) && ! empty($data['company_id'])) {
+            $company = Company::find($data['company_id']);
+            $data['company_requisite_id'] = $company !== null
+                ? $this->requisites->current($company)?->id
+                : null;
+        }
+
         $deal = Deal::create($data);
 
         // Record creation event in stage history (from_stage_id = null → creation).
@@ -497,6 +511,10 @@ class DealService
                 // The landing stage is the initial max_stage high-water mark.
                 'max_stage_id' => $stageId,
                 'company_id' => $company->id,
+                // Auto-pin the company's current requisite set (N5/Фича 7); null
+                // when the company has no current requisites (0 → stays null, not
+                // an error).
+                'company_requisite_id' => $this->requisites->current($company)?->id,
                 'title' => $opts['title'] ?? "Лид: {$company->name}",
                 'currency' => $opts['currency'] ?? config('crm.currencies.default', 'RUB'),
                 'owner_user_id' => $ownerId,
@@ -580,11 +598,28 @@ class DealService
             unset($data['extra_fields']);
         }
 
+        // License-mode (perpetual_license) toggle detection (N4). Capture whether
+        // the flag actually changes BEFORE the update so we can re-price all line
+        // items in the SAME transaction as the field write (atomic toggle). The
+        // re-price runs through DealProductService::applyLicenseMode, resolved
+        // lazily (app()) to avoid a constructor DI cycle — DealProductService
+        // already constructor-injects DealService.
+        $perpetualChanged = array_key_exists('perpetual_license', $data)
+            && (bool) $deal->perpetual_license !== (bool) $data['perpetual_license'];
+        $newPerpetual = $perpetualChanged ? (bool) $data['perpetual_license'] : false;
+
         // Snapshot only the scalar fields about to change (excludes extra_fields,
         // already unset). getOriginal() reflects the values currently in the DB.
         $original = array_intersect_key($deal->getOriginal(), $data);
 
-        $deal->update($data);
+        DB::transaction(function () use ($deal, $data, $perpetualChanged, $newPerpetual): void {
+            $deal->update($data);
+
+            if ($perpetualChanged) {
+                app(DealProductService::class)->applyLicenseMode($deal, $newPerpetual);
+            }
+        });
+
         $deal->refresh();
 
         $diff = $this->buildAuditDiff($original, $data, $extraChanged, $extraBefore, $deal->extra_fields ?? []);

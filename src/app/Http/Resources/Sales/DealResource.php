@@ -23,6 +23,11 @@ class DealResource extends JsonResource
             'currency' => $this->currency,
             // «Вечная лицензия» / «Коробка / on-premise» (price logic in N4).
             'perpetual_license' => (bool) $this->perpetual_license,
+            // N5 client-lifecycle flags. is_primary_deal = the first won deal that
+            // made the company a unique client. is_upsell is DERIVED, never stored
+            // (won on an already-converted company); a non-won deal is neither.
+            'is_primary_deal' => (bool) $this->is_primary_deal,
+            'is_upsell' => $this->status() === 'won' && ! $this->is_primary_deal,
             'status' => $this->status(),
 
             'pipeline_id' => $this->pipeline_id,

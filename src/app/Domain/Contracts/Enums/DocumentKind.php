@@ -10,8 +10,29 @@ namespace App\Domain\Contracts\Enums;
  */
 enum DocumentKind: string
 {
-    case Contract = 'contract';       // sublicensing agreement
-    case Invoice = 'invoice';        // payment invoice (M9)
-    case Act = 'act';            // completion act (M9)
-    case Reconciliation = 'reconciliation'; // reconciliation act (M9)
+    case Contract = 'contract';                         // sublicensing agreement
+    case TerminationAgreement = 'termination_agreement'; // дополнительное соглашение о расторжении
+    case Invoice = 'invoice';                           // payment invoice (M9)
+    case Act = 'act';                                   // completion act (M9)
+    case Reconciliation = 'reconciliation';             // reconciliation act (M9)
+
+    /**
+     * TemplateVariable keys that belong exclusively to the termination-agreement
+     * flow. These are seeded with required=true but with empty product/country
+     * wildcards, so without kind-scoping ContractContextBuilder would demand them
+     * for EVERY document (including normal contracts). The builder uses this list
+     * to enforce their required-ness only when kind === TerminationAgreement.
+     *
+     * @return list<string>
+     */
+    public static function terminationVariableKeys(): array
+    {
+        return [
+            'original_contract_number',
+            'original_contract_date',
+            'termination_date',
+            'termination_reason',
+            'termination_signatory',
+        ];
+    }
 }
