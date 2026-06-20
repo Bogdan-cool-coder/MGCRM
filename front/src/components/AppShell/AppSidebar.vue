@@ -124,26 +124,6 @@
             </router-link>
           </li>
 
-          <!-- Settings item -->
-          <li v-if="!collapsed" class="app-sidebar__group-label" role="presentation">
-            <span class="app-sidebar__group-label-text">{{ t('nav.settingsGroup') }}</span>
-          </li>
-          <li class="app-sidebar__nav-item">
-            <router-link
-              :to="settingsItem.route"
-              class="app-sidebar__nav-link"
-              active-class="app-sidebar__nav-link--active"
-              :aria-label="t(settingsItem.labelKey)"
-              :title="collapsed ? t(settingsItem.labelKey) : undefined"
-              @mouseenter="prefetch(settingsItem.route)"
-              @focus="prefetch(settingsItem.route)"
-            >
-              <i :class="['app-sidebar__nav-icon', settingsItem.icon]" />
-              <span v-if="!collapsed" class="app-sidebar__nav-label">
-                {{ t(settingsItem.labelKey) }}
-              </span>
-            </router-link>
-          </li>
         </template>
       </ul>
     </nav>
@@ -207,7 +187,6 @@ import { useOnboardingStore } from '@/stores/onboardingStore'
 import {
   prototypeNavItems,
   onboardingNavGroup,
-  settingsNavItem,
   filterNavByRole,
 } from '@/shared/nav/navItems'
 import type { NavItemBadge } from '@/shared/nav/navItems'
@@ -247,9 +226,6 @@ const isAdminOrDirector = computed<boolean>(() => {
 const onboardingItems = computed(() =>
   filterNavByRole(onboardingNavGroup.items, userStore.getUserRole ?? null),
 )
-
-// ─── Settings nav item ────────────────────────────────────────────────────────
-const settingsItem = settingsNavItem
 
 // ─── Badge counts ──────────────────────────────────────────────────────────────
 function getBadgeCount(source: NavItemBadge['source']): number {

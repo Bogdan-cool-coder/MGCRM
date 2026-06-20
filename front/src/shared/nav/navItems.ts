@@ -118,7 +118,9 @@ export const onboardingNavGroup: NavGroup = {
   ],
 }
 
-// ─── Settings entry (admin/director only) ─────────────────────────────────────
+// ─── Settings entry (CommandPalette only — NOT shown in sidebar) ──────────────
+// The sidebar no longer has a Settings item. /settings redirects to /profile (hub).
+// This item is kept for CommandPalette search (adminNavItems) only.
 export const settingsNavItem: NavItem = {
   key: 'settings',
   route: '/settings',

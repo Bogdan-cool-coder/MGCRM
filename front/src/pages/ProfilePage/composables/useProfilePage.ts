@@ -41,14 +41,19 @@ export const useProfilePage = () => {
   const userStore = useUserStore()
   const toast = useToast()
 
-  // Active tab — from ?tab= query param
-  const activeTab = computed<ProfileTab>(() => {
+  // Active tab — from ?tab= query param; no ?tab → 'hub' (card grid)
+  const activeTab = computed<ProfileTab | 'hub'>(() => {
     const tab = route.query['tab'] as string
-    return VALID_TABS.includes(tab as ProfileTab) ? (tab as ProfileTab) : 'profile'
+    if (!tab) return 'hub'
+    return VALID_TABS.includes(tab as ProfileTab) ? (tab as ProfileTab) : 'hub'
   })
 
-  const setTab = (tab: ProfileTab) => {
-    router.replace({ query: { tab } })
+  const setTab = (tab: ProfileTab | 'hub') => {
+    if (tab === 'hub') {
+      router.replace({ path: '/profile', query: {} })
+    } else {
+      router.replace({ query: { tab } })
+    }
   }
 
   // 2FA Setup flow
@@ -200,7 +205,7 @@ export const useProfilePage = () => {
   }
 
   return {
-    // Tab management
+    // Tab management (activeTab can be 'hub' when no ?tab query param)
     activeTab,
     setTab,
     tabs: VALID_TABS,

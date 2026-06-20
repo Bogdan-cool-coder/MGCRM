@@ -111,11 +111,10 @@ export const routes: RouteRecordRaw[] = [
   },
 
   // ─── Settings ────────────────────────────────────────────────────────────────
+  // /settings → hub (ProfilePage with no ?tab)
   {
     path: '/settings',
-    name: 'Settings',
-    component: () => import('@/pages/SettingsPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.settings' },
+    redirect: '/profile',
   },
   {
     path: '/settings/pipeline',

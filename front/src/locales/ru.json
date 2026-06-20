@@ -2578,8 +2578,50 @@
     "themeLight": "Светлая",
     "themeDark": "Тёмная",
     "language": "Язык",
-    "profileSettings": "Настройки профиля",
-    "logout": "Выйти"
+    "profileSettings": "Профиль и настройки",
+    "logout": "Выйти",
+    "hubTitle": "Профиль и настройки",
+    "hubSubtitle": "Личный кабинет и системные параметры",
+    "groupAccount": "Аккаунт",
+    "groupSystem": "Система",
+    "sections": {
+      "profile": {
+        "title": "Профиль",
+        "desc": "Имя, email, роль"
+      },
+      "security": {
+        "title": "Безопасность",
+        "desc": "Двухфакторная аутентификация"
+      },
+      "appearance": {
+        "title": "Внешний вид",
+        "desc": "Тема, режим навигации"
+      },
+      "quickActions": {
+        "title": "Быстрые действия",
+        "desc": "Кнопки панели быстрого доступа"
+      },
+      "telegram": {
+        "title": "Telegram",
+        "desc": "Привязка аккаунта"
+      },
+      "locale": {
+        "title": "Язык",
+        "desc": "Язык интерфейса"
+      },
+      "notifications": {
+        "title": "Уведомления"
+      },
+      "calendar": {
+        "title": "Календарь"
+      },
+      "signature": {
+        "title": "Подпись"
+      },
+      "segments": {
+        "title": "Сегменты"
+      }
+    }
   },
   "orbita": {
     "expand": "Развернуть",

@@ -2578,8 +2578,50 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "language": "Language",
-    "profileSettings": "Profile settings",
-    "logout": "Log out"
+    "profileSettings": "Profile & settings",
+    "logout": "Log out",
+    "hubTitle": "Profile & settings",
+    "hubSubtitle": "Personal account and system parameters",
+    "groupAccount": "Account",
+    "groupSystem": "System",
+    "sections": {
+      "profile": {
+        "title": "Profile",
+        "desc": "Name, email, role"
+      },
+      "security": {
+        "title": "Security",
+        "desc": "Two-factor authentication"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "desc": "Theme, navigation mode"
+      },
+      "quickActions": {
+        "title": "Quick actions",
+        "desc": "Quick access panel buttons"
+      },
+      "telegram": {
+        "title": "Telegram",
+        "desc": "Account connection"
+      },
+      "locale": {
+        "title": "Language",
+        "desc": "Interface language"
+      },
+      "notifications": {
+        "title": "Notifications"
+      },
+      "calendar": {
+        "title": "Calendar"
+      },
+      "signature": {
+        "title": "Signature"
+      },
+      "segments": {
+        "title": "Segments"
+      }
+    }
   },
   "orbita": {
     "expand": "Expand",
