@@ -129,6 +129,16 @@ export const primeVueFoundationSemantic = {
           shadow: '0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3)',
         },
       },
+      // DARK TEXT COLOR (BUG: --p-text-color = #000 в dark-режиме).
+      //
+      // Aura dark задаёт text.color = {surface.0}. Наша dark-палитра ИНВЕРТИРОВАНА →
+      // dark.surface.0 = surfacePalette[950] = #000000 (чёрный на тёмном фоне → невидимый текст).
+      // Фикс: явно переопределяем text.color через {surface.900} = surfacePalette[50] = #F9FAFB.
+      text: {
+        color: '{surface.900}',        // #F9FAFB — читабельный светлый текст в dark
+        mutedColor: '{surface.400}',   // #9B9C9F — muted (как Aura: {surface.500})
+        hoverMutedColor: '{surface.300}', // #7E7F82
+      },
       // DARK FORM FIELDS (BUG-3: инпуты белые в dark-режиме).
       //
       // Причина: Aura dark использует {surface.950} для background формполей.

@@ -154,7 +154,7 @@ const { t } = useI18n()
   min-width: 0;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-text-color);
   }
 
   &--link {
