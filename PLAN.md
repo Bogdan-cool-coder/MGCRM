@@ -393,6 +393,38 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 **Зависимости:** Финансы M9 для панели Платежи (плейсхолдер до тех пор); Договоры M5 для панели Документов (данные уже работают).
 
+### M2++. Карточки компании+контакта — Редизайн (Entity Card 2.0)
+
+**Статус:** DONE (2026-06-20). QA PASS. PM-APPROVE. Задеплоен на прод (commit `11da24f` + fix `7cc26d7`).
+**ТЗ:** `MG CRM 2026 / 5. Планы / Карточки компании+контакта — редизайн ТЗ.md`
+**Агенты:** `crm-specialist` (KPI backend) + `frontend-specialist` (UI + visual-fixes).
+
+**Что сделано (6 фаз ТЗ + 9 визуал-фиксов):**
+
+- [x] **EntityAvatar.vue** — детерминированный аватар 56×56, 8-цветная палитра по `entityId % 8`, белые инициалы (до 3 букв), размеры sm/md/lg.
+- [x] **EntityKpiStrip.vue** — KPI-полоса между шапкой и табами: `KpiItem[]` (icon/label/value/accent/clickable), 5 Skeleton при загрузке, mobile horizontal-scroll, tablet flex-wrap. Тёмная тема: surface-100/surface-300 токены (исправлено fix `7cc26d7`).
+- [x] **EntityNowStrip.vue** — «Сейчас» inline-полоса (label + dot-separated items). Готов к использованию.
+- [x] **EntityMiniTimeline.vue** — последние N записей лога (dot+actor+event+relativeDate), empty-state, skeleton, «Открыть лог» callback. Использует `useEntityLogFormat`.
+- [x] **useEntityLogFormat.ts** — shared composable: `EVENT_ICONS`, `eventIcon/Label/formatDate/relativeDate` вынесены из EntityLogTab.
+- [x] **EntityInfoHeader.vue рефакторинг** — avatar-col (56×56) + info-col, tags prop (max 3 Tag + «+N»), avatarInitials override, meta label/value с opacity 0.35/0.75.
+- [x] **EntityLogTab.vue** — рефакторинг на `useEntityLogFormat` (без изменения поведения).
+- [x] **CompanyRequisitesPanel.vue** — 3 постоянных секции (Юр. данные/Банк/Контакты и сегментация) с labeled-dividers вместо toggle.
+- [x] **CompanyEmployeesTab.vue** — удалена дублирующая кнопка «Добавить сотрудника».
+- [x] **MiniPipelinePanel.vue** — hint под empty-state (`company.page.deals.emptyHint`).
+- [x] **HoldingTree.vue** — `childrenCount` computed (recursive subtree), `:count` в InfoPanel-бейдж.
+- [x] **ContactRelationsPanel.vue** — `relationTypeIcon()` маппинг, `sortedRelations` (partner→other), улучшенный empty-state с CTA.
+- [x] **CompanyPage/index.vue** — `:tags`, `EntityKpiStrip` (5 метрик: open_deals/sum/employees/documents/last_activity), `EntityMiniTimeline` в overview.
+- [x] **ContactPage/index.vue** — `:tags`, `EntityKpiStrip` (4 метрики: deals/last_contact/open_tasks/companies), `EntityMiniTimeline`.
+- [x] **KPI backend (crm-specialist):** `ActivityService::openTasksCountForContact()` (single query), `CompanyController::show()` — 5 KPI агрегатов (open_deals_count/deals_sum/employees_count/documents_count/last_activity_at) + holding_company_count, `ContactController::show()` — 3 KPI (deals_count/last_touch_at/open_tasks_count). Все через `->additional(['kpi'=>...])` на Resource. 24 PHPUnit теста (CompanyKpiTest 13 + ContactKpiTest 11). Сьют 236 CRM-тестов зелёный.
+- [x] **9 визуал-фиксов:** login dark-card (`:global(.app-dark)` overrides), DealPage dark panels, /my-tasks New badge dark, /my-tasks kanban overdue border, /profile SelectButton dark, дубль вкладки «Тема» удалён, EngagementChip neutral-cold (без истории → серый `pi-circle`), MonthStepper locale.value (реактивный), PipelineCanvas Controls/MiniMap ghost-skeleton guard + hint z-index, TemplateVariables i18n.
+- [x] **i18n:** RU+EN — `company.kpi.*`, `company.requisites.section.*`, `company.page.deals.emptyHint/noWonDeals/holding.childrenCount`, `contact.kpi.*`, `crm.entity.nowStrip/miniTimeline/kpiStrip.*`.
+- [x] **Deploy:** commit `11da24f` + fix `7cc26d7` (34 файла, ~2000 ins), push `origin/main`, rolling-restart прода, nginx reload, health-check PASS (200/401, все 9 контейнеров Up).
+
+**Беклог (не блокеры):**
+- `EntityNowStrip.vue` создан, но не вставлен в CompanyPage/ContactPage напрямую — доступен для будущего использования.
+- KPI-поля (`kpi` object) null-safe — фронт работает без них (graceful degradation); связка с live CompanyResource стала полной.
+- Avatar-col в EntityInfoHeader добавляет ~60px ширины — проверить на узких viewport при будущих правках layout.
+
 ---
 
 ### M3. Sales / Kanban (2-3 недели)
