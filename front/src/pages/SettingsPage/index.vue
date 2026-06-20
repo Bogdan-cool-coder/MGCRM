@@ -86,6 +86,20 @@ const sections: SettingsSection[] = [
     titleKey: 'settings.sections.automationRuns.title',
     descKey: 'settings.sections.automationRuns.desc',
   },
+  {
+    key: 'acquisition-channels',
+    route: '/admin/acquisition-channels',
+    icon: 'pi pi-megaphone',
+    titleKey: 'settings.sections.acquisitionChannels.title',
+    descKey: 'settings.sections.acquisitionChannels.desc',
+  },
+  {
+    key: 'disconnect-reasons',
+    route: '/admin/disconnect-reasons',
+    icon: 'pi pi-times-circle',
+    titleKey: 'settings.sections.disconnectReasons.title',
+    descKey: 'settings.sections.disconnectReasons.desc',
+  },
 ]
 </script>
 

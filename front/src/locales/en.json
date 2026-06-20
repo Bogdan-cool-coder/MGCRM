@@ -29,6 +29,8 @@
     "onboardingAssignments": "Assignments",
     "hrProgress": "Progress",
     "automationRuns": "Automation log",
+    "acquisitionChannels": "Acquisition Channels",
+    "disconnectReasons": "Disconnect Reasons",
     "sections": {
       "learning": "Learning"
     }
@@ -256,6 +258,50 @@
       "automationRuns": {
         "title": "Automation log",
         "desc": "Run history and results of automated scenarios"
+      },
+      "acquisitionChannels": {
+        "title": "Acquisition Channels",
+        "desc": "Directory of client acquisition channels"
+      },
+      "disconnectReasons": {
+        "title": "Disconnect Reasons",
+        "desc": "Directory of reasons for ending cooperation"
+      }
+    }
+  },
+  "admin": {
+    "acquisitionChannels": {
+      "title": "Acquisition Channels",
+      "add": "Add Channel",
+      "edit": "Edit Channel",
+      "empty": "No channels added",
+      "deleteConfirm": "Delete acquisition channel?",
+      "columns": {
+        "name": "Name",
+        "sortOrder": "Order",
+        "isActive": "Active"
+      },
+      "fields": {
+        "name": "Name *",
+        "sortOrder": "Sort order",
+        "isActive": "Active"
+      }
+    },
+    "disconnectReasons": {
+      "title": "Disconnect Reasons",
+      "add": "Add Reason",
+      "edit": "Edit Reason",
+      "empty": "No reasons added",
+      "deleteConfirm": "Delete disconnect reason?",
+      "columns": {
+        "name": "Name",
+        "sortOrder": "Order",
+        "isActive": "Active"
+      },
+      "fields": {
+        "name": "Name *",
+        "sortOrder": "Sort order",
+        "isActive": "Active"
       }
     }
   },
@@ -306,7 +352,8 @@
     "actions": "Actions",
     "today": "Today",
     "yesterday": "Yesterday",
-    "copied": "Copied"
+    "copied": "Copied",
+    "select": "Select..."
   },
   "contacts": {
     "page": {
@@ -548,13 +595,16 @@
       "dealsSum": "Deals amount",
       "employees": "Employees",
       "documents": "Documents",
-      "lastActivity": "Last activity"
+      "lastActivity": "Last activity",
+      "wonDeals": "Won deals",
+      "upsellDeals": "Upsells"
     },
     "requisites": {
       "section": {
         "legal": "Legal data",
         "bank": "Bank",
-        "contacts": "Contacts & Segmentation"
+        "contacts": "Contacts & Segmentation",
+        "classification": "Classification"
       }
     }
   },
@@ -1492,6 +1542,35 @@
         "markContractTooltip": "Mark contract as sent",
         "kpMarked": "Proposal marked as sent",
         "contractMarked": "Contract marked as sent"
+      },
+      "fields": {
+        "perpetualLicense": "Perpetual License"
+      },
+      "perpetual": {
+        "on": "Perpetual",
+        "off": "Subscription",
+        "confirmTitle": "License Type Change",
+        "confirmMessage": "Switching will recalculate prices for all line items. Continue?",
+        "successOn": "Switched to perpetual license",
+        "successOff": "Switched to subscription"
+      },
+      "budget": {
+        "locked": "Budget (locked)",
+        "lineTotal": "Line total",
+        "total": "Total",
+        "lock": "Lock amount",
+        "unlock": "Unlock amount",
+        "lockedSuccess": "Amount locked",
+        "unlockedSuccess": "Lock removed"
+      },
+      "dates": {
+        "group": "Key Dates",
+        "contractPlan": "Contract — planned",
+        "contractFact": "Contract — actual",
+        "paymentPlan": "Payment — planned",
+        "paymentFact": "Payment — actual",
+        "overdueBy": "Overdue by {n} days",
+        "factDone": "Done"
       }
     },
     "move": {
@@ -1743,6 +1822,7 @@
       "invoice": "Invoice",
       "act": "Act",
       "reconciliation": "Reconciliation",
+      "termination_agreement": "Termination Agreement",
       "yaml": "YAML",
       "docx": "DOCX"
     },
@@ -2889,7 +2969,8 @@
         "holding": "Holding",
         "deals": "Deals",
         "totals": "Totals",
-        "payments": "Payments"
+        "payments": "Payments",
+        "marketing": "Marketing"
       },
       "rail": {
         "author": "Created by",
@@ -2899,7 +2980,99 @@
         "director": "Director",
         "bankName": "Bank",
         "bankAccount": "Account",
-        "annualRevenue": "Annual revenue"
+        "annualRevenue": "Annual revenue",
+        "specialization": "Specialization"
+      },
+      "specialization": {
+        "placeholder": "Not selected",
+        "agency": "Real Estate Agency",
+        "developer": "Developer",
+        "builder": "Builder",
+        "contractor": "Contractor",
+        "supplier": "Supplier",
+        "partner": "Partner"
+      },
+      "clientStatus": {
+        "prospect": "Prospect",
+        "active": "Active Client",
+        "disconnected": "Disconnected",
+        "since": "since {date}",
+        "at": "{date}",
+        "logTitle": "Client Status History",
+        "logEmpty": "History is empty",
+        "logTooltip": "Click to see status history"
+      },
+      "menu": {
+        "disconnect": "Disconnect Client",
+        "reconnect": "Reconnect Client"
+      },
+      "disconnect": {
+        "title": "Disconnect Client",
+        "hint": "Status changes only after uploading the signed termination agreement scan",
+        "reason": "Disconnect Reason",
+        "reasonPlaceholder": "Select reason...",
+        "reasonRequired": "Please select a disconnect reason",
+        "date": "Termination Date",
+        "datePlaceholder": "Select date",
+        "dateRequired": "Please specify the termination date",
+        "signatory": "Signatory",
+        "signatoryPlaceholder": "Director full name",
+        "submit": "Create Termination Agreement"
+      },
+      "reconnect": {
+        "confirm": "Resume cooperation with this company?",
+        "success": "Company status updated"
+      },
+      "marketing": {
+        "channel": "Acquisition Channel",
+        "channelHistory": "Change History",
+        "channelHistoryTitle": "Acquisition Channel History",
+        "historyEmpty": "History is empty",
+        "historyFrom": "Was",
+        "historyTo": "Became",
+        "historyBy": "Changed by",
+        "noChannel": "Not set"
+      },
+      "requisites": {
+        "current": "Active",
+        "add": "Add requisites",
+        "edit": "Edit requisites",
+        "setCurrent": "Set as active",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this requisite set?",
+        "empty": "No requisites added",
+        "loadError": "Failed to load requisites",
+        "defaultLabel": "Requisites",
+        "setCurrentSuccess": "Requisites set as active",
+        "createSuccess": "Requisites added",
+        "updateSuccess": "Requisites updated",
+        "deleteSuccess": "Requisite set deleted",
+        "deleteGuardError": "Cannot delete requisites",
+        "deleteGuardHint": "Cannot delete the only active set or one linked to documents",
+        "setAsCurrentOnCreate": "Set as active immediately",
+        "fields": {
+          "label": "Set name",
+          "labelPlaceholder": "e.g. New Requisites 2025",
+          "legalName": "Legal name",
+          "legalNamePlaceholder": "Alfa LLC",
+          "fullLegalForm": "Full legal form",
+          "taxIdLabel": "ID type",
+          "taxId": "ID number (TIN/BIN)",
+          "taxIdPlaceholder": "123456789",
+          "director": "Director (full name)",
+          "directorPlaceholder": "John Smith",
+          "directorGenitive": "Director (genitive case)",
+          "directorGenitivePlaceholder": "John Smith (genitive)",
+          "bank": "Bank",
+          "account": "Account / IBAN",
+          "bik": "Bank code (BIC)",
+          "validFrom": "Valid from",
+          "note": "Note",
+          "notePlaceholder": "Optional"
+        },
+        "errors": {
+          "legalNameRequired": "Legal name is required"
+        }
       },
       "holding": {
         "youAreHere": "You are here",
@@ -2931,7 +3104,13 @@
         "dealsParticipation": "Involved in deals",
         "customFields": "Custom fields",
         "dealsEmpty": "No deals",
-        "notes": "Notes"
+        "notes": "Notes",
+        "marketing": "Marketing"
+      },
+      "marketing": {
+        "channel": "Acquisition Channel",
+        "channelHistory": "Change History",
+        "historyTitle": "Channel History (contact)"
       },
       "notes": {
         "placeholder": "Add a note about this contact..."
@@ -3020,6 +3199,26 @@
         "deals": "Deals",
         "companies": "Companies"
       }
+    },
+    "termination": {
+      "drawerTitle": "Termination Agreement",
+      "step1": "Document Generation",
+      "generateHint": "Generate the termination agreement in DOCX and PDF format for signing.",
+      "generateBtn": "Generate Agreement",
+      "generating": "Generating...",
+      "generateError": "Document generation error. Please try again.",
+      "openPdf": "Open PDF",
+      "downloadDocx": "Download DOCX",
+      "step2": "Upload Signed Scan",
+      "scanHint": "Upload the scan of the agreement signed by both parties. Status changes only after upload.",
+      "chooseFile": "Choose file",
+      "uploadFormats": "PDF, JPG, PNG — up to 20 MB",
+      "scanUploaded": "Scan uploaded",
+      "uploadError": "Upload error. Please try again.",
+      "waiting": "Waiting for scan",
+      "statusDisconnected": "Disconnected",
+      "clientStatusLabel": "Client Status",
+      "stepLockedHint": "Available after document generation"
     },
     "contacts_page": {
       "savedViews": {

@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { CompanyType, Source, Country, City, ContactPosition } from '@/entities/crm'
+import type { CompanyType, Source, Country, City, ContactPosition, AcquisitionChannel, DisconnectReason } from '@/entities/crm'
 import { directoriesApi } from '@/api/crm/directories'
 
 export const useDirectoriesStore = defineStore('directories', () => {
@@ -10,6 +10,8 @@ export const useDirectoriesStore = defineStore('directories', () => {
   const countries = ref<Country[]>([])
   const cities = ref<City[]>([])
   const contactPositions = ref<ContactPosition[]>([])
+  const acquisitionChannels = ref<AcquisitionChannel[]>([])
+  const disconnectReasons = ref<DisconnectReason[]>([])
   const loaded = ref(false)
   const loading = ref(false)
 
@@ -50,24 +52,38 @@ export const useDirectoriesStore = defineStore('directories', () => {
   const activeSources = computed(() => sources.value.filter((s) => s.is_active))
   const activeCountries = computed(() => countries.value.filter((c) => c.is_active))
   const activeContactPositions = computed(() => contactPositions.value.filter((p) => p.is_active))
+  const activeAcquisitionChannels = computed(() => acquisitionChannels.value.filter((c) => c.is_active))
+  const activeDisconnectReasons = computed(() => disconnectReasons.value.filter((r) => r.is_active))
+
+  const getAcquisitionChannelName = computed(
+    () =>
+      (id: number | null | undefined): string => {
+        if (!id) return ''
+        return acquisitionChannels.value.find((c) => c.id === id)?.name ?? ''
+      },
+  )
 
   // ─── Actions ────────────────────────────────────────────────────────────────
   async function fetchAll(): Promise<void> {
     if (loaded.value || loading.value) return
     loading.value = true
     try {
-      const [ct, src, cnt, cty, pos] = await Promise.all([
+      const [ct, src, cnt, cty, pos, acq, dr] = await Promise.all([
         directoriesApi.getCompanyTypes(),
         directoriesApi.getSources(),
         directoriesApi.getCountries(),
         directoriesApi.getCities(),
         directoriesApi.getContactPositions(),
+        directoriesApi.getAcquisitionChannels({ active_only: true }),
+        directoriesApi.getDisconnectReasons({ active_only: true }),
       ])
       companyTypes.value = ct
       sources.value = src
       countries.value = cnt
       cities.value = cty
       contactPositions.value = pos
+      acquisitionChannels.value = acq
+      disconnectReasons.value = dr
       loaded.value = true
     } finally {
       loading.value = false
@@ -89,6 +105,8 @@ export const useDirectoriesStore = defineStore('directories', () => {
     countries,
     cities,
     contactPositions,
+    acquisitionChannels,
+    disconnectReasons,
     loaded,
     loading,
     // Getters
@@ -100,6 +118,9 @@ export const useDirectoriesStore = defineStore('directories', () => {
     activeSources,
     activeCountries,
     activeContactPositions,
+    activeAcquisitionChannels,
+    activeDisconnectReasons,
+    getAcquisitionChannelName,
     // Actions
     fetchAll,
     fetchCitiesForCountry,

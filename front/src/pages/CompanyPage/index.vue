@@ -54,7 +54,17 @@
         :tags="company.tags"
         :menu-items="menuItems"
         @back="router.back()"
-      />
+      >
+        <template #status>
+          <ClientStatusBadge
+            v-if="company.client_status"
+            :status="company.client_status"
+            :since="company.unique_client_since"
+            :disconnected-at="company.disconnected_at"
+            :company-id="company.id"
+          />
+        </template>
+      </EntityInfoHeader>
 
       <!-- KPI strip -->
       <EntityKpiStrip
@@ -110,6 +120,15 @@
                   <CompanyRequisitesPanel
                     :company="company"
                     :is-saving="isSaving"
+                    @save="patchField"
+                  />
+
+                  <!-- Marketing panel (N1 FE-A.3) -->
+                  <CompanyMarketingPanel
+                    :company-id="company.id"
+                    :acquisition-channel-id="company.acquisition_channel_id ?? null"
+                    :is-saving="isSaving"
+                    :channels="directoriesStore.activeAcquisitionChannels"
                     @save="patchField"
                   />
 
@@ -387,8 +406,26 @@
       @created="onInlineEmployeeCreated"
     />
 
-    <Toast position="top-right" />
-    <ConfirmDialog />
+    <!-- Disconnect dialog -->
+    <DisconnectDialog
+      v-if="company"
+      v-model="disconnectDialogOpen"
+      :company-id="company.id"
+      :company-name="company.name"
+      :reasons="directoriesStore.activeDisconnectReasons"
+      :signatory-default="company.director_short ?? company.director_position ?? null"
+      @created="onDisconnectCreated"
+    />
+
+    <!-- Termination document drawer -->
+    <TerminationDocumentDrawer
+      v-if="company && terminationDoc"
+      v-model="terminationDrawerOpen"
+      :company-name="company.name"
+      :document-id="terminationDoc.id"
+      @company-updated="onCompanyUpdatedFromTermination"
+    />
+
   </div>
 </template>
 
@@ -404,8 +441,6 @@ import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Skeleton from 'primevue/skeleton'
-import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
@@ -422,6 +457,10 @@ import CustomFieldRenderer from '@/components/crm/entity/CustomFieldRenderer.vue
 import CreateContactInlineDialog from '@/components/crm/CreateContactInlineDialog.vue'
 import { useEntityLog } from '@/composables/crm/useEntityLog'
 import CompanyRequisitesPanel from './components/CompanyRequisitesPanel.vue'
+import CompanyMarketingPanel from './components/CompanyMarketingPanel.vue'
+import ClientStatusBadge from '@/components/crm/ClientStatusBadge.vue'
+import DisconnectDialog from './components/DisconnectDialog.vue'
+import TerminationDocumentDrawer from './components/TerminationDocumentDrawer.vue'
 import CompanyEmployeesPanel from './components/CompanyEmployeesPanel.vue'
 import CompanyEmployeesTab from './components/CompanyEmployeesTab.vue'
 import CompanyDocumentsTab from './components/CompanyDocumentsTab.vue'
@@ -434,13 +473,22 @@ import { useBreakpoints } from '@/composables/useBreakpoints'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { CompanyExtended, EmploymentStatus, Company, Contact } from '@/entities/crm'
+import type { DocumentDto } from '@/entities/document'
 import type { MenuItem } from 'primevue/menuitem'
+import { useConfirm } from 'primevue/useconfirm'
 
 const { t } = useI18n()
 const router = useRouter()
 const toast = useToast()
+const confirm = useConfirm()
 
 const { isTablet, isMobile } = useBreakpoints()
+
+// ── Disconnect / Termination state ─────────────────────────────────────────────
+
+const disconnectDialogOpen = ref(false)
+const terminationDrawerOpen = ref(false)
+const terminationDoc = ref<DocumentDto | null>(null)
 
 const activeTab = ref('overview')
 const employeeSearch = ref('')
@@ -553,11 +601,13 @@ function formatKopecks(kopecks: number | null | undefined): string {
 const companyKpiItems = computed((): KpiItem[] => {
   const ext = company.value as CompanyExtended | null
   const lastAt = ext?.last_activity_at ?? null
-  const kpi = (ext as (CompanyExtended & { kpi?: { open_count?: number; base_total?: number; employees_count?: number; documents_count?: number } | null }) | null)?.kpi ?? null
+  const kpi = (ext as (CompanyExtended & { kpi?: { open_count?: number; base_total?: number; employees_count?: number; documents_count?: number; won_count?: number; upsell_count?: number } | null }) | null)?.kpi ?? null
   const openCount = kpi?.open_count ?? openDealsCount.value
   const dealsSum = kpi?.base_total ?? null
   const employeesCount = kpi?.employees_count ?? employees.value.length
   const documentsCount = kpi?.documents_count ?? documents.value.length
+  const wonCount = kpi?.won_count ?? 0
+  const upsellCount = kpi?.upsell_count ?? 0
   return [
     {
       key: 'open_deals',
@@ -574,6 +624,20 @@ const companyKpiItems = computed((): KpiItem[] => {
       label: 'company.kpi.dealsSum',
       value: formatKopecks(dealsSum),
       accent: 'brand',
+    },
+    {
+      key: 'won_deals',
+      icon: 'pi-trophy',
+      label: 'company.kpi.wonDeals',
+      value: wonCount,
+      accent: 'success',
+    },
+    {
+      key: 'upsell_deals',
+      icon: 'pi-refresh',
+      label: 'company.kpi.upsellDeals',
+      value: upsellCount,
+      accent: 'info',
     },
     {
       key: 'employees',
@@ -660,53 +724,76 @@ const filteredEmployees = computed(() => {
 
 // ── Menu items ─────────────────────────────────────────────────────────────────
 
-const menuItems = computed((): MenuItem[] => [
-  {
-    label: t('company.page.menu.createDeal'),
-    icon: 'pi pi-briefcase',
-    command: onCreateDeal,
-  },
-  {
-    label: t('company.page.menu.addTask'),
-    icon: 'pi pi-check-square',
-    command: () => { /* TODO: open task dialog */ },
-  },
-  {
-    label: t('company.page.menu.addNote'),
-    icon: 'pi pi-comment',
-    command: () => { /* TODO: open note dialog */ },
-  },
-  {
-    label: t('company.page.menu.call'),
-    icon: 'pi pi-phone',
-    command: () => { /* TODO: call action */ },
-  },
-  {
-    label: t('company.page.menu.email'),
-    icon: 'pi pi-envelope',
-    command: () => { /* TODO: email action */ },
-  },
-  { separator: true },
-  {
-    label: t('company.page.menu.copyLink'),
-    icon: 'pi pi-link',
-    command: () => {
-      void navigator.clipboard.writeText(window.location.href)
-      toast.add({ severity: 'success', summary: t('common.copied'), life: 2000 })
+const menuItems = computed((): MenuItem[] => {
+  const items: MenuItem[] = [
+    {
+      label: t('company.page.menu.createDeal'),
+      icon: 'pi pi-briefcase',
+      command: onCreateDeal,
     },
-  },
-  {
-    label: t('company.page.menu.export'),
-    icon: 'pi pi-download',
-    command: () => { /* TODO: export */ },
-  },
-  { separator: true },
-  {
+    {
+      label: t('company.page.menu.addTask'),
+      icon: 'pi pi-check-square',
+      command: () => { /* TODO: open task dialog */ },
+    },
+    {
+      label: t('company.page.menu.addNote'),
+      icon: 'pi pi-comment',
+      command: () => { /* TODO: open note dialog */ },
+    },
+    {
+      label: t('company.page.menu.call'),
+      icon: 'pi pi-phone',
+      command: () => { /* TODO: call action */ },
+    },
+    {
+      label: t('company.page.menu.email'),
+      icon: 'pi pi-envelope',
+      command: () => { /* TODO: email action */ },
+    },
+    { separator: true },
+    {
+      label: t('company.page.menu.copyLink'),
+      icon: 'pi pi-link',
+      command: () => {
+        void navigator.clipboard.writeText(window.location.href)
+        toast.add({ severity: 'success', summary: t('common.copied'), life: 2000 })
+      },
+    },
+    {
+      label: t('company.page.menu.export'),
+      icon: 'pi pi-download',
+      command: () => { /* TODO: export */ },
+    },
+    { separator: true },
+  ]
+
+  // Client lifecycle actions
+  const clientStatus = company.value?.client_status
+  if (clientStatus === 'active') {
+    items.push({
+      label: t('crm.company.menu.disconnect'),
+      icon: 'pi pi-times-circle',
+      class: 'menu-item--danger',
+      command: () => { disconnectDialogOpen.value = true },
+    })
+  } else if (clientStatus === 'disconnected') {
+    items.push({
+      label: t('crm.company.menu.reconnect'),
+      icon: 'pi pi-refresh',
+      command: onReconnect,
+    })
+  }
+
+  items.push({ separator: true })
+  items.push({
     label: t('common.delete'),
     icon: 'pi pi-trash',
     command: onDeleteCompany,
-  },
-])
+  })
+
+  return items
+})
 
 // ── Tab navigation options (mobile Select) ─────────────────────────────────────
 
@@ -734,20 +821,83 @@ function onCreateDeal() {
   }
 }
 
-async function onDeleteCompany() {
+// ── Disconnect / Reconnect ────────────────────────────────────────────────────
+
+function onDisconnectCreated(doc: DocumentDto) {
+  // Store the document and the payload for the TerminationDocumentDrawer
+  terminationDoc.value = doc
+  // Build a generate-compatible payload from what was sent (drawer re-uses it for generate)
+  // The doc carries the context implicitly; we just open the drawer
+  terminationDrawerOpen.value = true
+}
+
+function onReconnect() {
   if (!company.value) return
-  if (!confirm(t('company.page.menu.deleteConfirm'))) return
+  confirm.require({
+    message: t('crm.company.reconnect.confirm'),
+    header: t('crm.company.menu.reconnect'),
+    icon: 'pi pi-refresh',
+    acceptLabel: t('common.confirm', 'Подтвердить'),
+    rejectLabel: t('common.cancel'),
+    accept: async () => {
+      if (!company.value) return
+      try {
+        const updated = await companiesApi.reconnect(company.value.id)
+        Object.assign(company.value, updated)
+        toast.add({ severity: 'success', summary: t('crm.company.reconnect.success'), life: 3000 })
+      } catch (err) {
+        toast.add({
+          severity: 'error',
+          summary: getApiErrorMessage(err, t('errors.server_error')),
+          life: 4000,
+        })
+      }
+    },
+  })
+}
+
+async function onCompanyUpdatedFromTermination() {
+  // Refetch company — backend set client_status=disconnected
+  if (!companyId.value) return
   try {
-    await companiesApi.remove(company.value.id)
-    toast.add({ severity: 'success', summary: t('company.page.menu.deleteSuccess'), life: 3000 })
-    void router.push('/contacts')
-  } catch (err) {
+    const updated = await companiesApi.get(companyId.value)
+    if (company.value) Object.assign(company.value, updated)
     toast.add({
-      severity: 'error',
-      summary: getApiErrorMessage(err, t('errors.server_error')),
+      severity: 'success',
+      summary: t('crm.termination.statusDisconnected'),
+      detail: t('crm.company.clientStatus.disconnected'),
       life: 4000,
     })
+  } catch {
+    // non-fatal — just show toast
+    toast.add({ severity: 'info', summary: t('crm.termination.scanUploaded'), life: 3000 })
   }
+}
+
+function onDeleteCompany() {
+  if (!company.value) return
+  confirm.require({
+    message: t('company.page.menu.deleteConfirm'),
+    header: t('common.delete'),
+    icon: 'pi pi-trash',
+    acceptLabel: t('common.confirm', 'Подтвердить'),
+    rejectLabel: t('common.cancel'),
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      if (!company.value) return
+      try {
+        await companiesApi.remove(company.value.id)
+        toast.add({ severity: 'success', summary: t('company.page.menu.deleteSuccess'), life: 3000 })
+        void router.push('/contacts')
+      } catch (err) {
+        toast.add({
+          severity: 'error',
+          summary: getApiErrorMessage(err, t('errors.server_error')),
+          life: 4000,
+        })
+      }
+    },
+  })
 }
 
 async function saveCustomField(code: string, value: unknown) {

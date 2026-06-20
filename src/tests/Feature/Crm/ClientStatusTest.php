@@ -108,9 +108,9 @@ class ClientStatusTest extends TestCase
         Sanctum::actingAs($this->admin(), ['*']);
 
         $this->postJson('/api/admin/disconnect-reasons', [
-            'name'       => 'Сменил поставщика',
+            'name' => 'Сменил поставщика',
             'sort_order' => 1,
-            'is_active'  => true,
+            'is_active' => true,
         ])->assertSuccessful()
             ->assertJsonPath('data.name', 'Сменил поставщика');
 
@@ -230,7 +230,7 @@ class ClientStatusTest extends TestCase
     {
         $company = $this->company();
         $company->update([
-            'client_status'       => ClientStatus::Active,
+            'client_status' => ClientStatus::Active,
             'unique_client_since' => '2024-05-01',
         ]);
         $company->refresh();
@@ -306,7 +306,7 @@ class ClientStatusTest extends TestCase
         $service = app(CompanyService::class);
 
         $company->update([
-            'client_status'       => ClientStatus::Active,
+            'client_status' => ClientStatus::Active,
             'unique_client_since' => '2025-01-01',
         ]);
         $service->disconnect($company, $reason->id, null, null);
@@ -330,8 +330,8 @@ class ClientStatusTest extends TestCase
 
         // Force-disconnect a prospect (no unique_client_since)
         $company->update([
-            'client_status'        => ClientStatus::Disconnected,
-            'disconnected_at'      => now(),
+            'client_status' => ClientStatus::Disconnected,
+            'disconnected_at' => now(),
             'disconnect_reason_id' => $reason->id,
         ]);
 
@@ -348,7 +348,7 @@ class ClientStatusTest extends TestCase
         $service = app(CompanyService::class);
 
         $company->update([
-            'client_status'       => ClientStatus::Active,
+            'client_status' => ClientStatus::Active,
             'unique_client_since' => '2025-01-01',
         ]);
         $service->disconnect($company, $reason->id, null, null);
@@ -397,8 +397,8 @@ class ClientStatusTest extends TestCase
             'new_status' => ClientStatus::Active->value,
             'changed_by' => $user->id,
             'changed_at' => now()->subSeconds(60),
-            'reason_id'  => null,
-            'meta'       => null,
+            'reason_id' => null,
+            'meta' => null,
         ]);
 
         CompanyClientStatusLog::create([
@@ -407,8 +407,8 @@ class ClientStatusTest extends TestCase
             'new_status' => ClientStatus::Disconnected->value,
             'changed_by' => $user->id,
             'changed_at' => now(),
-            'reason_id'  => $reason->id,
-            'meta'       => null,
+            'reason_id' => $reason->id,
+            'meta' => null,
         ]);
 
         Sanctum::actingAs($user, ['*']);
@@ -440,7 +440,7 @@ class ClientStatusTest extends TestCase
 
         $this->postJson("/api/companies/{$company->id}/disconnect", [
             'disconnect_reason_id' => $reason->id,
-            'termination_date'     => '2025-12-31',
+            'termination_date' => '2025-12-31',
         ])->assertSuccessful()
             ->assertJsonPath('data.kind', 'termination_agreement');
 
@@ -484,7 +484,7 @@ class ClientStatusTest extends TestCase
         $reason = $this->reason();
 
         $company->update([
-            'client_status'       => ClientStatus::Active,
+            'client_status' => ClientStatus::Active,
             'unique_client_since' => '2025-01-01',
         ]);
 
@@ -506,7 +506,7 @@ class ClientStatusTest extends TestCase
         $user = $this->manager();
         $company = $this->company($user);
         $company->update([
-            'client_status'       => ClientStatus::Active,
+            'client_status' => ClientStatus::Active,
             'unique_client_since' => '2025-06-01',
         ]);
 

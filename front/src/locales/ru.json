@@ -29,6 +29,8 @@
     "onboardingAssignments": "Назначения",
     "hrProgress": "Прогресс",
     "automationRuns": "Журнал автоматизаций",
+    "acquisitionChannels": "Каналы привлечения",
+    "disconnectReasons": "Причины отключения",
     "sections": {
       "learning": "Обучение"
     }
@@ -256,6 +258,50 @@
       "automationRuns": {
         "title": "Журнал автоматизаций",
         "desc": "История запусков и результаты автоматических сценариев"
+      },
+      "acquisitionChannels": {
+        "title": "Каналы привлечения",
+        "desc": "Справочник каналов привлечения клиентов"
+      },
+      "disconnectReasons": {
+        "title": "Причины отключения",
+        "desc": "Справочник причин завершения сотрудничества"
+      }
+    }
+  },
+  "admin": {
+    "acquisitionChannels": {
+      "title": "Каналы привлечения",
+      "add": "Добавить канал",
+      "edit": "Редактировать канал",
+      "empty": "Каналы не добавлены",
+      "deleteConfirm": "Удалить канал привлечения?",
+      "columns": {
+        "name": "Название",
+        "sortOrder": "Порядок",
+        "isActive": "Активен"
+      },
+      "fields": {
+        "name": "Название *",
+        "sortOrder": "Порядок сортировки",
+        "isActive": "Активен"
+      }
+    },
+    "disconnectReasons": {
+      "title": "Причины отключения",
+      "add": "Добавить причину",
+      "edit": "Редактировать причину",
+      "empty": "Причины не добавлены",
+      "deleteConfirm": "Удалить причину отключения?",
+      "columns": {
+        "name": "Название",
+        "sortOrder": "Порядок",
+        "isActive": "Активна"
+      },
+      "fields": {
+        "name": "Название *",
+        "sortOrder": "Порядок сортировки",
+        "isActive": "Активна"
       }
     }
   },
@@ -306,7 +352,8 @@
     "actions": "Действия",
     "today": "Сегодня",
     "yesterday": "Вчера",
-    "copied": "Скопировано"
+    "copied": "Скопировано",
+    "select": "Выберите..."
   },
   "contacts": {
     "page": {
@@ -548,13 +595,16 @@
       "dealsSum": "Сумма сделок",
       "employees": "Сотрудники",
       "documents": "Документы",
-      "lastActivity": "Посл. активность"
+      "lastActivity": "Посл. активность",
+      "wonDeals": "Сделок выиграно",
+      "upsellDeals": "Допродаж"
     },
     "requisites": {
       "section": {
         "legal": "Юр. данные",
         "bank": "Банк",
-        "contacts": "Контакты и сегментация"
+        "contacts": "Контакты и сегментация",
+        "classification": "Классификация"
       }
     }
   },
@@ -1492,6 +1542,35 @@
         "markContractTooltip": "Отметить договор как отправленный",
         "kpMarked": "КП отмечено как отправленное",
         "contractMarked": "Договор отмечен как отправленный"
+      },
+      "fields": {
+        "perpetualLicense": "Вечная лицензия"
+      },
+      "perpetual": {
+        "on": "Бессрочно",
+        "off": "По подписке",
+        "confirmTitle": "Смена типа лицензии",
+        "confirmMessage": "Переключение пересчитает цены всех позиций сделки. Продолжить?",
+        "successOn": "Переключено на вечную лицензию",
+        "successOff": "Переключено на подписку"
+      },
+      "budget": {
+        "locked": "Бюджет (зафиксирован)",
+        "lineTotal": "Сумма позиций",
+        "total": "Итого",
+        "lock": "Зафиксировать сумму",
+        "unlock": "Снять фиксацию",
+        "lockedSuccess": "Сумма зафиксирована",
+        "unlockedSuccess": "Фиксация снята"
+      },
+      "dates": {
+        "group": "Ключевые даты",
+        "contractPlan": "Договор — план",
+        "contractFact": "Договор — факт",
+        "paymentPlan": "Оплата — план",
+        "paymentFact": "Оплата — факт",
+        "overdueBy": "Просрочено на {n} дн.",
+        "factDone": "Выполнено"
       }
     },
     "move": {
@@ -1743,6 +1822,7 @@
       "invoice": "Счёт",
       "act": "Акт",
       "reconciliation": "Сверка",
+      "termination_agreement": "Соглашение о расторжении",
       "yaml": "YAML",
       "docx": "DOCX"
     },
@@ -2889,7 +2969,8 @@
         "holding": "Холдинг",
         "deals": "Сделки",
         "totals": "Итоги",
-        "payments": "Платежи"
+        "payments": "Платежи",
+        "marketing": "Маркетинг"
       },
       "rail": {
         "author": "Автор",
@@ -2899,7 +2980,99 @@
         "director": "Директор",
         "bankName": "Банк",
         "bankAccount": "Расчётный счёт",
-        "annualRevenue": "Оборот в год"
+        "annualRevenue": "Оборот в год",
+        "specialization": "Специализация"
+      },
+      "specialization": {
+        "placeholder": "Не выбрана",
+        "agency": "Агентство недвижимости",
+        "developer": "Девелопер",
+        "builder": "Застройщик",
+        "contractor": "Подрядчик",
+        "supplier": "Поставщик",
+        "partner": "Партнёр"
+      },
+      "clientStatus": {
+        "prospect": "Потенциальный",
+        "active": "Активный клиент",
+        "disconnected": "Отключён",
+        "since": "с {date}",
+        "at": "{date}",
+        "logTitle": "История статуса клиента",
+        "logEmpty": "История пуста",
+        "logTooltip": "Нажмите, чтобы увидеть историю статусов"
+      },
+      "menu": {
+        "disconnect": "Отключить клиента",
+        "reconnect": "Возобновить клиента"
+      },
+      "disconnect": {
+        "title": "Отключение клиента",
+        "hint": "Статус изменится только после загрузки подписанного скана ДС о расторжении",
+        "reason": "Причина отключения",
+        "reasonPlaceholder": "Выберите причину...",
+        "reasonRequired": "Выберите причину отключения",
+        "date": "Дата расторжения",
+        "datePlaceholder": "Укажите дату",
+        "dateRequired": "Укажите дату расторжения",
+        "signatory": "Подписант",
+        "signatoryPlaceholder": "ФИО директора",
+        "submit": "Создать ДС о расторжении"
+      },
+      "reconnect": {
+        "confirm": "Возобновить сотрудничество с компанией?",
+        "success": "Статус компании обновлён"
+      },
+      "marketing": {
+        "channel": "Канал привлечения",
+        "channelHistory": "История смен",
+        "channelHistoryTitle": "История канала привлечения",
+        "historyEmpty": "История пуста",
+        "historyFrom": "Было",
+        "historyTo": "Стало",
+        "historyBy": "Изменил",
+        "noChannel": "Не задан"
+      },
+      "requisites": {
+        "current": "Действующие",
+        "add": "Добавить реквизиты",
+        "edit": "Редактировать реквизиты",
+        "setCurrent": "Сделать действующими",
+        "delete": "Удалить",
+        "deleteConfirm": "Удалить набор реквизитов?",
+        "empty": "Реквизиты не добавлены",
+        "loadError": "Ошибка загрузки реквизитов",
+        "defaultLabel": "Реквизиты",
+        "setCurrentSuccess": "Реквизиты установлены как действующие",
+        "createSuccess": "Реквизиты добавлены",
+        "updateSuccess": "Реквизиты обновлены",
+        "deleteSuccess": "Набор реквизитов удалён",
+        "deleteGuardError": "Невозможно удалить реквизиты",
+        "deleteGuardHint": "Нельзя удалить единственный текущий набор или набор, привязанный к документам",
+        "setAsCurrentOnCreate": "Сделать действующими сразу",
+        "fields": {
+          "label": "Название набора",
+          "labelPlaceholder": "Например: Новые реквизиты 2025",
+          "legalName": "Юридическое название",
+          "legalNamePlaceholder": "ТОО «Альфа»",
+          "fullLegalForm": "Полная юр. форма",
+          "taxIdLabel": "Тип идентификатора",
+          "taxId": "Идентификатор (ИНН/БИН)",
+          "taxIdPlaceholder": "123456789",
+          "director": "Директор (ФИО)",
+          "directorPlaceholder": "Иванов Иван Иванович",
+          "directorGenitive": "Директор (род. падеж)",
+          "directorGenitivePlaceholder": "Иванова Ивана Ивановича",
+          "bank": "Банк",
+          "account": "Расчётный счёт",
+          "bik": "БИК",
+          "validFrom": "Действует с",
+          "note": "Примечание",
+          "notePlaceholder": "Необязательно"
+        },
+        "errors": {
+          "legalNameRequired": "Юридическое название обязательно"
+        }
       },
       "holding": {
         "youAreHere": "Вы здесь",
@@ -2931,7 +3104,13 @@
         "dealsParticipation": "Участвует в сделках",
         "customFields": "Доп. поля",
         "dealsEmpty": "Сделок нет",
-        "notes": "Заметки"
+        "notes": "Заметки",
+        "marketing": "Маркетинг"
+      },
+      "marketing": {
+        "channel": "Канал привлечения",
+        "channelHistory": "История смен",
+        "historyTitle": "История канала (контакт)"
       },
       "notes": {
         "placeholder": "Добавьте заметку о контакте..."
@@ -3020,6 +3199,26 @@
         "deals": "Сделок",
         "companies": "Компаний"
       }
+    },
+    "termination": {
+      "drawerTitle": "ДС о расторжении",
+      "step1": "Генерация документа",
+      "generateHint": "Сгенерируйте ДС о расторжении в формате DOCX и PDF для подписания.",
+      "generateBtn": "Сгенерировать ДС",
+      "generating": "Идёт генерация...",
+      "generateError": "Ошибка генерации документа. Попробуйте ещё раз.",
+      "openPdf": "Открыть PDF",
+      "downloadDocx": "Скачать DOCX",
+      "step2": "Загрузка подписанного скана",
+      "scanHint": "Загрузите скан ДС, подписанного обеими сторонами. Статус клиента изменится только после загрузки.",
+      "chooseFile": "Выбрать файл",
+      "uploadFormats": "PDF, JPG, PNG — до 20 МБ",
+      "scanUploaded": "Скан загружен",
+      "uploadError": "Ошибка загрузки скана. Попробуйте ещё раз.",
+      "waiting": "Ожидает скан",
+      "statusDisconnected": "Отключён",
+      "clientStatusLabel": "Статус клиента",
+      "stepLockedHint": "Доступно после генерации документа"
     },
     "contacts_page": {
       "savedViews": {

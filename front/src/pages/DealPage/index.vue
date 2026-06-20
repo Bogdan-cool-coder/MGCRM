@@ -250,8 +250,6 @@
       @added="onContactAdded"
     />
 
-    <Toast position="top-right" />
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -261,8 +259,6 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
-import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import Drawer from 'primevue/drawer'
 import SelectButton from 'primevue/selectbutton'
 import DealInfoPanel from './components/DealInfoPanel.vue'

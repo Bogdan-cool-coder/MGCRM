@@ -31,7 +31,7 @@
 
       <!-- Info column -->
       <div class="entity-header__info-col">
-        <!-- Title + engagement chip -->
+        <!-- Title + engagement chip + status badge slot -->
         <div class="entity-header__title-row">
           <h2 class="entity-header__title">{{ title }}</h2>
           <EngagementChip
@@ -40,6 +40,8 @@
             :last-activity-at="lastActivityAt"
             class="entity-header__engagement"
           />
+          <!-- Client status badge (company only, optional) -->
+          <slot name="status" />
         </div>
 
         <!-- Metadata row -->

@@ -65,6 +65,8 @@ export interface Contact {
   owner_id: number | null
   owner?: { id: number; full_name: string } | null
   company_links?: ContactCompanyLink[]
+  // Acquisition channel (N1)
+  acquisition_channel_id: number | null
   created_at: string | null
   updated_at: string | null
 }
@@ -131,6 +133,17 @@ export interface Company {
 
   // Category
   category_code: CategoryCode | null
+
+  // Specialization (N1 enum)
+  specialization: 'agency' | 'developer' | 'builder' | 'contractor' | 'supplier' | 'partner' | null
+
+  // Acquisition channel (N1)
+  acquisition_channel_id: number | null
+
+  // Client status (N5)
+  client_status: ClientStatus | null
+  unique_client_since: string | null
+  disconnected_at: string | null
   turnover_rub: number | null
   category_recalc_at: string | null
 
@@ -310,6 +323,101 @@ export interface DealCustomFieldsResponse {
   definitions: CustomFieldDef[]
   values: Record<string, unknown>
 }
+
+// ─── Acquisition Channel (directories) ───────────────────────────────────────
+
+export interface AcquisitionChannel {
+  id: number
+  name: string
+  sort_order: number
+  is_active: boolean
+}
+
+// ─── Disconnect Reason (directories, N6) ─────────────────────────────────────
+
+export interface DisconnectReason {
+  id: number
+  name: string
+  sort_order: number
+  is_active: boolean
+}
+
+// ─── Channel History ──────────────────────────────────────────────────────────
+
+export interface ChannelHistoryEntry {
+  id: number
+  from_channel: string | null
+  to_channel: string | null
+  changed_by_name: string | null
+  changed_at: string
+}
+
+// ─── Client status ────────────────────────────────────────────────────────────
+
+export type ClientStatus = 'prospect' | 'active' | 'disconnected'
+
+export interface CompanyClientStatusLogEntry {
+  id: number
+  company_id: number
+  old_status: ClientStatus | null
+  new_status: ClientStatus
+  changed_by: number | null
+  changed_by_user: { id: number; full_name: string } | null
+  changed_at: string | null
+  reason_id: number | null
+  reason: { id: number; name: string } | null
+  meta: Record<string, unknown> | null
+  created_at: string | null
+}
+
+// ─── Company Requisite (N2) ───────────────────────────────────────────────────
+
+export interface CompanyRequisiteBankDetails {
+  bank: string | null
+  account: string | null
+  bik: string | null
+}
+
+export interface CompanyRequisite {
+  id: number
+  company_id: number
+  label: string | null
+  legal_name: string
+  full_legal_form: string | null
+  tax_id_label: string | null
+  tax_id: string | null
+  country_code: string | null
+  director: string | null
+  director_genitive: string | null
+  address: string | null
+  bank_details: CompanyRequisiteBankDetails | null
+  is_current: boolean
+  valid_from: string | null
+  valid_to: string | null
+  note: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface CreateRequisitePayload {
+  label?: string | null
+  legal_name: string
+  full_legal_form?: string | null
+  tax_id_label?: string | null
+  tax_id?: string | null
+  country_code?: string | null
+  director?: string | null
+  director_genitive?: string | null
+  address?: string | null
+  bank?: string | null
+  account?: string | null
+  bik?: string | null
+  valid_from?: string | null
+  note?: string | null
+  set_as_current?: boolean
+}
+
+export type UpdateRequisitePayload = Partial<CreateRequisitePayload>
 
 // ─── Entity Log (action log / audit trail) ────────────────────────────────────
 

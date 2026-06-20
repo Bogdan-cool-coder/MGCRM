@@ -5,6 +5,7 @@ import type {
   ContactCompanyLink,
   ContactRelation,
   PaginatedResponse,
+  ChannelHistoryEntry,
 } from '@/entities/crm'
 
 export interface ContactListParams {
@@ -225,5 +226,14 @@ export const contactsApi = {
       { responseType: 'blob' },
     )
     return res.data
+  },
+
+  // ── Channel History (N1) ──────────────────────────────────────────────────
+
+  async getChannelHistory(contactId: number): Promise<ChannelHistoryEntry[]> {
+    const res = await apiClient.get<{ data: ChannelHistoryEntry[] }>(
+      `/api/contacts/${contactId}/channel-history`,
+    )
+    return res.data.data ?? []
   },
 }

@@ -108,6 +108,14 @@ export interface DealDto {
   kp_sent_at?: string | null
   /** ISO timestamp of contract submission; null when not yet sent. */
   contract_sent_at?: string | null
+  /** True when deal products use perpetual (one-time) pricing model. */
+  perpetual_license?: boolean
+  /** True when deal amount is manually locked (does not auto-recalc from line items). */
+  amount_locked?: boolean
+  /** ISO date: actual contract signing date (факт). */
+  signed_at?: string | null
+  /** ISO date: actual payment date (факт). */
+  paid_at?: string | null
 }
 
 // ─── Activity type (used in NextTaskDto) ─────────────────────────────────────
@@ -325,8 +333,12 @@ export interface UpdateDealPayload {
   expected_close_date?: string | null
   expected_sign_date?: string | null
   expected_payment_date?: string | null
+  signed_at?: string | null
+  paid_at?: string | null
   owner_user_id?: number
   extra_fields?: Record<string, unknown>
+  perpetual_license?: boolean
+  amount_locked?: boolean
 }
 
 export interface MoveDealPayload {

@@ -73,15 +73,15 @@ class DisconnectFlowTest extends TestCase
 
     public function test_initiate_creates_termination_document(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         Sanctum::actingAs($user, ['*']);
 
         $response = $this->postJson("/api/companies/{$company->id}/disconnect", [
             'disconnect_reason_id' => $reason->id,
-            'termination_date'     => '2025-12-31',
+            'termination_date' => '2025-12-31',
         ])->assertSuccessful();
 
         // Returns a Document resource
@@ -89,22 +89,22 @@ class DisconnectFlowTest extends TestCase
         $response->assertJsonPath('data.status', ContractStatus::Draft->value);
 
         $this->assertDatabaseHas('documents', [
-            'kind'              => DocumentKind::TerminationAgreement->value,
+            'kind' => DocumentKind::TerminationAgreement->value,
             'source_company_id' => $company->id,
         ]);
     }
 
     public function test_initiate_does_not_change_company_status(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson("/api/companies/{$company->id}/disconnect", [
             'disconnect_reason_id' => $reason->id,
-            'termination_date'     => '2025-12-31',
+            'termination_date' => '2025-12-31',
         ])->assertSuccessful();
 
         // Company MUST still be active — status changes only on signed event.
@@ -113,19 +113,19 @@ class DisconnectFlowTest extends TestCase
 
     public function test_initiate_stores_reason_id_in_document_context(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
-        $reason  = $this->reason('Бюджетные ограничения');
+        $reason = $this->reason('Бюджетные ограничения');
 
         Sanctum::actingAs($user, ['*']);
 
         $response = $this->postJson("/api/companies/{$company->id}/disconnect", [
             'disconnect_reason_id' => $reason->id,
-            'termination_date'     => '2025-12-31',
+            'termination_date' => '2025-12-31',
         ])->assertSuccessful();
 
         $docId = $response->json('data.id');
-        $doc   = Document::findOrFail($docId);
+        $doc = Document::findOrFail($docId);
 
         $this->assertEquals($reason->id, $doc->context['custom']['disconnect_reason_id']);
         $this->assertEquals('2025-12-31', $doc->context['custom']['termination_date']);
@@ -134,7 +134,7 @@ class DisconnectFlowTest extends TestCase
 
     public function test_initiate_requires_disconnect_reason_id(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
 
         Sanctum::actingAs($user, ['*']);
@@ -147,9 +147,9 @@ class DisconnectFlowTest extends TestCase
 
     public function test_initiate_requires_termination_date(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         Sanctum::actingAs($user, ['*']);
 
@@ -161,14 +161,14 @@ class DisconnectFlowTest extends TestCase
 
     public function test_initiate_rejects_invalid_reason_id(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
 
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson("/api/companies/{$company->id}/disconnect", [
             'disconnect_reason_id' => 999999,
-            'termination_date'     => '2025-12-31',
+            'termination_date' => '2025-12-31',
         ])->assertUnprocessable()
             ->assertJsonValidationErrorFor('disconnect_reason_id');
     }
@@ -179,9 +179,9 @@ class DisconnectFlowTest extends TestCase
 
     public function test_service_initiate_creates_document_and_leaves_company_active(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
-        $reason  = $this->reason();
+        $reason = $this->reason();
         $service = app(CompanyDisconnectService::class);
 
         $doc = $service->initiate($company, $reason->id, '2025-12-31', $user->id);
@@ -197,9 +197,9 @@ class DisconnectFlowTest extends TestCase
 
     public function test_service_initiate_merges_caller_custom_context(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
-        $reason  = $this->reason();
+        $reason = $this->reason();
         $service = app(CompanyDisconnectService::class);
 
         $doc = $service->initiate($company, $reason->id, '2025-12-31', $user->id, [
@@ -224,28 +224,28 @@ class DisconnectFlowTest extends TestCase
     public function test_listener_sets_company_disconnected(): void
     {
         $company = $this->company();
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         // Create a termination document with reason stored in context.custom
         $doc = Document::factory()->create([
-            'kind'              => DocumentKind::TerminationAgreement->value,
+            'kind' => DocumentKind::TerminationAgreement->value,
             'source_company_id' => $company->id,
-            'status'            => ContractStatus::Signed->value,
-            'context'           => [
+            'status' => ContractStatus::Signed->value,
+            'context' => [
                 'sublicensee' => [],
-                'license'     => [],
-                'contract'    => [],
-                'payments'    => [],
-                'acts'        => [],
-                'custom'      => [
+                'license' => [],
+                'contract' => [],
+                'payments' => [],
+                'acts' => [],
+                'custom' => [
                     'disconnect_reason_id' => $reason->id,
-                    'termination_date'     => '2025-12-31',
-                    'termination_reason'   => $reason->name,
+                    'termination_date' => '2025-12-31',
+                    'termination_reason' => $reason->name,
                 ],
             ],
         ]);
 
-        $event    = new TerminationAgreementSigned($doc->id, $company->id, now());
+        $event = new TerminationAgreementSigned($doc->id, $company->id, now());
         $listener = app(DisconnectCompanyOnTerminationSigned::class);
         $listener->handle($event);
 
@@ -260,23 +260,23 @@ class DisconnectFlowTest extends TestCase
     public function test_listener_writes_status_log_on_disconnect(): void
     {
         $company = $this->company();
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         $doc = Document::factory()->create([
-            'kind'              => DocumentKind::TerminationAgreement->value,
+            'kind' => DocumentKind::TerminationAgreement->value,
             'source_company_id' => $company->id,
-            'status'            => ContractStatus::Signed->value,
-            'context'           => [
+            'status' => ContractStatus::Signed->value,
+            'context' => [
                 'sublicensee' => [],
-                'license'     => [],
-                'contract'    => [],
-                'payments'    => [],
-                'acts'        => [],
-                'custom'      => ['disconnect_reason_id' => $reason->id],
+                'license' => [],
+                'contract' => [],
+                'payments' => [],
+                'acts' => [],
+                'custom' => ['disconnect_reason_id' => $reason->id],
             ],
         ]);
 
-        $event    = new TerminationAgreementSigned($doc->id, $company->id, now());
+        $event = new TerminationAgreementSigned($doc->id, $company->id, now());
         $listener = app(DisconnectCompanyOnTerminationSigned::class);
         $listener->handle($event);
 
@@ -290,7 +290,7 @@ class DisconnectFlowTest extends TestCase
     public function test_listener_is_idempotent_on_already_disconnected_company(): void
     {
         $company = $this->company();
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         // Pre-disconnect the company
         app(CompanyService::class)->disconnect($company, $reason->id, null, null);
@@ -301,20 +301,20 @@ class DisconnectFlowTest extends TestCase
 
         // Fire event again (simulate re-upload)
         $doc = Document::factory()->create([
-            'kind'              => DocumentKind::TerminationAgreement->value,
+            'kind' => DocumentKind::TerminationAgreement->value,
             'source_company_id' => $company->id,
-            'status'            => ContractStatus::Signed->value,
-            'context'           => [
+            'status' => ContractStatus::Signed->value,
+            'context' => [
                 'sublicensee' => [],
-                'license'     => [],
-                'contract'    => [],
-                'payments'    => [],
-                'acts'        => [],
-                'custom'      => ['disconnect_reason_id' => $reason->id],
+                'license' => [],
+                'contract' => [],
+                'payments' => [],
+                'acts' => [],
+                'custom' => ['disconnect_reason_id' => $reason->id],
             ],
         ]);
 
-        $event    = new TerminationAgreementSigned($doc->id, $company->id, now());
+        $event = new TerminationAgreementSigned($doc->id, $company->id, now());
         $listener = app(DisconnectCompanyOnTerminationSigned::class);
         $listener->handle($event);
 
@@ -329,20 +329,20 @@ class DisconnectFlowTest extends TestCase
         $reason = $this->reason();
 
         $doc = Document::factory()->create([
-            'kind'    => DocumentKind::TerminationAgreement->value,
-            'status'  => ContractStatus::Signed->value,
+            'kind' => DocumentKind::TerminationAgreement->value,
+            'status' => ContractStatus::Signed->value,
             'context' => [
                 'sublicensee' => [],
-                'license'     => [],
-                'contract'    => [],
-                'payments'    => [],
-                'acts'        => [],
-                'custom'      => ['disconnect_reason_id' => $reason->id],
+                'license' => [],
+                'contract' => [],
+                'payments' => [],
+                'acts' => [],
+                'custom' => ['disconnect_reason_id' => $reason->id],
             ],
         ]);
 
         // Non-existent companyId — listener must not throw
-        $event    = new TerminationAgreementSigned($doc->id, 999999, now());
+        $event = new TerminationAgreementSigned($doc->id, 999999, now());
         $listener = app(DisconnectCompanyOnTerminationSigned::class);
 
         // Should complete without exception
@@ -358,19 +358,19 @@ class DisconnectFlowTest extends TestCase
     public function test_event_dispatch_triggers_listener_and_disconnects_company(): void
     {
         $company = $this->company();
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         $doc = Document::factory()->create([
-            'kind'              => DocumentKind::TerminationAgreement->value,
+            'kind' => DocumentKind::TerminationAgreement->value,
             'source_company_id' => $company->id,
-            'status'            => ContractStatus::Signed->value,
-            'context'           => [
+            'status' => ContractStatus::Signed->value,
+            'context' => [
                 'sublicensee' => [],
-                'license'     => [],
-                'contract'    => [],
-                'payments'    => [],
-                'acts'        => [],
-                'custom'      => ['disconnect_reason_id' => $reason->id],
+                'license' => [],
+                'contract' => [],
+                'payments' => [],
+                'acts' => [],
+                'custom' => ['disconnect_reason_id' => $reason->id],
             ],
         ]);
 
@@ -387,9 +387,9 @@ class DisconnectFlowTest extends TestCase
 
     public function test_reconnect_after_event_driven_disconnect(): void
     {
-        $user    = $this->manager();
+        $user = $this->manager();
         $company = $this->company($user);
-        $reason  = $this->reason();
+        $reason = $this->reason();
 
         // Directly set disconnected (simulating listener result)
         app(CompanyService::class)->disconnect($company, $reason->id, null, null);

@@ -568,11 +568,25 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `config/amo_migration.php` — скелет карт (pipelines/status_map/user_map TODO перед load-фазой).
 - [x] 20 migration-тестов (MigrationSchemaTest + AmoImportUserSeederTest + AmoMigrationConfigTest) зелёных.
 
+**Фронт FE-1…FE-5 — ✅ DONE (frontend-specialist, 2026-06-21, uncommitted, ветка feat/amo-native-fields)**
+
+- [x] **FE-1 (N1):** специализация (InlineEditableField select, блок «Классификация» в CompanyRequisitesPanel); `ClientStatusBadge.vue` (Tag+Popover со status-log, 3 severity); раздел «Маркетинг» (CompanyMarketingPanel + ContactMarketingPanel, InlineEditableField select из directoriesStore); `ChannelHistoryDrawer.vue` (Drawer right, список смен).
+- [x] **FE-2 (N2):** `CompanyRequisitesPanel` полностью переработан: список `RequisiteCard`, «Действующие», `RequisiteFormDialog` (create/edit/set-current); guard-удаление (422-toast без краша); `onUnmounted` + снаппи-закрытие (close до рефетча).
+- [x] **FE-3 (N3):** `DealDatesGroup.vue` — 4 пары «план/факт» (`DatePicker` PrimeVue dd.mm.yy, computed overdueDays); `DealProductsGroup` расширен: toggle perpetual (`ToggleSwitch`+`ConfirmDialog`) + замок бюджета (иконка + кнопка «Снять замок», двух-строчный режим при расхождении). `DealTabMain` — perpetualMutation/lockMutation через `useMutation<DealDto>`.
+- [x] **FE-4 (N1/N6):** `AcquisitionChannelsPage` + `DisconnectReasonsPage` (DataTable+Dialog CRUD, ToggleSwitch is_active, ConfirmDialog delete); роуты `/admin/acquisition-channels` + `/admin/disconnect-reasons` (gate roles: admin/director); SettingsPage hub расширен; directoriesStore — `acquisitionChannels` + `disconnectReasons` в `fetchAll()`.
+- [x] **FE-5 (N6):** `DisconnectDialog.vue` (причина+дата, initiate → создаёт ДС, статус НЕ меняется сразу); `TerminationDocumentDrawer.vue` (генерация PDF + upload скана, step-lock до генерации); reconnect через confirm; компания-меню «Отключить/Возобновить» по `client_status`; `TerminationAgreementSigned` → статус «отключён» (бэкенд-событие).
+- [x] Дублирующие `<Toast/>` + `<ConfirmDialog/>` убраны из DealPage + CompanyPage (остались только в DefaultLayout).
+- [x] i18n RU+EN полный для всех 5 срезов.
+- [x] 3 раунда браузерного QA: FE-1..4 PASS; FE-5 PASS (генерация ДС 422 на dev — placeholder-шаблон, не фронт-баг).
+- [x] Orbita inline-label refactor (попутный UX-фикс): `v-tooltip` заменён на `orbita-action-btn` inline-label pattern в `NotificationsButton`, `UserProfileButton`, `QuickActionsCluster`; scoped slot `labelSide` из `OrbitaPanel`.
+- [x] Новые тесты: `CompanyKpiTest.php` + `ContactKpiTest.php` (untracked — нужно добавить в commit).
+
 **Открытые хвосты (беклог, не блокеры для текущих спринтов):**
-- Фронт N1–N7 (все UI-срезы специализации, каналов, реквизитов, disconnect-flow, is_primary_deal, вечной лицензии, жизненного цикла клиента) — откладывается на фронт-спринт.
 - ETL-фазы N7 (Фаза 1–3: extract/transform/load AMO → MGCRM) — отдельная задача migration-specialist после заполнения config-карт юзером.
-- Юр-текст DOCX ДС расторжения — TODO от юзера (юристу); placeholder-шаблон уже создан, placeholder docx — загрузить через `/api/templates/{id}/upload`.
+- Юр-текст DOCX ДС расторжения — TODO от юзера (юристу); placeholder-шаблон уже создан, placeholder docx — загрузить через `/api/templates/{id}/upload`. Генерация PDF даст 200 только после загрузки реального docx.
+- Gate `disconnect`/`reconnect` — бэкенд: `$this->authorize('update', $company)`. Фронт: меню-пункт показывается по `client_status`, без дополнительной проверки роли менеджера на фронте. Вопрос: нужна ли явная роль manager+? — обсудить с юзером, сейчас приоритет: бэкенд-gate = update-policy (менеджер может).
 - Finance/Analytics (M9/M10) при расчётах: читать `Deal.amount` + проверять `amount_locked`; `is_primary_deal=true` = новый клиент, `won && !is_primary_deal` = upsell. `finance-specialist` и `analytics-specialist` должны получить этот контракт при старте M9/M10.
+- DealDatesGroup: использован `DatePicker` PrimeVue напрямую (не `InlineEditableField type=date`) — ТЗ указывало InlineEditableField, фактически DatePicker (расхождение несущественно по UX, зафиксировано).
 
 ---
 

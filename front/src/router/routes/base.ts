@@ -235,6 +235,28 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'automation.runs.pageTitle' },
   },
 
+  // ─── Directories: Admin ──────────────────────────────────────────────────
+  {
+    path: '/admin/acquisition-channels',
+    name: 'AcquisitionChannels',
+    component: () => import('@/pages/AcquisitionChannelsPage'),
+    meta: {
+      requiresAuth: true,
+      roles: ['admin', 'director'],
+      title: 'admin.acquisitionChannels.title',
+    },
+  },
+  {
+    path: '/admin/disconnect-reasons',
+    name: 'DisconnectReasons',
+    component: () => import('@/pages/DisconnectReasonsPage'),
+    meta: {
+      requiresAuth: true,
+      roles: ['admin', 'director'],
+      title: 'admin.disconnectReasons.title',
+    },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

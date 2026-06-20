@@ -178,6 +178,15 @@
                         />
                       </InfoPanel>
 
+                      <!-- Marketing panel (N1 FE-B.1) -->
+                      <ContactMarketingPanel
+                        :contact-id="contact.id"
+                        :acquisition-channel-id="contact.acquisition_channel_id ?? null"
+                        :is-saving="isSaving"
+                        :channels="directoriesStore.activeAcquisitionChannels"
+                        @save="patchField"
+                      />
+
                       <!-- Заметки -->
                       <InfoPanel
                         :title="t('crm.contact.sections.notes')"
@@ -342,6 +351,7 @@ import ContactChannelsBlock from './components/ContactChannelsBlock.vue'
 import ContactCompaniesPanel from './components/ContactCompaniesPanel.vue'
 import ContactRelationsPanel from './components/ContactRelationsPanel.vue'
 import ContactDealsPanel from './components/ContactDealsPanel.vue'
+import ContactMarketingPanel from './components/ContactMarketingPanel.vue'
 import { useContactPageData } from './composables/useContactPageData'
 import { useContactPageActions } from './composables/useContactPageActions'
 import { useDirectoriesStore } from '@/stores/directories'
