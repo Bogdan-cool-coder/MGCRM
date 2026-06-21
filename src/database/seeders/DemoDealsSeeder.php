@@ -38,19 +38,20 @@ class DemoDealsSeeder extends Seeder
     /**
      * Demo deals: [stage code, title, currency, [[product code, plan code|null, qty], ...]].
      * Stage codes are "MACRO Global" (AMO) codes.
+     * Product codes reference the MACRO Global 2026 official price-list catalog.
      *
      * @var list<array{0: string, 1: string, 2: string, 3: list<array{0: string, 1: ?string, 2: float}>}>
      */
     private const DEALS = [
-        ['unsorted', 'ООО «Ромашка» — внедрение CRM', 'RUB', [['macro_crm', null, 1]]],
-        ['unsorted', 'Acme Corp — AI assistant pilot', 'USD', [['macro_ai_assistant', 'per_min', 1000]]],
-        ['qualification', 'ТехноПарк — MACRO AI Core', 'RUB', [['macro_ai_core', 'start_annual', 1]]],
-        ['schedule', 'Глобус Логистик — интеграции', 'RUB', [['macro_integration_kit', 'basic_pkg', 1]]],
-        ['meeting', 'СтройИнвест — комплекс', 'RUB', [['macro_crm', null, 1], ['implementation_standard', null, 1]]],
-        ['warm', 'Альфа Финанс — MACRO AI Core Business', 'RUB', [['macro_ai_core', 'business_annual', 1]]],
-        ['hot', 'Берёзка Ритейл — Enterprise', 'RUB', [['macro_ai_core', 'enterprise_annual', 1]]],
-        ['success', 'Восток Трейд — закрытая', 'RUB', [['macro_crm', null, 2]]],
-        ['trial', 'Север Холдинг — пробный период', 'RUB', [['macro_integration_kit', 'pro_pkg', 1]]],
+        ['unsorted', 'ООО «Ромашка» — внедрение CRM', 'RUB', [['macro_sales_crm', null, 1]]],
+        ['unsorted', 'Acme Corp — Voice AI pilot', 'USD', [['voice_ai_broker', 'per_min', 500]]],
+        ['qualification', 'ТехноПарк — WhatsApp AI Broker', 'RUB', [['whatsapp_ai_broker', null, 1]]],
+        ['schedule', 'Глобус Логистик — TouchLink', 'RUB', [['touchlink', null, 1]]],
+        ['meeting', 'СтройИнвест — CRM + настройка', 'RUB', [['macro_sales_crm', null, 1], ['setup_macro_sales_crm', 'setup', 1]]],
+        ['warm', 'Альфа Финанс — Data Analytics AI', 'RUB', [['data_analytics_ai', null, 1]]],
+        ['hot', 'Берёзка Ритейл — MacroERP', 'RUB', [['macro_erp', null, 1]]],
+        ['success', 'Восток Трейд — закрытая', 'RUB', [['macro_sales_crm', null, 2]]],
+        ['trial', 'Север Холдинг — FlowFix', 'RUB', [['flowfix', null, 1]]],
     ];
 
     public function run(): void
