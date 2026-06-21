@@ -16,15 +16,15 @@ use Tests\TestCase;
 /**
  * AmoProductMappingSeeder curated mapping validation.
  *
- * Expected counts (2026-06-22 curation):
- *   map  — 25 (macro_sales_crm×2, macro_erp×3, flowfix×5, macro_catalog,
+ * Expected counts (2026-06-22 curation, updated per user decision):
+ *   map  — 18 (macro_sales_crm×2, macro_erp×3, macro_catalog,
  *              customer_portal×2, macro_broker×3, macro_web×2, touchlink,
- *              ppi×4, voice_ai_broker, data_analytics_ai)
- *   skip — 69
+ *              ppi×4)
+ *   skip — 76
  *   total — 94
  *
  * All mapped rows must point to an existing Product row.
- * UNCERTAIN rows carry a notes string containing 'UNCERTAIN'.
+ * No UNCERTAIN rows remain (user confirmed all seven as "иной продукт").
  */
 class AmoProductMappingSeederTest extends TestCase
 {
@@ -57,9 +57,9 @@ class AmoProductMappingSeederTest extends TestCase
         $mapped = AmoProductMapping::where('action', 'map')->count();
         $skipped = AmoProductMapping::where('action', 'skip')->count();
 
-        // 25 mapped + 69 skipped = 94
-        $this->assertSame(25, $mapped, "Expected 25 map rows, got {$mapped}");
-        $this->assertSame(69, $skipped, "Expected 69 skip rows, got {$skipped}");
+        // 18 mapped + 76 skipped = 94
+        $this->assertSame(18, $mapped, "Expected 18 map rows, got {$mapped}");
+        $this->assertSame(76, $skipped, "Expected 76 skip rows, got {$skipped}");
     }
 
     // ── every map row has a valid catalog_product_id ─────────────────────────
@@ -95,6 +95,55 @@ class AmoProductMappingSeederTest extends TestCase
             ->count();
 
         $this->assertSame(0, $badSkips, 'Some skip rows unexpectedly have a catalog_product_id');
+    }
+
+    // ── no UNCERTAIN notes remain ─────────────────────────────────────────────
+
+    public function test_no_uncertain_notes_remain(): void
+    {
+        $this->seedAll();
+
+        $uncertainCount = AmoProductMapping::where('notes', 'like', '%UNCERTAIN%')->count();
+
+        $this->assertSame(
+            0,
+            $uncertainCount,
+            'There are still rows with UNCERTAIN in notes; all should have been resolved',
+        );
+    }
+
+    // ── the 7 MacroBank + AI rows are now skip ────────────────────────────────
+
+    #[DataProvider('resolvedUncertainEnumIds')]
+    public function test_resolved_uncertain_rows_are_skip(int $enumId, string $label): void
+    {
+        $this->seedAll();
+
+        $row = AmoProductMapping::where('amo_enum_id', $enumId)->firstOrFail();
+
+        $this->assertSame(
+            'skip',
+            $row->action,
+            "Row '{$label}' (enum {$enumId}) should be skip after user decision",
+        );
+        $this->assertNull(
+            $row->catalog_product_id,
+            "Row '{$label}' (enum {$enumId}) should have null catalog_product_id",
+        );
+    }
+
+    /** @return list<array{0: int, 1: string}> */
+    public static function resolvedUncertainEnumIds(): array
+    {
+        return [
+            [1137106, '3. MacroBank (база)'],
+            [1193976, '3.1. MacroBank.Строительный учет (база)'],
+            [1194530, '3.2. MacroBank.Банковский учет'],
+            [1194532, '3.3. MacroBank.Финансовый учет расширенный'],
+            [1194534, '3.4. MacroBank.Строительный учет расширенный'],
+            [1193558, '7.5. Расшифровка звонков в текст'],
+            [1198070, '7.6. Распознавание документов 2.0'],
+        ];
     }
 
     // ── specific product mappings ─────────────────────────────────────────────
@@ -133,21 +182,6 @@ class AmoProductMappingSeederTest extends TestCase
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
         $this->assertSame('macro_erp', $product->code);
-    }
-
-    public function test_macro_bank_base_maps_to_flowfix_with_uncertain_note(): void
-    {
-        $this->seedAll();
-
-        $row = AmoProductMapping::where('amo_enum_id', 1137106)->firstOrFail();
-        $this->assertSame('map', $row->action);
-
-        $product = Product::find($row->catalog_product_id);
-        $this->assertNotNull($product);
-        $this->assertSame('flowfix', $product->code);
-
-        $this->assertNotNull($row->notes);
-        $this->assertStringContainsString('UNCERTAIN', $row->notes);
     }
 
     public function test_touchlink_maps_to_touchlink(): void
@@ -238,36 +272,6 @@ class AmoProductMappingSeederTest extends TestCase
         }
     }
 
-    public function test_voice_ai_broker_mapping_has_uncertain_note(): void
-    {
-        $this->seedAll();
-
-        $row = AmoProductMapping::where('amo_enum_id', 1193558)->firstOrFail();
-        $this->assertSame('map', $row->action);
-
-        $product = Product::find($row->catalog_product_id);
-        $this->assertNotNull($product);
-        $this->assertSame('voice_ai_broker', $product->code);
-
-        $this->assertNotNull($row->notes);
-        $this->assertStringContainsString('UNCERTAIN', $row->notes);
-    }
-
-    public function test_data_analytics_ai_mapping_has_uncertain_note(): void
-    {
-        $this->seedAll();
-
-        $row = AmoProductMapping::where('amo_enum_id', 1198070)->firstOrFail();
-        $this->assertSame('map', $row->action);
-
-        $product = Product::find($row->catalog_product_id);
-        $this->assertNotNull($product);
-        $this->assertSame('data_analytics_ai', $product->code);
-
-        $this->assertNotNull($row->notes);
-        $this->assertStringContainsString('UNCERTAIN', $row->notes);
-    }
-
     // ── spot-check important skips ────────────────────────────────────────────
 
     #[DataProvider('skippedEnumIds')]
@@ -315,8 +319,8 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seed(AmoProductMappingSeeder::class);
 
         $this->assertSame(94, AmoProductMapping::count());
-        $this->assertSame(25, AmoProductMapping::where('action', 'map')->count());
-        $this->assertSame(69, AmoProductMapping::where('action', 'skip')->count());
+        $this->assertSame(18, AmoProductMapping::where('action', 'map')->count());
+        $this->assertSame(76, AmoProductMapping::where('action', 'skip')->count());
     }
 
     public function test_rerun_overwrites_manual_deviation(): void

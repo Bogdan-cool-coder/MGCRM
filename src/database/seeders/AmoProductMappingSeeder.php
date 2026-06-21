@@ -13,12 +13,11 @@ use Illuminate\Database\Seeder;
  * AMO "Продукт/Product" (multiselect, field 590196) enum option into the
  * amo_product_mappings curation table with curated action/catalog_product_id.
  *
- * Mapping rules applied (2026-06-22 curation pass):
+ * Mapping rules applied (2026-06-22 curation pass, updated per user decision):
  *   map   — clear match to a MACRO Global 2026 catalog product
  *   skip  — no direct analog; deprecated, discontinued, customization services,
- *            legacy modules subsumed by the main product, or 3rd-party connectors
- *
- * UNCERTAIN entries are mapped but carry a notes flag for human confirmation.
+ *            legacy modules subsumed by the main product, or 3rd-party connectors,
+ *            or products from other vendor lines confirmed as "иной продукт" by user
  *
  * Idempotent: re-running converges on the same 94 rows.
  * This seeder now DOES assert action/catalog_product_id/notes on each run so that
@@ -31,6 +30,7 @@ class AmoProductMappingSeeder extends Seeder
      * All 94 AMO "Продукт/Product" enum options with curated mapping.
      *
      * Format: [amo_enum_id, amo_value, action, catalog_code|null, notes|null]
+     * Counts: 18 map / 76 skip / 94 total.
      *
      * @var list<array{0: int, 1: string, 2: string, 3: string|null, 4: string|null}>
      */
@@ -53,13 +53,13 @@ class AmoProductMappingSeeder extends Seeder
         [1188148, '2.2. ТМЦ, модуль',                               'map',  'macro_erp',       'Sub-module of MacroERP; mapped to parent product'],
 
         // ── 3.x MacroBank ─────────────────────────────────────────────────────
-        // MacroBank is financial accounting SaaS; closest 2026 product is FlowFix.
-        // UNCERTAIN — confirm with product owner before ETL.
-        [1137106, '3. MacroBank (база)',                              'map',  'flowfix',         'UNCERTAIN: MacroBank→FlowFix (финучёт), подтвердить у юзера'],
-        [1193976, '3.1. MacroBank.Строительный учет (база)',          'map',  'flowfix',         'UNCERTAIN: MacroBank module→FlowFix, подтвердить у юзера'],
-        [1194530, '3.2. MacroBank.Банковский учет',                   'map',  'flowfix',         'UNCERTAIN: MacroBank module→FlowFix, подтвердить у юзера'],
-        [1194532, '3.3. MacroBank.Финансовый учет расширенный',       'map',  'flowfix',         'UNCERTAIN: MacroBank module→FlowFix, подтвердить у юзера'],
-        [1194534, '3.4. MacroBank.Строительный учет расширенный',     'map',  'flowfix',         'UNCERTAIN: MacroBank module→FlowFix, подтвердить у юзера'],
+        // MacroBank is a separate financial product line — not a 2026 catalog analog.
+        // User decision 2026-06-22: skip all MacroBank entries.
+        [1137106, '3. MacroBank (база)',                              'skip', null,              'skip: иной продукт (решение юзера)'],
+        [1193976, '3.1. MacroBank.Строительный учет (база)',          'skip', null,              'skip: иной продукт (решение юзера)'],
+        [1194530, '3.2. MacroBank.Банковский учет',                   'skip', null,              'skip: иной продукт (решение юзера)'],
+        [1194532, '3.3. MacroBank.Финансовый учет расширенный',       'skip', null,              'skip: иной продукт (решение юзера)'],
+        [1194534, '3.4. MacroBank.Строительный учет расширенный',     'skip', null,              'skip: иной продукт (решение юзера)'],
         [1194536, '3.5. Доработка отчетных форм',                    'skip', null,              'MacroBank custom dev — no 2026 catalog entry'],
         [1194538, '3.6. Интеграция с MacroERP входящая',              'skip', null,              'MacroBank integration work — no 2026 catalog entry'],
         [1194540, '3.7. Интеграция с 1С исходящая',                  'skip', null,              'MacroBank integration work — no 2026 catalog entry'],
@@ -87,10 +87,9 @@ class AmoProductMappingSeeder extends Seeder
         [1193980, '7.2. Новый филиал',                               'skip', null,              'Infrastructure feature — no 2026 catalog entry'],
         [1188266, '7.3. Backup данных',                              'skip', null,              'Infrastructure feature — no 2026 catalog entry'],
         [1192896, '7.4. MacroData',                                  'skip', null,              'Legacy data product — no direct 2026 catalog entry'],
-        // 7.5 — speech-to-text → Voice AI Broker (UNCERTAIN: was a utility, not a broker)
-        [1193558, '7.5. Расшифровка звонков в текст',                'map',  'voice_ai_broker', 'UNCERTAIN: speech-to-text feature→voice_ai_broker, подтвердить у юзера'],
-        // 7.6 — document recognition → Data Analytics AI (UNCERTAIN)
-        [1198070, '7.6. Распознавание документов 2.0',               'map',  'data_analytics_ai', 'UNCERTAIN: doc recognition→data_analytics_ai, подтвердить у юзера'],
+        // 7.5 / 7.6 — user decision 2026-06-22: иной продукт, не наши аналоги → skip
+        [1193558, '7.5. Расшифровка звонков в текст',                'skip', null,              'skip: иной продукт (решение юзера)'],
+        [1198070, '7.6. Распознавание документов 2.0',               'skip', null,              'skip: иной продукт (решение юзера)'],
 
         // ── 8.x Партнёрские интеграции ───────────────────────────────────────
         // Only 8.26 TouchLink maps; all others are 3rd-party connector SKUs with
