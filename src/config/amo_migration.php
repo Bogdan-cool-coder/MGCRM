@@ -28,6 +28,51 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | API / extract (Phase 1)
+    |--------------------------------------------------------------------------
+    |
+    | AMO API v4 connection + extract tuning for AmoClient and the extractors.
+    | Token is a long-lived integration Bearer (AMO "долгоживущий" token) — kept
+    | in env only, never hard-coded, never logged. base_url interpolates the
+    | subdomain so a sandbox account can be pointed at without code changes.
+    |
+    | rate_limit_rps: AMO caps at ~7 req/s account-wide; we throttle to 6 to leave
+    | headroom for the live prod integration running alongside the one-off import.
+    | staging_path is resolved against storage_path() by the extractors; the JSONL
+    | files are written there (one record per line) so transform/load re-run off
+    | disk without re-hitting AMO.
+    |
+    */
+    'api' => [
+        'subdomain' => env('AMO_MIGRATION_SUBDOMAIN', 'macro'),
+        'base_url' => 'https://'.env('AMO_MIGRATION_SUBDOMAIN', 'macro').'.amocrm.ru/api/v4',
+        'token' => env('AMO_MIGRATION_TOKEN'),
+        'rate_limit_rps' => (int) env('AMO_MIGRATION_RATE_LIMIT_RPS', 6),
+        'pipeline_ids' => [6149857, 10915373],
+        'staging_path' => 'amo-migration',
+
+        // Per-entity id-filter batch sizes (AMO caps url length / filter cardinality).
+        'batch' => [
+            'contacts' => 250,
+            'companies' => 250,
+            'tasks' => 50,
+            'events' => 50,
+        ],
+
+        // Retry policy for 429 / 5xx (honours Retry-After when present).
+        'retry' => [
+            'max_attempts' => 5,
+            'base_delay_ms' => 1000,
+            'max_delay_ms' => 30000,
+        ],
+
+        // HTTP timeouts (seconds).
+        'timeout' => 30,
+        'connect_timeout' => 10,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Source / pipelines
     |--------------------------------------------------------------------------
     |
