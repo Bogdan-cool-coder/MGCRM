@@ -1,0 +1,11 @@
+/* ===========================================================================
+   MACRO Global — Fonts
+   Brand primary typeface: SF UI Display (Apple system display; not webfont-
+   licensed). The CRM ships Inter as the web fallback — see typography.ts in
+   the product. Secondary/brand documents use Roboto.
+   We load Inter + Roboto from Google Fonts as the faithful web stand-ins.
+   ⚠ SUBSTITUTION: SF UI Display is unavailable as a webfont — Inter is the
+   product's own documented fallback and what every screen actually renders in.
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');

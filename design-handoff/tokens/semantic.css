@@ -1,0 +1,90 @@
+/* ===========================================================================
+   MACRO Global — Semantic aliases
+   Maps raw primitives → role-based tokens used across UI. Source: semantic.ts
+   The CRM is light-first; the sidebar & deal-card header are brand-invariant
+   (always navy, never adapt to dark mode).
+   =========================================================================== */
+
+:root {
+  /* ─── Surfaces ────────────────────────────────────────────────────────── */
+  --mg-surface-page:    var(--mg-gray-100); /* #F1F2F3 app background */
+  --mg-surface-card:    var(--mg-gray-0);   /* #FFFFFF card / panel */
+  --mg-surface-muted:   var(--mg-gray-50);
+  --mg-surface-hover:   var(--mg-gray-200);
+  --mg-surface-panel:   var(--mg-gray-100);
+
+  /* ─── Text ────────────────────────────────────────────────────────────── */
+  --mg-text-primary:   var(--mg-gray-900); /* #272829 */
+  --mg-text-secondary: var(--mg-gray-700); /* #616263 */
+  --mg-text-muted:     var(--mg-gray-600); /* #7E7F82 */
+  --mg-text-inverse:   var(--mg-gray-0);
+  --mg-text-link:      var(--mg-primary-900);
+
+  /* ─── Borders ─────────────────────────────────────────────────────────── */
+  --mg-border-default: var(--mg-gray-200); /* #E3E4E6 */
+  --mg-border-strong:  var(--mg-gray-300); /* #D5D6D8 */
+  --mg-border-focus:   var(--mg-primary-900);
+  --mg-border-accent:  var(--mg-primary-400);
+
+  /* ─── Status triads (bg / border / text / solid) ──────────────────────── */
+  --mg-status-success-bg:     var(--mg-green-100);
+  --mg-status-success-border: var(--mg-green-300);
+  --mg-status-success-text:   var(--mg-green-900);
+  --mg-status-success-solid:  var(--mg-green-500);
+
+  --mg-status-danger-bg:      var(--mg-red-50);
+  --mg-status-danger-border:  var(--mg-red-200);
+  --mg-status-danger-text:    var(--mg-red-700);
+  --mg-status-danger-solid:   var(--mg-red-500);
+
+  --mg-status-warning-bg:     var(--mg-orange-100);
+  --mg-status-warning-border: var(--mg-orange-300);
+  --mg-status-warning-text:   var(--mg-orange-900);
+  --mg-status-warning-solid:  var(--mg-orange-500);
+
+  --mg-status-info-bg:        var(--mg-blue-100);
+  --mg-status-info-border:    var(--mg-blue-300);
+  --mg-status-info-text:      var(--mg-blue-900);
+  --mg-status-info-solid:     var(--mg-blue-500);
+
+  /* ─── Actions (buttons) ───────────────────────────────────────────────── */
+  --mg-action-primary-bg:     var(--mg-primary-900);
+  --mg-action-primary-hover:  var(--mg-primary-800);
+  --mg-action-primary-active: var(--mg-primary-700);
+  --mg-action-primary-text:   var(--mg-gray-0);
+
+  --mg-action-secondary-bg:    var(--mg-gray-0);
+  --mg-action-secondary-text:  var(--mg-gray-700);
+  --mg-action-secondary-border:var(--mg-gray-300);
+  --mg-action-secondary-hover: var(--mg-gray-100);
+
+  --mg-action-danger-bg:    var(--mg-red-500);
+  --mg-action-danger-hover: var(--mg-red-600);
+  --mg-action-danger-text:  var(--mg-gray-0);
+
+  /* ─── Inputs ──────────────────────────────────────────────────────────── */
+  --mg-input-bg:           var(--mg-gray-0);
+  --mg-input-border:       var(--mg-gray-300);
+  --mg-input-hover-border: var(--mg-primary-400);
+  --mg-input-focus-border: var(--mg-primary-900);
+  --mg-input-text:         var(--mg-gray-900);
+  --mg-input-placeholder:  var(--mg-gray-500);
+  --mg-input-disabled-bg:  var(--mg-gray-100);
+
+  /* ─── Brand-invariant chrome (never adapts to theme) ──────────────────── */
+  --mg-sidebar-bg:          #172747; /* brand-primary */
+  --mg-sidebar-hover-bg:    #0E172B; /* brand-primary-dark */
+  --mg-sidebar-active-bg:   rgba(255, 255, 255, 0.08);
+  --mg-sidebar-active-bar:  #ffffff;
+  --mg-sidebar-text:        rgba(255, 255, 255, 0.75);
+  --mg-sidebar-text-active: #ffffff;
+  --mg-sidebar-divider:     rgba(255, 255, 255, 0.08);
+  --mg-deal-header-bg:      #172747; /* deal-card header — always navy */
+
+  /* ─── Deal / pipeline status pills ────────────────────────────────────── */
+  --mg-deal-new-bg:    var(--mg-blue-100);    --mg-deal-new-text:    var(--mg-blue-900);
+  --mg-deal-active-bg: var(--mg-primary-100); --mg-deal-active-text: var(--mg-primary-900);
+  --mg-deal-won-bg:    var(--mg-green-100);   --mg-deal-won-text:    var(--mg-green-900);
+  --mg-deal-hot-bg:    var(--mg-orange-100);  --mg-deal-hot-text:    var(--mg-orange-900);
+  --mg-deal-lost-bg:   var(--mg-red-50);      --mg-deal-lost-text:   var(--mg-red-700);
+}

@@ -8,7 +8,7 @@
 **Планы, прогресс, решения, спринт-детализации** — Obsidian-vault **`MG CRM 2026`** (`~/Documents/Obsidian Vault/MG CRM 2026`, путь прописан в `.claude/brain.conf`).
 - В начале рабочей сессии читать `4. Активная работа/SESSION_STATE.md` — там текущий контекст.
 - Спринт-роадмап: `5. Планы/MGCRM (Laravel) — Master Roadmap.md`.
-- Дизайн-система и токены PrimeVue: `6. Справочник/Дизайн-система MG CRM (бренд MACRO Global).md` + `6. Справочник/PrimeVue 4 — тема, токены и тулинг (MGCRM).md`.
+- Дизайн-система и токены PrimeVue (vault-справка, вторична): `6. Справочник/Дизайн-система MG CRM (бренд MACRO Global).md` + `6. Справочник/PrimeVue 4 — тема, токены и тулинг (MGCRM).md`. **Основной эталон визуала теперь — skill `.claude/skills/macroglobal-design/` (см. §«Эталон визуала» ниже).**
 
 Старый vault **`Contracts MACRO`** — **АРХИВ/референс** (старые спеки, аудиты, журналы). НЕ редактировать.
 
@@ -52,6 +52,14 @@ macroglobalcrm/          ← git-репозиторий Bogdan-cool-coder/MGCRM.
 ## 📐 Закон проекта: ARCHITECTURE.md
 
 **Любой код — строго по `ARCHITECTURE.md`.** Это не рекомендации, а паттерны: backend-слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы, деньги-копейки, Policy-авторизация, frontend-слои (api → composables/async → page-composable → component → Pinia), именование, тесты, чёрный список. Отклонение = баг; `product-manager` режет такой код на ревью. Перед кодом агент читает релевантный раздел ARCHITECTURE.md.
+
+## 🎨 Эталон визуала: дизайн-система MACRO Global (design-handoff)
+
+**Единственный источник истины по визуалу/бренду/токенам/компонентам — `.claude/skills/macroglobal-design/`** (skill `macroglobal-design`). Перебивает vault-спеку `MG CRM 2026` и «визуальный» Vizion. **Иерархия эталонов:** визуал/бренд → дизайн-система; структура кода/паттерны → Vizion + ARCHITECTURE.md; состав фич/поведение → `./examples/contracts/`.
+- **Апрувнутые мокапы + ТЗ** — `design-handoff/redesign/` (`contacts.html`+`Contacts-spec.md`, `entity-card.html`+`EntityCard-spec.md`). Есть макет — реализуем ИМЕННО его.
+- **Токены:** значения системы (`--mg-*`) ⇄ переменные репо (`$primary-900`/`$surface-*`/`--p-*`); в `.vue`/`.scss` пиши переменную репо, НЕ литерал. Бренд-инварианты (сайдбар `#172747`, шапка карточки сделки `#172747`) — единственные допустимые хардкоды.
+- **Жёстко:** никаких hex/px мимо токенов · только PrimeIcons (`pi pi-*`) · без эмодзи/градиентов/bluish-purple/цветных теней · обе темы (light+dark) обязательны · деньги `1 200 000 ₽`.
+- **Контроль:** `npm run lint:ds` (stylelint, pre-commit+CI) + **обязательный визуальный гейт `qa-tester`** (computed-styles в обеих темах; визуальное отклонение = FAIL). Агенты `designer`/`frontend-specialist`/`qa-tester` пропатчены под систему.
 
 ## Целевой стек (жёсткий — см. PLAN.md §3)
 

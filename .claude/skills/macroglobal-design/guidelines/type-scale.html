@@ -1,0 +1,27 @@
+<!-- @dsCard group="Type" viewport="700x230" name="Interface scale" subtitle="Шкала интерфейса CRM — база 14px (плотный UI)" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-card); color: var(--mg-text-primary); }
+  .wrap { padding: 16px 22px; }
+  .line { display: flex; align-items: baseline; gap: 14px; padding: 4px 0; border-bottom: 1px solid var(--mg-gray-100); }
+  .line:last-child { border-bottom: none; }
+  .tok { width: 54px; font-size: 10px; color: var(--mg-text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .px { width: 42px; font-size: 10px; color: var(--mg-text-muted); flex-shrink: 0; }
+  .spec { color: var(--mg-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="line"><span class="tok">2xl</span><span class="px">24px</span><span class="spec" style="font-size:24px;font-weight:600">Заголовок раздела</span></div>
+    <div class="line"><span class="tok">xl</span><span class="px">20px</span><span class="spec" style="font-size:20px;font-weight:600">Заголовок страницы</span></div>
+    <div class="line"><span class="tok">lead</span><span class="px">21px</span><span class="spec" style="font-size:21px;font-weight:400">Lead / подзаголовок</span></div>
+    <div class="line"><span class="tok">md</span><span class="px">16px</span><span class="spec" style="font-size:16px;font-weight:600">Подсекция</span></div>
+    <div class="line"><span class="tok">sm</span><span class="px">14px</span><span class="spec" style="font-size:14px">Основной текст · ячейка таблицы</span></div>
+    <div class="line"><span class="tok">xs</span><span class="px">12px</span><span class="spec" style="font-size:12px;color:var(--mg-text-muted)">Подпись · таймстамп · мета</span></div>
+  </div>
+</body>
+</html>

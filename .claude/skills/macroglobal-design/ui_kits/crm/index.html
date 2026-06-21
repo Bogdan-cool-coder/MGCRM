@@ -1,0 +1,89 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1440x820" name="CRM — Deals / Contacts / Tasks" -->
+<!-- @startingPoint section="CRM" subtitle="Full CRM app shell — Deals, Contacts, Tasks" viewport="1440x820" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO Global CRM — UI Kit</title>
+<link rel="stylesheet" href="../../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--mg-font-sans); background: var(--mg-surface-page); color: var(--mg-text-primary); -webkit-font-smoothing: antialiased; }
+  #root { height: 100vh; }
+  .mg-sb-scroll::-webkit-scrollbar { width: 0; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" src="./Sidebar.jsx"></script>
+<script type="text/babel" src="./Shell.jsx"></script>
+<script type="text/babel" src="./DealsView.jsx"></script>
+<script type="text/babel" src="./ContactsView.jsx"></script>
+<script type="text/babel" src="./TasksView.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+  const { Button } = window.MACROGlobalCRMDesignSystem_2f42e6;
+
+  function App() {
+    const [view, setView] = React.useState('deals');
+    const [dealsMode, setDealsMode] = React.useState('kanban');
+    const [tasksMode, setTasksMode] = React.useState('kanban');
+
+    const headers = {
+      deals: {
+        icon: 'pi-briefcase', title: 'Сделки', subtitle: 'Воронка продаж · 6 сделок · ≈ 6,8 млн ₽',
+        actions: <>
+          <window.ViewSwitch value={dealsMode} onChange={setDealsMode} options={[{ key: 'kanban', icon: 'pi-th-large', label: 'Канбан' }, { key: 'list', icon: 'pi-list', label: 'Список' }]} />
+          <Button variant="primary" icon="pi-plus">Создать сделку</Button>
+        </>,
+      },
+      companies: {
+        icon: 'pi-users', title: 'Контакты', subtitle: 'Физлица и компании',
+        actions: <>
+          <Button variant="secondary" outlined icon="pi-clone">Дедуп</Button>
+          <Button variant="primary" icon="pi-plus">Создать контакт</Button>
+        </>,
+      },
+      contacts: {
+        icon: 'pi-users', title: 'Контакты', subtitle: 'Физлица и компании',
+        actions: <>
+          <Button variant="secondary" outlined icon="pi-clone">Дедуп</Button>
+          <Button variant="primary" icon="pi-plus">Создать контакт</Button>
+        </>,
+      },
+      tasks: {
+        icon: 'pi-check-square', title: 'Мои задачи', subtitle: null,
+        actions: <>
+          <window.ViewSwitch value={tasksMode} onChange={setTasksMode} options={[{ key: 'kanban', icon: 'pi-th-large', label: 'Канбан' }, { key: 'list', icon: 'pi-list', label: 'Список' }]} />
+          <Button variant="primary" icon="pi-plus">Создать задачу</Button>
+        </>,
+      },
+    };
+    const h = headers[view] || headers.deals;
+
+    return (
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+        <window.Sidebar active={view} onNavigate={(k) => setView(k === 'companies' ? 'contacts' : k)} />
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+          <window.TopBar />
+          <window.PageHeader icon={h.icon} title={h.title} subtitle={h.subtitle} actions={h.actions} />
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            {view === 'deals' && <window.DealsView />}
+            {view === 'contacts' && <window.ContactsView />}
+            {view === 'tasks' && <window.TasksView />}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

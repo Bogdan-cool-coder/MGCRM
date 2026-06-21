@@ -1,0 +1,11 @@
+#!/bin/sh
+# Design-system adherence gate (HARD) — MACRO Global CRM.
+# The whole front/ tree must stay token-clean: no hardcoded color/radius/size
+# past the design tokens (see .claude/skills/macroglobal-design + CLAUDE.md).
+# The tree is at 0 violations; this keeps it there. Fix with tokens, never silence.
+
+cd front && npm run lint:ds || {
+  echo "Design-system gate FAILED: hardcoded color/radius/size detected."
+  echo "Use repo tokens (\$primary-900 / \$surface-* / \$space-* / \$radius-* / \$shadow-*), not literals."
+  exit 1
+}

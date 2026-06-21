@@ -1,0 +1,49 @@
+/* ===========================================================================
+   MACRO Global — Typography
+   Brand font: SF UI Display → web fallback: Inter (per product typography.ts).
+   CRM interface base size is 14px (dense data UI); the brand web guideline
+   (brandbook §04) recommends 16px body for marketing/web. Both captured below.
+   =========================================================================== */
+
+:root {
+  /* Families */
+  --mg-font-sans: Inter, -apple-system, BlinkMacSystemFont, 'SF UI Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --mg-font-docs: Roboto, Inter, sans-serif; /* official documents (brandbook §03) */
+
+  /* CRM interface scale (base 14px) */
+  --mg-text-base: 14px;
+  --mg-text-xs:   0.75rem;   /* 12px — caption, timestamp, table meta */
+  --mg-text-sm:   0.875rem;  /* 14px — body, label, table cell */
+  --mg-text-md:   1rem;      /* 16px — subsection / h6 */
+  --mg-text-lg:   1.125rem;  /* 18px */
+  --mg-text-xl:   1.25rem;   /* 20px — section / page title (h1 in CRM) */
+  --mg-text-2xl:  1.5rem;    /* 24px */
+  --mg-text-3xl:  1.75rem;   /* 28px */
+  --mg-text-4xl:  2.25rem;   /* 36px */
+  --mg-text-lead: 1.3125rem; /* 21px — lead / subtitle */
+
+  /* Brand web heading scale (brandbook §04 — 16px base) */
+  --mg-web-display-1: 72px;
+  --mg-web-display-2: 64px;
+  --mg-web-display-3: 58px;
+  --mg-web-display-4: 52px;
+  --mg-web-h1: 40px;
+  --mg-web-h2: 32px;
+  --mg-web-h3: 28px;
+  --mg-web-h4: 24px;
+  --mg-web-h5: 20px;
+  --mg-web-h6: 16px;
+  --mg-web-body: 16px;
+  --mg-web-lead: 21px;
+
+  /* Weights */
+  --mg-weight-normal: 400;
+  --mg-weight-medium: 500;
+  --mg-weight-semibold: 600;
+  --mg-weight-bold: 700;
+
+  /* Line heights */
+  --mg-leading-tight: 1.25;
+  --mg-leading-normal: 1.5;
+  --mg-leading-relaxed: 1.625;
+}

@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Pipeline stage palette" subtitle="Цвета колонок канбана воронки продаж" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-card); color: var(--mg-text-primary); }
+  .row { display: flex; gap: 10px; padding: 18px; }
+  .col { flex: 1; }
+  .head { height: 40px; border-radius: var(--mg-radius-md) var(--mg-radius-md) 0 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
+  .amber { color: #6B4A00 !important; }
+  .body { border: 1px solid var(--mg-border-default); border-top: none; border-radius: 0 0 var(--mg-radius-md) var(--mg-radius-md); height: 30px; }
+  .hex { font-size: 10px; color: var(--mg-text-muted); text-align: center; margin-top: 6px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="col"><div class="head" style="background:var(--mg-stage-teal)">Лиды</div><div class="body"></div><div class="hex">#1D9E75</div></div>
+    <div class="col"><div class="head" style="background:var(--mg-stage-blue)">Квалиф.</div><div class="body"></div><div class="hex">#378ADD</div></div>
+    <div class="col"><div class="head amber" style="background:var(--mg-stage-amber)">Встреча</div><div class="body"></div><div class="hex">#EF9F27</div></div>
+    <div class="col"><div class="head" style="background:var(--mg-stage-pink)">КП</div><div class="body"></div><div class="hex">#D4537E</div></div>
+    <div class="col"><div class="head" style="background:var(--mg-stage-purple)">Договор</div><div class="body"></div><div class="hex">#7F77DD</div></div>
+  </div>
+</body>
+</html>
