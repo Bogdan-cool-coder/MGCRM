@@ -95,27 +95,27 @@ function correctAnswerText(answer: QuizAnswerResult): string {
 <style lang="scss" scoped>
 .quiz-result {
   &__review-title {
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
   }
 
   &__answer {
-    padding: 0.75rem;
+    padding: $space-3;
     background: var(--p-surface-50);
-    border-radius: 6px;
+    border-radius: $radius-md;
     border: 1px solid var(--p-surface-200);
   }
 
   &__question-text {
-    font-size: 0.9375rem;
-    font-weight: 600;
+    font-size: $font-size-sm; // snap from 15px
+    font-weight: $font-weight-semibold;
   }
 
   &__correct-answer,
   &__explanation {
-    font-size: 0.875rem;
+    font-size: $font-size-sm;
     color: var(--p-surface-600);
-    padding-left: 0.25rem;
+    padding-left: $space-1;
   }
 
   &__correct-label,

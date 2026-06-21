@@ -237,9 +237,10 @@ const {
     content: '';
     position: absolute;
     inset: 0;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
     background:
       radial-gradient(ellipse 70% 60% at 90% 110%, rgba(255, 255, 255, 0.04) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 40% at 10% -10%, rgba(255, 255, 255, 0.03) 0%, transparent 60%);
+      radial-gradient(ellipse 50% 40% at 10% -10%, rgba(255, 255, 255, 0.03) 0%, transparent 60%); // brand header overlay — static decorative gradient on navy panel
     pointer-events: none;
   }
 }
@@ -270,7 +271,8 @@ const {
   margin: 0;
   font-size: $font-size-2xl;
   font-weight: $font-weight-semibold;
-  color: rgba(255, 255, 255, 0.95);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.95); // brand header overlay — static text on navy panel
   line-height: $line-height-tight;
   letter-spacing: -0.01em;
 }
@@ -280,7 +282,8 @@ const {
   font-size: $font-size-2xl;
   font-weight: $font-weight-semibold;
   // Subtle lighter accent vs. the primary tagline line
-  color: rgba(255, 255, 255, 0.55);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.55); // brand header overlay — static text on navy panel
   line-height: $line-height-tight;
   letter-spacing: -0.01em;
 }
@@ -292,16 +295,18 @@ const {
   right: -120px;
   width: 380px;
   height: 380px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: $radius-circle;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  border: 1px solid rgba(255, 255, 255, 0.06); // brand header overlay — static decorative border on navy panel
   pointer-events: none;
 
   &::before {
     content: '';
     position: absolute;
     inset: 40px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: $radius-circle;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    border: 1px solid rgba(255, 255, 255, 0.04); // brand header overlay — static decorative border on navy panel
   }
 }
 
@@ -333,7 +338,7 @@ const {
   :global(.app-dark) & {
     background-color: var(--p-surface-800);
     border: 1px solid var(--p-surface-700);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: $shadow-elevated;
   }
 }
 

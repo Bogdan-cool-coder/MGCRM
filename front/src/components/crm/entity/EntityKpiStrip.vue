@@ -153,7 +153,7 @@ function accentIconClass(accent?: string): string {
 }
 
 .entity-kpi-strip__icon {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
 
@@ -188,7 +188,7 @@ function accentIconClass(accent?: string): string {
 }
 
 .entity-kpi-strip__value {
-  font-size: 13px;
+  font-size: $font-size-xs; // snap from 13px
   font-weight: 600;
   color: var(--p-text-color);
 
@@ -229,7 +229,7 @@ function accentIconClass(accent?: string): string {
 }
 
 .entity-kpi-strip__label {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-500;
 
   .app-dark & {

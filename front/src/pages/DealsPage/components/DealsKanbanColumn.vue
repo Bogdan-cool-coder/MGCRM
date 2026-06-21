@@ -332,7 +332,8 @@ function hidePopover() {
 
 .kanban-col__header {
   padding: $space-3 $space-3 $space-2;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12); // stage color header divider — alpha blend, no matching token
   flex-shrink: 0;
   background: $surface-50;
 
@@ -412,7 +413,7 @@ function hidePopover() {
 }
 
 .kanban-col__multi-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   color: $surface-400;
 }
 

@@ -107,7 +107,7 @@ function truncateDesc(desc: string): string {
 }
 
 .entity-mini-timeline__title-icon {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
 }
 
@@ -130,7 +130,7 @@ function truncateDesc(desc: string): string {
 }
 
 .entity-mini-timeline__link-icon {
-  font-size: 9px;
+  font-size: $font-size-3xs; // snap from 9px
 }
 
 .entity-mini-timeline__skeleton {
@@ -182,7 +182,7 @@ function truncateDesc(desc: string): string {
 .entity-mini-timeline__dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: var(--p-primary-color);
   flex-shrink: 0;
   margin-top: 5px;
@@ -191,7 +191,7 @@ function truncateDesc(desc: string): string {
 .entity-mini-timeline__content {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: var(--p-text-color);
   display: flex;
   flex-wrap: wrap;
@@ -216,7 +216,7 @@ function truncateDesc(desc: string): string {
 .entity-mini-timeline__desc {
   color: $surface-500;
   font-style: italic;
-  font-size: 11px;
+  font-size: $font-size-2xs;
 
   .app-dark & {
     color: var(--p-surface-500);
@@ -224,7 +224,7 @@ function truncateDesc(desc: string): string {
 }
 
 .entity-mini-timeline__time {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   color: $surface-400;
   white-space: nowrap;
   flex-shrink: 0;

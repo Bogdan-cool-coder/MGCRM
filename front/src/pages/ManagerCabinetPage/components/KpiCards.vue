@@ -173,7 +173,7 @@ const scoreLabel = computed<string>(() => {
 }
 
 .kpi-card__icon {
-  font-size: 20px;
+  font-size: $font-size-xl; // 20px
   color: $primary-color;
   flex-shrink: 0;
 }
@@ -186,14 +186,14 @@ const scoreLabel = computed<string>(() => {
 }
 
 .kpi-card__value {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg; // 2rem
   font-weight: $font-weight-bold;
   color: $surface-900;
   line-height: 1;
 }
 
 .kpi-card__value--md {
-  font-size: 1.5rem;
+  font-size: $font-size-2xl; // 1.5rem
 }
 
 .kpi-card__footer {
@@ -221,7 +221,7 @@ const scoreLabel = computed<string>(() => {
 }
 
 .kpi-cards__empty-icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl; // 2.5rem
   color: $surface-400;
 }
 

@@ -55,11 +55,17 @@ $orange-900: var(--app-orange-900);
 $blue-900: var(--app-blue-900);
 
 // Primary palette
+$primary-50: var(--app-primary-50);
 $primary-100: var(--app-primary-100);
+$primary-200: var(--app-primary-200);
+$primary-300: var(--app-primary-300);
 $primary-400: var(--app-primary-400);
 $primary-500: var(--app-primary-500);
 $primary-600: var(--app-primary-600);
+$primary-700: var(--app-primary-700);
+$primary-800: var(--app-primary-800);
 $primary-900: var(--app-primary-900);
+$primary-950: var(--app-primary-950);
 
 // Compatibility aliases
 $background-color: $surface-100;
@@ -85,6 +91,9 @@ $color-warning:        #FFB38A;
 $color-warning-bg:     #fff0e8;
 $color-warning-border: #ffc8ad;
 $color-warning-text:   #9b4029;
+// Vivid amber-orange for sidebar/nav badges in warning state (distinct from #FFB38A brand warning).
+// Not in the standard palette — kept as brand constant, same as notification-badge amber.
+$color-warning-badge:  #E8821E;
 
 $color-danger:         #FF5A44;
 $color-danger-bg:      #ffe8e6;

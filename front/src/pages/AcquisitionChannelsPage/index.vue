@@ -135,7 +135,7 @@ const {
 
 <style lang="scss" scoped>
 .acquisition-channels-page {
-  padding: 0.75rem;
+  padding: $space-3;
 }
 
 .dir-page__empty {
@@ -143,12 +143,13 @@ const {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 2.5rem;
+  gap: $space-2;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 2.5rem; // no exact $space token for 2.5rem; nearest $space-8 (2rem) is 8px short
   color: var(--p-text-muted-color);
 
   i {
-    font-size: 1.5rem;
+    font-size: $font-size-2xl;
     opacity: 0.4;
   }
 }

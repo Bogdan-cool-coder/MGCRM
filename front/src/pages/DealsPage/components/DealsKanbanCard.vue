@@ -333,12 +333,14 @@ const ownerInitial = computed(() => {
 
   // Health: no-task — yellow left inset border
   &--no-task {
-    box-shadow: inset 4px 0 0 $color-warning;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: inset 4px 0 0 $color-warning; // health signal inset border uses $color-warning token
   }
 
   // Health: overdue — red left inset border + full border
   &--overdue-health {
-    box-shadow: inset 4px 0 0 $color-danger;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: inset 4px 0 0 $color-danger; // health signal inset border uses $color-danger token
     border-color: $color-danger;
 
     :global(.app-dark) & {
@@ -348,7 +350,8 @@ const ownerInitial = computed(() => {
 
   // Dragging
   &--dragging {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: $shadow-dragging;
     opacity: 0.95;
   }
 
@@ -416,7 +419,7 @@ const ownerInitial = computed(() => {
   background: var(--p-surface-100);
   border-radius: $radius-sm;
   padding: 1px 6px;
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   color: $surface-600;
   min-width: 0;
   overflow: hidden;
@@ -428,7 +431,7 @@ const ownerInitial = computed(() => {
 }
 
 .kanban-card__product-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
   flex-shrink: 0;
 }
 
@@ -458,10 +461,10 @@ const ownerInitial = computed(() => {
 .kanban-card__avatar {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: var(--p-primary-color);
-  color: #fff;
-  font-size: 10px;
+  color: $sidebar-text-active;
+  font-size: $font-size-3xs; // snap from 10px
   font-weight: $font-weight-semibold;
   display: flex;
   align-items: center;
@@ -502,7 +505,7 @@ const ownerInitial = computed(() => {
 }
 
 .kanban-card__days-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
 }
 
 // Quick add button
@@ -523,7 +526,7 @@ const ownerInitial = computed(() => {
   padding: 0;
 
   i {
-    font-size: 11px;
+    font-size: $font-size-2xs; // snap from 11px
   }
 
   &:hover {
@@ -544,7 +547,7 @@ const ownerInitial = computed(() => {
   gap: $space-2;
   padding: $space-2 $space-3;
   border-top: 1px solid $surface-200;
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   min-height: 28px;
 
   :global(.app-dark) & {
@@ -577,7 +580,7 @@ const ownerInitial = computed(() => {
 }
 
 .kanban-card__task-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   color: $surface-500;
   flex-shrink: 0;
 
@@ -621,7 +624,7 @@ const ownerInitial = computed(() => {
   background: transparent;
   color: $primary-color;
   cursor: pointer;
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   white-space: nowrap;
   padding: 0;
 

@@ -2,7 +2,7 @@
   <div class="company-docs-tab">
     <!-- Header row -->
     <div class="company-docs-tab__header d-flex justify-content-between align-items-center mb-3">
-      <span class="fw-semibold text-muted" style="font-size: 0.85rem;">
+      <span class="fw-semibold text-muted company-docs-tab__header-label">
         {{ t('company.page.tabs.documents') }}
       </span>
       <Button
@@ -156,6 +156,10 @@ onMounted(() => void load())
     padding: $space-1 0;
   }
 
+  &__header-label {
+    font-size: $font-size-sm; // snap from 0.85rem (13.6px → 14px)
+  }
+
   &__empty {
     display: flex;
     flex-direction: column;
@@ -165,7 +169,7 @@ onMounted(() => void load())
   }
 
   &__empty-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl;
     color: var(--p-text-muted-color);
     opacity: 0.4;
   }

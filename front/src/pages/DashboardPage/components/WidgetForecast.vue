@@ -116,7 +116,7 @@ const forecastItems = computed(() => {
 }
 
 .widget-empty__icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-400;
 }
 
@@ -148,7 +148,7 @@ const forecastItems = computed(() => {
 }
 
 .forecast-kpi__icon {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $surface-500;
 }
 

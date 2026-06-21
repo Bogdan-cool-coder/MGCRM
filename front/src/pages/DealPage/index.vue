@@ -660,7 +660,7 @@ onMounted(async () => {
   }
 
   &__error-icon {
-    font-size: 3rem;
+    font-size: $font-size-icon-2xl;
     color: var(--p-red-400);
   }
 

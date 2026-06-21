@@ -203,7 +203,7 @@ const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
 
   &__count {
     background: var(--p-surface-200);
-    border-radius: 999px;
+    border-radius: $radius-pill;
     padding: 1px 6px;
     font-size: $font-size-xs;
     color: $surface-600;
@@ -231,7 +231,7 @@ const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
   }
 
   &__empty-icon {
-    font-size: 2rem;
+    font-size: $font-size-icon-lg;
     color: var(--p-surface-400);
   }
 
@@ -281,7 +281,7 @@ const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
     flex-shrink: 0;
     width: 26px;
     height: 26px;
-    border-radius: 50%;
+    border-radius: $radius-circle;
     background: var(--p-surface-100);
     display: flex;
     align-items: center;
@@ -294,7 +294,7 @@ const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
   }
 
   &__icon {
-    font-size: 0.7rem;
+    font-size: $font-size-3xs; // snap from 0.7rem (≈11.2px → 10px)
     color: var(--p-primary-color);
   }
 
@@ -334,7 +334,7 @@ const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
   }
 
   &__arrow {
-    font-size: 0.6rem;
+    font-size: $font-size-3xs; // snap from 0.6rem (≈9.6px → 10px)
     color: $surface-400;
   }
 

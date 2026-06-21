@@ -90,7 +90,7 @@
       <Column :header="t('automation.list.col.action')">
         <template #body="{ data }">
           <div class="d-flex align-items-center gap-1">
-            <i :class="['pi', ACTION_ICONS[data.action_kind as ActionKind] ?? 'pi-bolt']" style="font-size: 0.85rem;" />
+            <i :class="['pi', ACTION_ICONS[data.action_kind as ActionKind] ?? 'pi-bolt', 'automation-list-panel__action-icon']" />
             {{ t(`automation.action.${data.action_kind}`) }}
           </div>
         </template>
@@ -269,8 +269,12 @@ const filteredAutomations = computed(() => {
   }
 
   &__empty-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl; // 2.5rem
     color: var(--p-surface-400);
+  }
+
+  &__action-icon {
+    font-size: $font-size-sm; // snap from 0.85rem (13.6px→14px)
   }
 
   &__empty-title {

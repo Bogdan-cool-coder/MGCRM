@@ -63,26 +63,30 @@ function formatDate(iso: string): string {
   font-size: $font-size-xs;
   padding: 2px 8px;
   border-radius: $radius-sm;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: rgba(255, 255, 255, 0.1); // brand header overlay — static decorative tint on navy panel
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.8); // brand header overlay — static decorative tint on navy panel
   white-space: nowrap;
   overflow: hidden;
   max-width: 200px;
   text-overflow: ellipsis;
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs;
     flex-shrink: 0;
   }
 
   &--overdue {
     color: var(--p-red-300);
-    background: rgba(239, 68, 68, 0.15);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(239, 68, 68, 0.15); // danger tint on dark brand header — no token for this alpha
   }
 
   &--no-task {
     color: var(--p-yellow-300);
-    background: rgba(234, 179, 8, 0.12);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(234, 179, 8, 0.12); // warning tint on dark brand header — no token for this alpha
   }
 }
 </style>

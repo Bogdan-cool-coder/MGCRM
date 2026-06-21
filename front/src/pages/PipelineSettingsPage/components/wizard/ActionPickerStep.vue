@@ -226,7 +226,7 @@ function select(kind: ActionKind) {
   }
 
   &__icon {
-    font-size: 1.25rem;
+    font-size: $font-size-xl;
     color: var(--p-primary-color);
   }
 
@@ -234,10 +234,10 @@ function select(kind: ActionKind) {
     position: absolute;
     right: -8px;
     top: -6px;
-    font-size: 0.65rem;
+    font-size: $font-size-3xs; // snap from 0.65rem (≈10.4px → 10px)
     color: var(--p-primary-color);
     background: var(--p-surface-0);
-    border-radius: 50%;
+    border-radius: $radius-circle;
     padding: 1px;
 
     .app-dark & {

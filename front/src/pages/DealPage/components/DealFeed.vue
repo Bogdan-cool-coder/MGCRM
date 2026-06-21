@@ -356,7 +356,7 @@ async function onPin(id: number, isPinned: boolean) {
 }
 
 .deal-feed__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl; // 3rem
   color: $surface-300;
 }
 

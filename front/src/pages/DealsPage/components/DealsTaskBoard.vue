@@ -160,7 +160,7 @@ onMounted(() => { void taskBoard.load() })
 }
 
 .task-board__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl; // 3rem
 
   &--success {
     color: var(--p-green-500);
@@ -226,7 +226,8 @@ onMounted(() => { void taskBoard.load() })
     color: $color-danger-text;
 
     :global(.app-dark) & {
-      background: rgba(255, 90, 68, 0.15);
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: rgba(255, 90, 68, 0.15); // $color-danger (#FF5A44) alpha 0.15, dark mode tint
       color: $color-danger;
     }
   }
@@ -242,11 +243,13 @@ onMounted(() => { void taskBoard.load() })
   font-size: $font-size-xs;
   padding: 1px 6px;
   border-radius: $radius-sm;
-  background: rgba(0, 0, 0, 0.08);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: rgba(0, 0, 0, 0.08); // neutral alpha tint badge, no matching token
   flex-shrink: 0;
 
   :global(.app-dark) & {
-    background: rgba(255, 255, 255, 0.1);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(255, 255, 255, 0.1); // neutral alpha tint badge dark mode, no matching token
   }
 }
 

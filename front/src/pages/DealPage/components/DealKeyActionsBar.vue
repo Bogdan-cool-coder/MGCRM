@@ -268,7 +268,7 @@ async function onMarkContract() {
 }
 
 .key-actions-bar__chip-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
   flex-shrink: 0;
 }
 

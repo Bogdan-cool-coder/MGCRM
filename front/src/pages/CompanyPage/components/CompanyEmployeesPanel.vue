@@ -113,7 +113,7 @@ const firstFive = computed(() => props.employees.slice(0, 5))
 }
 
 .employees-panel__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   color: $surface-300;
 }
 
@@ -137,7 +137,7 @@ const firstFive = computed(() => props.employees.slice(0, 5))
   margin-top: $space-2;
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs; // snap from 10px
   }
 }
 
@@ -162,7 +162,7 @@ const firstFive = computed(() => props.employees.slice(0, 5))
   }
 
   i {
-    font-size: 12px;
+    font-size: $font-size-xs;
   }
 }
 </style>

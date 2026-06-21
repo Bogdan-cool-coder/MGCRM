@@ -131,7 +131,7 @@ const progressClass = (row: FunnelStage): string => {
 }
 
 .widget-empty__icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-400;
 }
 
@@ -156,7 +156,7 @@ const progressClass = (row: FunnelStage): string => {
 .funnel-stage-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background-color: $surface-400;
   flex-shrink: 0;
 
@@ -173,7 +173,7 @@ const progressClass = (row: FunnelStage): string => {
 }
 
 .funnel-stage-tag {
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
   padding: 1px 5px;
   flex-shrink: 0;
 }
@@ -188,13 +188,13 @@ const progressClass = (row: FunnelStage): string => {
   flex: 1;
   height: 6px;
   background-color: $surface-200;
-  border-radius: 3px;
+  border-radius: $radius-xs;
   overflow: hidden;
 }
 
 .funnel-progress__bar {
   height: 100%;
-  border-radius: 3px;
+  border-radius: $radius-xs;
   transition: width 0.4s ease;
 
   &--won { background-color: $primary-color; }

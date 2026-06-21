@@ -490,7 +490,8 @@ onMounted(async () => {
   }
 
   &:focus-within {
-    box-shadow: 0 0 0 2px rgba($primary-color, 0.18);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: 0 0 0 2px rgba($primary-color, 0.18); // focus ring alpha blend from $primary-color token
     border-color: rgba($primary-color, 0.4);
   }
 
@@ -517,7 +518,7 @@ onMounted(async () => {
   border-radius: $radius-sm;
   background: $surface-50;
   color: $surface-600;
-  font-size: 11px;
+  font-size: $font-size-2xs;
   cursor: pointer;
   transition: all var(--app-transition-fast);
   flex-shrink: 0;
@@ -540,11 +541,11 @@ onMounted(async () => {
 }
 
 .tqf__kind-icon {
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 .tqf__kind-caret {
-  font-size: 9px;
+  font-size: $font-size-3xs; // snap from 9px
   opacity: 0.6;
 }
 
@@ -571,7 +572,7 @@ onMounted(async () => {
 }
 
 .tqf__due-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs;
 }
 
 .tqf__responsible {
@@ -594,7 +595,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 11px;
+  font-size: $font-size-2xs;
   transition: all var(--app-transition-fast);
 
   &:hover {
@@ -700,7 +701,7 @@ onMounted(async () => {
 }
 
 .tqf__quick-btn {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   padding: 2px 8px;
   border: 1px solid $surface-300;
   border-radius: $radius-sm;
@@ -755,7 +756,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 13px;
+  font-size: $font-size-xs; // snap from 13px
   transition: all var(--app-transition-fast);
 
   &:hover {

@@ -1089,7 +1089,7 @@ onMounted(() => {
 }
 
 .contacts-page__inline-edit-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs;
   color: $surface-400;
   opacity: 0;
   transition: opacity 0.15s;
@@ -1113,7 +1113,7 @@ onMounted(() => {
   background: var(--p-primary-50) !important;
 
   :global(.app-dark) & {
-    background: rgba(23, 39, 71, 0.2) !important;
+    background: rgba($primary-900, 0.2) !important;
   }
 }
 
@@ -1131,7 +1131,7 @@ onMounted(() => {
 }
 
 .contacts-page__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 
   &--success {

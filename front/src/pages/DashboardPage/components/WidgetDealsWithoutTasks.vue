@@ -109,7 +109,7 @@ const countClass = computed(() => ({
 }
 
 .deals-no-tasks__icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-lg;
   margin-bottom: $space-2;
 
   &--neutral {
@@ -118,7 +118,7 @@ const countClass = computed(() => ({
 }
 
 .deals-no-tasks__count {
-  font-size: 3rem;
+  font-size: $font-size-icon-lg;
   font-weight: $font-weight-bold;
   line-height: 1;
 

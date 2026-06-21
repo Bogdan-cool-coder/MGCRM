@@ -112,7 +112,7 @@ const { t } = useI18n()
 .entity-row__avatar-icon {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: var(--p-primary-100);
   color: var(--p-primary-color);
   display: flex;
@@ -125,7 +125,7 @@ const { t } = useI18n()
   }
 
   i {
-    font-size: 13px;
+    font-size: $font-size-xs; // snap from 13px (-1px)
   }
 }
 
@@ -185,7 +185,7 @@ const { t } = useI18n()
   }
 
   i {
-    font-size: 12px;
+    font-size: $font-size-xs;
   }
 }
 

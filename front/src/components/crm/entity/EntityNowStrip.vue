@@ -61,7 +61,7 @@ function chipIcon(severity?: string): string {
 }
 
 .entity-now-strip__label {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   font-weight: 600;
   color: $surface-500;
   white-space: nowrap;
@@ -79,8 +79,8 @@ function chipIcon(severity?: string): string {
   align-items: center;
   gap: 4px;
   padding: 3px 8px 3px 6px;
-  border-radius: 999px;
-  font-size: 12px;
+  border-radius: $radius-pill;
+  font-size: $font-size-xs;
   line-height: 1.4;
   white-space: nowrap;
   transition: opacity var(--app-transition-fast, 0.15s);
@@ -155,7 +155,7 @@ function chipIcon(severity?: string): string {
 }
 
 .entity-now-strip__chip-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   flex-shrink: 0;
 }
 

@@ -109,8 +109,8 @@ function formatDate(iso: string): string {
   }
 
   &__code {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
+    font-family: $font-family-mono;
+    font-size: $font-size-xs;
     color: $surface-600;
     background: $surface-100;
     border-radius: $radius-sm;

@@ -336,7 +336,7 @@ onMounted(() => {
   background-color: rgba(255, 255, 255, 0.1);
   border: none;
   cursor: pointer;
-  color: #ffffff;
+  color: $sidebar-text-active;
   position: relative;
   overflow: hidden;
   transition: background-color var(--app-transition-fast);
@@ -377,7 +377,7 @@ onMounted(() => {
   transition: opacity var(--app-transition-fast);
 
   i {
-    font-size: 14px;
+    font-size: $font-size-sm; // snap from 14px
   }
 }
 
@@ -385,10 +385,10 @@ onMounted(() => {
 .app-sidebar__toggle {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background-color: $sidebar-bg;
   border: 2px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  color: $sidebar-text-active;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -408,7 +408,7 @@ onMounted(() => {
   }
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs; // snap from 10px
   }
 }
 
@@ -446,7 +446,7 @@ onMounted(() => {
 }
 
 .app-sidebar__group-label-text {
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
   font-weight: $font-weight-semibold;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -463,7 +463,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   margin: 2px 8px;
-  border-radius: 9px;
+  border-radius: $radius-badge; // snap from 9px
   padding: 8px 10px;
   color: $sidebar-text;
   text-decoration: none;
@@ -499,7 +499,7 @@ onMounted(() => {
       width: 3px;
       height: 18px;
       background: $sidebar-active-bar;
-      border-radius: 0 3px 3px 0;
+      border-radius: 0 $radius-xs $radius-xs 0;
     }
   }
 
@@ -512,14 +512,14 @@ onMounted(() => {
 }
 
 .app-sidebar__nav-icon {
-  font-size: 18px;
+  font-size: $font-size-lg;
   flex-shrink: 0;
   width: 18px;
   text-align: center;
 }
 
 .app-sidebar__nav-label {
-  font-size: 13px;
+  font-size: $font-size-xs; // snap from 13px
   font-weight: $font-weight-medium;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -534,17 +534,17 @@ onMounted(() => {
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  border-radius: 9px;
-  background: #E8821E; // warning variant
-  color: #fff;
-  font-size: 10px;
+  border-radius: $radius-badge;
+  background: $color-warning-badge; // warning variant
+  color: $sidebar-text-active;
+  font-size: $font-size-3xs; // snap from 10px
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
   margin-left: auto;
 
   &--danger {
-    background: #FF5A44;
+    background: $color-danger;
   }
 }
 
@@ -555,12 +555,12 @@ onMounted(() => {
   right: 4px;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
-  background: #E8821E;
+  border-radius: $radius-circle;
+  background: $color-warning-badge;
   flex-shrink: 0;
 
   &--danger {
-    background: #FF5A44;
+    background: $color-danger;
   }
 }
 
@@ -622,7 +622,7 @@ onMounted(() => {
 }
 
 .app-sidebar__avatar-initials {
-  color: #ffffff;
+  color: $sidebar-text-active;
   font-size: $font-size-xs;
   font-weight: $font-weight-bold;
   line-height: 1;
@@ -637,7 +637,7 @@ onMounted(() => {
 }
 
 .app-sidebar__user-name {
-  font-size: 14px;
+  font-size: $font-size-sm; // snap from 14px
   font-weight: $font-weight-medium;
   color: $sidebar-text-active;
   overflow: hidden;
@@ -654,7 +654,7 @@ onMounted(() => {
 }
 
 .app-sidebar__user-menu-icon {
-  font-size: 14px;
+  font-size: $font-size-sm; // snap from 14px
   color: rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
   margin-left: auto;
@@ -669,7 +669,7 @@ onMounted(() => {
 .app-sidebar__nav-skeleton {
   margin: 2px 8px;
   height: 36px;
-  border-radius: 9px;
+  border-radius: $radius-badge; // snap from 9px
   background: rgba(255, 255, 255, 0.2);
   animation: sidebar-skeleton-pulse 1.4s ease-in-out infinite;
 

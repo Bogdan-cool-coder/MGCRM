@@ -49,7 +49,7 @@ const { t } = useI18n()
   min-height: 72px;
   background: var(--p-surface-card);
   border: 2px solid var(--p-primary-color);
-  border-radius: 8px;
+  border-radius: $radius-lg;
   padding: $space-3 $space-4;
   display: flex;
   flex-direction: column;
@@ -62,7 +62,7 @@ const { t } = useI18n()
   }
 
   &__icon {
-    font-size: 1.25rem;
+    font-size: $font-size-xl;
     color: var(--p-primary-color);
     flex-shrink: 0;
   }
@@ -74,7 +74,7 @@ const { t } = useI18n()
   }
 
   &__title {
-    font-size: 0.875rem;
+    font-size: $font-size-sm;
     font-weight: 600;
     color: var(--p-text-color);
     white-space: nowrap;
@@ -83,7 +83,7 @@ const { t } = useI18n()
   }
 
   &__count {
-    font-size: 0.75rem;
+    font-size: $font-size-xs;
     color: var(--p-text-muted-color);
   }
 

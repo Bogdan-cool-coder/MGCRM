@@ -255,10 +255,10 @@ async function onSubmit() {
     &--active {
       background: $primary-color;
       border-color: $primary-color;
-      color: #fff;
+      color: $surface-0;
 
       &:hover {
-        color: #fff;
+        color: $surface-0;
       }
     }
 
@@ -269,7 +269,7 @@ async function onSubmit() {
       &--active {
         background: $primary-color;
         border-color: $primary-color;
-        color: #fff;
+        color: $surface-0;
       }
     }
   }

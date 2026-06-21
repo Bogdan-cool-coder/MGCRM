@@ -157,7 +157,7 @@ function dealStatusSeverity(status: DealStatus | string): 'success' | 'danger' |
 }
 
 .contact-deals-panel__empty-icon {
-  font-size: 1.5rem;
+  font-size: $font-size-2xl;
   color: $surface-300;
 }
 

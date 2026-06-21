@@ -227,7 +227,7 @@ defineExpose({ toggle, hide, show })
 }
 
 .account-menu__name {
-  font-size: 14px;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: var(--p-text-color);
   white-space: nowrap;
@@ -236,7 +236,7 @@ defineExpose({ toggle, hide, show })
 }
 
 .account-menu__role {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: var(--p-text-muted-color);
   white-space: nowrap;
   overflow: hidden;
@@ -251,7 +251,7 @@ defineExpose({ toggle, hide, show })
 }
 
 .account-menu__section-label {
-  font-size: 12px;
+  font-size: $font-size-xs;
   font-weight: $font-weight-medium;
   color: var(--p-text-muted-color);
   text-transform: uppercase;
@@ -267,7 +267,7 @@ defineExpose({ toggle, hide, show })
 
   :deep(.p-togglebutton) {
     flex: 1;
-    font-size: 13px;
+    font-size: $font-size-xs; // snap from 13px
   }
 }
 
@@ -275,7 +275,7 @@ defineExpose({ toggle, hide, show })
   width: 100%;
   justify-content: flex-start;
   padding: $space-2 $space-3;
-  font-size: 14px;
+  font-size: $font-size-sm;
   border-radius: 0;
 
   :deep(.p-button-label) {

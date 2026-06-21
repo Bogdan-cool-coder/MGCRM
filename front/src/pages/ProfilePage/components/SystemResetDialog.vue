@@ -157,7 +157,7 @@ function onHide() {
   }
 
   &__warn-icon {
-    font-size: 1.25rem;
+    font-size: $font-size-xl; // 1.25rem = 20px
     color: var(--p-red-500);
     flex-shrink: 0;
   }
@@ -200,7 +200,7 @@ function onHide() {
     margin: 0 0 $space-2;
 
     i {
-      font-size: 0.9rem;
+      font-size: $font-size-sm; // snap from 0.9rem (14.4px→14px)
 
       .system-reset-section--danger & {
         color: var(--p-red-500);
@@ -233,7 +233,7 @@ function onHide() {
   }
 
   &__input {
-    font-family: monospace;
+    font-family: $font-family-mono;
     font-size: $font-size-sm;
     letter-spacing: 0.05em;
   }

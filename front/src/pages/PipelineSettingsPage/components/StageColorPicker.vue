@@ -90,7 +90,7 @@ const SOFT_COLORS = [
 .stage-color-picker__swatch {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   border: 2px solid transparent;
   cursor: pointer;
   display: flex;
@@ -101,11 +101,13 @@ const SOFT_COLORS = [
 
   &:hover {
     transform: scale(1.15);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: $shadow-card; // interactive selected swatch shadow
   }
 
   &--active {
-    box-shadow: 0 0 0 3px var(--p-primary-color);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: 0 0 0 3px var(--p-primary-color); // selected ring via PrimeVue primary token
   }
 
   &--neutral {
@@ -120,6 +122,6 @@ const SOFT_COLORS = [
 }
 
 .stage-color-picker__check {
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 </style>

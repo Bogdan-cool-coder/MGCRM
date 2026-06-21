@@ -120,7 +120,7 @@
             @remove="removeBinding(b.id)"
           />
         </div>
-        <div v-else class="text-secondary mb-2" style="font-size: 0.85rem;">—</div>
+        <div v-else class="text-secondary mb-2 mt-drawer__bindings-empty">—</div>
 
         <!-- Add binding inline form -->
         <div class="mt-drawer__binding-form">
@@ -503,7 +503,7 @@ async function save() {
   }
 
   &__monospace {
-    font-family: 'Courier New', monospace;
+    font-family: $font-family-mono;
     font-size: $font-size-sm;
   }
 
@@ -539,6 +539,10 @@ async function save() {
     border-radius: $radius-md;
     padding: 0.75rem;
     background: var(--p-surface-50);
+  }
+
+  &__bindings-empty {
+    font-size: $font-size-sm; // snap from 0.85rem (~13.6px → 14px)
   }
 }
 </style>

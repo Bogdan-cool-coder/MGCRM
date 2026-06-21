@@ -195,7 +195,8 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
 
 .entity-header__id {
   font-size: $font-size-xs;
-  color: rgba(255, 255, 255, 0.4);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.4); // brand header overlay — static muted text on navy panel
   letter-spacing: 0.02em;
 }
 
@@ -203,7 +204,7 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #fff;
+  color: $sidebar-text-active;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -214,11 +215,12 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
   padding: 0;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.12);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(255, 255, 255, 0.12); // brand header overlay — static hover on navy panel
   }
 
   i {
-    font-size: 14px;
+    font-size: $font-size-sm;
   }
 }
 
@@ -253,7 +255,7 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
 }
 
 .entity-header__title {
-  color: #fff;
+  color: $sidebar-text-active;
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
   margin: 0;
@@ -292,20 +294,24 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
 }
 
 .entity-header__meta-label {
-  color: rgba(255, 255, 255, 0.35);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.35); // brand header overlay — static muted label on navy panel
 }
 
 .entity-header__meta-value {
-  color: rgba(255, 255, 255, 0.75);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.75); // brand header overlay — static meta text on navy panel
   font-weight: $font-weight-medium;
   transition: opacity 0.15s;
 
   &:hover {
-    color: rgba(255, 255, 255, 1);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    color: rgba(255, 255, 255, 1); // brand header overlay — static hover text on navy panel
   }
 
   &--subtitle {
-    color: rgba(255, 255, 255, 0.6);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    color: rgba(255, 255, 255, 0.6); // brand header overlay — static subtitle on navy panel
   }
 }
 

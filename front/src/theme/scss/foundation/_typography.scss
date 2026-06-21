@@ -1,7 +1,15 @@
 // App theme typography backed by --app-* custom properties
 
 $font-family-sans: var(--app-font-family-sans);
+// Monospace stack for code, hotkey chips, preformatted content.
+// Static — not theme-reactive; Courier New as universal fallback.
+$font-family-mono: ui-monospace, 'Courier New', Courier, monospace;
+
 $font-size-base: var(--app-font-size-base);
+// Sub-xs sizes — dense UI: badges, timestamps, captions in tight spaces
+$font-size-2xs: 0.6875rem; // 11px — badge count, tight caption
+$font-size-3xs: 0.625rem;  // 10px — micro label, rotting-day chip
+// xs = 0.75rem = 12px (--app-font-size-xs)
 $font-size-xs: var(--app-font-size-xs);
 $font-size-sm: var(--app-font-size-sm);
 $font-size-md: var(--app-font-size-md);
@@ -11,6 +19,13 @@ $font-size-2xl: var(--app-font-size-2xl);
 $font-size-3xl: var(--app-font-size-3xl);
 $font-size-4xl: var(--app-font-size-4xl);
 $font-size-lead: var(--app-font-size-lead);
+// Icon / empty-state display sizes (static — not theme-reactive)
+$font-size-icon-sm: 1.125rem;  // 18px — inline icon
+$font-size-icon-md: 1.375rem;  // 22px — avatar fallback letter
+$font-size-icon-lg: 2rem;      // 32px — section empty-state icon
+$font-size-icon-xl: 2.5rem;    // 40px — page empty-state icon
+$font-size-icon-2xl: 3rem;     // 48px — full-page empty-state icon
+$font-size-icon-3xl: 4rem;     // 64px — hero / coming-soon icon
 
 $font-weight-normal: var(--app-font-weight-normal);
 $font-weight-medium: var(--app-font-weight-medium);

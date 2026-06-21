@@ -347,8 +347,8 @@ onMounted(() => {
 }
 
 .rates-page__rate {
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
+  font-family: $font-family-mono;
+  font-size: $font-size-xs; // snap from 13px
   font-variant-numeric: tabular-nums;
 }
 
@@ -364,7 +364,7 @@ onMounted(() => {
 }
 
 .rates-page__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 }
 

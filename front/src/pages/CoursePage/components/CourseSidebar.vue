@@ -84,12 +84,12 @@ function kindIcon(kind: LessonKind): string {
   border-right: 1px solid var(--p-surface-200);
 
   &__progress-label {
-    font-size: 0.75rem;
+    font-size: $font-size-xs;
     color: var(--p-surface-500);
   }
 
   &__module-title {
-    font-size: 0.6875rem;
+    font-size: $font-size-2xs;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -102,7 +102,7 @@ function kindIcon(kind: LessonKind): string {
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
-    border-radius: 6px;
+    border-radius: $radius-md;
     cursor: pointer;
     transition: background 0.15s;
 
@@ -121,18 +121,18 @@ function kindIcon(kind: LessonKind): string {
   }
 
   &__lesson-status {
-    font-size: 0.875rem;
+    font-size: $font-size-sm;
     flex-shrink: 0;
   }
 
   &__lesson-kind {
-    font-size: 0.75rem;
+    font-size: $font-size-xs;
     color: var(--p-surface-400);
     flex-shrink: 0;
   }
 
   &__lesson-name {
-    font-size: 0.875rem;
+    font-size: $font-size-sm;
     line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;

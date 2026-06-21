@@ -319,7 +319,7 @@ onMounted(() => {
 }
 
 .requisites-panel__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg; // 2rem
   color: $surface-300;
 }
 

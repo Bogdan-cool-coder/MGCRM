@@ -135,7 +135,7 @@ const {
 
 <style lang="scss" scoped>
 .disconnect-reasons-page {
-  padding: 0.75rem;
+  padding: $space-3;
 }
 
 .dir-page__empty {
@@ -143,12 +143,12 @@ const {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 2.5rem;
+  gap: $space-2;
+  padding: $space-8;
   color: var(--p-text-muted-color);
 
   i {
-    font-size: 1.5rem;
+    font-size: $font-size-lg;
     opacity: 0.4;
   }
 }

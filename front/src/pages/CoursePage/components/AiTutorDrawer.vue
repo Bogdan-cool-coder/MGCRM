@@ -53,7 +53,7 @@
         v-else-if="messages.length === 0 && !isSending"
         class="text-center text-muted py-4"
       >
-        <i class="pi pi-comments" style="font-size: 2rem; opacity: 0.3" />
+        <i class="pi pi-comments ai-tutor-drawer__empty-icon" style="opacity: 0.3" />
         <p class="mt-2 mb-0">{{ t('onboarding.coursePage.aiTutor.emptyHistory') }}</p>
       </div>
 
@@ -76,7 +76,7 @@
         <!-- Sending indicator -->
         <div v-if="isSending" class="d-flex align-items-center gap-2 mt-2">
           <ProgressSpinner style="width: 24px; height: 24px" strokeWidth="4" />
-          <span class="text-muted" style="font-size: 0.875rem">Думаю...</span>
+          <span class="text-muted ai-tutor-drawer__thinking-text">Думаю...</span>
         </div>
       </template>
     </div>
@@ -161,7 +161,15 @@ function formatTime(iso: string): string {
 <style lang="scss" scoped>
 .ai-tutor-drawer {
   &__lesson-title {
-    font-size: 0.8125rem;
+    font-size: $font-size-sm; // snap from 0.8125rem (15px→14px)
+  }
+
+  &__empty-icon {
+    font-size: $font-size-icon-lg; // 2rem
+  }
+
+  &__thinking-text {
+    font-size: $font-size-sm; // 0.875rem
   }
 
   &__messages {
@@ -184,7 +192,7 @@ function formatTime(iso: string): string {
 
       .ai-tutor-drawer__bubble {
         background: var(--p-primary-50);
-        border-radius: 12px 12px 2px 12px;
+        border-radius: $radius-xl $radius-xl $radius-2xs $radius-xl;
         text-align: right;
       }
     }
@@ -192,13 +200,13 @@ function formatTime(iso: string): string {
     &--assistant {
       .ai-tutor-drawer__bubble {
         background: var(--p-surface-100);
-        border-radius: 12px 12px 12px 2px;
+        border-radius: $radius-xl $radius-xl $radius-xl $radius-2xs;
       }
     }
   }
 
   &__ai-icon {
-    font-size: 1rem;
+    font-size: $font-size-md; // 1rem
     color: var(--p-primary-color);
     margin-top: 0.25rem;
     flex-shrink: 0;
@@ -210,14 +218,14 @@ function formatTime(iso: string): string {
   }
 
   &__text {
-    font-size: 0.9375rem;
+    font-size: $font-size-sm; // snap from 0.9375rem (15px→14px)
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
   }
 
   &__time {
-    font-size: 0.6875rem;
+    font-size: $font-size-2xs; // 0.6875rem = 11px
     color: var(--p-surface-400);
   }
 

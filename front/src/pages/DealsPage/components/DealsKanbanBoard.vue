@@ -111,7 +111,7 @@ function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   }
   &::-webkit-scrollbar-thumb {
     background: $surface-300;
-    border-radius: 3px;
+    border-radius: $radius-xs;
   }
 }
 
@@ -140,7 +140,7 @@ function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
 }
 
 .kanban-board__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 }
 

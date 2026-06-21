@@ -310,9 +310,9 @@ async function onUploadScan(event: FileUploadUploaderEvent) {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: var(--p-primary-color);
-  color: #fff;
+  color: $surface-0;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
   flex-shrink: 0;
@@ -393,7 +393,7 @@ async function onUploadScan(event: FileUploadUploaderEvent) {
 
 .termination-drawer__scan-check {
   color: var(--p-green-500);
-  font-size: 1.25rem;
+  font-size: $font-size-xl;
 }
 
 .termination-drawer__scan-name {

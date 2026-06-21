@@ -160,7 +160,7 @@
         <Divider />
         <div class="d-flex align-items-center gap-2 mb-3">
           <Tag severity="info" :value="t('onboarding.builder.quiz.draftQuestions')" />
-          <span class="text-muted" style="font-size: 0.8rem;">{{ t('onboarding.builder.quiz.draftHint') }}</span>
+          <span class="text-muted quiz-draft-hint">{{ t('onboarding.builder.quiz.draftHint') }}</span>
         </div>
 
         <div
@@ -543,6 +543,10 @@ function onHide(): void {
     margin-bottom: $space-2;
     font-size: $font-size-sm;
   }
+}
+
+.quiz-draft-hint {
+  font-size: $font-size-2xs; // snap from 0.8rem (≈12.8px → 11px)
 }
 
 /* close button rendered in custom #header slot */

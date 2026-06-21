@@ -79,7 +79,7 @@
           </div>
 
           <div v-else class="p-4 text-muted text-center">
-            <i class="pi pi-book-open" style="font-size: 2rem; opacity: 0.4" />
+            <i class="pi pi-book-open course-page__empty-icon" />
             <p class="mt-2">Выберите урок из списка слева</p>
           </div>
 
@@ -242,48 +242,53 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    padding: 1.5rem;
+    padding: $space-6;
     min-width: 0;
   }
 
   &__header {
-    margin-bottom: 1.5rem;
+    margin-bottom: $space-6;
   }
 
   &__course-title {
-    font-size: 1.375rem;
-    font-weight: 700;
-    margin: 0.25rem 0 0.75rem;
+    font-size: $font-size-icon-md;
+    font-weight: $font-weight-bold;
+    margin: $space-1 0 $space-3;
   }
 
   &__lesson-header {
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
+    margin-bottom: $space-4;
+    padding-bottom: $space-3;
     border-bottom: 1px solid var(--p-surface-200);
   }
 
   &__lesson-title {
-    font-size: 1.125rem;
-    font-weight: 600;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
     margin: 0;
   }
 
   &__lesson-body {
     flex: 1;
-    margin-bottom: 2rem;
+    margin-bottom: $space-8;
   }
 
   &__ai-btn-wrap {
-    margin-bottom: 1.5rem;
+    margin-bottom: $space-6;
   }
 
   &__nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 1rem;
+    padding-top: $space-4;
     border-top: 1px solid var(--p-surface-200);
     margin-top: auto;
+  }
+
+  &__empty-icon {
+    font-size: $font-size-icon-lg;
+    opacity: 0.4;
   }
 
   &__skeleton {

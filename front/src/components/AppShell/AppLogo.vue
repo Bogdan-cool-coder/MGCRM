@@ -49,7 +49,7 @@ defineProps<{
 }
 
 .app-logo__mark-text {
-  color: #ffffff;
+  color: $surface-0;
   font-size: $font-size-sm;
   font-weight: $font-weight-bold;
   letter-spacing: -0.02em;

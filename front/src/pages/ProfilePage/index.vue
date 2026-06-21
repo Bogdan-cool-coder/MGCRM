@@ -149,7 +149,7 @@
 
                 <div class="totp-qr-placeholder mb-4">
                   <p class="totp-qr-placeholder__text">{{ totpSetupSecret }}</p>
-                  <p class="text-muted" style="font-size: 12px; word-break: break-all;">{{ totpSetupUri }}</p>
+                  <p class="text-muted totp-uri-text" style="word-break: break-all;">{{ totpSetupUri }}</p>
                 </div>
 
                 <p class="mb-3">{{ t('profile.security.totp_enter_code') }}</p>
@@ -639,7 +639,8 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 
   &:hover:not(.settings-card--disabled) {
     border-color: var(--p-primary-300);
-    box-shadow: 0 2px 12px rgba(23, 39, 71, 0.08);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: $shadow-card-hover;
   }
 
   &:focus-visible {
@@ -679,12 +680,12 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   justify-content: center;
 
   :global(.app-dark) & {
-    background-color: rgba(23, 39, 71, 0.3);
+    background-color: rgba($primary-900, 0.3);
   }
 }
 
 .settings-card__icon {
-  font-size: 20px;
+  font-size: $font-size-xl;
   color: var(--p-primary-600);
 
   :global(.app-dark) & {
@@ -730,7 +731,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 }
 
 .settings-card__arrow {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
   transition: color var(--app-transition-fast), transform var(--app-transition-fast);
@@ -794,12 +795,16 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   border: 1px solid $surface-200;
   border-radius: $radius-md;
   display: inline-block;
-  font-family: monospace;
+  font-family: $font-family-mono;
 
   :global(.app-dark) & {
     background-color: var(--p-surface-800);
     border-color: var(--p-surface-700);
   }
+}
+
+.totp-uri-text {
+  font-size: $font-size-xs;
 }
 
 .totp-qr-placeholder__text {
@@ -826,7 +831,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   background-color: $surface-100;
   border: 1px solid $surface-200;
   border-radius: $radius-sm;
-  font-family: monospace;
+  font-family: $font-family-mono;
   font-size: $font-size-sm;
   color: $surface-900;
   text-align: center;
@@ -862,7 +867,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   }
 
   &__icon {
-    font-size: 28px;
+    font-size: $font-size-3xl;
     color: var(--p-text-muted-color);
     margin-top: 2px;
     flex-shrink: 0;
@@ -936,7 +941,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   }
 
   &__icon {
-    font-size: 24px;
+    font-size: $font-size-2xl;
     color: $primary;
   }
 
@@ -960,7 +965,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
     position: absolute;
     top: $space-2;
     right: $space-2;
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $primary;
   }
 }
@@ -1004,7 +1009,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 
 .quick-actions-preview__icon {
   color: $primary;
-  font-size: 1rem;
+  font-size: $font-size-md;
 }
 
 .quick-actions-preview__label {
@@ -1041,7 +1046,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   }
 
   &__icon {
-    font-size: 1.25rem;
+    font-size: $font-size-xl;
     color: var(--p-red-500);
     flex-shrink: 0;
     margin-top: 2px;
@@ -1088,7 +1093,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 }
 
 .coming-soon-block__icon {
-  font-size: 48px;
+  font-size: $font-size-icon-2xl;
   opacity: 0.4;
 }
 </style>

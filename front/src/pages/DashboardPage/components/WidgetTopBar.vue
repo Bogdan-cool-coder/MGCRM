@@ -154,7 +154,7 @@ const barOption = computed<EChartsOption>(() => {
 }
 
 .widget-empty__icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-400;
 }
 

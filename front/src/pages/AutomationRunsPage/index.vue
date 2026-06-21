@@ -308,7 +308,7 @@ function truncate(s: string, len: number): string {
   }
 
   &__empty-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl; // 2.5rem
     color: var(--p-surface-400);
   }
 

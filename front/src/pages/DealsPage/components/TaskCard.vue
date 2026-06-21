@@ -142,13 +142,13 @@ async function onComplete() {
 }
 
 .task-card__deal-icon {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
 }
 
 .task-card__deal-link {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-500;
   text-decoration: none;
   overflow: hidden;
@@ -174,7 +174,7 @@ async function onComplete() {
   gap: 3px;
   border-radius: $radius-sm;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   font-weight: $font-weight-medium;
   flex-shrink: 0;
 }
@@ -202,7 +202,7 @@ async function onComplete() {
 }
 
 .task-card__type-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
 }
 
 .task-card__action-text {

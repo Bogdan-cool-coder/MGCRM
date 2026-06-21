@@ -227,11 +227,11 @@ function onTagClick(event: Event) {
 }
 
 .client-status-badge__icon {
-  font-size: 10px;
+  font-size: $font-size-3xs;
 }
 
 .client-status-badge__chevron {
-  font-size: 9px;
+  font-size: $font-size-3xs; // snap from 9px
   opacity: 0.7;
 }
 
@@ -297,7 +297,7 @@ function onTagClick(event: Event) {
 }
 
 .client-status-badge__log-arrow {
-  font-size: 10px;
+  font-size: $font-size-3xs;
   color: $surface-400;
 }
 
@@ -311,7 +311,7 @@ function onTagClick(event: Event) {
 }
 
 .client-status-badge__log-meta-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs;
   margin-right: 3px;
 }
 

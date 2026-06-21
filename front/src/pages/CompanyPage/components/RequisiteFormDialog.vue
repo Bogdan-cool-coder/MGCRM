@@ -369,7 +369,7 @@ defineExpose({ setSaving: (v: boolean) => { saving.value = v } })
   gap: $space-2;
 
   span {
-    font-size: 10px;
+    font-size: $font-size-3xs; // snap from 10px
     font-weight: $font-weight-bold;
     text-transform: uppercase;
     letter-spacing: 0.06em;

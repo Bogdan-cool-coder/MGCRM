@@ -242,7 +242,7 @@ onMounted(() => {
 }
 
 .entity-activities__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 

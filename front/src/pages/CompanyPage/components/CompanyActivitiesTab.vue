@@ -312,7 +312,7 @@ function onActivityUpdated(activity: ActivityDto) {
 }
 
 .company-activities__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 }
 
@@ -360,7 +360,7 @@ function onActivityUpdated(activity: ActivityDto) {
   top: 4px;
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: $primary-color;
   border: 2px solid $surface-card;
 

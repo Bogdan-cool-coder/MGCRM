@@ -46,7 +46,7 @@ const renderedContent = computed(() => {
 
 .lesson-text-content {
   line-height: 1.7;
-  font-size: 0.9375rem;
+  font-size: $font-size-sm; // snap from 0.9375rem (15px→14px)
   color: var(--p-text-color);
 
   :deep(h1),
@@ -76,14 +76,14 @@ const renderedContent = computed(() => {
 
   :deep(code) {
     background: var(--p-surface-100);
-    border-radius: 4px;
+    border-radius: $radius-sm; // 4px
     padding: 0.1em 0.4em;
-    font-size: 0.875em;
+    font-size: $font-size-sm; // 0.875rem (was em-relative, now rem-based token)
   }
 
   :deep(pre) {
     background: var(--p-surface-100);
-    border-radius: 6px;
+    border-radius: $radius-md; // 6px
     padding: 1rem;
     overflow-x: auto;
     margin-bottom: 1rem;
@@ -100,7 +100,7 @@ const renderedContent = computed(() => {
     background: var(--p-surface-100);
     padding: 0.75rem 1rem;
     margin: 1rem 0;
-    border-radius: 4px;
+    border-radius: $radius-sm; // 4px
     color: var(--p-text-color);
 
     p:last-child {

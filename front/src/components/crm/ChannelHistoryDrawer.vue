@@ -168,7 +168,7 @@ function formatDate(iso: string): string {
 }
 
 .channel-history-drawer__empty-icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-300;
 }
 
@@ -224,7 +224,7 @@ function formatDate(iso: string): string {
 }
 
 .channel-history-drawer__arrow {
-  font-size: 10px;
+  font-size: $font-size-3xs;
   color: $surface-400;
 }
 
@@ -244,6 +244,6 @@ function formatDate(iso: string): string {
 }
 
 .channel-history-drawer__meta-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs;
 }
 </style>

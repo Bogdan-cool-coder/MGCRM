@@ -67,7 +67,7 @@
               <Tag
                 severity="secondary"
                 :value="t(`templateVariables.types.${data.var_type}`, data.var_type)"
-                style="font-size: 0.7rem;"
+                class="variables-page__type-tag"
               />
             </template>
           </Column>
@@ -180,7 +180,7 @@ function formatKey(key: string): string {
 
 <style lang="scss" scoped>
 .variables-page {
-  padding: 0.75rem;
+  padding: $space-3;
 
   &__label {
     font-size: $font-size-sm;
@@ -209,9 +209,13 @@ function formatKey(key: string): string {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 2rem;
+    gap: $space-2;
+    padding: $space-8;
     color: var(--p-text-muted-color);
+  }
+
+  &__type-tag {
+    font-size: $font-size-3xs; // snap from 0.7rem (≈11.2px → 10px)
   }
 }
 </style>

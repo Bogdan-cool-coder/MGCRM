@@ -422,7 +422,7 @@ function onHide(): void {
 }
 
 .lesson-md-textarea {
-  font-family: 'Courier New', monospace;
+  font-family: $font-family-mono;
   font-size: $font-size-sm;
 }
 
@@ -436,7 +436,7 @@ function onHide(): void {
     background: var(--p-surface-100);
     padding: 0.75rem 1rem;
     margin: 1rem 0;
-    border-radius: 4px;
+    border-radius: $radius-sm; // 4px
   }
 }
 

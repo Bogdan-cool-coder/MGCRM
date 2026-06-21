@@ -258,7 +258,7 @@ const moreMenuItems = computed(() => [
   position: absolute;
   top: -6px;
   right: -6px;
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
   min-width: 18px;
   height: 18px;
 }

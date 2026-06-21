@@ -110,7 +110,7 @@ function formatDate(iso: string | null | undefined): string {
 .company-rail__avatar {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background-color: $surface-100;
   display: flex;
   align-items: center;

@@ -93,7 +93,7 @@ function formatDate(iso: string): string {
 }
 
 .company-docs-panel__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   color: $surface-300;
 }
 
@@ -166,7 +166,7 @@ function formatDate(iso: string): string {
   font-weight: $font-weight-medium;
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs; // snap from 10px
   }
 }
 </style>

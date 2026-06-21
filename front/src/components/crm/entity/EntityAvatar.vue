@@ -44,7 +44,7 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   border: 2px solid rgba(255, 255, 255, 0.25);
   flex-shrink: 0;
 
@@ -53,7 +53,7 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
     height: 32px;
 
     .entity-avatar__initials {
-      font-size: 12px;
+      font-size: $font-size-xs;
     }
   }
 
@@ -62,7 +62,7 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
     height: 56px;
 
     .entity-avatar__initials {
-      font-size: 18px;
+      font-size: $font-size-lg;
     }
   }
 
@@ -71,17 +71,17 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
     height: 72px;
 
     .entity-avatar__initials {
-      font-size: 22px;
+      font-size: $font-size-icon-md;
     }
   }
 }
 
 .entity-avatar__initials {
-  color: #fff;
-  font-weight: 600;
+  color: $surface-0;
+  font-weight: $font-weight-semibold;
   line-height: 1;
   letter-spacing: 0.02em;
-  font-family: Inter, 'SF UI Display', system-ui, sans-serif;
+  font-family: $font-family-sans;
   user-select: none;
 }
 </style>

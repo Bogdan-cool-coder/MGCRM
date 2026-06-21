@@ -365,7 +365,7 @@ function rottingClass(deal: DealDto & { days_in_stage?: number | null }): string
 }
 
 .deals-list__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 }
 

@@ -315,7 +315,8 @@ function onReset() {
   position: fixed;
   inset: 0;
   z-index: 999;
-  background: rgba(0, 0, 0, 0.3);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: rgba(0, 0, 0, 0.3); // modal backdrop scrim — no token for translucent black overlay
 }
 
 .contacts-filter-overlay {
@@ -326,7 +327,7 @@ function onReset() {
   z-index: 1000;
   background: $surface-card;
   border-bottom: 1px solid $surface-200;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: $shadow-overlay-sm;
   padding: $space-4;
 
   :global(.app-dark) & {

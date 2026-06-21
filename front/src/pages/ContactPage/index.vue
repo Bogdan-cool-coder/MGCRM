@@ -591,7 +591,7 @@ void attachCompanyStatus
 }
 
 .contact-page-v2__error-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-lg;
   color: var(--p-red-400);
 }
 
@@ -650,7 +650,7 @@ void attachCompanyStatus
 }
 
 .contact-page-v2__placeholder-icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-300;
 }
 

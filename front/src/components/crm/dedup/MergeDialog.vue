@@ -310,7 +310,7 @@ function onHide() {
   }
 
   &__empty-icon {
-    font-size: 2rem;
+    font-size: $font-size-icon-lg;
     color: $surface-400;
 
     &--success {

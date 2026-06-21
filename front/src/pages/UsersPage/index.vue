@@ -245,7 +245,7 @@ function roleSeverity(role: UserRole): 'success' | 'warn' | 'info' | 'secondary'
   }
 
   &__avatar-icon {
-    font-size: 0.85rem;
+    font-size: $font-size-sm; // snap from 0.85rem (~13.6px → 14px)
     color: var(--p-text-muted-color);
     flex-shrink: 0;
   }
@@ -276,7 +276,7 @@ function roleSeverity(role: UserRole): 'success' | 'warn' | 'info' | 'secondary'
   }
 
   &__empty-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl;
     opacity: 0.3;
   }
 

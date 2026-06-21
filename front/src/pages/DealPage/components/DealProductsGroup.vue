@@ -291,7 +291,7 @@ function onToggleLock() {
 }
 
 .deal-products-group__empty-icon {
-  font-size: 1.5rem;
+  font-size: $font-size-2xl;
   color: $surface-300;
 }
 

@@ -192,7 +192,7 @@ function formatDate(dateStr: string): string {
     text-align: center;
 
     &-icon {
-      font-size: 1.5rem;
+      font-size: $font-size-2xl;
       opacity: 0.3;
     }
   }
@@ -260,7 +260,7 @@ function formatDate(dateStr: string): string {
 
     i {
       flex-shrink: 0;
-      font-size: 0.875rem;
+      font-size: $font-size-sm;
     }
   }
 

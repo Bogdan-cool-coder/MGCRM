@@ -96,7 +96,7 @@ const { t } = useI18n()
   }
 
   &__icon {
-    font-size: 2rem;
+    font-size: $font-size-icon-lg;
     color: var(--p-surface-400);
     flex-shrink: 0;
 
@@ -106,7 +106,7 @@ const { t } = useI18n()
   }
 
   &__value {
-    font-size: 2rem;
+    font-size: $font-size-icon-lg;
     font-weight: $font-weight-bold;
     line-height: 1;
     color: var(--p-surface-700);

@@ -101,7 +101,7 @@ function formatDate(iso: string): string {
 }
 
 .multi-totals__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   color: $surface-300;
 }
 

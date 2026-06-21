@@ -144,7 +144,7 @@ defineExpose({ collapse, expand, collapsed })
   }
 
   i {
-    font-size: 12px;
+    font-size: $font-size-xs;
   }
 }
 

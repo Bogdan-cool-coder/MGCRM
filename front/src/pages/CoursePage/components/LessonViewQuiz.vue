@@ -123,14 +123,14 @@ async function handleRetry() {
 <style lang="scss" scoped>
 .quiz-header {
   &__title {
-    font-size: 1.125rem;
+    font-size: $font-size-lg;
     font-weight: 700;
     margin: 0 0 0.25rem;
   }
 
   &__meta,
   &__attempt {
-    font-size: 0.875rem;
+    font-size: $font-size-sm;
     color: var(--p-surface-500);
     margin: 0;
   }
@@ -138,7 +138,7 @@ async function handleRetry() {
 
 .quiz-question-header {
   &__num {
-    font-size: 0.8125rem;
+    font-size: $font-size-xs; // snap from 13px (0.8125rem)
     font-weight: 600;
     color: var(--p-surface-500);
     text-transform: uppercase;

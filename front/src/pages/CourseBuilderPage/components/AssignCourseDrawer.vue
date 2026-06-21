@@ -56,7 +56,7 @@
         />
         <div v-if="selectedUsers.length > 0" class="mt-2">
           <Badge :value="selectedUsers.length" severity="info" />
-          <span class="ms-2 text-muted" style="font-size: 0.85rem;">
+          <span class="ms-2 text-muted assign-drawer-body__count-label">
             {{ t('onboarding.assignments.drawer.employees') }}
           </span>
         </div>
@@ -188,6 +188,10 @@ async function submit(): Promise<void> {
     content: ' *';
     color: var(--p-red-500);
   }
+}
+
+.assign-drawer-body__count-label {
+  font-size: $font-size-sm; // snap from 0.85rem (13.6px→14px)
 }
 
 /* close button rendered in custom #header slot */

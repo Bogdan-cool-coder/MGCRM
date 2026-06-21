@@ -609,7 +609,7 @@ function onDrop(event: DragEvent): void {
   }
 
   &__saving-label {
-    font-size: 0.75rem;
+    font-size: $font-size-xs;
     color: var(--p-text-muted-color);
   }
 
@@ -658,7 +658,7 @@ function onDrop(event: DragEvent): void {
   :deep(.vue-flow__minimap) {
     background: var(--p-card-background);
     border: 1px solid var(--p-surface-border);
-    border-radius: 6px;
+    border-radius: $radius-md;
   }
 
   :deep(.vue-flow__minimap-mask) {
@@ -716,10 +716,12 @@ function onDrop(event: DragEvent): void {
     align-items: center;
     justify-content: center;
     gap: $space-4;
-    background: rgba(255, 255, 255, 0.85);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba($surface-0, 0.85);
     pointer-events: none;
 
     .app-dark & {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
       background: rgba(0, 0, 0, 0.6);
     }
 
@@ -729,12 +731,12 @@ function onDrop(event: DragEvent): void {
   }
 
   &__empty-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl;
     color: var(--p-text-muted-color);
   }
 
   &__empty-text {
-    font-size: 0.9375rem;
+    font-size: $font-size-sm; // snap from 15px
     color: var(--p-text-muted-color);
     text-align: center;
     max-width: 280px;
@@ -750,9 +752,9 @@ function onDrop(event: DragEvent): void {
     transform: translateX(-50%);
     background: var(--p-surface-card);
     border: 1px solid var(--p-surface-border);
-    border-radius: 6px;
+    border-radius: $radius-md;
     padding: $space-2 $space-4;
-    font-size: 0.8125rem;
+    font-size: $font-size-xs; // snap from 13px
     color: var(--p-text-muted-color);
     pointer-events: none;
     z-index: 5;
@@ -765,8 +767,8 @@ function onDrop(event: DragEvent): void {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
-    padding: 1.5rem;
+    gap: $space-4;
+    padding: $space-6;
   }
 
   &__narrow-message {

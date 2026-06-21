@@ -163,7 +163,7 @@ function statusSeverity(status: DealStatus): 'success' | 'danger' | 'secondary' 
 }
 
 .company-deals-tab__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 

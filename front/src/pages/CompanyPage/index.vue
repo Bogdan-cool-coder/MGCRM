@@ -1062,7 +1062,7 @@ onMounted(async () => {
 }
 
 .company-page-v2__error-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 
@@ -1168,7 +1168,7 @@ onMounted(async () => {
 }
 
 .company-page-v2__payments-tab-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 
@@ -1197,7 +1197,7 @@ onMounted(async () => {
 }
 
 .company-page-v2__payments-icon {
-  font-size: 1.5rem;
+  font-size: $font-size-2xl;
   color: $surface-300;
 }
 
@@ -1219,7 +1219,7 @@ onMounted(async () => {
 }
 
 .company-page-v2__files-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 

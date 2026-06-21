@@ -23,7 +23,7 @@
           <Column :header="t('managerCabinet.team.name')">
             <template #body="{ data: row }">
               <span :class="{ 'team-table__viewer-name': row.is_viewer }">
-                <i v-if="row.is_viewer" class="pi pi-user me-1" style="font-size: 12px" />
+                <i v-if="row.is_viewer" class="pi pi-user me-1 team-table__viewer-icon" />
                 {{ row.full_name }}
               </span>
             </template>
@@ -130,6 +130,10 @@ const labelFor = (pct: number): string => {
   color: var(--p-primary-color);
 }
 
+.team-table__viewer-icon {
+  font-size: $font-size-xs;
+}
+
 .team-table__footer {
   border-top: 1px solid $surface-200;
 }
@@ -145,7 +149,7 @@ const labelFor = (pct: number): string => {
 }
 
 .team-table__empty-icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-400;
 }
 

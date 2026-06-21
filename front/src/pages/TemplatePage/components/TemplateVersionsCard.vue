@@ -22,8 +22,7 @@
           <Tag
             :severity="aiSeverity(v.ai_check_status)"
             :value="t(`templates.card.aiCheck.statuses.${v.ai_check_status}`, v.ai_check_status)"
-            class="ms-auto"
-            style="font-size: 0.7rem;"
+            class="ms-auto template-versions-card__ai-tag"
           />
         </div>
       </div>
@@ -74,6 +73,10 @@ function formatDate(dateStr: string): string {
     &:last-child {
       border-bottom: none;
     }
+  }
+
+  &__ai-tag {
+    font-size: $font-size-3xs; // snap from 0.7rem (11.2px→10px)
   }
 }
 </style>

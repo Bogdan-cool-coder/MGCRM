@@ -173,7 +173,7 @@ function formatAmount(kopecks: number): string {
 }
 
 .mini-pipeline__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg; // 2rem
   color: $surface-300;
 }
 
@@ -224,7 +224,7 @@ function formatAmount(kopecks: number): string {
 .mini-pipeline__stage-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: $radius-circle; // 50%
   flex-shrink: 0;
 }
 
@@ -274,7 +274,7 @@ function formatAmount(kopecks: number): string {
   font-weight: $font-weight-medium;
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs; // 10px
   }
 }
 </style>

@@ -65,7 +65,7 @@ const { t } = useI18n()
     width: 100%;
     height: 600px;
     border: 1px solid var(--p-surface-200);
-    border-radius: 6px;
+    border-radius: $radius-md; // 6px
   }
 }
 </style>

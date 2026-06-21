@@ -165,7 +165,7 @@ const chips = computed((): FilterChip[] => {
   margin-left: 2px;
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs;
   }
 
   &:hover {

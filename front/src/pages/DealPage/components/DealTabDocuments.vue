@@ -549,7 +549,7 @@ onMounted(async () => {
   }
 
   &__empty-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl;
     color: var(--p-text-muted-color);
     opacity: 0.35;
   }
