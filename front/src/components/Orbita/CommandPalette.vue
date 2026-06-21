@@ -386,7 +386,7 @@ const _localeRef = locale
 
     &::-webkit-scrollbar-thumb {
       background: $surface-300;
-      border-radius: 2px;
+      border-radius: $radius-2xs;
     }
   }
 
@@ -422,7 +422,7 @@ const _localeRef = locale
 }
 
 .command-palette__search-icon {
-  font-size: 1rem;
+  font-size: $font-size-md;
   color: $surface-400;
   flex-shrink: 0;
 }
@@ -432,7 +432,7 @@ const _localeRef = locale
   border: none;
   outline: none;
   background: transparent;
-  font-size: 1rem;
+  font-size: $font-size-md;
   color: var(--p-text-color);
   line-height: 1.5;
 
@@ -442,7 +442,7 @@ const _localeRef = locale
 }
 
 .command-palette__esc-hint {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   padding: 2px 6px;
   border: 1px solid $surface-300;
   border-radius: $radius-sm;
@@ -460,7 +460,7 @@ const _localeRef = locale
 
 .command-palette__section-header {
   padding: $space-1 $space-4;
-  font-size: 11px;
+  font-size: $font-size-2xs;
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -493,23 +493,23 @@ const _localeRef = locale
 }
 
 .command-palette__item-icon {
-  font-size: 0.9rem;
+  font-size: $font-size-sm; // snap from 0.9rem (≈14.4px→14px)
   color: $surface-500;
-  width: 1rem;
+  width: $font-size-md;
   text-align: center;
   flex-shrink: 0;
 }
 
 .command-palette__item-label {
   flex: 1;
-  font-size: 14px;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
 }
 
 .command-palette__item-meta {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
-  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-family: $font-family-mono;
   flex-shrink: 0;
 }
 
@@ -525,13 +525,13 @@ const _localeRef = locale
 }
 
 .command-palette__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   opacity: 0.4;
 }
 
 // ─── Hint bar ─────────────────────────────────────────────────────────────────
 .command-palette__hint {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   color: $surface-400;
   text-align: center;
 }

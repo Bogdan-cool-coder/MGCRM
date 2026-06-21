@@ -45,8 +45,10 @@
     <div class="orbita-panel__divider" role="separator" />
 
     <!-- Action slots: notifications, user profile -->
+    <!-- labelSide is passed as scoped slot so action components can render
+         inline labels (same expand pattern as nav buttons) instead of tooltips -->
     <div class="orbita-panel__group orbita-panel__group--actions">
-      <slot name="actions" />
+      <slot name="actions" :label-side="labelSide" :orientation="orientation" />
     </div>
   </div>
 </template>
@@ -88,7 +90,7 @@ const labelSide = computed<'start' | 'end' | 'center'>(() => {
   return left < window.innerWidth / 2 ? 'start' : 'end'
 })
 
-defineExpose({ panelRef })
+defineExpose({ panelRef, labelSide })
 </script>
 
 <style lang="scss" scoped>
@@ -163,7 +165,7 @@ defineExpose({ panelRef })
 
     &-icon {
       flex-shrink: 0;
-      font-size: 1rem;
+      font-size: $font-size-md;
       line-height: 1;
       // Fixed square so icon is always centered inside the button at rest
       width: orbita.$orbita-control-size;
@@ -172,7 +174,7 @@ defineExpose({ panelRef })
     }
 
     &-label {
-      font-size: 13px;
+      font-size: $font-size-xs; // snap from 13px
       font-weight: $font-weight-medium;
       white-space: nowrap;
       pointer-events: none;
@@ -285,7 +287,7 @@ defineExpose({ panelRef })
 
 // Vertical labels: open toward center of screen
 .orbita-panel[data-orientation='vertical'][data-label-side='start'] {
-  // Near left edge → labels expand to the right
+  // Near left edge → labels expand to the right; icon stays pinned at left
   .orbita-panel__btn {
     flex-direction: row;
     &:hover,
@@ -296,7 +298,7 @@ defineExpose({ panelRef })
 }
 
 .orbita-panel[data-orientation='vertical'][data-label-side='end'] {
-  // Near right edge → labels expand to the left (row-reverse)
+  // Near right edge → labels expand to the left (row-reverse); icon stays pinned at right
   .orbita-panel__btn {
     flex-direction: row-reverse;
 
@@ -313,26 +315,56 @@ defineExpose({ panelRef })
   }
 }
 
-.orbita-panel[data-orientation='vertical'][data-direction='up'] {
-  left: 50%;
+// ─── Vertical panel anchor (edge-aware) ──────────────────────────────────────
+//
+// KEY: panel is positioned relative to .orbita (the flex container holding
+// [OrbitaPanel, OrbitaToggle]). The toggle is the LAST child, so in V-mode
+// the panel sits ABOVE (up) or BELOW (down) the toggle.
+//
+// label-side=start (left edge) → anchor left:0, panel grows rightward.
+// label-side=end   (right edge)→ anchor right:0, panel grows leftward.
+// NO translateX(-50%) — that was the source of symmetric expansion from centre.
+// The icon column always stays flush with the edge of the orbita container.
+
+// direction=up, left edge
+.orbita-panel[data-orientation='vertical'][data-direction='up'][data-label-side='start'] {
+  left: 0;
+  right: auto;
   bottom: calc(100% - #{orbita.$orbita-toggle-overlap});
-  transform: translateX(-50%);
-  transform-origin: center bottom;
+  transform-origin: left bottom;
 }
 
-.orbita-panel[data-orientation='vertical'][data-direction='down'] {
-  left: 50%;
+// direction=up, right edge
+.orbita-panel[data-orientation='vertical'][data-direction='up'][data-label-side='end'] {
+  right: 0;
+  left: auto;
+  bottom: calc(100% - #{orbita.$orbita-toggle-overlap});
+  transform-origin: right bottom;
+}
+
+// direction=down, left edge
+.orbita-panel[data-orientation='vertical'][data-direction='down'][data-label-side='start'] {
+  left: 0;
+  right: auto;
   top: calc(100% - #{orbita.$orbita-toggle-overlap});
-  transform: translateX(-50%);
-  transform-origin: center top;
+  transform-origin: left top;
 }
 
+// direction=down, right edge
+.orbita-panel[data-orientation='vertical'][data-direction='down'][data-label-side='end'] {
+  right: 0;
+  left: auto;
+  top: calc(100% - #{orbita.$orbita-toggle-overlap});
+  transform-origin: right top;
+}
+
+// Collapse animation — vertical scaleY only, no X shift
 .orbita-panel[data-orientation='vertical'].is-collapsed[data-direction='up'] {
-  transform: translateX(-50%) translateY(0.5rem) scaleY(0.96);
+  transform: translateY(0.5rem) scaleY(0.96);
 }
 
 .orbita-panel[data-orientation='vertical'].is-collapsed[data-direction='down'] {
-  transform: translateX(-50%) translateY(-0.5rem) scaleY(0.96);
+  transform: translateY(-0.5rem) scaleY(0.96);
 }
 
 // ─── Responsive ───────────────────────────────────────────────────────────────
@@ -385,14 +417,18 @@ defineExpose({ panelRef })
 
 @media (forced-colors: active) {
   .orbita-panel {
-    border: 1px solid ButtonText;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    border: 1px solid ButtonText; // a11y forced-colors system keyword
   }
 
   .orbita-panel__btn {
     &.is-active {
-      border: 2px solid Highlight;
-      color: HighlightText;
-      background: Highlight;
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      border: 2px solid Highlight; // a11y forced-colors system keyword
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: HighlightText; // a11y forced-colors system keyword
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: Highlight; // a11y forced-colors system keyword
     }
   }
 }

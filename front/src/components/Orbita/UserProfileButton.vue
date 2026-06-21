@@ -1,8 +1,17 @@
 <template>
-  <div class="user-profile-btn">
+  <!--
+    Inline-label wrapper follows the same orbita-panel__btn expand pattern.
+    v-tooltip removed — it rendered behind the toggle in vertical mode.
+  -->
+  <div
+    class="user-profile-btn"
+    :class="[
+      'orbita-action-btn',
+      panelOrientation === 'vertical' ? `orbita-action-btn--${labelSide}` : 'orbita-action-btn--h',
+    ]"
+  >
     <button
-      v-tooltip="tooltipOptions(label)"
-      class="user-profile-btn__trigger"
+      class="user-profile-btn__trigger orbita-action-btn__trigger"
       :aria-label="label"
       @click="handleClick"
       @keydown.esc.stop="accountMenuRef?.hide()"
@@ -16,6 +25,9 @@
       <span v-else class="user-profile-btn__initials">{{ initials }}</span>
     </button>
 
+    <!-- Inline label — expands on hover, edge-aware -->
+    <span class="orbita-action-btn__label" aria-hidden="true">{{ label }}</span>
+
     <AccountMenu
       ref="accountMenuRef"
       @show="emit('visibility-change', true)"
@@ -27,14 +39,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Tooltip from 'primevue/tooltip'
 import AccountMenu from '@/components/AppShell/AccountMenu.vue'
 import { useUserStore } from '@/stores/user'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
-import type { OrbitaOverlayControl } from './types'
+import type { OrbitaOverlayControl, OrbitaOrientation } from './types'
 
 interface Props {
   tooltipOptions: (value: string) => OrbitaTooltipOptions
+  /** Edge-aware label side forwarded from OrbitaPanel scoped slot */
+  labelSide?: 'start' | 'end' | 'center'
+  /** Panel orientation forwarded from OrbitaPanel scoped slot */
+  panelOrientation?: OrbitaOrientation
 }
 
 defineProps<Props>()
@@ -45,7 +60,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const vTooltip = Tooltip
 const userStore = useUserStore()
 const accountMenuRef = ref<InstanceType<typeof AccountMenu> | null>(null)
 
@@ -66,7 +80,6 @@ function handleClick(event: MouseEvent) {
 }
 
 // ─── OrbitaOverlayControl interface ──────────────────────────────────────────
-// Exposed so parent (Orbita.vue) can wire useOrbitaOverlays for mutual exclusion.
 function syncPopover(open: boolean, event?: MouseEvent | null) {
   if (!accountMenuRef.value) return
   if (open && event) {
@@ -84,14 +97,85 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 </script>
 
 <style lang="scss" scoped>
+@use './styles/tokens' as orbita;
+
+// ─── Inline-label action button wrapper (shared with NotificationsButton) ───
+// Defined here locally because scoped styles don't leak; action btn label
+// classes are duplicated across components intentionally (no global SCSS leak).
+.orbita-action-btn {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  height: orbita.$orbita-control-size;
+  min-width: orbita.$orbita-control-size;
+  max-width: orbita.$orbita-control-size;
+  border-radius: $radius-md;
+  transition: max-width 0.18s ease-out;
+
+  &:hover,
+  &:focus-within {
+    max-width: 14rem;
+
+    .orbita-action-btn__label {
+      max-width: 10rem;
+      opacity: 1;
+      padding-inline-end: 0.625rem;
+    }
+  }
+
+  &--start {
+    flex-direction: row;
+  }
+
+  &--end {
+    flex-direction: row-reverse;
+
+    &:hover,
+    &:focus-within {
+      .orbita-action-btn__label {
+        padding-inline-end: 0;
+        padding-inline-start: 0.625rem;
+      }
+    }
+  }
+
+  &--h,
+  &--center {
+    flex-direction: row;
+  }
+}
+
+.orbita-action-btn__trigger {
+  flex-shrink: 0;
+  width: orbita.$orbita-control-size;
+  min-width: orbita.$orbita-control-size;
+}
+
+.orbita-action-btn__label {
+  font-size: $font-size-xs; // snap from 13px
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  pointer-events: none;
+  display: block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-inline: 0;
+  color: $surface-700;
+  transition:
+    max-width 0.18s ease-out,
+    opacity 0.14s ease-out,
+    padding-inline 0.18s ease-out;
+}
+
+// ─── Trigger ─────────────────────────────────────────────────────────────────
 .user-profile-btn {
   position: relative;
-  display: inline-flex;
 }
 
 .user-profile-btn__trigger {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: orbita.$orbita-control-size;
+  height: orbita.$orbita-control-size;
   border: 1px solid transparent;
   border-radius: $radius-md;
   background: transparent;
@@ -128,11 +212,40 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   border-radius: $radius-sm;
   background: rgba($primary, 0.15);
   color: $primary;
-  font-size: 11px;
+  font-size: $font-size-2xs;
   font-weight: $font-weight-bold;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+// ─── Dark mode ────────────────────────────────────────────────────────────────
+:global(.app-dark) {
+  .orbita-action-btn__label {
+    color: $surface-300;
+  }
+
+  .user-profile-btn__trigger {
+    &:hover {
+      background: $surface-800;
+      border-color: rgba($surface-100, 0.1);
+    }
+  }
+}
+
+// ─── Accessibility ────────────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .orbita-action-btn,
+  .orbita-action-btn__label {
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .orbita-action-btn__label {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    color: ButtonText; // a11y forced-colors system keyword
+  }
 }
 </style>

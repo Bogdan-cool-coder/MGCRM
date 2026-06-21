@@ -158,7 +158,7 @@ const rotateLabel = computed(() =>
   &__grip-dot {
     width: 4px;
     height: 4px;
-    border-radius: 999px;
+    border-radius: $radius-pill; // 999px
     background: currentColor;
     opacity: 0.8;
   }
@@ -207,7 +207,7 @@ const rotateLabel = computed(() =>
     }
 
     :deep(.p-button-icon) {
-      font-size: 1rem;
+      font-size: $font-size-md; // 1rem
     }
   }
 
@@ -236,7 +236,7 @@ const rotateLabel = computed(() =>
     }
 
     :deep(.p-button-icon) {
-      font-size: 0.85rem;
+      font-size: $font-size-sm; // snap from 0.85rem (13.6px→14px)
     }
 
     // In vertical mode, rotate icon 90deg to indicate axis
@@ -306,11 +306,13 @@ const rotateLabel = computed(() =>
 // Accessibility: forced-colors (high contrast mode)
 @media (forced-colors: active) {
   .orbita-toggle {
-    border: 1px solid ButtonText;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    border: 1px solid ButtonText; // a11y forced-colors system keyword
   }
 
   .orbita-toggle__grip-dot {
-    background: ButtonText;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: ButtonText; // a11y forced-colors system keyword
   }
 }
 </style>

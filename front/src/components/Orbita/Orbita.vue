@@ -25,18 +25,28 @@
       :current-position="layoutStore.orbitPos"
       @navigate="navigateTo"
     >
-      <template #actions>
+      <template #actions="{ labelSide: panelLabelSide, orientation: panelOrientation }">
         <!-- User-configured quick actions (from profile) -->
-        <QuickActionsCluster :tooltip-options="tooltipOptions" />
+        <!-- labelSide + orientation forwarded so action components render inline
+             labels (edge-aware) instead of v-tooltip (which can sit behind the toggle) -->
+        <QuickActionsCluster
+          :tooltip-options="tooltipOptions"
+          :label-side="panelLabelSide"
+          :panel-orientation="panelOrientation"
+        />
         <NotificationsButton
           ref="notificationsRef"
           :tooltip-options="tooltipOptions"
+          :label-side="panelLabelSide"
+          :panel-orientation="panelOrientation"
           @toggle-request="handleOverlayToggle('notifications', $event)"
           @visibility-change="handleOverlayVisibility('notifications', $event)"
         />
         <UserProfileButton
           ref="userProfileRef"
           :tooltip-options="tooltipOptions"
+          :label-side="panelLabelSide"
+          :panel-orientation="panelOrientation"
           @toggle-request="handleOverlayToggle('profile', $event)"
           @visibility-change="handleOverlayVisibility('profile', $event)"
         />
