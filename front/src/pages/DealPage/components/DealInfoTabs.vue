@@ -66,6 +66,7 @@ const activeTab = ref<'main' | 'documents' | 'finances' | 'log'>('main')
   border-bottom: 1px solid var(--p-surface-200);
   background: var(--p-card-background);
 
+  // #4 fix: dark tablist — card-background token already resolves correctly via colorScheme.dark.card
   .app-dark & {
     border-bottom-color: var(--p-surface-700);
   }
@@ -74,6 +75,11 @@ const activeTab = ref<'main' | 'documents' | 'finances' | 'log'>('main')
 :deep(.p-tab) {
   font-size: $font-size-sm;
   padding: $space-2 $space-3;
+}
+
+// spec §3: active tab = font-weight 600
+:deep(.p-tab[aria-selected="true"]) {
+  font-weight: $font-weight-semibold;
 }
 
 :deep(.p-tabpanel) {

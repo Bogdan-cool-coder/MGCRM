@@ -455,6 +455,34 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### DS-5. Редизайн карточки сущности (контакт + компания)
+
+**Статус:** DONE (2026-06-22). designer→backend-specialist→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields.
+**ТЗ:** `design-handoff/redesign/EntityCard-spec.md` + `entity-card.html`.
+**Агенты:** `backend-specialist` (KPI-агрегат контакта) + `frontend-specialist` (редизайн компонентов и страниц).
+
+**Что сделано:**
+
+- [x] **Бэкенд — `DealService::aggregateForContact(Contact)` (sales-specialist / DealService):** агрегат сделок контакта через `deal_contacts` (без N+1: одним `whereHas` + `->get(['id','amount','currency'])`). Группирует по валюте (int-копейки), конвертирует через `ExchangeRateService::convertAmount` (null если FX недоступен). Возвращает `DealTotalsDTO`: `per_currency`, `base_total` (int|null), `base_currency`, `open_count`. Деньги — строго int, float запрещён.
+- [x] **Бэкенд — `ContactController::show()` расширен:** `DealService::aggregateForContact()` + `ActivityService::openTasksCountForContact()` + `DB::table('crm_contact_company_links')->count()` — три агрегата без N+1. KPI-блок: `deals_count`, `deals_sum` (int копейки|null), `deals_sum_currency`, `last_touch_at`, `open_tasks_count`, `companies_count` — через `->additional(['kpi' => ...])`. `ContactResource::toArray()` — `'kpi' => $this->additional['kpi'] ?? null` (null в index-ответе, без N+1 на списках).
+- [x] **Бэкенд — `ContactResource`:** добавлены поля `source`, `created_at`, `updated_at` (ISO8601).
+- [x] **Тесты — `ContactKpiTest.php`:** 19 PHPUnit тестов (51 assertion): deals_count с/без soft-deleted, last_touch_at, open_tasks_count (все task-like типы, исключение Note/Done), deals_sum (RUB-агрегат, soft-delete, null-корнер), deals_sum_currency тип, companies_count, kpi-структура, index без kpi. Сьют 357 CRM PASS.
+- [x] **Фронт — переработаны компоненты `front/src/components/crm/entity/`:** `EntityInfoHeader.vue` (avatar-col 56×56, info-col с title/subtitle/meta-row/tags, кнопки назад+меню в top-row), `EntityKpiStrip.vue` (KPI-пилюли с accent-вариантами, loading-skeleton, mobile horizontal-scroll), `EntityActivitiesTab.vue` (фильтр-чипы Все/События/Изменения, feed bottom-up, OpenTasksList, EntityComposer), `EntityComposer.vue` (режимы Заметка/Задача), `EntityAvatar.vue`, `InfoPanel.vue`.
+- [x] **Фронт — `ContactPage/index.vue`:** редизайн на EntityInfoHeader + EntityKpiStrip + Tabs (Обзор/Активность/Сделки/Файлы); правый рейл `ContactRightRail.vue` удалён; `ContactDealsTab.vue` (NEW) — DataTable сделок, link→DealPage, форматирование копеек; `ContactFilesTab.vue` (NEW) — graceful «скоро» (B-4); Обзор — одна колонка (`col-12`); i18n RU+EN.
+- [x] **Фронт — `CompanyPage/index.vue`:** редизайн на EntityInfoHeader + EntityKpiStrip + Tabs (Обзор/Активность/Сотрудники/Сделки/Документы/Файлы/Холдинг); правый рейл `CompanyRightRail.vue` удалён; `CompanyFilesTab.vue` (NEW) — graceful «скоро» (B-4); `CompanyMiniDealsPanel.vue` (NEW); компоненты `CompanyActivitiesTab`, `CompanyDealsTab`, `CompanyEmployeesTab` рефакторинг.
+- [x] **Фронт — пресет табов `theme/adapters/primevue/preset.ts`:** DS-5 добавил `tabs.activeBar.height=2px`, `tabs.activeBar.background='{primary.900}'`, `colorScheme.dark.tablist.background='{surface.100}'` — app-wide улучшение (затронул `DealInfoTabs.vue`: active-tab `font-weight: 600` через `:deep(.p-tab[aria-selected="true"])`).
+- [x] **Фронт — `typography.ts`:** добавлен NB-комментарий о 14px-root (rem-шкала 14-based; xs=0.75rem рендерится ~10.5px, не 12px).
+- [x] **i18n:** полная симметрия RU+EN (0 расхождений). Новые ключи: `crm.entity.*`, `contact.page.*`, `company.page.*`, `crm.contact.*`, `crm.company.*`, `crm.files.*`.
+- [x] **QA:** tsc+lint:ds+build clean. qa-tester: 5/6 визуальных пунктов PASS; §1 мета 10.5px vs «12px» → BY-DESIGN (14px root, корректный токен `$font-size-xs`, задокументировано в `typography.ts`).
+
+**Беклог (не блокеры):**
+- **B-3:** кнопка «Добавить в сделку» в `ContactDealsTab` disabled — требует `POST /api/deals/{id}/contacts` (будущий слайс).
+- **B-4:** `ContactFilesTab` и `CompanyFilesTab` — graceful «скоро»; двухпанельный layout реализуется после появления `GET /api/{contacts|companies}/{id}/files`.
+- **position-wire (DS-4 хвост):** фильтр position не пробрасывается из `buildContactParams()` — отдельный слайс фильтров.
+- **CompanyPage TODO-команды** (строки ~700–729): `open task/note/call/email/export` — заглушки `command: () => {}`, реализуются при добавлении соответствующих диалогов.
+
+---
+
 ### M3. Sales / Kanban (2-3 недели)
 
 **Ведущие:** `sales-specialist` + `catalog` (в его зоне) + `frontend-specialist` + `designer`. Контекст `Sales` + `Catalog`.

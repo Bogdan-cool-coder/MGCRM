@@ -1,91 +1,90 @@
 <template>
-  <div class="company-deals-tab">
+  <div class="contact-deals-tab">
     <!-- TabHead -->
-    <div class="company-deals-tab__head">
-      <span class="company-deals-tab__head-title">{{ t('company.page.tabs.deals') }}</span>
+    <div class="contact-deals-tab__head">
+      <span class="contact-deals-tab__head-title">{{ t('contact.page.tabs.deals') }}</span>
       <Button
         icon="pi pi-plus"
-        :label="t('company.page.deals.createDeal')"
+        :label="t('crm.contact.sections.dealsParticipation')"
         size="small"
-        @click="$emit('createDeal')"
+        severity="secondary"
+        outlined
+        disabled
+        :title="t('crm.contact.deals.addComingSoon')"
       />
+      <!-- TODO B-3: кнопка «Добавить в сделку» — требует POST /api/deals/{id}/contacts -->
     </div>
 
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="company-deals-tab__skeleton">
-      <Skeleton height="48px" class="mb-2" />
-      <Skeleton height="48px" class="mb-2" />
-      <Skeleton height="48px" />
+    <!-- Loading -->
+    <div v-if="loading" class="contact-deals-tab__skeleton">
+      <Skeleton height="44px" class="mb-2" />
+      <Skeleton height="44px" class="mb-2" />
+      <Skeleton height="44px" />
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="deals.length === 0" class="company-deals-tab__empty">
-      <i class="pi pi-briefcase company-deals-tab__empty-icon" />
-      <p class="company-deals-tab__empty-title">{{ t('company.page.deals.empty') }}</p>
-      <Button
-        icon="pi pi-plus"
-        :label="t('company.page.deals.createDeal')"
-        severity="secondary"
-        outlined
-        @click="$emit('createDeal')"
-      />
+    <div v-else-if="deals.length === 0" class="contact-deals-tab__empty">
+      <i class="pi pi-briefcase contact-deals-tab__empty-icon" />
+      <p class="contact-deals-tab__empty-text">{{ t('crm.contact.sections.dealsEmpty') }}</p>
     </div>
 
-    <!-- Deals table — §6 колонки: Название · Этап · Сумма · Ответственный · Создана -->
+    <!-- Full DataTable -->
     <DataTable
       v-else
       :value="deals"
       size="small"
-      class="company-deals-tab__table"
+      class="contact-deals-tab__table"
     >
       <Column :header="t('sales.deal.list.columns.title')">
         <template #body="{ data }">
-          <RouterLink :to="`/deals/${data.id}`" class="company-deals-tab__deal-link">
-            {{ data.title }}
+          <RouterLink :to="`/deals/${data.id}`" class="contact-deals-tab__deal-link">
+            {{ data.title || `#${data.id}` }}
           </RouterLink>
         </template>
       </Column>
 
-      <Column :header="t('sales.deal.list.columns.stage')" style="width: 180px">
+      <Column :header="t('sales.deal.list.columns.stage')" style="width: 160px">
         <template #body="{ data }">
           <Tag
+            v-if="data.stage?.name"
             :value="data.stage.name"
             severity="secondary"
             size="small"
-            :style="data.stage.color ? { background: data.stage.color + '22', color: data.stage.color } : {}"
+            :style="data.stage?.color ? { background: data.stage.color + '22', color: data.stage.color } : {}"
           />
+          <span v-else>—</span>
         </template>
       </Column>
 
-      <Column :header="t('sales.deal.list.columns.amount')" style="width: 150px">
+      <Column :header="t('sales.deal.list.columns.amount')" style="width: 140px">
         <template #body="{ data }">
-          <span class="company-deals-tab__amount">{{ formatKopecks(data.amount, data.currency) }}</span>
+          <span class="contact-deals-tab__amount">{{ formatKopecks(data.amount, data.currency) }}</span>
         </template>
       </Column>
 
-      <Column :header="t('sales.deal.list.columns.owner')" style="width: 150px">
+      <Column :header="t('sales.deal.list.columns.owner')" style="width: 140px">
         <template #body="{ data }">
-          <span class="company-deals-tab__owner">{{ data.owner?.name ?? '—' }}</span>
+          <span class="contact-deals-tab__owner">{{ data.owner?.name ?? '—' }}</span>
         </template>
       </Column>
 
-      <Column :header="t('common.createdAt')" style="width: 120px">
+      <Column :header="t('common.createdAt')" style="width: 110px">
         <template #body="{ data }">
-          <span class="company-deals-tab__date">{{ formatDate(data.created_at) }}</span>
+          <span class="contact-deals-tab__date">{{ formatDate(data.created_at) }}</span>
         </template>
       </Column>
     </DataTable>
 
-    <!-- Pagination -->
-    <div v-if="hasMore" class="company-deals-tab__load-more">
+    <!-- Load more -->
+    <div v-if="hasMore" class="contact-deals-tab__load-more">
       <Button
         icon="pi pi-refresh"
         :label="t('common.loadMore')"
         severity="secondary"
         outlined
         size="small"
-        :loading="loading"
-        @click="$emit('loadMore')"
+        :loading="loadingMore"
+        @click="emit('loadMore')"
       />
     </div>
   </div>
@@ -95,20 +94,20 @@
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
-import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
+import Skeleton from 'primevue/skeleton'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import type { DealDto } from '@/entities/sales'
 
 defineProps<{
   deals: DealDto[]
-  loading: boolean
-  hasMore: boolean
+  loading?: boolean
+  loadingMore?: boolean
+  hasMore?: boolean
 }>()
 
-defineEmits<{
-  createDeal: []
+const emit = defineEmits<{
   loadMore: []
 }>()
 
@@ -143,14 +142,14 @@ function formatDate(iso: string | null | undefined): string {
 </script>
 
 <style lang="scss" scoped>
-.company-deals-tab {
+.contact-deals-tab {
   display: flex;
   flex-direction: column;
 }
 
 // ── TabHead ──────────────────────────────────────────────────────────────────
 
-.company-deals-tab__head {
+.contact-deals-tab__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -162,7 +161,7 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
-.company-deals-tab__head-title {
+.contact-deals-tab__head-title {
   font-size: $font-size-xs;
   font-weight: $font-weight-bold;
   text-transform: uppercase;
@@ -172,13 +171,13 @@ function formatDate(iso: string | null | undefined): string {
 
 // ── States ───────────────────────────────────────────────────────────────────
 
-.company-deals-tab__skeleton {
+.contact-deals-tab__skeleton {
+  padding: $space-4;
   display: flex;
   flex-direction: column;
-  padding: $space-4;
 }
 
-.company-deals-tab__empty {
+.contact-deals-tab__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -187,24 +186,24 @@ function formatDate(iso: string | null | undefined): string {
   text-align: center;
 }
 
-.company-deals-tab__empty-icon {
-  font-size: $font-size-icon-2xl;
+.contact-deals-tab__empty-icon {
+  font-size: $font-size-icon-xl;
   color: $surface-300;
 }
 
-.company-deals-tab__empty-title {
-  font-size: $font-size-base;
+.contact-deals-tab__empty-text {
+  font-size: $font-size-sm;
   color: $surface-500;
   margin: 0;
 }
 
 // ── Table ────────────────────────────────────────────────────────────────────
 
-.company-deals-tab__table {
-  border: none;
+.contact-deals-tab__table {
+  border-top: none;
 }
 
-.company-deals-tab__deal-link {
+.contact-deals-tab__deal-link {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: var(--p-primary-color);
@@ -215,7 +214,7 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
-.company-deals-tab__amount {
+.contact-deals-tab__amount {
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   color: $primary-900;
@@ -225,17 +224,23 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
-.company-deals-tab__owner {
+.contact-deals-tab__owner {
   font-size: $font-size-sm;
   color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
 }
 
-.company-deals-tab__date {
+.contact-deals-tab__date {
   font-size: $font-size-sm;
   color: $surface-500;
 }
 
-.company-deals-tab__load-more {
+// ── Load more ────────────────────────────────────────────────────────────────
+
+.contact-deals-tab__load-more {
   display: flex;
   justify-content: center;
   padding: $space-3;

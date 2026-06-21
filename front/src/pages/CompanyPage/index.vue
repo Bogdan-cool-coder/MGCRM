@@ -45,13 +45,15 @@
       <EntityInfoHeader
         :entity-id="company.id"
         :title="company.name"
-        :subtitle="companySubtitle || undefined"
         :author-name="company.owner_user?.full_name"
         :works-with-name="company.responsible_user?.full_name"
         :category-code="company.category_code"
         :engagement-tier="(company as CompanyExtended).engagement_tier ?? undefined"
         :last-activity-at="(company as CompanyExtended).last_activity_at"
         :tags="company.tags"
+        :source-label="companySourceLabel"
+        :created-at="company.created_at"
+        :updated-at="company.updated_at"
         :menu-items="menuItems"
         @back="router.back()"
       >
@@ -108,96 +110,109 @@
             <Tab value="payments">{{ t('crm.company.tabs.payments') }}</Tab>
             <Tab value="holding">{{ t('company.page.tabs.holding') }}</Tab>
             <Tab value="files">{{ t('crm.company.tabs.files') }}</Tab>
-            <Tab value="log">{{ t('crm.company.tabs.log') }}</Tab>
           </TabList>
 
           <TabPanels>
-            <!-- ── Overview ───────────────────────────────────────── -->
+            <!-- ── Overview (одна колонка §3.2) ──────────────────────────── -->
             <TabPanel value="overview">
-              <div class="row g-0">
-                <div class="col-12 col-xl-6">
-                  <!-- Requisites panel -->
-                  <CompanyRequisitesPanel
-                    :company="company"
-                    :is-saving="isSaving"
-                    @save="patchField"
-                  />
+              <div class="company-page-v2__tab-content">
+                <div class="row g-0">
+                  <div class="col-12">
+                    <div class="company-page-v2__panels">
 
-                  <!-- Marketing panel (N1 FE-A.3) -->
-                  <CompanyMarketingPanel
-                    :company-id="company.id"
-                    :acquisition-channel-id="company.acquisition_channel_id ?? null"
-                    :is-saving="isSaving"
-                    :channels="directoriesStore.activeAcquisitionChannels"
-                    @save="patchField"
-                  />
+                      <!-- 1. Реквизиты -->
+                      <CompanyRequisitesPanel
+                        :company="company"
+                        :is-saving="isSaving"
+                        @save="patchField"
+                      />
 
-                  <!-- Employees overview panel -->
-                  <CompanyEmployeesPanel
-                    :employees="employees"
-                    @add-employee="openAddEmployee"
-                    @set-primary="setPrimaryEmployee"
-                    @go-to-tab="goToTab"
-                  />
+                      <!-- 2. Сотрудники (обзор) -->
+                      <CompanyEmployeesPanel
+                        :employees="employees"
+                        @add-employee="openAddEmployee"
+                        @set-primary="setPrimaryEmployee"
+                        @go-to-tab="goToTab"
+                      />
 
-                  <!-- Holding tree panel (always visible, collapsed by default) -->
-                  <HoldingTree
-                    :tree="holding"
-                    :loading="holdingLoading"
-                    @attach-parent="showAttachHolding = true"
-                    @detach-parent="onDetachHolding"
-                  />
-                </div>
+                      <!-- 3. Сделки в работе (CompanyMiniDealsPanel) -->
+                      <InfoPanel
+                        :title="t('crm.company.sections.dealsInProgress')"
+                        icon="pi-briefcase"
+                        panel-key="company-deals-overview"
+                        :default-collapsed="false"
+                        :count="deals.length || undefined"
+                      >
+                        <template #header-action>
+                          <Button
+                            icon="pi pi-plus"
+                            text
+                            severity="secondary"
+                            size="small"
+                            :title="t('company.page.deals.createDeal')"
+                            @click.stop="onCreateDeal"
+                          />
+                        </template>
+                        <CompanyMiniDealsPanel :deals="deals" />
+                      </InfoPanel>
 
-                <div class="col-12 col-xl-6">
-                  <!-- «Сейчас» strip -->
-                  <InfoPanel
-                    :title="t('crm.entity.nowStrip.label')"
-                    icon="pi-bolt"
-                    panel-key="company-now-strip"
-                    :default-collapsed="false"
-                  >
-                    <EntityNowStrip :items="companyNowItems" />
-                  </InfoPanel>
+                      <!-- 4. Холдинг -->
+                      <InfoPanel
+                        :title="t('company.page.tabs.holding')"
+                        icon="pi-sitemap"
+                        panel-key="company-holding-overview"
+                        :default-collapsed="true"
+                      >
+                        <template #header-action>
+                          <Button
+                            icon="pi pi-plus"
+                            text
+                            severity="secondary"
+                            size="small"
+                            :title="t('crm.company.holding.addParent')"
+                            @click.stop="showAttachHolding = true"
+                          />
+                        </template>
+                        <HoldingTree
+                          :tree="holding"
+                          :loading="holdingLoading"
+                          @attach-parent="showAttachHolding = true"
+                          @detach-parent="onDetachHolding"
+                        />
+                      </InfoPanel>
 
-                  <!-- Mini pipeline / deals panel -->
-                  <MiniPipelinePanel
-                    :deals="deals"
-                    :loading="dealsLoading"
-                    @create-deal="onCreateDeal"
-                    @filter-by-stage="(id) => { goToTab('deals') }"
-                    @go-to-tab="goToTab"
-                  />
+                      <!-- 5. История событий (мини) -->
+                      <InfoPanel
+                        :title="t('crm.entity.miniTimeline.title')"
+                        icon="pi-history"
+                        panel-key="company-mini-timeline"
+                        :default-collapsed="false"
+                      >
+                        <EntityMiniTimeline
+                          :log="companyLog"
+                          :max-items="5"
+                          :on-go-to-log="() => goToTab('activity')"
+                        />
+                      </InfoPanel>
 
-                  <!-- Mini timeline (Хронология) -->
-                  <InfoPanel
-                    :title="t('crm.entity.miniTimeline.title')"
-                    icon="pi-history"
-                    panel-key="company-mini-timeline"
-                    :default-collapsed="false"
-                  >
-                    <EntityMiniTimeline
-                      :log="companyLog"
-                      :max-items="5"
-                      :on-go-to-log="() => goToTab('log')"
-                    />
-                  </InfoPanel>
+                      <!-- Доп. поля (свёрнуты) -->
+                      <InfoPanel
+                        :title="t('crm.contact.sections.customFields')"
+                        icon="pi-sliders-h"
+                        panel-key="company-custom-fields"
+                        :default-collapsed="true"
+                      >
+                        <CustomFieldRenderer
+                          v-if="company"
+                          entity-scope="company"
+                          :entity-id="company.id"
+                          :extra-fields="company.extra_fields"
+                          :on-save="saveCustomField"
+                        />
+                      </InfoPanel>
 
-                  <!-- Custom fields (collapsed) -->
-                  <InfoPanel
-                    :title="t('crm.contact.sections.customFields')"
-                    icon="pi-sliders-h"
-                    panel-key="company-custom-fields"
-                    :default-collapsed="true"
-                  >
-                    <CustomFieldRenderer
-                      v-if="company"
-                      entity-scope="company"
-                      :entity-id="company.id"
-                      :extra-fields="company.extra_fields"
-                      :on-save="saveCustomField"
-                    />
-                  </InfoPanel>
+                    </div>
+                  </div>
                 </div>
               </div>
             </TabPanel>
@@ -271,7 +286,19 @@
 
             <!-- ── Holding tab ────────────────────────────────────── -->
             <TabPanel value="holding">
-              <div class="company-page-v2__tab-content">
+              <div class="company-page-v2__tab-content company-page-v2__tab-content--no-pad">
+                <!-- TabHead -->
+                <div class="company-page-v2__tab-head">
+                  <span class="company-page-v2__tab-head-title">{{ t('company.page.tabs.holding') }}</span>
+                  <Button
+                    icon="pi pi-plus"
+                    :label="t('crm.company.holding.addParent')"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    @click="showAttachHolding = true"
+                  />
+                </div>
                 <div class="company-page-v2__holding-tab-wrapper">
                   <HoldingTree
                     :tree="holding"
@@ -285,16 +312,8 @@
 
             <!-- ── Files tab ──────────────────────────────────────── -->
             <TabPanel value="files">
-              <div class="company-page-v2__tab-content company-page-v2__files-tab">
-                <i class="pi pi-folder company-page-v2__files-icon" />
-                <p class="company-page-v2__files-text">{{ t('company.page.stub.files') }}</p>
-              </div>
-            </TabPanel>
-
-            <!-- ── Log tab ───────────────────────────────────────────── -->
-            <TabPanel value="log">
-              <div class="company-page-v2__tab-content">
-                <EntityLogTab :log="companyLog" :metrics="companyMetrics" />
+              <div class="company-page-v2__tab-content company-page-v2__tab-content--no-pad">
+                <CompanyFilesTab />
               </div>
             </TabPanel>
           </TabPanels>
@@ -448,16 +467,13 @@ import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
-import EntityNowStrip, { type NowItem } from '@/components/crm/entity/EntityNowStrip.vue'
 import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import EntityActivitiesTab from '@/components/crm/entity/EntityActivitiesTab.vue'
-import EntityLogTab, { type LogMetric } from '@/components/crm/entity/EntityLogTab.vue'
 import CustomFieldRenderer from '@/components/crm/entity/CustomFieldRenderer.vue'
 import CreateContactInlineDialog from '@/components/crm/CreateContactInlineDialog.vue'
 import { useEntityLog } from '@/composables/crm/useEntityLog'
 import CompanyRequisitesPanel from './components/CompanyRequisitesPanel.vue'
-import CompanyMarketingPanel from './components/CompanyMarketingPanel.vue'
 import ClientStatusBadge from '@/components/crm/ClientStatusBadge.vue'
 import DisconnectDialog from './components/DisconnectDialog.vue'
 import TerminationDocumentDrawer from './components/TerminationDocumentDrawer.vue'
@@ -465,8 +481,9 @@ import CompanyEmployeesPanel from './components/CompanyEmployeesPanel.vue'
 import CompanyEmployeesTab from './components/CompanyEmployeesTab.vue'
 import CompanyDocumentsTab from './components/CompanyDocumentsTab.vue'
 import CompanyDealsTab from './components/CompanyDealsTab.vue'
+import CompanyMiniDealsPanel from './components/CompanyMiniDealsPanel.vue'
+import CompanyFilesTab from './components/CompanyFilesTab.vue'
 import HoldingTree from './components/HoldingTree.vue'
-import MiniPipelinePanel from './components/MiniPipelinePanel.vue'
 import { useCompanyPageData } from './composables/useCompanyPageData'
 import { useCompanyPageActions } from './composables/useCompanyPageActions'
 import { useBreakpoints } from '@/composables/useBreakpoints'
@@ -550,24 +567,14 @@ const {
 
 const companyLog = useEntityLog('company', () => companyId.value ?? null)
 
-const companyMetrics = computed((): LogMetric[] => [
-  { key: 'openDeals', label: t('crm.log.metrics.openDeals'), metricValue: openDealsCount.value },
-  { key: 'employees', label: t('crm.log.metrics.employees'), metricValue: employees.value.length },
-  { key: 'documents', label: t('crm.log.metrics.documents'), metricValue: documents.value.length },
-])
-
 // ── Computed ───────────────────────────────────────────────────────────────────
 
-const companySubtitle = computed(() => {
-  if (!company.value) return ''
-  const parts: string[] = []
-  if (company.value.company_type_id) {
-    parts.push(directoriesStore.getCompanyTypeLabel(company.value.company_type_id))
-  }
-  if (company.value.country_code) {
-    parts.push(company.value.country_code)
-  }
-  return parts.filter(Boolean).join(' · ')
+const companySourceLabel = computed((): string | null => {
+  const ext = company.value as (typeof company.value & { source?: string | null; acquisition_channel?: { name?: string } | null }) | null
+  if (!ext) return null
+  if (ext.acquisition_channel?.name) return ext.acquisition_channel.name
+  if (ext.source) return directoriesStore.getSourceLabel?.(ext.source) ?? ext.source
+  return null
 })
 
 const openDealsCount = computed(() => deals.value.filter((d) => d.status === 'open').length)
@@ -667,50 +674,6 @@ const companyKpiItems = computed((): KpiItem[] => {
   ]
 })
 
-// ── Now strip ──────────────────────────────────────────────────────────────────
-
-const companyNowItems = computed((): NowItem[] => {
-  const ext = company.value as CompanyExtended | null
-  const lastAt = ext?.last_activity_at ?? null
-  const lastDays = lastAt
-    ? Math.floor((Date.now() - new Date(lastAt).getTime()) / 86_400_000)
-    : null
-  const lastContactLabel = lastDays === null
-    ? t('crm.entity.kpiStrip.never', 'Нет')
-    : lastDays === 0
-      ? t('common.today', 'Сегодня')
-      : lastDays === 1
-        ? t('common.yesterday', 'Вчера')
-        : `${lastDays}${t('crm.entity.kpiStrip.daysUnit', 'д')}`
-  const lastContactSeverity: NowItem['severity'] = lastDays === null
-    ? 'neutral'
-    : lastDays > 30
-      ? 'danger'
-      : lastDays > 7
-        ? 'warning'
-        : 'success'
-
-  const openTasks = (ext as (CompanyExtended & { open_tasks_count?: number }) | null)?.open_tasks_count ?? 0
-  const overdue = (ext as (CompanyExtended & { overdue_tasks_count?: number }) | null)?.overdue_tasks_count ?? 0
-
-  return [
-    {
-      label: t('crm.entity.nowStrip.lastContact'),
-      value: lastContactLabel,
-      severity: lastContactSeverity,
-    },
-    {
-      label: t('crm.entity.nowStrip.openTasks'),
-      value: openTasks,
-      severity: openTasks > 0 ? 'warning' : 'neutral',
-    },
-    {
-      label: t('crm.entity.nowStrip.overdue'),
-      value: overdue,
-      severity: overdue > 0 ? 'danger' : 'neutral',
-    },
-  ]
-})
 
 const filteredEmployees = computed(() => {
   if (!employeeSearch.value) return employees.value
@@ -806,7 +769,6 @@ const tabOptions = computed(() => [
   { label: t('crm.company.tabs.payments'), value: 'payments' },
   { label: t('company.page.tabs.holding'), value: 'holding' },
   { label: t('crm.company.tabs.files'), value: 'files' },
-  { label: t('crm.company.tabs.log'), value: 'log' },
 ])
 
 // ── Actions ────────────────────────────────────────────────────────────────────
@@ -1089,10 +1051,17 @@ onMounted(async () => {
     top: 0;
     z-index: 10;
 
+    // #4 fix: dark tablist must use {surface.100}=#444547 (card bg), NOT {surface.900}=#F9FAFB.
+    // {surface.900} in our inverted dark palette is surfacePalette[50]=#F9FAFB (nearly white).
     .app-dark & {
-      background: var(--p-surface-900);
-      border-bottom-color: var(--p-surface-700);
+      background: var(--p-surface-100); // dark #444547 (card bg canon §5.2)
+      border-bottom-color: var(--p-surface-700); // dark #616263
     }
+  }
+
+  // spec §3: active tab label font-weight = 600
+  :deep(.p-tab[aria-selected="true"]) {
+    font-weight: $font-weight-semibold;
   }
 
   :deep(.p-tabpanels) {
@@ -1120,8 +1089,9 @@ onMounted(async () => {
   background: $surface-card;
   border-bottom: 1px solid var(--p-surface-200);
 
+  // #4 fix: same dark correction as tablist above — {surface.100}=#444547 (card bg)
   .app-dark & {
-    background: var(--p-surface-900);
+    background: var(--p-surface-100); // dark #444547 (card bg canon)
     border-bottom-color: var(--p-surface-700);
   }
 }
@@ -1137,6 +1107,41 @@ onMounted(async () => {
   @media (max-width: 375px) {
     padding: $space-3;
   }
+
+  &--no-pad {
+    padding: 0;
+  }
+}
+
+// ── Panels stacked layout (overview one-column) ────────────────────────────────
+.company-page-v2__panels {
+  background: $surface-card;
+  border-radius: $radius-lg;
+  // var(--p-surface-200) reactive: light=#E3E4E6, dark=#616263 (inverted palette).
+  border: 1px solid var(--p-surface-200);
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+// ── Holding / Files TabHead ────────────────────────────────────────────────────
+.company-page-v2__tab-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid var(--p-surface-200);
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-600);
+  }
+}
+
+.company-page-v2__tab-head-title {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $surface-500;
 }
 
 // ── Employees toolbar ──────────────────────────────────────────────────────────

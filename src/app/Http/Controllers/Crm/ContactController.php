@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Crm;
 use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\ContactService;
+use App\Domain\Sales\Services\DealService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\StoreContactRequest;
 use App\Http\Requests\Crm\UpdateContactRequest;
@@ -26,6 +27,7 @@ class ContactController extends Controller
     public function __construct(
         private readonly ContactService $service,
         private readonly ActivityService $activityService,
+        private readonly DealService $dealService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -48,8 +50,8 @@ class ContactController extends Controller
     {
         $this->authorize('view', $contact);
 
-        // KPI: deal participation count (via deal_contacts join), open tasks count.
-        // Both are single aggregate queries — zero N+1.
+        // KPI: deal participation count + deal sum (via deal_contacts join), open tasks count.
+        // All aggregate queries — zero N+1.
         $dealsCount = (int) DB::table('deal_contacts')
             ->join('deals', 'deals.id', '=', 'deal_contacts.deal_id')
             ->where('deal_contacts.contact_id', $contact->id)
@@ -58,13 +60,24 @@ class ContactController extends Controller
 
         $openTasksCount = $this->activityService->openTasksCountForContact((int) $contact->id);
 
+        // B-2 (DS-5): aggregate deal amounts for the contact's KPI sum chip.
+        $dealTotals = $this->dealService->aggregateForContact($contact);
+
+        // KPI companies count: how many companies this contact is linked to.
+        $companiesCount = (int) DB::table('crm_contact_company_links')
+            ->where('contact_id', $contact->id)
+            ->count();
+
         return ContactResource::make(
             $contact->load(['owner', 'companyLinks.company', 'channels'])
         )->additional([
             'kpi' => [
                 'deals_count' => $dealsCount,
+                'deals_sum' => $dealTotals->base_total,          // int kopecks or null if FX unavailable
+                'deals_sum_currency' => $dealTotals->base_currency, // ISO 4217
                 'last_touch_at' => $contact->last_activity_at?->toIso8601String(),
                 'open_tasks_count' => $openTasksCount,
+                'companies_count' => $companiesCount,
             ],
         ]);
     }

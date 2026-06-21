@@ -26,6 +26,7 @@
           :entity-id="entityId"
           :initials="resolvedInitials"
           size="md"
+          on-brand
         />
       </div>
 
@@ -44,6 +45,9 @@
           <slot name="status" />
         </div>
 
+        <!-- Subtitle (position for contact, above meta-row) -->
+        <p v-if="subtitle" class="entity-header__subtitle">{{ subtitle }}</p>
+
         <!-- Metadata row -->
         <div class="entity-header__meta-row">
           <!-- Category chip (company only) -->
@@ -59,20 +63,36 @@
             <span class="entity-header__meta-label">{{ t('crm.entity.author') }}:</span>
             <span class="entity-header__meta-value">{{ authorName || '—' }}</span>
           </span>
-          <!-- Works with (company only) -->
-          <span v-if="worksWithName !== undefined" class="entity-header__meta-item">
+          <!-- Company name (contact only) or Responsible (company only) -->
+          <span v-if="companyName !== undefined" class="entity-header__meta-item">
+            <span class="entity-header__meta-label">{{ t('crm.entity.primaryCompany') }}:</span>
+            <span class="entity-header__meta-value">{{ companyName || '—' }}</span>
+          </span>
+          <span v-else-if="worksWithName !== undefined" class="entity-header__meta-item">
             <span class="entity-header__meta-label">{{ t('crm.entity.worksWithCompany') }}:</span>
             <span class="entity-header__meta-value">{{ worksWithName || '—' }}</span>
           </span>
-          <!-- Position (contact only, via subtitle) -->
-          <span v-if="subtitle" class="entity-header__meta-item">
-            <span class="entity-header__meta-value entity-header__meta-value--subtitle">{{ subtitle }}</span>
+          <!-- Source -->
+          <span v-if="sourceLabel" class="entity-header__meta-item">
+            <span class="entity-header__meta-label">{{ t('crm.entity.source') }}:</span>
+            <span class="entity-header__meta-value">{{ sourceLabel }}</span>
+          </span>
+          <!-- Created -->
+          <span v-if="createdAt" class="entity-header__meta-item">
+            <span class="entity-header__meta-label">{{ t('crm.entity.createdAt') }}:</span>
+            <span class="entity-header__meta-value">{{ formatDate(createdAt) }}</span>
+          </span>
+          <!-- Updated -->
+          <span v-if="updatedAt" class="entity-header__meta-item">
+            <span class="entity-header__meta-label">{{ t('crm.entity.updatedAt') }}:</span>
+            <span class="entity-header__meta-value">{{ formatDate(updatedAt) }}</span>
           </span>
           <slot name="meta" />
         </div>
 
         <!-- Tags row (max 3 + +N) -->
         <div v-if="tags && tags.length > 0" class="entity-header__tags-row">
+          <i class="pi pi-tag entity-header__tags-icon" />
           <Tag
             v-for="tag in visibleTags"
             :key="tag"
@@ -115,6 +135,8 @@ const props = withDefaults(
     subtitle?: string | null
     /** Author of the record (owner_user) */
     authorName?: string | null
+    /** Primary company name (contact only) */
+    companyName?: string
     /** Responsible person's name (company only) */
     worksWithName?: string
     /** Category code (company only) */
@@ -127,15 +149,26 @@ const props = withDefaults(
     tags?: string[]
     /** Override initials for avatar (auto-computed from title if omitted) */
     avatarInitials?: string
+    /** Acquisition channel / source label */
+    sourceLabel?: string | null
+    /** ISO date string — record created at */
+    createdAt?: string | null
+    /** ISO date string — record updated at */
+    updatedAt?: string | null
   }>(),
   {
     subtitle: null,
     authorName: null,
+    companyName: undefined,
+    worksWithName: undefined,
     categoryCode: null,
     engagementTier: null,
     lastActivityAt: null,
     tags: () => [],
     avatarInitials: undefined,
+    sourceLabel: null,
+    createdAt: null,
+    updatedAt: null,
   },
 )
 
@@ -171,6 +204,14 @@ const resolvedInitials = computed(() => {
 
 const visibleTags = computed(() => (props.tags ?? []).slice(0, MAX_TAGS))
 const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - MAX_TAGS))
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  } catch {
+    return iso
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -202,7 +243,8 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
 
 .entity-header__btn-icon {
   background: transparent;
-  border: none;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  border: 1px solid rgba(255, 255, 255, 0.22); // brand header overlay — static border on navy
   cursor: pointer;
   color: $sidebar-text-active;
   display: flex;
@@ -256,7 +298,8 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
 
 .entity-header__title {
   color: $sidebar-text-active;
-  font-size: $font-size-lg;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  font-size: 22px; // brand invariant — entity card header title
   font-weight: $font-weight-semibold;
   margin: 0;
   display: -webkit-box;
@@ -273,13 +316,24 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
   margin-top: 3px;
 }
 
+// ── Subtitle (position, contact only) ─────────────────────────────────────────
+
+.entity-header__subtitle {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.6); // brand header overlay — static subtitle on navy panel
+  font-size: $font-size-sm;
+  margin: 0;
+}
+
 // ── Meta row ───────────────────────────────────────────────────────────────────
 
 .entity-header__meta-row {
   display: flex;
   align-items: center;
-  gap: $space-3;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  gap: 18px; // brand header overlay — meta gap (not a token)
   flex-wrap: wrap;
+  font-size: $font-size-xs; // spec §1: meta row = 12px
 }
 
 .entity-header__category-tag {
@@ -295,24 +349,13 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
 
 .entity-header__meta-label {
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  color: rgba(255, 255, 255, 0.35); // brand header overlay — static muted label on navy panel
+  color: rgba(255, 255, 255, 0.4); // brand header overlay — static muted label on navy panel
 }
 
 .entity-header__meta-value {
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  color: rgba(255, 255, 255, 0.75); // brand header overlay — static meta text on navy panel
+  color: rgba(255, 255, 255, 0.8); // brand header overlay — static meta text on navy panel
   font-weight: $font-weight-medium;
-  transition: opacity 0.15s;
-
-  &:hover {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    color: rgba(255, 255, 255, 1); // brand header overlay — static hover text on navy panel
-  }
-
-  &--subtitle {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    color: rgba(255, 255, 255, 0.6); // brand header overlay — static subtitle on navy panel
-  }
 }
 
 // ── Tags row ───────────────────────────────────────────────────────────────────
@@ -323,6 +366,14 @@ const hiddenTagsCount = computed(() => Math.max(0, (props.tags?.length ?? 0) - M
   gap: $space-1;
   flex-wrap: wrap;
   margin-top: $space-1;
+}
+
+.entity-header__tags-icon {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  font-size: 10px; // brand invariant — small tag icon in navy header
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.4); // brand header overlay
+  flex-shrink: 0;
 }
 
 .entity-header__tag {

@@ -401,7 +401,8 @@
     "today": "Сегодня",
     "yesterday": "Вчера",
     "copied": "Скопировано",
-    "select": "Выберите..."
+    "select": "Выберите...",
+    "createdAt": "Создана"
   },
   "contacts": {
     "page": {
@@ -644,7 +645,8 @@
         "actions": {
           "setPrimary": "Сделать основным",
           "changeStatus": "Изменить статус",
-          "unlink": "Отвязать"
+          "unlink": "Отвязать",
+          "goToCard": "Перейти в карточку"
         },
         "unlinkConfirm": "Отвязать сотрудника?",
         "empty": "Сотрудники не добавлены",
@@ -726,7 +728,8 @@
       "deals": "Сделки",
       "lastContact": "Посл. контакт",
       "openTasks": "Открытых задач",
-      "companies": "Компании"
+      "companies": "Компании",
+      "dealsSum": "Сумма сделок"
     },
     "page": {
       "back": "Назад",
@@ -766,7 +769,8 @@
           "unlink": "Отвязать"
         },
         "unlinkConfirm": "Отвязать контакт от компании?",
-        "empty": "Компании не привязаны"
+        "empty": "Компании не привязаны",
+        "isPrimary": "Основная компания"
       },
       "stub": {
         "tasks": "Задачи появятся в следующем спринте",
@@ -3066,6 +3070,20 @@
         "never": "Нет",
         "daysAgo": "{n}д",
         "daysUnit": "д"
+      },
+      "source": "Источник",
+      "createdAt": "Создан",
+      "updatedAt": "Изменён",
+      "primaryCompany": "Компания",
+      "feed": {
+        "filterAll": "Все",
+        "filterEvents": "События",
+        "filterChanges": "Изменения"
+      },
+      "composer": {
+        "note": "Заметка",
+        "task": "Задача",
+        "add": "Добавить"
       }
     },
     "company": {
@@ -3083,7 +3101,8 @@
         "deals": "Сделки",
         "totals": "Итоги",
         "payments": "Платежи",
-        "marketing": "Маркетинг"
+        "marketing": "Маркетинг",
+        "dealsInProgress": "Сделки в работе"
       },
       "rail": {
         "author": "Автор",
@@ -3276,6 +3295,9 @@
         "addRelation": "Добавить связь",
         "copyLink": "Копировать ссылку",
         "delete": "Удалить"
+      },
+      "deals": {
+        "addComingSoon": "Привязать к сделке (скоро)"
       }
     },
     "log": {
@@ -3370,6 +3392,13 @@
     "customFields": {
       "schemaError": "Не удалось загрузить схему дополнительных полей",
       "empty": "Дополнительные поля не настроены"
+    },
+    "files": {
+      "createFolder": "Создать папку",
+      "upload": "Загрузить файл",
+      "emptyFiles": "Нет файлов",
+      "emptyFolders": "Нет папок",
+      "comingSoon": "Файлы появятся в ближайших обновлениях"
     }
   },
   "contacts_filter": {

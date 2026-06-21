@@ -827,6 +827,57 @@ class DealService
     }
 
     /**
+     * Aggregate deal financials for a Contact (cross-domain B-2 / DS-5).
+     * Called by ContactController::show() to populate the KPI "sum" chip.
+     *
+     * Counts ALL deals the contact participates in (via deal_contacts), open or closed.
+     * Returns per-currency subtotals (kopecks) + converted base total.
+     * float is FORBIDDEN — all arithmetic in integer kopecks.
+     */
+    public function aggregateForContact(Contact $contact): DealTotalsDTO
+    {
+        $baseCurrency = strtoupper((string) config('crm.currencies.default', 'RUB'));
+
+        // All deals the contact participates in (no closed_at filter — "sum" = total portfolio)
+        $deals = Deal::query()
+            ->whereHas('dealContacts', static fn (Builder $q) => $q->where('contact_id', $contact->id))
+            ->whereNull('deals.deleted_at')
+            ->get(['id', 'amount', 'currency']);
+
+        // Group by currency, sum kopecks (integer only)
+        $perCurrency = [];
+        foreach ($deals as $deal) {
+            $currency = strtoupper((string) ($deal->currency ?? $baseCurrency));
+            $perCurrency[$currency] = ($perCurrency[$currency] ?? 0) + (int) $deal->amount;
+        }
+
+        // Convert to base currency — all arithmetic stays integer
+        $baseTotal = 0;
+        $conversionFailed = false;
+
+        foreach ($perCurrency as $currency => $amountKopecks) {
+            if ($currency === $baseCurrency) {
+                $baseTotal += $amountKopecks;
+            } else {
+                $converted = $this->exchangeRateService->convertAmount($amountKopecks, $currency, $baseCurrency);
+                if ($converted === null) {
+                    $conversionFailed = true;
+                } else {
+                    $baseTotal += $converted;
+                }
+            }
+        }
+
+        return new DealTotalsDTO(
+            per_currency: $perCurrency,
+            base_total: $conversionFailed ? null : $baseTotal,
+            base_currency: $baseCurrency,
+            open_count: $deals->count(),
+            as_of_date: now()->toIso8601String(),
+        );
+    }
+
+    /**
      * Recompute Deal.amount as the sum of its line items (kopecks). The single
      * point of amount denormalisation — called exclusively from
      * DealProductService on every line-item mutation.

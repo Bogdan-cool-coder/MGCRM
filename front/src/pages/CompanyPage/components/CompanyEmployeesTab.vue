@@ -6,19 +6,23 @@
       <p>{{ t('company.page.employees.empty') }}</p>
     </div>
 
-    <!-- Table -->
+    <!-- Table with expandable rows -->
     <DataTable
       v-else
+      v-model:expanded-rows="expandedRows"
       :value="employees"
       :loading="loading"
-      striped-rows
       class="employees-tab__table"
+      data-key="contact_id"
     >
+      <Column style="width: 32px" expander />
+
       <Column :header="t('company.page.employees.columns.name')">
         <template #body="{ data }">
           <RouterLink
             :to="`/contacts/${data.contact_id}`"
             class="employees-tab__name employees-tab__name--link"
+            @click.stop
           >
             {{ data.contact?.full_name ?? `#${data.contact_id}` }}
           </RouterLink>
@@ -69,6 +73,23 @@
           />
         </template>
       </Column>
+
+      <!-- Expansion row: contact channels -->
+      <template #expansion="{ data }">
+        <div class="employees-tab__expansion">
+          <template v-if="data.contact?.channels?.length">
+            <span
+              v-for="ch in data.contact.channels"
+              :key="ch.id"
+              class="employees-tab__channel-chip"
+            >
+              <i :class="['pi', channelIcon(ch.channel_type)]" />
+              {{ ch.value }}
+            </span>
+          </template>
+          <span v-else class="employees-tab__expansion-empty">{{ t('crm.contact.channels.empty') }}</span>
+        </div>
+      </template>
     </DataTable>
   </div>
 </template>
@@ -76,15 +97,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
+import { RouterLink } from 'vue-router'
 import type { ContactCompanyLink, EmploymentStatus } from '@/entities/crm'
-
-// Note: 'addEmployee' emit kept for compatibility — now only triggered via the toolbar in index.vue
 
 defineProps<{
   employees: ContactCompanyLink[]
@@ -99,8 +119,10 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const router = useRouter()
 
 const menuRefs = ref<Map<number, InstanceType<typeof Menu>>>(new Map())
+const expandedRows = ref<Record<string, boolean>>({})
 
 function setMenuRef(id: number, el: unknown) {
   if (el) menuRefs.value.set(id, el as InstanceType<typeof Menu>)
@@ -112,6 +134,11 @@ function onMenuClick(event: Event, data: ContactCompanyLink) {
 
 function getMenuItems(data: ContactCompanyLink) {
   return [
+    {
+      label: t('company.page.employees.actions.goToCard'),
+      icon: 'pi pi-user',
+      command: () => void router.push(`/contacts/${data.contact_id}`),
+    },
     {
       label: t('company.page.employees.actions.setPrimary'),
       icon: 'pi pi-star',
@@ -132,6 +159,19 @@ function getMenuItems(data: ContactCompanyLink) {
       command: () => emit('unlink', data.contact_id),
     },
   ]
+}
+
+function channelIcon(type: string): string {
+  const map: Record<string, string> = {
+    phone: 'pi-phone',
+    email: 'pi-envelope',
+    tg: 'pi-send',
+    wa: 'pi-whatsapp',
+    linkedin: 'pi-linkedin',
+    instagram: 'pi-instagram',
+    viber: 'pi-mobile',
+  }
+  return map[type] ?? 'pi-at'
 }
 </script>
 
@@ -160,18 +200,15 @@ function getMenuItems(data: ContactCompanyLink) {
 .employees-tab__table {
   border: 1px solid $surface-200;
   border-radius: $radius-md;
+  overflow: hidden;
 }
 
 .employees-tab__name {
-  // Use semantic text token so the name stays readable in both light and dark themes
   font-weight: $font-weight-medium;
   color: var(--p-text-color);
 
   &--link {
     text-decoration: none;
-    // var(--p-primary-color) adapts per theme:
-    //   light → {primary.900} = #172747  (dark navy, readable on white)
-    //   dark  → {primary.400} = #6f87bc  (steel blue, readable on dark bg)
     color: var(--p-primary-color);
 
     &:hover {
@@ -187,5 +224,49 @@ function getMenuItems(data: ContactCompanyLink) {
   &--active {
     color: var(--p-orange-400, #ffb38a);
   }
+}
+
+// ── Expansion row ─────────────────────────────────────────────────────────────
+
+.employees-tab__expansion {
+  padding: $space-2 $space-4 $space-2 48px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  background: var(--p-surface-50);
+  border-top: 1px solid var(--p-surface-100);
+
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-top-color: var(--p-surface-200);
+  }
+}
+
+.employees-tab__channel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  padding: $space-1 $space-2;
+  border-radius: $radius-md;
+  background: var(--p-surface-100);
+  color: $surface-700;
+  border: 1px solid var(--p-surface-200);
+
+  .app-dark & {
+    background: var(--p-surface-200);
+    color: var(--p-surface-200);
+    border-color: var(--p-surface-600);
+  }
+
+  i {
+    font-size: $font-size-xs;
+    color: var(--p-primary-color);
+  }
+}
+
+.employees-tab__expansion-empty {
+  font-size: $font-size-xs;
+  color: $surface-400;
 }
 </style>

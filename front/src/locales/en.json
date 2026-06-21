@@ -401,7 +401,8 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "copied": "Copied",
-    "select": "Select..."
+    "select": "Select...",
+    "createdAt": "Created"
   },
   "contacts": {
     "page": {
@@ -644,7 +645,8 @@
         "actions": {
           "setPrimary": "Set as primary",
           "changeStatus": "Change status",
-          "unlink": "Unlink"
+          "unlink": "Unlink",
+          "goToCard": "Go to contact"
         },
         "unlinkConfirm": "Unlink employee?",
         "empty": "No employees added",
@@ -726,7 +728,8 @@
       "deals": "Deals",
       "lastContact": "Last contact",
       "openTasks": "Open tasks",
-      "companies": "Companies"
+      "companies": "Companies",
+      "dealsSum": "Deals amount"
     },
     "page": {
       "back": "Back",
@@ -766,7 +769,8 @@
           "unlink": "Unlink"
         },
         "unlinkConfirm": "Unlink contact from company?",
-        "empty": "No companies linked"
+        "empty": "No companies linked",
+        "isPrimary": "Primary company"
       },
       "stub": {
         "tasks": "Tasks coming in next sprint",
@@ -3066,6 +3070,20 @@
         "never": "None",
         "daysAgo": "{n}d",
         "daysUnit": "d"
+      },
+      "source": "Source",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "primaryCompany": "Company",
+      "feed": {
+        "filterAll": "All",
+        "filterEvents": "Events",
+        "filterChanges": "Changes"
+      },
+      "composer": {
+        "note": "Note",
+        "task": "Task",
+        "add": "Add"
       }
     },
     "company": {
@@ -3083,7 +3101,8 @@
         "deals": "Deals",
         "totals": "Totals",
         "payments": "Payments",
-        "marketing": "Marketing"
+        "marketing": "Marketing",
+        "dealsInProgress": "Deals in progress"
       },
       "rail": {
         "author": "Created by",
@@ -3276,6 +3295,9 @@
         "addRelation": "Add relation",
         "copyLink": "Copy link",
         "delete": "Delete"
+      },
+      "deals": {
+        "addComingSoon": "Add to deal (coming soon)"
       }
     },
     "log": {
@@ -3370,6 +3392,13 @@
     "customFields": {
       "schemaError": "Failed to load custom fields schema",
       "empty": "No custom fields configured"
+    },
+    "files": {
+      "createFolder": "Create folder",
+      "upload": "Upload file",
+      "emptyFiles": "No files",
+      "emptyFolders": "No folders",
+      "comingSoon": "Files will be available in upcoming updates"
     }
   },
   "contacts_filter": {

@@ -105,6 +105,34 @@ export const MgCrmPreset = definePreset(Aura, {
     //   {surface.400} → surfacePalette[500] = #9B9C9F  — muted text (не выбранный)
     //   {surface.300} → surfacePalette[600] = #7E7F82  — hover text
     //   {surface.900} → surfacePalette[50]  = #F9FAFB  — текст активного (checked) элемента
+    // TABS SPEC §3:
+    // - active tab label font-weight = 600 (scoped via colorScheme to avoid affecting inactive).
+    // - active underline bar height = 2px (Aura default = 1px).
+    // - tablist dark background = {surface.100} = #444547 (dark card bg, NOT {surface.900}=#F9FAFB).
+    //
+    // NOTE: tabs.tab.fontWeight is a single token for all tabs — it cannot be split active/inactive
+    // at the token level. Aura Tabs render active tab with data-p-active="true"; we use scoped
+    // :deep SCSS in the consumer pages/components for active-only font-weight = 600.
+    // Here we only set activeBar.height=2px and colorScheme.dark.tablist.background.
+    tabs: {
+      activeBar: {
+        height: '2px',
+        background: '{primary.900}', // brand #172747 underline
+      },
+      colorScheme: {
+        dark: {
+          tablist: {
+            background: '{surface.100}', // dark: #444547 (canon card bg, NOT {surface.900}=#F9FAFB)
+          },
+          tab: {
+            background: '{surface.100}',
+            hoverBackground: '{surface.100}',
+            activeBackground: '{surface.100}',
+          },
+        },
+      },
+    },
+
     togglebutton: {
       colorScheme: {
         dark: {
