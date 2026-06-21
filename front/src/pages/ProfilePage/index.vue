@@ -522,13 +522,17 @@ interface SystemSection {
 }
 
 const systemSections: SystemSection[] = [
-  { key: 'users',             route: '/admin/users',                 icon: 'pi pi-users',       titleKey: 'settings.sections.users.title',            descKey: 'settings.sections.users.desc' },
-  { key: 'pipeline',          route: '/settings/pipeline',           icon: 'pi pi-sliders-h',   titleKey: 'settings.sections.pipeline.title',         descKey: 'settings.sections.pipeline.desc' },
-  { key: 'templates',         route: '/admin/templates',             icon: 'pi pi-file-edit',   titleKey: 'settings.sections.templates.title',        descKey: 'settings.sections.templates.desc' },
-  { key: 'templateVariables', route: '/admin/template-variables',    icon: 'pi pi-list',        titleKey: 'settings.sections.templateVariables.title', descKey: 'settings.sections.templateVariables.desc' },
-  { key: 'approvalRoutes',    route: '/admin/approval-routes',       icon: 'pi pi-sitemap',     titleKey: 'settings.sections.approvalRoutes.title',   descKey: 'settings.sections.approvalRoutes.desc' },
-  { key: 'messageTemplates',  route: '/admin/message-templates',     icon: 'pi pi-envelope',    titleKey: 'settings.sections.messageTemplates.title', descKey: 'settings.sections.messageTemplates.desc' },
-  { key: 'automationRuns',    route: '/admin/automation-runs',       icon: 'pi pi-clock',       titleKey: 'settings.sections.automationRuns.title',   descKey: 'settings.sections.automationRuns.desc' },
+  { key: 'users',                route: '/admin/users',                  icon: 'pi pi-users',       titleKey: 'settings.sections.users.title',               descKey: 'settings.sections.users.desc' },
+  { key: 'pipeline',             route: '/settings/pipeline',            icon: 'pi pi-sliders-h',   titleKey: 'settings.sections.pipeline.title',            descKey: 'settings.sections.pipeline.desc' },
+  { key: 'catalog',              route: '/admin/products',               icon: 'pi pi-box',         titleKey: 'settings.sections.catalog.title',             descKey: 'settings.sections.catalog.desc' },
+  { key: 'exchangeRates',        route: '/admin/exchange-rates',         icon: 'pi pi-dollar',      titleKey: 'settings.sections.exchangeRates.title',       descKey: 'settings.sections.exchangeRates.desc' },
+  { key: 'templates',            route: '/admin/templates',              icon: 'pi pi-file-edit',   titleKey: 'settings.sections.templates.title',           descKey: 'settings.sections.templates.desc' },
+  { key: 'templateVariables',    route: '/admin/template-variables',     icon: 'pi pi-list',        titleKey: 'settings.sections.templateVariables.title',   descKey: 'settings.sections.templateVariables.desc' },
+  { key: 'approvalRoutes',       route: '/admin/approval-routes',        icon: 'pi pi-sitemap',     titleKey: 'settings.sections.approvalRoutes.title',      descKey: 'settings.sections.approvalRoutes.desc' },
+  { key: 'messageTemplates',     route: '/admin/message-templates',      icon: 'pi pi-envelope',    titleKey: 'settings.sections.messageTemplates.title',    descKey: 'settings.sections.messageTemplates.desc' },
+  { key: 'automationRuns',       route: '/admin/automation-runs',        icon: 'pi pi-clock',       titleKey: 'settings.sections.automationRuns.title',      descKey: 'settings.sections.automationRuns.desc' },
+  { key: 'acquisitionChannels',  route: '/admin/acquisition-channels',   icon: 'pi pi-filter',      titleKey: 'settings.sections.acquisitionChannels.title', descKey: 'settings.sections.acquisitionChannels.desc' },
+  { key: 'disconnectReasons',    route: '/admin/disconnect-reasons',     icon: 'pi pi-ban',         titleKey: 'settings.sections.disconnectReasons.title',   descKey: 'settings.sections.disconnectReasons.desc' },
 ]
 
 // ─── Section mode: header title + icon ───────────────────────────────────────

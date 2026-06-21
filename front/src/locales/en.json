@@ -263,13 +263,21 @@
         "title": "Users",
         "desc": "Manage employee accounts"
       },
+      "catalog": {
+        "title": "Product catalog",
+        "desc": "Products, plans and pricing"
+      },
+      "exchangeRates": {
+        "title": "Exchange rates",
+        "desc": "Rates for multi-currency deals"
+      },
       "acquisitionChannels": {
-        "title": "Acquisition Channels",
-        "desc": "Directory of client acquisition channels"
+        "title": "Acquisition channels",
+        "desc": "Lead source dictionary"
       },
       "disconnectReasons": {
-        "title": "Disconnect Reasons",
-        "desc": "Directory of reasons for ending cooperation"
+        "title": "Disconnect reasons",
+        "desc": "Client churn reason dictionary"
       }
     }
   },
