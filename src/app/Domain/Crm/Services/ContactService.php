@@ -57,6 +57,11 @@ class ContactService
                     $inner->where('company_id', $filters['company_id']);
                 });
             })
+            ->when(isset($filters['position']), function (Builder $q) use ($filters): void {
+                // Filter by job position (stored as a free-text string on crm_contacts.position).
+                // Partial match so the UI can send a ContactPosition label or free text.
+                $q->where('position', 'like', '%'.$filters['position'].'%');
+            })
             ->when(isset($filters['engagement_tier']), function (Builder $q) use ($filters): void {
                 // Normalise engagement tier filter to a date range comparison in PHP
                 // (portable across PG and SQLite — no DB::raw with NOW()).

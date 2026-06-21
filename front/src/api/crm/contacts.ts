@@ -61,7 +61,31 @@ export interface AttachContactCompanyPayload {
   employment_status?: 'works' | 'left'
 }
 
+export interface ContactsKpiResponse {
+  data: {
+    entity: string
+    total: number
+    // companies
+    clients?: number
+    cat_l?: number
+    cat_m?: number
+    cat_s?: number
+    // contacts
+    active?: number
+    no_touch_30?: number
+    // shared
+    new_week?: number
+  }
+}
+
 export const contactsApi = {
+  async kpi(entity: 'company' | 'contact'): Promise<ContactsKpiResponse> {
+    const res = await apiClient.get<ContactsKpiResponse>('/api/contacts/kpi', {
+      params: { entity },
+    })
+    return res.data
+  },
+
   async list(params: ContactListParams = {}): Promise<PaginatedResponse<Contact>> {
     const searchParams: Record<string, unknown> = { ...params }
     if (params.tags?.length) {

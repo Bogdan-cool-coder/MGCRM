@@ -1,130 +1,106 @@
 <template>
-  <Teleport to="body">
-    <div v-if="visible" class="filter-overlay-backdrop" @click="emit('close')" />
-    <div v-if="visible" class="contacts-filter-overlay">
-      <!-- Preset chips row -->
-      <div class="contacts-filter-overlay__presets">
-        <span class="contacts-filter-overlay__section-label">{{ t('sales.deals.page.filters.presets') }}</span>
-        <div class="contacts-filter-overlay__preset-chips">
-          <ToggleButton
-            v-model="localPresets.mine"
-            :on-label="t('contacts_filter.presets.mine', 'Мои')"
-            :off-label="t('contacts_filter.presets.mine', 'Мои')"
-            class="contacts-filter-overlay__preset-chip"
-          />
-          <ToggleButton
-            v-model="localPresets.active"
-            :on-label="t('contacts_filter.presets.active', 'Активные')"
-            :off-label="t('contacts_filter.presets.active', 'Активные')"
-            class="contacts-filter-overlay__preset-chip contacts-filter-overlay__preset-chip--success"
-          />
-          <ToggleButton
-            v-model="localPresets.withDeals"
-            :on-label="t('contacts_filter.presets.withDeals', 'С открытыми сделками')"
-            :off-label="t('contacts_filter.presets.withDeals', 'С открытыми сделками')"
-            class="contacts-filter-overlay__preset-chip"
-          />
-          <ToggleButton
-            v-model="localPresets.noTask"
-            :on-label="t('contacts_filter.presets.noTask', 'Без задач')"
-            :off-label="t('contacts_filter.presets.noTask', 'Без задач')"
-            class="contacts-filter-overlay__preset-chip contacts-filter-overlay__preset-chip--warning"
-          />
-          <ToggleButton
-            v-model="localPresets.duplicates"
-            :on-label="t('crm.contacts_page.savedViews.duplicates')"
-            :off-label="t('crm.contacts_page.savedViews.duplicates')"
-            class="contacts-filter-overlay__preset-chip contacts-filter-overlay__preset-chip--danger"
-          />
-        </div>
-        <Button
-          icon="pi pi-times"
-          text
-          severity="secondary"
-          size="small"
-          class="contacts-filter-overlay__close-btn"
-          @click="emit('close')"
+  <div class="contacts-filter-panel">
+    <!-- Preset chips row -->
+    <div class="contacts-filter-panel__presets">
+      <span class="contacts-filter-panel__section-label">{{ t('contacts.filter.segmentsLabel') }}</span>
+      <div class="contacts-filter-panel__preset-chips">
+        <ToggleButton
+          v-model="localPresets.mine"
+          :on-label="t('contacts.filter.preset.mine')"
+          :off-label="t('contacts.filter.preset.mine')"
+          class="contacts-filter-panel__preset-chip"
+        />
+        <ToggleButton
+          v-model="localPresets.active"
+          :on-label="t('contacts.filter.preset.active')"
+          :off-label="t('contacts.filter.preset.active')"
+          class="contacts-filter-panel__preset-chip contacts-filter-panel__preset-chip--success"
+        />
+        <ToggleButton
+          v-model="localPresets.withDeals"
+          :on-label="t('contacts.filter.preset.withDeals')"
+          :off-label="t('contacts.filter.preset.withDeals')"
+          class="contacts-filter-panel__preset-chip"
+        />
+        <ToggleButton
+          v-model="localPresets.noTask"
+          :on-label="t('contacts.filter.preset.noTask')"
+          :off-label="t('contacts.filter.preset.noTask')"
+          class="contacts-filter-panel__preset-chip contacts-filter-panel__preset-chip--warning"
+        />
+        <ToggleButton
+          v-model="localPresets.duplicates"
+          :on-label="t('contacts.filter.preset.duplicates')"
+          :off-label="t('contacts.filter.preset.duplicates')"
+          class="contacts-filter-panel__preset-chip contacts-filter-panel__preset-chip--danger"
         />
       </div>
+      <Button
+        icon="pi pi-times"
+        text
+        severity="secondary"
+        size="small"
+        class="contacts-filter-panel__close-btn"
+        @click="emit('close')"
+      />
+    </div>
 
-      <div class="contacts-filter-overlay__divider" />
+    <div class="contacts-filter-panel__divider" />
 
-      <!-- 3 columns -->
-      <div class="row g-4 contacts-filter-overlay__body">
-        <!-- Col 1: Who -->
-        <div class="col-md-4">
-          <p class="contacts-filter-overlay__col-title">{{ t('contacts_filter.col.who', 'Кто') }}</p>
+    <!-- 3 columns -->
+    <div class="row g-4 contacts-filter-panel__body">
+      <!-- Col 1: Who -->
+      <div class="col-md-4">
+        <p class="contacts-filter-panel__col-title">{{ t('contacts.filter.col.who') }}</p>
 
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('sales.deals.page.filters.owner') }}</label>
-            <MultiSelect
-              v-model="localFilters.owner_ids"
-              :options="users"
-              option-label="full_name"
-              option-value="id"
-              filter
-              class="w-100"
-              :placeholder="t('sales.deals.page.filters.owner')"
-            />
-          </div>
-
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('crm.entity.author') }}</label>
-            <MultiSelect
-              v-model="localFilters.author_ids"
-              :options="users"
-              option-label="full_name"
-              option-value="id"
-              filter
-              class="w-100"
-              :placeholder="t('crm.entity.author')"
-            />
-          </div>
-
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('contacts.page.columns.tags') }}</label>
-            <MultiSelect
-              v-model="localFilters.tags"
-              :options="availableTags"
-              filter
-              class="w-100"
-              :placeholder="t('contacts.page.columns.tags')"
-            />
-          </div>
-
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('contacts.page.filters.source') }}</label>
-            <MultiSelect
-              v-model="localFilters.sources"
-              :options="sources"
-              option-label="name"
-              option-value="code"
-              filter
-              class="w-100"
-              :placeholder="t('contacts.page.filters.source')"
-            />
-          </div>
-
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('crm.contacts_page.filters.engagement') }}</label>
-            <Select
-              v-model="localFilters.engagement_tier"
-              :options="engagementOptions"
-              option-label="label"
-              option-value="value"
-              show-clear
-              class="w-100"
-              :placeholder="t('crm.contacts_page.filters.engagement')"
-            />
-          </div>
+        <div class="contacts-filter-panel__field">
+          <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.owner') }}</label>
+          <MultiSelect
+            v-model="localFilters.owner_ids"
+            :options="users"
+            option-label="full_name"
+            option-value="id"
+            filter
+            class="w-100"
+            :placeholder="t('contacts.filter.field.owner')"
+          />
         </div>
 
-        <!-- Col 2: What -->
-        <div class="col-md-4">
-          <p class="contacts-filter-overlay__col-title">{{ t('contacts_filter.col.what', 'Что') }}</p>
+        <div class="contacts-filter-panel__field">
+          <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.author') }}</label>
+          <MultiSelect
+            v-model="localFilters.author_ids"
+            :options="users"
+            option-label="full_name"
+            option-value="id"
+            filter
+            class="w-100"
+            :placeholder="t('contacts.filter.field.author')"
+          />
+        </div>
 
-          <div v-if="entityType === 'company'" class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('contacts.page.filters.companyType') }}</label>
+        <div class="contacts-filter-panel__field">
+          <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.engagement') }}</label>
+          <Select
+            v-model="localFilters.engagement_tier"
+            :options="engagementOptions"
+            option-label="label"
+            option-value="value"
+            show-clear
+            class="w-100"
+            :placeholder="t('contacts.filter.field.engagement')"
+          />
+        </div>
+      </div>
+
+      <!-- Col 2: What (entity-dependent) -->
+      <div class="col-md-4">
+        <p class="contacts-filter-panel__col-title">{{ t('contacts.filter.col.what') }}</p>
+
+        <!-- Company-specific fields -->
+        <template v-if="entityType === 'company'">
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.companyType') }}</label>
             <MultiSelect
               v-model="localFilters.company_type_ids"
               :options="companyTypes"
@@ -132,24 +108,24 @@
               option-value="id"
               filter
               class="w-100"
-              :placeholder="t('contacts.page.filters.companyType')"
+              :placeholder="t('contacts.filter.field.companyType')"
             />
           </div>
 
-          <div v-if="entityType === 'company'" class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('company.page.fields.category', 'Категория') }}</label>
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.category') }}</label>
             <MultiSelect
               v-model="localFilters.categories"
               :options="categoryOptions"
               option-label="label"
               option-value="value"
               class="w-100"
-              :placeholder="t('company.page.fields.category', 'Категория')"
+              :placeholder="t('contacts.filter.field.category')"
             />
           </div>
 
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('contacts.page.filters.country') }}</label>
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.country') }}</label>
             <Select
               v-model="localFilters.country_code"
               :options="countries"
@@ -158,66 +134,101 @@
               filter
               show-clear
               class="w-100"
-              :placeholder="t('contacts.page.filters.country')"
+              :placeholder="t('contacts.filter.field.country')"
             />
           </div>
 
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('contacts_filter.city', 'Город') }}</label>
-            <InputText v-model="localFilters.city" class="w-100" />
-          </div>
-
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('crm.contacts_page.filters.openDealsMin') }}</label>
-            <div class="d-flex gap-2 align-items-center">
-              <InputNumber v-model="localFilters.open_deals_min" :min="0" class="flex-1" />
-              <span class="contacts-filter-overlay__range-sep">—</span>
-              <InputNumber v-model="localFilters.open_deals_max" :min="0" class="flex-1" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Col 3: When -->
-        <div class="col-md-4">
-          <p class="contacts-filter-overlay__col-title">{{ t('contacts_filter.col.when', 'Когда') }}</p>
-
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('contacts_filter.createdAt', 'Дата создания') }}</label>
-            <DatePicker
-              v-model="localFilters.created_range"
-              selection-mode="range"
-              show-icon
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.tags') }}</label>
+            <MultiSelect
+              v-model="localFilters.tags"
+              :options="availableTags"
+              filter
               class="w-100"
+              :placeholder="t('contacts.filter.field.tags')"
+            />
+          </div>
+        </template>
+
+        <!-- Contact-specific fields -->
+        <template v-else>
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.company') }}</label>
+            <InputText v-model="localFilters.city" class="w-100" :placeholder="t('contacts.filter.field.company')" />
+          </div>
+
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.position') }}</label>
+            <InputText v-model="localFilters.position" class="w-100" :placeholder="t('contacts.filter.field.position')" />
+          </div>
+
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.source') }}</label>
+            <MultiSelect
+              v-model="localFilters.sources"
+              :options="sources"
+              option-label="name"
+              option-value="code"
+              filter
+              class="w-100"
+              :placeholder="t('contacts.filter.field.source')"
             />
           </div>
 
-          <div class="contacts-filter-overlay__field">
-            <label class="contacts-filter-overlay__label">{{ t('crm.contacts_page.filters.lastTouchFrom') }}</label>
-            <DatePicker
-              v-model="localFilters.last_touch_range"
-              selection-mode="range"
-              show-icon
+          <div class="contacts-filter-panel__field">
+            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.tags') }}</label>
+            <MultiSelect
+              v-model="localFilters.tags"
+              :options="availableTags"
+              filter
               class="w-100"
+              :placeholder="t('contacts.filter.field.tags')"
             />
           </div>
-        </div>
+        </template>
       </div>
 
-      <!-- Footer -->
-      <div class="contacts-filter-overlay__footer">
-        <Button
-          :label="t('sales.deals.page.filters.reset')"
-          severity="secondary"
-          text
-          @click="onReset"
-        />
-        <Button
-          :label="t('sales.deals.page.filters.apply')"
-          @click="onApply"
-        />
+      <!-- Col 3: When -->
+      <div class="col-md-4">
+        <p class="contacts-filter-panel__col-title">{{ t('contacts.filter.col.when') }}</p>
+
+        <div class="contacts-filter-panel__field">
+          <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.createdAt') }}</label>
+          <DatePicker
+            v-model="localFilters.created_range"
+            selection-mode="range"
+            show-icon
+            class="w-100"
+          />
+        </div>
+
+        <div class="contacts-filter-panel__field">
+          <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.lastActivity') }}</label>
+          <DatePicker
+            v-model="localFilters.last_touch_range"
+            selection-mode="range"
+            show-icon
+            class="w-100"
+          />
+        </div>
       </div>
     </div>
-  </Teleport>
+
+    <!-- Footer -->
+    <div class="contacts-filter-panel__footer">
+      <Button
+        :label="t('contacts.filter.reset')"
+        severity="secondary"
+        text
+        @click="onReset"
+      />
+      <Button
+        icon="pi pi-check"
+        :label="t('contacts.filter.apply')"
+        @click="onApply"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -225,7 +236,6 @@ import { reactive, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
 import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
@@ -253,7 +263,16 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const localFilters = reactive<ContactsOverlayFilters>({ ...props.filters })
+// Extended local filter to include position for contacts
+interface LocalFilters extends ContactsOverlayFilters {
+  position: string
+}
+
+const localFilters = reactive<LocalFilters>({
+  ...props.filters,
+  position: (props.filters as unknown as Record<string, unknown>)['position'] as string ?? '',
+})
+
 const localPresets = reactive({
   mine: props.filters.only_mine,
   active: props.filters.only_active,
@@ -265,7 +284,10 @@ const localPresets = reactive({
 watch(
   () => props.filters,
   (next) => {
-    Object.assign(localFilters, { ...next })
+    Object.assign(localFilters, {
+      ...next,
+      position: (next as unknown as Record<string, unknown>)['position'] as string ?? '',
+    })
     localPresets.mine = next.only_mine
     localPresets.active = next.only_active
     localPresets.withDeals = next.only_with_deals
@@ -289,18 +311,19 @@ const categoryOptions = [
 ]
 
 function onApply() {
-  emit('apply', {
+  const result: ContactsOverlayFilters & { position?: string } = {
     ...localFilters,
     only_mine: localPresets.mine,
     only_active: localPresets.active,
     only_with_deals: localPresets.withDeals,
     only_no_task: localPresets.noTask,
     only_duplicates: localPresets.duplicates,
-  })
+  }
+  emit('apply', result)
 }
 
 function onReset() {
-  Object.assign(localFilters, { ...DEFAULT_OVERLAY_FILTERS })
+  Object.assign(localFilters, { ...DEFAULT_OVERLAY_FILTERS, position: '' })
   localPresets.mine = false
   localPresets.active = false
   localPresets.withDeals = false
@@ -311,112 +334,98 @@ function onReset() {
 </script>
 
 <style lang="scss" scoped>
-.filter-overlay-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  background: rgba(0, 0, 0, 0.3); // modal backdrop scrim — no token for translucent black overlay
-}
-
-.contacts-filter-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: $surface-card;
+.contacts-filter-panel {
   border-bottom: 1px solid $surface-200;
-  box-shadow: $shadow-overlay-sm;
-  padding: $space-4;
+  background: $surface-50;
+  padding: $space-4 $space-5;
+  flex-shrink: 0;
 
-  :global(.app-dark) & {
-    background: var(--p-surface-900);
+  .app-dark & {
+    background: var(--p-surface-50);
     border-bottom-color: var(--p-surface-700);
   }
 }
 
-.contacts-filter-overlay__presets {
+.contacts-filter-panel__presets {
   display: flex;
   align-items: center;
   gap: $space-3;
   flex-wrap: wrap;
 }
 
-.contacts-filter-overlay__section-label {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  color: $surface-500;
+.contacts-filter-panel__section-label {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  color: $surface-400;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
-.contacts-filter-overlay__preset-chips {
+.contacts-filter-panel__preset-chips {
   display: flex;
   flex-wrap: wrap;
   gap: $space-2;
   flex: 1;
 }
 
-.contacts-filter-overlay__preset-chip {
+.contacts-filter-panel__preset-chip {
   font-size: $font-size-xs;
 }
 
-.contacts-filter-overlay__close-btn {
+.contacts-filter-panel__close-btn {
   margin-left: auto;
   flex-shrink: 0;
 }
 
-.contacts-filter-overlay__divider {
+.contacts-filter-panel__divider {
   height: 1px;
-  background: $surface-100;
+  background: $surface-200;
   margin: $space-3 0;
 
-  :global(.app-dark) & {
+  .app-dark & {
     background: var(--p-surface-700);
   }
 }
 
-.contacts-filter-overlay__body {
+.contacts-filter-panel__body {
   margin-bottom: $space-3;
 }
 
-.contacts-filter-overlay__col-title {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  color: $surface-500;
+.contacts-filter-panel__col-title {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  color: $surface-400;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: $space-3;
 }
 
-.contacts-filter-overlay__field {
+.contacts-filter-panel__field {
   margin-bottom: $space-3;
 }
 
-.contacts-filter-overlay__label {
+.contacts-filter-panel__label {
   display: block;
   font-size: $font-size-xs;
-  color: $surface-500;
+  font-weight: $font-weight-medium;
+  color: $surface-600;
   margin-bottom: $space-1;
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
 }
 
-.contacts-filter-overlay__range-sep {
-  font-size: $font-size-sm;
-  color: $surface-400;
-  flex-shrink: 0;
-}
-
-.contacts-filter-overlay__footer {
+.contacts-filter-panel__footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: $space-2;
   padding-top: $space-3;
-  border-top: 1px solid $surface-100;
+  border-top: 1px solid $surface-200;
 
-  :global(.app-dark) & {
+  .app-dark & {
     border-top-color: var(--p-surface-700);
   }
 }

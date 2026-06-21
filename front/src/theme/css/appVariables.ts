@@ -32,6 +32,7 @@ export function createAppCssVariables(): FlatVars {
   addPalette('orange', appTheme.palette.orange, vars)
   addPalette('blue', appTheme.palette.blue, vars)
   addPalette('green', appTheme.palette.green, vars)
+  addPalette('teal', appTheme.palette.teal, vars)
   addPalette('monochrome', appTheme.palette.monochrome, vars)
 
   // Semantic surface — mapped to reactive PrimeVue surface tokens.

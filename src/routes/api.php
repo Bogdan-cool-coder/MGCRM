@@ -50,6 +50,7 @@ use App\Http\Controllers\Crm\ContactChannelController;
 use App\Http\Controllers\Crm\ContactCompanyController;
 use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\ContactRelationController;
+use App\Http\Controllers\Crm\ContactsKpiController;
 use App\Http\Controllers\Crm\CrmFeedController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
@@ -157,6 +158,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // CRITICAL: bulk + export routes MUST be declared BEFORE apiResource('contacts')
     // so that 'bulk'/'export' are NOT bound as a {contact} route param.
+    // KPI chip-bar counters for the Contacts section header (Contacts-spec.md §3).
+    // entity=company|contact — aggregated counts for the current user's visible scope.
+    Route::get('contacts/kpi', ContactsKpiController::class)->name('contacts.kpi');
     Route::patch('contacts/bulk', [ContactBulkController::class, 'apply'])->name('contacts.bulk.apply');
     Route::delete('contacts/bulk', [ContactBulkController::class, 'delete'])->name('contacts.bulk.delete');
     Route::post('contacts/export', [ContactBulkController::class, 'export'])->name('contacts.export');

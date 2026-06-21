@@ -8,6 +8,7 @@ import {
   primaryPalette,
   redPalette,
   surfacePalette,
+  tealPalette,
 } from './tokens/colors'
 import { layout } from './tokens/layout'
 import { motion } from './tokens/motion'
@@ -26,6 +27,7 @@ export const appTheme = {
     orange: orangePalette,
     blue: bluePalette,
     green: greenPalette,
+    teal: tealPalette,
     monochrome: monochromePalette,
   },
   common: commonColors,

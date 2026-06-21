@@ -409,8 +409,30 @@
       "subtitle": "Физлица и компании",
       "subtitle_companies": "Список компаний",
       "create": "Создать контакт",
+      "createContact": "Создать физлицо",
+      "createCompany": "Создать компанию",
       "dedup": "Дедуп",
       "total": "Итого: {count}",
+      "header": {
+        "title": "Контакты",
+        "switchCompany": "Компании",
+        "switchContact": "Физлица",
+        "entitySwitch": "Тип сущности"
+      },
+      "search": {
+        "placeholder": {
+          "company": "Поиск по названию, БИН…",
+          "contact": "Поиск по имени, телефону, email…"
+        }
+      },
+      "menu": {
+        "more": "Ещё",
+        "import": "Импорт из файла",
+        "export": "Экспорт в Excel",
+        "dedup": "Поиск дубликатов",
+        "columns": "Настроить колонки",
+        "bulk": "Массовые действия"
+      },
       "typeSwitch": {
         "contact": "Физлицо",
         "company": "Компания"
@@ -424,7 +446,10 @@
         "tags": "Теги",
         "actions": "Действия",
         "density": "Плотность",
-        "choose": "Выбор колонок"
+        "choose": "Выбор колонок",
+        "phone": "Телефон",
+        "author": "Автор",
+        "responsible": "Ответственный"
       },
       "density": {
         "compact": "Компактный",
@@ -438,7 +463,8 @@
         "country": "Страна",
         "tags": "Теги",
         "apply": "Применить",
-        "reset": "Сбросить"
+        "reset": "Сбросить",
+        "openPanel": "Фильтры"
       },
       "empty": {
         "title": "Контактов пока нет",
@@ -467,6 +493,51 @@
         "create": "Не удалось создать запись",
         "delete": "Не удалось удалить запись"
       }
+    },
+    "kpi": {
+      "total": "Всего",
+      "clients": "Клиенты",
+      "catL": "Кат. L",
+      "catM": "Кат. M",
+      "catS": "Кат. S",
+      "active": "Активные",
+      "noTouch": "Без касаний",
+      "newWeek": "Новые за нед."
+    },
+    "filter": {
+      "segmentsLabel": "СЕГМЕНТЫ",
+      "preset": {
+        "mine": "Мои",
+        "active": "Активные",
+        "withDeals": "С открытыми сделками",
+        "noTask": "Без задач",
+        "duplicates": "Дубликаты"
+      },
+      "col": {
+        "who": "Кто",
+        "what": "Что",
+        "when": "Когда"
+      },
+      "field": {
+        "owner": "Ответственный",
+        "author": "Автор",
+        "engagement": "Вовлечённость",
+        "companyType": "Тип компании",
+        "category": "Категория",
+        "country": "Страна",
+        "tags": "Теги",
+        "company": "Компания",
+        "position": "Должность",
+        "source": "Источник",
+        "createdAt": "Создан",
+        "lastActivity": "Последняя активность"
+      },
+      "apply": "Применить",
+      "reset": "Сбросить"
+    },
+    "paginator": {
+      "showing": "Показано {from}–{to} из {total}",
+      "perPageLabel": "Показывать:"
     },
     "actions": {
       "create": "Создать контакт"
@@ -580,10 +651,7 @@
         "seeAll": "Все сотрудники ({count})"
       },
       "holding": {
-        "parent": "Родительская холдинговая",
-        "children": "Дочерние компании",
-        "addChild": "Добавить дочернюю",
-        "stub": "Управление холдингом появится в следующем спринте"
+        "childrenCount": "{count} компаний в холдинге"
       },
       "stub": {
         "tasks": "Раздел «Задачи» появится в следующем спринте",
@@ -625,9 +693,6 @@
         "createDeal": "Создать сделку",
         "openCount": "{count} открытых",
         "seeAll": "Все сделки"
-      },
-      "holding": {
-        "childrenCount": "{count} компаний в холдинге"
       },
       "totals": {
         "empty": "Нет завершённых сделок",

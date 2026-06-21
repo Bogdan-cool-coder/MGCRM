@@ -43,7 +43,10 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
 
   const entityType = ref<EntityType>(initialType)
   const page = ref(1)
-  const perPage = ref(25)
+
+  // Persist perPage in localStorage
+  const storedPerPage = Number(localStorage.getItem('mgcrm_contacts_per_page_v1')) || 50
+  const perPage = ref(storedPerPage)
   /** Legacy simple filter — kept for backward compat; overlayFilters extends it. */
   const filter = ref<ContactsFilter>({ ...DEFAULT_FILTER })
   /** Full overlay filter state */
@@ -51,7 +54,7 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
 
   const emptyPage = (): PaginatedResponse<Contact | Company> => ({
     data: [],
-    meta: { current_page: 1, last_page: 1, per_page: 25, total: 0, from: null, to: null },
+    meta: { current_page: 1, last_page: 1, per_page: 50, total: 0, from: null, to: null },
   })
 
   const contactsResource = useAsyncResource<PaginatedResponse<Contact>>(

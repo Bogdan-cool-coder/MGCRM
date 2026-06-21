@@ -409,8 +409,30 @@
       "subtitle": "Individuals and companies",
       "subtitle_companies": "Company list",
       "create": "New contact",
+      "createContact": "New individual",
+      "createCompany": "New company",
       "dedup": "Dedup",
       "total": "Total: {count}",
+      "header": {
+        "title": "Contacts",
+        "switchCompany": "Companies",
+        "switchContact": "Individuals",
+        "entitySwitch": "Entity type"
+      },
+      "search": {
+        "placeholder": {
+          "company": "Search by name, BIN...",
+          "contact": "Search by name, phone, email..."
+        }
+      },
+      "menu": {
+        "more": "More",
+        "import": "Import from file",
+        "export": "Export to Excel",
+        "dedup": "Find duplicates",
+        "columns": "Customize columns",
+        "bulk": "Bulk actions"
+      },
       "typeSwitch": {
         "contact": "Individual",
         "company": "Company"
@@ -424,7 +446,10 @@
         "tags": "Tags",
         "actions": "Actions",
         "density": "Density",
-        "choose": "Column chooser"
+        "choose": "Column chooser",
+        "phone": "Phone",
+        "author": "Author",
+        "responsible": "Responsible"
       },
       "density": {
         "compact": "Compact",
@@ -438,7 +463,8 @@
         "country": "Country",
         "tags": "Tags",
         "apply": "Apply",
-        "reset": "Reset"
+        "reset": "Reset",
+        "openPanel": "Filters"
       },
       "empty": {
         "title": "No contacts yet",
@@ -467,6 +493,51 @@
         "create": "Failed to create record",
         "delete": "Failed to delete record"
       }
+    },
+    "kpi": {
+      "total": "Total",
+      "clients": "Clients",
+      "catL": "Cat. L",
+      "catM": "Cat. M",
+      "catS": "Cat. S",
+      "active": "Active",
+      "noTouch": "No touch",
+      "newWeek": "New this week"
+    },
+    "filter": {
+      "segmentsLabel": "SEGMENTS",
+      "preset": {
+        "mine": "Mine",
+        "active": "Active",
+        "withDeals": "With open deals",
+        "noTask": "No tasks",
+        "duplicates": "Duplicates"
+      },
+      "col": {
+        "who": "Who",
+        "what": "What",
+        "when": "When"
+      },
+      "field": {
+        "owner": "Responsible",
+        "author": "Author",
+        "engagement": "Engagement",
+        "companyType": "Company type",
+        "category": "Category",
+        "country": "Country",
+        "tags": "Tags",
+        "company": "Company",
+        "position": "Position",
+        "source": "Source",
+        "createdAt": "Created",
+        "lastActivity": "Last activity"
+      },
+      "apply": "Apply",
+      "reset": "Reset"
+    },
+    "paginator": {
+      "showing": "Showing {from}–{to} of {total}",
+      "perPageLabel": "Show:"
     },
     "actions": {
       "create": "Create contact"
@@ -580,10 +651,7 @@
         "seeAll": "All employees ({count})"
       },
       "holding": {
-        "parent": "Parent holding",
-        "children": "Subsidiaries",
-        "addChild": "Add subsidiary",
-        "stub": "Holding management coming in next sprint"
+        "childrenCount": "{count} companies in holding"
       },
       "stub": {
         "tasks": "Tasks section coming in next sprint",
@@ -625,9 +693,6 @@
         "createDeal": "Create deal",
         "openCount": "{count} open",
         "seeAll": "All deals"
-      },
-      "holding": {
-        "childrenCount": "{count} companies in holding"
       },
       "totals": {
         "empty": "No completed deals",

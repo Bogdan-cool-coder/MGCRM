@@ -138,7 +138,7 @@ const chips = computed((): FilterChip[] => {
   padding: $space-2 $space-4;
   border-bottom: 1px solid $surface-100;
 
-  :global(.app-dark) & {
+  .app-dark & {
     border-bottom-color: var(--p-surface-700);
   }
 }

@@ -35,38 +35,45 @@ function loadVisibleFields(entityType: EntityType): string[] | null {
   }
 }
 
-const DEFAULT_CONTACT_FIELDS = ['id', 'full_name', 'engagement_tier', 'position', 'company', 'last_activity_at', 'open_deals_count', 'owner', 'tags']
-const DEFAULT_COMPANY_FIELDS = ['id', 'name', 'engagement_tier', 'company_type', 'category_code', 'country_code', 'open_deals_count', 'owner', 'tags']
+// Per §5 spec: contacts = ФИО/Компания/Телефон/Посл.контакт/Теги/Автор
+// companies = Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный/Теги
+const DEFAULT_CONTACT_FIELDS = ['full_name', 'company', 'phone', 'last_activity_at', 'tags', 'owner']
+const DEFAULT_COMPANY_FIELDS = ['name', 'category_code', 'country_code', 'open_deals_count', 'last_activity_at', 'engagement_tier', 'owner', 'tags']
 
 export function useContactsView(entityType: { value: EntityType }) {
   const { t } = useI18n()
 
   const density = ref<ContactsDensity>(loadDensity())
 
-  // Translated column defs — explicit field to keep TS happy
+  // Translated column defs — §5.2 contacts: ФИО/Компания/Телефон/Посл.контакт/Теги/Автор
   const contactColumnDefs = computed<ContactColumnDef[]>(() => [
     { field: 'id', header: '#', sortable: false, width: 60 },
-    { field: 'full_name', header: t('contacts.page.columns.name'), required: true, sortable: true, frozen: true },
+    { field: 'full_name', header: t('contacts.page.columns.name'), required: true, sortable: true },
+    { field: 'company', header: t('contacts.page.columns.company'), sortable: false },
+    { field: 'phone', header: t('contacts.page.columns.phone'), sortable: false },
+    { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
+    { field: 'tags', header: t('contacts.page.columns.tags'), sortable: false },
+    { field: 'owner', header: t('contacts.page.columns.author'), sortable: false },
+    // Available but hidden by default:
     { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: false, width: 100 },
     { field: 'position', header: t('contact.page.fields.position', 'Должность'), sortable: true },
-    { field: 'company', header: t('contacts.page.columns.company'), sortable: false },
-    { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
     { field: 'open_deals_count', header: t('crm.contacts_page.columns.openDeals'), sortable: true, width: 120 },
-    { field: 'owner', header: t('crm.entity.author'), sortable: false },
-    { field: 'tags', header: t('contacts.page.columns.tags'), sortable: false },
   ])
 
+  // §5.1 companies: Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный/Теги
   const companyColumnDefs = computed<ContactColumnDef[]>(() => [
-    { field: 'id', header: '#', sortable: false, width: 60 },
-    { field: 'name', header: t('company.page.fields.name'), required: true, sortable: true, frozen: true },
-    { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: false, width: 100 },
-    { field: 'company_type', header: t('contacts.page.filters.companyType'), sortable: false },
-    { field: 'category_code', header: t('company.page.fields.category', 'Категория'), sortable: false, width: 100 },
+    { field: 'name', header: t('company.page.fields.name'), required: true, sortable: true },
+    { field: 'category_code', header: t('company.page.fields.category', 'Категория'), sortable: false },
     { field: 'country_code', header: t('contacts.page.filters.country'), sortable: true },
-    { field: 'employees_count', header: t('contacts_company.employees', 'Сотрудников'), sortable: true, width: 110 },
-    { field: 'open_deals_count', header: t('crm.contacts_page.columns.openDeals'), sortable: true, width: 120 },
-    { field: 'owner', header: t('crm.entity.author'), sortable: false },
+    { field: 'open_deals_count', header: t('crm.contacts_page.columns.openDeals'), sortable: true },
+    { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
+    { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: false },
+    { field: 'owner', header: t('contacts.page.columns.responsible'), sortable: false },
     { field: 'tags', header: t('contacts.page.columns.tags'), sortable: false },
+    // Available but hidden by default:
+    { field: 'id', header: '#', sortable: false, width: 60 },
+    { field: 'company_type', header: t('contacts.page.filters.companyType'), sortable: false },
+    { field: 'employees_count', header: t('contacts_company.employees', 'Сотрудников'), sortable: true, width: 110 },
   ])
 
   const allColumns = computed(() =>

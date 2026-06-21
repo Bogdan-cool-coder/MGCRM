@@ -427,6 +427,34 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### DS-4. Редизайн раздела Контакты (список)
+
+**Статус:** DONE (2026-06-21). designer→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields. PM APPROVE.
+**ТЗ:** `design-handoff/redesign/Contacts-spec.md` + `contacts.html`.
+**Агенты:** `frontend-specialist` (UI) + `backend-specialist` (KPI endpoint + position-filter).
+
+**Что сделано:**
+
+- [x] **KPI-лента (бэкенд):** `ContactsKpiService` + `ContactsKpiController` — `GET /api/contacts/kpi?entity=company|contact`. Aggregated counters через `DB::table()` (без Eloquent N+1). Visibility-scope: Admin/Director — всё; Manager — own records (`owner_user_id`/`owner_id`). Response `{ data: { entity, total, ... } }`. 25 PHPUnit тестов (ContactsKpiBarTest), 349 CRM-тестов зелёные.
+- [x] **Position-filter (бэкенд):** `ContactService::list()` — фильтр `?position=` через `->where('position', 'like', '%value%')` (Eloquent-билдер, без raw). 4 теста B4 в ContactsKpiBarTest.
+- [x] **CrmAvatar.vue** — новый `front/src/components/ui/CrmAvatar.vue`, инициалы (1–2 буквы), prop `square` (radius-md vs radius-circle), prop `size`, фон `$primary-900`.
+- [x] **ContactsKpiBar.vue** — KPI-чипы (pill, 6 для компаний / 4 для физлиц), skeleton при загрузке, teal-вариант через `$teal-*` токены.
+- [x] **ContactsPaginator.vue** — самостоятельный компонент, 50/100/200 per-page, дропдаун вверх, prev/next/first/last.
+- [x] **ContactsToolbar** рефакторинг — segmented entity-switch (tablist/role=tab, a11y), search, filter-badge, More-menu, Create-button, плотность/column-chooser.
+- [x] **ContactsFilterOverlay** рефакторинг — Должность (position) для физлиц, grid-3-col, segment-пресеты.
+- [x] **ContactsPage/index.vue** — KPI через `useAsyncResource`, watch entityType → loadKpi(), `CrmAvatar` в ячейках, `position`-строка под именем.
+- [x] **Teal-палитра:** `tealPalette` добавлена в `tokens/colors.ts` + `theme/config.ts` + `appVariables.ts` (addPalette 'teal') + `_colors.scss` (`$teal-100/700/900`). Токен готов для stylelint.
+- [x] **Preset-оверрайды кнопок:** `theme/adapters/primevue/preset.ts` — BUG-DS4-4/6: filled-button brand-navy в обеих темах через `components.button.colorScheme.{light,dark}`.
+- [x] **i18n:** `contacts.kpi.*` (total/clients/catL/catM/catS/active/noTouch/newWeek), `contacts.page.header.entitySwitch` — симметрично RU + EN (0 расхождений).
+- [x] **Agent-patch:** `.claude/agents/frontend-specialist.md` — зафиксированы 2 dark-theme ловушки: идиома `.app-dark &` (не `:global()`), инверсия surface-шкалы в dark-режиме.
+- [x] **QA:** frontend-specialist: tsc+lint:ds+build clean. qa-tester: функционал + визуал light/dark PASS.
+
+**Беклог (не блокеры):**
+- `initialType` в index.vue (строка 701): тернарный `route.name === 'Companies' ? 'company' : 'company'` — обе ветки возвращают `'company'`, мёртвый код. Поведение корректное (spec требует default=company), но выражение стоит упростить при следующем касании файла.
+- `position` в `ContactListParams` есть (api/crm/contacts.ts), но не пробрасывается из `buildContactParams()` в `useContactsPageData.ts` — фильтр работает только на сервере (прямые запросы). UI-wire через overlayFilters добавить в следующем слайсе фильтров.
+
+---
+
 ### M3. Sales / Kanban (2-3 недели)
 
 **Ведущие:** `sales-specialist` + `catalog` (в его зоне) + `frontend-specialist` + `designer`. Контекст `Sales` + `Catalog`.

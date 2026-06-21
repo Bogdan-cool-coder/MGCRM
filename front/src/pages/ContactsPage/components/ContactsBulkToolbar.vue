@@ -138,7 +138,7 @@ function onSelectAllChange() {
   flex-shrink: 0;
   flex-wrap: wrap;
 
-  :global(.app-dark) & {
+  .app-dark & {
     background: rgba(23, 39, 71, 0.25);
     border-bottom-color: rgba(23, 39, 71, 0.5);
   }
@@ -170,7 +170,7 @@ function onSelectAllChange() {
   background: $surface-200;
   flex-shrink: 0;
 
-  :global(.app-dark) & {
+  .app-dark & {
     background: var(--p-surface-700);
   }
 }
