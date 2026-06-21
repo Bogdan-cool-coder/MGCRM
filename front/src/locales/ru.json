@@ -259,6 +259,10 @@
         "title": "Журнал автоматизаций",
         "desc": "История запусков и результаты автоматических сценариев"
       },
+      "users": {
+        "title": "Пользователи",
+        "desc": "Управление учётными записями сотрудников"
+      },
       "acquisitionChannels": {
         "title": "Каналы привлечения",
         "desc": "Справочник каналов привлечения клиентов"
@@ -270,6 +274,50 @@
     }
   },
   "admin": {
+    "users": {
+      "title": "Пользователи",
+      "subtitle": "Управление учётными записями сотрудников",
+      "addUser": "Добавить пользователя",
+      "created": "Пользователь создан",
+      "empty": "Пользователи не найдены",
+      "active": "Активен",
+      "inactive": "Неактивен",
+      "passwordHint": "Пароль будет сгенерирован автоматически и отправлен пользователю на email.",
+      "columns": {
+        "full_name": "ФИО",
+        "email": "Email",
+        "phone": "Телефон",
+        "job_title": "Должность",
+        "department": "Отдел",
+        "role": "Роль",
+        "is_active": "Активен"
+      },
+      "fields": {
+        "full_name": "ФИО",
+        "full_name_ph": "Иванов Иван Иванович",
+        "email": "Email",
+        "email_ph": "user{'@'}company.com",
+        "phone": "Телефон",
+        "phone_ph": "+7 (999) 000-00-00",
+        "job_title": "Должность",
+        "job_title_ph": "Менеджер по продажам",
+        "department": "Отдел",
+        "department_ph": "Выберите отдел",
+        "role": "Роль",
+        "role_ph": "Выберите роль (по умолчанию: Менеджер)"
+      },
+      "filters": {
+        "search": "Поиск по имени, email...",
+        "role": "Роль",
+        "department": "Отдел",
+        "status": "Статус",
+        "active": "Активен",
+        "inactive": "Неактивен"
+      },
+      "errors": {
+        "invalidEmail": "Некорректный email"
+      }
+    },
     "acquisitionChannels": {
       "title": "Каналы привлечения",
       "add": "Добавить канал",
@@ -1424,7 +1472,7 @@
           "tg": "{'@'}username или числовой ID",
           "wa": "Номер +7XXXXXXXXXX",
           "linkedin": "URL профиля LinkedIn",
-          "email": "email@domain.com",
+          "email": "email{'@'}domain.com",
           "phone": "+7XXXXXXXXXX"
         },
         "submit": "Добавить",

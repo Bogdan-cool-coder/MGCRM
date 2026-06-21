@@ -235,6 +235,18 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'automation.runs.pageTitle' },
   },
 
+  // ─── Users: Admin ────────────────────────────────────────────────────────
+  {
+    path: '/admin/users',
+    name: 'AdminUsers',
+    component: () => import('@/pages/UsersPage'),
+    meta: {
+      requiresAuth: true,
+      roles: ['admin', 'director'],
+      title: 'admin.users.title',
+    },
+  },
+
   // ─── Directories: Admin ──────────────────────────────────────────────────
   {
     path: '/admin/acquisition-channels',

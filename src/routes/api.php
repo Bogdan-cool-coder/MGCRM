@@ -55,6 +55,8 @@ use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
 use App\Http\Controllers\Crm\HoldingController;
 use App\Http\Controllers\Crm\SavedViewController;
+use App\Http\Controllers\Iam\Admin\DepartmentController;
+use App\Http\Controllers\Iam\Admin\UserManagementController;
 use App\Http\Controllers\Iam\ProfileController;
 use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Inbox\ChannelController;
@@ -333,6 +335,15 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // Admin — Directories
     // =========================================================================
     Route::prefix('admin')->name('admin.')->group(function (): void {
+        // Settings → user management (admin/director). List + create only for
+        // now; module-access config (position/department → permissions) lands
+        // on a later milestone.
+        Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('users', [UserManagementController::class, 'store'])->name('users.store');
+
+        // Department directory (read-only) — feeds the add-user form Select.
+        Route::get('departments', [DepartmentController::class, 'index'])->name('departments.index');
+
         Route::apiResource('company-types', CompanyTypeController::class)
             ->parameter('company-types', 'companyType');
         Route::apiResource('contact-positions', ContactPositionController::class)

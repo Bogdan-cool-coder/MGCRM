@@ -259,6 +259,10 @@
         "title": "Automation log",
         "desc": "Run history and results of automated scenarios"
       },
+      "users": {
+        "title": "Users",
+        "desc": "Manage employee accounts"
+      },
       "acquisitionChannels": {
         "title": "Acquisition Channels",
         "desc": "Directory of client acquisition channels"
@@ -270,6 +274,50 @@
     }
   },
   "admin": {
+    "users": {
+      "title": "Users",
+      "subtitle": "Manage employee accounts",
+      "addUser": "Add user",
+      "created": "User created",
+      "empty": "No users found",
+      "active": "Active",
+      "inactive": "Inactive",
+      "passwordHint": "A password will be generated automatically and sent to the user's email.",
+      "columns": {
+        "full_name": "Full name",
+        "email": "Email",
+        "phone": "Phone",
+        "job_title": "Job title",
+        "department": "Department",
+        "role": "Role",
+        "is_active": "Active"
+      },
+      "fields": {
+        "full_name": "Full name",
+        "full_name_ph": "John Doe",
+        "email": "Email",
+        "email_ph": "user{'@'}company.com",
+        "phone": "Phone",
+        "phone_ph": "+1 (555) 000-0000",
+        "job_title": "Job title",
+        "job_title_ph": "Sales Manager",
+        "department": "Department",
+        "department_ph": "Select department",
+        "role": "Role",
+        "role_ph": "Select role (default: Manager)"
+      },
+      "filters": {
+        "search": "Search by name, email...",
+        "role": "Role",
+        "department": "Department",
+        "status": "Status",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "errors": {
+        "invalidEmail": "Invalid email"
+      }
+    },
     "acquisitionChannels": {
       "title": "Acquisition Channels",
       "add": "Add Channel",
@@ -1424,7 +1472,7 @@
           "tg": "{'@'}username or numeric ID",
           "wa": "Number +7XXXXXXXXXX",
           "linkedin": "LinkedIn profile URL",
-          "email": "email@domain.com",
+          "email": "email{'@'}domain.com",
           "phone": "+7XXXXXXXXXX"
         },
         "submit": "Add",

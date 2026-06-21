@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
     private const BASELINE_SEEDERS = [
         RolePermissionSeeder::class,
         AdminSeeder::class,
+        // Org: default department directory (feeds the add-user form Select).
+        DepartmentSeeder::class,
         // Catalog (products + prices).
         ProductGroupSeeder::class,
         ProductSeeder::class,
@@ -76,6 +78,10 @@ class DatabaseSeeder extends Seeder
         // not config — hence SAMPLE, not baseline. Needs the spatie roles
         // (RolePermissionSeeder, baseline) to exist first.
         AmoImportUserSeeder::class,
+        // Migration: AMO "Продукт" enum options (94) pre-loaded as skip rows into
+        // the amo_product_mappings curation table. SAMPLE (curation data, not
+        // config) — human maps each to a catalog product later.
+        AmoProductMappingSeeder::class,
     ];
 
     /**

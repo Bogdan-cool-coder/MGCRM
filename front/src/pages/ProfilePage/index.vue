@@ -522,6 +522,7 @@ interface SystemSection {
 }
 
 const systemSections: SystemSection[] = [
+  { key: 'users',             route: '/admin/users',                 icon: 'pi pi-users',       titleKey: 'settings.sections.users.title',            descKey: 'settings.sections.users.desc' },
   { key: 'pipeline',          route: '/settings/pipeline',           icon: 'pi pi-sliders-h',   titleKey: 'settings.sections.pipeline.title',         descKey: 'settings.sections.pipeline.desc' },
   { key: 'templates',         route: '/admin/templates',             icon: 'pi pi-file-edit',   titleKey: 'settings.sections.templates.title',        descKey: 'settings.sections.templates.desc' },
   { key: 'templateVariables', route: '/admin/template-variables',    icon: 'pi pi-list',        titleKey: 'settings.sections.templateVariables.title', descKey: 'settings.sections.templateVariables.desc' },
