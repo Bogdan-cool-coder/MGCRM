@@ -52,11 +52,13 @@ return [
         'staging_path' => 'amo-migration',
 
         // Per-entity id-filter batch sizes (AMO caps url length / filter cardinality).
+        // events: GET /events caps filter[entity_id] at 10 ids per request — an 11th
+        // id returns HTTP 400 "More params given than allowed.", so this MUST stay <= 10.
         'batch' => [
             'contacts' => 250,
             'companies' => 250,
             'tasks' => 50,
-            'events' => 50,
+            'events' => 10,
         ],
 
         // Retry policy for 429 / 5xx (honours Retry-After when present).

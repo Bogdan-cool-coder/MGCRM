@@ -11,6 +11,7 @@ use App\Domain\Migration\Extractors\LeadExtractor;
 use App\Domain\Migration\Extractors\NoteExtractor;
 use App\Domain\Migration\Extractors\TaskExtractor;
 use App\Domain\Migration\Services\AmoClient;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -223,6 +224,38 @@ class AmoExtractorTest extends TestCase
         $this->assertSame(1, $written);
         $rows = $this->readJsonl('events');
         $this->assertSame('lead_status_changed', $rows[0]['type']);
+    }
+
+    public function test_event_extractor_filters_entity_as_string_and_caps_ids_at_ten(): void
+    {
+        @mkdir($this->stagingDir, 0775, true);
+        // 25 lead ids → must split into 3 requests of <= 10 ids each (AMO hard cap).
+        file_put_contents($this->stagingDir.'/leads.ids.json', json_encode(range(1, 25)));
+
+        Http::fake([
+            'macro.amocrm.ru/*' => Http::response([
+                '_embedded' => ['events' => [['id' => 'e', 'type' => 'lead_added']]],
+                '_links' => [],
+            ], 200),
+        ]);
+
+        (new EventExtractor($this->client()))->run();
+
+        // 25 ids / 10-cap → 3 batches → 3 requests.
+        Http::assertSentCount(3);
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $q);
+
+            // filter[entity] is a single string 'lead', never an array.
+            $entityOk = ($q['filter']['entity'] ?? null) === 'lead';
+
+            // filter[entity_id] is an array of <= 10 ids.
+            $ids = $q['filter']['entity_id'] ?? [];
+            $idsOk = is_array($ids) && count($ids) >= 1 && count($ids) <= 10;
+
+            return $entityOk && $idsOk;
+        });
     }
 
     public function test_note_extractor_writes_per_lead_with_lead_id_stamp(): void
