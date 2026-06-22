@@ -5,8 +5,9 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useRouter } from 'vue-router'
 import { useMutation } from '@/composables/async/useMutation'
 import { contactsApi } from '@/api/crm/contacts'
+import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { ContactExtended, ContactCompanyLink, ContactRelation, ContactChannel } from '@/entities/crm'
+import type { ContactExtended, ContactCompanyLink, ContactRelation, ContactChannel, Company } from '@/entities/crm'
 
 export const useContactPageActions = (opts: {
   contactId: { value: number }
@@ -63,10 +64,12 @@ export const useContactPageActions = (opts: {
   // ── Attach company dialog ─────────────────────────────────────────────────
 
   const attachCompanyOpen = ref(false)
-  const attachCompanySearch = ref('')
+  const attachCompanySearch = ref<string | Company>('')
   const attachCompanyId = ref<number | null>(null)
   const attachCompanyPosition = ref('')
   const attachCompanyStatus = ref<'works' | 'left'>('works')
+  const attachCompanySuggestions = ref<Company[]>([])
+  let attachCompanyTimer: ReturnType<typeof setTimeout> | null = null
 
   function openAttachCompany() {
     attachCompanyOpen.value = true
@@ -74,13 +77,34 @@ export const useContactPageActions = (opts: {
     attachCompanyId.value = null
     attachCompanyPosition.value = ''
     attachCompanyStatus.value = 'works'
+    attachCompanySuggestions.value = []
   }
 
   function closeAttachCompany() {
     attachCompanyOpen.value = false
   }
 
-  async function submitAttachCompany() {
+  function searchAttachCompany(query: string) {
+    if (attachCompanyTimer) clearTimeout(attachCompanyTimer)
+    if (!query || query.length < 2) {
+      attachCompanySuggestions.value = []
+      return
+    }
+    attachCompanyTimer = setTimeout(async () => {
+      try {
+        const result = await companiesApi.list({ search: query, per_page: 10 })
+        attachCompanySuggestions.value = result.data
+      } catch {
+        attachCompanySuggestions.value = []
+      }
+    }, 300)
+  }
+
+  function onAttachCompanySelect(company: Company) {
+    attachCompanyId.value = company.id
+  }
+
+  async function submitAttachCompany(isPrimary = false) {
     if (!attachCompanyId.value || !opts.contactId.value) return
     await linkMutation.run(
       () =>
@@ -88,6 +112,7 @@ export const useContactPageActions = (opts: {
           company_id: attachCompanyId.value!,
           position: attachCompanyPosition.value || undefined,
           employment_status: attachCompanyStatus.value,
+          is_primary: isPrimary || undefined,
         }),
       {
         onSuccess() {
@@ -183,9 +208,12 @@ export const useContactPageActions = (opts: {
     attachCompanyId,
     attachCompanyPosition,
     attachCompanyStatus,
+    attachCompanySuggestions,
     isAttaching: linkMutation.isPending,
     openAttachCompany,
     closeAttachCompany,
+    searchAttachCompany,
+    onAttachCompanySelect,
     submitAttachCompany,
     setPrimaryCompany,
     confirmDetachCompany,

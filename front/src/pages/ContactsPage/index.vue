@@ -777,12 +777,6 @@ const activeView = ref<string>('default')
 
 function onSetView(viewId: string) {
   activeView.value = viewId
-  if (viewId === 'duplicates') {
-    overlayFilters.value.only_duplicates = true
-    applyFilter()
-    return
-  }
-  overlayFilters.value.only_duplicates = false
   const state = savedViews.getViewState(viewId)
   if (state) {
     view.setDensity(state.density)
@@ -863,7 +857,7 @@ const typeOptions = computed(() => [
 // ── Dedup hint on quick-create ─────────────────────────────────────────────
 
 const hasDuplicateHint = computed(
-  () => activeView.value === 'duplicates' || overlayFilters.value.only_duplicates,
+  () => activeView.value === 'duplicates',
 )
 
 // ── Merge (dedup segment) ─────────────────────────────────────────────────────

@@ -27,24 +27,18 @@
       />
     </div>
 
-    <!-- Columns -->
+    <!-- Columns (visible only; hidden stages controlled via FilterPanel) -->
     <template v-else>
       <DealsKanbanColumn
-        v-for="col in visibleColumns"
+        v-for="(col, idx) in visibleColumns"
         :key="col.stage.id"
         :data-stage-id="col.stage.id"
         :column="col"
+        :column-index="idx"
         :loading="loading"
         @drop="onDrop"
         @title-change="(cid: number, title: string) => emit('titleChange', cid, title)"
         @load-more="emit('loadMore', $event)"
-        @add-deal="emit('addDealToStage', $event)"
-      />
-
-      <!-- Hidden columns toggle -->
-      <HiddenColumnsToggle
-        :columns="hiddenColumns"
-        @show="emit('showHidden', $event)"
       />
     </template>
   </div>
@@ -56,12 +50,10 @@ import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import DealsKanbanColumn from './DealsKanbanColumn.vue'
-import HiddenColumnsToggle from './HiddenColumnsToggle.vue'
 import type { BoardColumnDto, DealCardDto } from '@/entities/sales'
 
 const props = defineProps<{
   visibleColumns: BoardColumnDto[]
-  hiddenColumns: BoardColumnDto[]
   loading: boolean
 }>()
 
@@ -69,9 +61,7 @@ const emit = defineEmits<{
   drop: [card: DealCardDto, fromStageId: number, toStageId: number]
   titleChange: [cardId: number, title: string]
   loadMore: [stageId: number]
-  showHidden: [stageId: number]
   create: []
-  addDealToStage: [stageId: number]
 }>()
 
 const { t } = useI18n()
@@ -103,12 +93,15 @@ function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   // Custom scrollbar
   scrollbar-width: thin;
   scrollbar-color: $surface-300 transparent;
+
   &::-webkit-scrollbar {
     height: 6px;
   }
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
+
   &::-webkit-scrollbar-thumb {
     background: $surface-300;
     border-radius: $radius-xs;
@@ -116,15 +109,15 @@ function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
 }
 
 .kanban-board__skeleton-col {
-  width: 280px;
-  min-width: 280px;
+  width: 284px;
+  min-width: 284px;
   flex-shrink: 0;
   padding: $space-3;
   background: $surface-card;
   border: 1px solid $surface-200;
   border-radius: $radius-lg;
 
-  :global(.app-dark) & {
+  .app-dark & {
     border-color: var(--p-surface-700);
   }
 }

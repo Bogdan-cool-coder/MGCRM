@@ -501,6 +501,31 @@ const confirm = useConfirm()
 
 const { isTablet, isMobile } = useBreakpoints()
 
+// ── Menu action helpers ────────────────────────────────────────────────────────
+
+function onMenuCall() {
+  // Find first phone channel across primary employee's channels
+  const primaryEmp = employees.value.find((e) => e.is_primary) ?? employees.value[0] ?? null
+  const contact = primaryEmp?.contact as ({ phone?: string | null } | null) | undefined
+  const phone = contact?.phone ?? null
+  if (phone) {
+    window.location.href = `tel:${phone}`
+  } else {
+    toast.add({ severity: 'info', summary: t('company.page.menu.noPhone', 'Нет номера телефона'), life: 3000 })
+  }
+}
+
+function onMenuEmail() {
+  const primaryEmp = employees.value.find((e) => e.is_primary) ?? employees.value[0] ?? null
+  const contact = primaryEmp?.contact as ({ email?: string | null } | null) | undefined
+  const email = contact?.email ?? null
+  if (email) {
+    window.location.href = `mailto:${email}`
+  } else {
+    toast.add({ severity: 'info', summary: t('company.page.menu.noEmail', 'Нет адреса email'), life: 3000 })
+  }
+}
+
 // ── Disconnect / Termination state ─────────────────────────────────────────────
 
 const disconnectDialogOpen = ref(false)
@@ -697,22 +722,26 @@ const menuItems = computed((): MenuItem[] => {
     {
       label: t('company.page.menu.addTask'),
       icon: 'pi pi-check-square',
-      command: () => { /* TODO: open task dialog */ },
+      // Switch to activity tab — EntityComposer default is task mode
+      command: () => { goToTab('activity') },
     },
     {
       label: t('company.page.menu.addNote'),
       icon: 'pi pi-comment',
-      command: () => { /* TODO: open note dialog */ },
+      // Switch to activity tab — user picks note tab in composer
+      command: () => { goToTab('activity') },
     },
     {
+      // Call: use first phone channel from primary employee or show toast "no phone"
       label: t('company.page.menu.call'),
       icon: 'pi pi-phone',
-      command: () => { /* TODO: call action */ },
+      command: onMenuCall,
     },
     {
+      // Email: use first email channel from primary employee or show toast "no email"
       label: t('company.page.menu.email'),
       icon: 'pi pi-envelope',
-      command: () => { /* TODO: email action */ },
+      command: onMenuEmail,
     },
     { separator: true },
     {
@@ -724,9 +753,9 @@ const menuItems = computed((): MenuItem[] => {
       },
     },
     {
-      label: t('company.page.menu.export'),
+      label: `${t('company.page.menu.export')} (${t('common.comingSoon', 'скоро')})`,
       icon: 'pi pi-download',
-      command: () => { /* TODO: export */ },
+      disabled: true,
     },
     { separator: true },
   ]

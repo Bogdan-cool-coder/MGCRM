@@ -115,6 +115,7 @@
                           />
                         </template>
                         <ContactChannelsBlock
+                          ref="channelsBlockRef"
                           :contact-id="contact.id"
                           :channels="channels"
                           @updated="onChannelsUpdated"
@@ -289,10 +290,15 @@
       <div class="contact-page-v2__dialog-form">
         <div class="contact-page-v2__dialog-field">
           <label class="contact-page-v2__dialog-label">{{ t('company.page.fields.name') }} *</label>
-          <InputText
+          <AutoComplete
             v-model="attachCompanySearch"
+            :suggestions="attachCompanySuggestions"
+            option-label="name"
             :placeholder="t('common.search')"
             class="w-full"
+            force-selection
+            @complete="searchAttachCompany($event.query)"
+            @option-select="onAttachCompanySelect($event.value)"
           />
         </div>
         <div class="contact-page-v2__dialog-field">
@@ -309,7 +315,7 @@
         <Button
           :label="t('common.save')"
           :loading="isAttaching"
-          :disabled="!attachCompanySearch"
+          :disabled="!attachCompanyId"
           @click="submitAttachCompanyWithPrimary"
         />
       </template>
@@ -321,7 +327,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
@@ -337,6 +343,7 @@ import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import AutoComplete from 'primevue/autocomplete'
 import ToggleSwitch from 'primevue/toggleswitch'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
@@ -394,9 +401,12 @@ const {
   attachCompanyId,
   attachCompanyPosition,
   attachCompanyStatus,
+  attachCompanySuggestions,
   isAttaching,
   openAttachCompany,
   closeAttachCompany,
+  searchAttachCompany,
+  onAttachCompanySelect,
   submitAttachCompany,
   setPrimaryCompany,
   confirmDetachCompany,
@@ -567,18 +577,20 @@ const tabOptions = computed(() => [
 // ── Attach company with isPrimary ─────────────────────────────────────────────
 
 async function submitAttachCompanyWithPrimary() {
-  // Pass isPrimary to the underlying action if supported, else call base submit
-  // The composable exposes submitAttachCompany — we call it (isPrimary sent via form state)
-  // Note: backend integration for is_primary requires updating submitAttachCompany composable
-  // For now delegate to the existing action
-  await submitAttachCompany()
+  await submitAttachCompany(attachCompanyIsPrimary.value)
 }
 
 // ── Navigation helpers ────────────────────────────────────────────────────────
 
+const channelsBlockRef = ref<{ openAdd: () => void } | null>(null)
+
 function openAddChannel() {
-  // The ContactChannelsBlock handles add internally via its own button
-  // This method can be used if we need to programmatically open it
+  // Make sure we're on overview tab so the block is mounted
+  activeTab.value = 'overview'
+  // Delegate to ContactChannelsBlock exposed openAdd (via defineExpose)
+  void nextTick(() => {
+    channelsBlockRef.value?.openAdd()
+  })
 }
 
 function goToActivityTab() {
@@ -593,9 +605,8 @@ onMounted(async () => {
   if (contactId.value) void contactLog.load()
 })
 
-// suppress unused warning
+// suppress unused warning — isSaving passed via InlineEditableField, attachCompanyStatus unused but kept in composable
 void isSaving
-void attachCompanyId
 void attachCompanyStatus
 </script>
 

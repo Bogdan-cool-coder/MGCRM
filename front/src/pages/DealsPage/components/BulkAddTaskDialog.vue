@@ -262,15 +262,9 @@ async function onSubmit() {
       }
     }
 
-    :global(.app-dark) & {
-      border-color: var(--p-surface-600);
+    .app-dark & {
+      border-color: var(--p-surface-200);
       color: var(--p-surface-300);
-
-      &--active {
-        background: $primary-color;
-        border-color: $primary-color;
-        color: $surface-0;
-      }
     }
   }
 

@@ -483,6 +483,45 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### DS-6. Редизайн воронки (SalesFunnel 2.0)
+
+**Статус:** DONE (2026-06-22). backend-specialist→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields. PM APPROVE.
+**ТЗ:** `design-handoff/redesign/SalesFunnel-spec.md` + `sales-funnel.html`.
+
+**Что сделано:**
+
+- [x] **Бэкенд — `IndexDealRequest` (NEW):** полный FormRequest валидации фильтров воронки (14 измерений: view/per_page/pipeline_id/stage_ids/owner_ids/tags/status/only_mine/only_no_task/only_overdue/product_q/country/city/budget_from/budget_to/created_from/created_to). `prepareForValidation()` нормализует boolean flags из query-строк + coerce array-фильтры. `authorize()` — `can('viewAny', Deal::class)`. `DealController::index()/board()/export()` переведены на `IndexDealRequest::validated()` — неизвестные query-параметры отброшены.
+- [x] **Бэкенд — `DealService::applyFilters()`:** полный набор фильтров воронки (owner_ids/stage_ids/only_mine/q/status/tags/product_q/country/city/budget_from/budget_to/created_from/created_to/only_no_task/only_overdue/archived). Все значения через query-builder bindings (no injection). tags — `whereJsonContains` (portable PG+SQLite). Visibility scope applied BEFORE filters (scopedQuery → applyFilters). Без N+1: whereHas/whereExists/subquery.
+- [x] **Бэкенд — `DealService::list()`:** batched `stampLastContact` через `ActivityService::lastContactDatesForDeals()` (ROW_NUMBER PG / PHP-fallback SQLite). `DealResource` — поля `country`/`category`/`last_contact_at` (B1–B3).
+- [x] **Бэкенд — `ActivityService::lastContactDatesForDeals()`:** батчевый запрос last completed event per deal, без N+1.
+- [x] **Бэкенд — `ContactService::list()` + `CompanyService::list()`:** полный набор фильтров (owner_ids/author_ids/sources/tags/position/engagement_tier/created_from/created_to/last_touch_from/last_touch_to/open_deals_min/open_deals_max/only_mine/only_active/only_with_deals/only_no_task). LIKE-эскейп для `%` в тегах. Пресеты через `_auth_user_id` (передаётся контроллером, сервис не читает Auth напрямую). `whereExists` subquery для open_deals.
+- [x] **Тесты:** `DealListFiltersTest` (23 теста), `DealListColumnsTest` (7 тестов), `ContactFilterTest`, `CompanyFilterTest`, `ContactKpiTest`. Scope-safety тест (manager не видит чужое при явном owner_ids). N+1 guard (query count < 20 для 12 сделок). 96/96 PASS.
+- [x] **Фронт — воронка:** `DealsToolbar.vue` — pipeline-switcher `DealsPipelineMenu.vue` (NEW), filter-badge, view-toggle kanban/list. `DealsFilterOverlay.vue` — полная переработка: search + presets-chips + 4-col grid (owner_ids/stage_ids/product_q/region→country/city/budget/tags/dateRange). `DealsKpiChips.vue` (NEW) — KPI-полоска (inWork/catL/M/S/won/noTask/overdue) над доской. `DealsListView.vue` — redesign колонок (Название/Стадия/Компания/Страна/Категория/Посл.контакт/Бюджет/Ответственный).
+- [x] **Фронт — composables:** `useDealsList.ts` / `useDealsBoard.ts` — `f.region → country` mapping, все фильтр-поля пробрасываются. `DealsFilters` — поле `region` для UI, `country` на сервер.
+- [x] i18n RU+EN симметрия (0 расхождений).
+- [x] **QA:** 23 контрольные точки — dark воронки, фильтры шлют параметры, мёртвых кнопок нет, 0 console/network ошибок. PASS.
+
+---
+
+### DS-7. Ремонт по wiring-аудиту (фильтры Контакты/Компании + мёртвые кнопки + dark + орфаны)
+
+**Статус:** DONE (2026-06-22). frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields. PM APPROVE.
+
+**Что сделано:**
+
+- [x] **Фронт — ContactsPage:** `ContactsFilterOverlay.vue` + `ContactsActiveFiltersBar.vue` — `buildContactParams()` пробрасывает все фильтры (position/sources/tags/owner_ids/author_ids/engagement_tier/created_from/created_to/last_touch_from/last_touch_to/open_deals_min/open_deals_max/only_mine/only_active/only_with_deals/only_no_task). `ContactsToolbar.vue` — «Импорт» → `severity='secondary'` + disabled + tooltip «скоро». `useContactsFilters.ts` — `position` добавлен в DealsFilters (закрыт DS-4 хвост). `ContactsPage/index.vue` — SavedViews смонтирован.
+- [x] **Фронт — ContactPage:** `ContactChannelsBlock.vue` — кнопка «+» работает (открывает форму добавления канала). `useContactPageActions.ts` — `submitAttachCompany(isPrimary)` через `useMutation`, `setPrimaryCompany()` реализован, `searchAttachCompany` с дебаунсом. `ContactPage/index.vue` — AutoComplete с is_primary параметром + отдельная кнопка «Установить основной».
+- [x] **Фронт — CompanyPage:** `CompanyPage/index.vue` — меню-кнопки «Позвонить»/«Написать»/«Скопировать ссылку»/«Удалить» работают; toast для missing phone/email. `api/crm/contacts.ts` + `api/crm/companies.ts` — buildContactParams/buildCompanyParams обновлены.
+- [x] **Удалены орфаны** (нулевые импорты): `DealsTaskBoard.vue`, `DealsPage/TaskCard.vue`, `DealsPage/useTaskBoard.ts`, `DealsFilterPanel.vue`, `HiddenColumnsToggle.vue`, `EntityNowStrip.vue`. MyTasksPage — собственные `TaskCard.vue` и `useTaskBoard.ts` НЕ затронуты.
+- [x] **Dark-идиомы:** `.app-dark &` (не `:global`) применены во всех новых/переработанных компонентах; инверсия surface-переменных.
+- [x] **Беклог (не блокер):** `category_code` фикс (фронт слал `category_codes` — теперь `category_code`); `SavedViewsDropdown.vue` использует `:global(.p-menuitem--danger)` для PrimeVue selector — допустимо (внешний компонент, нет DDD-аналога). `DealsKanbanCard.vue` — `:global(.kanban-card--ghost)` для drag-placeholder — допустимо (SortableJS inject).
+
+**Беклог (не блокер):**
+- B-4 files API — `ContactFilesTab` / `CompanyFilesTab` — graceful «скоро» (ждёт `GET /api/{contacts|companies}/{id}/files`).
+- gate disconnect/reconnect на фронте без проверки роли менеджера (бэкенд-gate = update-policy; обсудить с юзером).
+
+---
+
 ### M3. Sales / Kanban (2-3 недели)
 
 **Ведущие:** `sales-specialist` + `catalog` (в его зоне) + `frontend-specialist` + `designer`. Контекст `Sales` + `Catalog`.

@@ -186,6 +186,8 @@ function openAdd() {
   newChannelValue.value = ''
 }
 
+defineExpose({ openAdd })
+
 function cancelAdd() {
   addingOpen.value = false
 }

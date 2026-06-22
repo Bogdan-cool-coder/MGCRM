@@ -694,7 +694,9 @@
         "copyLink": "Copy link",
         "export": "Export",
         "deleteConfirm": "Delete company? This action is irreversible.",
-        "deleteSuccess": "Company deleted"
+        "deleteSuccess": "Company deleted",
+        "noPhone": "No phone number",
+        "noEmail": "No email address"
       },
       "deals": {
         "empty": "No open deals",
@@ -1191,14 +1193,17 @@
         "viewTasks": "Tasks",
         "summary": "{count} deals · ≈ {total}",
         "toolbar": {
-          "searchAndFilter": "Search & Filter",
-          "moreMenu": "More"
+          "searchAndFilter": "Search & filter",
+          "moreMenu": "More",
+          "pipeline": "Pipeline",
+          "pipelineSettings": "Configure pipelines"
         },
         "menu": {
           "import": "Import",
           "export": "Export",
           "duplicates": "Find duplicates",
           "bulkActions": "Bulk actions",
+          "comingSoon": "coming soon",
           "sort": "Sort",
           "sortCreatedAt": "By date created",
           "sortTitle": "By name",
@@ -1227,7 +1232,11 @@
           "presetWon": "Won",
           "presetLost": "Lost",
           "presetNoTask": "No task",
-          "presetOverdue": "Overdue task"
+          "presetOverdue": "Overdue task",
+          "hiddenStages": "Hidden stages",
+          "hiddenStagesHint": "These stages are hidden from the board by default. Toggle to show the column.",
+          "hiddenStagesCount": "{n} on",
+          "hiddenStagesSettings": "Configure which stages to hide"
         },
         "bulk": {
           "selected": "Selected: {n}",
@@ -1349,6 +1358,28 @@
           "deleteReject": "Cancel",
           "deleteSuccess": "Deal deleted",
           "moveSuccess": "Stage updated"
+        },
+        "pipeline": {
+          "salesSubtitle": "sales funnel",
+          "onboardingSubtitle": "onboarding & launch",
+          "partnerSubtitle": "referral deals"
+        },
+        "list": {
+          "today": "Today",
+          "daysAgo": "{n}d ago",
+          "columns": {
+            "country": "Country",
+            "inStage": "In stage",
+            "lastContact": "Last contact"
+          }
+        },
+        "kpi": {
+          "inWork": "Active",
+          "inWorkValue": "{n} companies",
+          "categories": "Categories L/M/S",
+          "won": "Won",
+          "noTask": "No task",
+          "overdue": "Overdue"
         }
       },
       "form": {

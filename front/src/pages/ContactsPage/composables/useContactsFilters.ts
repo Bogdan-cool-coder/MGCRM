@@ -2,6 +2,16 @@
  * ContactsOverlayFilters type and default — exported from here so they can be
  * used in both ContactsFilterOverlay.vue (<script setup> cannot re-export) and
  * useContactsPageData.ts.
+ *
+ * Notes on supported backend params:
+ * - Contacts: owner_ids[], author_ids[], sources[], tags[], position,
+ *             created_from/to, last_touch_from/to, open_deals_min/max,
+ *             only_mine/only_active/only_with_deals/only_no_task
+ * - Contacts NOT supported: city (no city column on crm_contacts),
+ *             only_duplicates (no dedup hash)
+ * - Companies: owner_ids[], company_type_ids[], category_codes[], sources[],
+ *              tags[], country_code, city, created_from/to, last_touch_from/to,
+ *              only_mine/only_active/only_with_deals/only_no_task
  */
 
 export interface ContactsOverlayFilters {
@@ -13,7 +23,10 @@ export interface ContactsOverlayFilters {
   company_type_ids: number[]
   categories: string[]
   country_code: string | null
+  /** City — only sent for companies, not contacts */
   city: string
+  /** Position — contacts only */
+  position: string
   open_deals_min: number | null
   open_deals_max: number | null
   created_range: Date[] | null
@@ -23,7 +36,7 @@ export interface ContactsOverlayFilters {
   only_active: boolean
   only_with_deals: boolean
   only_no_task: boolean
-  only_duplicates: boolean
+  // NOTE: only_duplicates intentionally removed — backend has no dedup-hash column
 }
 
 export const DEFAULT_OVERLAY_FILTERS: ContactsOverlayFilters = {
@@ -36,6 +49,7 @@ export const DEFAULT_OVERLAY_FILTERS: ContactsOverlayFilters = {
   categories: [],
   country_code: null,
   city: '',
+  position: '',
   open_deals_min: null,
   open_deals_max: null,
   created_range: null,
@@ -44,5 +58,4 @@ export const DEFAULT_OVERLAY_FILTERS: ContactsOverlayFilters = {
   only_active: false,
   only_with_deals: false,
   only_no_task: false,
-  only_duplicates: false,
 }

@@ -28,12 +28,6 @@
           :off-label="t('contacts.filter.preset.noTask')"
           class="contacts-filter-panel__preset-chip contacts-filter-panel__preset-chip--warning"
         />
-        <ToggleButton
-          v-model="localPresets.duplicates"
-          :on-label="t('contacts.filter.preset.duplicates')"
-          :off-label="t('contacts.filter.preset.duplicates')"
-          class="contacts-filter-panel__preset-chip contacts-filter-panel__preset-chip--danger"
-        />
       </div>
       <Button
         icon="pi pi-times"
@@ -153,13 +147,12 @@
         <!-- Contact-specific fields -->
         <template v-else>
           <div class="contacts-filter-panel__field">
-            <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.company') }}</label>
-            <InputText v-model="localFilters.city" class="w-100" :placeholder="t('contacts.filter.field.company')" />
-          </div>
-
-          <div class="contacts-filter-panel__field">
             <label class="contacts-filter-panel__label">{{ t('contacts.filter.field.position') }}</label>
-            <InputText v-model="localFilters.position" class="w-100" :placeholder="t('contacts.filter.field.position')" />
+            <InputText
+              v-model="localFilters.position"
+              class="w-100"
+              :placeholder="t('contacts.filter.field.position')"
+            />
           </div>
 
           <div class="contacts-filter-panel__field">
@@ -263,14 +256,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-// Extended local filter to include position for contacts
-interface LocalFilters extends ContactsOverlayFilters {
-  position: string
-}
-
-const localFilters = reactive<LocalFilters>({
+const localFilters = reactive<ContactsOverlayFilters>({
+  ...DEFAULT_OVERLAY_FILTERS,
   ...props.filters,
-  position: (props.filters as unknown as Record<string, unknown>)['position'] as string ?? '',
 })
 
 const localPresets = reactive({
@@ -278,21 +266,16 @@ const localPresets = reactive({
   active: props.filters.only_active,
   withDeals: props.filters.only_with_deals,
   noTask: props.filters.only_no_task,
-  duplicates: props.filters.only_duplicates,
 })
 
 watch(
   () => props.filters,
   (next) => {
-    Object.assign(localFilters, {
-      ...next,
-      position: (next as unknown as Record<string, unknown>)['position'] as string ?? '',
-    })
+    Object.assign(localFilters, { ...next })
     localPresets.mine = next.only_mine
     localPresets.active = next.only_active
     localPresets.withDeals = next.only_with_deals
     localPresets.noTask = next.only_no_task
-    localPresets.duplicates = next.only_duplicates
   },
   { deep: true },
 )
@@ -311,24 +294,21 @@ const categoryOptions = [
 ]
 
 function onApply() {
-  const result: ContactsOverlayFilters & { position?: string } = {
+  emit('apply', {
     ...localFilters,
     only_mine: localPresets.mine,
     only_active: localPresets.active,
     only_with_deals: localPresets.withDeals,
     only_no_task: localPresets.noTask,
-    only_duplicates: localPresets.duplicates,
-  }
-  emit('apply', result)
+  })
 }
 
 function onReset() {
-  Object.assign(localFilters, { ...DEFAULT_OVERLAY_FILTERS, position: '' })
+  Object.assign(localFilters, { ...DEFAULT_OVERLAY_FILTERS })
   localPresets.mine = false
   localPresets.active = false
   localPresets.withDeals = false
   localPresets.noTask = false
-  localPresets.duplicates = false
   emit('reset')
 }
 </script>

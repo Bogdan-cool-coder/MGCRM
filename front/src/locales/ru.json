@@ -694,7 +694,9 @@
         "copyLink": "Копировать ссылку",
         "export": "Экспорт",
         "deleteConfirm": "Удалить компанию? Это действие необратимо.",
-        "deleteSuccess": "Компания удалена"
+        "deleteSuccess": "Компания удалена",
+        "noPhone": "Нет номера телефона",
+        "noEmail": "Нет адреса email"
       },
       "deals": {
         "empty": "Нет открытых сделок",
@@ -1202,13 +1204,16 @@
         },
         "toolbar": {
           "searchAndFilter": "Поиск и фильтр",
-          "moreMenu": "Ещё"
+          "moreMenu": "Ещё",
+          "pipeline": "Воронка",
+          "pipelineSettings": "Настроить воронки"
         },
         "menu": {
           "import": "Импорт",
           "export": "Экспорт",
           "duplicates": "Поиск дублей",
           "bulkActions": "Массовые действия",
+          "comingSoon": "скоро",
           "sort": "Сортировка",
           "sortCreatedAt": "По дате создания",
           "sortTitle": "По названию",
@@ -1237,7 +1242,11 @@
           "presetWon": "Успешно завершённые",
           "presetLost": "Нереализованные",
           "presetNoTask": "Без задач",
-          "presetOverdue": "С просроченными"
+          "presetOverdue": "С просроченными",
+          "hiddenStages": "Скрытые статусы",
+          "hiddenStagesHint": "По умолчанию эти статусы скрыты из воронки. Включите тумблер, чтобы отобразить колонку.",
+          "hiddenStagesCount": "{n} вкл.",
+          "hiddenStagesSettings": "Настроить, какие статусы скрывать"
         },
         "bulk": {
           "selected": "Выбрано: {n}",
@@ -1349,6 +1358,28 @@
           "deleteReject": "Отмена",
           "deleteSuccess": "Сделка удалена",
           "moveSuccess": "Стадия изменена"
+        },
+        "pipeline": {
+          "salesSubtitle": "воронка продаж",
+          "onboardingSubtitle": "внедрение и запуск",
+          "partnerSubtitle": "реферальные сделки"
+        },
+        "list": {
+          "today": "Сегодня",
+          "daysAgo": "{n} дн назад",
+          "columns": {
+            "country": "Страна",
+            "inStage": "В статусе",
+            "lastContact": "Посл. контакт"
+          }
+        },
+        "kpi": {
+          "inWork": "В работе",
+          "inWorkValue": "{n} компаний",
+          "categories": "Категории L/M/S",
+          "won": "Успешных",
+          "noTask": "Без задачи",
+          "overdue": "Просрочено"
         }
       },
       "form": {
