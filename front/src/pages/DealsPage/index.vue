@@ -73,6 +73,8 @@
         :per-page="perPage"
         :has-active-filters="hasActiveFilters()"
         :stages="currentStages"
+        :kpi="kpi"
+        :kpi-loading="kpiLoading"
         @page-change="onPageChange"
         @reset-filters="resetFilters"
         @create="createDrawerOpen = true"
@@ -155,6 +157,7 @@ import BulkAddTaskDialog from './components/BulkAddTaskDialog.vue'
 import { useDealsFilters } from './composables/useDealsFilters'
 import { useDealsBoard } from './composables/useDealsBoard'
 import { useDealsList } from './composables/useDealsList'
+import { useDealsKpi } from './composables/useDealsKpi'
 import { useSalesStore } from '@/stores/salesStore'
 import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { salesApi } from '@/api/sales'
@@ -209,6 +212,8 @@ const {
   toOverlayFilters,
   activeFilterCount,
 } = useDealsFilters(() => {
+  // KPI is funnel-wide — always reload regardless of view
+  void kpiComposable.load()
   if (salesStore.activeView === 'kanban') {
     void boardComposable.load()
   } else if (salesStore.activeView === 'list') {
@@ -309,6 +314,11 @@ const {
   perPage,
   onPageChange,
 } = listComposable
+
+// ── KPI composable (whole-funnel aggregate) ─────────────────────────────────────
+
+const kpiComposable = useDealsKpi(filters, () => currentPipelineId.value)
+const { kpi, loading: kpiLoading } = kpiComposable
 
 // ── Create drawer ───────────────────────────────────────────────────────────────
 
@@ -561,6 +571,8 @@ onUnmounted(() => {
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 
 async function reload() {
+  // KPI is funnel-wide — always reload alongside the view-specific query
+  void kpiComposable.load()
   if (salesStore.activeView === 'kanban') {
     void boardComposable.load()
   } else if (salesStore.activeView === 'list') {

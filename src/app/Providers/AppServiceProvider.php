@@ -101,7 +101,10 @@ use App\Domain\SalesPulse\Services\PrismPulseLlmClient;
 use App\Domain\SalesPulse\Services\SalesPulseNotifier;
 use App\Domain\SalesPulse\Telegram\SalesPulseBot;
 use App\Domain\SalesPulse\Telegram\SalesPulseBotFactory;
+use App\Support\LikeEscape;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -169,6 +172,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerLikeMacros();
+
         // CRM Policies (ARCHITECTURE.md §3 — no inline role checks)
         Gate::policy(Company::class, CompanyPolicy::class);
         Gate::policy(Contact::class, ContactPolicy::class);
@@ -290,5 +295,38 @@ class AppServiceProvider extends ServiceProvider
         // Telegram/webhook IO ever blocks the deal create / move web request.
         Event::listen(DealCreated::class, RunOnCreateAutomations::class);
         Event::listen(DealStageChanged::class, RunOnEnterStageAutomations::class);
+    }
+
+    /**
+     * Register `whereLike` / `orWhereLike` query-builder macros — the single
+     * call site for a wildcard-safe "contains" LIKE. They escape the raw value
+     * via LikeEscape (neutralising `%`, `_`, `\`), wrap it in `%...%`, and emit
+     * an explicit `LIKE ? ESCAPE ?` so the backslash escaping actually takes
+     * effect (Eloquent's `where(col,'like',…)` omits the ESCAPE clause). Both
+     * PostgreSQL and SQLite honour `LIKE ... ESCAPE '\'`.
+     *
+     * Macros are registered on BOTH the query and Eloquent builders so they are
+     * usable in raw DB::table() queries and on Eloquent models / relations.
+     */
+    private function registerLikeMacros(): void
+    {
+        $whereLike = function (string $column, string $value, string $boolean = 'and') {
+            /** @var EloquentBuilder|QueryBuilder $this */
+            return $this->whereRaw(
+                "{$this->getGrammar()->wrap($column)} LIKE ? ESCAPE ?",
+                [LikeEscape::wrap($value), LikeEscape::ESCAPE_CHAR],
+                $boolean,
+            );
+        };
+
+        $orWhereLike = function (string $column, string $value) {
+            /** @var EloquentBuilder|QueryBuilder $this */
+            return $this->whereLike($column, $value, 'or');
+        };
+
+        QueryBuilder::macro('whereLike', $whereLike);
+        QueryBuilder::macro('orWhereLike', $orWhereLike);
+        EloquentBuilder::macro('whereLike', $whereLike);
+        EloquentBuilder::macro('orWhereLike', $orWhereLike);
     }
 }

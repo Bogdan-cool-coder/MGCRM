@@ -23,6 +23,7 @@ import type {
   UpdateDealProductPayload,
   AddDealContactPayload,
   DealListParams,
+  DealKpiDto,
   CreatePipelinePayload,
   UpdatePipelinePayload,
   CreateStagePayload,
@@ -215,6 +216,15 @@ export const salesApi = {
     }
     const res = await apiClient.get<BoardRawResponseDto>('/api/deals', { params: clean })
     return adaptBoardResponse(res.data)
+  },
+
+  async getDealKpi(params: Omit<DealListParams, 'view' | 'page' | 'per_page'> = {}): Promise<DealKpiDto> {
+    const clean: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== null && v !== undefined && v !== '') clean[k] = v
+    }
+    const res = await apiClient.get<{ data: DealKpiDto }>('/api/deals/kpi', { params: clean })
+    return res.data.data
   },
 
   async getDeal(id: number): Promise<DealDto> {

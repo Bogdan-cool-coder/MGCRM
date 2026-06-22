@@ -71,7 +71,7 @@ export function useDealsBoard(
           only_no_task: f.only_no_task || undefined,
           only_overdue: f.only_overdue || undefined,
           product_q: f.product_q || undefined,
-          country: f.region || undefined,
+          country: f.country || undefined,
           city: f.city || undefined,
           budget_from: f.budget_from ?? undefined,
           budget_to: f.budget_to ?? undefined,

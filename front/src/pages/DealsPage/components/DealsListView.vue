@@ -1,7 +1,7 @@
 <template>
   <div class="deals-list">
     <!-- KPI chips above table -->
-    <DealsKpiChips :deals="deals" />
+    <DealsKpiChips :kpi="kpi" :loading="kpiLoading" />
 
     <DataTable
       :value="deals"
@@ -177,7 +177,7 @@ import Menu from 'primevue/menu'
 import Tag from 'primevue/tag'
 import { formatCurrency } from '@/utils/currency'
 import DealsKpiChips from './DealsKpiChips.vue'
-import type { DealDto, ActivityType, PipelineStageDto } from '@/entities/sales'
+import type { DealDto, ActivityType, PipelineStageDto, DealKpiDto } from '@/entities/sales'
 
 const props = defineProps<{
   deals: DealDto[]
@@ -186,6 +186,8 @@ const props = defineProps<{
   perPage: number
   hasActiveFilters: boolean
   stages: PipelineStageDto[]
+  kpi: DealKpiDto
+  kpiLoading: boolean
 }>()
 
 const emit = defineEmits<{

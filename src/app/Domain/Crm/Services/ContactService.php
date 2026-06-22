@@ -49,11 +49,11 @@ class ContactService
         $query = Contact::query()
             ->with(['owner', 'companyLinks.company'])
             ->when(isset($filters['search']), function (Builder $q) use ($filters): void {
-                $term = '%'.$filters['search'].'%';
+                $term = (string) $filters['search'];
                 $q->where(function (Builder $inner) use ($term): void {
-                    $inner->where('full_name', 'like', $term)
-                        ->orWhere('email', 'like', $term)
-                        ->orWhere('phone', 'like', $term);
+                    $inner->whereLike('full_name', $term)
+                        ->orWhereLike('email', $term)
+                        ->orWhereLike('phone', $term);
                 });
             })
             ->when(isset($filters['status']), function (Builder $q) use ($filters): void {
@@ -81,15 +81,16 @@ class ContactService
             })
             ->when(isset($filters['position']), function (Builder $q) use ($filters): void {
                 // Partial match so the UI can send a ContactPosition label or free text.
-                $q->where('position', 'like', '%'.$filters['position'].'%');
+                $q->whereLike('position', (string) $filters['position']);
             })
             // Tags: JSON-stored array, any-match via LIKE (portable across PG+SQLite).
-            // Only % needs escaping (% in a tag value). Underscore is NOT escaped
-            // because no ESCAPE clause is used and \_ would be a literal backslash+_.
+            // The tag value is escaped (%, _, \) and the LIKE carries ESCAPE '\'
+            // via the whereLike macro, so a tag containing _ or % matches literally
+            // and never acts as a wildcard.
             ->when($tags !== [], function (Builder $q) use ($tags): void {
                 $q->where(function (Builder $inner) use ($tags): void {
                     foreach ($tags as $tag) {
-                        $inner->orWhere('tags', 'like', '%'.str_replace('%', '\%', (string) $tag).'%');
+                        $inner->orWhereLike('tags', (string) $tag);
                     }
                 });
             })

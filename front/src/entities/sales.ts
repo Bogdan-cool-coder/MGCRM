@@ -460,6 +460,19 @@ export interface DealListParams {
   archived?: boolean
 }
 
+// ─── KPI aggregate (GET /api/deals/kpi) ──────────────────────────────────────
+
+export interface DealKpiDto {
+  pipeline_id: number | null
+  in_work: number
+  cat_l: number
+  cat_m: number
+  cat_s: number
+  won: number
+  no_task: number
+  overdue: number
+}
+
 // ─── Bulk payloads (PATCH /api/deals/bulk, DELETE /api/deals/bulk) ────────────
 
 export type BulkDealField = 'owner_id' | 'tags' | 'extra_fields' | 'currency'

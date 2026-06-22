@@ -67,13 +67,13 @@ class CompanyService
         $query = Company::query()
             ->with(['companyType', 'responsibleUser', 'ownerUser'])
             ->when(isset($filters['search']), function (Builder $q) use ($filters): void {
-                $term = '%'.$filters['search'].'%';
+                $term = (string) $filters['search'];
                 $q->where(function (Builder $inner) use ($term): void {
-                    $inner->where('name', 'like', $term)
-                        ->orWhere('legal_name', 'like', $term)
-                        ->orWhere('tax_id', 'like', $term)
-                        ->orWhere('email', 'like', $term)
-                        ->orWhere('phone', 'like', $term);
+                    $inner->whereLike('name', $term)
+                        ->orWhereLike('legal_name', $term)
+                        ->orWhereLike('tax_id', $term)
+                        ->orWhereLike('email', $term)
+                        ->orWhereLike('phone', $term);
                 });
             })
             // company_type_ids[]: multi (scalar company_type_id alias).
@@ -94,7 +94,7 @@ class CompanyService
                 $q->where('country_code', $filters['country_code']);
             })
             ->when(isset($filters['city']), function (Builder $q) use ($filters): void {
-                $q->where('city', 'like', '%'.$filters['city'].'%');
+                $q->whereLike('city', (string) $filters['city']);
             })
             ->when(isset($filters['responsible_user_id']), function (Builder $q) use ($filters): void {
                 $q->where('responsible_user_id', $filters['responsible_user_id']);
@@ -107,12 +107,13 @@ class CompanyService
             ->when($ownerIds !== [], function (Builder $q) use ($ownerIds): void {
                 $q->whereIn('owner_user_id', $ownerIds);
             })
-            // tags[]: any-match via JSON LIKE (portable PG+SQLite).
-            // Only % needs escaping. Underscore is NOT escaped (no ESCAPE clause).
+            // tags[]: any-match via JSON LIKE (portable PG+SQLite). The tag value is
+            // escaped (%, _, \) and the LIKE carries ESCAPE '\' via the whereLike
+            // macro, so _ / % in a tag match literally and never act as wildcards.
             ->when($tags !== [], function (Builder $q) use ($tags): void {
                 $q->where(function (Builder $inner) use ($tags): void {
                     foreach ($tags as $tag) {
-                        $inner->orWhere('tags', 'like', '%'.str_replace('%', '\%', (string) $tag).'%');
+                        $inner->orWhereLike('tags', (string) $tag);
                     }
                 });
             })

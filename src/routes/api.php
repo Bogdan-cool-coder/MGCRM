@@ -88,6 +88,7 @@ use App\Http\Controllers\Sales\DealController;
 use App\Http\Controllers\Sales\DealCustomFieldController;
 use App\Http\Controllers\Sales\DealFeedController;
 use App\Http\Controllers\Sales\DealHistoryController;
+use App\Http\Controllers\Sales\DealKpiController;
 use App\Http\Controllers\Sales\DealProductController;
 use App\Http\Controllers\Sales\LostReasonController;
 use App\Http\Controllers\Sales\ManagerCabinetController;
@@ -454,6 +455,11 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::patch('deals/bulk', [DealController::class, 'bulkUpdate'])->name('deals.bulk.update');
     Route::delete('deals/bulk', [DealController::class, 'bulkDestroy'])->name('deals.bulk.destroy');
     Route::get('deals/export', [DealController::class, 'export'])->name('deals.export');
+
+    // Funnel-wide KPI chip counters (SalesFunnel-spec §5.1). MUST precede
+    // deals/{deal} so 'kpi' is not bound as a {deal} param. Same filter set as
+    // the list; pagination is ignored (counts span the whole filtered funnel).
+    Route::get('deals/kpi', DealKpiController::class)->name('deals.kpi');
 
     Route::get('deals/{deal}', [DealController::class, 'show'])->name('deals.show');
     Route::patch('deals/{deal}', [DealController::class, 'update'])->name('deals.update');

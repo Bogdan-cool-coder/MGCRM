@@ -1217,7 +1217,7 @@
           "company": "Company",
           "stage": "Stage",
           "product": "Product",
-          "region": "Region / country",
+          "country": "Country",
           "city": "City",
           "budgetFrom": "Budget from",
           "budgetTo": "to",

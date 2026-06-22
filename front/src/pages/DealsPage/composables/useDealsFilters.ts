@@ -17,7 +17,7 @@ export interface DealsFilters {
   only_overdue: boolean
   dateRange: Date[] | null
   product_q: string
-  region: string
+  country: string
   city: string
   budget_from: number | null
   budget_to: number | null
@@ -37,7 +37,7 @@ function emptyFilters(): DealsFilters {
     only_overdue: false,
     dateRange: null,
     product_q: '',
-    region: '',
+    country: '',
     city: '',
     budget_from: null,
     budget_to: null,
@@ -82,7 +82,7 @@ export function useDealsFilters(onFilterChange: () => void) {
       only_overdue: overlayFilters.only_overdue,
       dateRange: overlayFilters.dateRange,
       product_q: overlayFilters.product_q,
-      region: overlayFilters.region,
+      country: overlayFilters.country,
       city: overlayFilters.city,
       budget_from: overlayFilters.budget_from,
       budget_to: overlayFilters.budget_to,
@@ -99,7 +99,7 @@ export function useDealsFilters(onFilterChange: () => void) {
       stage_ids: filters.value.stage_ids,
       owner_ids: filters.value.owner_ids,
       product_q: filters.value.product_q,
-      region: filters.value.region,
+      country: filters.value.country,
       city: filters.value.city,
       budget_from: filters.value.budget_from,
       budget_to: filters.value.budget_to,
@@ -124,7 +124,7 @@ export function useDealsFilters(onFilterChange: () => void) {
       f.only_no_task ||
       f.only_overdue ||
       !!f.product_q ||
-      !!f.region ||
+      !!f.country ||
       !!f.city ||
       f.budget_from !== null ||
       f.budget_to !== null ||
@@ -143,7 +143,7 @@ export function useDealsFilters(onFilterChange: () => void) {
     if (f.only_no_task) n++
     if (f.only_overdue) n++
     if (f.product_q) n++
-    if (f.region || f.city) n++
+    if (f.country || f.city) n++
     if (f.budget_from !== null || f.budget_to !== null) n++
     if (f.tags.length) n++
     return n

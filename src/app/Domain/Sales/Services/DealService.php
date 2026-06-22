@@ -220,6 +220,26 @@ class DealService
     }
 
     /**
+     * Visibility-scoped, filtered Deal query WITHOUT pagination, ordering OR eager
+     * loads — the lean base the KPI aggregate (DealKpiService) clones to run its
+     * COUNT/DISTINCT counters off. A sibling of filteredQuery() that strips the
+     * with()/orderBy() the aggregate never needs, so KPI never pays for relation
+     * hydration. The SAME scope + applyFilters path as list()/board(), guaranteeing
+     * the chips count exactly the funnel the list renders under identical filters.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Deal>
+     */
+    public function kpiBaseQuery(array $filters, VisibilityScope $scope, User $user): Builder
+    {
+        $query = $this->scopedQuery($scope, $user);
+
+        $this->applyFilters($query, $filters, $user);
+
+        return $query;
+    }
+
+    /**
      * Apply the full deal-list / board filter set to a base Deal query. Every
      * dimension is guarded by when() so absent / empty / invalid inputs are a
      * silent no-op (the listing is never narrowed by a filter the user did not
@@ -262,7 +282,7 @@ class DealService
             // ----- title search -----
             ->when(
                 $this->nonEmptyString($filters['q'] ?? null),
-                fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'),
+                fn (Builder $q) => $q->whereLike('title', (string) $filters['q']),
             )
 
             // ----- status (open|won|lost) → stage flags -----
@@ -289,7 +309,7 @@ class DealService
                 $this->nonEmptyString($filters['product_q'] ?? null),
                 fn (Builder $q) => $q->whereHas(
                     'products.product',
-                    fn (Builder $p) => $p->where('catalog_products.name', 'like', '%'.$filters['product_q'].'%'),
+                    fn (Builder $p) => $p->whereLike('catalog_products.name', (string) $filters['product_q']),
                 ),
             )
 
@@ -305,7 +325,7 @@ class DealService
                 $this->nonEmptyString($filters['city'] ?? null),
                 fn (Builder $q) => $q->whereHas(
                     'company',
-                    fn (Builder $c) => $c->where('city', 'like', '%'.$filters['city'].'%'),
+                    fn (Builder $c) => $c->whereLike('city', (string) $filters['city']),
                 ),
             )
 

@@ -78,10 +78,10 @@
         <InputText v-model="localFilters.product_q" class="w-100" placeholder="..." />
       </div>
 
-      <!-- Регион/страна -->
+      <!-- Страна -->
       <div class="filter-overlay__field">
-        <label class="filter-overlay__label">{{ t('sales.deals.page.filters.region') }}</label>
-        <InputText v-model="localFilters.region" class="w-100" />
+        <label class="filter-overlay__label">{{ t('sales.deals.page.filters.country') }}</label>
+        <InputText v-model="localFilters.country" class="w-100" />
       </div>
 
       <!-- Город -->
@@ -220,7 +220,7 @@ export interface OverlayFilters {
   stage_ids: number[]
   owner_ids: number[]
   product_q: string
-  region: string
+  country: string
   city: string
   budget_from: number | null
   budget_to: number | null
@@ -337,7 +337,7 @@ function onReset() {
     stage_ids: [],
     owner_ids: [],
     product_q: '',
-    region: '',
+    country: '',
     city: '',
     budget_from: null,
     budget_to: null,

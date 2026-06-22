@@ -1227,7 +1227,7 @@
           "company": "Компания",
           "stage": "Стадия",
           "product": "Продукт",
-          "region": "Регион / страна",
+          "country": "Страна",
           "city": "Город",
           "budgetFrom": "Бюджет от",
           "budgetTo": "до",

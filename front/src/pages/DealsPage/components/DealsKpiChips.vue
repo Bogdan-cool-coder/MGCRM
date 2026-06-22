@@ -1,73 +1,62 @@
 <template>
   <div class="deals-kpi">
-    <!-- In work: unique companies -->
-    <span class="deals-kpi__chip deals-kpi__chip--brand">
-      <i class="pi pi-building deals-kpi__chip-icon" />
-      {{ t('sales.deals.page.kpi.inWork') }}:
-      <strong>{{ t('sales.deals.page.kpi.inWorkValue', { n: inWork }) }}</strong>
-    </span>
+    <!-- Loading skeleton: show muted chips while fetching -->
+    <template v-if="props.loading">
+      <span v-for="i in 5" :key="i" class="deals-kpi__chip deals-kpi__chip--skeleton" aria-hidden="true">
+        <i class="pi pi-spin pi-spinner deals-kpi__chip-icon" />
+        &nbsp;
+      </span>
+    </template>
 
-    <!-- Categories L/M/S -->
-    <span class="deals-kpi__chip deals-kpi__chip--info">
-      <i class="pi pi-chart-bar deals-kpi__chip-icon" />
-      {{ t('sales.deals.page.kpi.categories') }}:
-      <strong>{{ catL }}L / {{ catM }}M / {{ catS }}S</strong>
-    </span>
+    <template v-else>
+      <!-- In work: unique companies with non-won deals -->
+      <span class="deals-kpi__chip deals-kpi__chip--brand">
+        <i class="pi pi-building deals-kpi__chip-icon" />
+        {{ t('sales.deals.page.kpi.inWork') }}:
+        <strong>{{ t('sales.deals.page.kpi.inWorkValue', { n: props.kpi.in_work }) }}</strong>
+      </span>
 
-    <!-- Won -->
-    <span class="deals-kpi__chip deals-kpi__chip--success">
-      <i class="pi pi-check-circle deals-kpi__chip-icon" />
-      {{ t('sales.deals.page.kpi.won') }}:
-      <strong>{{ won }}</strong>
-    </span>
+      <!-- Categories L/M/S -->
+      <span class="deals-kpi__chip deals-kpi__chip--info">
+        <i class="pi pi-chart-bar deals-kpi__chip-icon" />
+        {{ t('sales.deals.page.kpi.categories') }}:
+        <strong>{{ props.kpi.cat_l }}L / {{ props.kpi.cat_m }}M / {{ props.kpi.cat_s }}S</strong>
+      </span>
 
-    <!-- No task -->
-    <span class="deals-kpi__chip deals-kpi__chip--warning">
-      <i class="pi pi-clock deals-kpi__chip-icon" />
-      {{ t('sales.deals.page.kpi.noTask') }}:
-      <strong>{{ noTask }}</strong>
-    </span>
+      <!-- Won -->
+      <span class="deals-kpi__chip deals-kpi__chip--success">
+        <i class="pi pi-check-circle deals-kpi__chip-icon" />
+        {{ t('sales.deals.page.kpi.won') }}:
+        <strong>{{ props.kpi.won }}</strong>
+      </span>
 
-    <!-- Overdue -->
-    <span class="deals-kpi__chip deals-kpi__chip--danger">
-      <i class="pi pi-exclamation-circle deals-kpi__chip-icon" />
-      {{ t('sales.deals.page.kpi.overdue') }}:
-      <strong>{{ overdue }}</strong>
-    </span>
+      <!-- No task -->
+      <span class="deals-kpi__chip deals-kpi__chip--warning">
+        <i class="pi pi-clock deals-kpi__chip-icon" />
+        {{ t('sales.deals.page.kpi.noTask') }}:
+        <strong>{{ props.kpi.no_task }}</strong>
+      </span>
+
+      <!-- Overdue -->
+      <span class="deals-kpi__chip deals-kpi__chip--danger">
+        <i class="pi pi-exclamation-circle deals-kpi__chip-icon" />
+        {{ t('sales.deals.page.kpi.overdue') }}:
+        <strong>{{ props.kpi.overdue }}</strong>
+      </span>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { DealDto } from '@/entities/sales'
+import type { DealKpiDto } from '@/entities/sales'
 
 const props = defineProps<{
-  deals: DealDto[]
+  kpi: DealKpiDto
+  loading?: boolean
 }>()
 
 const { t } = useI18n()
-
-const inWork = computed(() => {
-  const ids = new Set<number>()
-  for (const d of props.deals) {
-    if (!d.stage.is_won) {
-      ids.add(d.company.id)
-    }
-  }
-  return ids.size
-})
-
-const catL = computed(() => props.deals.filter((d) => d.category === 'L').length)
-const catM = computed(() => props.deals.filter((d) => d.category === 'M').length)
-// S = S1 + S2
-const catS = computed(() => props.deals.filter((d) => d.category === 'S1' || d.category === 'S2').length)
-
-const won = computed(() => props.deals.filter((d) => d.stage.is_won).length)
-
-const noTask = computed(() => props.deals.filter((d) => !d.next_task).length)
-
-const overdue = computed(() => props.deals.filter((d) => d.next_task?.is_overdue).length)
 </script>
 
 <style lang="scss" scoped>
@@ -93,6 +82,17 @@ const overdue = computed(() => props.deals.filter((d) => d.next_task?.is_overdue
 
   strong {
     font-weight: $font-weight-semibold;
+  }
+
+  &--skeleton {
+    background: var(--p-surface-200);
+    color: transparent;
+    min-width: 90px;
+    animation: kpi-pulse 1.2s ease-in-out infinite;
+
+    .app-dark & {
+      background: var(--p-surface-100);
+    }
   }
 
   &--brand {
@@ -149,5 +149,10 @@ const overdue = computed(() => props.deals.filter((d) => d.next_task?.is_overdue
 .deals-kpi__chip-icon {
   font-size: $font-size-xs;
   flex-shrink: 0;
+}
+
+@keyframes kpi-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 </style>

@@ -1,45 +1,41 @@
 /**
- * List view composable for DealsPage.
- * Manages paginated table state via useAsyncResource.
+ * KPI aggregate composable for DealsPage.
+ * Fetches whole-funnel counts from GET /api/deals/kpi using the same
+ * active filters as the list/board (pagination params are intentionally excluded).
  */
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { salesApi } from '@/api/sales'
-import type { DealDto, SalesPaginatedResponse } from '@/entities/sales'
+import type { DealKpiDto } from '@/entities/sales'
 import type { DealsFilters } from './useDealsFilters'
 import type { Ref } from 'vue'
 
-export function useDealsList(
+const NULL_KPI: DealKpiDto = {
+  pipeline_id: null,
+  in_work: 0,
+  cat_l: 0,
+  cat_m: 0,
+  cat_s: 0,
+  won: 0,
+  no_task: 0,
+  overdue: 0,
+}
+
+export function useDealsKpi(
   filters: Ref<DealsFilters>,
   pipelineId: () => number | null,
 ) {
-  const page = ref(1)
-  const perPage = ref(25)
+  const resource = useAsyncResource<DealKpiDto>(() => NULL_KPI)
 
-  const resource = useAsyncResource<SalesPaginatedResponse<DealDto>>(() => ({
-    data: [],
-    meta: {
-      current_page: 1,
-      last_page: 1,
-      per_page: 25,
-      total: 0,
-      from: null,
-      to: null,
-    },
-  }))
-
-  const deals = computed(() => resource.data.value.data)
-  const total = computed(() => resource.data.value.meta.total)
+  const kpi = computed(() => resource.data.value)
   const loading = computed(() => resource.loading.value)
-  const error = computed(() => resource.error.value)
 
   async function load() {
     const pid = pipelineId()
     const f = filters.value
     const dateRange = f.dateRange
     await resource.run(() =>
-      salesApi.getDeals({
-        view: 'list',
+      salesApi.getDealKpi({
         pipeline_id: pid ?? undefined,
         q: f.q || undefined,
         owner_ids: f.owner_ids.length ? f.owner_ids : undefined,
@@ -56,31 +52,13 @@ export function useDealsList(
         tags: f.tags.length ? f.tags : undefined,
         created_from: dateRange?.[0] ? dateRange[0].toISOString().slice(0, 10) : undefined,
         created_to: dateRange?.[1] ? dateRange[1].toISOString().slice(0, 10) : undefined,
-        page: page.value,
-        per_page: perPage.value,
       }),
     )
   }
 
-  function onPageChange(event: { page: number; rows: number }) {
-    page.value = event.page + 1
-    perPage.value = event.rows
-    void load()
-  }
-
-  function resetPage() {
-    page.value = 1
-  }
-
   return {
-    deals,
-    total,
+    kpi,
     loading,
-    error,
-    page,
-    perPage,
     load,
-    onPageChange,
-    resetPage,
   }
 }
