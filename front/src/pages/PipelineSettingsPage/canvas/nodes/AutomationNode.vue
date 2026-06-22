@@ -117,7 +117,7 @@ const triggerSummary = computed<string>(() => {
   width: 220px;
   background: var(--p-surface-card);
   border: 1px solid var(--p-surface-border);
-  border-radius: 8px;
+  border-radius: $radius-lg;
   cursor: pointer;
   transition: border-color 0.15s;
 
@@ -137,14 +137,14 @@ const triggerSummary = computed<string>(() => {
   }
 
   &__icon {
-    font-size: 1rem;
+    font-size: $font-size-md;
     color: var(--p-primary-color);
     flex-shrink: 0;
     margin-top: 2px;
   }
 
   &__name {
-    font-size: 0.8125rem;
+    font-size: $font-size-sm; // snap from 0.8125rem (13px→14px)
     font-weight: 600;
     color: var(--p-text-color);
     line-height: 1.3;
@@ -156,7 +156,7 @@ const triggerSummary = computed<string>(() => {
   }
 
   &__trigger {
-    font-size: 0.75rem;
+    font-size: $font-size-xs;
     color: var(--p-text-muted-color);
     padding: 0 $space-3 $space-2;
     white-space: nowrap;

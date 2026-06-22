@@ -5,17 +5,41 @@ import type {
   HoldingTreeDto,
   PaginatedResponse,
   EmploymentStatus,
+  ChannelHistoryEntry,
+  CompanyRequisite,
+  CreateRequisitePayload,
+  UpdateRequisitePayload,
+  CompanyClientStatusLogEntry,
 } from '@/entities/crm'
+import type { DocumentDto } from '@/entities/document'
 
 export interface CompanyListParams {
   page?: number
   per_page?: number
   search?: string
+  // multi-value filters (arrays sent as owner_ids[], company_type_ids[], etc.)
+  owner_ids?: number[]
+  company_type_ids?: number[]
+  category_code?: string[]
+  sources?: string[]
+  tags?: string[]
+  // single-value filters
+  country_code?: string
+  city?: string
+  engagement_tier?: 'fresh' | 'cooling' | 'cold'
+  // date-range filters (ISO date strings)
+  created_from?: string
+  created_to?: string
+  last_touch_from?: string
+  last_touch_to?: string
+  // presets
+  only_mine?: boolean
+  only_active?: boolean
+  only_with_deals?: boolean
+  only_no_task?: boolean
+  // legacy single params kept for backward compat
   company_type_id?: number
   source?: string
-  country_code?: string
-  tags?: string[]
-  engagement_tier?: 'fresh' | 'cooling' | 'cold'
   sort?: string
   direction?: 'asc' | 'desc'
 }
@@ -63,9 +87,14 @@ export interface UpdateEmployeeLinkPayload {
 export const companiesApi = {
   async list(params: CompanyListParams = {}): Promise<PaginatedResponse<Company>> {
     const searchParams: Record<string, unknown> = { ...params }
-    if (params.tags?.length) {
-      searchParams['tags[]'] = params.tags
-      delete searchParams['tags']
+    // Serialize array params to bracket notation for Laravel
+    const arrayKeys: Array<keyof CompanyListParams> = ['owner_ids', 'company_type_ids', 'category_code', 'sources', 'tags']
+    for (const key of arrayKeys) {
+      const val = params[key] as unknown[] | undefined
+      if (val?.length) {
+        searchParams[`${key}[]`] = val
+      }
+      delete searchParams[key]
     }
     const res = await apiClient.get<PaginatedResponse<Company>>('/api/companies', {
       params: searchParams,
@@ -178,6 +207,107 @@ export const companiesApi = {
       '/api/companies/export',
       { company_ids: companyIds, filters },
       { responseType: 'blob' },
+    )
+    return res.data
+  },
+
+  // ── Channel History (N1) ──────────────────────────────────────────────────
+
+  async getChannelHistory(companyId: number): Promise<ChannelHistoryEntry[]> {
+    const res = await apiClient.get<{ data: ChannelHistoryEntry[] }>(
+      `/api/companies/${companyId}/channel-history`,
+    )
+    return res.data.data ?? []
+  },
+
+  // ── Requisites (N2) ───────────────────────────────────────────────────────
+
+  async getRequisites(companyId: number): Promise<CompanyRequisite[]> {
+    const res = await apiClient.get<{ data: CompanyRequisite[] }>(
+      `/api/companies/${companyId}/requisites`,
+    )
+    return res.data.data ?? []
+  },
+
+  async createRequisite(
+    companyId: number,
+    payload: CreateRequisitePayload,
+  ): Promise<CompanyRequisite> {
+    const res = await apiClient.post<{ data: CompanyRequisite }>(
+      `/api/companies/${companyId}/requisites`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async updateRequisite(
+    companyId: number,
+    requisiteId: number,
+    payload: UpdateRequisitePayload,
+  ): Promise<CompanyRequisite> {
+    const res = await apiClient.patch<{ data: CompanyRequisite }>(
+      `/api/companies/${companyId}/requisites/${requisiteId}`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async deleteRequisite(companyId: number, requisiteId: number): Promise<void> {
+    await apiClient.delete(`/api/companies/${companyId}/requisites/${requisiteId}`)
+  },
+
+  async setCurrentRequisite(companyId: number, requisiteId: number): Promise<void> {
+    await apiClient.post(`/api/companies/${companyId}/requisites/${requisiteId}/set-current`)
+  },
+
+  // ── Client lifecycle (N5/N6) ───────────────────────────────────────────────
+
+  async getStatusLog(
+    companyId: number,
+    page = 1,
+  ): Promise<PaginatedResponse<CompanyClientStatusLogEntry>> {
+    const res = await apiClient.get<PaginatedResponse<CompanyClientStatusLogEntry>>(
+      `/api/companies/${companyId}/status-log`,
+      { params: { page } },
+    )
+    return res.data
+  },
+
+  async disconnect(
+    companyId: number,
+    payload: {
+      disconnect_reason_id: number
+      termination_date: string
+      context?: { custom?: { termination_signatory?: string; original_contract_number?: string; original_contract_date?: string } }
+    },
+  ): Promise<DocumentDto> {
+    const res = await apiClient.post<{ data: DocumentDto }>(
+      `/api/companies/${companyId}/disconnect`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async reconnect(companyId: number): Promise<Company> {
+    const res = await apiClient.post<{ data: Company }>(
+      `/api/companies/${companyId}/reconnect`,
+    )
+    return res.data.data
+  },
+
+  // ── Termination Document (N6) ─────────────────────────────────────────────
+
+  async generateTerminationDocument(
+    companyId: number,
+    payload: {
+      disconnect_reason_id: number
+      termination_date: string
+      context?: { custom?: Record<string, string> }
+    },
+  ): Promise<{ document_id: number; number: string | null; docx_url: string | null; pdf_url: string | null; warnings: string[] }> {
+    const res = await apiClient.post<{ document_id: number; number: string | null; docx_url: string | null; pdf_url: string | null; warnings: string[] }>(
+      `/api/companies/${companyId}/termination-documents/generate`,
+      payload,
     )
     return res.data
   },

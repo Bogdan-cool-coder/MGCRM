@@ -78,9 +78,6 @@ const chips = computed((): FilterChip[] => {
   if (props.filters.only_no_task) {
     result.push({ key: 'only_no_task', label: t('contacts_filter.presets.noTask', 'Без задач') })
   }
-  if (props.filters.only_duplicates) {
-    result.push({ key: 'only_duplicates', label: t('crm.contacts_page.savedViews.duplicates') })
-  }
 
   if (props.filters.engagement_tier) {
     result.push({
@@ -110,8 +107,14 @@ const chips = computed((): FilterChip[] => {
     result.push({ key: 'country', label: country?.name ?? props.filters.country_code! })
   }
 
-  if (props.filters.city) {
+  // city chip — only for companies (contacts have no city column)
+  if (props.entityType === 'company' && props.filters.city) {
     result.push({ key: 'city', label: props.filters.city })
+  }
+
+  // position chip — only for contacts
+  if (props.entityType === 'contact' && props.filters.position) {
+    result.push({ key: 'position', label: props.filters.position })
   }
 
   if (props.filters.open_deals_min !== null || props.filters.open_deals_max !== null) {
@@ -138,7 +141,7 @@ const chips = computed((): FilterChip[] => {
   padding: $space-2 $space-4;
   border-bottom: 1px solid $surface-100;
 
-  :global(.app-dark) & {
+  .app-dark & {
     border-bottom-color: var(--p-surface-700);
   }
 }
@@ -165,7 +168,7 @@ const chips = computed((): FilterChip[] => {
   margin-left: 2px;
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs;
   }
 
   &:hover {

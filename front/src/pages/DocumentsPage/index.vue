@@ -224,11 +224,11 @@ function formatDate(dateStr: string): string {
 
 <style lang="scss" scoped>
 .documents-page {
-  padding: 0.75rem;
+  padding: $space-3;
 
   &__table-card {
     :deep(.p-card-body) {
-      padding: 0.75rem;
+      padding: $space-3;
     }
   }
 
@@ -240,14 +240,15 @@ function formatDate(dateStr: string): string {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
-    padding: 3rem 1rem;
+    gap: $space-3;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    padding: 3rem $space-4; // no exact $space token for 3rem (48px); nearest $space-8 is 32px
     color: var(--p-text-muted-color);
     text-align: center;
   }
 
   &__empty-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl;
     opacity: 0.4;
   }
 }

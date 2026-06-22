@@ -451,7 +451,7 @@ onMounted(() => {
 }
 
 .custom-field-renderer__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   color: $surface-300;
 }
 
@@ -504,7 +504,7 @@ onMounted(() => {
 }
 
 .custom-field-renderer__url-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs;
 }
 
 // ── Date field ─────────────────────────────────────────────────────────────────

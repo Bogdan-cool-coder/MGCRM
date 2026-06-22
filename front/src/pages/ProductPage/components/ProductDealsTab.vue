@@ -22,7 +22,7 @@ const { t } = useI18n()
   min-height: 200px;
 
   &__icon {
-    font-size: 2rem;
+    font-size: $font-size-icon-lg;
     color: $surface-400;
   }
 

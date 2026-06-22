@@ -1,11 +1,5 @@
 <template>
   <div class="deals-page">
-    <PageHeader
-      :title="t('sales.deals.page.title')"
-      :subtitle="pageSubtitle"
-      icon="pi pi-briefcase"
-    />
-
     <!-- Bulk toolbar (replaces normal toolbar when bulk mode is active) -->
     <DealsBulkToolbar
       v-if="salesStore.bulkMode"
@@ -22,45 +16,51 @@
       @clear-selection="salesStore.clearBulkSelection()"
     />
 
-    <!-- Main toolbar (amo-style one-liner) -->
+    <!-- Main toolbar (one-liner with pipeline picker) -->
     <DealsToolbar
       v-else
       :active-view="salesStore.activeView"
       :total-deals="totalDealsCount"
       :total-sum="totalSumFormatted"
-      :active-sort="salesStore.boardSort"
-      @open-filter="filterOverlayVisible = true"
+      :pipeline-name="activePipelineName"
+      :filter-active="hasActiveFilters()"
+      :filter-count="activeFilterCount"
+      :pipelines="pipelines"
+      :pipeline-menu-open="pipelineMenuOpen"
+      :active-pipeline-id="currentPipelineId"
+      @open-filter="filterOverlayVisible = !filterOverlayVisible"
+      @open-pipeline-menu="pipelineMenuOpen = !pipelineMenuOpen"
+      @close-pipeline-menu="pipelineMenuOpen = false"
+      @set-pipeline="onSetPipeline"
       @set-view="onSetView"
       @create="createDrawerOpen = true"
       @export="onExport"
       @enter-bulk="salesStore.enterBulkMode()"
-      @set-sort="onSetSort"
     />
 
-    <!-- Filter overlay -->
+    <!-- Filter panel (inline, under toolbar) -->
     <DealsFilterOverlay
-      :visible="filterOverlayVisible"
+      v-if="filterOverlayVisible"
       :stages="currentStages"
       :users="[]"
       :tags="[]"
       :filters="toOverlayFilters()"
+      :hidden-stages="hiddenColumns"
       @close="filterOverlayVisible = false"
       @apply="onFilterApply"
       @reset="onFilterReset"
+      @toggle-hidden-stage="toggleHiddenStage"
     />
 
     <!-- Board view -->
     <div v-if="salesStore.activeView === 'kanban'" class="deals-page__board-wrap">
       <DealsKanbanBoard
         :visible-columns="visibleColumns"
-        :hidden-columns="hiddenColumns"
         :loading="boardLoading"
         @drop="onBoardDrop"
         @title-change="onCardTitleChange"
         @load-more="onLoadMore"
-        @show-hidden="toggleHiddenStage"
         @create="createDrawerOpen = true"
-        @add-deal-to-stage="onAddDealToStage"
       />
     </div>
 
@@ -72,6 +72,7 @@
         :total="total"
         :per-page="perPage"
         :has-active-filters="hasActiveFilters()"
+        :stages="currentStages"
         @page-change="onPageChange"
         @reset-filters="resetFilters"
         @create="createDrawerOpen = true"
@@ -139,7 +140,6 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
-import PageHeader from '@/components/AppShell/PageHeader.vue'
 import DealsKanbanBoard from './components/DealsKanbanBoard.vue'
 import DealsListView from './components/DealsListView.vue'
 import DealsToolbar from './components/DealsToolbar.vue'
@@ -163,7 +163,7 @@ import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { PipelineDto, DealDto, DealCardDto, PipelineStageDto } from '@/entities/sales'
 import type { OverlayFilters } from './components/DealsFilterOverlay.vue'
-import type { DealsView, BoardSort } from '@/stores/salesStore'
+import type { DealsView } from '@/stores/salesStore'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -176,6 +176,7 @@ const uiTriggers = useUiTriggersStore()
 // ── Filter overlay ─────────────────────────────────────────────────────────────
 
 const filterOverlayVisible = ref(false)
+const pipelineMenuOpen = ref(false)
 
 // ── Pipeline ────────────────────────────────────────────────────────────────────
 
@@ -185,6 +186,11 @@ const pipelines = computed(() => pipelinesResource.data.value)
 const currentPipelineId = computed(() => {
   if (salesStore.activePipelineId) return salesStore.activePipelineId
   return pipelines.value[0]?.id ?? null
+})
+
+const activePipelineName = computed(() => {
+  const pid = currentPipelineId.value
+  return pipelines.value.find((p) => p.id === pid)?.name ?? t('sales.deals.page.toolbar.pipeline')
 })
 
 const currentStages = computed<PipelineStageDto[]>(() => {
@@ -201,6 +207,7 @@ const {
   hasActiveFilters,
   applyOverlayFilters,
   toOverlayFilters,
+  activeFilterCount,
 } = useDealsFilters(() => {
   if (salesStore.activeView === 'kanban') {
     void boardComposable.load()
@@ -212,10 +219,23 @@ const {
 
 function onFilterApply(overlayFilters: OverlayFilters) {
   applyOverlayFilters(overlayFilters)
+  filterOverlayVisible.value = false
 }
 
 function onFilterReset() {
   resetFilters()
+}
+
+// ── Pipeline switch ────────────────────────────────────────────────────────────
+
+function onSetPipeline(id: number) {
+  salesStore.setActivePipeline(id)
+  pipelineMenuOpen.value = false
+  const pipeline = pipelines.value.find((p) => p.id === id)
+  if (pipeline?.stages) {
+    salesStore.cacheStages(id, pipeline.stages)
+  }
+  void reload()
 }
 
 // ── View toggle ────────────────────────────────────────────────────────────────
@@ -230,11 +250,6 @@ function onSetView(view: DealsView) {
     listFilters.resetPage()
     void listComposable.load()
   }
-}
-
-function onSetSort(sort: BoardSort) {
-  salesStore.setBoardSort(sort)
-  void boardComposable.load()
 }
 
 // Sync URL
@@ -283,12 +298,6 @@ const totalSumFormatted = computed(() => {
   return `${Math.round(rub)} ${sign}`
 })
 
-const pageSubtitle = computed(() => {
-  const pipeline = boardComposable.pipeline.value
-  const name = pipeline?.name ?? ''
-  return `${name} · ${totalDealsCount.value} сделок · ≈ ${totalSumFormatted.value}`
-})
-
 // ── List composable ─────────────────────────────────────────────────────────────
 
 const listComposable = useDealsList(filters, () => currentPipelineId.value)
@@ -305,11 +314,6 @@ const {
 
 const createDrawerOpen = ref(false)
 const createDrawerStageId = ref<number | null>(null)
-
-function onAddDealToStage(stageId: number) {
-  createDrawerStageId.value = stageId
-  createDrawerOpen.value = true
-}
 
 function onDealCreated() {
   createDrawerStageId.value = null
@@ -434,11 +438,6 @@ const bulkAddTaskOpen = ref(false)
 
 const allVisibleDealIds = computed<number[]>(() => {
   if (salesStore.activeView === 'kanban') {
-    // Use all locally-loaded columns (including hidden ones) so that
-    // "select all" captures every card currently rendered on screen.
-    // visibleColumns already includes toggled-open hidden stages,
-    // but hiddenColumns still holds the unopened ones; scanning
-    // localColumns once is the simplest authoritative source.
     return boardComposable.localColumns.value.flatMap((col) => col.deals.map((d) => d.id))
   }
   if (salesStore.activeView === 'list') {
@@ -603,12 +602,17 @@ onMounted(async () => {
   flex-direction: column;
   height: 100%;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+  background: var(--p-surface-100);
+
+  .app-dark & {
+    background: var(--p-surface-50);
+  }
 }
 
 .deals-page__board-wrap {
   flex: 1;
   overflow: hidden;
-  padding: $space-4 $space-6;
+  padding: $space-4 $space-5;
   display: flex;
   flex-direction: column;
 }
@@ -617,7 +621,6 @@ onMounted(async () => {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding: $space-4 $space-6;
+  padding: $space-4 $space-5;
 }
-
 </style>

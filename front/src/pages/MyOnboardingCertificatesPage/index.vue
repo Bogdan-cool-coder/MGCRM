@@ -70,13 +70,13 @@ onMounted(async () => {
 .certificates-page {
   &__empty {
     &-icon {
-      font-size: 4rem;
+      font-size: $font-size-icon-3xl;
       color: var(--p-surface-400);
       display: block;
     }
 
     &-title {
-      font-size: 1.125rem;
+      font-size: $font-size-lg;
       font-weight: 600;
     }
 

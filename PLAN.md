@@ -427,6 +427,101 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### DS-4. Редизайн раздела Контакты (список)
+
+**Статус:** DONE (2026-06-21). designer→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields. PM APPROVE.
+**ТЗ:** `design-handoff/redesign/Contacts-spec.md` + `contacts.html`.
+**Агенты:** `frontend-specialist` (UI) + `backend-specialist` (KPI endpoint + position-filter).
+
+**Что сделано:**
+
+- [x] **KPI-лента (бэкенд):** `ContactsKpiService` + `ContactsKpiController` — `GET /api/contacts/kpi?entity=company|contact`. Aggregated counters через `DB::table()` (без Eloquent N+1). Visibility-scope: Admin/Director — всё; Manager — own records (`owner_user_id`/`owner_id`). Response `{ data: { entity, total, ... } }`. 25 PHPUnit тестов (ContactsKpiBarTest), 349 CRM-тестов зелёные.
+- [x] **Position-filter (бэкенд):** `ContactService::list()` — фильтр `?position=` через `->where('position', 'like', '%value%')` (Eloquent-билдер, без raw). 4 теста B4 в ContactsKpiBarTest.
+- [x] **CrmAvatar.vue** — новый `front/src/components/ui/CrmAvatar.vue`, инициалы (1–2 буквы), prop `square` (radius-md vs radius-circle), prop `size`, фон `$primary-900`.
+- [x] **ContactsKpiBar.vue** — KPI-чипы (pill, 6 для компаний / 4 для физлиц), skeleton при загрузке, teal-вариант через `$teal-*` токены.
+- [x] **ContactsPaginator.vue** — самостоятельный компонент, 50/100/200 per-page, дропдаун вверх, prev/next/first/last.
+- [x] **ContactsToolbar** рефакторинг — segmented entity-switch (tablist/role=tab, a11y), search, filter-badge, More-menu, Create-button, плотность/column-chooser.
+- [x] **ContactsFilterOverlay** рефакторинг — Должность (position) для физлиц, grid-3-col, segment-пресеты.
+- [x] **ContactsPage/index.vue** — KPI через `useAsyncResource`, watch entityType → loadKpi(), `CrmAvatar` в ячейках, `position`-строка под именем.
+- [x] **Teal-палитра:** `tealPalette` добавлена в `tokens/colors.ts` + `theme/config.ts` + `appVariables.ts` (addPalette 'teal') + `_colors.scss` (`$teal-100/700/900`). Токен готов для stylelint.
+- [x] **Preset-оверрайды кнопок:** `theme/adapters/primevue/preset.ts` — BUG-DS4-4/6: filled-button brand-navy в обеих темах через `components.button.colorScheme.{light,dark}`.
+- [x] **i18n:** `contacts.kpi.*` (total/clients/catL/catM/catS/active/noTouch/newWeek), `contacts.page.header.entitySwitch` — симметрично RU + EN (0 расхождений).
+- [x] **Agent-patch:** `.claude/agents/frontend-specialist.md` — зафиксированы 2 dark-theme ловушки: идиома `.app-dark &` (не `:global()`), инверсия surface-шкалы в dark-режиме.
+- [x] **QA:** frontend-specialist: tsc+lint:ds+build clean. qa-tester: функционал + визуал light/dark PASS.
+
+**Беклог (не блокеры):**
+- `initialType` в index.vue (строка 701): тернарный `route.name === 'Companies' ? 'company' : 'company'` — обе ветки возвращают `'company'`, мёртвый код. Поведение корректное (spec требует default=company), но выражение стоит упростить при следующем касании файла.
+- `position` в `ContactListParams` есть (api/crm/contacts.ts), но не пробрасывается из `buildContactParams()` в `useContactsPageData.ts` — фильтр работает только на сервере (прямые запросы). UI-wire через overlayFilters добавить в следующем слайсе фильтров.
+
+---
+
+### DS-5. Редизайн карточки сущности (контакт + компания)
+
+**Статус:** DONE (2026-06-22). designer→backend-specialist→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields.
+**ТЗ:** `design-handoff/redesign/EntityCard-spec.md` + `entity-card.html`.
+**Агенты:** `backend-specialist` (KPI-агрегат контакта) + `frontend-specialist` (редизайн компонентов и страниц).
+
+**Что сделано:**
+
+- [x] **Бэкенд — `DealService::aggregateForContact(Contact)` (sales-specialist / DealService):** агрегат сделок контакта через `deal_contacts` (без N+1: одним `whereHas` + `->get(['id','amount','currency'])`). Группирует по валюте (int-копейки), конвертирует через `ExchangeRateService::convertAmount` (null если FX недоступен). Возвращает `DealTotalsDTO`: `per_currency`, `base_total` (int|null), `base_currency`, `open_count`. Деньги — строго int, float запрещён.
+- [x] **Бэкенд — `ContactController::show()` расширен:** `DealService::aggregateForContact()` + `ActivityService::openTasksCountForContact()` + `DB::table('crm_contact_company_links')->count()` — три агрегата без N+1. KPI-блок: `deals_count`, `deals_sum` (int копейки|null), `deals_sum_currency`, `last_touch_at`, `open_tasks_count`, `companies_count` — через `->additional(['kpi' => ...])`. `ContactResource::toArray()` — `'kpi' => $this->additional['kpi'] ?? null` (null в index-ответе, без N+1 на списках).
+- [x] **Бэкенд — `ContactResource`:** добавлены поля `source`, `created_at`, `updated_at` (ISO8601).
+- [x] **Тесты — `ContactKpiTest.php`:** 19 PHPUnit тестов (51 assertion): deals_count с/без soft-deleted, last_touch_at, open_tasks_count (все task-like типы, исключение Note/Done), deals_sum (RUB-агрегат, soft-delete, null-корнер), deals_sum_currency тип, companies_count, kpi-структура, index без kpi. Сьют 357 CRM PASS.
+- [x] **Фронт — переработаны компоненты `front/src/components/crm/entity/`:** `EntityInfoHeader.vue` (avatar-col 56×56, info-col с title/subtitle/meta-row/tags, кнопки назад+меню в top-row), `EntityKpiStrip.vue` (KPI-пилюли с accent-вариантами, loading-skeleton, mobile horizontal-scroll), `EntityActivitiesTab.vue` (фильтр-чипы Все/События/Изменения, feed bottom-up, OpenTasksList, EntityComposer), `EntityComposer.vue` (режимы Заметка/Задача), `EntityAvatar.vue`, `InfoPanel.vue`.
+- [x] **Фронт — `ContactPage/index.vue`:** редизайн на EntityInfoHeader + EntityKpiStrip + Tabs (Обзор/Активность/Сделки/Файлы); правый рейл `ContactRightRail.vue` удалён; `ContactDealsTab.vue` (NEW) — DataTable сделок, link→DealPage, форматирование копеек; `ContactFilesTab.vue` (NEW) — graceful «скоро» (B-4); Обзор — одна колонка (`col-12`); i18n RU+EN.
+- [x] **Фронт — `CompanyPage/index.vue`:** редизайн на EntityInfoHeader + EntityKpiStrip + Tabs (Обзор/Активность/Сотрудники/Сделки/Документы/Файлы/Холдинг); правый рейл `CompanyRightRail.vue` удалён; `CompanyFilesTab.vue` (NEW) — graceful «скоро» (B-4); `CompanyMiniDealsPanel.vue` (NEW); компоненты `CompanyActivitiesTab`, `CompanyDealsTab`, `CompanyEmployeesTab` рефакторинг.
+- [x] **Фронт — пресет табов `theme/adapters/primevue/preset.ts`:** DS-5 добавил `tabs.activeBar.height=2px`, `tabs.activeBar.background='{primary.900}'`, `colorScheme.dark.tablist.background='{surface.100}'` — app-wide улучшение (затронул `DealInfoTabs.vue`: active-tab `font-weight: 600` через `:deep(.p-tab[aria-selected="true"])`).
+- [x] **Фронт — `typography.ts`:** добавлен NB-комментарий о 14px-root (rem-шкала 14-based; xs=0.75rem рендерится ~10.5px, не 12px).
+- [x] **i18n:** полная симметрия RU+EN (0 расхождений). Новые ключи: `crm.entity.*`, `contact.page.*`, `company.page.*`, `crm.contact.*`, `crm.company.*`, `crm.files.*`.
+- [x] **QA:** tsc+lint:ds+build clean. qa-tester: 5/6 визуальных пунктов PASS; §1 мета 10.5px vs «12px» → BY-DESIGN (14px root, корректный токен `$font-size-xs`, задокументировано в `typography.ts`).
+
+**Беклог (не блокеры):**
+- **B-3:** кнопка «Добавить в сделку» в `ContactDealsTab` disabled — требует `POST /api/deals/{id}/contacts` (будущий слайс).
+- **B-4:** `ContactFilesTab` и `CompanyFilesTab` — graceful «скоро»; двухпанельный layout реализуется после появления `GET /api/{contacts|companies}/{id}/files`.
+- **position-wire (DS-4 хвост):** фильтр position не пробрасывается из `buildContactParams()` — отдельный слайс фильтров.
+- **CompanyPage TODO-команды** (строки ~700–729): `open task/note/call/email/export` — заглушки `command: () => {}`, реализуются при добавлении соответствующих диалогов.
+
+---
+
+### DS-6. Редизайн воронки (SalesFunnel 2.0)
+
+**Статус:** DONE (2026-06-22). backend-specialist→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields. PM APPROVE.
+**ТЗ:** `design-handoff/redesign/SalesFunnel-spec.md` + `sales-funnel.html`.
+
+**Что сделано:**
+
+- [x] **Бэкенд — `IndexDealRequest` (NEW):** полный FormRequest валидации фильтров воронки (14 измерений: view/per_page/pipeline_id/stage_ids/owner_ids/tags/status/only_mine/only_no_task/only_overdue/product_q/country/city/budget_from/budget_to/created_from/created_to). `prepareForValidation()` нормализует boolean flags из query-строк + coerce array-фильтры. `authorize()` — `can('viewAny', Deal::class)`. `DealController::index()/board()/export()` переведены на `IndexDealRequest::validated()` — неизвестные query-параметры отброшены.
+- [x] **Бэкенд — `DealService::applyFilters()`:** полный набор фильтров воронки (owner_ids/stage_ids/only_mine/q/status/tags/product_q/country/city/budget_from/budget_to/created_from/created_to/only_no_task/only_overdue/archived). Все значения через query-builder bindings (no injection). tags — `whereJsonContains` (portable PG+SQLite). Visibility scope applied BEFORE filters (scopedQuery → applyFilters). Без N+1: whereHas/whereExists/subquery.
+- [x] **Бэкенд — `DealService::list()`:** batched `stampLastContact` через `ActivityService::lastContactDatesForDeals()` (ROW_NUMBER PG / PHP-fallback SQLite). `DealResource` — поля `country`/`category`/`last_contact_at` (B1–B3).
+- [x] **Бэкенд — `ActivityService::lastContactDatesForDeals()`:** батчевый запрос last completed event per deal, без N+1.
+- [x] **Бэкенд — `ContactService::list()` + `CompanyService::list()`:** полный набор фильтров (owner_ids/author_ids/sources/tags/position/engagement_tier/created_from/created_to/last_touch_from/last_touch_to/open_deals_min/open_deals_max/only_mine/only_active/only_with_deals/only_no_task). LIKE-эскейп для `%` в тегах. Пресеты через `_auth_user_id` (передаётся контроллером, сервис не читает Auth напрямую). `whereExists` subquery для open_deals.
+- [x] **Тесты:** `DealListFiltersTest` (23 теста), `DealListColumnsTest` (7 тестов), `ContactFilterTest`, `CompanyFilterTest`, `ContactKpiTest`. Scope-safety тест (manager не видит чужое при явном owner_ids). N+1 guard (query count < 20 для 12 сделок). 96/96 PASS.
+- [x] **Фронт — воронка:** `DealsToolbar.vue` — pipeline-switcher `DealsPipelineMenu.vue` (NEW), filter-badge, view-toggle kanban/list. `DealsFilterOverlay.vue` — полная переработка: search + presets-chips + 4-col grid (owner_ids/stage_ids/product_q/region→country/city/budget/tags/dateRange). `DealsKpiChips.vue` (NEW) — KPI-полоска (inWork/catL/M/S/won/noTask/overdue) над доской. `DealsListView.vue` — redesign колонок (Название/Стадия/Компания/Страна/Категория/Посл.контакт/Бюджет/Ответственный).
+- [x] **Фронт — composables:** `useDealsList.ts` / `useDealsBoard.ts` — `f.region → country` mapping, все фильтр-поля пробрасываются. `DealsFilters` — поле `region` для UI, `country` на сервер.
+- [x] i18n RU+EN симметрия (0 расхождений).
+- [x] **QA:** 23 контрольные точки — dark воронки, фильтры шлют параметры, мёртвых кнопок нет, 0 console/network ошибок. PASS.
+
+---
+
+### DS-7. Ремонт по wiring-аудиту (фильтры Контакты/Компании + мёртвые кнопки + dark + орфаны)
+
+**Статус:** DONE (2026-06-22). frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields. PM APPROVE.
+
+**Что сделано:**
+
+- [x] **Фронт — ContactsPage:** `ContactsFilterOverlay.vue` + `ContactsActiveFiltersBar.vue` — `buildContactParams()` пробрасывает все фильтры (position/sources/tags/owner_ids/author_ids/engagement_tier/created_from/created_to/last_touch_from/last_touch_to/open_deals_min/open_deals_max/only_mine/only_active/only_with_deals/only_no_task). `ContactsToolbar.vue` — «Импорт» → `severity='secondary'` + disabled + tooltip «скоро». `useContactsFilters.ts` — `position` добавлен в DealsFilters (закрыт DS-4 хвост). `ContactsPage/index.vue` — SavedViews смонтирован.
+- [x] **Фронт — ContactPage:** `ContactChannelsBlock.vue` — кнопка «+» работает (открывает форму добавления канала). `useContactPageActions.ts` — `submitAttachCompany(isPrimary)` через `useMutation`, `setPrimaryCompany()` реализован, `searchAttachCompany` с дебаунсом. `ContactPage/index.vue` — AutoComplete с is_primary параметром + отдельная кнопка «Установить основной».
+- [x] **Фронт — CompanyPage:** `CompanyPage/index.vue` — меню-кнопки «Позвонить»/«Написать»/«Скопировать ссылку»/«Удалить» работают; toast для missing phone/email. `api/crm/contacts.ts` + `api/crm/companies.ts` — buildContactParams/buildCompanyParams обновлены.
+- [x] **Удалены орфаны** (нулевые импорты): `DealsTaskBoard.vue`, `DealsPage/TaskCard.vue`, `DealsPage/useTaskBoard.ts`, `DealsFilterPanel.vue`, `HiddenColumnsToggle.vue`, `EntityNowStrip.vue`. MyTasksPage — собственные `TaskCard.vue` и `useTaskBoard.ts` НЕ затронуты.
+- [x] **Dark-идиомы:** `.app-dark &` (не `:global`) применены во всех новых/переработанных компонентах; инверсия surface-переменных.
+- [x] **Беклог (не блокер):** `category_code` фикс (фронт слал `category_codes` — теперь `category_code`); `SavedViewsDropdown.vue` использует `:global(.p-menuitem--danger)` для PrimeVue selector — допустимо (внешний компонент, нет DDD-аналога). `DealsKanbanCard.vue` — `:global(.kanban-card--ghost)` для drag-placeholder — допустимо (SortableJS inject).
+
+**Беклог (не блокер):**
+- B-4 files API — `ContactFilesTab` / `CompanyFilesTab` — graceful «скоро» (ждёт `GET /api/{contacts|companies}/{id}/files`).
+- gate disconnect/reconnect на фронте без проверки роли менеджера (бэкенд-gate = update-policy; обсудить с юзером).
+
+---
+
 ### M3. Sales / Kanban (2-3 недели)
 
 **Ведущие:** `sales-specialist` + `catalog` (в его зоне) + `frontend-specialist` + `designer`. Контекст `Sales` + `Catalog`.
@@ -477,6 +572,116 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 **Беклог M3 (специальный таск, отложен, НЕ реализовывать сейчас):**
 - [ ] **ОТЛОЖЕН: Логика красной подсветки отложенных задач (Task-overdue-red).** Если менеджер ставит задачу или переносит дедлайн на срок 1 месяц и более вперёд — подсвечивать такую задачу красным (привлечение внимания; борьба с немотивированными переносами). **Исключение:** стадии воронки, где будущие даты легитимны (напр. стадия типа COLD), исключаются из красной подсветки. **Механизм управления:** per-stage флаг в конструкторе воронки (PipelineStage) — тумблер «включить красную подсветку на этой стадии». **Зависимость:** прокачка задачника (Activity/Task — логика создания/редактирования задач, M6); реализовать в привязке к M6 или позже. Schema: добавить `bool warn_on_far_deadline (default true)` в `pipeline_stages` (отдельная миграция при реализации). **Зона:** `sales-specialist` (бэк) + `frontend-specialist` (UI в Kanban-карточке + конструктор воронки).
+
+---
+
+### M2+++. AMO-поля → нативные фичи MGCRM (дизайн-контракт)
+
+**Статус:** N1–N7 DONE. PM-апрув получен по всем слайсам (N1–N5 2026-06-20, N6–N7 2026-06-20). Весь бэкенд милстоуна завершён. Хвосты: фронт всех фич (N1–N7), ETL-фаза (N7 Фаза 1–3), юр-текст DOCX ДС (от юзера), финальная доводка amo_migration-карт.
+**Ведущие:** `crm-specialist` (N1, N2, N5-crm, N6-crm) + `sales-specialist` (N3, N4, N5-sales) + `contract-specialist` (N6-contract) + `migration-specialist` (N7). ТЗ: vault `MG CRM 2026/5. Планы/AMO-поля → нативные фичи MGCRM (дизайн).md` (N6) + `AMO→MGCRM — полный план миграции (build).md` (N7).
+
+**N1 — CRM: специализация + канал привлечения (crm-specialist) ✅ DONE 2026-06-20**
+- [x] Enum `CompanySpecialization` (6 значений: real_estate_agency/developer/builder/contractor/supplier/partner) + миграция `2026_06_20_200000_add_specialization_to_crm_companies` (reversible, string(32) nullable).
+- [x] Справочник `acquisition_channels` (миграция `200001`, модель `AcquisitionChannel`, seeder `AcquisitionChannelSeeder` 7 baseline-каналов, idempotent `firstOrCreate`).
+- [x] FK `acquisition_channel_id` на `crm_companies` + `crm_contacts` (миграция `200002`, nullable, `nullOnDelete`).
+- [x] История канала: таблица `acquisition_channel_history` (миграция `200003`) + модель `AcquisitionChannelHistory` + `AcquisitionChannelHistoryService::record()` — пишет ТОЛЬКО при `old_channel_id ≠ new_channel_id` И ТОЛЬКО если ключ `acquisition_channel_id` присутствует в payload (двойной guard через `array_key_exists`).
+- [x] История вызывается из `CompanyService::update()` и `ContactService::update()` (через `array_key_exists` guard; `create()` — не вызывается, история не нужна при создании).
+- [x] Эндпоинты `GET /api/companies/{id}/channel-history` + `GET /api/contacts/{id}/channel-history` (`AcquisitionChannelHistoryController`, authorize view-policy).
+- [x] Админ-CRUD `/api/admin/acquisition-channels` (в группе `prefix('admin')` — та же группа что company-types/contact-positions/sources/countries/cities); write: `admin-write` gate (admin/director), read: любой auth.
+- [x] `StoreAcquisitionChannelRequest` + `UpdateAcquisitionChannelRequest` (name/sort_order/is_active).
+- [x] `AcquisitionChannelResource` + `AcquisitionChannelHistoryResource` (old_channel/new_channel/changed_by eager-loaded).
+- [x] `CompanyResource` и `ContactResource` обновлены: `specialization` (enum.value), `acquisition_channel_id`.
+- [x] `StoreCompanyRequest`/`UpdateCompanyRequest` + `UpdateContactRequest`: `specialization` Rule::enum + `acquisition_channel_id` exists:acquisition_channels,id.
+- [x] 267 CRM-тестов зелёных. Pint clean. 4 миграции применены на dev-Postgres.
+
+**N3 — Sales: фактические даты + блокировка бюджета (sales-specialist) ✅ DONE 2026-06-20**
+- [x] Миграция `2026_06_25_120000_add_actual_dates_and_budget_flags_to_deals_table` (reversible): `signed_at date nullable`, `paid_at date nullable`, `amount_locked boolean default false`, `perpetual_license boolean default false`.
+- [x] `Deal.$fillable` + `casts()` обновлены. `DealResource` — `signed_at`/`paid_at` (toDateString), `amount_locked` (bool cast), `perpetual_license` (bool cast).
+- [x] `UpdateDealRequest` — `signed_at`/`paid_at` (sometimes|nullable|date), `amount_locked`/`perpetual_license` (sometimes|boolean).
+- [x] `DealService::recalcAmount()` — ранний return при `amount_locked === true` (единственная точка пересчёта, атомарное изменение).
+- [x] **Контракт `amount_locked` для cross-domain (зафиксировано):** при `amount_locked = true` `Deal.amount` — авторитетный бюджет (negotiated/imported), может отличаться от `sum(deal_products)` по дизайну. Analytics/Finance/KPI/Commission **обязаны** читать `Deal.amount` как единственный авторитетный бюджет (не пересчитывать из продуктов). `DealResource` явно экспонирует `amount_locked: bool` — потребители обязаны учитывать флаг. Зафиксировано в docblock миграции и в комментарии модели.
+- [x] 7 новых тестов `DealCrudTest` (signed_at/paid_at/amount_locked round-trip, defaults, validation) + 2 Unit-теста `DealAmountTest` (locked_budget_recalc_does_not_overwrite + unlocked_regression). Сьют 2031 PASS / Pint clean.
+
+**N2 — CRM: множественные реквизиты компании (crm-specialist) ✅ DONE 2026-06-20**
+- [x] Таблица `company_requisites` (модель `CompanyRequisite`): поля юр.лица, директора, налог. ID, гео, `bank_details` JSON, `is_current`, `valid_from/to`, `label/note`. FK `company_id` → `crm_companies` cascadeOnDelete.
+- [x] Partial-unique «один current на компанию»: Postgres — partial index `WHERE is_current = TRUE`; SQLite — сервис-guard в `setCurrent()` транзакции.
+- [x] Денорм-стратегия: источник истины = `company_requisites`; current зеркалится на `crm_companies` (12 полей + bank разложение) через `CompanyRequisiteService::mirrorToCompany()` при `setCurrent()` и `update()` (если is_current). list/search/dedup читают `Company.tax_id` — не сломаны.
+- [x] Дата-миграция `2026_06_26_100001_seed_company_requisites_from_companies` — создаёт current-набор из текущих полей каждой компании (chunk 200, down() no-op).
+- [x] `CompanyRequisiteService`: list/current/create/update/setCurrent (транзакция)/delete (guard: единственный current; привязанные документы)/`resolveForNewDocument` (1→авто, >1→needs_selection).
+- [x] Пины: `deals.company_requisite_id` + `documents.company_requisite_id` (FK nullable nullOnDelete, миграция `100002`). Модели Deal+Document: `$fillable` + `belongsTo(CompanyRequisite)`.
+- [x] Роуты `/companies/{c}/requisites` (index/store/update/destroy) + set-current + resolve. `/resolve` объявлен **до** `{requisite}` param-роута.
+- [x] `CompanyResource`: `current_requisite` (whenLoaded) + `requisites` (whenLoaded). `CompanyRequisiteResource`: все поля.
+- [x] 17 тестов `CompanyRequisiteTest` — CRUD, setCurrent/зеркало, инвариант «один current», гарды удаления, resolver, smoke-тест дата-миграции, пин сделки. Сьют 875 PASS.
+
+**N4 — Catalog: вечная лицензия (crm-specialist + sales-specialist) ✅ DONE 2026-06-20**
+- [x] `BillingUnit::Perpetual` (enum case `'perpetual'`, label «Вечная лицензия»; без новой миграции — varchar поле.
+- [x] `ProductService::getPerpetualPlan(Product|int): ?ProductPlan` — возвращает первый perpetual-план продукта.
+- [x] `ProductService::createPlan()` — guard «один perpetual-план на продукт»: abort(422) при попытке создать второй.
+- [x] `DealProductService::applyLicenseMode(Deal, bool)` — пересчёт unit_price всех позиций сделки в одной транзакции (perpetual→PerpetualPlan цена; false→base price plan_id=null). Продукт без perpetual-плана или без цены — пропускается (не падает, не обнуляет). `recalcAmount` в конце самоуважает `amount_locked` (N3×N4 пересечение).
+- [x] `DealProductService::addProduct()` — при `perpetual_license=true` и отсутствии явного `plan_id` авто-резолвит perpetual-план; если нет — base-план (null). Явный `plan_id` всегда приоритетнее.
+- [x] Wire в `DealService::update()`: при смене `perpetual_license` флага вызывается `app(DealProductService::class)->applyLicenseMode()` в той же транзакции. Ленивый `app()` resolve для обхода DI-цикла (DealProductService→DealService).
+- [x] 16 catalog-тестов (`PerpetualPlanTest`) + 9 sales-тестов (`DealPerpetualLicenseTest`).
+
+**N5 — Жизненный цикл клиента (crm-specialist + sales-specialist) ✅ DONE 2026-06-20**
+- [x] Enum `ClientStatus` (`prospect`/`active`/`disconnected`) + справочник `disconnect_reasons` (миграция `2026_06_27_100000`, admin-CRUD).
+- [x] Миграция `100001` на `crm_companies`: `client_status` string(16) default `prospect`; `unique_client_since` date nullable; `disconnected_at` timestamp nullable; `disconnect_reason_id` FK nullOnDelete; `disconnect_doc_id` unsignedBigInteger nullable (без FK — добавит N6/contract).
+- [x] Таблица `company_client_status_log` (миграция `100002`): append-only лог смен статуса (company_id/old_status/new_status/changed_by/changed_at/reason_id/meta). Без `updated_at`.
+- [x] `CompanyService::markAsUniqueClient(Company, CarbonInterface, ?int)` — идемпотентен (guard по `unique_client_since`); пишет лог-запись.
+- [x] `CompanyService::disconnect(Company, int $reasonId, ?int $docId, ?int $userId)` — статус+дата+reason; пишет лог.
+- [x] `CompanyService::reconnect(Company, ?int $userId)` — если `unique_client_since` set → active, иначе → prospect; чистит disconnect-поля; пишет лог.
+- [x] `DealMoveService::detectUniqueClient(Deal, int)` — на won-переходе: lockForUpdate company, `isFirstWon = unique_client_since === null` → markAsUniqueClient + `is_primary_deal = true`; иначе upsell (`is_primary_deal = false`). DDD-граница: статус компании пишется ТОЛЬКО через `CompanyService`.
+- [x] `deals.is_primary_deal` (миграция `120000`, boolean default false): true = сделка-конвертер (первая win); false = стандарт или upsell. `is_upsell` derived: won && !is_primary_deal — нет отдельного столбца.
+- [x] Авто-пин `deals.company_requisite_id` при создании: `DealService::create()` и `openInboundLead()` вызывают `$this->requisites->current($company)?->id`; null-кейс (0 реквизитов) — nullable без ошибки.
+- [x] Артизан-команда `sales:backfill-unique-clients [--dry-run]`: ретроспективный stamp is_primary_deal + unique_client_since из имеющихся won-сделок (COALESCE(signed_at,closed_at) asc, id asc tie-break); идемпотентна.
+- [x] Роуты: `GET /companies/{company}/status-log`, `POST /companies/{company}/disconnect`, `POST /companies/{company}/reconnect`; `apiResource disconnect-reasons` (admin-CRUD).
+- [x] `CompanyClientStatusController` + `DisconnectReasonController` (admin-gate).
+- [x] 26 crm-тестов (`ClientStatusTest`) + 3 N5-sales-тестов (`DealUniqueClientTest`) + 5 тестов (`BackfillUniqueClientsTest`).
+
+**N6 — ДС расторжения + контур отключения (contract-specialist + crm-specialist) ✅ DONE 2026-06-20**
+- [x] `DocumentKind::TerminationAgreement` + enum-метод `terminationVariableKeys()` (5 ключей scope-guard).
+- [x] Шаблон `termination_agreement` (placeholder docx, юр-текст — TODO юристу) + 5 TemplateVariable группы «Расторжение» (original_contract_number/date, termination_date/reason/signatory).
+- [x] `ContractGenerationService` параметризован по kind (resolveTemplate → template по kind/code, не хардкод master_skeleton).
+- [x] `TerminationDocumentService::create()` — создаёт ДС (draft), пинит реквизит, автозаполняет оригинальный договор, хранит disconnect_reason_id + termination_date + termination_reason в context.custom.
+- [x] `ContractContextBuilder::buildSublicensee()` переключён с legacy extra_fields на `Document.company_requisite_id → CompanyRequisite` (приоритет: пин → current → Company-колонки). Исправлен pre-existing баг (extra_fields-путь).
+- [x] ДС-required scoping: `terminationVariableKeys()` применяются как required ТОЛЬКО при kind=termination_agreement; обычные договоры не 422-ят — прод-регрессия поймана и исправлена.
+- [x] FK `disconnect_doc_id → documents.id` nullOnDelete (миграция `2026_06_27_200001`).
+- [x] Событие `TerminationAgreementSigned` (emits только Contracts; payload: documentId/companyId/signedAt). Диспетчится в `DocumentService::dispatchTerminationSignedIfNeeded()` — строго после коммита транзакции.
+- [x] `CompanyDisconnectService::initiate()` — создаёт ДС через `TerminationDocumentService`, НЕ меняет client_status, embed reason_id/date/name в context.custom. Возвращает Document.
+- [x] Листенер `DisconnectCompanyOnTerminationSigned` в `Domain/Crm/Listeners/` — слушает событие Contracts, вызывает `CompanyService::disconnect()`. Идемпотентен (already-disconnected → no-op + Log::info). Зарегистрирован в `AppServiceProvider::boot()`.
+- [x] `POST /companies/{id}/disconnect` переосмыслен в initiate (возвращает Document, не меняет статус компании).
+- [x] `CompanyService::reconnect()` — reverses disconnect, чистит disconnect_*, status→active/prospect по unique_client_since.
+- [x] 384 contracts-тестов + 386 crm-тестов зелёных.
+
+**N7 — Инфра миграции AMO (Фаза 0) (migration-specialist) ✅ DONE 2026-06-20**
+- [x] Таблица `external_refs` (миграция `2026_06_28_120000`): UNIQUE(source, entity_type, external_id) — идемпотентность ETL; FK-less полиморф; `external_payload jsonb`.
+- [x] Таблица `migration_maps` (миграция `120001`): UNIQUE(map_type, amo_id, amo_parent_id) — карты custom-полей/опций.
+- [x] Таблица `amo_product_mappings` (миграция `120002`): UNIQUE(amo_enum_id); FK catalog_product_id/catalog_plan_id nullOnDelete; action: map/skip/other.
+- [x] Модели `Domain/Migration/{ExternalRef, MigrationMap, AmoProductMapping}`.
+- [x] `created_by_id` FK nullable nullOnDelete на deals/crm_contacts/crm_companies (миграция `120003`); relation `creator()` на Deal/Contact/Company.
+- [x] `is_service` boolean default false + index на users (миграция `120004`); в User `$fillable` + casts.
+- [x] `AmoImportUserSeeder` — SAMPLE (не в reset-clean); email `import-amo@mgcrm.local`; is_service=true, is_active=false, роль Manager; idempotent (пароль не сбрасывается при повторном запуске).
+- [x] `config/amo_migration.php` — скелет карт (pipelines/status_map/user_map TODO перед load-фазой).
+- [x] 20 migration-тестов (MigrationSchemaTest + AmoImportUserSeederTest + AmoMigrationConfigTest) зелёных.
+
+**Фронт FE-1…FE-5 — ✅ DONE (frontend-specialist, 2026-06-21, uncommitted, ветка feat/amo-native-fields)**
+
+- [x] **FE-1 (N1):** специализация (InlineEditableField select, блок «Классификация» в CompanyRequisitesPanel); `ClientStatusBadge.vue` (Tag+Popover со status-log, 3 severity); раздел «Маркетинг» (CompanyMarketingPanel + ContactMarketingPanel, InlineEditableField select из directoriesStore); `ChannelHistoryDrawer.vue` (Drawer right, список смен).
+- [x] **FE-2 (N2):** `CompanyRequisitesPanel` полностью переработан: список `RequisiteCard`, «Действующие», `RequisiteFormDialog` (create/edit/set-current); guard-удаление (422-toast без краша); `onUnmounted` + снаппи-закрытие (close до рефетча).
+- [x] **FE-3 (N3):** `DealDatesGroup.vue` — 4 пары «план/факт» (`DatePicker` PrimeVue dd.mm.yy, computed overdueDays); `DealProductsGroup` расширен: toggle perpetual (`ToggleSwitch`+`ConfirmDialog`) + замок бюджета (иконка + кнопка «Снять замок», двух-строчный режим при расхождении). `DealTabMain` — perpetualMutation/lockMutation через `useMutation<DealDto>`.
+- [x] **FE-4 (N1/N6):** `AcquisitionChannelsPage` + `DisconnectReasonsPage` (DataTable+Dialog CRUD, ToggleSwitch is_active, ConfirmDialog delete); роуты `/admin/acquisition-channels` + `/admin/disconnect-reasons` (gate roles: admin/director); SettingsPage hub расширен; directoriesStore — `acquisitionChannels` + `disconnectReasons` в `fetchAll()`.
+- [x] **FE-5 (N6):** `DisconnectDialog.vue` (причина+дата, initiate → создаёт ДС, статус НЕ меняется сразу); `TerminationDocumentDrawer.vue` (генерация PDF + upload скана, step-lock до генерации); reconnect через confirm; компания-меню «Отключить/Возобновить» по `client_status`; `TerminationAgreementSigned` → статус «отключён» (бэкенд-событие).
+- [x] Дублирующие `<Toast/>` + `<ConfirmDialog/>` убраны из DealPage + CompanyPage (остались только в DefaultLayout).
+- [x] i18n RU+EN полный для всех 5 срезов.
+- [x] 3 раунда браузерного QA: FE-1..4 PASS; FE-5 PASS (генерация ДС 422 на dev — placeholder-шаблон, не фронт-баг).
+- [x] Orbita inline-label refactor (попутный UX-фикс): `v-tooltip` заменён на `orbita-action-btn` inline-label pattern в `NotificationsButton`, `UserProfileButton`, `QuickActionsCluster`; scoped slot `labelSide` из `OrbitaPanel`.
+- [x] Новые тесты: `CompanyKpiTest.php` + `ContactKpiTest.php` (untracked — нужно добавить в commit).
+
+**Открытые хвосты (беклог, не блокеры для текущих спринтов):**
+- ETL-фазы N7 (Фаза 1–3: extract/transform/load AMO → MGCRM) — отдельная задача migration-specialist после заполнения config-карт юзером.
+- Юр-текст DOCX ДС расторжения — TODO от юзера (юристу); placeholder-шаблон уже создан, placeholder docx — загрузить через `/api/templates/{id}/upload`. Генерация PDF даст 200 только после загрузки реального docx.
+- Gate `disconnect`/`reconnect` — бэкенд: `$this->authorize('update', $company)`. Фронт: меню-пункт показывается по `client_status`, без дополнительной проверки роли менеджера на фронте. Вопрос: нужна ли явная роль manager+? — обсудить с юзером, сейчас приоритет: бэкенд-gate = update-policy (менеджер может).
+- Finance/Analytics (M9/M10) при расчётах: читать `Deal.amount` + проверять `amount_locked`; `is_primary_deal=true` = новый клиент, `won && !is_primary_deal` = upsell. `finance-specialist` и `analytics-specialist` должны получить этот контракт при старте M9/M10.
+- DealDatesGroup: использован `DatePicker` PrimeVue напрямую (не `InlineEditableField type=date`) — ТЗ указывало InlineEditableField, фактически DatePicker (расхождение несущественно по UX, зафиксировано).
 
 ---
 

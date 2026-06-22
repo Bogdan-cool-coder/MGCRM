@@ -340,7 +340,7 @@ function onSelect(value: string) {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-400);
   }
 }
@@ -356,14 +356,14 @@ function onSelect(value: string) {
   color: $surface-500;
   flex-shrink: 0;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-400);
   }
 
   &--default {
     color: var(--p-yellow-500);
 
-    :global(.app-dark) & {
+    .app-dark & {
       color: var(--p-yellow-400);
     }
   }
@@ -377,7 +377,7 @@ function onSelect(value: string) {
   padding: $space-2 $space-3;
   border-top: 1px solid $surface-200;
 
-  :global(.app-dark) & {
+  .app-dark & {
     border-top-color: var(--p-surface-700);
   }
 }
@@ -405,7 +405,7 @@ function onSelect(value: string) {
   font-weight: $font-weight-medium;
   color: $surface-700;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-200);
   }
 

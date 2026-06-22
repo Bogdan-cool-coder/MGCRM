@@ -55,14 +55,6 @@
           <i class="pi pi-clock kanban-card__days-icon" />
           {{ t('sales.deals.page.card.daysInWork', { n: effectiveDaysInStage }) }}
         </span>
-        <button
-          class="kanban-card__quick-add"
-          :title="t('activity.quickAdd.tooltip')"
-          type="button"
-          @click.stop="onQuickAdd"
-        >
-          <i class="pi pi-plus" />
-        </button>
       </div>
     </div>
 
@@ -282,10 +274,6 @@ function onClick() {
   }
 }
 
-function onQuickAdd() {
-  activityStore.openQuickAdd(props.card.id)
-}
-
 function onScheduleTask() {
   activityStore.openQuickAdd(props.card.id)
 }
@@ -322,33 +310,32 @@ const ownerInitial = computed(() => {
     box-shadow: var(--p-card-shadow);
   }
 
-  :global(.app-dark) & {
-    background: var(--p-surface-900);
-    border-color: var(--p-surface-700);
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-color: var(--p-surface-200);
 
     &:hover {
-      background: var(--p-surface-800);
+      background: var(--p-surface-50);
     }
   }
 
   // Health: no-task — yellow left inset border
   &--no-task {
-    box-shadow: inset 4px 0 0 $color-warning;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: inset 4px 0 0 $color-warning; // health signal inset border uses $color-warning token
   }
 
   // Health: overdue — red left inset border + full border
   &--overdue-health {
-    box-shadow: inset 4px 0 0 $color-danger;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: inset 4px 0 0 $color-danger; // health signal inset border uses $color-danger token
     border-color: $color-danger;
-
-    :global(.app-dark) & {
-      border-color: $color-danger;
-    }
   }
 
   // Dragging
   &--dragging {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: $shadow-dragging;
     opacity: 0.95;
   }
 
@@ -380,8 +367,8 @@ const ownerInitial = computed(() => {
   white-space: nowrap;
   min-height: 20px;
 
-  :global(.app-dark) & {
-    color: var(--p-surface-50);
+  .app-dark & {
+    color: var(--p-text-color);
   }
 }
 
@@ -416,19 +403,19 @@ const ownerInitial = computed(() => {
   background: var(--p-surface-100);
   border-radius: $radius-sm;
   padding: 1px 6px;
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   color: $surface-600;
   min-width: 0;
   overflow: hidden;
 
-  :global(.app-dark) & {
-    background: var(--p-surface-700);
+  .app-dark & {
+    background: var(--p-surface-200);
     color: var(--p-surface-300);
   }
 }
 
 .kanban-card__product-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
   flex-shrink: 0;
 }
 
@@ -458,10 +445,10 @@ const ownerInitial = computed(() => {
 .kanban-card__avatar {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: var(--p-primary-color);
-  color: #fff;
-  font-size: 10px;
+  color: $sidebar-text-active;
+  font-size: $font-size-3xs; // snap from 10px
   font-weight: $font-weight-semibold;
   display: flex;
   align-items: center;
@@ -502,39 +489,9 @@ const ownerInitial = computed(() => {
 }
 
 .kanban-card__days-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
 }
 
-// Quick add button
-.kanban-card__quick-add {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: $radius-sm;
-  border: none;
-  background: transparent;
-  color: $surface-400;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity var(--app-transition-fast), background-color var(--app-transition-fast), color var(--app-transition-fast);
-  flex-shrink: 0;
-  padding: 0;
-
-  i {
-    font-size: 11px;
-  }
-
-  &:hover {
-    background: var(--p-surface-hover);
-    color: $primary-color;
-  }
-}
-
-.kanban-card:hover .kanban-card__quick-add {
-  opacity: 1;
-}
 
 // ─── Health strip (bottom bar) ────────────────────────────────────────────────
 
@@ -544,25 +501,25 @@ const ownerInitial = computed(() => {
   gap: $space-2;
   padding: $space-2 $space-3;
   border-top: 1px solid $surface-200;
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   min-height: 28px;
 
-  :global(.app-dark) & {
-    border-top-color: var(--p-surface-700);
+  .app-dark & {
+    border-top-color: var(--p-surface-200);
   }
 
   &--neutral {
     background: var(--p-surface-50);
 
-    :global(.app-dark) & {
-      background: var(--p-surface-800);
+    .app-dark & {
+      background: var(--p-surface-50);
     }
   }
 
   &--warning {
     background: $color-warning-bg;
 
-    :global(.app-dark) & {
+    .app-dark & {
       background: rgba(255, 179, 138, 0.15);
     }
   }
@@ -570,14 +527,14 @@ const ownerInitial = computed(() => {
   &--danger {
     background: $color-danger-bg;
 
-    :global(.app-dark) & {
+    .app-dark & {
       background: rgba(255, 90, 68, 0.15);
     }
   }
 }
 
 .kanban-card__task-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   color: $surface-500;
   flex-shrink: 0;
 
@@ -593,14 +550,14 @@ const ownerInitial = computed(() => {
   white-space: nowrap;
   flex: 1;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-300);
   }
 
   &--muted {
     color: $color-warning-text;
 
-    :global(.app-dark) & {
+    .app-dark & {
       color: $color-warning;
     }
   }
@@ -609,7 +566,7 @@ const ownerInitial = computed(() => {
     color: $color-danger-text;
     font-weight: $font-weight-medium;
 
-    :global(.app-dark) & {
+    .app-dark & {
       color: $color-danger;
     }
   }
@@ -621,7 +578,7 @@ const ownerInitial = computed(() => {
   background: transparent;
   color: $primary-color;
   cursor: pointer;
-  font-size: 11px;
+  font-size: $font-size-2xs; // snap from 11px
   white-space: nowrap;
   padding: 0;
 

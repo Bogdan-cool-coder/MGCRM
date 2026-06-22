@@ -35,7 +35,7 @@ class ContactCompanyLinkPrimaryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ContactService;
+        $this->service = app(ContactService::class);
     }
 
     // -------------------------------------------------------------------------

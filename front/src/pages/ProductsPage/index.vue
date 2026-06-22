@@ -500,8 +500,8 @@ onMounted(() => {
 }
 
 .products-page__code {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
+  font-family: $font-family-mono;
+  font-size: $font-size-xs;
   color: $surface-600;
 }
 
@@ -531,7 +531,7 @@ onMounted(() => {
 }
 
 .products-page__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 }
 

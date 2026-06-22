@@ -31,15 +31,15 @@ const formattedTime = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 1rem;
+  font-size: $font-size-md;
   font-weight: 600;
   color: var(--p-text-color);
   padding: 0.375rem 0.75rem;
-  border-radius: 6px;
+  border-radius: $radius-md;
   background: var(--p-surface-100);
 
   &__icon {
-    font-size: 0.875rem;
+    font-size: $font-size-sm;
   }
 
   &--danger {

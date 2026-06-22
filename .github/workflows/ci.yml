@@ -151,6 +151,13 @@ jobs:
         working-directory: ./front
         run: npm run lint
 
+      # Design-system adherence — stylelint token gate (.claude/skills/macroglobal-design).
+      # BLOCKING — codebase migrated onto tokens (0 violations as of 2026-06-21).
+      # No hardcoded color/radius/size past the design tokens.
+      - name: Design-system adherence (lint:ds)
+        working-directory: ./front
+        run: npm run lint:ds
+
       # Vite production build smoke
       - name: Build
         working-directory: ./front

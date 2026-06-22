@@ -29,6 +29,8 @@
     "onboardingAssignments": "Assignments",
     "hrProgress": "Progress",
     "automationRuns": "Automation log",
+    "acquisitionChannels": "Acquisition Channels",
+    "disconnectReasons": "Disconnect Reasons",
     "sections": {
       "learning": "Learning"
     }
@@ -256,6 +258,106 @@
       "automationRuns": {
         "title": "Automation log",
         "desc": "Run history and results of automated scenarios"
+      },
+      "users": {
+        "title": "Users",
+        "desc": "Manage employee accounts"
+      },
+      "catalog": {
+        "title": "Product catalog",
+        "desc": "Products, plans and pricing"
+      },
+      "exchangeRates": {
+        "title": "Exchange rates",
+        "desc": "Rates for multi-currency deals"
+      },
+      "acquisitionChannels": {
+        "title": "Acquisition channels",
+        "desc": "Lead source dictionary"
+      },
+      "disconnectReasons": {
+        "title": "Disconnect reasons",
+        "desc": "Client churn reason dictionary"
+      }
+    }
+  },
+  "admin": {
+    "users": {
+      "title": "Users",
+      "subtitle": "Manage employee accounts",
+      "addUser": "Add user",
+      "created": "User created",
+      "empty": "No users found",
+      "active": "Active",
+      "inactive": "Inactive",
+      "passwordHint": "A password will be generated automatically and sent to the user's email.",
+      "columns": {
+        "full_name": "Full name",
+        "email": "Email",
+        "phone": "Phone",
+        "job_title": "Job title",
+        "department": "Department",
+        "role": "Role",
+        "is_active": "Active"
+      },
+      "fields": {
+        "full_name": "Full name",
+        "full_name_ph": "John Doe",
+        "email": "Email",
+        "email_ph": "user{'@'}company.com",
+        "phone": "Phone",
+        "phone_ph": "+1 (555) 000-0000",
+        "job_title": "Job title",
+        "job_title_ph": "Sales Manager",
+        "department": "Department",
+        "department_ph": "Select department",
+        "role": "Role",
+        "role_ph": "Select role (default: Manager)"
+      },
+      "filters": {
+        "search": "Search by name, email...",
+        "role": "Role",
+        "department": "Department",
+        "status": "Status",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "errors": {
+        "invalidEmail": "Invalid email"
+      }
+    },
+    "acquisitionChannels": {
+      "title": "Acquisition Channels",
+      "add": "Add Channel",
+      "edit": "Edit Channel",
+      "empty": "No channels added",
+      "deleteConfirm": "Delete acquisition channel?",
+      "columns": {
+        "name": "Name",
+        "sortOrder": "Order",
+        "isActive": "Active"
+      },
+      "fields": {
+        "name": "Name *",
+        "sortOrder": "Sort order",
+        "isActive": "Active"
+      }
+    },
+    "disconnectReasons": {
+      "title": "Disconnect Reasons",
+      "add": "Add Reason",
+      "edit": "Edit Reason",
+      "empty": "No reasons added",
+      "deleteConfirm": "Delete disconnect reason?",
+      "columns": {
+        "name": "Name",
+        "sortOrder": "Order",
+        "isActive": "Active"
+      },
+      "fields": {
+        "name": "Name *",
+        "sortOrder": "Sort order",
+        "isActive": "Active"
       }
     }
   },
@@ -306,7 +408,9 @@
     "actions": "Actions",
     "today": "Today",
     "yesterday": "Yesterday",
-    "copied": "Copied"
+    "copied": "Copied",
+    "select": "Select...",
+    "createdAt": "Created"
   },
   "contacts": {
     "page": {
@@ -314,8 +418,30 @@
       "subtitle": "Individuals and companies",
       "subtitle_companies": "Company list",
       "create": "New contact",
+      "createContact": "New individual",
+      "createCompany": "New company",
       "dedup": "Dedup",
       "total": "Total: {count}",
+      "header": {
+        "title": "Contacts",
+        "switchCompany": "Companies",
+        "switchContact": "Individuals",
+        "entitySwitch": "Entity type"
+      },
+      "search": {
+        "placeholder": {
+          "company": "Search by name, BIN...",
+          "contact": "Search by name, phone, email..."
+        }
+      },
+      "menu": {
+        "more": "More",
+        "import": "Import from file",
+        "export": "Export to Excel",
+        "dedup": "Find duplicates",
+        "columns": "Customize columns",
+        "bulk": "Bulk actions"
+      },
       "typeSwitch": {
         "contact": "Individual",
         "company": "Company"
@@ -329,7 +455,10 @@
         "tags": "Tags",
         "actions": "Actions",
         "density": "Density",
-        "choose": "Column chooser"
+        "choose": "Column chooser",
+        "phone": "Phone",
+        "author": "Author",
+        "responsible": "Responsible"
       },
       "density": {
         "compact": "Compact",
@@ -343,7 +472,8 @@
         "country": "Country",
         "tags": "Tags",
         "apply": "Apply",
-        "reset": "Reset"
+        "reset": "Reset",
+        "openPanel": "Filters"
       },
       "empty": {
         "title": "No contacts yet",
@@ -372,6 +502,51 @@
         "create": "Failed to create record",
         "delete": "Failed to delete record"
       }
+    },
+    "kpi": {
+      "total": "Total",
+      "clients": "Clients",
+      "catL": "Cat. L",
+      "catM": "Cat. M",
+      "catS": "Cat. S",
+      "active": "Active",
+      "noTouch": "No touch",
+      "newWeek": "New this week"
+    },
+    "filter": {
+      "segmentsLabel": "SEGMENTS",
+      "preset": {
+        "mine": "Mine",
+        "active": "Active",
+        "withDeals": "With open deals",
+        "noTask": "No tasks",
+        "duplicates": "Duplicates"
+      },
+      "col": {
+        "who": "Who",
+        "what": "What",
+        "when": "When"
+      },
+      "field": {
+        "owner": "Responsible",
+        "author": "Author",
+        "engagement": "Engagement",
+        "companyType": "Company type",
+        "category": "Category",
+        "country": "Country",
+        "tags": "Tags",
+        "company": "Company",
+        "position": "Position",
+        "source": "Source",
+        "createdAt": "Created",
+        "lastActivity": "Last activity"
+      },
+      "apply": "Apply",
+      "reset": "Reset"
+    },
+    "paginator": {
+      "showing": "Showing {from}–{to} of {total}",
+      "perPageLabel": "Show:"
     },
     "actions": {
       "create": "Create contact"
@@ -478,17 +653,15 @@
         "actions": {
           "setPrimary": "Set as primary",
           "changeStatus": "Change status",
-          "unlink": "Unlink"
+          "unlink": "Unlink",
+          "goToCard": "Go to contact"
         },
         "unlinkConfirm": "Unlink employee?",
         "empty": "No employees added",
         "seeAll": "All employees ({count})"
       },
       "holding": {
-        "parent": "Parent holding",
-        "children": "Subsidiaries",
-        "addChild": "Add subsidiary",
-        "stub": "Holding management coming in next sprint"
+        "childrenCount": "{count} companies in holding"
       },
       "stub": {
         "tasks": "Tasks section coming in next sprint",
@@ -521,7 +694,9 @@
         "copyLink": "Copy link",
         "export": "Export",
         "deleteConfirm": "Delete company? This action is irreversible.",
-        "deleteSuccess": "Company deleted"
+        "deleteSuccess": "Company deleted",
+        "noPhone": "No phone number",
+        "noEmail": "No email address"
       },
       "deals": {
         "empty": "No open deals",
@@ -530,9 +705,6 @@
         "createDeal": "Create deal",
         "openCount": "{count} open",
         "seeAll": "All deals"
-      },
-      "holding": {
-        "childrenCount": "{count} companies in holding"
       },
       "totals": {
         "empty": "No completed deals",
@@ -548,13 +720,16 @@
       "dealsSum": "Deals amount",
       "employees": "Employees",
       "documents": "Documents",
-      "lastActivity": "Last activity"
+      "lastActivity": "Last activity",
+      "wonDeals": "Won deals",
+      "upsellDeals": "Upsells"
     },
     "requisites": {
       "section": {
         "legal": "Legal data",
         "bank": "Bank",
-        "contacts": "Contacts & Segmentation"
+        "contacts": "Contacts & Segmentation",
+        "classification": "Classification"
       }
     }
   },
@@ -563,7 +738,8 @@
       "deals": "Deals",
       "lastContact": "Last contact",
       "openTasks": "Open tasks",
-      "companies": "Companies"
+      "companies": "Companies",
+      "dealsSum": "Deals amount"
     },
     "page": {
       "back": "Back",
@@ -603,7 +779,8 @@
           "unlink": "Unlink"
         },
         "unlinkConfirm": "Unlink contact from company?",
-        "empty": "No companies linked"
+        "empty": "No companies linked",
+        "isPrimary": "Primary company"
       },
       "stub": {
         "tasks": "Tasks coming in next sprint",
@@ -1016,14 +1193,17 @@
         "viewTasks": "Tasks",
         "summary": "{count} deals · ≈ {total}",
         "toolbar": {
-          "searchAndFilter": "Search & Filter",
-          "moreMenu": "More"
+          "searchAndFilter": "Search & filter",
+          "moreMenu": "More",
+          "pipeline": "Pipeline",
+          "pipelineSettings": "Configure pipelines"
         },
         "menu": {
           "import": "Import",
           "export": "Export",
           "duplicates": "Find duplicates",
           "bulkActions": "Bulk actions",
+          "comingSoon": "coming soon",
           "sort": "Sort",
           "sortCreatedAt": "By date created",
           "sortTitle": "By name",
@@ -1052,7 +1232,11 @@
           "presetWon": "Won",
           "presetLost": "Lost",
           "presetNoTask": "No task",
-          "presetOverdue": "Overdue task"
+          "presetOverdue": "Overdue task",
+          "hiddenStages": "Hidden stages",
+          "hiddenStagesHint": "These stages are hidden from the board by default. Toggle to show the column.",
+          "hiddenStagesCount": "{n} on",
+          "hiddenStagesSettings": "Configure which stages to hide"
         },
         "bulk": {
           "selected": "Selected: {n}",
@@ -1174,6 +1358,28 @@
           "deleteReject": "Cancel",
           "deleteSuccess": "Deal deleted",
           "moveSuccess": "Stage updated"
+        },
+        "pipeline": {
+          "salesSubtitle": "sales funnel",
+          "onboardingSubtitle": "onboarding & launch",
+          "partnerSubtitle": "referral deals"
+        },
+        "list": {
+          "today": "Today",
+          "daysAgo": "{n}d ago",
+          "columns": {
+            "country": "Country",
+            "inStage": "In stage",
+            "lastContact": "Last contact"
+          }
+        },
+        "kpi": {
+          "inWork": "Active",
+          "inWorkValue": "{n} companies",
+          "categories": "Categories L/M/S",
+          "won": "Won",
+          "noTask": "No task",
+          "overdue": "Overdue"
         }
       },
       "form": {
@@ -1374,7 +1580,7 @@
           "tg": "{'@'}username or numeric ID",
           "wa": "Number +7XXXXXXXXXX",
           "linkedin": "LinkedIn profile URL",
-          "email": "email@domain.com",
+          "email": "email{'@'}domain.com",
           "phone": "+7XXXXXXXXXX"
         },
         "submit": "Add",
@@ -1492,6 +1698,35 @@
         "markContractTooltip": "Mark contract as sent",
         "kpMarked": "Proposal marked as sent",
         "contractMarked": "Contract marked as sent"
+      },
+      "fields": {
+        "perpetualLicense": "Perpetual License"
+      },
+      "perpetual": {
+        "on": "Perpetual",
+        "off": "Subscription",
+        "confirmTitle": "License Type Change",
+        "confirmMessage": "Switching will recalculate prices for all line items. Continue?",
+        "successOn": "Switched to perpetual license",
+        "successOff": "Switched to subscription"
+      },
+      "budget": {
+        "locked": "Budget (locked)",
+        "lineTotal": "Line total",
+        "total": "Total",
+        "lock": "Lock amount",
+        "unlock": "Unlock amount",
+        "lockedSuccess": "Amount locked",
+        "unlockedSuccess": "Lock removed"
+      },
+      "dates": {
+        "group": "Key Dates",
+        "contractPlan": "Contract — planned",
+        "contractFact": "Contract — actual",
+        "paymentPlan": "Payment — planned",
+        "paymentFact": "Payment — actual",
+        "overdueBy": "Overdue by {n} days",
+        "factDone": "Done"
       }
     },
     "move": {
@@ -1743,6 +1978,7 @@
       "invoice": "Invoice",
       "act": "Act",
       "reconciliation": "Reconciliation",
+      "termination_agreement": "Termination Agreement",
       "yaml": "YAML",
       "docx": "DOCX"
     },
@@ -2873,6 +3109,20 @@
         "never": "None",
         "daysAgo": "{n}d",
         "daysUnit": "d"
+      },
+      "source": "Source",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "primaryCompany": "Company",
+      "feed": {
+        "filterAll": "All",
+        "filterEvents": "Events",
+        "filterChanges": "Changes"
+      },
+      "composer": {
+        "note": "Note",
+        "task": "Task",
+        "add": "Add"
       }
     },
     "company": {
@@ -2889,7 +3139,9 @@
         "holding": "Holding",
         "deals": "Deals",
         "totals": "Totals",
-        "payments": "Payments"
+        "payments": "Payments",
+        "marketing": "Marketing",
+        "dealsInProgress": "Deals in progress"
       },
       "rail": {
         "author": "Created by",
@@ -2899,7 +3151,99 @@
         "director": "Director",
         "bankName": "Bank",
         "bankAccount": "Account",
-        "annualRevenue": "Annual revenue"
+        "annualRevenue": "Annual revenue",
+        "specialization": "Specialization"
+      },
+      "specialization": {
+        "placeholder": "Not selected",
+        "agency": "Real Estate Agency",
+        "developer": "Developer",
+        "builder": "Builder",
+        "contractor": "Contractor",
+        "supplier": "Supplier",
+        "partner": "Partner"
+      },
+      "clientStatus": {
+        "prospect": "Prospect",
+        "active": "Active Client",
+        "disconnected": "Disconnected",
+        "since": "since {date}",
+        "at": "{date}",
+        "logTitle": "Client Status History",
+        "logEmpty": "History is empty",
+        "logTooltip": "Click to see status history"
+      },
+      "menu": {
+        "disconnect": "Disconnect Client",
+        "reconnect": "Reconnect Client"
+      },
+      "disconnect": {
+        "title": "Disconnect Client",
+        "hint": "Status changes only after uploading the signed termination agreement scan",
+        "reason": "Disconnect Reason",
+        "reasonPlaceholder": "Select reason...",
+        "reasonRequired": "Please select a disconnect reason",
+        "date": "Termination Date",
+        "datePlaceholder": "Select date",
+        "dateRequired": "Please specify the termination date",
+        "signatory": "Signatory",
+        "signatoryPlaceholder": "Director full name",
+        "submit": "Create Termination Agreement"
+      },
+      "reconnect": {
+        "confirm": "Resume cooperation with this company?",
+        "success": "Company status updated"
+      },
+      "marketing": {
+        "channel": "Acquisition Channel",
+        "channelHistory": "Change History",
+        "channelHistoryTitle": "Acquisition Channel History",
+        "historyEmpty": "History is empty",
+        "historyFrom": "Was",
+        "historyTo": "Became",
+        "historyBy": "Changed by",
+        "noChannel": "Not set"
+      },
+      "requisites": {
+        "current": "Active",
+        "add": "Add requisites",
+        "edit": "Edit requisites",
+        "setCurrent": "Set as active",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this requisite set?",
+        "empty": "No requisites added",
+        "loadError": "Failed to load requisites",
+        "defaultLabel": "Requisites",
+        "setCurrentSuccess": "Requisites set as active",
+        "createSuccess": "Requisites added",
+        "updateSuccess": "Requisites updated",
+        "deleteSuccess": "Requisite set deleted",
+        "deleteGuardError": "Cannot delete requisites",
+        "deleteGuardHint": "Cannot delete the only active set or one linked to documents",
+        "setAsCurrentOnCreate": "Set as active immediately",
+        "fields": {
+          "label": "Set name",
+          "labelPlaceholder": "e.g. New Requisites 2025",
+          "legalName": "Legal name",
+          "legalNamePlaceholder": "Alfa LLC",
+          "fullLegalForm": "Full legal form",
+          "taxIdLabel": "ID type",
+          "taxId": "ID number (TIN/BIN)",
+          "taxIdPlaceholder": "123456789",
+          "director": "Director (full name)",
+          "directorPlaceholder": "John Smith",
+          "directorGenitive": "Director (genitive case)",
+          "directorGenitivePlaceholder": "John Smith (genitive)",
+          "bank": "Bank",
+          "account": "Account / IBAN",
+          "bik": "Bank code (BIC)",
+          "validFrom": "Valid from",
+          "note": "Note",
+          "notePlaceholder": "Optional"
+        },
+        "errors": {
+          "legalNameRequired": "Legal name is required"
+        }
       },
       "holding": {
         "youAreHere": "You are here",
@@ -2931,7 +3275,13 @@
         "dealsParticipation": "Involved in deals",
         "customFields": "Custom fields",
         "dealsEmpty": "No deals",
-        "notes": "Notes"
+        "notes": "Notes",
+        "marketing": "Marketing"
+      },
+      "marketing": {
+        "channel": "Acquisition Channel",
+        "channelHistory": "Change History",
+        "historyTitle": "Channel History (contact)"
       },
       "notes": {
         "placeholder": "Add a note about this contact..."
@@ -2984,6 +3334,9 @@
         "addRelation": "Add relation",
         "copyLink": "Copy link",
         "delete": "Delete"
+      },
+      "deals": {
+        "addComingSoon": "Add to deal (coming soon)"
       }
     },
     "log": {
@@ -3020,6 +3373,26 @@
         "deals": "Deals",
         "companies": "Companies"
       }
+    },
+    "termination": {
+      "drawerTitle": "Termination Agreement",
+      "step1": "Document Generation",
+      "generateHint": "Generate the termination agreement in DOCX and PDF format for signing.",
+      "generateBtn": "Generate Agreement",
+      "generating": "Generating...",
+      "generateError": "Document generation error. Please try again.",
+      "openPdf": "Open PDF",
+      "downloadDocx": "Download DOCX",
+      "step2": "Upload Signed Scan",
+      "scanHint": "Upload the scan of the agreement signed by both parties. Status changes only after upload.",
+      "chooseFile": "Choose file",
+      "uploadFormats": "PDF, JPG, PNG — up to 20 MB",
+      "scanUploaded": "Scan uploaded",
+      "uploadError": "Upload error. Please try again.",
+      "waiting": "Waiting for scan",
+      "statusDisconnected": "Disconnected",
+      "clientStatusLabel": "Client Status",
+      "stepLockedHint": "Available after document generation"
     },
     "contacts_page": {
       "savedViews": {
@@ -3058,6 +3431,13 @@
     "customFields": {
       "schemaError": "Failed to load custom fields schema",
       "empty": "No custom fields configured"
+    },
+    "files": {
+      "createFolder": "Create folder",
+      "upload": "Upload file",
+      "emptyFiles": "No files",
+      "emptyFolders": "No folders",
+      "comingSoon": "Files will be available in upcoming updates"
     }
   },
   "contacts_filter": {

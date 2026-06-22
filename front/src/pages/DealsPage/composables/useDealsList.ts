@@ -35,13 +35,27 @@ export function useDealsList(
 
   async function load() {
     const pid = pipelineId()
+    const f = filters.value
+    const dateRange = f.dateRange
     await resource.run(() =>
       salesApi.getDeals({
         view: 'list',
         pipeline_id: pid ?? undefined,
-        stage_id: filters.value.stage_id ?? undefined,
-        owner_id: filters.value.owner_id ?? undefined,
-        q: filters.value.q || undefined,
+        q: f.q || undefined,
+        owner_ids: f.owner_ids.length ? f.owner_ids : undefined,
+        stage_ids: f.stage_ids.length ? f.stage_ids : undefined,
+        status: f.status ?? undefined,
+        only_mine: f.only_mine || undefined,
+        only_no_task: f.only_no_task || undefined,
+        only_overdue: f.only_overdue || undefined,
+        product_q: f.product_q || undefined,
+        country: f.region || undefined,
+        city: f.city || undefined,
+        budget_from: f.budget_from ?? undefined,
+        budget_to: f.budget_to ?? undefined,
+        tags: f.tags.length ? f.tags : undefined,
+        created_from: dateRange?.[0] ? dateRange[0].toISOString().slice(0, 10) : undefined,
+        created_to: dateRange?.[1] ? dateRange[1].toISOString().slice(0, 10) : undefined,
         page: page.value,
         per_page: perPage.value,
       }),

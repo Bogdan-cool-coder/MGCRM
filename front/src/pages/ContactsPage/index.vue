@@ -1,420 +1,439 @@
 <template>
   <div class="contacts-page">
-    <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
-    <ContactsBulkToolbar
-      v-if="bulk.bulkMode.value"
-      :selected-count="bulk.selectedCount.value"
-      :total-visible="items.length"
-      :exporting="bulk.exporting.value"
-      @cancel="bulk.exitBulk()"
-      @select-all="bulk.selectAll()"
-      @clear-selection="bulk.clearSelection()"
-      @assign-owner="bulk.openAssignOwner()"
-      @add-tag="bulk.openAddTag()"
-      @merge="onMergeClick"
-      @export="bulk.exportXlsx()"
-      @delete="bulk.confirmBulkDelete()"
-    />
-    <ContactsToolbar
-      v-else
-      :active-view="activeView"
-      :saved-views="savedViews.views.value"
-      :default-view-id="savedViews.defaultViewId.value"
-      :entity-type="entityType"
-      :total="total"
-      :search="filter.search"
-      :active-filter-count="activeFilterCount"
-      :density="view.density.value"
-      :saved-views-loading="savedViews.isLoading.value"
-      @set-view="onSetView"
-      @save-view="onSaveView"
-      @delete-view="onDeleteView"
-      @set-default-view="onSetDefaultView"
-      @rename-view="onRenameView"
-      @set-entity-type="entityType = $event"
-      @search="onSearch"
-      @open-filter="filterOverlayOpen = true"
-      @open-columns="columnChooserOpen = true"
-      @set-density="view.setDensity($event)"
-      @create="openQuickCreate"
-      @export="bulk.exportXlsx()"
-      @open-dedup="openDedup"
-      @enter-bulk="bulk.enterBulk()"
-    />
+    <!-- ── Card wrapper ───────────────────────────────────────────────────────── -->
+    <div class="contacts-page__card">
+      <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
+      <ContactsBulkToolbar
+        v-if="bulk.bulkMode.value"
+        :selected-count="bulk.selectedCount.value"
+        :total-visible="items.length"
+        :exporting="bulk.exporting.value"
+        @cancel="bulk.exitBulk()"
+        @select-all="bulk.selectAll()"
+        @clear-selection="bulk.clearSelection()"
+        @assign-owner="bulk.openAssignOwner()"
+        @add-tag="bulk.openAddTag()"
+        @merge="onMergeClick"
+        @export="bulk.exportXlsx()"
+        @delete="bulk.confirmBulkDelete()"
+      />
+      <ContactsToolbar
+        v-else
+        :active-view="activeView"
+        :saved-views="savedViews.views.value"
+        :default-view-id="savedViews.defaultViewId.value"
+        :entity-type="entityType"
+        :total="total"
+        :search="filter.search"
+        :active-filter-count="activeFilterCount"
+        :density="view.density.value"
+        :saved-views-loading="savedViews.isLoading.value"
+        @set-view="onSetView"
+        @save-view="onSaveView"
+        @delete-view="onDeleteView"
+        @set-default-view="onSetDefaultView"
+        @rename-view="onRenameView"
+        @set-entity-type="entityType = $event"
+        @search="onSearch"
+        @open-filter="filterOverlayOpen = !filterOverlayOpen"
+        @open-columns="columnChooserOpen = true"
+        @set-density="view.setDensity($event)"
+        @create="openQuickCreate"
+        @export="bulk.exportXlsx()"
+        @open-dedup="openDedup"
+        @enter-bulk="bulk.enterBulk()"
+      />
 
-    <!-- ── Active filter chips ──────────────────────────────────────────── -->
-    <ContactsActiveFiltersBar
-      :filters="overlayFilters"
-      :entity-type="entityType"
-      :search="filter.search"
-      :users="usersCache"
-      :sources="directoriesStore.activeSources"
-      :company-types="directoriesStore.activeCompanyTypes"
-      :countries="directoriesStore.activeCountries"
-      @remove="removeChipFilter"
-      @reset="resetFilter"
-    />
+      <!-- ── KPI Bar ─────────────────────────────────────────────────────────── -->
+      <ContactsKpiBar
+        :entity-type="entityType"
+        :stats="kpiStats"
+        :loading="kpiLoading"
+      />
 
-    <!-- ── Filter overlay ──────────────────────────────────────────────── -->
-    <ContactsFilterOverlay
-      :visible="filterOverlayOpen"
-      :entity-type="entityType"
-      :filters="overlayFilters"
-      :users="usersCache"
-      :sources="directoriesStore.activeSources"
-      :company-types="directoriesStore.activeCompanyTypes"
-      :countries="directoriesStore.activeCountries"
-      :available-tags="availableTags"
-      @close="filterOverlayOpen = false"
-      @apply="onApplyOverlay"
-      @reset="onResetOverlay"
-    />
+      <!-- ── Active filter chips ───────────────────────────────────────────── -->
+      <ContactsActiveFiltersBar
+        :filters="overlayFilters"
+        :entity-type="entityType"
+        :search="filter.search"
+        :users="usersCache"
+        :sources="directoriesStore.activeSources"
+        :company-types="directoriesStore.activeCompanyTypes"
+        :countries="directoriesStore.activeCountries"
+        @remove="removeChipFilter"
+        @reset="resetFilter"
+      />
 
-    <!-- ── Main content ───────────────────────────────────────────────────── -->
-    <div class="contacts-page__body">
-      <!-- ── Empty: no records ──────────────────────────────────────────── -->
-      <div
-        v-if="!loading && items.length === 0 && !isFiltered && activeView !== 'duplicates'"
-        class="contacts-page__empty"
-      >
-        <i
-          :class="entityType === 'company' ? 'pi pi-building' : 'pi pi-users'"
-          class="contacts-page__empty-icon"
-        />
-        <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.noRecords') }}</p>
-        <Button
-          icon="pi pi-plus"
-          :label="t('contacts.page.create')"
-          @click="openQuickCreate"
+      <!-- ── Filter panel (inline) ─────────────────────────────────────────── -->
+      <div v-show="filterOverlayOpen">
+        <ContactsFilterOverlay
+          :visible="filterOverlayOpen"
+          :entity-type="entityType"
+          :filters="overlayFilters"
+          :users="usersCache"
+          :sources="directoriesStore.activeSources"
+          :company-types="directoriesStore.activeCompanyTypes"
+          :countries="directoriesStore.activeCountries"
+          :available-tags="availableTags"
+          @close="filterOverlayOpen = false"
+          @apply="onApplyOverlay"
+          @reset="onResetOverlay"
         />
       </div>
 
-      <!-- ── Empty: filter has no results ──────────────────────────────── -->
-      <div
-        v-else-if="!loading && items.length === 0 && isFiltered && activeView !== 'duplicates'"
-        class="contacts-page__empty"
-      >
-        <i class="pi pi-filter-slash contacts-page__empty-icon" />
-        <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.noResults') }}</p>
-        <Button
-          severity="secondary"
-          :label="t('contacts.page.empty.resetFilters')"
-          @click="resetFilter"
-        />
-      </div>
-
-      <!-- ── Empty: segment empty ───────────────────────────────────────── -->
-      <div
-        v-else-if="!loading && items.length === 0 && activeView !== 'default' && activeView !== 'duplicates'"
-        class="contacts-page__empty"
-      >
-        <i class="pi pi-bookmark contacts-page__empty-icon" />
-        <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.noSegment') }}</p>
-        <Button
-          severity="secondary"
-          :label="t('contacts_filter.changeFilters', 'Изменить фильтры')"
-          @click="filterOverlayOpen = true"
-        />
-      </div>
-
-      <!-- ── Empty: duplicates not found ─────────────────────────────────── -->
-      <div
-        v-else-if="!loading && items.length === 0 && activeView === 'duplicates'"
-        class="contacts-page__empty"
-      >
-        <i class="pi pi-check-circle contacts-page__empty-icon contacts-page__empty-icon--success" />
-        <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.duplicates') }}</p>
-      </div>
-
-      <!-- ── DataTable ──────────────────────────────────────────────────── -->
-      <div v-else class="contacts-page__table-wrap">
-        <DataTable
-          v-model:selection="selectedRows"
-          :value="items"
-          :loading="loading"
-          :row-class="rowClass"
-          data-key="id"
-          :selection-mode="bulk.bulkMode.value ? 'multiple' : undefined"
-          striped-rows
-          scroll-height="flex"
-          scrollable
-          :rows="perPage"
-          class="contacts-page__table"
-          @row-click="onRowClick"
+      <!-- ── Main content ──────────────────────────────────────────────────── -->
+      <div class="contacts-page__body">
+        <!-- Empty: no records -->
+        <div
+          v-if="!loading && items.length === 0 && !isFiltered && activeView !== 'duplicates'"
+          class="contacts-page__empty"
         >
-          <!-- Bulk checkbox column -->
-          <Column
-            v-if="bulk.bulkMode.value"
-            selection-mode="multiple"
-            style="width: 48px; flex-shrink: 0"
-            frozen
+          <i
+            :class="entityType === 'company' ? 'pi pi-building' : 'pi pi-users'"
+            class="contacts-page__empty-icon"
           />
+          <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.noRecords') }}</p>
+          <Button
+            icon="pi pi-plus"
+            :label="t('contacts.page.create')"
+            @click="openQuickCreate"
+          />
+        </div>
 
-          <!-- Render visible columns dynamically -->
-          <template v-for="col in visibleColumnDefs" :key="col.field">
-            <!-- ID -->
+        <!-- Empty: filter has no results -->
+        <div
+          v-else-if="!loading && items.length === 0 && isFiltered && activeView !== 'duplicates'"
+          class="contacts-page__empty"
+        >
+          <i class="pi pi-filter-slash contacts-page__empty-icon" />
+          <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.noResults') }}</p>
+          <Button
+            severity="secondary"
+            :label="t('contacts.page.empty.resetFilters')"
+            @click="resetFilter"
+          />
+        </div>
+
+        <!-- Empty: duplicates not found -->
+        <div
+          v-else-if="!loading && items.length === 0 && activeView === 'duplicates'"
+          class="contacts-page__empty"
+        >
+          <i class="pi pi-check-circle contacts-page__empty-icon contacts-page__empty-icon--success" />
+          <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.duplicates') }}</p>
+        </div>
+
+        <!-- DataTable -->
+        <div v-else class="contacts-page__table-wrap">
+          <DataTable
+            v-model:selection="selectedRows"
+            :value="items"
+            :loading="loading"
+            :row-class="rowClass"
+            data-key="id"
+            :selection-mode="bulk.bulkMode.value ? 'multiple' : undefined"
+            scroll-height="flex"
+            scrollable
+            :rows="perPage"
+            class="contacts-page__table"
+            @row-click="onRowClick"
+          >
+            <!-- Bulk checkbox column -->
             <Column
-              v-if="col.field === 'id'"
-              field="id"
-              :header="col.header"
-              :style="{ width: `${col.width ?? 60}px` }"
-              :sortable="col.sortable"
+              v-if="bulk.bulkMode.value"
+              selection-mode="multiple"
+              style="width: 48px; flex-shrink: 0"
             />
 
-            <!-- Name / full_name (frozen) -->
-            <Column
-              v-else-if="col.field === 'full_name'"
-              field="full_name"
-              :header="col.header"
-              :frozen="col.frozen"
-              :sortable="col.sortable"
-              style="min-width: 200px"
-            >
-              <template #body="{ data }">
-                <RouterLink
-                  :to="`/contacts/${data.id}`"
-                  class="contacts-page__name-link"
-                  @click.stop
-                >
-                  <i class="pi pi-user contacts-page__name-icon" />
-                  {{ (data as Contact).full_name }}
-                </RouterLink>
-              </template>
-            </Column>
+            <!-- Render visible columns dynamically -->
+            <template v-for="col in visibleColumnDefs" :key="col.field">
+              <!-- Company name -->
+              <Column
+                v-if="col.field === 'name'"
+                field="name"
+                :header="col.header"
+                :sortable="col.sortable"
+                style="min-width: 200px"
+              >
+                <template #body="{ data }">
+                  <div class="contacts-page__name-cell">
+                    <CrmAvatar
+                      :name="(data as Company).name"
+                      :size="32"
+                      square
+                    />
+                    <RouterLink
+                      :to="`/companies/${data.id}`"
+                      class="contacts-page__name-link"
+                      @click.stop
+                    >
+                      {{ (data as Company).name }}
+                    </RouterLink>
+                  </div>
+                </template>
+              </Column>
 
-            <!-- Company name (frozen) -->
-            <Column
-              v-else-if="col.field === 'name'"
-              field="name"
-              :header="col.header"
-              :frozen="col.frozen"
-              :sortable="col.sortable"
-              style="min-width: 200px"
-            >
-              <template #body="{ data }">
-                <RouterLink
-                  :to="`/companies/${data.id}`"
-                  class="contacts-page__name-link"
-                  @click.stop
-                >
-                  <i class="pi pi-building contacts-page__name-icon" />
-                  {{ (data as Company).name }}
-                </RouterLink>
-              </template>
-            </Column>
+              <!-- Contact full_name (2-line: name + position) -->
+              <Column
+                v-else-if="col.field === 'full_name'"
+                field="full_name"
+                :header="col.header"
+                :sortable="col.sortable"
+                style="min-width: 200px"
+              >
+                <template #body="{ data }">
+                  <div class="contacts-page__name-cell">
+                    <CrmAvatar
+                      :name="(data as Contact).full_name"
+                      :size="32"
+                      :square="false"
+                    />
+                    <div class="contacts-page__name-cell-text">
+                      <RouterLink
+                        :to="`/contacts/${data.id}`"
+                        class="contacts-page__name-link"
+                        @click.stop
+                      >
+                        {{ (data as Contact).full_name }}
+                      </RouterLink>
+                      <span
+                        v-if="(data as Contact).position"
+                        class="contacts-page__name-position"
+                      >{{ (data as Contact).position }}</span>
+                    </div>
+                  </div>
+                </template>
+              </Column>
 
-            <!-- Engagement tier dot -->
-            <Column
-              v-else-if="col.field === 'engagement_tier'"
-              field="engagement_tier"
-              :header="col.header"
-              :style="{ width: '80px' }"
-            >
-              <template #body="{ data }">
-                <EngagementChip
-                  v-if="(data as ContactExtended).engagement_tier"
-                  :tier="(data as ContactExtended).engagement_tier!"
-                  :last-activity-at="(data as ContactExtended).last_activity_at"
-                  dot-only
-                />
-                <span v-else class="contacts-page__na">—</span>
-              </template>
-            </Column>
-
-            <!-- Position (contact) -->
-            <Column
-              v-else-if="col.field === 'position'"
-              field="position"
-              :header="col.header"
-              :sortable="col.sortable"
-            >
-              <template #body="{ data }">
-                {{ (data as Contact).position || '—' }}
-              </template>
-            </Column>
-
-            <!-- Company (contact → company link) -->
-            <Column
-              v-else-if="col.field === 'company'"
-              :header="col.header"
-            >
-              <template #body="{ data }">
-                <span v-if="getPrimaryCompanyLink(data as Contact)">
-                  <RouterLink
-                    :to="`/companies/${getPrimaryCompanyLink(data as Contact)!.company_id}`"
-                    class="contacts-page__company-link"
-                    @click.stop
+              <!-- Engagement tier — dot + text -->
+              <Column
+                v-else-if="col.field === 'engagement_tier'"
+                field="engagement_tier"
+                :header="col.header"
+              >
+                <template #body="{ data }">
+                  <span
+                    v-if="(data as ContactExtended).engagement_tier"
+                    class="contacts-page__engagement"
+                    :class="`contacts-page__engagement--${(data as ContactExtended).engagement_tier}`"
                   >
-                    {{ getPrimaryCompanyLink(data as Contact)?.company?.name ?? '—' }}
-                  </RouterLink>
-                </span>
-                <span v-else class="contacts-page__na">—</span>
-              </template>
-            </Column>
-
-            <!-- Last activity (last_activity_at) -->
-            <Column
-              v-else-if="col.field === 'last_activity_at'"
-              field="last_activity_at"
-              :header="col.header"
-              :sortable="col.sortable"
-            >
-              <template #body="{ data }">
-                <span
-                  v-if="(data as ContactExtended).last_activity_at"
-                  v-tooltip="(data as ContactExtended).last_activity_at"
-                  class="contacts-page__date"
-                >
-                  {{ formatDate((data as ContactExtended).last_activity_at) }}
-                </span>
-                <span v-else class="contacts-page__na">—</span>
-              </template>
-            </Column>
-
-            <!-- Open deals count -->
-            <Column
-              v-else-if="col.field === 'open_deals_count'"
-              :header="col.header"
-              :sortable="col.sortable"
-            >
-              <template #body="{ data }">
-                <span
-                  v-if="(data as Record<string, unknown>)['open_deals_count'] != null"
-                  class="contacts-page__deals-count"
-                >
-                  {{ (data as Record<string, unknown>)['open_deals_count'] }}
-                </span>
-                <span v-else class="contacts-page__na">—</span>
-              </template>
-            </Column>
-
-            <!-- Owner (inline-editable) -->
-            <Column
-              v-else-if="col.field === 'owner'"
-              :header="col.header"
-            >
-              <template #body="{ data }">
-                <span
-                  class="contacts-page__owner-cell"
-                  @click.stop="openOwnerInlineEdit(data)"
-                >
-                  <span v-if="getOwner(data)">{{ getOwner(data)!.full_name }}</span>
+                    <span class="contacts-page__engagement-dot" />
+                    <span class="contacts-page__engagement-text">
+                      {{ engagementLabel((data as ContactExtended).engagement_tier!) }}
+                    </span>
+                  </span>
                   <span v-else class="contacts-page__na">—</span>
-                  <i class="pi pi-pencil contacts-page__inline-edit-icon" />
-                </span>
-              </template>
-            </Column>
+                </template>
+              </Column>
 
-            <!-- Tags (inline-editable) -->
-            <Column
-              v-else-if="col.field === 'tags'"
-              :header="col.header"
-            >
-              <template #body="{ data }">
-                <span class="contacts-page__tags">
+              <!-- Position (contact) -->
+              <Column
+                v-else-if="col.field === 'position'"
+                field="position"
+                :header="col.header"
+                :sortable="col.sortable"
+              >
+                <template #body="{ data }">
+                  {{ (data as Contact).position || '—' }}
+                </template>
+              </Column>
+
+              <!-- Phone (contact) -->
+              <Column
+                v-else-if="col.field === 'phone'"
+                :header="col.header"
+              >
+                <template #body="{ data }">
+                  <span v-if="(data as Contact).phone" class="contacts-page__na">
+                    {{ (data as Contact).phone }}
+                  </span>
+                  <span v-else class="contacts-page__na">—</span>
+                </template>
+              </Column>
+
+              <!-- Company (contact → company link) -->
+              <Column
+                v-else-if="col.field === 'company'"
+                :header="col.header"
+              >
+                <template #body="{ data }">
+                  <span v-if="getPrimaryCompanyLink(data as Contact)">
+                    <RouterLink
+                      :to="`/companies/${getPrimaryCompanyLink(data as Contact)!.company_id}`"
+                      class="contacts-page__company-link"
+                      @click.stop
+                    >
+                      {{ getPrimaryCompanyLink(data as Contact)?.company?.name ?? '—' }}
+                    </RouterLink>
+                  </span>
+                  <span v-else class="contacts-page__na">—</span>
+                </template>
+              </Column>
+
+              <!-- Last activity (with freshness color) -->
+              <Column
+                v-else-if="col.field === 'last_activity_at'"
+                field="last_activity_at"
+                :header="col.header"
+                :sortable="col.sortable"
+              >
+                <template #body="{ data }">
+                  <span
+                    v-if="(data as ContactExtended).last_activity_at"
+                    v-tooltip="(data as ContactExtended).last_activity_at"
+                    :style="{
+                      color: touchColor((data as ContactExtended).last_activity_at),
+                      fontWeight: touchFreshness((data as ContactExtended).last_activity_at) !== 'n' ? 600 : 400,
+                    }"
+                  >
+                    {{ formatDate((data as ContactExtended).last_activity_at) }}
+                  </span>
+                  <span v-else class="contacts-page__na">—</span>
+                </template>
+              </Column>
+
+              <!-- Open deals count — circle badge -->
+              <Column
+                v-else-if="col.field === 'open_deals_count'"
+                :header="col.header"
+                :sortable="col.sortable"
+                header-style="text-align: center"
+                body-style="text-align: center"
+              >
+                <template #body="{ data }">
+                  <span
+                    v-if="(data as Record<string, unknown>)['open_deals_count']"
+                    class="contacts-page__deals-badge"
+                  >
+                    {{ (data as Record<string, unknown>)['open_deals_count'] }}
+                  </span>
+                  <span v-else class="contacts-page__na">—</span>
+                </template>
+              </Column>
+
+              <!-- Category code — centered -->
+              <Column
+                v-else-if="col.field === 'category_code'"
+                :header="col.header"
+                header-style="text-align: center"
+                body-style="text-align: center"
+              >
+                <template #body="{ data }">
                   <Tag
-                    v-for="tag in (data.tags ?? []).slice(0, 2)"
-                    :key="tag"
-                    :value="tag"
-                    severity="secondary"
+                    v-if="(data as Company).category_code"
+                    :value="(data as Company).category_code!"
+                    :severity="categorySeverity((data as Company).category_code)"
                     size="small"
                   />
-                  <span
-                    v-if="(data.tags ?? []).length > 2"
-                    class="contacts-page__tags-more"
-                  >+{{ data.tags.length - 2 }}</span>
-                </span>
-              </template>
-            </Column>
+                  <span v-else class="contacts-page__na">—</span>
+                </template>
+              </Column>
 
-            <!-- Company type -->
-            <Column
-              v-else-if="col.field === 'company_type'"
-              :header="col.header"
-            >
-              <template #body="{ data }">
-                {{ (data as Company).company_type?.name ?? '—' }}
-              </template>
-            </Column>
+              <!-- Country code -->
+              <Column
+                v-else-if="col.field === 'country_code'"
+                field="country_code"
+                :header="col.header"
+                :sortable="col.sortable"
+              >
+                <template #body="{ data }">
+                  <span class="contacts-page__na">
+                    {{ directoriesStore.getCountryName((data as Company).country_code) || '—' }}
+                  </span>
+                </template>
+              </Column>
 
-            <!-- Category code -->
-            <Column
-              v-else-if="col.field === 'category_code'"
-              :header="col.header"
-              style="width: 90px"
-            >
-              <template #body="{ data }">
-                <Tag
-                  v-if="(data as Company).category_code"
-                  :value="(data as Company).category_code!"
-                  :severity="categorySeverity((data as Company).category_code)"
-                  size="small"
-                />
-                <span v-else class="contacts-page__na">—</span>
-              </template>
-            </Column>
+              <!-- Owner / Author — avatar + name -->
+              <Column
+                v-else-if="col.field === 'owner'"
+                :header="col.header"
+              >
+                <template #body="{ data }">
+                  <div v-if="getOwner(data)" class="contacts-page__owner-cell">
+                    <CrmAvatar
+                      :name="getOwner(data)!.full_name"
+                      :size="22"
+                      :square="false"
+                    />
+                    <span class="contacts-page__owner-name">{{ getOwner(data)!.full_name }}</span>
+                  </div>
+                  <span v-else class="contacts-page__na">—</span>
+                </template>
+              </Column>
 
-            <!-- Country code -->
-            <Column
-              v-else-if="col.field === 'country_code'"
-              field="country_code"
-              :header="col.header"
-              :sortable="col.sortable"
-            >
-              <template #body="{ data }">
-                {{ directoriesStore.getCountryName((data as Company).country_code) || '—' }}
-              </template>
-            </Column>
+              <!-- Tags -->
+              <Column
+                v-else-if="col.field === 'tags'"
+                :header="col.header"
+              >
+                <template #body="{ data }">
+                  <span class="contacts-page__tags">
+                    <Tag
+                      v-for="tag in (data.tags ?? []).slice(0, 2)"
+                      :key="tag"
+                      :value="tag"
+                      severity="secondary"
+                      size="small"
+                    />
+                    <span
+                      v-if="(data.tags ?? []).length > 2"
+                      class="contacts-page__tags-more"
+                    >+{{ data.tags.length - 2 }}</span>
+                    <span v-if="!(data.tags ?? []).length" class="contacts-page__na">—</span>
+                  </span>
+                </template>
+              </Column>
 
-            <!-- Employees count (company) -->
-            <Column
-              v-else-if="col.field === 'employees_count'"
-              :header="col.header"
-              :sortable="col.sortable"
-            >
-              <template #body="{ data }">
-                {{ (data as Record<string, unknown>)['employees_count'] ?? '—' }}
-              </template>
-            </Column>
+              <!-- Company type -->
+              <Column
+                v-else-if="col.field === 'company_type'"
+                :header="col.header"
+              >
+                <template #body="{ data }">
+                  {{ (data as Company).company_type?.name ?? '—' }}
+                </template>
+              </Column>
 
-            <!-- Fallback for unknown column -->
-            <Column
-              v-else
-              :field="col.field"
-              :header="col.header"
-              :sortable="col.sortable"
-            />
-          </template>
+              <!-- Employees count (company) -->
+              <Column
+                v-else-if="col.field === 'employees_count'"
+                :header="col.header"
+                :sortable="col.sortable"
+              >
+                <template #body="{ data }">
+                  {{ (data as Record<string, unknown>)['employees_count'] ?? '—' }}
+                </template>
+              </Column>
 
-          <!-- Row actions -->
-          <Column header="" style="width: 48px; flex-shrink: 0">
-            <template #body="{ data }">
-              <Button
-                icon="pi pi-ellipsis-v"
-                text
-                severity="secondary"
-                size="small"
-                @click.stop="onMenuClick($event, data)"
+              <!-- ID -->
+              <Column
+                v-else-if="col.field === 'id'"
+                field="id"
+                :header="col.header"
+                :style="{ width: `${col.width ?? 60}px` }"
+                :sortable="col.sortable"
               />
-              <Menu
-                :ref="(el) => setMenuRef(data.id, el)"
-                :model="getMenuItems(data)"
-                popup
+
+              <!-- Fallback -->
+              <Column
+                v-else
+                :field="col.field"
+                :header="col.header"
+                :sortable="col.sortable"
               />
             </template>
-          </Column>
-        </DataTable>
+          </DataTable>
 
-        <!-- Paginator -->
-        <Paginator
-          v-show="total > 0"
-          :rows="perPage"
-          :total-records="total"
-          :first="(page - 1) * perPage"
-          :rows-per-page-options="[25, 50, 100]"
-          class="contacts-page__paginator"
-          @page="onPaginatorChange"
-        />
+          <!-- Custom Paginator -->
+          <ContactsPaginator
+            v-show="total > 0"
+            :page="page"
+            :per-page="perPage"
+            :total="total"
+            @update:page="onPageChange"
+            @update:per-page="onPerPageChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -602,22 +621,6 @@
       @apply="view.setVisibleFields($event)"
     />
 
-    <!-- Inline edit overlay for owner -->
-    <Popover ref="ownerPopover">
-      <div class="contacts-page__inline-owner">
-        <Select
-          v-model="inlineEditOwnerId"
-          :options="usersCache"
-          option-label="full_name"
-          option-value="id"
-          filter
-          show-clear
-          style="width: 220px"
-          @update:model-value="submitOwnerInlineEdit"
-        />
-      </div>
-    </Popover>
-
     <Toast position="top-right" />
     <ConfirmDialog />
   </div>
@@ -635,26 +638,23 @@ import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Drawer from 'primevue/drawer'
-import Menu from 'primevue/menu'
-import Paginator from 'primevue/paginator'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Popover from 'primevue/popover'
 import Message from 'primevue/message'
 
 import MergeDialog from '@/components/crm/dedup/MergeDialog.vue'
-import EngagementChip from '@/components/crm/entity/EngagementChip.vue'
+import CrmAvatar from '@/components/ui/CrmAvatar.vue'
 
 import { useDirectoriesStore } from '@/stores/directories'
 import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
+import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useContactsPageData } from './composables/useContactsPageData'
 import { useContactsPageActions } from './composables/useContactsPageActions'
 import { useContactsView } from './composables/useContactsView'
 import { useContactsBulk } from './composables/useContactsBulk'
 import { useSavedViews } from './composables/useSavedViews'
 import { contactsApi } from '@/api/crm/contacts'
-import { companiesApi } from '@/api/crm/companies'
 
 import ContactsToolbar from './components/ContactsToolbar.vue'
 import ContactsBulkToolbar from './components/ContactsBulkToolbar.vue'
@@ -663,10 +663,34 @@ import ContactsActiveFiltersBar from './components/ContactsActiveFiltersBar.vue'
 import ContactsColumnChooser from './components/ContactsColumnChooser.vue'
 import ContactsAssignOwnerDialog from './components/ContactsAssignOwnerDialog.vue'
 import ContactsAddTagDialog from './components/ContactsAddTagDialog.vue'
+import ContactsKpiBar from './components/ContactsKpiBar.vue'
+import ContactsPaginator from './components/ContactsPaginator.vue'
+import type { KpiStats } from './components/ContactsKpiBar.vue'
+import type { ContactsKpiResponse } from '@/api/crm/contacts'
 
 import type { Contact, Company, ContactExtended, CategoryCode } from '@/entities/crm'
 import type { EntityType } from './composables/useContactsPageData'
 import type { SavedViewState } from './composables/useSavedViews'
+
+type TouchFreshness = 'g' | 'a' | 'r' | 'n'
+
+function touchFreshness(iso: string | null): TouchFreshness {
+  if (!iso) return 'n'
+  const days = (Date.now() - new Date(iso).getTime()) / 86_400_000
+  if (days <= 3) return 'g'
+  if (days <= 14) return 'a'
+  return 'r'
+}
+
+function touchColor(iso: string | null): string {
+  const f = touchFreshness(iso)
+  switch (f) {
+    case 'g': return 'var(--app-green-900)'
+    case 'a': return 'var(--app-orange-900)'
+    case 'r': return 'var(--app-red-700)'
+    default:  return 'var(--p-surface-400)'
+  }
+}
 
 const { t } = useI18n()
 const route = useRoute()
@@ -674,7 +698,7 @@ const directoriesStore = useDirectoriesStore()
 const uiTriggers = useUiTriggersStore()
 const { users: usersCache, load: loadUsers } = useUsersCache()
 
-const initialType: EntityType = route.name === 'Companies' ? 'company' : 'contact'
+const initialType: EntityType = route.name === 'Companies' ? 'company' : 'company'
 
 // ── Data layer ────────────────────────────────────────────────────────────────
 
@@ -699,6 +723,28 @@ const {
   onPageChange,
   ensureDirectories,
 } = useContactsPageData({ initialType })
+
+// ── KPI Bar ───────────────────────────────────────────────────────────────────
+
+const emptyKpi = (): ContactsKpiResponse => ({
+  data: { entity: 'company', total: 0 },
+})
+const kpiResource = useAsyncResource<ContactsKpiResponse>(emptyKpi)
+
+const kpiLoading = computed(() => kpiResource.loading.value)
+const kpiStats = computed<KpiStats>(() => kpiResource.data.value.data)
+
+async function loadKpi() {
+  try {
+    await kpiResource.run(() => contactsApi.kpi(entityType.value))
+  } catch {
+    // non-critical — empty stats are fine
+  }
+}
+
+watch(entityType, () => {
+  void loadKpi()
+})
 
 // ── View (columns, density) ───────────────────────────────────────────────────
 
@@ -731,12 +777,6 @@ const activeView = ref<string>('default')
 
 function onSetView(viewId: string) {
   activeView.value = viewId
-  if (viewId === 'duplicates') {
-    overlayFilters.value.only_duplicates = true
-    applyFilter()
-    return
-  }
-  overlayFilters.value.only_duplicates = false
   const state = savedViews.getViewState(viewId)
   if (state) {
     view.setDensity(state.density)
@@ -807,7 +847,6 @@ const {
   openDedup,
   submitQuickCreate,
   openCard,
-  confirmDelete,
 } = useContactsPageActions({ reload: load, entityType })
 
 const typeOptions = computed(() => [
@@ -818,7 +857,7 @@ const typeOptions = computed(() => [
 // ── Dedup hint on quick-create ─────────────────────────────────────────────
 
 const hasDuplicateHint = computed(
-  () => activeView.value === 'duplicates' || overlayFilters.value.only_duplicates,
+  () => activeView.value === 'duplicates',
 )
 
 // ── Merge (dedup segment) ─────────────────────────────────────────────────────
@@ -828,70 +867,15 @@ function onMergeClick() {
   openDedup()
 }
 
-// ── Inline edit — owner ───────────────────────────────────────────────────────
+// ── Paginator callbacks ───────────────────────────────────────────────────────
 
-const ownerPopover = ref<InstanceType<typeof Popover> | null>(null)
-const inlineEditOwnerId = ref<number | null>(null)
-const inlineEditItem = ref<Contact | Company | null>(null)
-const inlineEditLoading = ref(false)
-
-function openOwnerInlineEdit(data: Contact | Company) {
-  inlineEditItem.value = data
-  const owner = getOwner(data)
-  inlineEditOwnerId.value = owner?.id ?? null
-  ownerPopover.value?.show(
-    // Using a synthetic event positioned at center for now; in full impl
-    // this would need the click event forwarded from the cell
-    new MouseEvent('click'),
-  )
+function onPerPageChange(newPerPage: number) {
+  perPage.value = newPerPage
+  page.value = 1
+  void load()
 }
 
-async function submitOwnerInlineEdit(userId: number | null) {
-  if (!inlineEditItem.value) return
-  ownerPopover.value?.hide()
-  inlineEditLoading.value = true
-  try {
-    if (entityType.value === 'contact') {
-      await contactsApi.update(inlineEditItem.value.id, { owner_id: userId })
-    } else {
-      await companiesApi.update(inlineEditItem.value.id, { responsible_user_id: userId })
-    }
-    await load()
-  } catch {
-    // non-critical inline edit error — just reload
-    await load()
-  } finally {
-    inlineEditLoading.value = false
-    inlineEditItem.value = null
-  }
-}
-
-// ── Row menu ──────────────────────────────────────────────────────────────────
-
-const menuRefs = ref<Map<number, InstanceType<typeof Menu>>>(new Map())
-
-function setMenuRef(id: number, el: unknown) {
-  if (el) menuRefs.value.set(id, el as InstanceType<typeof Menu>)
-}
-
-function onMenuClick(event: Event, data: Contact | Company) {
-  menuRefs.value.get(data.id)?.toggle(event)
-}
-
-function getMenuItems(data: Contact | Company) {
-  return [
-    {
-      label: t('common.delete'),
-      icon: 'pi pi-trash',
-      command: () => {
-        confirmDelete(
-          data as (Contact | Company) & { full_name?: string; name?: string },
-          entityType.value,
-        )
-      },
-    },
-  ]
-}
+// ── Row click ─────────────────────────────────────────────────────────────────
 
 function onRowClick(event: { data: Contact | Company }) {
   if (bulk.bulkMode.value) {
@@ -908,12 +892,6 @@ function onSearch(query: string) {
   filter.value.search = query
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => applyFilter(), 300)
-}
-
-// ── Paginator ─────────────────────────────────────────────────────────────────
-
-function onPaginatorChange(event: { page: number }) {
-  onPageChange(event.page + 1)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -955,6 +933,15 @@ function categorySeverity(code: CategoryCode | null): 'danger' | 'warn' | 'succe
   }
 }
 
+function engagementLabel(tier: string): string {
+  switch (tier) {
+    case 'fresh': return t('crm.entity.engagement.fresh')
+    case 'cooling': return t('crm.entity.engagement.cooling')
+    case 'cold': return t('crm.entity.engagement.cold')
+    default: return tier
+  }
+}
+
 const availableTags = computed<string[]>(() => {
   const tags = new Set<string>()
   for (const item of items.value) {
@@ -984,6 +971,7 @@ onMounted(() => {
   ensureDirectories()
   void loadUsers()
   void load()
+  void loadKpi()
   void savedViews.load()
 })
 </script>
@@ -994,6 +982,21 @@ onMounted(() => {
   flex-direction: column;
   height: 100%;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+}
+
+.contacts-page__card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  overflow: hidden;
+
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-color: var(--p-surface-700);
+  }
 }
 
 .contacts-page__body {
@@ -1007,37 +1010,100 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 
 .contacts-page__table {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
+
+  // DataTable scroll wrapper must fill remaining space and scroll internally
+  :deep(.p-datatable-table-container) {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  // Override DataTable styles per spec
+  :deep(.p-datatable-thead > tr > th) {
+    padding: 10px 14px;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $surface-400;
+    border-bottom: 1px solid $surface-200;
+    white-space: nowrap;
+    background: $surface-card;
+
+    .app-dark & {
+      border-bottom-color: var(--p-surface-700);
+      color: var(--p-surface-500);
+      background: var(--p-surface-100);
+    }
+  }
+
+  :deep(.p-datatable-tbody > tr > td) {
+    padding: 10px 14px;
+    font-size: $font-size-sm;
+    border-bottom: 1px solid $surface-200;
+    white-space: nowrap;
+
+    .app-dark & {
+      border-bottom-color: var(--p-surface-700);
+    }
+  }
+
+  :deep(.p-datatable-tbody > tr:hover > td) {
+    background: $surface-50;
+
+    .app-dark & {
+      background: var(--p-surface-200);
+    }
+  }
+
+  // Remove striped rows
+  :deep(.p-datatable-tbody > tr.p-row-odd > td) {
+    background: transparent;
+  }
 }
 
-// Name links
-.contacts-page__name-link {
+// Name cell
+.contacts-page__name-cell {
   display: inline-flex;
   align-items: center;
   gap: $space-2;
-  color: var(--p-text-color);
+}
+
+.contacts-page__name-cell-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contacts-page__name-link {
+  color: $primary-900;
   text-decoration: none;
-  font-weight: $font-weight-medium;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-sm;
 
   &:hover {
-    color: $primary-color;
     text-decoration: underline;
   }
 }
 
-.contacts-page__name-icon {
+.contacts-page__name-position {
+  font-size: $font-size-2xs;
   color: $surface-400;
-  font-size: $font-size-sm;
-  flex-shrink: 0;
+  line-height: 1.3;
 }
 
 .contacts-page__company-link {
-  color: $primary-color;
+  color: $primary-900;
   text-decoration: none;
   font-size: $font-size-sm;
 
@@ -1051,48 +1117,81 @@ onMounted(() => {
   font-size: $font-size-sm;
 }
 
-.contacts-page__date {
-  font-size: $font-size-sm;
-  color: $surface-600;
+// Engagement — dot + text
+.contacts-page__engagement {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+}
 
-  :global(.app-dark) & {
-    color: var(--p-surface-300);
+.contacts-page__engagement-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-circle;
+  flex-shrink: 0;
+}
+
+.contacts-page__engagement-text {
+  font-size: $font-size-sm;
+}
+
+.contacts-page__engagement--fresh {
+  .contacts-page__engagement-dot {
+    background: $green-500;
+  }
+  .contacts-page__engagement-text {
+    color: $green-900;
   }
 }
 
-.contacts-page__deals-count {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: $primary-color;
+.contacts-page__engagement--cooling {
+  .contacts-page__engagement-dot {
+    background: $orange-500;
+  }
+  .contacts-page__engagement-text {
+    color: $orange-900;
+  }
 }
 
+.contacts-page__engagement--cold {
+  .contacts-page__engagement-dot {
+    background: $surface-300;
+  }
+  .contacts-page__engagement-text {
+    color: $surface-400;
+  }
+}
+
+// Deals badge — circle
+.contacts-page__deals-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  border-radius: $radius-badge;
+  background: $primary-100;
+  color: $primary-900;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  padding: 0 $space-1;
+  box-sizing: border-box;
+}
+
+// Owner cell
 .contacts-page__owner-cell {
   display: inline-flex;
   align-items: center;
   gap: $space-1;
-  cursor: pointer;
-  border-radius: $radius-sm;
-  padding: 2px $space-1;
-  transition: background 0.15s;
-
-  &:hover {
-    background: $surface-100;
-
-    .contacts-page__inline-edit-icon {
-      opacity: 1;
-    }
-  }
-
-  :global(.app-dark) & {
-    &:hover { background: var(--p-surface-700); }
-  }
 }
 
-.contacts-page__inline-edit-icon {
-  font-size: 10px;
-  color: $surface-400;
-  opacity: 0;
-  transition: opacity 0.15s;
+.contacts-page__owner-name {
+  font-size: $font-size-xs;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
 }
 
 .contacts-page__tags {
@@ -1112,8 +1211,8 @@ onMounted(() => {
 :deep(.contacts-page__row--selected td) {
   background: var(--p-primary-50) !important;
 
-  :global(.app-dark) & {
-    background: rgba(23, 39, 71, 0.2) !important;
+  .app-dark & {
+    background: rgba($primary-900, 0.2) !important;
   }
 }
 
@@ -1131,7 +1230,7 @@ onMounted(() => {
 }
 
 .contacts-page__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 
   &--success {
@@ -1145,18 +1244,8 @@ onMounted(() => {
   color: $surface-700;
   margin: 0;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-200);
-  }
-}
-
-// Paginator
-.contacts-page__paginator {
-  border-top: 1px solid $surface-200;
-  flex-shrink: 0;
-
-  :global(.app-dark) & {
-    border-top-color: var(--p-surface-700);
   }
 }
 
@@ -1204,7 +1293,7 @@ onMounted(() => {
 }
 
 .req {
-  color: var(--p-red-500, #ff5a44);
+  color: $red-500;
 }
 
 .contacts-page__drawer-footer {
@@ -1217,10 +1306,6 @@ onMounted(() => {
 
 .contacts-page__dedup-hint {
   margin-top: $space-2;
-}
-
-.contacts-page__inline-owner {
-  padding: $space-2;
 }
 
 .w-full {

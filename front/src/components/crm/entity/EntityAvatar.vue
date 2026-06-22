@@ -1,8 +1,8 @@
 <template>
   <div
     class="entity-avatar"
-    :class="[`entity-avatar--${size}`]"
-    :style="{ background: bgColor }"
+    :class="[`entity-avatar--${size}`, { 'entity-avatar--on-brand': onBrand }]"
+    :style="onBrand ? undefined : { background: bgColor }"
     :aria-label="initials"
   >
     <span class="entity-avatar__initials">{{ displayInitials }}</span>
@@ -28,13 +28,19 @@ const props = withDefaults(
     entityId: number
     initials: string
     size?: 'sm' | 'md' | 'lg'
+    /** When true, renders brand-header variant: rgba(255,255,255,0.14) bg + white initials.
+     *  Used on navy EntityInfoHeader (baked-in brand invariant — rgba allowed on navy panel). */
+    onBrand?: boolean
   }>(),
   {
     size: 'md',
+    onBrand: false,
   },
 )
 
-const bgColor = computed(() => AVATAR_PALETTE[props.entityId % AVATAR_PALETTE.length])
+const bgColor = computed(() =>
+  props.onBrand ? undefined : AVATAR_PALETTE[props.entityId % AVATAR_PALETTE.length],
+)
 
 const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
 </script>
@@ -44,8 +50,9 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: $radius-circle;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  border: 2px solid rgba(255, 255, 255, 0.25); // brand invariant: avatar ring on navy panel
   flex-shrink: 0;
 
   &--sm {
@@ -53,7 +60,7 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
     height: 32px;
 
     .entity-avatar__initials {
-      font-size: 12px;
+      font-size: $font-size-xs;
     }
   }
 
@@ -62,7 +69,7 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
     height: 56px;
 
     .entity-avatar__initials {
-      font-size: 18px;
+      font-size: $font-size-lg;
     }
   }
 
@@ -71,17 +78,30 @@ const displayInitials = computed(() => props.initials.slice(0, 3).toUpperCase())
     height: 72px;
 
     .entity-avatar__initials {
-      font-size: 22px;
+      font-size: $font-size-icon-md;
     }
   }
 }
 
 .entity-avatar__initials {
-  color: #fff;
-  font-weight: 600;
+  color: $surface-0;
+  font-weight: $font-weight-semibold;
   line-height: 1;
   letter-spacing: 0.02em;
-  font-family: Inter, 'SF UI Display', system-ui, sans-serif;
+  font-family: $font-family-sans;
   user-select: none;
+}
+
+// ── Brand-header variant (navy panel) ─────────────────────────────────────────
+// rgba(255,255,255,0.14) is a brand invariant for semi-transparent white on navy bg.
+// stylelint-disable-next-line scale-unlimited/declaration-strict-value
+.entity-avatar--on-brand {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: rgba(255, 255, 255, 0.14); // brand invariant: avatar on navy panel
+
+  .entity-avatar__initials {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    color: #fff; // brand invariant: white initials on navy panel
+  }
 }
 </style>

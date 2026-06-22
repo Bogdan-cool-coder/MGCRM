@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Catalog\Services;
 
+use App\Domain\Catalog\Enums\BillingUnit;
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Catalog\Models\ProductPlan;
 use App\Domain\Catalog\Models\ProductPrice;
@@ -11,6 +12,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * ProductService — all business logic for catalog products, plans and prices.
@@ -97,9 +99,40 @@ class ProductService
 
     // ---- Plans ----
 
-    /** @param array<string, mixed> $data */
+    /**
+     * Returns the perpetual-licensing plan for a product, or null if none exists.
+     * Used by sales-specialist DealProductService::applyLicenseMode().
+     *
+     * Catalog contract for sales:
+     *   $plan = $productService->getPerpetualPlan($product);
+     *   $price = $productService->getPriceSnapshot($product->id, $plan->id, $currencyCode);
+     */
+    public function getPerpetualPlan(Product|int $product): ?ProductPlan
+    {
+        $productId = $product instanceof Product ? $product->id : $product;
+
+        return ProductPlan::query()
+            ->where('product_id', $productId)
+            ->where('unit', BillingUnit::Perpetual->value)
+            ->first();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     *
+     * @throws HttpException 422 when a second perpetual plan is attempted
+     */
     public function createPlan(Product $product, array $data): ProductPlan
     {
+        // Guard: one perpetual plan per product.
+        $unit = isset($data['unit']) ? BillingUnit::tryFrom((string) $data['unit']) : null;
+        if ($unit === BillingUnit::Perpetual) {
+            $existing = $this->getPerpetualPlan($product);
+            if ($existing !== null) {
+                abort(422, 'Product already has a perpetual plan (id: '.$existing->id.'). Only one perpetual plan per product is allowed.');
+            }
+        }
+
         return $product->plans()->create($data);
     }
 

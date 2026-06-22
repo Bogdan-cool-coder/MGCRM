@@ -420,7 +420,7 @@ function onActivityUpdated(activity: ActivityDto) {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   border: 2px solid var(--p-card-background);
   display: flex;
   align-items: center;
@@ -431,27 +431,27 @@ function onActivityUpdated(activity: ActivityDto) {
 
   &--primary {
     background: var(--p-primary-400);
-    color: #fff;
+    color: $sidebar-text-active;
   }
 
   &--green {
     background: var(--p-green-500);
-    color: #fff;
+    color: $sidebar-text-active;
   }
 
   &--red {
     background: var(--p-red-500);
-    color: #fff;
+    color: $sidebar-text-active;
   }
 
   &--surface {
     background: var(--p-surface-400);
-    color: #fff;
+    color: $sidebar-text-active;
   }
 }
 
 .feed-item__dot-icon {
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 .feed-item__card {
@@ -563,7 +563,7 @@ function onActivityUpdated(activity: ActivityDto) {
 }
 
 .feed-item__field-arrow {
-  font-size: 10px;
+  font-size: $font-size-3xs;
   color: $surface-400;
 }
 
@@ -593,7 +593,7 @@ function onActivityUpdated(activity: ActivityDto) {
   }
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs;
   }
 }
 
@@ -674,7 +674,7 @@ function onActivityUpdated(activity: ActivityDto) {
 }
 
 .feed-item__responsible-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs;
   margin-right: 2px;
 }
 

@@ -363,7 +363,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 }
 
 .orbita-action-btn__label {
-  font-size: 13px;
+  font-size: $font-size-xs; // snap from 13px
   font-weight: $font-weight-medium;
   white-space: nowrap;
   pointer-events: none;
@@ -412,7 +412,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 }
 
 .notifications-btn__icon {
-  font-size: 1rem;
+  font-size: $font-size-md;
   color: $surface-700;
 }
 
@@ -423,10 +423,10 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   min-width: 16px;
   height: 16px;
   padding: 0 3px;
-  border-radius: 8px;
-  background: #FF5A44;
-  color: #fff;
-  font-size: 9px;
+  border-radius: $radius-badge; // snap from 8px
+  background: $color-danger;
+  color: $surface-0;
+  font-size: $font-size-3xs; // snap from 9px
   font-weight: 700;
   line-height: 16px;
   text-align: center;
@@ -460,13 +460,13 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 }
 
 .nf__title {
-  font-size: 14px;
+  font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   color: var(--p-text-color);
 }
 
 .nf__mark-all-btn {
-  font-size: 12px !important;
+  font-size: $font-size-xs !important;
   padding: 0 !important;
   color: $primary !important;
 }
@@ -507,7 +507,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 }
 
 .nf__empty-icon {
-  font-size: 32px;
+  font-size: $font-size-icon-lg;
   opacity: 0.4;
 
   &--error {
@@ -530,7 +530,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: $radius-badge; // snap from 10px → 9px
   background: $surface-100;
   font-size: $font-size-xs;
   color: $surface-700;
@@ -562,7 +562,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
     }
     &::-webkit-scrollbar-thumb {
       background: $surface-300;
-      border-radius: 2px;
+      border-radius: $radius-2xs;
     }
   }
 }
@@ -582,7 +582,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 }
 
 .nf__section-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs;
 }
 
 // ─── Notification list ─────────────────────────────────────────────────────
@@ -622,7 +622,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
       width: 3px;
       height: 60%;
       background: $primary;
-      border-radius: 0 2px 2px 0;
+      border-radius: 0 $radius-2xs $radius-2xs 0;
     }
   }
 }
@@ -673,7 +673,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 .nf__item-action-btn {
   flex-shrink: 0;
   align-self: center;
-  font-size: 11px !important;
+  font-size: $font-size-2xs !important;
 }
 
 // ─── Load more ─────────────────────────────────────────────────────────────
@@ -712,7 +712,8 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 
 @media (forced-colors: active) {
   .orbita-action-btn__label {
-    color: ButtonText;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    color: ButtonText; // a11y forced-colors system keyword
   }
 }
 </style>

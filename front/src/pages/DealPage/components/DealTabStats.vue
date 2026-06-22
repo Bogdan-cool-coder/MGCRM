@@ -116,7 +116,7 @@ const lastActivityLabel = computed((): string => {
   }
 
   &__value {
-    font-size: 2rem;
+    font-size: $font-size-icon-lg;
     font-weight: $font-weight-bold;
     color: var(--p-text-color);
     line-height: 1.1;

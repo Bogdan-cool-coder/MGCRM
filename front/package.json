@@ -11,7 +11,9 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --ext .ts,.vue",
     "lint:fix": "eslint . --ext .ts,.vue --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "lint:ds": "stylelint --config .stylelintrc.vue.json \"src/**/*.vue\" && stylelint --config .stylelintrc.scss.json \"src/**/*.scss\"",
+    "lint:ds:react": "oxlint --config ../.claude/skills/macroglobal-design/_adherence.oxlintrc.json --ignore-pattern '**/theme/**' src"
   },
   "dependencies": {
     "@primevue/themes": "^4.5.4",
@@ -49,8 +51,13 @@
     "eslint-plugin-vue": "^10.8.0",
     "jiti": "^2.7.0",
     "npm-run-all2": "^8.0.4",
+    "oxlint": "^1.70.0",
+    "postcss-html": "^1.8.1",
     "prettier": "^3.8.1",
     "sass": "^1.97.3",
+    "stylelint": "^17.13.0",
+    "stylelint-config-standard-scss": "^17.0.0",
+    "stylelint-declaration-strict-value": "^1.11.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vue-eslint-parser": "^10.4.0",

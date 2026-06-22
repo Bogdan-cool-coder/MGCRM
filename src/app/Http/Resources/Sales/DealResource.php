@@ -23,6 +23,11 @@ class DealResource extends JsonResource
             'currency' => $this->currency,
             // «Вечная лицензия» / «Коробка / on-premise» (price logic in N4).
             'perpetual_license' => (bool) $this->perpetual_license,
+            // N5 client-lifecycle flags. is_primary_deal = the first won deal that
+            // made the company a unique client. is_upsell is DERIVED, never stored
+            // (won on an already-converted company); a non-won deal is neither.
+            'is_primary_deal' => (bool) $this->is_primary_deal,
+            'is_upsell' => $this->status() === 'won' && ! $this->is_primary_deal,
             'status' => $this->status(),
 
             'pipeline_id' => $this->pipeline_id,
@@ -39,6 +44,26 @@ class DealResource extends JsonResource
                 'id' => $this->company->id,
                 'name' => $this->company->name,
             ]),
+
+            // ---- Deals-list columns (SalesFunnel-spec §5.2). Read-only, derived
+            // from the loaded company / batched activity stamp — never $fillable.
+
+            // B1 «Страна» — the deal's company country (ISO-2, e.g. "kz"). Read off
+            // the eager-loaded company (list() selects country_code); null when the
+            // company relation is not loaded or the company has no country.
+            'country' => $this->whenLoaded('company', fn (): ?string => $this->company?->country_code),
+
+            // B3 «Категории L/M/S» — the raw company category code (L/M/S1/S2). The
+            // frontend aggregates S = S1 + S2 for the KPI chip; the backend stays
+            // un-opinionated and ships the raw code. CategoryCode enum → its string
+            // value. null when uncategorised or the relation is not loaded.
+            'category' => $this->whenLoaded('company', fn (): ?string => $this->company?->category_code?->value),
+
+            // B2 «Посл. контакт» — ISO-8601 date of the last COMPLETED client-facing
+            // event on the deal (call/follow-up/meeting/presentation). Batched onto
+            // the model by DealService::list() (last_contact_at_payload); null on
+            // single-deal renders (show/store/update) where it is not stamped.
+            'last_contact_at' => $this->resource->getAttribute('last_contact_at_payload'),
 
             'owner_user_id' => $this->owner_user_id,
             'owner' => $this->whenLoaded('owner', fn () => [

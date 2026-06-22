@@ -150,7 +150,7 @@ function execute(action: QuickActionDef): void {
 }
 
 .orbita-action-btn__label {
-  font-size: 13px;
+  font-size: $font-size-xs; // snap from 13px
   font-weight: $font-weight-medium;
   white-space: nowrap;
   pointer-events: none;
@@ -197,7 +197,7 @@ function execute(action: QuickActionDef): void {
   }
 
   &__icon {
-    font-size: 1rem;
+    font-size: $font-size-md;
     color: $surface-700;
     line-height: 1;
   }
@@ -231,7 +231,8 @@ function execute(action: QuickActionDef): void {
 
 @media (forced-colors: active) {
   .orbita-action-btn__label {
-    color: ButtonText;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    color: ButtonText; // a11y forced-colors system keyword
   }
 }
 </style>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Contracts\Services;
 
 use App\Domain\Contracts\Enums\ContractStatus;
+use App\Domain\Contracts\Enums\DocumentKind;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
@@ -73,10 +74,14 @@ class ContractGenerationService
             ])->status(422);
         }
 
-        // 1. Find master_skeleton template and validate docx version exists.
-        $masterTemplate = Template::where('code', 'master_skeleton')
-            ->with('currentVersion')
-            ->firstOrFail();
+        // 1. Resolve template:
+        //    - If Document carries a pinned template_version FK, use that version's template.
+        //    - Otherwise fall back to master_skeleton (default for kind=contract).
+        //    This lets termination_agreement docs use a dedicated template without
+        //    touching the master_skeleton flow.
+        $resolvedTemplate = $this->resolveTemplate($doc);
+
+        $masterTemplate = $resolvedTemplate;
 
         // This throws RuntimeException with a clear message if no docx uploaded.
         try {
@@ -185,6 +190,46 @@ class ContractGenerationService
     }
 
     // ---- Private helpers ----
+
+    /**
+     * Resolve the Template to use for generation.
+     *
+     * Priority:
+     *  1. Template code derived from Document.kind:
+     *     - termination_agreement → Template(code='termination_agreement')
+     *     - contract (default)    → Template(code='master_skeleton')
+     *  2. Explicit template_code override (future use): if Document.context['template_code']
+     *     is set, that code takes precedence over the kind-based resolution.
+     *
+     * Falls back to master_skeleton when the kind-specific template is not found
+     * so existing contract generation keeps working without disruption.
+     */
+    private function resolveTemplate(Document $doc): Template
+    {
+        // Explicit override stored in context (future use, no breaking change).
+        $explicitCode = (string) ($doc->context['template_code'] ?? '');
+        if ($explicitCode !== '') {
+            $t = Template::where('code', $explicitCode)->with('currentVersion')->first();
+            if ($t !== null) {
+                return $t;
+            }
+        }
+
+        // Kind-based resolution.
+        $kindCode = match ($doc->kind) {
+            DocumentKind::TerminationAgreement => 'termination_agreement',
+            default => 'master_skeleton',
+        };
+
+        $t = Template::where('code', $kindCode)->with('currentVersion')->first();
+
+        // Fallback: always return master_skeleton so contract generation never breaks.
+        if ($t === null && $kindCode !== 'master_skeleton') {
+            $t = Template::where('code', 'master_skeleton')->with('currentVersion')->firstOrFail();
+        }
+
+        return $t ?? Template::where('code', 'master_skeleton')->with('currentVersion')->firstOrFail();
+    }
 
     /**
      * Clone and fill the items table rows (${item_name}, etc.).

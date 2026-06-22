@@ -25,9 +25,14 @@ class DatabaseSeeder extends Seeder
     private const BASELINE_SEEDERS = [
         RolePermissionSeeder::class,
         AdminSeeder::class,
+        // Org: default department directory (feeds the add-user form Select).
+        DepartmentSeeder::class,
         // Catalog (products + prices).
         ProductGroupSeeder::class,
         ProductSeeder::class,
+        // CRM directories: acquisition channels, disconnect reasons.
+        AcquisitionChannelSeeder::class,
+        DisconnectReasonSeeder::class,
         // Sales config: pipeline + stages, lost reasons.
         PipelineSeeder::class,
         // SalesPulse: the two AMO mirror funnels (MACRO Global / MACRO AI Global)
@@ -69,6 +74,14 @@ class DatabaseSeeder extends Seeder
         DemoDocumentsSeeder::class,
         // Onboarding: demo course, assignments, quiz (content + progress).
         OnboardingSeeder::class,
+        // Migration: AMO fallback import service account (DEC-C). Service user,
+        // not config — hence SAMPLE, not baseline. Needs the spatie roles
+        // (RolePermissionSeeder, baseline) to exist first.
+        AmoImportUserSeeder::class,
+        // Migration: AMO "Продукт" enum options (94) pre-loaded as skip rows into
+        // the amo_product_mappings curation table. SAMPLE (curation data, not
+        // config) — human maps each to a catalog product later.
+        AmoProductMappingSeeder::class,
     ];
 
     /**

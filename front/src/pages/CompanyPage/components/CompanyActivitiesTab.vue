@@ -312,7 +312,7 @@ function onActivityUpdated(activity: ActivityDto) {
 }
 
 .company-activities__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-400;
 }
 
@@ -334,10 +334,6 @@ function onActivityUpdated(activity: ActivityDto) {
     bottom: 8px;
     width: 2px;
     background: $surface-200;
-
-    :global(.app-dark) & {
-      background: var(--p-surface-700);
-    }
   }
 }
 
@@ -360,13 +356,9 @@ function onActivityUpdated(activity: ActivityDto) {
   top: 4px;
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: $primary-color;
   border: 2px solid $surface-card;
-
-  :global(.app-dark) & {
-    border-color: var(--p-card-background);
-  }
 
   &--done {
     background: var(--p-green-500);
@@ -385,10 +377,6 @@ function onActivityUpdated(activity: ActivityDto) {
   border: 1px solid $surface-200;
   border-radius: $radius-md;
   padding: $space-3;
-
-  :global(.app-dark) & {
-    border-color: var(--p-surface-700);
-  }
 }
 
 .company-activities__row {
@@ -421,16 +409,8 @@ function onActivityUpdated(activity: ActivityDto) {
   overflow: hidden;
   text-overflow: ellipsis;
 
-  :global(.app-dark) & {
-    color: var(--p-surface-100);
-  }
-
   &--done {
     color: $surface-400;
-
-    :global(.app-dark) & {
-      color: var(--p-surface-500);
-    }
   }
 }
 

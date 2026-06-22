@@ -1,5 +1,16 @@
 <template>
   <div class="company-deals-tab">
+    <!-- TabHead -->
+    <div class="company-deals-tab__head">
+      <span class="company-deals-tab__head-title">{{ t('company.page.tabs.deals') }}</span>
+      <Button
+        icon="pi pi-plus"
+        :label="t('company.page.deals.createDeal')"
+        size="small"
+        @click="$emit('createDeal')"
+      />
+    </div>
+
     <!-- Loading skeleton -->
     <div v-if="loading" class="company-deals-tab__skeleton">
       <Skeleton height="48px" class="mb-2" />
@@ -20,11 +31,10 @@
       />
     </div>
 
-    <!-- Deals table -->
+    <!-- Deals table — §6 колонки: Название · Этап · Сумма · Ответственный · Создана -->
     <DataTable
       v-else
       :value="deals"
-      striped-rows
       size="small"
       class="company-deals-tab__table"
     >
@@ -47,19 +57,9 @@
         </template>
       </Column>
 
-      <Column :header="t('sales.deal.list.columns.amount')" style="width: 150px" class="text-right">
+      <Column :header="t('sales.deal.list.columns.amount')" style="width: 150px">
         <template #body="{ data }">
           <span class="company-deals-tab__amount">{{ formatKopecks(data.amount, data.currency) }}</span>
-        </template>
-      </Column>
-
-      <Column :header="t('sales.deal.list.columns.status')" style="width: 110px">
-        <template #body="{ data }">
-          <Tag
-            :value="t(`sales.deal.statuses.${data.status}`)"
-            :severity="statusSeverity(data.status)"
-            size="small"
-          />
         </template>
       </Column>
 
@@ -69,15 +69,9 @@
         </template>
       </Column>
 
-      <Column style="width: 60px">
+      <Column :header="t('common.createdAt')" style="width: 120px">
         <template #body="{ data }">
-          <Button
-            icon="pi pi-external-link"
-            text
-            severity="secondary"
-            size="small"
-            @click="$router.push(`/deals/${data.id}`)"
-          />
+          <span class="company-deals-tab__date">{{ formatDate(data.created_at) }}</span>
         </template>
       </Column>
     </DataTable>
@@ -105,7 +99,7 @@ import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import type { DealDto, DealStatus } from '@/entities/sales'
+import type { DealDto } from '@/entities/sales'
 
 defineProps<{
   deals: DealDto[]
@@ -134,10 +128,17 @@ function formatKopecks(kopecks: number, currency: string): string {
   }
 }
 
-function statusSeverity(status: DealStatus): 'success' | 'danger' | 'secondary' {
-  if (status === 'won') return 'success'
-  if (status === 'lost') return 'danger'
-  return 'secondary'
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  } catch {
+    return iso
+  }
 }
 </script>
 
@@ -145,12 +146,36 @@ function statusSeverity(status: DealStatus): 'success' | 'danger' | 'secondary' 
 .company-deals-tab {
   display: flex;
   flex-direction: column;
-  gap: $space-4;
 }
+
+// ── TabHead ──────────────────────────────────────────────────────────────────
+
+.company-deals-tab__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid var(--p-surface-200);
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-600);
+  }
+}
+
+.company-deals-tab__head-title {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $surface-500;
+}
+
+// ── States ───────────────────────────────────────────────────────────────────
 
 .company-deals-tab__skeleton {
   display: flex;
   flex-direction: column;
+  padding: $space-4;
 }
 
 .company-deals-tab__empty {
@@ -163,7 +188,7 @@ function statusSeverity(status: DealStatus): 'success' | 'danger' | 'secondary' 
 }
 
 .company-deals-tab__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 
@@ -173,9 +198,10 @@ function statusSeverity(status: DealStatus): 'success' | 'danger' | 'secondary' 
   margin: 0;
 }
 
+// ── Table ────────────────────────────────────────────────────────────────────
+
 .company-deals-tab__table {
-  border: 1px solid $surface-200;
-  border-radius: $radius-md;
+  border: none;
 }
 
 .company-deals-tab__deal-link {
@@ -191,11 +217,11 @@ function statusSeverity(status: DealStatus): 'success' | 'danger' | 'secondary' 
 
 .company-deals-tab__amount {
   font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: $surface-800;
+  font-weight: $font-weight-semibold;
+  color: $primary-900;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-primary-300);
   }
 }
 
@@ -204,9 +230,14 @@ function statusSeverity(status: DealStatus): 'success' | 'danger' | 'secondary' 
   color: $surface-600;
 }
 
+.company-deals-tab__date {
+  font-size: $font-size-sm;
+  color: $surface-500;
+}
+
 .company-deals-tab__load-more {
   display: flex;
   justify-content: center;
-  padding-top: $space-2;
+  padding: $space-3;
 }
 </style>

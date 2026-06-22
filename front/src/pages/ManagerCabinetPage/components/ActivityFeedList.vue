@@ -199,7 +199,7 @@ const formatDate = (dateStr: string | null): string => {
 }
 
 .activity-feed__kind-icon {
-  font-size: 14px;
+  font-size: $font-size-sm;
   margin-top: 2px;
 }
 
@@ -236,7 +236,7 @@ const formatDate = (dateStr: string | null): string => {
 }
 
 .activity-feed__empty-icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-400;
 }
 

@@ -355,7 +355,7 @@ function confirmDelete() {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #fff;
+  color: $sidebar-text-active;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -370,12 +370,12 @@ function confirmDelete() {
   }
 
   i {
-    font-size: 14px;
+    font-size: $font-size-sm;
   }
 }
 
 .deal-header__title {
-  color: #fff;
+  color: $sidebar-text-active;
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
   margin: 0;
@@ -410,7 +410,7 @@ function confirmDelete() {
 }
 
 .deal-header__stage-chevron {
-  font-size: 10px;
+  font-size: $font-size-3xs; // snap from 10px
   color: rgba(255, 255, 255, 0.6);
 }
 
@@ -460,7 +460,7 @@ function confirmDelete() {
 .deal-header__planned-date-value {
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
-  color: #fff;
+  color: $sidebar-text-active;
 
   &--empty {
     color: rgba(255, 255, 255, 0.35);

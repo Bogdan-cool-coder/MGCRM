@@ -294,7 +294,7 @@ function extractErrorMessage(e: unknown): string {
   &__dot {
     width: 16px;
     height: 16px;
-    border-radius: 50%;
+    border-radius: $radius-circle;
     flex-shrink: 0;
     border: none;
     cursor: pointer;
@@ -386,7 +386,7 @@ function extractErrorMessage(e: unknown): string {
   }
 
   &__chevron {
-    font-size: 0.65rem;
+    font-size: $font-size-3xs; // snap from 0.65rem (≈10.4px→10px)
     transition: transform var(--app-transition-fast);
   }
 
@@ -435,6 +435,6 @@ function extractErrorMessage(e: unknown): string {
 }
 
 :global(.stage-item--dragging) {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: $shadow-dragging;
 }
 </style>

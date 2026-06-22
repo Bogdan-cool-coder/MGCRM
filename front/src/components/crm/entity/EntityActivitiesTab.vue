@@ -2,10 +2,40 @@
   <div class="entity-activities">
     <!--
       Layout (top → bottom):
+        [Filter chips — Все / События / Изменения]
         [Feed — scrollable, bottom-up: oldest at top, newest near composer]
         [OpenTasksList — compact rows for pending tasks]
         [EntityComposer — note/task creation]
     -->
+
+    <!-- Filter chips -->
+    <div class="entity-activities__filter-chips">
+      <button
+        type="button"
+        class="entity-activities__chip"
+        :class="{ 'entity-activities__chip--active': feedFilter === 'all' }"
+        @click="feedFilter = 'all'"
+      >
+        {{ t('crm.entity.feed.filterAll') }}
+      </button>
+      <button
+        type="button"
+        class="entity-activities__chip"
+        :class="{ 'entity-activities__chip--active': feedFilter === 'events' }"
+        @click="feedFilter = 'events'"
+      >
+        {{ t('crm.entity.feed.filterEvents') }}
+      </button>
+      <button
+        type="button"
+        class="entity-activities__chip"
+        :class="{ 'entity-activities__chip--active': feedFilter === 'changes' }"
+        @click="feedFilter = 'changes'"
+      >
+        {{ t('crm.entity.feed.filterChanges') }}
+      </button>
+    </div>
+
     <div ref="scrollEl" class="entity-activities__feed-wrap">
       <div class="entity-activities__feed-inner">
         <!-- Loading skeleton -->
@@ -16,7 +46,7 @@
         </div>
 
         <!-- Empty state -->
-        <div v-else-if="!loading && groups.length === 0" class="entity-activities__empty">
+        <div v-else-if="!loading && filteredGroups.length === 0" class="entity-activities__empty">
           <i class="pi pi-clock entity-activities__empty-icon" />
           <p class="entity-activities__empty-title">{{ t('sales.deal.feed.empty.title') }}</p>
           <p class="entity-activities__empty-hint">{{ t('sales.deal.feed.empty.subtitle') }}</p>
@@ -37,7 +67,7 @@
             />
           </div>
 
-          <div v-for="group in groups" :key="group.date" class="entity-activities__group">
+          <div v-for="group in filteredGroups" :key="group.date" class="entity-activities__group">
             <button
               type="button"
               class="entity-activities__date-header"
@@ -91,13 +121,20 @@
                   </div>
                 </div>
 
-                <!-- Field change item -->
+                <!-- Field change item — лог-строка §5 -->
                 <div v-else-if="item.fieldChanges" class="entity-activities__field-change">
-                  <i class="pi pi-pencil entity-activities__fc-icon" />
+                  <div class="entity-activities__fc-circle">
+                    <i class="pi pi-pencil" />
+                  </div>
                   <span class="entity-activities__fc-text">
-                    {{ item.actor?.full_name ?? t('common.system') }}
+                    <strong>{{ item.actor?.full_name ?? t('common.system') }}</strong>
                     {{ t('sales.deal.feed.changedField') }}:
-                    <strong v-for="(fc, idx) in item.fieldChanges" :key="idx">{{ fc.field }}</strong>
+                    <span v-for="(fc, idx) in item.fieldChanges" :key="idx" class="entity-activities__fc-field">
+                      {{ fc.field }}
+                      <template v-if="fc.old_value !== undefined && fc.new_value !== undefined">
+                        <span class="entity-activities__fc-arrow">{{ fc.old_value }} → {{ fc.new_value }}</span>
+                      </template>
+                    </span>
                   </span>
                 </div>
               </div>
@@ -138,6 +175,7 @@ import { kindIcon, statusSeverity, formatDueDate } from '@/utils/activity'
 import type { ActivityDto } from '@/entities/activity'
 
 export type EntityFeedType = 'company' | 'contact'
+type FeedFilter = 'all' | 'events' | 'changes'
 
 const props = defineProps<{
   entityType: EntityFeedType
@@ -147,6 +185,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const scrollEl = ref<HTMLElement | null>(null)
+const feedFilter = ref<FeedFilter>('all')
 
 const feed = useEntityFeed(
   () => props.entityType,
@@ -155,6 +194,21 @@ const feed = useEntityFeed(
 
 const groups = computed(() => feed.groups.value)
 const loading = computed(() => feed.loading.value)
+
+// Client-side filter: events = activity only, changes = fieldChanges only
+const filteredGroups = computed(() => {
+  if (feedFilter.value === 'all') return groups.value
+  return groups.value
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => {
+        if (feedFilter.value === 'events') return !!item.activity
+        if (feedFilter.value === 'changes') return !!item.fieldChanges
+        return true
+      }),
+    }))
+    .filter((g) => g.items.length > 0)
+})
 
 // ─── Auto-scroll to bottom ────────────────────────────────────────────────────
 
@@ -205,6 +259,60 @@ onMounted(() => {
   overflow: hidden;
 }
 
+// ─── Filter chips ─────────────────────────────────────────────────────────────
+
+.entity-activities__filter-chips {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  border-bottom: 1px solid var(--p-surface-200);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-700);
+  }
+}
+
+.entity-activities__chip {
+  display: inline-flex;
+  align-items: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 4px 12px; // spec: 4px 12px — chip padding
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  border-radius: 999px; // pill
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: $surface-600;
+  transition: background var(--app-transition-fast), color var(--app-transition-fast);
+
+  &:hover:not(.entity-activities__chip--active) {
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      background: var(--p-surface-200);
+    }
+  }
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.entity-activities__chip--active {
+  background: $primary-100;
+  color: $primary-900;
+
+  .app-dark & {
+    background: var(--p-primary-900);
+    color: var(--p-primary-200);
+  }
+}
+
 // ─── Feed scrollable area ─────────────────────────────────────────────────────
 
 .entity-activities__feed-wrap {
@@ -242,7 +350,7 @@ onMounted(() => {
 }
 
 .entity-activities__empty-icon {
-  font-size: 3rem;
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 
@@ -403,26 +511,70 @@ onMounted(() => {
   color: $surface-500;
 }
 
+// ─── Field change (лог-строка §5) ────────────────────────────────────────────
+
 .entity-activities__field-change {
   display: flex;
   align-items: center;
   gap: $space-2;
   font-size: $font-size-xs;
   color: $surface-500;
-  padding: $space-2 $space-3;
+  padding: $space-1 $space-2;
 }
 
-.entity-activities__fc-icon {
-  font-size: $font-size-xs;
-  color: $surface-400;
+.entity-activities__fc-circle {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  width: 22px; // spec: 22px circle
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  height: 22px;
+  border-radius: $radius-circle;
+  background: var(--p-surface-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+
+  .app-dark & {
+    background: var(--p-surface-200);
+  }
+
+  i {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    font-size: 10px; // spec: 10px icon inside circle
+    color: var(--p-primary-color);
+  }
 }
 
 .entity-activities__fc-text {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
+
   strong {
     font-weight: $font-weight-medium;
-    color: $surface-600;
-    margin-left: $space-1;
+  }
+}
+
+.entity-activities__fc-field {
+  font-weight: $font-weight-medium;
+  color: $surface-700;
+  margin-left: $space-1;
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+}
+
+.entity-activities__fc-arrow {
+  color: $surface-500;
+  margin-left: $space-1;
+
+  .app-dark & {
+    color: var(--p-surface-400);
   }
 }
 </style>

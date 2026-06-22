@@ -285,7 +285,7 @@ function downloadTemplate() {
   }
 
   &__upload-icon {
-    font-size: 2.5rem;
+    font-size: $font-size-icon-xl; // 2.5rem
     color: $surface-400;
   }
 

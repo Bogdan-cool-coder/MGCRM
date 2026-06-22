@@ -38,10 +38,24 @@
       :loading="productsLoading"
       :updating-id="updatingId"
       :deleting-id="deletingId"
+      :deal-amount="deal.amount"
+      :amount-locked="deal.amount_locked ?? false"
+      :perpetual-license="deal.perpetual_license ?? false"
+      :perpetual-saving="perpetualSaving"
+      :lock-saving="lockSaving"
       @add-product="emit('openAddProduct')"
       @update-item="onUpdateProduct"
       @remove-item="onRemoveProduct"
       @amount-changed="emit('amountChanged', $event)"
+      @toggle-perpetual="onTogglePerpetual"
+      @toggle-lock="onToggleLock"
+    />
+
+    <!-- ── Group: Key dates ─────────────────────────────────────────────────── -->
+    <DealDatesGroup
+      ref="datesGroupRef"
+      :deal="deal"
+      @deal-updated="(updates) => emit('dealUpdated', updates)"
     />
 
     <!-- ── Group: Contacts (accent, open by default) ──────────────────────────── -->
@@ -94,6 +108,7 @@ import { RouterLink } from 'vue-router'
 import DealFieldGroup from './DealFieldGroup.vue'
 import DealFieldRow from './DealFieldRow.vue'
 import DealProductsGroup from './DealProductsGroup.vue'
+import DealDatesGroup from './DealDatesGroup.vue'
 import DealContactsGroup from './DealContactsGroup.vue'
 import DealCompanyGroup from './DealCompanyGroup.vue'
 import InlineEditableField from '@/components/crm/InlineEditableField.vue'
@@ -137,6 +152,7 @@ const toast = useToast()
 // ── Refs for collapse/expand all ───────────────────────────────────────────────
 
 const productsGroupRef = ref<InstanceType<typeof DealProductsGroup> | null>(null)
+const datesGroupRef = ref<InstanceType<typeof DealDatesGroup> | null>(null)
 const contactsGroupRef = ref<InstanceType<typeof DealContactsGroup> | null>(null)
 const companyGroupRef = ref<InstanceType<typeof DealCompanyGroup> | null>(null)
 const customGroupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
@@ -215,6 +231,69 @@ async function loadCompanyFull() {
 
 function onCompanyUpdated(updated: Company) {
   companyFull.value = updated
+}
+
+// ── Perpetual license toggle ───────────────────────────────────────────────────
+
+const perpetualMutation = useMutation<DealDto>()
+const perpetualSaving = computed(() => perpetualMutation.isPending.value)
+
+async function onTogglePerpetual(newValue: boolean) {
+  try {
+    const updated = await perpetualMutation.run(() =>
+      salesApi.updateDeal(props.deal.id, { perpetual_license: newValue }),
+    )
+    emit('dealUpdated', {
+      perpetual_license: updated.perpetual_license,
+      amount: updated.amount,
+    })
+    toast.add({
+      severity: 'success',
+      summary: newValue
+        ? t('sales.deal.perpetual.successOn')
+        : t('sales.deal.perpetual.successOff'),
+      life: 2500,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
+
+// ── Budget lock toggle ─────────────────────────────────────────────────────────
+
+const lockMutation = useMutation<DealDto>()
+const lockSaving = computed(() => lockMutation.isPending.value)
+
+async function onToggleLock() {
+  const newLocked = !(props.deal.amount_locked ?? false)
+  try {
+    const updated = await lockMutation.run(() =>
+      salesApi.updateDeal(props.deal.id, { amount_locked: newLocked }),
+    )
+    emit('dealUpdated', {
+      amount_locked: updated.amount_locked,
+      amount: updated.amount,
+    })
+    toast.add({
+      severity: 'success',
+      summary: newLocked
+        ? t('sales.deal.budget.lockedSuccess')
+        : t('sales.deal.budget.unlockedSuccess'),
+      life: 2000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
 }
 
 // ── Custom fields (scope=deal) ─────────────────────────────────────────────────
@@ -332,6 +411,4 @@ watch(() => props.deal.company.id, (newId, oldId) => {
     text-decoration: underline;
   }
 }
-
-
 </style>

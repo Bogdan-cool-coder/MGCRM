@@ -69,7 +69,7 @@ const tooltipText = computed((): string => {
   cursor: default;
 
   i {
-    font-size: 10px;
+    font-size: $font-size-3xs; // 10px
     flex-shrink: 0;
   }
 
@@ -101,11 +101,11 @@ const tooltipText = computed((): string => {
     background: transparent;
     width: 10px;
     height: 10px;
-    border-radius: 50%;
+    border-radius: $radius-circle; // 50%
     justify-content: center;
 
     i {
-      font-size: 8px;
+      font-size: $font-size-3xs; // 8px snap to 10px (≈2px delta, icon context)
     }
 
     .engagement-chip__label {

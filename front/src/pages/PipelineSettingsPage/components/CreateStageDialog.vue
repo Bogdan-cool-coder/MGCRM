@@ -258,7 +258,7 @@ function cancel() {
 
   &__color-val {
     font-size: $font-size-sm;
-    font-family: monospace;
+    font-family: $font-family-mono;
     color: var(--p-text-muted-color);
   }
 }

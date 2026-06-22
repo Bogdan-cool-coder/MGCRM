@@ -1,168 +1,126 @@
 <template>
+  <!-- ── Classification (FE-A.1) — retained from FE-1, always shown ────────────── -->
+  <InfoPanel
+    :title="t('company.requisites.section.classification')"
+    icon="pi-tag"
+    panel-key="company-classification"
+    :default-collapsed="false"
+  >
+    <KeyFactsBlock>
+      <KeyFactsItem :label="t('crm.company.fields.specialization')">
+        <InlineEditableField
+          :model-value="company.specialization"
+          field-key="specialization"
+          field-type="select"
+          :options="specializationOptions"
+          option-label="name"
+          option-value="id"
+          :placeholder="t('crm.company.specialization.placeholder')"
+          :saving="isSaving"
+          @save="onSave"
+        >
+          <template #display="{ value }">
+            <span v-if="value">{{ specializationLabel(value as string) }}</span>
+            <span v-else>—</span>
+          </template>
+        </InlineEditableField>
+      </KeyFactsItem>
+    </KeyFactsBlock>
+  </InfoPanel>
+
+  <!-- ── Requisites list (FE-A.4) ────────────────────────────────────────────── -->
   <InfoPanel
     :title="t('crm.company.sections.requisites')"
     icon="pi-building"
     panel-key="company-requisites"
     :default-collapsed="false"
   >
-    <!-- Section: Legal data -->
-    <div class="requisites__section">
-      <div class="requisites__section-divider">
-        <span>{{ t('company.requisites.section.legal') }}</span>
+    <template #header-action>
+      <Button
+        icon="pi pi-plus"
+        :label="t('crm.company.requisites.add')"
+        text
+        severity="secondary"
+        size="small"
+        @click="openCreate"
+      />
+    </template>
+
+    <!-- Loading -->
+    <template v-if="loading">
+      <Skeleton height="80px" class="mb-2" />
+      <Skeleton height="80px" />
+    </template>
+
+    <!-- Error -->
+    <template v-else-if="loadError">
+      <div class="requisites-panel__error">
+        <i class="pi pi-exclamation-triangle requisites-panel__error-icon" />
+        <span>{{ t('crm.company.requisites.loadError') }}</span>
+        <Button
+          :label="t('common.retry')"
+          severity="secondary"
+          text
+          size="small"
+          @click="load"
+        />
       </div>
-      <KeyFactsBlock>
-        <KeyFactsItem :label="t('company.page.fields.taxIdLabel')">
-          <InlineEditableField
-            :model-value="company.tax_id_label"
-            field-key="tax_id_label"
-            field-type="text"
-            placeholder="БИН / ИНН / TIN"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
+    </template>
 
-        <KeyFactsItem :label="t('company.page.fields.taxId')">
-          <InlineEditableField
-            :model-value="company.tax_id"
-            field-key="tax_id"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-
-        <KeyFactsItem :label="t('company.page.fields.legalForm')">
-          <InlineEditableField
-            :model-value="company.legal_form"
-            field-key="legal_form"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-
-        <KeyFactsItem :label="t('company.page.fields.fullLegalForm')">
-          <InlineEditableField
-            :model-value="company.full_legal_form"
-            field-key="full_legal_form"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-
-        <KeyFactsItem :label="t('company.page.fields.directorPosition')">
-          <InlineEditableField
-            :model-value="company.director_position"
-            field-key="director_position"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-      </KeyFactsBlock>
-    </div>
-
-    <!-- Section: Bank -->
-    <div class="requisites__section">
-      <div class="requisites__section-divider">
-        <span>{{ t('company.requisites.section.bank') }}</span>
+    <!-- Empty -->
+    <template v-else-if="!loading && requisites.length === 0">
+      <div class="requisites-panel__empty">
+        <i class="pi pi-building requisites-panel__empty-icon" />
+        <p class="requisites-panel__empty-text">{{ t('crm.company.requisites.empty') }}</p>
+        <Button
+          :label="t('crm.company.requisites.add')"
+          icon="pi pi-plus"
+          size="small"
+          @click="openCreate"
+        />
       </div>
-      <KeyFactsBlock>
-        <KeyFactsItem :label="t('company.page.fields.bank')">
-          <InlineEditableField
-            :model-value="company.bank"
-            field-key="bank"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
+    </template>
 
-        <KeyFactsItem :label="t('company.page.fields.account')">
-          <InlineEditableField
-            :model-value="company.account"
-            field-key="account"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-      </KeyFactsBlock>
-    </div>
-
-    <!-- Section: Contacts & Segmentation -->
-    <div class="requisites__section">
-      <div class="requisites__section-divider">
-        <span>{{ t('company.requisites.section.contacts') }}</span>
-      </div>
-      <KeyFactsBlock>
-        <KeyFactsItem :label="t('company.page.fields.address')">
-          <InlineEditableField
-            :model-value="company.address"
-            field-key="address"
-            field-type="textarea"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-
-        <KeyFactsItem :label="t('company.page.fields.website')">
-          <span class="company-requisites__url-wrap">
-            <a
-              v-if="company.website"
-              :href="company.website"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="company-requisites__url-link"
-            >
-              {{ truncateUrl(company.website) }}
-              <i class="pi pi-external-link company-requisites__url-icon" />
-            </a>
-            <InlineEditableField
-              :model-value="company.website"
-              field-key="website"
-              field-type="text"
-              :saving="isSaving"
-              @save="onSave"
-            />
-          </span>
-        </KeyFactsItem>
-
-        <KeyFactsItem :label="t('company.page.fields.phone')">
-          <InlineEditableField
-            :model-value="company.phone"
-            field-key="phone"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-
-        <KeyFactsItem :label="t('company.page.fields.email')">
-          <InlineEditableField
-            :model-value="company.email"
-            field-key="email"
-            field-type="text"
-            :saving="isSaving"
-            @save="onSave"
-          />
-        </KeyFactsItem>
-      </KeyFactsBlock>
-    </div>
+    <!-- List -->
+    <template v-else>
+      <RequisiteCard
+        v-for="(req, idx) in sortedRequisites"
+        :key="req.id"
+        :requisite="req"
+        :index="idx"
+        @set-current="onSetCurrent"
+        @edit="openEdit"
+        @delete="onDelete"
+      />
+    </template>
   </InfoPanel>
+
+  <!-- Form dialog -->
+  <RequisiteFormDialog
+    ref="formDialog"
+    v-model="formOpen"
+    :requisite="editingRequisite"
+    @saved="onFormSaved"
+  />
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import InlineEditableField from '@/components/crm/InlineEditableField.vue'
+import { useToast } from 'primevue/usetoast'
+import Button from 'primevue/button'
+import Skeleton from 'primevue/skeleton'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
 import KeyFactsBlock from '@/components/crm/entity/KeyFactsBlock.vue'
 import KeyFactsItem from '@/components/crm/entity/KeyFactsItem.vue'
-import type { Company } from '@/entities/crm'
+import InlineEditableField from '@/components/crm/InlineEditableField.vue'
+import RequisiteCard from './RequisiteCard.vue'
+import RequisiteFormDialog from './RequisiteFormDialog.vue'
+import { companiesApi } from '@/api/crm/companies'
+import { getApiErrorMessage } from '@/utils/errors'
+import type { Company, CompanyRequisite, CreateRequisitePayload } from '@/entities/crm'
 
-defineProps<{
+const props = defineProps<{
   company: Company
   isSaving: boolean
 }>()
@@ -172,80 +130,202 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const toast = useToast()
+
+// ── Specialization enum (FE-A.1, N1) ─────────────────────────────────────────
+
+const SPECIALIZATION_VALUES = [
+  'agency',
+  'developer',
+  'builder',
+  'contractor',
+  'supplier',
+  'partner',
+] as const
+
+const specializationOptions = SPECIALIZATION_VALUES.map((v) => ({
+  id: v,
+  name: t(`crm.company.specialization.${v}`),
+}))
+
+function specializationLabel(value: string): string {
+  return t(`crm.company.specialization.${value}`, value)
+}
 
 function onSave(fieldKey: string, value: string | number | null) {
   emit('save', fieldKey, value)
 }
 
-function truncateUrl(url: string): string {
+// ── Requisites list state ──────────────────────────────────────────────────────
+
+const requisites = ref<CompanyRequisite[]>([])
+const loading = ref(false)
+const loadError = ref(false)
+
+const sortedRequisites = computed(() => {
+  // current first, then by id desc
+  return [...requisites.value].sort((a, b) => {
+    if (a.is_current && !b.is_current) return -1
+    if (!a.is_current && b.is_current) return 1
+    return b.id - a.id
+  })
+})
+
+async function load() {
+  loading.value = true
+  loadError.value = false
   try {
-    const u = new URL(url)
-    return u.hostname + (u.pathname !== '/' ? u.pathname : '')
+    requisites.value = await companiesApi.getRequisites(props.company.id)
   } catch {
-    return url.slice(0, 40)
+    loadError.value = true
+  } finally {
+    loading.value = false
   }
 }
+
+// ── Form dialog ────────────────────────────────────────────────────────────────
+
+const formOpen = ref(false)
+const editingRequisite = ref<CompanyRequisite | null>(null)
+const formDialog = ref<{ setSaving: (v: boolean) => void } | null>(null)
+
+function openCreate() {
+  editingRequisite.value = null
+  formOpen.value = true
+}
+
+function openEdit(req: CompanyRequisite) {
+  editingRequisite.value = req
+  formOpen.value = true
+}
+
+async function onFormSaved(payload: CreateRequisitePayload, id?: number) {
+  formDialog.value?.setSaving(true)
+  try {
+    if (id) {
+      await companiesApi.updateRequisite(props.company.id, id, payload)
+    } else {
+      await companiesApi.createRequisite(props.company.id, payload)
+    }
+    // Close dialog immediately on success; background-refresh list without blocking
+    formOpen.value = false
+    formDialog.value?.setSaving(false)
+    toast.add({
+      severity: 'success',
+      summary: id
+        ? t('crm.company.requisites.updateSuccess')
+        : t('crm.company.requisites.createSuccess'),
+      life: 3000,
+    })
+    void load()
+  } catch (err) {
+    formDialog.value?.setSaving(false)
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
+
+// ── Set current ────────────────────────────────────────────────────────────────
+
+async function onSetCurrent(requisiteId: number) {
+  // Optimistic: mark current locally
+  const prev = requisites.value.map((r) => ({ ...r }))
+  requisites.value = requisites.value.map((r) => ({
+    ...r,
+    is_current: r.id === requisiteId,
+  }))
+  try {
+    await companiesApi.setCurrentRequisite(props.company.id, requisiteId)
+    toast.add({
+      severity: 'success',
+      summary: t('crm.company.requisites.setCurrentSuccess'),
+      life: 3000,
+    })
+    await load()
+  } catch (err) {
+    // rollback
+    requisites.value = prev
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
+
+// ── Delete ─────────────────────────────────────────────────────────────────────
+
+async function onDelete(requisiteId: number) {
+  try {
+    await companiesApi.deleteRequisite(props.company.id, requisiteId)
+    toast.add({
+      severity: 'success',
+      summary: t('crm.company.requisites.deleteSuccess'),
+      life: 3000,
+    })
+    await load()
+  } catch (err) {
+    // 422: cannot delete current/attached
+    const status = (err as { response?: { status?: number; data?: { message?: string } } })?.response?.status
+    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+    if (status === 422) {
+      toast.add({
+        severity: 'error',
+        summary: t('crm.company.requisites.deleteGuardError'),
+        detail: msg ?? t('crm.company.requisites.deleteGuardHint'),
+        life: 5000,
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: getApiErrorMessage(err, t('errors.server_error')),
+        life: 4000,
+      })
+    }
+  }
+}
+
+// ── Lifecycle ──────────────────────────────────────────────────────────────────
+
+onMounted(() => {
+  void load()
+})
 </script>
 
 <style lang="scss" scoped>
-.requisites__section {
-  &:not(:first-child) {
-    margin-top: $space-4;
-  }
-}
-
-.requisites__section-divider {
+.requisites-panel__error {
   display: flex;
   align-items: center;
   gap: $space-2;
-  margin-bottom: $space-3;
-
-  span {
-    font-size: 10px;
-    font-weight: $font-weight-bold;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: $surface-400;
-    white-space: nowrap;
-
-    .app-dark & {
-      color: var(--p-surface-500);
-    }
-  }
-
-  &::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--p-surface-200);
-
-    .app-dark & {
-      background: var(--p-surface-700);
-    }
-  }
+  padding: $space-3;
+  color: $surface-500;
+  font-size: $font-size-sm;
 }
 
-.company-requisites__url-wrap {
+.requisites-panel__error-icon {
+  color: var(--p-orange-500);
+}
+
+.requisites-panel__empty {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
-  width: 100%;
-}
-
-.company-requisites__url-link {
-  display: inline-flex;
   align-items: center;
-  gap: $space-1;
-  font-size: $font-size-sm;
-  color: var(--p-primary-color);
-  text-decoration: none;
-
-  &:hover {
-    text-decoration: underline;
-  }
+  gap: $space-3;
+  padding: $space-5 $space-4;
+  text-align: center;
 }
 
-.company-requisites__url-icon {
-  font-size: 10px;
+.requisites-panel__empty-icon {
+  font-size: $font-size-icon-lg; // 2rem
+  color: $surface-300;
+}
+
+.requisites-panel__empty-text {
+  font-size: $font-size-sm;
+  color: $surface-500;
+  margin: 0;
 }
 </style>

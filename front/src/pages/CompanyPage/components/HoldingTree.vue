@@ -161,7 +161,7 @@ function holdingRoleLabel(role: HoldingRole | null): string {
 }
 
 .holding-tree__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   color: $surface-300;
 }
 
@@ -218,7 +218,7 @@ function holdingRoleLabel(role: HoldingRole | null): string {
 }
 
 .holding-tree__node-icon {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
 }
@@ -236,7 +236,7 @@ function holdingRoleLabel(role: HoldingRole | null): string {
 }
 
 .holding-tree__you-icon {
-  font-size: 13px;
+  font-size: $font-size-sm; // snap from 13px
   color: var(--p-primary-color);
   flex-shrink: 0;
 }

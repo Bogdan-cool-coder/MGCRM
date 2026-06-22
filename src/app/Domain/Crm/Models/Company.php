@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Crm\Models;
 
 use App\Domain\Crm\Enums\CategoryCode;
+use App\Domain\Crm\Enums\ClientStatus;
 use App\Domain\Crm\Enums\CompanySpecialization;
 use App\Domain\Crm\Enums\HoldingRole;
 use App\Domain\Iam\Models\User;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -66,6 +68,9 @@ class Company extends Model
         'holding_role',
         'responsible_user_id',
         'owner_user_id',
+        // First-class author of the card. Populated by the AMO import; nullable
+        // for legacy/system-created rows.
+        'created_by_id',
         'department_id',
         'tags',
         'extra_fields',
@@ -73,19 +78,30 @@ class Company extends Model
         'turnover_rub',
         'category_recalc_at',
         'last_activity_at',
+        // Client lifecycle (N5)
+        'client_status',
+        'unique_client_since',
+        'disconnected_at',
+        'disconnect_reason_id',
+        'disconnect_doc_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'tags'                   => 'array',
-            'extra_fields'           => 'array',
-            'holding_role'           => HoldingRole::class,
-            'category_code'          => CategoryCode::class,
-            'specialization'         => CompanySpecialization::class,
+            'tags' => 'array',
+            'extra_fields' => 'array',
+            'holding_role' => HoldingRole::class,
+            'category_code' => CategoryCode::class,
+            'specialization' => CompanySpecialization::class,
+            'client_status' => ClientStatus::class,
             'acquisition_channel_id' => 'integer',
-            'category_recalc_at'     => 'datetime',
-            'last_activity_at'       => 'datetime',
+            'disconnect_reason_id' => 'integer',
+            'disconnect_doc_id' => 'integer',
+            'unique_client_since' => 'date',
+            'category_recalc_at' => 'datetime',
+            'last_activity_at' => 'datetime',
+            'disconnected_at' => 'datetime',
         ];
     }
 
@@ -118,6 +134,12 @@ class Company extends Model
         return $this->belongsTo(User::class, 'owner_user_id');
     }
 
+    /** The user who originally created this company (distinct from owner/responsible). */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
+    }
+
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
@@ -147,5 +169,31 @@ class Company extends Model
     public function acquisitionChannel(): BelongsTo
     {
         return $this->belongsTo(AcquisitionChannel::class, 'acquisition_channel_id');
+    }
+
+    // ---- Client lifecycle (N5) ----
+
+    public function disconnectReason(): BelongsTo
+    {
+        return $this->belongsTo(DisconnectReason::class, 'disconnect_reason_id');
+    }
+
+    public function clientStatusLog(): HasMany
+    {
+        return $this->hasMany(CompanyClientStatusLog::class);
+    }
+
+    // ---- Requisites ----
+
+    /** All requisite sets for this company. */
+    public function requisites(): HasMany
+    {
+        return $this->hasMany(CompanyRequisite::class);
+    }
+
+    /** The current (active) requisite set. */
+    public function currentRequisite(): HasOne
+    {
+        return $this->hasOne(CompanyRequisite::class)->where('is_current', true);
     }
 }

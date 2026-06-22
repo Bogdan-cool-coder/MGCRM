@@ -1,0 +1,45 @@
+/* ===========================================================================
+   MACRO Global — Spacing, radius, shadows, motion, layout
+   Source: brandbook §4 + front/src/theme/tokens/*
+   =========================================================================== */
+
+:root {
+  /* ─── Spacing (брендбук §4.1: 4/8/12/16/20/24/28/32) ──────────────────── */
+  --mg-space-1: 0.25rem; /* 4px */
+  --mg-space-2: 0.5rem;  /* 8px */
+  --mg-space-3: 0.75rem; /* 12px */
+  --mg-space-4: 1rem;    /* 16px */
+  --mg-space-5: 1.25rem; /* 20px */
+  --mg-space-6: 1.5rem;  /* 24px — Bootstrap gutter */
+  --mg-space-7: 1.75rem; /* 28px — PageHeader vertical */
+  --mg-space-8: 2rem;    /* 32px */
+
+  /* ─── Border radius (брендбук §4.2) ───────────────────────────────────── */
+  --mg-radius-sm: 4px;  /* Input, Tag, Badge, table cell */
+  --mg-radius-md: 6px;  /* Button, Card, Panel, Dropdown — default */
+  --mg-radius-lg: 8px;  /* Dialog, Drawer, large Card */
+  --mg-radius-xl: 12px; /* Avatar, icon plates */
+
+  /* ─── Elevation / shadows (брендбук §4.3) ─────────────────────────────── */
+  --mg-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.05);
+  --mg-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.10);
+  --mg-shadow-md:   0 4px 12px rgba(0, 0, 0, 0.10);
+  --mg-shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* ─── Motion (брендбук §4.4) ──────────────────────────────────────────── */
+  --mg-duration-fast: 0.2s;   /* @kind other */
+  --mg-duration-normal: 0.3s; /* @kind other */
+  --mg-duration-slow: 0.5s;   /* @kind other */
+  --mg-ease-standard: ease-in-out; /* @kind other */
+  --mg-ease-enter: ease-out;       /* @kind other */
+  --mg-ease-exit: ease-in;         /* @kind other */
+  --mg-transition-fast: 0.2s ease-in-out;   /* @kind other */
+  --mg-transition-normal: 0.3s ease-in-out; /* @kind other */
+
+  /* ─── Layout ──────────────────────────────────────────────────────────── */
+  --mg-header-height: 60px;
+  --mg-sidebar-width: 240px;
+  --mg-sidebar-rail-width: 56px;
+  --mg-web-container: 1320px; /* brand 12-col grid container @1920 */
+  --mg-web-gutter: 24px;
+}

@@ -9,6 +9,7 @@ use App\Domain\Automation\Enums\ActionKind;
 use App\Domain\Automation\Enums\ActionStatus;
 use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Contracts\Services\DocumentService;
+use App\Domain\Crm\Services\CompanyService;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Services\EntityLogService;
@@ -33,7 +34,7 @@ class ChangeStageActionTest extends TestCase
         $documents = Mockery::mock(DocumentService::class);
         $documents->shouldReceive('hasActiveContractForDeal')->andReturn(true)->byDefault();
 
-        return new ChangeStageAction(new DealMoveService($documents, new EngagementService, app(EntityLogService::class)));
+        return new ChangeStageAction(new DealMoveService($documents, new EngagementService, app(EntityLogService::class), app(CompanyService::class)));
     }
 
     public function test_kind(): void

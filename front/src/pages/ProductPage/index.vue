@@ -248,8 +248,8 @@ onMounted(async () => {
 }
 
 .product-page__header-code {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
+  font-family: $font-family-mono;
+  font-size: $font-size-xs;
 }
 
 .product-page__header-group {

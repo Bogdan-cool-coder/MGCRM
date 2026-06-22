@@ -120,7 +120,7 @@ const { t } = useI18n()
 }
 
 .cabinet-header__meta-icon {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $surface-400;
   flex-shrink: 0;
 }
@@ -141,7 +141,7 @@ const { t } = useI18n()
 }
 
 .cabinet-header__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   color: $surface-400;
 }
 

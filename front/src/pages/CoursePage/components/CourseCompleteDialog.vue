@@ -23,7 +23,7 @@
         <span class="text-muted">{{ t('onboarding.coursePage.complete.certPending') }}</span>
       </template>
       <template v-else>
-        <i class="pi pi-file-pdf text-success" style="font-size: 1.5rem" />
+        <i class="pi pi-file-pdf text-success course-complete__cert-icon" />
         <span class="text-success fw-bold">{{ t('onboarding.coursePage.complete.certReady') }}</span>
         <Button
           :label="t('onboarding.coursePage.complete.downloadCert')"
@@ -72,16 +72,20 @@ const { t } = useI18n()
 <style lang="scss" scoped>
 .course-complete {
   &__trophy {
-    font-size: 3.5rem;
+    font-size: $font-size-icon-2xl; // snap from 3.5rem (56px→48px)
     color: var(--p-yellow-500);
     display: block;
-    margin-bottom: 0.75rem;
+    margin-bottom: $space-3;
   }
 
   &__congrats {
-    font-size: 1rem;
-    font-weight: 500;
-    margin-bottom: 0.75rem;
+    font-size: $font-size-md;
+    font-weight: $font-weight-medium;
+    margin-bottom: $space-3;
+  }
+
+  &__cert-icon {
+    font-size: $font-size-2xl;
   }
 }
 </style>

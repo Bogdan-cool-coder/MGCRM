@@ -206,9 +206,9 @@ function onHide() {
   padding: $space-1 0;
 
   &__icon {
-    font-size: 1rem;
+    font-size: $font-size-md;
     color: $primary;
-    width: 1rem;
+    width: $font-size-md;
     text-align: center;
     flex-shrink: 0;
   }
@@ -228,7 +228,7 @@ function onHide() {
 
   &__header {
     font-size: $font-size-sm;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     color: var(--p-text-color);
   }
 }

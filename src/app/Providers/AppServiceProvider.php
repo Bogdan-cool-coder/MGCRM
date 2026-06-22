@@ -32,6 +32,7 @@ use App\Domain\Catalog\Policies\ProductGroupPolicy;
 use App\Domain\Catalog\Policies\ProductPolicy;
 use App\Domain\Contracts\Events\ApprovalDecisionMade;
 use App\Domain\Contracts\Events\DocumentSubmittedForApproval;
+use App\Domain\Contracts\Events\TerminationAgreementSigned;
 use App\Domain\Contracts\Models\ApprovalRoute;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\LicensorEntity;
@@ -44,6 +45,7 @@ use App\Domain\Contracts\Policies\LicensorPolicy;
 use App\Domain\Contracts\Policies\MessageTemplatePolicy;
 use App\Domain\Contracts\Policies\TemplatePolicy;
 use App\Domain\Contracts\Policies\TemplateVariablePolicy;
+use App\Domain\Crm\Listeners\DisconnectCompanyOnTerminationSigned;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactRelation;
@@ -276,6 +278,11 @@ class AppServiceProvider extends ServiceProvider
         // Onboarding — Certificate generation (S3.6). On CourseCompleted, dispatch
         // GenerateCertificateJob to the queue (never block the HTTP request).
         Event::listen(CourseCompleted::class, GenerateCertificateListener::class);
+
+        // N6 — finalise company disconnect when TerminationAgreement is signed.
+        // The listener is synchronous (no I/O, only DB writes inside a transaction)
+        // so it does NOT block meaningful HTTP request time.
+        Event::listen(TerminationAgreementSigned::class, DisconnectCompanyOnTerminationSigned::class);
 
         // Automation inline triggers (M7 P2). on_create / on_enter_stage fire from
         // Sales events AFTER their transaction commits; the listeners only claim an

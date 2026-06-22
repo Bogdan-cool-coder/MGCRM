@@ -29,6 +29,7 @@ class UserFactory extends Factory
     {
         return [
             'full_name' => fake()->name(),
+            'phone' => null,
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make('password'),
             'role' => Role::Manager,
@@ -37,6 +38,7 @@ class UserFactory extends Factory
             'department_id' => null,
             'manager_id' => null,
             'is_active' => true,
+            'is_service' => false,
             'locale' => 'ru',
             'nav_quick_actions' => null,
             'totp_enabled' => false,

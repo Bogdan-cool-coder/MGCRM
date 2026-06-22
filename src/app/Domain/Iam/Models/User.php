@@ -37,6 +37,7 @@ class User extends Authenticatable
         'email',
         'password',
         'full_name',
+        'phone',
         'job_title',
         'role',
         'telegram_user_id',
@@ -44,6 +45,9 @@ class User extends Authenticatable
         'department_id',
         'manager_id',
         'is_active',
+        // Service / system account (e.g. the AMO fallback import user). Hidden
+        // from owner/assignee dropdowns.
+        'is_service',
         'locale',
         'salary_currency',
         'nav_quick_actions',
@@ -72,6 +76,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => Role::class,
             'is_active' => 'boolean',
+            'is_service' => 'boolean',
             'nav_quick_actions' => 'array',
             'totp_enabled' => 'boolean',
             'totp_enabled_at' => 'datetime',

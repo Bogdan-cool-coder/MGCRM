@@ -311,7 +311,7 @@ function extractMessage(e: unknown): string {
   &__circle {
     width: 28px;
     height: 28px;
-    border-radius: 50%;
+    border-radius: $radius-circle;
     border: 2px solid var(--p-surface-300);
     background: var(--p-surface-0);
     color: var(--p-text-muted-color);
@@ -342,7 +342,7 @@ function extractMessage(e: unknown): string {
     height: 2px;
     background: var(--p-surface-200);
     margin: 0 $space-2;
-    border-radius: 1px;
+    border-radius: $radius-2xs;
 
     .app-dark & {
       background: var(--p-surface-700);
@@ -354,7 +354,7 @@ function extractMessage(e: unknown): string {
     .wizard-step-item__circle {
       border-color: var(--p-primary-color);
       background: var(--p-primary-color);
-      color: #fff;
+      color: var(--p-primary-contrast-color);
     }
 
     .wizard-step-item__label {

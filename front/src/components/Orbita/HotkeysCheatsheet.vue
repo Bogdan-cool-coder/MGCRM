@@ -73,7 +73,7 @@ const otherEntries = computed(() =>
   }
 
   &__section-title {
-    font-size: 12px;
+    font-size: $font-size-xs; // 12px
     font-weight: $font-weight-semibold;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -105,20 +105,21 @@ const otherEntries = computed(() =>
     border: 1px solid $surface-300;
     border-radius: $radius-sm;
     background: $surface-50;
-    font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-    font-size: 12px;
+    font-family: $font-family-mono;
+    font-size: $font-size-xs; // 12px
     color: $surface-700;
     line-height: 1.5;
-    box-shadow: 0 1px 0 $surface-300;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: 0 1px 0 $surface-300; // custom divider shadow, uses surface tokens
   }
 
   &__arrow {
     color: $surface-400;
-    font-size: 12px;
+    font-size: $font-size-xs; // 12px
   }
 
   &__desc {
-    font-size: 14px;
+    font-size: $font-size-sm; // 14px
     color: var(--p-text-color);
     padding-left: $space-3;
   }
@@ -128,6 +129,7 @@ const otherEntries = computed(() =>
   border-color: $surface-600;
   background: $surface-800;
   color: $surface-200;
-  box-shadow: 0 1px 0 $surface-600;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  box-shadow: 0 1px 0 $surface-600; // custom divider shadow, uses surface tokens
 }
 </style>

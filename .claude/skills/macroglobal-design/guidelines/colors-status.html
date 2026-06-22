@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x160" name="Status colors" subtitle="Success / Danger / Warning / Info — статусные цвета" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-card); color: var(--mg-text-primary); }
+  .row { display: flex; gap: 10px; padding: 18px; }
+  .col { flex: 1; }
+  .chip { height: 44px; border-radius: var(--mg-radius-md); }
+  .name { font-size: 12px; font-weight: 600; margin-top: 7px; }
+  .hex { font-size: 11px; color: var(--mg-text-muted); text-transform: uppercase; }
+  .pill { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: var(--mg-radius-sm); font-size: 11px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="col"><div class="chip" style="background:var(--mg-success)"></div><div class="name">Success</div><div class="hex">#A7EFAA</div><span class="pill" style="background:var(--mg-status-success-bg);color:var(--mg-status-success-text)">Активен</span></div>
+    <div class="col"><div class="chip" style="background:var(--mg-danger)"></div><div class="name">Danger</div><div class="hex">#FF5A44</div><span class="pill" style="background:var(--mg-status-danger-bg);color:var(--mg-status-danger-text)">Просрочено</span></div>
+    <div class="col"><div class="chip" style="background:var(--mg-warning)"></div><div class="name">Warning</div><div class="hex">#FFB38A</div><span class="pill" style="background:var(--mg-status-warning-bg);color:var(--mg-status-warning-text)">Нет задачи</span></div>
+    <div class="col"><div class="chip" style="background:var(--mg-info)"></div><div class="name">Info</div><div class="hex">#8DD9FF</div><span class="pill" style="background:var(--mg-status-info-bg);color:var(--mg-status-info-text)">Новый</span></div>
+  </div>
+</body>
+</html>

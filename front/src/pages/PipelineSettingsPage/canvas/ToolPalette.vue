@@ -130,7 +130,7 @@ function onDragEnd(): void {
     }
 
     i {
-      font-size: 0.75rem;
+      font-size: $font-size-xs;
     }
   }
 
@@ -138,8 +138,8 @@ function onDragEnd(): void {
 
   &__title {
     padding: $space-2 $space-3 $space-1;
-    font-size: 0.6875rem;
-    font-weight: 700;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
     color: var(--p-text-muted-color);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -181,14 +181,14 @@ function onDragEnd(): void {
   }
 
   &__icon {
-    font-size: 1rem;
+    font-size: $font-size-md;
     flex-shrink: 0;
     width: 18px;
     text-align: center;
   }
 
   &__label {
-    font-size: 0.8125rem;
+    font-size: $font-size-sm; // snap from 0.8125rem (15px → 14px)
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -197,7 +197,7 @@ function onDragEnd(): void {
 
   &__hint {
     padding: $space-2 $space-3;
-    font-size: 0.6875rem;
+    font-size: $font-size-2xs;
     color: var(--p-text-muted-color);
     border-top: 1px solid var(--p-surface-border);
     white-space: nowrap;

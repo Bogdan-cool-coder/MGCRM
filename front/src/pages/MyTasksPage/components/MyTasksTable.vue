@@ -653,7 +653,7 @@ onMounted(() => {
   }
 
   &__empty-icon {
-    font-size: 3rem;
+    font-size: $font-size-icon-lg;
     color: $surface-400;
 
     &--success {
@@ -770,7 +770,7 @@ onMounted(() => {
   &__stage-dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: $radius-circle;
     flex-shrink: 0;
   }
 

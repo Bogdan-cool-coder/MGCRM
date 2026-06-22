@@ -4,3 +4,10 @@ $radius-sm: var(--app-radius-sm);
 $radius-md: var(--app-radius-md);
 $radius-lg: var(--app-radius-lg);
 $radius-xl: var(--app-radius-xl);
+
+// Special radius values (static — not theme-reactive)
+$radius-2xs: 2px;   // hairline divider dot, micro inset
+$radius-xs: 3px;    // tight badge, small chip edge
+$radius-badge: 9px; // pill badge (small number badge)
+$radius-pill: 999px; // full-pill badge, tag with rounded ends
+$radius-circle: 50%; // avatar, dot indicator, circular icon-button

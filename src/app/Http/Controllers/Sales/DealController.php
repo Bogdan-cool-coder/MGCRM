@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolveVisibility;
 use App\Http\Requests\Sales\BulkDealActionRequest;
 use App\Http\Requests\Sales\BulkDealDeleteRequest;
+use App\Http\Requests\Sales\IndexDealRequest;
 use App\Http\Requests\Sales\MoveDealRequest;
 use App\Http\Requests\Sales\StoreDealRequest;
 use App\Http\Requests\Sales\UpdateDealRequest;
@@ -43,21 +44,22 @@ class DealController extends Controller
         private readonly ActivityService $activities,
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection|JsonResponse
+    public function index(IndexDealRequest $request): AnonymousResourceCollection|JsonResponse
     {
-        $this->authorize('viewAny', Deal::class);
-
+        // The request already authorised viewAny + validated the full filter set;
+        // only validated keys reach the service (unknown query params are ignored).
         $scope = $this->scope($request);
+        $filters = $request->validated();
 
-        if ($request->query('view') === 'board') {
-            return $this->board($request, $scope);
+        if (($filters['view'] ?? null) === 'board') {
+            return $this->board($request, $scope, $filters);
         }
 
         $deals = $this->service->list(
-            $request->query(),
+            $filters,
             $scope,
             $request->user(),
-            (int) $request->query('per_page', 25),
+            (int) ($filters['per_page'] ?? 25),
         );
 
         return DealResource::collection($deals);
@@ -168,15 +170,13 @@ class DealController extends Controller
 
     /**
      * GET /api/deals/export — XLSX of the filtered, visibility-scoped deal list.
-     * Honours the same filters as the list/board (pipeline_id / stage_id /
-     * owner_id / q / archived) and the user's row-level scope.
+     * Honours the SAME validated filter set as the list/board so the file always
+     * matches exactly what is on screen, plus the user's row-level scope.
      */
-    public function export(Request $request): StreamedResponse
+    public function export(IndexDealRequest $request): StreamedResponse
     {
-        $this->authorize('viewAny', Deal::class);
-
         $xlsx = $this->exporter->buildXlsx(
-            $request->query(),
+            $request->validated(),
             $this->scope($request),
             $request->user(),
         );
@@ -313,10 +313,13 @@ class DealController extends Controller
         return DealResource::make($deal)->response();
     }
 
-    private function board(Request $request, VisibilityScope $scope): JsonResponse
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function board(Request $request, VisibilityScope $scope, array $filters): JsonResponse
     {
-        $pipelineId = $request->filled('pipeline_id')
-            ? (int) $request->query('pipeline_id')
+        $pipelineId = isset($filters['pipeline_id'])
+            ? (int) $filters['pipeline_id']
             : $this->service->defaultSalesPipelineId();
 
         if ($pipelineId === null) {
@@ -327,6 +330,7 @@ class DealController extends Controller
             $pipelineId,
             $scope,
             $request->user(),
+            $filters,
         );
 
         $columns = [];

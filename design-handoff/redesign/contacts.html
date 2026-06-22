@@ -1,0 +1,323 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1280x880" name="Redesign — Контакты (список)" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Контакты (редизайн)</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
+  .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
+    --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-tile:#e3e8f3; }
+  .surface.dark { --c-page:#272829; --c-card:#444547; --c-border:#616263; --c-border2:#54595E;
+    --c-text:#F9FAFB; --c-text2:#E3E4E6; --c-muted:#9B9C9F; --c-hover:#3a3b3d; --c-tile:#1f2f5a; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+
+
+
+const { useState } = React;
+
+function Avatar({ name, size = 30, square }) {
+  const ini = (name || '').trim().split(/\s+/).slice(0, 2).map((w) => w[0] ? w[0].toUpperCase() : '').join('') || '?';
+  return <span style={{ width: size, height: size, borderRadius: square ? 'var(--mg-radius-md)' : '50%', flexShrink: 0, background: 'var(--mg-primary-900)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: Math.round(size * 0.38) }}>{ini}</span>;
+}
+function Tag({ children, sev = 'secondary', size = 'sm' }) {
+  const m = { success: ['var(--mg-status-success-bg)', 'var(--mg-status-success-text)'], danger: ['var(--mg-status-danger-bg)', 'var(--mg-status-danger-text)'], warning: ['var(--mg-status-warning-bg)', 'var(--mg-status-warning-text)'], info: ['var(--mg-status-info-bg)', 'var(--mg-status-info-text)'], primary: ['var(--mg-primary-100)', 'var(--mg-primary-900)'], neutral: ['var(--c-hover)', 'var(--c-text2)'] }[sev];
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: size === 'sm' ? '11px' : '12px', fontWeight: 600, padding: size === 'sm' ? '1px 7px' : '2px 9px', borderRadius: 'var(--mg-radius-sm)', background: m[0], color: m[1], whiteSpace: 'nowrap' }}>{children}</span>;
+}
+function KpiChip({ icon, value, label, accent }) {
+  const m = { info: ['var(--mg-blue-100)', 'var(--mg-blue-700)'], brand: ['var(--mg-primary-100)', 'var(--mg-primary-900)'], success: ['var(--mg-green-100)', 'var(--mg-green-900)'], teal: ['#d4f3e8', '#0A6E4E'], amber: ['var(--mg-orange-100)', 'var(--mg-orange-900)'], danger: ['var(--mg-red-50)', 'var(--mg-red-700)'] }[accent] || ['var(--c-hover)', 'var(--c-text2)'];
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '6px 13px', borderRadius: '999px', background: m[0], color: m[1], fontSize: '13px', whiteSpace: 'nowrap' }}>
+    <i className={`pi ${icon}`} style={{ fontSize: '12px' }} /><span style={{ opacity: .8 }}>{label}:</span><strong style={{ fontWeight: 700 }}>{value}</strong></span>;
+}
+function Btn({ label, icon, primary, outlined, text, onClick, compact }) {
+  const [h, setH] = useState(false);
+  let bg = primary ? h ? 'var(--mg-primary-800)' : 'var(--mg-primary-900)' : text || outlined ? h ? 'var(--c-hover)' : 'transparent' : h ? 'var(--c-hover)' : 'var(--c-card)';
+  let col = primary ? '#fff' : 'var(--c-text2)';
+  let bd = primary ? 'transparent' : text ? 'transparent' : 'var(--c-border2)';
+  return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, padding: label ? '0 14px' : '0 10px', borderRadius: 'var(--mg-radius-md)', cursor: 'pointer', color: col, border: '1px solid ' + bd, background: bg, whiteSpace: 'nowrap', transition: 'background .15s', height: compact ? '31px' : '38px', boxSizing: 'border-box' }}>
+    {icon && <i className={`pi ${icon}`} style={{ fontSize: '13px' }} />}{label}</button>;
+}
+function FSelect({ placeholder, value }) {
+  return <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 11px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', fontSize: '13px', color: value ? 'var(--c-text)' : 'var(--c-muted)', cursor: 'pointer', background: 'var(--c-card)' }}>
+    <span style={{ flex: 1 }}>{value || placeholder}</span><i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></div>;
+}
+function FField({ label, children }) {
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+    <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--c-text2)' }}>{label}</label>{children}</div>;
+}
+
+const ENG = { high: ['Высокая', '#2b6b38', '#A7EFAA'], mid: ['Средняя', '#9b4029', '#FFB38A'], low: ['Низкая', '#7E7F82', '#D5D6D8'] };
+const TR = { g: 'var(--mg-green-700)', a: 'var(--mg-orange-700)', r: 'var(--mg-red-600)', n: 'var(--c-muted)' };
+const CAT = { L: 'danger', M: 'warning', S1: 'success', S2: 'info' };
+
+const CONTACTS = [
+{ id: 1042, name: 'Богдан Меркулов', phone: '+7 701 234-56-78', pos: 'Коммерческий директор', company: 'ООО «Ромашка»', eng: 'high', touch: 'Сегодня', tr: 'g', deals: 4, source: 'Партнёр', tags: ['Тёплый'], owner: 'И. Петров' },
+{ id: 1041, name: 'Анна Сидорова', phone: '+7 705 112-33-44', pos: 'Менеджер закупок', company: 'ТехноПарк', eng: 'high', touch: 'Вчера', tr: 'g', deals: 2, source: 'Сайт', tags: ['Тёплый'], owner: 'А. Сидорова' },
+{ id: 1039, name: 'Сергей Ким', phone: '+7 700 555-21-09', pos: 'Финансовый директор', company: 'СтройИнвест', eng: 'mid', touch: '8 дн назад', tr: 'a', deals: 1, source: 'Выставка', tags: ['Холодный'], owner: 'И. Петров' },
+{ id: 1037, name: 'Марина Лебедева', phone: '+7 702 998-10-22', pos: 'Главный бухгалтер', company: 'Глобус Логистик', eng: 'low', touch: '34 дн назад', tr: 'r', deals: 0, source: 'Реклама', tags: [], owner: 'А. Сидорова' },
+{ id: 1035, name: 'Дмитрий Орлов', phone: '+1 415 555-0132', pos: 'CEO', company: 'Acme Corp', eng: 'high', touch: '2 дн назад', tr: 'g', deals: 3, source: 'Рекомендация', tags: ['Договор'], owner: 'И. Петров' },
+{ id: 1031, name: 'Елена Воронова', phone: '+7 707 443-87-65', pos: 'HR-директор', company: 'ТехноПарк', eng: 'mid', touch: '12 дн назад', tr: 'a', deals: 1, source: 'Сайт', tags: [], owner: 'М. Котов' },
+{ id: 1028, name: 'Павел Зайцев', phone: '+7 701 220-45-80', pos: 'Менеджер проектов', company: 'ООО «Ромашка»', eng: 'low', touch: '—', tr: 'n', deals: 0, source: 'Холодный обзвон', tags: ['Новый'], owner: 'М. Котов' },
+{ id: 1024, name: 'Ольга Новикова', phone: '+7 705 661-29-14', pos: 'Директор по маркетингу', company: 'СтройИнвест', eng: 'high', touch: '4 дн назад', tr: 'g', deals: 2, source: 'Партнёр', tags: ['Тёплый'], owner: 'А. Сидорова' }];
+
+const COMPANIES = [
+{ id: 7, name: 'ООО «Ромашка»', type: 'ТОО', cat: 'L', country: 'Казахстан', emp: 120, eng: 'high', touch: 'Сегодня', tr: 'g', deals: 4, owner: 'И. Петров', tags: ['Договор', 'Ключевой'] },
+{ id: 6, name: 'ТехноПарк', type: 'АО', cat: 'M', country: 'Казахстан', emp: 340, eng: 'high', touch: 'Вчера', tr: 'g', deals: 3, owner: 'А. Сидорова', tags: ['Тёплый'] },
+{ id: 5, name: 'СтройИнвест', type: 'ТОО', cat: 'M', country: 'Казахстан', emp: 85, eng: 'mid', touch: '6 дн назад', tr: 'a', deals: 2, owner: 'И. Петров', tags: [] },
+{ id: 4, name: 'Глобус Логистик', type: 'ТОО', cat: 'S1', country: 'Россия', emp: 1200, eng: 'low', touch: '40 дн назад', tr: 'r', deals: 0, owner: 'А. Сидорова', tags: ['Холодный'] },
+{ id: 3, name: 'Acme Corp', type: 'Inc', cat: 'S2', country: 'США', emp: 50, eng: 'high', touch: '3 дн назад', tr: 'g', deals: 3, owner: 'И. Петров', tags: ['Договор'] },
+{ id: 2, name: 'Альфа Девелопмент', type: 'ТОО', cat: 'L', country: 'Казахстан', emp: 60, eng: 'mid', touch: '14 дн назад', tr: 'a', deals: 1, owner: 'М. Котов', tags: ['Новый'] },
+{ id: 1, name: 'Бета Системс', type: 'ТОО', cat: 'S1', country: 'Казахстан', emp: 450, eng: 'high', touch: '2 дн назад', tr: 'g', deals: 2, owner: 'А. Сидорова', tags: ['Тёплый'] }];
+
+const tagSev = (t) => t === 'Договор' || t === 'Ключевой' ? 'primary' : t === 'Новый' ? 'info' : t === 'Холодный' ? 'neutral' : 'warning';
+
+function Th({ children, right, center }) {return <th style={{ textAlign: center ? 'center' : right ? 'right' : 'left', padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid var(--c-border)', whiteSpace: 'nowrap' }}>{children}</th>;}
+function Cell({ children, right, center, muted }) {return <td style={{ padding: '10px 14px', fontSize: '13px', color: muted ? 'var(--c-muted)' : 'var(--c-text)', borderBottom: '1px solid var(--c-border)', whiteSpace: 'nowrap', textAlign: center ? 'center' : right ? 'right' : 'left' }}>{children}</td>;}
+function TouchCell({ touch, tr }) {return <td style={{ padding: '10px 14px', fontSize: '13px', color: TR[tr], fontWeight: tr === 'n' ? 400 : 500, borderBottom: '1px solid var(--c-border)', whiteSpace: 'nowrap' }}>{touch}</td>;}
+function PageSize() {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(50);
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+    <span style={{ fontSize: '13px', color: 'var(--c-muted)' }}>Показывать:</span>
+    <span style={{ position: 'relative' }}>
+      <button onClick={() => setOpen((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 11px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', color: 'var(--c-text)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--mg-font-sans)' }}>{val}<i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></button>
+      {open && <React.Fragment>
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+        <div style={{ position: 'absolute', bottom: 'calc(100% + 5px)', left: 0, zIndex: 41, minWidth: 92, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px' }}>
+          {[50, 100, 200].map((n) => <button key={n} onClick={() => {setVal(n);setOpen(false);}} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', border: 'none', background: 'transparent', borderRadius: 'var(--mg-radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: n === val ? 700 : 500, color: 'var(--c-text)', fontFamily: 'var(--mg-font-sans)' }}>{n}</button>)}
+        </div>
+      </React.Fragment>}
+    </span>
+  </span>;
+}
+function EngCell({ eng }) {const e = ENG[eng];return <Cell><span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: e[2] }} /><span style={{ color: e[1], fontWeight: 600, fontSize: '12px' }}>{e[0]}</span></span></Cell>;}
+function DealsCell({ n }) {return <Cell center>{n > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 22, height: 20, padding: '0 6px', borderRadius: 10, background: 'var(--mg-primary-100)', color: 'var(--mg-primary-900)', fontSize: '12px', fontWeight: 700 }}>{n}</span> : <span style={{ color: 'var(--c-muted)' }}>—</span>}</Cell>;}
+function TagsCell({ tags }) {return <Cell><span style={{ display: 'inline-flex', gap: '4px', flexWrap: 'wrap' }}>{tags.length ? tags.map((t, i) => <Tag key={i} sev={tagSev(t)}>{t}</Tag>) : <span style={{ color: 'var(--c-muted)' }}>—</span>}</span></Cell>;}
+function OwnerCell({ owner }) {return <Cell><span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}><Avatar name={owner} size={22} /><span style={{ color: 'var(--c-text2)', fontSize: '12px' }}>{owner}</span></span></Cell>;}
+function Menu({ items, onClose, align }) {
+  return <React.Fragment>
+    <div onClick={(e) => {e.stopPropagation();onClose();}} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+    <div style={{ position: 'absolute', top: 'calc(100% + 5px)', [align || 'right']: 0, zIndex: 41, minWidth: 200, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+      {items.map((it, i) => it.sep ? <div key={i} style={{ height: 1, background: 'var(--c-border)', margin: '5px 6px' }} /> :
+      <button key={i} onClick={() => onClose()} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 'var(--mg-radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: 500, color: it.danger ? 'var(--mg-red-600)' : 'var(--c-text)', textAlign: 'left', fontFamily: 'var(--mg-font-sans)', whiteSpace: 'nowrap' }}>
+          <i className={`pi ${it.icon}`} style={{ fontSize: '13px', width: 15, color: it.danger ? 'var(--mg-red-600)' : 'var(--c-muted)' }} />{it.label}</button>)}
+    </div>
+  </React.Fragment>;
+}
+function MenuButton({ icon, label, outlined, text, items, align, compact }) {
+  const [open, setOpen] = useState(false);
+  return <span style={{ position: 'relative', display: 'inline-flex' }}>
+    <Btn icon={icon} label={label} outlined={outlined} text={text} compact={compact} onClick={() => setOpen((o) => !o)} />
+    {open && <Menu items={items} align={align} onClose={() => setOpen(false)} />}
+  </span>;
+}
+const ROW_ITEMS = [
+{ icon: 'pi-id-card', label: 'Открыть карточку' },
+{ icon: 'pi-pencil', label: 'Редактировать' },
+{ sep: true },
+{ icon: 'pi-briefcase', label: 'Создать сделку' },
+{ icon: 'pi-check-square', label: 'Поставить задачу' },
+{ icon: 'pi-clone', label: 'Объединить дубликаты' },
+{ sep: true },
+{ icon: 'pi-trash', label: 'Удалить', danger: true }];
+
+const HDR_ITEMS = [
+{ icon: 'pi-clone', label: 'Поиск дубликатов (дедуп)' },
+{ icon: 'pi-upload', label: 'Импорт из файла' },
+{ icon: 'pi-download', label: 'Экспорт в Excel' },
+{ icon: 'pi-table', label: 'Настроить колонки' },
+{ sep: true },
+{ icon: 'pi-check-square', label: 'Массовые действия' }];
+
+function More() {
+  const [open, setOpen] = useState(false);
+  return <Cell right><span style={{ position: 'relative', display: 'inline-flex' }}>
+    <i className="pi pi-ellipsis-v" onClick={(e) => {e.stopPropagation();setOpen((o) => !o);}} style={{ color: 'var(--c-muted)', fontSize: '14px', cursor: 'pointer', padding: '4px' }} />
+    {open && <Menu items={ROW_ITEMS} align="right" onClose={() => setOpen(false)} />}
+  </span></Cell>;
+}
+
+function ContactRow({ c }) {
+  const [h, setH] = useState(false);
+  return <tr onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{ background: h ? 'var(--c-hover)' : 'var(--c-card)', cursor: 'pointer' }}>
+    <Cell><span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}><Avatar name={c.name} size={32} /><span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}><a style={{ color: 'var(--mg-primary-900)', fontWeight: 600, textDecoration: 'none' }}>{c.name}</a><span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>{c.pos}</span></span></span></Cell>
+    <Cell><a style={{ color: 'var(--mg-primary-900)', textDecoration: 'none' }}>{c.company}</a></Cell>
+    <Cell muted>{c.phone}</Cell>
+    <TouchCell touch={c.touch} tr={c.tr} />
+    <TagsCell tags={c.tags} />
+    <OwnerCell owner={c.owner} />
+  </tr>;
+}
+function CompanyRow({ c }) {
+  const [h, setH] = useState(false);
+  return <tr onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{ background: h ? 'var(--c-hover)' : 'var(--c-card)', cursor: 'pointer' }}>
+    <Cell><span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}><Avatar name={c.name} size={32} square /><a style={{ color: 'var(--mg-primary-900)', fontWeight: 600, textDecoration: 'none' }}>{c.name}</a></span></Cell>
+    <Cell center><Tag sev={CAT[c.cat]}>{c.cat}</Tag></Cell>
+    <Cell muted>{c.country}</Cell>
+    <DealsCell n={c.deals} />
+    <TouchCell touch={c.touch} tr={c.tr} />
+    <EngCell eng={c.eng} />
+    <OwnerCell owner={c.owner} />
+    <TagsCell tags={c.tags} />
+  </tr>;
+}
+
+function FilterOverlay({ entity, onClose }) {
+  const Preset = ({ label, sev }) => {const [on, setOn] = useState(label === 'Активные');
+    const c = { success: ['var(--mg-status-success-bg)', 'var(--mg-status-success-text)'], warning: ['var(--mg-status-warning-bg)', 'var(--mg-status-warning-text)'], danger: ['var(--mg-status-danger-bg)', 'var(--mg-status-danger-text)'] }[sev] || ['var(--mg-primary-100)', 'var(--mg-primary-900)'];
+    return <button onClick={() => setOn(!on)} style={{ fontSize: '13px', fontWeight: 600, padding: '6px 13px', borderRadius: '999px', cursor: 'pointer', border: '1px solid ' + (on ? 'transparent' : 'var(--c-border)'), background: on ? c[0] : 'var(--c-card)', color: on ? c[1] : 'var(--c-text2)' }}>{label}</button>;
+  };
+  return <div style={{ borderBottom: '1px solid var(--c-border)', background: 'var(--c-hover)', padding: '16px 20px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Сегменты</span>
+      <Preset label="Мои" /><Preset label="Активные" sev="success" /><Preset label="С открытыми сделками" /><Preset label="Без задач" sev="warning" /><Preset label="Дубликаты" sev="danger" />
+      <span style={{ flex: 1 }} />
+      <i className="pi pi-times" onClick={onClose} style={{ cursor: 'pointer', color: 'var(--c-muted)', fontSize: '15px' }} />
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px 24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Кто</div>
+        <FField label="Ответственный"><FSelect placeholder="Любой" /></FField>
+        <FField label="Автор"><FSelect placeholder="Любой" /></FField>
+        <FField label="Вовлечённость"><FSelect placeholder="Любая" /></FField>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Что</div>
+        {entity === 'company' ?
+        <React.Fragment><FField label="Тип компании"><FSelect placeholder="Любой" /></FField><FField label="Категория"><FSelect placeholder="L / M / S1 / S2" /></FField><FField label="Страна"><FSelect placeholder="Любая" /></FField></React.Fragment> :
+        <React.Fragment><FField label="Компания"><FSelect placeholder="Любая" /></FField><FField label="Должность"><FSelect placeholder="Любая" /></FField><FField label="Источник"><FSelect placeholder="Любой" /></FField></React.Fragment>}
+        <FField label="Теги"><FSelect placeholder="Выберите теги" /></FField>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Когда</div>
+        <FField label="Создан"><FSelect placeholder="За всё время" /></FField>
+        <FField label="Последняя активность"><FSelect placeholder="За всё время" /></FField>
+      </div>
+    </div>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+      <Btn label="Сбросить" text /><Btn label="Применить" icon="pi-check" primary onClick={onClose} />
+    </div>
+  </div>;
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const dark = t.dark;
+  const [entity, setEntity] = useState('company');
+  const [filters, setFilters] = useState(false);
+
+  const ACC = { '#172747': { light: '#2B4987', c100: '#e3e8f3', tile: '#e3e8f3' }, '#2b2f36': { light: '#545b66', c100: '#e7e8ea', tile: '#e7e8ea' }, '#312e81': { light: '#4f46e5', c100: '#e7e7fb', tile: '#e7e7fb' }, '#0f4d3a': { light: '#1F8A5B', c100: '#d9f2e6', tile: '#d9f2e6' } };
+  const SHP = { 'Острые': ['2px', '3px', '4px', '6px'], 'Скруглённые': ['4px', '6px', '8px', '12px'], 'Мягкие': ['9px', '13px', '18px', '24px'] };
+  const a = ACC[t.accent] || ACC['#172747'];const s = SHP[t.shape] || SHP['Скруглённые'];
+  const vars = { '--mg-primary-900': t.accent, '--mg-primary-light': a.light, '--mg-primary-100': a.c100, '--c-tile': a.tile, '--mg-radius-sm': s[0], '--mg-radius-md': s[1], '--mg-radius-lg': s[2], '--mg-radius-xl': s[3], minHeight: '100vh', background: 'var(--c-page)' };
+  if (!dark && t.mood === 'Тёплый') vars['--c-page'] = '#f4f1ec';
+  if (!dark && t.mood === 'Брендовый') vars['--c-page'] = a.tile;
+
+  const isCo = entity === 'company';
+  const Seg = ({ v, label }) => {const ac = entity === v;
+    return <button onClick={() => setEntity(v)} style={{ fontSize: '13px', fontWeight: 600, padding: '7px 16px', border: 'none', cursor: 'pointer', background: ac ? 'var(--c-card)' : 'transparent', color: ac ? 'var(--mg-primary-900)' : 'var(--c-muted)', borderRadius: '5px', boxShadow: ac ? 'var(--mg-shadow-sm)' : 'none' }}>{label}</button>;
+  };
+
+  return <div className={'surface' + (dark ? ' dark' : '')} style={vars}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 28px', background: 'var(--mg-primary-950)', position: 'sticky', top: 0, zIndex: 5 }}>
+      <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>Редизайн раздела «Контакты»</span>
+      <span style={{ flex: 1 }} />
+      <button onClick={() => setTweak('dark', !dark)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', fontWeight: 600, padding: '7px 14px', borderRadius: '6px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.22)', background: 'transparent', color: '#fff' }}>
+        <i className={`pi ${dark ? 'pi-sun' : 'pi-moon'}`} style={{ fontSize: '14px' }} />{dark ? 'Светлая' : 'Тёмная'}</button>
+    </div>
+
+    <div style={{ padding: '24px 28px', maxWidth: '1340px', margin: '0 auto' }}>
+      <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-md)', overflow: 'hidden' }}>
+        {/* PAGE HEADER — title + type switch right of it */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--c-border)', flexWrap: 'wrap' }}>
+          <i className={`pi ${isCo ? 'pi-building' : 'pi-users'}`} style={{ fontSize: '20px', color: 'var(--mg-primary-900)' }} />
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: 'var(--c-text)' }}>Контакты</h1>
+          <div style={{ display: 'inline-flex', gap: '2px', background: 'var(--mg-gray-100)', borderRadius: '7px', padding: '3px', height: '38px' }}>
+            <Seg v="company" label="Компания" /><Seg v="contact" label="Физлицо" /></div>
+          <div style={{ position: 'relative' }}>
+            <i className="pi pi-search" style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: 'var(--c-muted)' }} />
+            <input placeholder={isCo ? 'Поиск по названию, БИН…' : 'Поиск по имени, телефону, email…'} style={{ width: '240px', boxSizing: 'border-box', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', padding: '8px 12px 8px 32px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', color: 'var(--c-text)', outline: 'none', height: "38px" }} /></div>
+          <div style={{ position: 'relative' }}>
+            <Btn label="Фильтры" icon="pi-filter" outlined onClick={() => setFilters((f) => !f)} />
+            <span style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#E8821E', color: '#fff', fontSize: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>1</span></div>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+          <MenuButton icon="pi-ellipsis-v" outlined compact items={HDR_ITEMS} align="right" />
+          <Btn label={isCo ? 'Создать компанию' : 'Создать контакт'} icon="pi-plus" primary />
+          </span>
+        </div>
+
+        {/* KPI SUMMARY — per entity */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '13px 20px', borderBottom: '1px solid var(--c-border)' }}>
+          {isCo ? <React.Fragment>
+            <KpiChip icon="pi-building" value="96" label="Всего" accent="brand" />
+            <KpiChip icon="pi-verified" value="58" label="Клиенты" accent="success" />
+            <KpiChip icon="pi-flag-fill" value="8" label="Категория L" accent="danger" />
+            <KpiChip icon="pi-flag-fill" value="21" label="Категория M" accent="amber" />
+            <KpiChip icon="pi-flag-fill" value="67" label="Категория S" accent="success" />
+            <KpiChip icon="pi-plus-circle" value="5" label="Новые за неделю" accent="teal" />
+          </React.Fragment> : <React.Fragment>
+            <KpiChip icon="pi-users" value="248" label="Всего" accent="brand" />
+            <KpiChip icon="pi-verified" value="180" label="Активные" accent="success" />
+            <KpiChip icon="pi-clock" value="23" label="Без касаний 30+ дн" accent="info" />
+            <KpiChip icon="pi-plus-circle" value="12" label="Новые за неделю" accent="teal" />
+          </React.Fragment>}
+        </div>
+
+        {/* TOOLBAR moved into header */}
+
+        {filters && <FilterOverlay entity={entity} onClose={() => setFilters(false)} />}
+
+        {/* TABLE */}
+        <div style={{ overflowX: 'visible' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--mg-font-sans)' }}>
+            {isCo ?
+            <thead><tr><Th>Название</Th><Th center>Категория</Th><Th>Страна</Th><Th center>Сделки</Th><Th>Посл. контакт</Th><Th>Вовлечённость</Th><Th>Ответственный</Th><Th>Теги</Th></tr></thead> :
+            <thead><tr><Th>ФИО</Th><Th>Компания</Th><Th>Телефон</Th><Th>Посл. контакт</Th><Th>Теги</Th><Th>Автор</Th></tr></thead>}
+            <tbody>{isCo ? COMPANIES.map((c) => <CompanyRow key={c.id} c={c} />) : CONTACTS.map((c) => <ContactRow key={c.id} c={c} />)}</tbody>
+          </table>
+        </div>
+
+        {/* FOOTER */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderTop: '1px solid var(--c-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}><PageSize /><span style={{ fontSize: '13px', color: 'var(--c-muted)' }}>{isCo ? 'Показано 1–7 из 96' : 'Показано 1–8 из 248'}</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {['pi-angle-double-left', 'pi-angle-left'].map((p) => <i key={p} className={`pi ${p}`} style={{ fontSize: '13px', color: 'var(--c-muted)', cursor: 'pointer', padding: '4px' }} />)}
+            <span style={{ minWidth: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '5px', background: 'var(--mg-primary-900)', color: '#fff', fontSize: '13px', fontWeight: 600 }}>1</span>
+            {['2', '3'].map((n) => <span key={n} style={{ minWidth: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '5px', color: 'var(--c-text2)', fontSize: '13px', cursor: 'pointer' }}>{n}</span>)}
+            {['pi-angle-right', 'pi-angle-double-right'].map((p) => <i key={p} className={`pi ${p}`} style={{ fontSize: '13px', color: 'var(--c-muted)', cursor: 'pointer', padding: '4px' }} />)}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Бренд" />
+      <TweakColor label="Акцент" value={t.accent} options={['#172747', '#2b2f36', '#312e81', '#0f4d3a']} onChange={(v) => setTweak('accent', v)} />
+      <TweakSection label="Форма" />
+      <TweakRadio label="Скругление" value={t.shape} options={['Острые', 'Скруглённые', 'Мягкие']} onChange={(v) => setTweak('shape', v)} />
+      <TweakSection label="Полотно" />
+      <TweakRadio label="Фон" value={t.mood} options={['Прохладный', 'Тёплый', 'Брендовый']} onChange={(v) => setTweak('mood', v)} />
+      <TweakToggle label="Тёмная тема" value={t.dark} onChange={(v) => setTweak('dark', v)} />
+    </TweaksPanel>
+  </div>;
+}
+const TWEAK_DEFAULTS = { accent: '#172747', shape: 'Скруглённые', mood: 'Прохладный', dark: false };
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

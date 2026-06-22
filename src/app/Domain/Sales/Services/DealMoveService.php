@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Sales\Services;
 
 use App\Domain\Contracts\Services\DocumentService;
+use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Services\CompanyService;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
@@ -38,6 +40,7 @@ class DealMoveService
         private readonly DocumentService $documents,
         private readonly EngagementService $engagement,
         private readonly EntityLogService $entityLog,
+        private readonly CompanyService $companies,
     ) {}
 
     public function move(
@@ -125,6 +128,16 @@ class DealMoveService
 
             $locked->save();
 
+            // 6a. Client-lifecycle detect on the won-transition (N5). Entering a
+            //     won stage either converts the company into a unique client (this
+            //     is its first won deal → primary) or is an upsell on an already
+            //     converted company. Runs inside this transaction so the deal flag
+            //     and the company status commit together; company status is written
+            //     ONLY through CompanyService (DDD boundary) — never $company->save().
+            if ($toStage->is_won) {
+                $this->detectUniqueClient($locked, $userId);
+            }
+
             // 7. Append-only history row (stable event contract).
             DealStageHistory::create([
                 'deal_id' => $locked->id,
@@ -169,6 +182,56 @@ class DealMoveService
         }
 
         return $result;
+    }
+
+    /**
+     * Client-lifecycle detect on a won-transition (N5, Фича 3). MUST run inside
+     * the caller's DB::transaction (move() guarantees this) so the deal flag and
+     * the company status are committed atomically.
+     *
+     * Steps:
+     *   1. Row-lock the company (lockForUpdate) — serialises two deals on the same
+     *      company winning concurrently, so exactly one becomes the primary.
+     *   2. Client date = deal.signed_at ?? deal.closed_at ?? now() — "подписан
+     *      договор → клиент" (design Q2/Q5: unique_client_since = the first won
+     *      deal's signed_at; closed_at / now() are fallbacks when signed_at is
+     *      blank). signed_at is a date cast → startOfDay() for a stable CarbonInterface.
+     *   3. If the company has no unique_client_since yet → this deal converts it:
+     *      mark it (CompanyService::markAsUniqueClient, itself idempotent) and flag
+     *      the deal primary. Otherwise it is an upsell → primary stays false.
+     *
+     * Company with no company_id is impossible (NOT NULL FK), but the relation is
+     * defensively null-checked: a company that vanished mid-flight is a silent
+     * no-op rather than a failed win.
+     */
+    private function detectUniqueClient(Deal $deal, int $userId): void
+    {
+        if ($deal->company_id === null) {
+            return;
+        }
+
+        // Anti-race: lock the company row for the rest of this transaction.
+        $company = Company::query()->lockForUpdate()->find($deal->company_id);
+
+        if ($company === null) {
+            return;
+        }
+
+        $isFirstWon = $company->unique_client_since === null;
+
+        if ($isFirstWon) {
+            // "Клиент" date = signed_at (preferred) → closed_at → now().
+            $clientDate = ($deal->signed_at ?? $deal->closed_at ?? now())->copy()->startOfDay();
+
+            // Cross-domain write through CompanyService (idempotent itself):
+            // sets client_status=active + unique_client_since + status log.
+            $this->companies->markAsUniqueClient($company, $clientDate, $userId);
+        }
+
+        // Primary only when this deal is the converting (first) won deal; later
+        // won deals on the same company are upsells (is_primary_deal stays false).
+        $deal->is_primary_deal = $isFirstWon;
+        $deal->save();
     }
 
     /**

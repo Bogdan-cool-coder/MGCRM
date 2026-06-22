@@ -43,7 +43,10 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
 
   const entityType = ref<EntityType>(initialType)
   const page = ref(1)
-  const perPage = ref(25)
+
+  // Persist perPage in localStorage
+  const storedPerPage = Number(localStorage.getItem('mgcrm_contacts_per_page_v1')) || 50
+  const perPage = ref(storedPerPage)
   /** Legacy simple filter — kept for backward compat; overlayFilters extends it. */
   const filter = ref<ContactsFilter>({ ...DEFAULT_FILTER })
   /** Full overlay filter state */
@@ -51,7 +54,7 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
 
   const emptyPage = (): PaginatedResponse<Contact | Company> => ({
     data: [],
-    meta: { current_page: 1, last_page: 1, per_page: 25, total: 0, from: null, to: null },
+    meta: { current_page: 1, last_page: 1, per_page: 50, total: 0, from: null, to: null },
   })
 
   const contactsResource = useAsyncResource<PaginatedResponse<Contact>>(
@@ -91,7 +94,10 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     if (f.company_type_ids.length) n++
     if (f.categories.length) n++
     if (f.country_code) n++
-    if (f.city) n++
+    // city only counts for companies
+    if (entityType.value === 'company' && f.city) n++
+    // position only counts for contacts
+    if (entityType.value === 'contact' && f.position) n++
     if (f.open_deals_min !== null || f.open_deals_max !== null) n++
     if (f.created_range) n++
     if (f.last_touch_range) n++
@@ -99,7 +105,6 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     if (f.only_active) n++
     if (f.only_with_deals) n++
     if (f.only_no_task) n++
-    if (f.only_duplicates) n++
     return n
   })
 
@@ -109,17 +114,38 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
       activeFilterCount.value > 0,
   )
 
+  function isoFromDate(d: Date): string {
+    return d.toISOString().slice(0, 10)
+  }
+
   function buildContactParams(): ContactListParams {
     const f = overlayFilters.value
     const params: ContactListParams = {
       page: page.value,
       per_page: perPage.value,
       search: filter.value.search || undefined,
-      // Overlay filters mapped to API params
+      // Multi-value
+      owner_ids: f.owner_ids.length ? f.owner_ids : undefined,
+      author_ids: f.author_ids.length ? f.author_ids : undefined,
+      sources: f.sources.length ? f.sources : undefined,
       tags: f.tags.length ? f.tags : (filter.value.tags.length ? filter.value.tags : undefined),
-      source: f.sources[0] ?? filter.value.source ?? undefined,
+      // Single-value
+      position: f.position || undefined,
       country_code: f.country_code ?? filter.value.country_code ?? undefined,
       engagement_tier: f.engagement_tier ?? undefined,
+      // Date ranges
+      created_from: f.created_range?.[0] ? isoFromDate(f.created_range[0]) : undefined,
+      created_to: f.created_range?.[1] ? isoFromDate(f.created_range[1]) : undefined,
+      last_touch_from: f.last_touch_range?.[0] ? isoFromDate(f.last_touch_range[0]) : undefined,
+      last_touch_to: f.last_touch_range?.[1] ? isoFromDate(f.last_touch_range[1]) : undefined,
+      // Open deals range
+      open_deals_min: f.open_deals_min ?? undefined,
+      open_deals_max: f.open_deals_max ?? undefined,
+      // Presets
+      only_mine: f.only_mine || undefined,
+      only_active: f.only_active || undefined,
+      only_with_deals: f.only_with_deals || undefined,
+      only_no_task: f.only_no_task || undefined,
     }
     return params
   }
@@ -130,11 +156,26 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
       page: page.value,
       per_page: perPage.value,
       search: filter.value.search || undefined,
-      company_type_id: f.company_type_ids[0] ?? filter.value.company_type_id ?? undefined,
-      source: f.sources[0] ?? filter.value.source ?? undefined,
-      country_code: f.country_code ?? filter.value.country_code ?? undefined,
+      // Multi-value
+      owner_ids: f.owner_ids.length ? f.owner_ids : undefined,
+      company_type_ids: f.company_type_ids.length ? f.company_type_ids : undefined,
+      category_code: f.categories.length ? f.categories : undefined,
+      sources: f.sources.length ? f.sources : undefined,
       tags: f.tags.length ? f.tags : (filter.value.tags.length ? filter.value.tags : undefined),
+      // Single-value
+      country_code: f.country_code ?? filter.value.country_code ?? undefined,
+      city: f.city || undefined,
       engagement_tier: f.engagement_tier ?? undefined,
+      // Date ranges
+      created_from: f.created_range?.[0] ? isoFromDate(f.created_range[0]) : undefined,
+      created_to: f.created_range?.[1] ? isoFromDate(f.created_range[1]) : undefined,
+      last_touch_from: f.last_touch_range?.[0] ? isoFromDate(f.last_touch_range[0]) : undefined,
+      last_touch_to: f.last_touch_range?.[1] ? isoFromDate(f.last_touch_range[1]) : undefined,
+      // Presets
+      only_mine: f.only_mine || undefined,
+      only_active: f.only_active || undefined,
+      only_with_deals: f.only_with_deals || undefined,
+      only_no_task: f.only_no_task || undefined,
     }
     return params
   }
@@ -197,10 +238,10 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     else if (key === 'only_active') { f.only_active = false }
     else if (key === 'only_with_deals') { f.only_with_deals = false }
     else if (key === 'only_no_task') { f.only_no_task = false }
-    else if (key === 'only_duplicates') { f.only_duplicates = false }
     else if (key === 'engagement_tier') { f.engagement_tier = null }
     else if (key === 'country') { f.country_code = null }
     else if (key === 'city') { f.city = '' }
+    else if (key === 'position') { f.position = '' }
     else if (key === 'open_deals') { f.open_deals_min = null; f.open_deals_max = null }
     else if (key.startsWith('owner_')) {
       const id = parseInt(key.slice(6))

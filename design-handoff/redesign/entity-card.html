@@ -1,0 +1,772 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1180x900" name="Redesign — Контакт / Компания (карточка)" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Редизайн карточки контакта/компании</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
+  /* light/dark local surface vars — brand navy header stays invariant */
+  .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
+    --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-tile:#e3e8f3; }
+  .surface.dark { --c-page:#272829; --c-card:#444547; --c-border:#616263; --c-border2:#54595E;
+    --c-text:#F9FAFB; --c-text2:#E3E4E6; --c-muted:#9B9C9F; --c-hover:#3a3b3d; --c-tile:#1f2f5a; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+
+
+
+
+
+
+
+
+
+
+
+
+const { useState } = React;
+
+// ── small primitives (inline, token-driven) ───────────────────────────────────
+function Avatar({ initials, size = 52, light }) {
+  return <span style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0,
+    background: light ? 'rgba(255,255,255,0.14)' : 'var(--mg-primary-900)', color: '#fff',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    fontWeight: 600, fontSize: Math.round(size * 0.36), letterSpacing: '-0.02em' }}>{initials}</span>;
+}
+function Tag({ children, sev = 'secondary', size = 'md' }) {
+  const m = {
+    success: ['var(--mg-status-success-bg)', 'var(--mg-status-success-text)'],
+    danger: ['var(--mg-status-danger-bg)', 'var(--mg-status-danger-text)'],
+    warning: ['var(--mg-status-warning-bg)', 'var(--mg-status-warning-text)'],
+    info: ['var(--mg-status-info-bg)', 'var(--mg-status-info-text)'],
+    primary: ['var(--mg-primary-100)', 'var(--mg-primary-900)'],
+    secondary: ['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.85)'],
+    neutral: ['var(--c-hover)', 'var(--c-text2)']
+  }[sev];
+  const fs = size === 'sm' ? '11px' : '12px';
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: fs, fontWeight: 600,
+    padding: size === 'sm' ? '1px 7px' : '2px 9px', borderRadius: 'var(--mg-radius-sm)', background: m[0], color: m[1], whiteSpace: 'nowrap' }}>{children}</span>;
+}
+function HeaderBtn({ icon, label, primary, full, onClick }) {
+  const [h, setH] = useState(false);
+  return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ display: full ? 'flex' : 'inline-flex', alignItems: 'center', justifyContent: full ? 'flex-start' : 'center',
+    width: full ? '100%' : undefined, gap: '7px', fontFamily: 'var(--mg-font-sans)',
+    fontSize: '13px', fontWeight: 600, padding: label ? '7px 12px' : '7px', borderRadius: 'var(--mg-radius-md)', cursor: 'pointer',
+    color: '#fff', border: '1px solid ' + (primary ? 'transparent' : 'rgba(255,255,255,0.22)'),
+    background: primary ? h ? '#3a5694' : 'var(--mg-primary-light)' : h ? 'rgba(255,255,255,0.12)' : 'transparent',
+    transition: 'background .15s' }}>
+    <i className={`pi ${icon}`} style={{ fontSize: '14px' }} />{label && <span>{label}</span>}
+  </button>;
+}
+
+// ── KPI chip (label: value, tinted) ────────────────────────────────────────────
+function KpiChip({ icon, value, label, accent }) {
+  const m = {
+    info: ['var(--mg-blue-100)', 'var(--mg-blue-700)'],
+    brand: ['var(--mg-primary-100)', 'var(--mg-primary-900)'],
+    success: ['var(--mg-green-100)', 'var(--mg-green-900)'],
+    teal: ['#d4f3e8', '#0A6E4E'],
+    amber: ['var(--mg-orange-100)', 'var(--mg-orange-900)'],
+    danger: ['var(--mg-red-50)', 'var(--mg-red-700)'],
+    neutral: ['var(--c-hover)', 'var(--c-text2)']
+  }[accent] || ['var(--c-hover)', 'var(--c-text2)'];
+  const [h, setH] = useState(false);
+  return <span onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '6px 13px', borderRadius: '999px',
+    background: m[0], color: m[1], fontSize: '13px', cursor: 'default', whiteSpace: 'nowrap',
+    boxShadow: h ? 'inset 0 0 0 1px ' + m[1] + '33' : 'none', transition: 'box-shadow .15s' }}>
+    <i className={`pi ${icon}`} style={{ fontSize: '12px' }} />
+    <span style={{ opacity: .8 }}>{label}:</span><strong style={{ fontWeight: 700 }}>{value}</strong></span>;
+}
+
+// ── Now chip ───────────────────────────────────────────────────────────────────
+function NowChip({ icon, label, value, sev }) {
+  // light-on-dark variant for header placement
+  const m = { success: ['rgba(167,239,170,0.16)', '#bff5c0'], warning: ['rgba(141,217,255,0.16)', '#a3d5ff'],
+    danger: ['rgba(255,90,68,0.18)', '#ffb0a8'], neutral: ['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.8)'] }[sev];
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px 3px 8px',
+    borderRadius: '999px', fontSize: '12px', background: m[0], color: m[1] }}>
+    <i className={`pi ${icon}`} style={{ fontSize: '11px' }} />
+    <span style={{ opacity: .85 }}>{label}:</span><strong>{value}</strong></span>;
+}
+
+// ── Collapsible panel ──────────────────────────────────────────────────────────
+function Panel({ icon, title, count, action, children, open = true }) {
+  const [o, setO] = useState(open);const [h, setH] = useState(false);
+  return <div style={{ borderBottom: '1px solid var(--c-border)' }}>
+    <button onClick={() => setO(!o)} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '11px 16px',
+      background: h ? 'var(--c-hover)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', minHeight: '46px',
+      fontFamily: 'var(--mg-font-sans)' }}>
+      <span style={{ width: 26, height: 26, borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-tile)',
+        color: 'var(--mg-primary-900)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <i className={`pi ${icon}`} style={{ fontSize: '12px', color: 'var(--mg-primary-light)' }} /></span>
+      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--c-text2)' }}>{title}</span>
+      {count != null && <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-muted)', background: 'var(--c-hover)', borderRadius: '10px', padding: '1px 8px' }}>{count}</span>}
+      <span style={{ flex: 1 }} />
+      {action && <span onClick={(e) => e.stopPropagation()}>{action}</span>}
+      <i className={`pi ${o ? 'pi-chevron-down' : 'pi-chevron-right'}`} style={{ fontSize: '12px', color: 'var(--c-muted)' }} />
+    </button>
+    {o && <div style={{ padding: '4px 16px 16px' }}>{children}</div>}
+  </div>;
+}
+
+function RailRow({ label, children }) {
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
+    <div style={{ fontSize: '13px', color: 'var(--c-text2)' }}>{children}</div>
+  </div>;
+}
+
+function AddBtn({ label, onClick }) {
+  const [h, setH] = useState(false);
+  return <span onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600,
+    color: 'var(--mg-primary-light)', padding: '4px 9px', borderRadius: 'var(--mg-radius-sm)',
+    background: h ? 'var(--c-tile)' : 'transparent', transition: 'background .15s', whiteSpace: 'nowrap' }}>
+    <i className="pi pi-plus" style={{ fontSize: '11px' }} />{label}</span>;
+}
+
+// ── data ───────────────────────────────────────────────────────────────────────
+const DATA = {
+  contact: {
+    id: 1042, initials: 'БМ', title: 'Богдан Меркулов', sub: 'Коммерческий директор',
+    badges: [{ t: 'Активный', s: 'success', i: 'pi-verified' }], tags: ['VIP', 'Тёплый'],
+    meta: [['Автор', 'И. Петров'], ['Компания', 'ООО «Ромашка»'], ['Источник', 'Партнёр'], ['Создан', '12.03.25'], ['Изменён', 'сегодня 09:10']],
+    now: [['pi-list-check', 'Задач', '3', 'warning'], ['pi-exclamation-circle', 'Просрочено', '1', 'danger']],
+    kpi: [['pi-briefcase', '4', 'Сделки', 'info'], ['pi-wallet', '6,8 млн ₽', 'Сумма', 'brand'], ['pi-check-square', '3', 'Задачи', 'amber'], ['pi-building', '2', 'Компании', 'teal'], ['pi-clock', 'Сегодня', 'Послед. активность', 'success']],
+    tabs: ['Обзор', 'Активность', 'Сделки', 'Файлы'],
+    panels: [
+    { i: 'pi-phone', t: 'Каналы связи', c: 3, body: 'channels', add: 'Создать канал', dlg: 'channel' },
+    { i: 'pi-building', t: 'Компании', c: 2, body: 'companies', add: 'Добавить в компанию', dlg: 'attach' },
+    { i: 'pi-share-alt', t: 'Связи', c: 1, body: 'rel', add: 'Добавить связь', dlg: 'relation' },
+    { i: 'pi-briefcase', t: 'Участвует в сделках', c: 4, body: 'deals', add: 'Добавить в сделку', dlg: 'deal' },
+    { i: 'pi-comment', t: 'Заметки', c: null, body: 'notes', add: 'Добавить заметку', dlg: 'note' },
+    { i: 'pi-history', t: 'История событий', c: null, body: 'timeline' }]
+
+  },
+  company: {
+    id: 1, initials: 'ОР', title: 'ООО «Ромашка»', sub: null,
+    badges: [{ t: 'Активный клиент', s: 'success', i: 'pi-verified' }, { t: 'L', s: 'danger', i: null }], tags: ['Договор', 'Ключевой'],
+    meta: [['Автор', 'И. Петров'], ['Ответственный', 'А. Сидорова'], ['Источник', 'Партнёр'], ['Создан', '03.02.25'], ['Изменён', 'сегодня 09:10']],
+    now: [['pi-list-check', 'Задач', '5', 'warning'], ['pi-exclamation-circle', 'Просрочено', '0', 'neutral']],
+    kpi: [['pi-briefcase', '4', 'Откр. сделки', 'info'], ['pi-wallet', '12,4 млн ₽', 'Сумма', 'brand'], ['pi-trophy', '3', 'Выиграно', 'success'], ['pi-users', '8', 'Сотрудники', 'teal'], ['pi-file', '6', 'Документы', 'amber'], ['pi-clock', 'Вчера', 'Послед. активность', 'success']],
+    tabs: ['Обзор', 'Активность', 'Сотрудники', 'Сделки', 'Документы', 'Файлы', 'Холдинг'],
+    panels: [
+    { i: 'pi-id-card', t: 'Реквизиты', c: null, body: 'req', add: 'Добавить реквизит', dlg: 'req' },
+    { i: 'pi-users', t: 'Сотрудники', c: 8, body: 'emp', add: 'Добавить сотрудника', dlg: 'contact' },
+    { i: 'pi-briefcase', t: 'Сделки в работе', c: 2, body: 'deals', add: 'Создать сделку', dlg: 'deal' },
+    { i: 'pi-sitemap', t: 'Холдинг', c: null, body: 'holding', add: 'Привязать компанию', dlg: 'attach' },
+    { i: 'pi-history', t: 'История событий', c: null, body: 'timeline' }]
+
+  }
+};
+
+function ChannelRow({ icon, value, kind, action, last }) {
+  const [h, setH] = useState(false);
+  return <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0',
+    borderBottom: last ? 'none' : '1px solid var(--c-border)', fontSize: '13px', color: 'var(--c-text)' }}>
+    <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} title={action}
+    style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      background: h ? 'var(--mg-primary-900)' : 'var(--c-tile)', color: h ? '#fff' : 'var(--mg-primary-light)', transition: 'all .15s' }}>
+      <i className={`pi ${icon}`} style={{ fontSize: '13px' }} /></button>
+    <span style={{ flex: 1, fontWeight: 500 }}>{value}</span>
+    <span style={{ fontSize: '11px', fontWeight: h ? 600 : 400, color: h ? 'var(--mg-primary-light)' : 'var(--c-muted)' }}>{h ? action : kind}</span>
+    <i className="pi pi-copy" title="Скопировать" style={{ color: 'var(--c-muted)', fontSize: '12px', cursor: 'pointer' }} />
+  </div>;
+}
+
+function ReqField({ label, value }) {
+  const [h, setH] = useState(false);
+  return <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{ minWidth: 0 }}>
+    <div style={{ fontSize: '10px', color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</div>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+      <span style={{ fontSize: '13px', color: 'var(--c-text)', fontWeight: 500, wordBreak: 'break-word' }}>{value}</span>
+      <i className="pi pi-copy" title="Копировать" style={{ fontSize: '11px', color: 'var(--mg-primary-light)', opacity: h ? 1 : 0, cursor: 'pointer', transition: 'opacity .15s', flexShrink: 0, marginTop: '2px' }} />
+    </div></div>;
+}
+function ReqIcon({ icon, title }) {
+  const [h, setH] = useState(false);
+  return <i className={`pi ${icon}`} title={title} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ width: 26, height: 26, borderRadius: 'var(--mg-radius-sm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', fontSize: '12px', color: h ? 'var(--mg-primary-900)' : 'var(--c-muted)', background: h ? 'var(--c-tile)' : 'transparent', transition: 'all .15s' }} />;
+}
+function RequisiteCard({ name, primary, fields, last }) {
+  return <div style={{ border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', padding: '12px 14px',
+    marginBottom: last ? 0 : '10px', background: 'var(--c-card)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '11px' }}>
+      <span style={{ width: 24, height: 24, borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-tile)', color: 'var(--mg-primary-light)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <i className="pi pi-id-card" style={{ fontSize: '12px' }} /></span>
+      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--c-text)' }}>{name}</span>
+      {primary && <Tag sev="primary" size="sm">Основной</Tag>}
+      <span style={{ flex: 1 }} />
+      <ReqIcon icon="pi-copy" title="Копировать реквизиты" />
+      <ReqIcon icon="pi-pencil" title="Редактировать" />
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
+      {fields.map((f, i) => <ReqField key={i} label={f[0]} value={f[1]} />)}
+    </div></div>;
+}
+
+// ── panel body samples ──────────────────────────────────────────────────────────
+function PanelBody({ kind }) {
+  const row = { display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--c-border)', fontSize: '13px', color: 'var(--c-text)' };
+  if (kind === 'channels') return <div>
+    {[['pi-phone', '+7 777 012 34 56', 'Рабочий', 'Позвонить'], ['pi-envelope', 'b.merkulov@romashka.kz', 'Email', 'Написать'], ['pi-telegram', '@merkulov', 'Telegram', 'Открыть чат']].map((c, i, a) =>
+    <ChannelRow key={i} icon={c[0]} value={c[1]} kind={c[2]} action={c[3]} last={i === a.length - 1} />)}
+  </div>;
+  if (kind === 'companies') return <div>
+    {[['ООО «Ромашка»', 'Коммерческий директор', true], ['АО «ТехноПарк»', 'Консультант', false]].map((c, i) =>
+    <div key={i} style={{ ...row, borderBottom: i < 1 ? row.borderBottom : 'none' }}>
+        <i className="pi pi-building" style={{ color: 'var(--c-muted)', width: 16 }} />
+        <span style={{ flex: 1 }}><a style={{ color: 'var(--mg-primary-900)', fontWeight: 500, textDecoration: 'none' }}>{c[0]}</a>
+          <span style={{ color: 'var(--c-muted)' }}> · {c[1]}</span></span>
+        {c[2] && <Tag sev="primary" size="sm">Основная</Tag>}
+      </div>)}
+  </div>;
+  if (kind === 'deals') {const rows = [['Внедрение CRM', 'Договор', 'primary', '1 200 000 ₽'], ['Доп. модуль аналитики', 'Квалификация', 'info', '450 000 ₽']];
+    const grid = { display: 'grid', gridTemplateColumns: 'max-content 130px 1fr', alignItems: 'center', gap: '12px' };
+    return <div>
+      {rows.map((d, i) =>
+      <div key={i} style={{ ...grid, padding: '9px 0', borderBottom: i < rows.length - 1 ? '1px solid var(--c-border)' : 'none', fontSize: '13px' }}>
+          <a style={{ fontWeight: 500, color: 'var(--mg-primary-900)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d[0]}</a>
+          <span><Tag sev={d[2]} size="sm">{d[1]}</Tag></span>
+          <span style={{ fontWeight: 700, color: 'var(--mg-primary-900)', textAlign: 'right' }}>{d[3]}</span>
+        </div>)}
+    </div>;
+  }
+  if (kind === 'emp') return <div>
+    {[['БМ', 'Богдан Меркулов', 'Коммерческий директор', true], ['АК', 'Алия Касымова', 'Бухгалтер', false]].map((e, i) =>
+    <div key={i} style={{ ...row, borderBottom: i < 1 ? row.borderBottom : 'none' }}>
+        <Avatar initials={e[0]} size={28} />
+        <span style={{ flex: 1 }}><a style={{ color: 'var(--mg-primary-900)', fontWeight: 500, textDecoration: 'none' }}>{e[1]}</a>
+          <span style={{ color: 'var(--c-muted)' }}> · {e[2]}</span></span>
+        {e[3] && <Tag sev="primary" size="sm">Контактное лицо</Tag>}</div>)}
+  </div>;
+  if (kind === 'req') {const reqs = [
+    { name: 'ТОО «Ромашка»', primary: true, fields: [['БИН', '123456789012'], ['Форма', 'ТОО'], ['Директор', 'Б. Меркулов'], ['Банк', 'Kaspi Bank'], ['Счёт', 'KZ12 3456 7890 1234'], ['КБе', '17']] },
+    { name: 'ИП Меркулов Б.А.', primary: false, fields: [['ИИН', '870101300123'], ['Форма', 'ИП'], ['Банк', 'Halyk Bank'], ['Счёт', 'KZ98 7654 3210 5678']] }];
+
+    return <div>{reqs.map((r, i) => <RequisiteCard key={i} {...r} last={i === reqs.length - 1} />)}</div>;
+  }
+  if (kind === 'pipe') return <div>
+    {[['Внедрение CRM', 'Договор', 82, 'var(--mg-stage-purple)'], ['Аналитика', 'Квалификация', 40, 'var(--mg-stage-blue)']].map((p, i) =>
+    <div key={i} style={{ padding: '8px 0', borderBottom: i < 1 ? '1px solid var(--c-border)' : 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '5px' }}>
+          <span style={{ fontWeight: 500, color: 'var(--c-text)' }}>{p[0]}</span><span style={{ color: 'var(--c-muted)' }}>{p[1]}</span></div>
+        <div style={{ height: '6px', borderRadius: '3px', background: 'var(--c-hover)', overflow: 'hidden' }}>
+          <div style={{ width: p[2] + '%', height: '100%', background: p[3] }} /></div></div>)}
+  </div>;
+  if (kind === 'rel') return <div style={{ ...row, borderBottom: 'none' }}>
+    <i className="pi pi-user" style={{ color: 'var(--c-muted)', width: 16 }} />
+    <span style={{ flex: 1 }}>Анна Сидорова <span style={{ color: 'var(--c-muted)' }}>· Коллега</span></span></div>;
+  if (kind === 'notes') return <div style={{ fontSize: '13px', color: 'var(--c-text2)', fontStyle: 'italic', padding: '4px 0' }}>
+    Предпочитает связь в Telegram. Принимает решения по бюджету самостоятельно.</div>;
+  if (kind === 'holding') return <div style={{ fontSize: '13px', color: 'var(--c-text2)' }}>
+    <div style={{ padding: '6px 0' }}><i className="pi pi-sitemap" style={{ marginRight: 8, color: 'var(--mg-primary-light)' }} />Холдинг «Ромашка Групп»</div>
+    <div style={{ padding: '6px 0 6px 24px', color: 'var(--c-muted)' }}>└ ООО «Ромашка» <Tag sev="neutral" size="sm">текущая</Tag></div></div>;
+  if (kind === 'timeline') return <div>
+    {[['pi-phone', 'Звонок — обсудили КП', '2 ч назад'], ['pi-pencil', 'Изменён этап сделки', 'Вчера'], ['pi-user-plus', 'Добавлен контакт', '3 дня назад']].map((e, i) =>
+    <div key={i} style={{ display: 'flex', gap: '10px', padding: '7px 0', fontSize: '13px' }}>
+        <i className={`pi ${e[0]}`} style={{ color: 'var(--mg-primary-light)', fontSize: '12px', marginTop: '2px' }} />
+        <span style={{ flex: 1, color: 'var(--c-text)' }}>{e[1]}</span>
+        <span style={{ color: 'var(--c-muted)', fontSize: '12px' }}>{e[2]}</span></div>)}
+  </div>;
+  return null;
+}
+
+// ── dialog primitives ─────────────────────────────────────────────────────────
+function DlgRow({ children }) {return <div style={{ display: 'flex', gap: '14px' }}>{children}</div>;}
+function DlgDivider({ children }) {return <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '2px 0' }}>
+  <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--c-muted)' }}>{children}</span>
+  <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} /></div>;}
+function Toggle({ on }) {const [v, setV] = useState(!!on);
+  return <div onClick={() => setV(!v)} style={{ width: '40px', height: '22px', borderRadius: '999px', background: v ? 'var(--mg-primary-900)' : 'var(--c-border2)', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'background .15s' }}>
+    <span style={{ position: 'absolute', top: '2px', left: v ? '20px' : '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left .15s' }} /></div>;}
+function DlgField({ label, req, children, w }) {return <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: w || '100%', minWidth: 0 }}>
+  <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text2)' }}>{label}{req && <span style={{ color: 'var(--mg-red-500)' }}> *</span>}</label>{children}</div>;}
+function DlgInput({ placeholder, value, icon }) {return <div style={{ position: 'relative' }}>
+  {icon && <i className={`pi ${icon}`} style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: 'var(--c-muted)' }} />}
+  <input defaultValue={value} placeholder={placeholder} style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', padding: icon ? '9px 12px 9px 32px' : '9px 12px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', color: 'var(--c-text)', outline: 'none' }} /></div>;}
+function DlgSelect({ placeholder, value, icon }) {return <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', fontSize: '14px', color: value ? 'var(--c-text)' : 'var(--c-muted)', cursor: 'pointer', background: 'var(--c-card)' }}>
+  {icon && <i className={`pi ${icon}`} style={{ fontSize: '13px', color: 'var(--c-muted)' }} />}<span style={{ flex: 1 }}>{value || placeholder}</span><i className="pi pi-chevron-down" style={{ fontSize: '11px', color: 'var(--c-muted)' }} /></div>;}
+function DlgArea({ placeholder, rows = 2 }) {return <textarea rows={rows} placeholder={placeholder} style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', padding: '9px 12px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', color: 'var(--c-text)', outline: 'none', resize: 'vertical' }} />;}
+function DlgBtn({ label, primary, icon, onClick }) {const [h, setH] = useState(false);
+  return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', fontWeight: 600, padding: '8px 16px', borderRadius: 'var(--mg-radius-md)', cursor: 'pointer',
+    color: primary ? '#fff' : 'var(--c-text2)', border: '1px solid ' + (primary ? 'transparent' : 'var(--c-border2)'),
+    background: primary ? h ? 'var(--mg-primary-800)' : 'var(--mg-primary-900)' : h ? 'var(--c-hover)' : 'transparent', transition: 'background .15s' }}>
+    {icon && <i className={`pi ${icon}`} style={{ fontSize: '13px' }} />}{label}</button>;}
+
+function Backdrop({ onClose, align, children }) {
+  return <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(14,23,43,0.5)', zIndex: 50, display: 'flex',
+    justifyContent: align === 'right' ? 'flex-end' : 'center', alignItems: align === 'right' ? 'stretch' : 'flex-start', padding: align === 'right' ? 0 : '48px 24px', overflow: 'auto' }}>
+    <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex' }}>{children}</div></div>;
+}
+function Modal({ title, width, onClose, footer, children }) {
+  return <Backdrop onClose={onClose}>
+    <div style={{ width: width || 520, maxWidth: '92vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column', background: 'var(--c-card)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-lg)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px', borderBottom: '1px solid var(--c-border)' }}>
+        <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--c-text)', flex: 1 }}>{title}</span>
+        <i className="pi pi-times" onClick={onClose} style={{ cursor: 'pointer', color: 'var(--c-muted)', fontSize: '15px' }} /></div>
+      <div style={{ padding: '18px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>{children}</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px', borderTop: '1px solid var(--c-border)' }}>{footer}</div>
+    </div></Backdrop>;
+}
+function DrawerR({ title, onClose, footer, note, children }) {
+  return <Backdrop onClose={onClose} align="right">
+    <div style={{ width: 500, maxWidth: '95vw', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--c-card)', boxShadow: 'var(--mg-shadow-lg)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px', borderBottom: '1px solid var(--c-border)' }}>
+        <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--c-text)', flex: 1 }}>{title}</span>
+        <i className="pi pi-times" onClick={onClose} style={{ cursor: 'pointer', color: 'var(--c-muted)', fontSize: '15px' }} /></div>
+      {note && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--mg-blue-100)', color: 'var(--mg-blue-900)', fontSize: '12px' }}><i className="pi pi-info-circle" />{note}</div>}
+      <div style={{ flex: 1, padding: '18px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>{children}</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px', borderTop: '1px solid var(--c-border)' }}>{footer}</div>
+    </div></Backdrop>;
+}
+function MenuItem({ icon, label, danger, onClose }) {const [h, setH] = useState(false);
+  return <div onClick={onClose} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: 'var(--mg-radius-sm)', cursor: 'pointer', fontSize: '13px',
+    color: danger ? 'var(--mg-red-600)' : 'var(--c-text)', background: h ? danger ? 'var(--mg-red-50)' : 'var(--c-hover)' : 'transparent' }}>
+    <i className={`pi ${icon}`} style={{ fontSize: '13px', width: 14, textAlign: 'center' }} />{label}</div>;}
+function HeaderMenu({ onClose }) {
+  return <React.Fragment>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+    <div style={{ position: 'absolute', top: '40px', right: 0, zIndex: 41, minWidth: '218px', background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px' }}>
+      <MenuItem icon="pi-comment" label="Добавить заметку" onClose={onClose} />
+      <MenuItem icon="pi-link" label="Добавить связь" onClose={onClose} />
+      <MenuItem icon="pi-copy" label="Скопировать ссылку" onClose={onClose} />
+      <div style={{ height: '1px', background: 'var(--c-border)', margin: '5px 6px' }} />
+      <MenuItem icon="pi-trash" label="Удалить" danger onClose={onClose} />
+    </div></React.Fragment>;
+}
+
+// ── dialog host (real forms, fields verified against the repo) ──────────────────
+function DialogHost({ id, onClose, company }) {
+  const cancel = <DlgBtn label="Отмена" onClick={onClose} />;
+  if (id === 'req') return <Modal title="Добавить реквизиты" width={600} onClose={onClose}
+  footer={<React.Fragment>{cancel}<DlgBtn label="Сохранить" primary icon="pi-check" onClick={onClose} /></React.Fragment>}>
+    <DlgField label="Метка"><DlgInput placeholder="напр. Основное юрлицо" /></DlgField>
+    <DlgRow>
+      <DlgField label="Юр. название" req w="64%"><DlgInput placeholder="ТОО «Ромашка»" /></DlgField>
+      <DlgField label="Полная форма" w="34%"><DlgInput placeholder="ТОО / ООО / АО" /></DlgField></DlgRow>
+    <DlgRow>
+      <DlgField label="Метка налог. ID" w="34%"><DlgInput placeholder="БИН / ИНН / TIN" /></DlgField>
+      <DlgField label="Налоговый ID" w="64%"><DlgInput placeholder="123456789012" /></DlgField></DlgRow>
+    <DlgRow>
+      <DlgField label="Страна" w="34%"><DlgSelect placeholder="Казахстан" /></DlgField>
+      <DlgField label="Директор" w="64%"><DlgInput placeholder="Меркулов Богдан" /></DlgField></DlgRow>
+    <DlgField label="Директор (в род. падеже)"><DlgInput placeholder="Меркулова Богдана" /></DlgField>
+    <DlgField label="Адрес"><DlgArea placeholder="г. Алматы, ул. …" /></DlgField>
+    <DlgDivider>Банк</DlgDivider>
+    <DlgField label="Банк"><DlgInput placeholder="Kaspi Bank" /></DlgField>
+    <DlgRow>
+      <DlgField label="Счёт" w="64%"><DlgInput placeholder="KZ12 3456 7890 1234" /></DlgField>
+      <DlgField label="БИК" w="34%"><DlgInput placeholder="CASPKZKA" /></DlgField></DlgRow>
+    <DlgRow>
+      <DlgField label="Действует с" w="48%"><DlgSelect placeholder="дд.мм.гггг" icon="pi-calendar" /></DlgField>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '48%', paddingTop: '22px' }}>
+        <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text2)' }}>Установить текущим</label><Toggle on /></div></DlgRow>
+    <DlgField label="Примечание"><DlgArea placeholder="Комментарий…" /></DlgField>
+  </Modal>;
+  if (id === 'deal') return <DrawerR title="Новая сделка" onClose={onClose}
+  note="Компания подставлена из карточки · сделка появится в воронке продаж"
+  footer={<React.Fragment>{cancel}<DlgBtn label="Создать" primary icon="pi-check" onClick={onClose} /></React.Fragment>}>
+    <DlgField label="Компания" req><DlgInput value={company} icon="pi-building" /></DlgField>
+    <DlgField label="Название" req><DlgInput placeholder="Внедрение CRM" /></DlgField>
+    <DlgField label="Воронка" req><DlgSelect value="Продажи" /></DlgField>
+    <DlgField label="Этап"><DlgSelect placeholder="Новые лиды" /></DlgField>
+    <DlgField label="Валюта" req><DlgSelect value="KZT ₸" /></DlgField>
+    <DlgField label="Ответственный"><DlgSelect value="И. Петров" /></DlgField>
+    <DlgField label="Ожидаемая дата закрытия"><DlgSelect placeholder="дд.мм.гггг" icon="pi-calendar" /></DlgField>
+  </DrawerR>;
+  if (id === 'attach') return <Modal title="Привязать компанию" width={480} onClose={onClose}
+  footer={<React.Fragment>{cancel}<DlgBtn label="Сохранить" primary onClick={onClose} /></React.Fragment>}>
+    <DlgField label="Компания" req><DlgInput placeholder="Поиск компании…" icon="pi-search" /></DlgField>
+    <DlgField label="Должность"><DlgInput placeholder="Коммерческий директор" /></DlgField>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text2)' }}>Основная компания</label><Toggle /></div>
+  </Modal>;
+  if (id === 'contact') return <Modal title="Добавить сотрудника" width={520} onClose={onClose}
+  footer={<React.Fragment>{cancel}<DlgBtn label="Добавить" primary icon="pi-user-plus" onClick={onClose} /></React.Fragment>}>
+    <DlgField label="ФИО" req><DlgInput placeholder="Иванов Иван" /></DlgField>
+    <DlgField label="Телефон" req><DlgInput placeholder="+7 777 000 00 00" /></DlgField>
+    <DlgField label="Email"><DlgInput placeholder="email@company.kz" /></DlgField>
+    <DlgField label="Должность" req><DlgInput placeholder="Менеджер по закупкам" /></DlgField>
+    <DlgField label="Заметки"><DlgArea placeholder="Комментарий…" rows={3} /></DlgField>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text2)' }}>Основной контакт</label><Toggle /></div>
+  </Modal>;
+  if (id === 'channel') return <Modal title="Создать канал связи" width={460} onClose={onClose}
+  footer={<React.Fragment>{cancel}<DlgBtn label="Сохранить" primary onClick={onClose} /></React.Fragment>}>
+    <DlgField label="Тип" req><DlgSelect value="Телефон" /></DlgField>
+    <DlgField label="Значение" req><DlgInput placeholder="+7 777 000 00 00" /></DlgField>
+    <DlgField label="Подпись"><DlgInput placeholder="Рабочий" /></DlgField>
+  </Modal>;
+  if (id === 'relation') return <Modal title="Добавить связь" width={480} onClose={onClose}
+  footer={<React.Fragment>{cancel}<DlgBtn label="Сохранить" primary onClick={onClose} /></React.Fragment>}>
+    <DlgField label="Контакт" req><DlgInput placeholder="Поиск контакта…" icon="pi-search" /></DlgField>
+    <DlgField label="Тип связи"><DlgSelect placeholder="Коллега" /></DlgField>
+  </Modal>;
+  if (id === 'note') return <Modal title="Добавить заметку" width={520} onClose={onClose}
+  footer={<React.Fragment>{cancel}<DlgBtn label="Сохранить" primary onClick={onClose} /></React.Fragment>}>
+    <DlgField label="Текст"><DlgArea placeholder="Заметка…" rows={5} /></DlgField>
+  </Modal>;
+  return null;
+}
+
+// ── tab content (faithful to repo tabs) ───────────────────────────────────────
+function TabCard({ children }) {return <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-card)', overflow: 'hidden' }}>{children}</div>;}
+function TabHead({ title, action }) {return <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid var(--c-border)' }}>
+  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{title}</span><span style={{ flex: 1 }} />{action}</div>;}
+function Th({ children, right }) {return <th style={{ textAlign: right ? 'right' : 'left', padding: '9px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid var(--c-border)', whiteSpace: 'nowrap' }}>{children}</th>;}
+function Td({ children, right }) {return <td style={{ padding: '10px 14px', fontSize: '13px', color: 'var(--c-text)', borderBottom: '1px solid var(--c-border)', textAlign: right ? 'right' : 'left', whiteSpace: 'nowrap' }}>{children}</td>;}
+function TRow({ children }) {const [h, setH] = useState(false);return <tr onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{ background: h ? 'var(--c-hover)' : 'transparent', cursor: 'pointer' }}>{children}</tr>;}
+function DataTbl({ head, children }) {return <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--mg-font-sans)' }}><thead><tr>{head}</tr></thead><tbody>{children}</tbody></table>;}
+
+function ComposerSelect({ value, placeholder, icon }) {
+  return <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', fontSize: '13px', color: value ? 'var(--c-text)' : 'var(--c-muted)', cursor: 'pointer', background: 'var(--c-card)', whiteSpace: 'nowrap' }}>
+    {icon && <i className={`pi ${icon}`} style={{ fontSize: '12px', color: 'var(--c-muted)' }} />}<span>{value || placeholder}</span><i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></div>;
+}
+function Composer() {
+  const [mode, setMode] = useState('note');
+  const ModeBtn = ({ id, icon, label }) => {const a = mode === id;
+    return <button onClick={() => setMode(id)} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, padding: '8px 12px', borderRadius: 'var(--mg-radius-md)', cursor: 'pointer', width: '110px',
+      border: '1px solid ' + (a ? 'var(--mg-primary-900)' : 'var(--c-border2)'), background: a ? 'var(--mg-primary-900)' : 'var(--c-card)', color: a ? '#fff' : 'var(--c-text2)', transition: 'all .15s' }}>
+      <i className={`pi ${icon}`} style={{ fontSize: '13px' }} />{label}</button>;
+  };
+  const field = { boxSizing: 'border-box', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', padding: '9px 12px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', color: 'var(--c-text)', outline: 'none' };
+  return <div style={{ borderTop: '1px solid var(--c-border)', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'flex-start', background: 'var(--c-hover)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+      <ModeBtn id="note" icon="pi-comment" label="Заметка" />
+      <ModeBtn id="task" icon="pi-check-square" label="Задача" />
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {mode === 'note' ?
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '78px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', padding: '8px', background: 'var(--c-card)', fontWeight: "600", width: "888px", height: "7px" }}>
+          <textarea placeholder="Введите текст заметки…" style={{ flex: 1, alignSelf: 'stretch', outline: 'none', resize: 'none', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', background: 'transparent', color: 'var(--c-text)', border: "0px", borderWidth: "0px 0px 0px 20px", borderStyle: "none", borderColor: "currentcolor", borderImage: "initial", margin: "0px 0px 0px 5px", padding: "0px 5px 0px 0px", height: "60px" }} />
+          <DlgBtn label="Добавить" primary /></div> :
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '78px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', padding: '8px', background: 'var(--c-card)' }}>
+          <div style={{ flex: 1, minWidth: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+              <ComposerSelect placeholder="дд.мм.гггг чч:мм" icon="pi-calendar" />
+              <ComposerSelect placeholder="Ответственный" icon="pi-user" />
+              <ComposerSelect placeholder="Тип задачи" icon="pi-tag" /></div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1 }}>
+              <span style={{ color: 'var(--c-muted)', fontWeight: 700, lineHeight: '1.5' }}>:</span>
+              <textarea placeholder="Текст задачи…" style={{ flex: 1, alignSelf: 'stretch', minWidth: '120px', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', background: 'transparent', color: 'var(--c-text)', height: "60px" }} /></div></div>
+          <DlgBtn label="Добавить" primary /></div>}
+    </div>
+  </div>;
+}
+function ActivityFeed({ setDialog }) {
+  const items = [
+  { ic: 'pi-file-edit', t: 'Заметка', body: 'Клиент просит отсрочку оплаты на 14 дней. Согласовать с финансами.', who: 'А. Сидорова · сегодня 11:05' },
+  { log: true, ic: 'pi-pencil', who: 'И. Петров', txt: 'изменил этап', old: 'Квалификация', neu: 'Договор', time: 'сегодня 12:40' },
+  { ic: 'pi-phone', t: 'Звонок — обсудили условия КП', st: 'Выполнено', sv: 'success', who: 'И. Петров · сегодня 14:20' },
+  { ic: 'pi-calendar', t: 'Встреча — демо MACRO AI Core', st: 'Запланировано', sv: 'warning', who: 'И. Петров · завтра 11:00' }];
+
+  return <TabCard>
+    <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        {['Все', 'События', 'Изменения'].map((f, i) => <span key={i} style={{ fontSize: '12px', fontWeight: 600, padding: '4px 11px', borderRadius: '999px', cursor: 'pointer', background: i === 0 ? 'var(--mg-primary-100)' : 'var(--c-hover)', color: i === 0 ? 'var(--mg-primary-900)' : 'var(--c-muted)' }}>{f}</span>)}</div>
+      <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--c-muted)' }}><i className="pi pi-angle-up" style={{ fontSize: '10px' }} /> более ранние события выше</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} />
+        <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--c-muted)' }}>20 июня 2026</span>
+        <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} /></div>
+      {items.map((a, i) => a.log ?
+      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--c-muted)', padding: '0 2px' }}>
+          <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, background: 'var(--c-tile)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><i className={`pi ${a.ic}`} style={{ fontSize: '10px', color: 'var(--mg-primary-light)' }} /></span>
+          <span style={{ flex: 1 }}><strong style={{ color: 'var(--c-text2)' }}>{a.who}</strong> {a.txt} <span style={{ textDecoration: 'line-through' }}>{a.old}</span> <i className="pi pi-arrow-right" style={{ fontSize: '8px' }} /> <span style={{ color: 'var(--mg-primary-light)', fontWeight: 600 }}>{a.neu}</span></span>
+          <span>{a.time}</span></div> :
+      <div key={i} style={{ border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className={`pi ${a.ic}`} style={{ fontSize: '13px', color: 'var(--mg-primary-light)' }} />
+            <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>{a.t}</span>
+            {a.st && <Tag sev={a.sv} size="sm">{a.st}</Tag>}</div>
+          {a.body && <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text2)' }}>{a.body}</p>}
+          <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{a.who}</span></div>)}
+    </div>
+    <Composer />
+  </TabCard>;
+}
+function DealsTab({ setDialog }) {
+  const rows = [['Внедрение CRM', 'Договор', 'primary', '1 200 000 ₽', 'И. Петров', '12.03.25'], ['Доп. модуль аналитики', 'Квалификация', 'info', '450 000 ₽', 'А. Сидорова', '03.04.25'], ['Расширение лицензий', 'Встреча', 'warning', '2 800 000 ₽', 'И. Петров', '21.04.25']];
+  return <TabCard>
+    <TabHead title="Сделки" action={<DlgBtn label="Создать сделку" primary icon="pi-plus" onClick={() => setDialog('deal')} />} />
+    <DataTbl head={<React.Fragment><Th>Название</Th><Th>Этап</Th><Th right>Сумма</Th><Th>Ответственный</Th><Th>Создана</Th></React.Fragment>}>
+      {rows.map((r, i) => <TRow key={i}><Td><a style={{ color: 'var(--mg-primary-900)', fontWeight: 500, textDecoration: 'none' }}>{r[0]}</a></Td>
+        <Td><Tag sev={r[2]} size="sm">{r[1]}</Tag></Td><Td right><strong style={{ color: 'var(--mg-primary-900)' }}>{r[3]}</strong></Td><Td>{r[4]}</Td><Td>{r[5]}</Td></TRow>)}
+    </DataTbl>
+  </TabCard>;
+}
+function EmpMenu({ onClose }) {
+  return <React.Fragment>
+    <div onClick={(e) => {e.stopPropagation();onClose();}} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+    <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: '30px', right: '6px', zIndex: 41, minWidth: '214px', background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px' }}>
+      <MenuItem icon="pi-user" label="Перейти в карточку" onClose={onClose} />
+      <MenuItem icon="pi-star" label="Сделать основным" onClose={onClose} />
+      <MenuItem icon="pi-sync" label="Изменить статус" onClose={onClose} />
+      <div style={{ height: '1px', background: 'var(--c-border)', margin: '5px 6px' }} />
+      <MenuItem icon="pi-user-minus" label="Отвязать контакт" danger onClose={onClose} />
+    </div></React.Fragment>;
+}
+function EmpRow({ r }) {
+  const [open, setOpen] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const bb = '1px solid var(--c-border)';
+  return <React.Fragment>
+    <tr onClick={() => setOpen((o) => !o)} style={{ cursor: 'pointer', background: open ? 'var(--c-hover)' : 'transparent' }}>
+      <td style={{ padding: '10px 14px', fontSize: '13px', borderBottom: bb }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          <i className={`pi ${open ? 'pi-chevron-down' : 'pi-chevron-right'}`} style={{ fontSize: '11px', color: 'var(--c-muted)', width: 12 }} />
+          <Avatar name={r.name} size={26} />
+          <a onClick={(e) => e.stopPropagation()} style={{ color: 'var(--mg-primary-900)', fontWeight: 500, textDecoration: 'none' }}>{r.name}</a></span></td>
+      <td style={{ padding: '10px 14px', fontSize: '13px', color: 'var(--c-text)', borderBottom: bb }}>{r.pos}</td>
+      <td style={{ padding: '10px 14px', borderBottom: bb }}><Tag sev={r.sv} size="sm">{r.st}</Tag></td>
+      <td style={{ padding: '10px 14px', borderBottom: bb }}><i className={`pi ${r.primary ? 'pi-star-fill' : 'pi-star'}`} style={{ fontSize: '13px', color: r.primary ? 'var(--mg-orange-500)' : 'var(--c-muted)' }} /></td>
+      <td style={{ padding: '10px 14px', borderBottom: bb, position: 'relative', textAlign: 'right' }}>
+        <i className="pi pi-ellipsis-v" onClick={(e) => {e.stopPropagation();setMenu((m) => !m);}} style={{ color: 'var(--c-muted)', fontSize: '13px', cursor: 'pointer' }} />
+        {menu && <EmpMenu onClose={() => setMenu(false)} />}</td>
+    </tr>
+    {open && <tr><td colSpan={5} style={{ background: 'var(--c-hover)', borderBottom: bb, padding: 0 }}>
+      <div style={{ padding: '10px 14px 12px 48px', display: 'flex', flexWrap: 'wrap', gap: '8px 22px' }}>
+        {r.ch.map((c, i) => <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px' }}>
+          <i className={`pi ${c[0]}`} style={{ color: 'var(--mg-primary-light)', fontSize: '12px' }} />
+          <span style={{ color: 'var(--c-text)', fontWeight: 500 }}>{c[1]}</span>
+          <span style={{ color: 'var(--c-muted)', fontSize: '11px' }}>{c[2]}</span></span>)}</div></td></tr>}
+  </React.Fragment>;
+}
+function EmployeesTab({ setDialog }) {
+  const rows = [
+  { name: 'Богдан Меркулов', pos: 'Коммерческий директор', st: 'Работает', sv: 'success', primary: true, ch: [['pi-phone', '+7 777 012 34 56', 'Рабочий'], ['pi-envelope', 'b.merkulov@romashka.kz', 'Email'], ['pi-telegram', '@merkulov', 'Telegram']] },
+  { name: 'Алия Касымова', pos: 'Главный бухгалтер', st: 'Работает', sv: 'success', primary: false, ch: [['pi-phone', '+7 701 555 12 00', 'Рабочий'], ['pi-envelope', 'a.kasymova@romashka.kz', 'Email']] },
+  { name: 'Сергей Ким', pos: 'Менеджер по закупкам', st: 'Уволен', sv: 'secondary', primary: false, ch: [['pi-phone', '+7 700 999 88 77', 'Личный']] }];
+
+  return <TabCard>
+    <TabHead title="Сотрудники" action={<DlgBtn label="Добавить сотрудника" primary icon="pi-user-plus" onClick={() => setDialog('contact')} />} />
+    <DataTbl head={<React.Fragment><Th>ФИО</Th><Th>Должность</Th><Th>Статус</Th><Th>Осн.</Th><Th /></React.Fragment>}>
+      {rows.map((r, i) => <EmpRow key={i} r={r} />)}
+    </DataTbl>
+  </TabCard>;
+}
+function DocsTab() {
+  const rows = [['Подписан', 'success', '№ 2026-014', 'Договор', '18.06.2026'], ['На согласовании', 'warning', '№ 2026-021', 'Счёт', '20.06.2026'], ['Черновик', 'info', '—', 'Акт', '—']];
+  return <TabCard>
+    <TabHead title="Документы" action={<DlgBtn label="Создать документ" primary icon="pi-plus" />} />
+    <DataTbl head={<React.Fragment><Th>№</Th><Th>Статус</Th><Th>Вид</Th><Th>Дата</Th><Th /></React.Fragment>}>
+      {rows.map((r, i) => <TRow key={i}><Td><span style={{ color: r[2] === '—' ? 'var(--c-muted)' : 'var(--c-text)', fontWeight: r[2] === '—' ? 400 : 500 }}>{r[2]}</span></Td>
+        <Td><Tag sev={r[1]} size="sm">{r[0]}</Tag></Td>
+        <Td>{r[3]}</Td><Td>{r[4]}</Td>
+        <Td><span style={{ display: 'inline-flex', gap: '8px' }}><i className="pi pi-external-link" style={{ color: 'var(--c-muted)', fontSize: '13px' }} /><i className="pi pi-file-pdf" style={{ color: 'var(--c-muted)', fontSize: '13px' }} /></span></Td></TRow>)}
+    </DataTbl>
+  </TabCard>;
+}
+function LogTab() {
+  const metrics = [['4', 'Сделки'], ['2', 'Компании'], ['37', 'Изменений']];
+  const entries = [
+  { ic: 'pi-pencil', who: 'И. Петров', ev: 'изменил этап', old: 'Квалификация', neu: 'Договор', time: '2 ч назад' },
+  { ic: 'pi-plus', who: 'А. Сидорова', ev: 'создала сделку', val: 'Внедрение CRM', time: 'вчера, 17:40' },
+  { ic: 'pi-user-plus', who: 'И. Петров', ev: 'добавил контакт', val: 'Богдан Меркулов', time: '3 дня назад' }];
+
+  return <TabCard>
+    <div style={{ display: 'flex', gap: '28px', padding: '14px 16px', borderBottom: '1px solid var(--c-border)' }}>
+      {metrics.map((m, i) => <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-text)' }}>{m[0]}</span>
+        <span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>{m[1]}</span></div>)}</div>
+    <div style={{ padding: '6px 16px 12px' }}>
+      {entries.map((e, i) => <div key={i} style={{ display: 'flex', gap: '10px', padding: '10px 0', borderBottom: i < entries.length - 1 ? '1px solid var(--c-border)' : 'none', alignItems: 'flex-start' }}>
+        <span style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: 'var(--c-tile)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><i className={`pi ${e.ic}`} style={{ fontSize: '11px', color: 'var(--mg-primary-light)' }} /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '13px', color: 'var(--c-text2)' }}><strong style={{ color: 'var(--c-text)' }}>{e.who}</strong> {e.ev}
+            {e.old && <React.Fragment> <span style={{ textDecoration: 'line-through', color: 'var(--c-muted)', fontSize: '12px' }}>{e.old}</span> <i className="pi pi-arrow-right" style={{ fontSize: '9px', color: 'var(--c-muted)' }} /> <span style={{ color: 'var(--mg-primary-light)', fontWeight: 600, fontSize: '12px' }}>{e.neu}</span></React.Fragment>}
+            {e.val && <React.Fragment> <span style={{ color: 'var(--mg-primary-light)', fontWeight: 600 }}>«{e.val}»</span></React.Fragment>}</div>
+          <div style={{ fontSize: '12px', color: 'var(--c-muted)', marginTop: '2px' }}>{e.time}</div></div></div>)}
+    </div>
+  </TabCard>;
+}
+function fileIcon(name) {
+  const e = name.split('.').pop().toLowerCase();
+  if (e === 'pdf') return 'pi-file-pdf';
+  if (e === 'doc' || e === 'docx') return 'pi-file-word';
+  if (e === 'xls' || e === 'xlsx') return 'pi-file-excel';
+  return 'pi-file';
+}
+function FilesView() {
+  const folders = [
+  { name: 'Папка менеджера сделки', files: [['КП_Ромашка_v2.pdf', '420 КБ', '18.06.2026'], ['Бриф_внедрение.docx', '88 КБ', '12.06.2026']] },
+  { name: 'Сканы договоров / ДС', files: [['Договор_2026-014.pdf', '1,2 МБ', '18.06.2026'], ['ДС_1_2026-014.pdf', '310 КБ', '19.06.2026'], ['Счёт_2026-021.pdf', '120 КБ', '20.06.2026']] },
+  { name: 'Папка менеджера ОКС', files: [['Акт_сверки_Q2.xlsx', '64 КБ', '30.06.2026']] }];
+
+  const [sel, setSel] = useState(0);
+  const folder = folders[sel];
+  return <TabCard>
+    <TabHead title="Файлы" action={<React.Fragment><DlgBtn label="Создать папку" icon="pi-folder-plus" /><DlgBtn label="Загрузить файл" primary icon="pi-upload" /></React.Fragment>} />
+    <div style={{ display: 'flex', minHeight: '240px' }}>
+      <div style={{ width: '46%', borderRight: '1px solid var(--c-border)', padding: '8px' }}>
+        {folders.map((f, i) => {const a = i === sel;
+          return <div key={i} onClick={() => setSel(i)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: 'var(--mg-radius-md)', cursor: 'pointer', background: a ? 'var(--c-tile)' : 'transparent', marginBottom: '2px' }}>
+            <i className={`pi ${a ? 'pi-folder-open' : 'pi-folder'}`} style={{ fontSize: '15px', color: 'var(--mg-primary-light)' }} />
+            <span style={{ flex: 1, fontSize: '13px', fontWeight: a ? 600 : 500, color: 'var(--c-text)' }}>{f.name}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-muted)', background: 'var(--c-hover)', borderRadius: '10px', padding: '1px 8px' }}>{f.files.length}</span>
+            <i className="pi pi-chevron-right" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></div>;})}
+      </div>
+      <div style={{ flex: 1, padding: '8px' }}>
+        {folder.files.map((f, i) => <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderBottom: i < folder.files.length - 1 ? '1px solid var(--c-border)' : 'none' }}>
+          <i className={`pi ${fileIcon(f[0])}`} style={{ fontSize: '16px', color: 'var(--mg-primary-light)' }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f[0]}</div>
+            <div style={{ fontSize: '11px', color: 'var(--c-muted)' }}>{f[1]} · {f[2]}</div></div>
+          <i className="pi pi-download" style={{ fontSize: '13px', color: 'var(--c-muted)', cursor: 'pointer' }} />
+          <i className="pi pi-ellipsis-v" style={{ fontSize: '13px', color: 'var(--c-muted)', cursor: 'pointer' }} /></div>)}
+      </div>
+    </div>
+  </TabCard>;
+}
+function TabContent({ name, d, setDialog }) {
+  if (name === 'Активность') return <ActivityFeed setDialog={setDialog} />;
+  if (name === 'Сделки') return <DealsTab setDialog={setDialog} />;
+  if (name === 'Сотрудники') return <EmployeesTab setDialog={setDialog} />;
+  if (name === 'Документы') return <DocsTab />;
+  if (name === 'Журнал') return <LogTab />;
+  if (name === 'Файлы') return <FilesView />;
+  if (name === 'Холдинг') return <TabCard><TabHead title="Холдинг" action={<DlgBtn label="Привязать компанию" primary icon="pi-plus" onClick={() => setDialog('attach')} />} /><div style={{ padding: '14px 16px' }}><PanelBody kind="holding" /></div></TabCard>;
+  return <TabCard><div style={{ padding: '40px', textAlign: 'center', color: 'var(--c-muted)', fontSize: '14px' }}>{name}</div></TabCard>;
+}
+
+// ── card ─────────────────────────────────────────────────────────────────────
+function EntityCard({ d }) {
+  const [tab, setTab] = useState(0);
+  const [dialog, setDialog] = useState(null);
+  const [menu, setMenu] = useState(false);
+  return <div style={{ background: 'var(--c-card)', borderRadius: 'var(--mg-radius-lg)', overflow: 'hidden',
+    border: '1px solid var(--c-border)', boxShadow: 'var(--mg-shadow-md)' }}>
+    {/* NAVY HEADER */}
+    <div style={{ background: 'var(--mg-primary-900)', padding: '16px 20px' }}>
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+        <Avatar initials={d.initials} size={56} light />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>{d.title}</h1>
+            {d.badges.map((b, i) => <Tag key={i} sev={b.s}>{b.i && <i className={`pi ${b.i}`} style={{ fontSize: '10px' }} />}{b.t}</Tag>)}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: '#bff5c0' }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#A7EFAA' }} />Вовлечённость: Высокий</span>
+          </div>
+          <div style={{ display: 'flex', gap: '18px', marginTop: '7px', flexWrap: 'wrap' }}>
+            {d.sub && <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{d.sub}</span>}
+            {d.meta.map((m, i) => <span key={i} style={{ fontSize: '12px' }}>
+              <span style={{ color: 'rgba(255,255,255,0.4)' }}>{m[0]}: </span>
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>{m[1]}</span></span>)}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '9px', flexWrap: 'wrap' }}>
+            <i className="pi pi-tag" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }} />
+            {d.tags.map((t, i) => <span key={i} style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--mg-radius-sm)', background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}>{t}</span>)}
+          </div>
+        </div>
+        {/* right control column */}
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, position: 'relative' }}>
+          <HeaderBtn icon="pi-arrow-left" />
+          <HeaderBtn icon="pi-ellipsis-v" onClick={() => setMenu((m) => !m)} />
+          {menu && <HeaderMenu onClose={() => setMenu(false)} />}
+        </div>
+      </div>
+    </div>
+
+    {/* KPI CHIPS */}
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '13px 20px', background: 'var(--c-card)', borderBottom: '1px solid var(--c-border)' }}>
+      {d.kpi.map((k, i) => <KpiChip key={i} icon={k[0]} value={k[1]} label={k[2]} accent={k[3]} />)}
+    </div>
+
+    {/* TABS */}
+    <div style={{ display: 'flex', gap: '2px', padding: '0 20px', borderBottom: '1px solid var(--c-border)', background: 'var(--c-card)' }}>
+      {d.tabs.map((tb, i) => {const a = i === tab;
+        return <button key={i} onClick={() => setTab(i)} style={{ fontFamily: 'var(--mg-font-sans)', fontSize: '14px',
+          fontWeight: a ? 600 : 500, padding: '13px 12px', border: 'none', background: 'transparent', cursor: 'pointer',
+          color: a ? 'var(--mg-primary-900)' : 'var(--c-muted)', borderBottom: '2px solid ' + (a ? 'var(--mg-primary-900)' : 'transparent'), marginBottom: '-1px' }}>{tb}</button>;
+      })}
+    </div>
+
+    {/* BODY */}
+    <div style={{ background: 'var(--c-page)', minHeight: '360px', padding: '16px 20px' }}>
+      {tab === 0 ?
+      <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-card)', overflow: 'hidden' }}>
+          {d.panels.map((p, i) => <Panel key={i} icon={p.i} title={p.t} count={p.c} open={i < 3}
+        action={p.add ? <AddBtn label={p.add} onClick={() => p.dlg && setDialog(p.dlg)} /> : null}>
+            <PanelBody kind={p.body} /></Panel>)}
+        </div> :
+      <TabContent name={d.tabs[tab]} d={d} setDialog={setDialog} />}
+    </div>
+    {dialog && <DialogHost id={dialog} onClose={() => setDialog(null)} company={d.title} />}
+  </div>;
+}
+
+const TWEAK_DEFAULTS = { accent: '#172747', shape: 'Скруглённые', mood: 'Прохладный', dark: false };
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [which, setWhich] = useState('contact');
+  const dark = t.dark;
+  const ACC = {
+    '#172747': { light: '#2B4987', c100: '#e3e8f3', tile: '#e3e8f3' },
+    '#2b2f36': { light: '#545b66', c100: '#e7e8ea', tile: '#e7e8ea' },
+    '#312e81': { light: '#4f46e5', c100: '#e7e7fb', tile: '#e7e7fb' },
+    '#0f4d3a': { light: '#1F8A5B', c100: '#d9f2e6', tile: '#d9f2e6' } };
+  const SHP = { 'Острые': ['2px', '3px', '4px', '6px'], 'Скруглённые': ['4px', '6px', '8px', '12px'], 'Мягкие': ['9px', '13px', '18px', '24px'] };
+  const a = ACC[t.accent] || ACC['#172747'];
+  const s = SHP[t.shape] || SHP['Скруглённые'];
+  const vars = { '--mg-primary-900': t.accent, '--mg-primary-light': a.light, '--mg-primary-100': a.c100, '--c-tile': a.tile,
+    '--mg-radius-sm': s[0], '--mg-radius-md': s[1], '--mg-radius-lg': s[2], '--mg-radius-xl': s[3], minHeight: '100vh', background: 'var(--c-page)' };
+  if (!dark && t.mood === 'Тёплый') vars['--c-page'] = '#f4f1ec';
+  if (!dark && t.mood === 'Брендовый') vars['--c-page'] = a.tile;
+  const Seg = ({ v, label, icon }) => {const ac = which === v;
+    return <button onClick={() => setWhich(v)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px',
+      fontSize: '13px', fontWeight: 600, padding: '7px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+      background: ac ? '#fff' : 'transparent', color: ac ? 'var(--mg-primary-900)' : 'rgba(255,255,255,0.85)', boxShadow: ac ? 'var(--mg-shadow-sm)' : 'none' }}>
+      <i className={`pi ${icon}`} style={{ fontSize: '13px' }} />{label}</button>;
+  };
+  return <div className={'surface' + (dark ? ' dark' : '')} style={vars}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 28px', background: 'var(--mg-primary-950)', position: 'sticky', top: 0, zIndex: 5 }}>
+      <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.01em' }}>Редизайн карточки</span>
+      <div style={{ display: 'inline-flex', gap: '2px', background: 'rgba(255,255,255,0.08)', borderRadius: '8px', padding: '3px' }}>
+        <Seg v="contact" label="Контакт (физлицо)" icon="pi-user" />
+        <Seg v="company" label="Компания" icon="pi-building" />
+      </div>
+      <span style={{ flex: 1 }} />
+      <button onClick={() => setTweak('dark', !dark)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px',
+        fontSize: '13px', fontWeight: 600, padding: '7px 14px', borderRadius: '6px', cursor: 'pointer',
+        border: '1px solid rgba(255,255,255,0.22)', background: 'transparent', color: '#fff' }}>
+        <i className={`pi ${dark ? 'pi-sun' : 'pi-moon'}`} style={{ fontSize: '14px' }} />{dark ? 'Светлая' : 'Тёмная'}</button>
+    </div>
+    <div style={{ padding: '28px', maxWidth: '1140px', margin: '0 auto' }}>
+      <EntityCard d={DATA[which]} key={which} />
+    </div>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Бренд" />
+      <TweakColor label="Акцент" value={t.accent} options={['#172747', '#2b2f36', '#312e81', '#0f4d3a']} onChange={(v) => setTweak('accent', v)} />
+      <TweakSection label="Форма" />
+      <TweakRadio label="Скругление" value={t.shape} options={['Острые', 'Скруглённые', 'Мягкие']} onChange={(v) => setTweak('shape', v)} />
+      <TweakSection label="Полотно" />
+      <TweakRadio label="Фон" value={t.mood} options={['Прохладный', 'Тёплый', 'Брендовый']} onChange={(v) => setTweak('mood', v)} />
+      <TweakToggle label="Тёмная тема" value={t.dark} onChange={(v) => setTweak('dark', v)} />
+    </TweaksPanel>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!-- @dsCard group="Colors" viewport="700x140" name="Gray scale" subtitle="Gray 100–900 — фоновые и второстепенные элементы" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-card); color: var(--mg-text-primary); }
+  .wrap { padding: 18px; }
+  .scale { display: flex; border-radius: var(--mg-radius-md); overflow: hidden; border: 1px solid var(--mg-border-default); }
+  .step { flex: 1; height: 64px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; }
+  .lbl { font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="scale">
+      <div class="step" style="background:#F1F2F3"><span class="lbl" style="color:#444547">100</span></div>
+      <div class="step" style="background:#E3E4E6"><span class="lbl" style="color:#444547">200</span></div>
+      <div class="step" style="background:#D5D6D8"><span class="lbl" style="color:#444547">300</span></div>
+      <div class="step" style="background:#B8B9BB"><span class="lbl" style="color:#272829">400</span></div>
+      <div class="step" style="background:#9B9C9F"><span class="lbl" style="color:#fff">500</span></div>
+      <div class="step" style="background:#7E7F82"><span class="lbl" style="color:#fff">600</span></div>
+      <div class="step" style="background:#616263"><span class="lbl" style="color:#fff">700</span></div>
+      <div class="step" style="background:#444547"><span class="lbl" style="color:#fff">800</span></div>
+      <div class="step" style="background:#272829"><span class="lbl" style="color:#fff">900</span></div>
+    </div>
+  </div>
+</body>
+</html>

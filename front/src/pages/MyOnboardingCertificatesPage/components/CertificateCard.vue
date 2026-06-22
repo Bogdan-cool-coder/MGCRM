@@ -50,26 +50,26 @@ const formattedDate = computed(() =>
 <style lang="scss" scoped>
 .certificate-card {
   &__icon {
-    font-size: 3rem;
+    font-size: $font-size-icon-2xl;
     color: var(--p-green-500);
     display: block;
     margin-bottom: 1rem;
   }
 
   &__title {
-    font-size: 1rem;
+    font-size: $font-size-md;
     font-weight: 600;
     margin: 0 0 0.5rem;
   }
 
   &__number {
-    font-size: 0.875rem;
+    font-size: $font-size-sm;
     color: var(--p-surface-500);
     margin: 0 0 0.25rem;
   }
 
   &__date {
-    font-size: 0.8125rem;
+    font-size: $font-size-xs; // snap from 13px (0.8125rem)
     color: var(--p-surface-400);
     margin: 0;
   }

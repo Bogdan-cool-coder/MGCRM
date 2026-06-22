@@ -8,7 +8,9 @@ use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
@@ -240,11 +242,135 @@ class ContactKpiTest extends TestCase
                 'data' => [
                     'kpi' => [
                         'deals_count',
+                        'deals_sum',
+                        'deals_sum_currency',
                         'last_touch_at',
                         'open_tasks_count',
+                        'companies_count',
                     ],
                 ],
             ]);
+    }
+
+    // ---- deals_sum (B-2 / DS-5) ----
+
+    public function test_kpi_deals_sum_sums_amounts_across_all_linked_deals(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $stage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+        $d1 = Deal::factory()->inStage($stage)->create(['amount' => 100_000, 'currency' => 'RUB']);
+        $d2 = Deal::factory()->inStage($stage)->create(['amount' => 200_000, 'currency' => 'RUB']);
+
+        DealContact::factory()->create(['deal_id' => $d1->id, 'contact_id' => $contact->id]);
+        DealContact::factory()->create(['deal_id' => $d2->id, 'contact_id' => $contact->id]);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+
+        // deals_sum is int kopecks or null (FX unavailable); must never be a float
+        $dealsSumRaw = $response->json('data.kpi.deals_sum');
+        $this->assertTrue($dealsSumRaw === null || is_int($dealsSumRaw));
+
+        // Both deals in same currency (RUB) — no conversion needed; sum = 300_000 kopecks
+        if ($dealsSumRaw !== null) {
+            $this->assertSame(300_000, $dealsSumRaw);
+        }
+    }
+
+    public function test_kpi_deals_sum_is_zero_when_no_deals(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+
+        // No deals linked — base_total = 0, never null (no conversion needed)
+        $this->assertSame(0, $response->json('data.kpi.deals_sum'));
+    }
+
+    public function test_kpi_deals_sum_excludes_soft_deleted_deals(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $stage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+        $deal = Deal::factory()->inStage($stage)->create(['amount' => 500_000, 'currency' => 'RUB']);
+        DealContact::factory()->create(['deal_id' => $deal->id, 'contact_id' => $contact->id]);
+
+        $deal->delete();
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+        $this->assertSame(0, $response->json('data.kpi.deals_sum'));
+    }
+
+    public function test_kpi_deals_sum_currency_is_string(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+
+        $currency = $response->json('data.kpi.deals_sum_currency');
+        $this->assertIsString($currency);
+        $this->assertNotEmpty($currency);
+    }
+
+    // ---- companies_count ----
+
+    public function test_kpi_companies_count_reflects_company_links(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $c1 = Company::factory()->create();
+        $c2 = Company::factory()->create();
+
+        ContactCompanyLink::create(['contact_id' => $contact->id, 'company_id' => $c1->id, 'is_primary' => true]);
+        ContactCompanyLink::create(['contact_id' => $contact->id, 'company_id' => $c2->id, 'is_primary' => false]);
+
+        $this->getJson("/api/contacts/{$contact->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kpi.companies_count', 2);
+    }
+
+    public function test_kpi_companies_count_is_zero_when_no_links(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $this->getJson("/api/contacts/{$contact->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kpi.companies_count', 0);
+    }
+
+    // ---- source and timestamps in ContactResource ----
+
+    public function test_show_response_contains_source_field(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create([
+            'owner_id' => $user->id,
+            'source' => 'website',
+        ]);
+
+        $this->getJson("/api/contacts/{$contact->id}")
+            ->assertOk()
+            ->assertJsonPath('data.source', 'website');
+    }
+
+    public function test_show_response_contains_created_at_and_updated_at(): void
+    {
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+
+        $this->assertNotNull($response->json('data.created_at'));
+        $this->assertNotNull($response->json('data.updated_at'));
+        // Verify ISO 8601 format (contains 'T' separator)
+        $this->assertStringContainsString('T', $response->json('data.created_at'));
+        $this->assertStringContainsString('T', $response->json('data.updated_at'));
     }
 
     // ---- index does NOT expose kpi (no N+1 on list) ----

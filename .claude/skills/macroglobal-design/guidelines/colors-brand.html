@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Brand colors" subtitle="Primary navy + secondary — фирменные цвета" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-card); color: var(--mg-text-primary); }
+  .row { display: flex; gap: 10px; padding: 18px; flex-wrap: wrap; }
+  .sw { width: 150px; border-radius: var(--mg-radius-md); overflow: hidden; border: 1px solid var(--mg-border-default); }
+  .chip { height: 56px; }
+  .meta { padding: 7px 9px; }
+  .name { font-size: 12px; font-weight: 600; }
+  .hex { font-size: 11px; color: var(--mg-text-muted); font-variant-numeric: tabular-nums; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--mg-primary)"></div><div class="meta"><div class="name">Primary</div><div class="hex">#172747</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--mg-primary-dark)"></div><div class="meta"><div class="name">Primary Dark</div><div class="hex">#0E172B</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--mg-primary-light)"></div><div class="meta"><div class="name">Primary Light</div><div class="hex">#2B4987</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--mg-secondary)"></div><div class="meta"><div class="name">Secondary</div><div class="hex">#6C757D</div></div></div>
+  </div>
+</body>
+</html>

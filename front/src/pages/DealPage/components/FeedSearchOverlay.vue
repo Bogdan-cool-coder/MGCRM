@@ -82,11 +82,12 @@ function onReset() {
   display: flex;
   align-items: center;
   gap: $space-2;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: $shadow-md; // snap from rgba(0,0,0,0.08) → rgba(0,0,0,0.10)
 
   .app-dark & {
     border-color: var(--p-surface-700);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); // dark overlay variant, no canonical token
   }
 }
 

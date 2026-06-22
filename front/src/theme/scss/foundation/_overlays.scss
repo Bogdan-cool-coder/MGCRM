@@ -5,3 +5,10 @@ $shadow-sm: var(--app-shadow-sm);
 $shadow-card: var(--app-shadow-card);
 $shadow-md: var(--app-shadow-md);
 $shadow-lg: var(--app-shadow-lg);
+
+// Supplemental static shadows (not theme-reactive — elevation-specific, always dark)
+// Used for dragging state, focus-ring outlines, elevated overlays.
+$shadow-dragging:   0 4px 16px rgba(0, 0, 0, 0.15); // kanban card drag / stage drag
+$shadow-elevated:   0 4px 24px rgba(0, 0, 0, 0.4);  // login panel / dark backdrop lift
+$shadow-overlay-sm: 0 8px 24px rgba(0, 0, 0, 0.12); // filter overlays / popovers
+$shadow-card-hover: 0 2px 12px rgba(23, 39, 71, 0.08); // hover lift on white cards (primary navy tint)

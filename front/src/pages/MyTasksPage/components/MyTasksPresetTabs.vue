@@ -90,7 +90,7 @@ function getCount(preset: TaskPreset): number {
   min-width: 20px;
   height: 20px;
   padding: 0 $space-1;
-  border-radius: 10px;
+  border-radius: $radius-badge; // snap from 10px → 9px
   background: var(--p-surface-200);
   color: var(--p-surface-600);
   line-height: 1;

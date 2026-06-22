@@ -55,7 +55,7 @@
           <!-- Loading channels -->
           <template v-if="channelsLoading[link.contact.id]">
             <span class="deal-contacts-group__channels-loading">
-              <i class="pi pi-spin pi-spinner" style="font-size: 10px" />
+              <i class="pi pi-spin pi-spinner deal-contacts-group__spinner" />
             </span>
           </template>
           <!-- Channel tags -->
@@ -87,7 +87,7 @@
                   :disabled="deletingChannel[ch.id]"
                   @click="removeChannel(link.contact.id, ch.id)"
                 >
-                  <i class="pi pi-times" style="font-size: 9px" />
+                  <i class="pi pi-times deal-contacts-group__remove-icon" />
                 </button>
               </span>
             </template>
@@ -302,8 +302,16 @@ function onChannelAdded(channel: ContactChannel) {
 }
 
 .deal-contacts-group__empty-icon {
-  font-size: 1.5rem;
+  font-size: $font-size-2xl;
   color: $surface-300;
+}
+
+.deal-contacts-group__spinner {
+  font-size: $font-size-3xs;
+}
+
+.deal-contacts-group__remove-icon {
+  font-size: $font-size-3xs; // snap from 9px (-1px)
 }
 
 .deal-contacts-group__empty-text {
@@ -401,7 +409,7 @@ function onChannelAdded(channel: ContactChannel) {
   }
 
   .pi {
-    font-size: 10px;
+    font-size: $font-size-3xs;
   }
 }
 
@@ -473,7 +481,7 @@ a.deal-contacts-group__channel-tag,
   }
 
   .pi {
-    font-size: 10px;
+    font-size: $font-size-3xs;
   }
 }
 

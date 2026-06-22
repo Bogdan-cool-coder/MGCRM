@@ -255,22 +255,16 @@ async function onSubmit() {
     &--active {
       background: $primary-color;
       border-color: $primary-color;
-      color: #fff;
+      color: $surface-0;
 
       &:hover {
-        color: #fff;
+        color: $surface-0;
       }
     }
 
-    :global(.app-dark) & {
-      border-color: var(--p-surface-600);
+    .app-dark & {
+      border-color: var(--p-surface-200);
       color: var(--p-surface-300);
-
-      &--active {
-        background: $primary-color;
-        border-color: $primary-color;
-        color: #fff;
-      }
     }
   }
 

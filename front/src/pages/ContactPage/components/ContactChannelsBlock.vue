@@ -186,6 +186,8 @@ function openAdd() {
   newChannelValue.value = ''
 }
 
+defineExpose({ openAdd })
+
 function cancelAdd() {
   addingOpen.value = false
 }
@@ -300,7 +302,7 @@ function onDeleteChannel(ch: ContactChannel) {
   transition: background var(--app-transition-fast);
 
   i {
-    font-size: 11px;
+    font-size: $font-size-2xs;
   }
 }
 
@@ -339,7 +341,7 @@ function onDeleteChannel(ch: ContactChannel) {
 }
 
 .contact-channels__empty-icon {
-  font-size: 1.5rem;
+  font-size: $font-size-2xl;
   color: $surface-300;
 }
 
@@ -385,7 +387,7 @@ function onDeleteChannel(ch: ContactChannel) {
   }
 
   i {
-    font-size: 11px;
+    font-size: $font-size-2xs;
   }
 }
 </style>

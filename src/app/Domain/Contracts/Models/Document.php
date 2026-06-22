@@ -7,6 +7,7 @@ namespace App\Domain\Contracts\Models;
 use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Enums\DocumentKind;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyRequisite;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
 use Database\Factories\Contracts\DocumentFactory;
@@ -50,6 +51,7 @@ class Document extends Model
         'city_code',
         'source_deal_id',
         'source_company_id',
+        'company_requisite_id',
         'author_user_id',
         'status',
         'context',
@@ -107,6 +109,15 @@ class Document extends Model
     public function sourceCompany(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'source_company_id');
+    }
+
+    /**
+     * Pinned requisite set at document creation time.
+     * Immutable after signing — the context JSONB already carries the snapshot text.
+     */
+    public function companyRequisite(): BelongsTo
+    {
+        return $this->belongsTo(CompanyRequisite::class, 'company_requisite_id');
     }
 
     public function templateVersion(): BelongsTo

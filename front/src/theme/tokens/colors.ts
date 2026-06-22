@@ -125,6 +125,21 @@ export const orangePalette = {
   950: '#551d12',
 } as const
 
+// Бирюзовая палитра (teal — KPI «Новые за неделю», pipeline stage teal)
+export const tealPalette = {
+  50: '#f0fdfb',
+  100: '#d4f3e8', // KPI chip bg (light)
+  200: '#a4e7d2',
+  300: '#6dd4b8',
+  400: '#3cbda0',
+  500: '#1D9E75', // stage-color-teal
+  600: '#158463',
+  700: '#0A6E4E', // KPI chip text (light)
+  800: '#084f39',
+  900: '#0A3D28', // KPI chip bg (dark)
+  950: '#052418',
+} as const
+
 // Синяя палитра (info — из брендбука: solid #8DD9FF)
 export const bluePalette = {
   50: '#f5faff',
@@ -155,5 +170,6 @@ export const colors = {
   orange: orangePalette,
   blue: bluePalette,
   green: greenPalette,
+  teal: tealPalette,
   monochrome: monochromePalette,
 } as const

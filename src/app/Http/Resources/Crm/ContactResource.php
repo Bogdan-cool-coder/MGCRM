@@ -15,22 +15,22 @@ class ContactResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'full_name'   => $this->full_name,
-            'position'    => $this->position,
-            'phone'       => $this->phone,
-            'email'       => $this->email,
+            'id' => $this->id,
+            'full_name' => $this->full_name,
+            'position' => $this->position,
+            'phone' => $this->phone,
+            'email' => $this->email,
             'tg_username' => $this->tg_username,
-            'notes'       => $this->notes,
-            'source'      => $this->source,
-            'status'      => $this->status?->value,
-            'tags'        => $this->tags ?? [],
+            'notes' => $this->notes,
+            'source' => $this->source,
+            'status' => $this->status?->value,
+            'tags' => $this->tags ?? [],
             'extra_fields' => $this->extra_fields ?? [],
-            'owner_id'    => $this->owner_id,
+            'owner_id' => $this->owner_id,
 
             // Marketing — acquisition channel
             'acquisition_channel_id' => $this->acquisition_channel_id,
-            'acquisition_channel'    => $this->whenLoaded(
+            'acquisition_channel' => $this->whenLoaded(
                 'acquisitionChannel',
                 fn () => $this->acquisitionChannel
                     ? ['id' => $this->acquisitionChannel->id, 'name' => $this->acquisitionChannel->name]
@@ -39,11 +39,11 @@ class ContactResource extends JsonResource
 
             // Engagement (B2)
             'last_activity_at' => $this->last_activity_at?->toIso8601String(),
-            'engagement_tier'  => $this->computeEngagementTier()->value,
+            'engagement_tier' => $this->computeEngagementTier()->value,
 
             // User (when loaded)
             'owner' => $this->whenLoaded('owner', fn () => [
-                'id'        => $this->owner->id,
+                'id' => $this->owner->id,
                 'full_name' => $this->owner->full_name,
             ]),
 
@@ -55,9 +55,12 @@ class ContactResource extends JsonResource
 
             // KPI block (available on show() only — set via ->additional(['kpi' => ...]))
             // Fields:
-            //   deals_count     — total number of deals this contact participates in (via deal_contacts)
-            //   last_touch_at   — ISO 8601 timestamp of last engagement (mirrors last_activity_at column)
-            //   open_tasks_count— number of open (not closed, not done) task-like activities targeting this contact
+            //   deals_count      — total number of deals this contact participates in (via deal_contacts)
+            //   deals_sum        — total deal amounts in base currency (kopecks); null if FX rate unavailable
+            //   deals_sum_currency — ISO 4217 base currency for deals_sum
+            //   last_touch_at    — ISO 8601 timestamp of last engagement (mirrors last_activity_at column)
+            //   open_tasks_count — number of open (not closed, not done) task-like activities targeting this contact
+            //   companies_count  — number of companies this contact is linked to
             'kpi' => $this->additional['kpi'] ?? null,
 
             'created_at' => $this->created_at?->toIso8601String(),

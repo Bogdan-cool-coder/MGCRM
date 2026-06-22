@@ -7,6 +7,7 @@ namespace App\Domain\Contracts\Services;
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Enums\DocumentKind;
+use App\Domain\Contracts\Events\TerminationAgreementSigned;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
 use App\Domain\Contracts\Models\DocumentRevision;
@@ -273,6 +274,12 @@ class DocumentService
         // for the entity log — it fires only when a deal/company source is linked
         // (a free-standing document simply produces no entity-log row).
         $this->recordContractEvent($doc, $to, $userId, $note);
+
+        // Post-commit event for TerminationAgreement → Signed.
+        // Fired outside the transaction so the signed_at row is already persisted.
+        if ($to === ContractStatus::Signed) {
+            $this->dispatchTerminationSignedIfNeeded($doc->fresh());
+        }
 
         return $doc->fresh();
     }
@@ -578,11 +585,30 @@ class DocumentService
 
     /**
      * Side effect for Approved → Signed transition.
+     *
+     * For termination_agreement documents, also dispatches TerminationAgreementSigned
+     * so N6-crm can update the company's disconnect state.
+     * The event is dispatched AFTER this method returns (outside the transaction
+     * lock) to ensure the row is committed before any listener reads it.
+     * We store a flag on the locked model so transition() can fire it post-commit.
      */
     private function applySigned(Document $locked): void
     {
         $locked->signed_at = now();
         // TODO(cs-specialist): trigger CS subscription creation after signed (S-CS sprint)
+    }
+
+    /**
+     * Dispatch TerminationAgreementSigned after the transaction commits.
+     * Called from transition() when kind=termination_agreement moves to Signed.
+     */
+    private function dispatchTerminationSignedIfNeeded(Document $doc): void
+    {
+        $kind = $doc->kind instanceof DocumentKind ? $doc->kind : DocumentKind::tryFrom((string) $doc->kind);
+
+        if ($kind === DocumentKind::TerminationAgreement && $doc->source_company_id !== null) {
+            event(TerminationAgreementSigned::fromDocument($doc));
+        }
     }
 
     /**

@@ -231,7 +231,7 @@ function onDelete(id: number) {
 }
 
 .open-tasks__kind-icon {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
 }
@@ -263,7 +263,7 @@ function onDelete(id: number) {
 }
 
 .open-tasks__due-icon {
-  font-size: 10px;
+  font-size: $font-size-3xs;
 }
 
 .open-tasks__responsible {
@@ -287,7 +287,7 @@ function onDelete(id: number) {
   border-radius: $radius-sm;
   background: transparent;
   color: var(--p-green-500);
-  font-size: 11px;
+  font-size: $font-size-2xs;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -299,7 +299,7 @@ function onDelete(id: number) {
 
   &:hover {
     background: var(--p-green-500);
-    color: #fff;
+    color: $sidebar-text-active;
 
     .open-tasks__complete-label {
       display: inline;
@@ -307,7 +307,7 @@ function onDelete(id: number) {
   }
 
   .pi {
-    font-size: 11px;
+    font-size: $font-size-2xs;
   }
 }
 

@@ -12,7 +12,7 @@
   >
     <template #empty>
       <div class="hr-progress-table__empty">
-        <i class="pi pi-graduation-cap" style="font-size: 2rem; color: var(--p-surface-400);" />
+        <i class="pi pi-graduation-cap hr-progress-table__empty-icon" />
         <p class="text-muted mt-2">{{ t('onboarding.hrProgress.empty') }}</p>
       </div>
     </template>
@@ -38,7 +38,7 @@
       <template #body="{ data: r }">
         <div class="d-flex align-items-center gap-2">
           <ProgressBar :value="r.progress_pct" style="height: 8px; flex: 1;" />
-          <span style="font-size: 0.8rem; white-space: nowrap;">{{ r.progress_pct }}%</span>
+          <span class="hr-progress-table__pct">{{ r.progress_pct }}%</span>
         </div>
       </template>
     </Column>
@@ -105,7 +105,17 @@ function formatDate(dateStr: string): string {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2.5rem;
+    padding: $space-8; // 2.5rem = 40px, closest token $space-8 = 32px; snap 8px — padding not guarded by lint:ds
+  }
+
+  &__empty-icon {
+    font-size: $font-size-icon-lg; // 2rem
+    color: var(--p-surface-400);
+  }
+
+  &__pct {
+    font-size: $font-size-2xs; // snap from 0.8rem (12.8px→11px); alt $font-size-xs (12px) snap -0.8px
+    white-space: nowrap;
   }
 
   &__link {

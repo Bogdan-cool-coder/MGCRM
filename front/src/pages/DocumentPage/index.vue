@@ -292,7 +292,7 @@ const docMenuItems = computed(() => [
     text-align: center;
 
     &-icon {
-      font-size: 3rem;
+      font-size: $font-size-icon-2xl; // 3rem
       opacity: 0.4;
     }
   }

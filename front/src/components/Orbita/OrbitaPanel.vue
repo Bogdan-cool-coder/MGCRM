@@ -165,7 +165,7 @@ defineExpose({ panelRef, labelSide })
 
     &-icon {
       flex-shrink: 0;
-      font-size: 1rem;
+      font-size: $font-size-md;
       line-height: 1;
       // Fixed square so icon is always centered inside the button at rest
       width: orbita.$orbita-control-size;
@@ -174,7 +174,7 @@ defineExpose({ panelRef, labelSide })
     }
 
     &-label {
-      font-size: 13px;
+      font-size: $font-size-xs; // snap from 13px
       font-weight: $font-weight-medium;
       white-space: nowrap;
       pointer-events: none;
@@ -417,14 +417,18 @@ defineExpose({ panelRef, labelSide })
 
 @media (forced-colors: active) {
   .orbita-panel {
-    border: 1px solid ButtonText;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    border: 1px solid ButtonText; // a11y forced-colors system keyword
   }
 
   .orbita-panel__btn {
     &.is-active {
-      border: 2px solid Highlight;
-      color: HighlightText;
-      background: Highlight;
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      border: 2px solid Highlight; // a11y forced-colors system keyword
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: HighlightText; // a11y forced-colors system keyword
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: Highlight; // a11y forced-colors system keyword
     }
   }
 }

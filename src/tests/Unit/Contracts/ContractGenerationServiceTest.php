@@ -16,6 +16,7 @@ use App\Domain\Contracts\Services\ContractNumberingService;
 use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Contracts\Services\TemplateService;
 use App\Domain\Contracts\Services\YamlTemplateParser;
+use App\Domain\Crm\Services\CompanyRequisiteService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Services\Documents\GotenbergClient;
@@ -128,7 +129,7 @@ class ContractGenerationServiceTest extends TestCase
     {
         return new ContractGenerationService(
             new TemplateService,
-            new ContractContextBuilder(new YamlTemplateParser),
+            new ContractContextBuilder(new YamlTemplateParser, new CompanyRequisiteService),
             new ContractNumberingService,
             app(DocumentService::class),
             new GotenbergClient,

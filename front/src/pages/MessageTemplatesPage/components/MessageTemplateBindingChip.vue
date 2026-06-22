@@ -40,12 +40,12 @@ const label = computed(() => {
   padding: 0.25rem 0.5rem;
   background: var(--p-surface-100);
   border: 1px solid var(--p-surface-300);
-  border-radius: 9999px;
+  border-radius: $radius-pill; // 9999px
   font-size: $font-size-xs;
   color: var(--p-text-color);
 
   &__icon {
-    font-size: 0.7rem;
+    font-size: $font-size-3xs; // 0.7rem snap from ~11.2px→10px
     color: var(--p-text-muted-color);
   }
 
@@ -65,7 +65,7 @@ const label = computed(() => {
     padding: 0;
     cursor: pointer;
     color: var(--p-text-muted-color);
-    font-size: 0.65rem;
+    font-size: $font-size-3xs; // 0.65rem snap ~10.4px→10px
     line-height: 1;
 
     &:hover {

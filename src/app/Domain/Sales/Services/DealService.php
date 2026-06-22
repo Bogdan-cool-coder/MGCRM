@@ -8,6 +8,7 @@ use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Services\CompanyRequisiteService;
 use App\Domain\Crm\Services\CustomFieldService;
 use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
@@ -22,8 +23,10 @@ use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\DealStageHistory;
 use App\Domain\Sales\Models\Pipeline;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -54,6 +57,7 @@ class DealService
         private readonly ExchangeRateService $exchangeRateService,
         private readonly EngagementService $engagementService,
         private readonly EntityLogService $entityLog,
+        private readonly CompanyRequisiteService $requisites,
     ) {}
 
     /**
@@ -156,24 +160,44 @@ class DealService
      */
     public function list(array $filters, VisibilityScope $scope, User $user, int $perPage = 25): LengthAwarePaginator
     {
-        return $this->scopedQuery($scope, $user)
-            ->with(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name'])
-            ->when(isset($filters['pipeline_id']), fn (Builder $q) => $q->where('pipeline_id', $filters['pipeline_id']))
-            ->when(isset($filters['stage_id']), fn (Builder $q) => $q->where('stage_id', $filters['stage_id']))
-            ->when(isset($filters['owner_id']), fn (Builder $q) => $q->where('owner_user_id', $filters['owner_id']))
-            ->when(isset($filters['q']), function (Builder $q) use ($filters): void {
-                $q->where('title', 'like', '%'.$filters['q'].'%');
-            })
-            // Archived deals are hidden by default; ?archived=true returns ONLY
-            // archived ones. Soft-deleted deals are excluded automatically by the
-            // SoftDeletes global scope (no deleted_at filter needed here).
-            ->when(
-                $filters['archived'] ?? false,
-                fn (Builder $q) => $q->whereNotNull('archived_at'),
-                fn (Builder $q) => $q->whereNull('archived_at'),
-            )
+        // The company select carries country_code / category_code so the list
+        // DealResource can render the «Страна» (B1) and «Категории L/M/S» (B3)
+        // columns straight off the loaded relation — no per-row query (N+1).
+        $query = $this->scopedQuery($scope, $user)
+            ->with(['pipeline:id,name,kind', 'stage', 'company:id,name,country_code,category_code', 'owner:id,full_name']);
+
+        $this->applyFilters($query, $filters, $user);
+
+        $deals = $query
             ->orderByDesc('created_at')
             ->paginate($perPage);
+
+        $this->stampLastContact($deals->getCollection());
+
+        return $deals;
+    }
+
+    /**
+     * Stamp `last_contact_at_payload` onto a page of deals for the list
+     * «Посл. контакт» column (B2). The dates are resolved in ONE batched query
+     * across the whole page via ActivityService — mirroring how board() batches
+     * next_task / primary_product — so the list view never N+1s the activities
+     * table. Deals with no completed contact are stamped null.
+     *
+     * @param  Collection<int, Deal>  $deals
+     */
+    private function stampLastContact(Collection $deals): void
+    {
+        if ($deals->isEmpty()) {
+            return;
+        }
+
+        $dealIds = $deals->map(static fn (Deal $deal): int => (int) $deal->id)->all();
+        $lastContact = $this->activityService->lastContactDatesForDeals($dealIds);
+
+        foreach ($deals as $deal) {
+            $deal->setAttribute('last_contact_at_payload', $lastContact[(int) $deal->id] ?? null);
+        }
     }
 
     /**
@@ -187,18 +211,189 @@ class DealService
      */
     public function filteredQuery(array $filters, VisibilityScope $scope, User $user): Builder
     {
-        return $this->scopedQuery($scope, $user)
-            ->with(['pipeline:id,name,kind', 'stage:id,name', 'company:id,name', 'owner:id,full_name'])
+        $query = $this->scopedQuery($scope, $user)
+            ->with(['pipeline:id,name,kind', 'stage:id,name', 'company:id,name', 'owner:id,full_name']);
+
+        $this->applyFilters($query, $filters, $user);
+
+        return $query->orderByDesc('created_at');
+    }
+
+    /**
+     * Apply the full deal-list / board filter set to a base Deal query. Every
+     * dimension is guarded by when() so absent / empty / invalid inputs are a
+     * silent no-op (the listing is never narrowed by a filter the user did not
+     * set). All values flow through the query builder's bindings — no string
+     * interpolation, so the filters are injection-safe. The visibility scope is
+     * applied by the caller (scopedQuery) BEFORE this, so $user here is only the
+     * "current user" the only_mine / owner presets resolve against.
+     *
+     * Archived handling is part of the set: archived deals are hidden by default
+     * and ?archived=true returns ONLY archived ones (soft-deleted rows are
+     * already excluded by the SoftDeletes global scope).
+     *
+     * @param  Builder<Deal>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyFilters(Builder $query, array $filters, User $user): void
+    {
+        $query
+            // ----- pipeline / stage placement -----
             ->when(isset($filters['pipeline_id']), fn (Builder $q) => $q->where('pipeline_id', $filters['pipeline_id']))
             ->when(isset($filters['stage_id']), fn (Builder $q) => $q->where('stage_id', $filters['stage_id']))
-            ->when(isset($filters['owner_id']), fn (Builder $q) => $q->where('owner_user_id', $filters['owner_id']))
-            ->when(isset($filters['q']), fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'))
             ->when(
-                $filters['archived'] ?? false,
+                $this->nonEmptyList($filters['stage_ids'] ?? null),
+                fn (Builder $q) => $q->whereIn('stage_id', $filters['stage_ids']),
+            )
+
+            // ----- ownership (single owner_id kept as an alias of owner_ids) -----
+            ->when(isset($filters['owner_id']), fn (Builder $q) => $q->where('owner_user_id', $filters['owner_id']))
+            ->when(
+                $this->nonEmptyList($filters['owner_ids'] ?? null),
+                fn (Builder $q) => $q->whereIn('owner_user_id', $filters['owner_ids']),
+            )
+            // only_mine preset: restrict to the current user's own deals (applied
+            // on top of any owner filter — an AND, not an override).
+            ->when(
+                $this->isTruthy($filters['only_mine'] ?? null),
+                fn (Builder $q) => $q->where('owner_user_id', $user->id),
+            )
+
+            // ----- title search -----
+            ->when(
+                $this->nonEmptyString($filters['q'] ?? null),
+                fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'),
+            )
+
+            // ----- status (open|won|lost) → stage flags -----
+            ->when(
+                $this->nonEmptyString($filters['status'] ?? null),
+                fn (Builder $q) => $this->applyStatusFilter($q, (string) $filters['status']),
+            )
+
+            // ----- tags (JSON array — whereJsonContains is SQLite+PG portable) -----
+            ->when(
+                $this->nonEmptyList($filters['tags'] ?? null),
+                function (Builder $q) use ($filters): void {
+                    $q->where(function (Builder $sub) use ($filters): void {
+                        // Match any of the requested tags (OR semantics).
+                        foreach ($filters['tags'] as $tag) {
+                            $sub->orWhereJsonContains('tags', $tag);
+                        }
+                    });
+                },
+            )
+
+            // ----- product_q: name search over the deal's line items -----
+            ->when(
+                $this->nonEmptyString($filters['product_q'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'products.product',
+                    fn (Builder $p) => $p->where('catalog_products.name', 'like', '%'.$filters['product_q'].'%'),
+                ),
+            )
+
+            // ----- company geography -----
+            ->when(
+                $this->nonEmptyString($filters['country'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'company',
+                    fn (Builder $c) => $c->where('country_code', $filters['country']),
+                ),
+            )
+            ->when(
+                $this->nonEmptyString($filters['city'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'company',
+                    fn (Builder $c) => $c->where('city', 'like', '%'.$filters['city'].'%'),
+                ),
+            )
+
+            // ----- budget range (kopecks, on the denormalised Deal.amount) -----
+            ->when(
+                isset($filters['budget_from']),
+                fn (Builder $q) => $q->where('amount', '>=', (int) $filters['budget_from']),
+            )
+            ->when(
+                isset($filters['budget_to']),
+                fn (Builder $q) => $q->where('amount', '<=', (int) $filters['budget_to']),
+            )
+
+            // ----- created_at range (inclusive day boundaries) -----
+            ->when(
+                $this->nonEmptyString($filters['created_from'] ?? null),
+                fn (Builder $q) => $q->where('created_at', '>=', Carbon::parse((string) $filters['created_from'])->startOfDay()),
+            )
+            ->when(
+                $this->nonEmptyString($filters['created_to'] ?? null),
+                fn (Builder $q) => $q->where('created_at', '<=', Carbon::parse((string) $filters['created_to'])->endOfDay()),
+            )
+
+            // ----- task presets (open task-like activity on the deal) -----
+            ->when(
+                $this->isTruthy($filters['only_no_task'] ?? null),
+                fn (Builder $q) => $q->whereDoesntHave('nextTask'),
+            )
+            ->when(
+                $this->isTruthy($filters['only_overdue'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'nextTask',
+                    fn (Builder $t) => $t->where('due_at', '<', now()),
+                ),
+            )
+
+            // ----- archived (hidden by default) -----
+            ->when(
+                $this->isTruthy($filters['archived'] ?? null),
                 fn (Builder $q) => $q->whereNotNull('archived_at'),
                 fn (Builder $q) => $q->whereNull('archived_at'),
-            )
-            ->orderByDesc('created_at');
+            );
+    }
+
+    /**
+     * status (open|won|lost) → stage flags. The deal has no status column —
+     * "won"/"lost" are derived from the current stage's is_won/is_lost booleans,
+     * and "open" is neither (mirrors Deal::status()). Implemented via whereHas on
+     * the stage relation so it composes with the other filters and stays
+     * scope-safe. An unknown status string is ignored (no rows are excluded by a
+     * value the FormRequest would have rejected anyway — defence in depth).
+     *
+     * @param  Builder<Deal>  $query
+     */
+    private function applyStatusFilter(Builder $query, string $status): void
+    {
+        match ($status) {
+            'won' => $query->whereHas('stage', fn (Builder $s) => $s->where('is_won', true)),
+            'lost' => $query->whereHas('stage', fn (Builder $s) => $s->where('is_lost', true)),
+            'open' => $query->whereHas('stage', fn (Builder $s) => $s->where('is_won', false)->where('is_lost', false)),
+            default => null,
+        };
+    }
+
+    /**
+     * True when $value is a non-empty array (the multi-value filters). An empty
+     * array (e.g. owner_ids[]= with no items) is treated as "no filter" so it
+     * never produces a whereIn([]) that would silently return zero rows.
+     */
+    private function nonEmptyList(mixed $value): bool
+    {
+        return is_array($value) && $value !== [];
+    }
+
+    /** True when $value is a non-empty, non-whitespace string. */
+    private function nonEmptyString(mixed $value): bool
+    {
+        return is_string($value) && trim($value) !== '';
+    }
+
+    /**
+     * Truthy coercion for the boolean preset flags. The FormRequest's `boolean`
+     * rule normalises "1"/"true"/"on"/"yes" to true, but the service is also
+     * called directly (tests / cross-domain) with raw values, so coerce here too.
+     */
+    private function isTruthy(mixed $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -238,12 +433,30 @@ class DealService
      * `days_in_stage`. The next-task and primary-product lookups are BATCHED
      * across the whole board (two queries total, not per-card) to avoid N+1.
      *
+     * The same cross-cutting filter set as list() is honoured here so the board
+     * narrows in lockstep with the list view. pipeline_id and the stage filters
+     * are NOT re-applied from $filters — the board's pipeline is fixed by the
+     * argument and the stage is fixed per column by the loop (applying a
+     * stage_id/stage_ids filter would just blank out other columns, which the
+     * funnel does by hiding them in the UI, not by emptying them server-side).
+     *
+     * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    public function board(int $pipelineId, VisibilityScope $scope, User $user): array
+    public function board(int $pipelineId, VisibilityScope $scope, User $user, array $filters = []): array
     {
         $pipeline = Pipeline::query()->with('stages')->findOrFail($pipelineId);
         $baseCurrency = config('crm.currencies.default', 'RUB');
+
+        // Strip pipeline/stage placement keys: the board owns those (fixed
+        // pipeline arg + per-column stage loop). The rest of the filter set
+        // (owner, status, tags, geography, budget, dates, presets, …) applies.
+        $columnFilters = $filters;
+        unset(
+            $columnFilters['pipeline_id'],
+            $columnFilters['stage_id'],
+            $columnFilters['stage_ids'],
+        );
 
         $multiCurrencyWarning = false;
 
@@ -254,6 +467,8 @@ class DealService
             $base = $this->scopedQuery($scope, $user)
                 ->where('pipeline_id', $pipelineId)
                 ->where('stage_id', $stage->id);
+
+            $this->applyFilters($base, $columnFilters, $user);
 
             $total = (clone $base)->count();
 
@@ -426,6 +641,18 @@ class DealService
         $data['max_stage_id'] = $firstStage->id;
         $data['stage_changed_at'] = now();
 
+        // Auto-pin the company's current requisite set (N5/Фича 7): a deal records
+        // which requisites it was opened with so a later requisite change does not
+        // retroactively alter it. Only when the caller did not pin one explicitly
+        // and the company actually has a current set — 0 requisites leaves it null
+        // (resolveForNewDocument-null backlog flag) without failing.
+        if (empty($data['company_requisite_id']) && ! empty($data['company_id'])) {
+            $company = Company::find($data['company_id']);
+            $data['company_requisite_id'] = $company !== null
+                ? $this->requisites->current($company)?->id
+                : null;
+        }
+
         $deal = Deal::create($data);
 
         // Record creation event in stage history (from_stage_id = null → creation).
@@ -497,6 +724,10 @@ class DealService
                 // The landing stage is the initial max_stage high-water mark.
                 'max_stage_id' => $stageId,
                 'company_id' => $company->id,
+                // Auto-pin the company's current requisite set (N5/Фича 7); null
+                // when the company has no current requisites (0 → stays null, not
+                // an error).
+                'company_requisite_id' => $this->requisites->current($company)?->id,
                 'title' => $opts['title'] ?? "Лид: {$company->name}",
                 'currency' => $opts['currency'] ?? config('crm.currencies.default', 'RUB'),
                 'owner_user_id' => $ownerId,
@@ -580,11 +811,28 @@ class DealService
             unset($data['extra_fields']);
         }
 
+        // License-mode (perpetual_license) toggle detection (N4). Capture whether
+        // the flag actually changes BEFORE the update so we can re-price all line
+        // items in the SAME transaction as the field write (atomic toggle). The
+        // re-price runs through DealProductService::applyLicenseMode, resolved
+        // lazily (app()) to avoid a constructor DI cycle — DealProductService
+        // already constructor-injects DealService.
+        $perpetualChanged = array_key_exists('perpetual_license', $data)
+            && (bool) $deal->perpetual_license !== (bool) $data['perpetual_license'];
+        $newPerpetual = $perpetualChanged ? (bool) $data['perpetual_license'] : false;
+
         // Snapshot only the scalar fields about to change (excludes extra_fields,
         // already unset). getOriginal() reflects the values currently in the DB.
         $original = array_intersect_key($deal->getOriginal(), $data);
 
-        $deal->update($data);
+        DB::transaction(function () use ($deal, $data, $perpetualChanged, $newPerpetual): void {
+            $deal->update($data);
+
+            if ($perpetualChanged) {
+                app(DealProductService::class)->applyLicenseMode($deal, $newPerpetual);
+            }
+        });
+
         $deal->refresh();
 
         $diff = $this->buildAuditDiff($original, $data, $extraChanged, $extraBefore, $deal->extra_fields ?? []);
@@ -756,6 +1004,57 @@ class DealService
             ->whereNull('closed_at')
             ->whereHas('stage', static fn (Builder $q) => $q->where('is_won', false)->where('is_lost', false))
             ->with('stage:id,is_won,is_lost')
+            ->get(['id', 'amount', 'currency']);
+
+        // Group by currency, sum kopecks (integer only)
+        $perCurrency = [];
+        foreach ($deals as $deal) {
+            $currency = strtoupper((string) ($deal->currency ?? $baseCurrency));
+            $perCurrency[$currency] = ($perCurrency[$currency] ?? 0) + (int) $deal->amount;
+        }
+
+        // Convert to base currency — all arithmetic stays integer
+        $baseTotal = 0;
+        $conversionFailed = false;
+
+        foreach ($perCurrency as $currency => $amountKopecks) {
+            if ($currency === $baseCurrency) {
+                $baseTotal += $amountKopecks;
+            } else {
+                $converted = $this->exchangeRateService->convertAmount($amountKopecks, $currency, $baseCurrency);
+                if ($converted === null) {
+                    $conversionFailed = true;
+                } else {
+                    $baseTotal += $converted;
+                }
+            }
+        }
+
+        return new DealTotalsDTO(
+            per_currency: $perCurrency,
+            base_total: $conversionFailed ? null : $baseTotal,
+            base_currency: $baseCurrency,
+            open_count: $deals->count(),
+            as_of_date: now()->toIso8601String(),
+        );
+    }
+
+    /**
+     * Aggregate deal financials for a Contact (cross-domain B-2 / DS-5).
+     * Called by ContactController::show() to populate the KPI "sum" chip.
+     *
+     * Counts ALL deals the contact participates in (via deal_contacts), open or closed.
+     * Returns per-currency subtotals (kopecks) + converted base total.
+     * float is FORBIDDEN — all arithmetic in integer kopecks.
+     */
+    public function aggregateForContact(Contact $contact): DealTotalsDTO
+    {
+        $baseCurrency = strtoupper((string) config('crm.currencies.default', 'RUB'));
+
+        // All deals the contact participates in (no closed_at filter — "sum" = total portfolio)
+        $deals = Deal::query()
+            ->whereHas('dealContacts', static fn (Builder $q) => $q->where('contact_id', $contact->id))
+            ->whereNull('deals.deleted_at')
             ->get(['id', 'amount', 'currency']);
 
         // Group by currency, sum kopecks (integer only)

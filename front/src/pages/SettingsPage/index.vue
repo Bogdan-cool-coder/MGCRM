@@ -86,6 +86,20 @@ const sections: SettingsSection[] = [
     titleKey: 'settings.sections.automationRuns.title',
     descKey: 'settings.sections.automationRuns.desc',
   },
+  {
+    key: 'acquisition-channels',
+    route: '/admin/acquisition-channels',
+    icon: 'pi pi-megaphone',
+    titleKey: 'settings.sections.acquisitionChannels.title',
+    descKey: 'settings.sections.acquisitionChannels.desc',
+  },
+  {
+    key: 'disconnect-reasons',
+    route: '/admin/disconnect-reasons',
+    icon: 'pi pi-times-circle',
+    titleKey: 'settings.sections.disconnectReasons.title',
+    descKey: 'settings.sections.disconnectReasons.desc',
+  },
 ]
 </script>
 
@@ -123,7 +137,7 @@ const sections: SettingsSection[] = [
 
   &:hover {
     border-color: var(--p-primary-300);
-    box-shadow: 0 2px 12px rgba(23, 39, 71, 0.08);
+    box-shadow: $shadow-card-hover;
   }
 
   &:focus-visible {
@@ -143,12 +157,12 @@ const sections: SettingsSection[] = [
   justify-content: center;
 
   :global(.app-dark) & {
-    background-color: rgba(23, 39, 71, 0.3);
+    background-color: rgba($primary-900, 0.3);
   }
 }
 
 .settings-card__icon {
-  font-size: 20px;
+  font-size: $font-size-xl;
   color: var(--p-primary-600);
 }
 
@@ -179,7 +193,7 @@ const sections: SettingsSection[] = [
 }
 
 .settings-card__arrow {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
   transition: color var(--app-transition-fast), transform var(--app-transition-fast);

@@ -91,11 +91,9 @@ defineExpose({ collapse, expand, collapsed })
 
 <style lang="scss" scoped>
 .info-panel {
+  // var(--p-surface-200) is reactive: light=#E3E4E6, dark=#616263 (inverted palette).
+  // No dark override needed — the token resolves correctly in both themes.
   border-bottom: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
 
   &:last-child {
     border-bottom: none;
@@ -144,7 +142,7 @@ defineExpose({ collapse, expand, collapsed })
   }
 
   i {
-    font-size: 12px;
+    font-size: $font-size-xs;
   }
 }
 

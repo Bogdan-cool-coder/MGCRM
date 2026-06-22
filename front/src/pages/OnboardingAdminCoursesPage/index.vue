@@ -233,12 +233,12 @@ onMounted(() => {
     flex-direction: column;
     align-items: center;
     gap: $space-3;
-    padding: 2.5rem;
+    padding: $space-8;
     text-align: center;
   }
 
   &__empty-icon {
-    font-size: 3rem;
+    font-size: $font-size-icon-lg;
     color: var(--p-surface-400);
   }
 

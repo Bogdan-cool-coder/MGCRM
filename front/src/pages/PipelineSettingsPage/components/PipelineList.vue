@@ -120,7 +120,7 @@ const { t } = useI18n()
   }
 
   &__empty-icon {
-    font-size: 3rem;
+    font-size: $font-size-icon-2xl;
     color: var(--p-surface-400);
   }
 

@@ -114,7 +114,7 @@ const deadlineText = computed<string | null>(() => {
   }
 
   &__cover-icon {
-    font-size: 3rem;
+    font-size: $font-size-icon-lg;
     color: var(--p-surface-400);
   }
 
@@ -124,31 +124,32 @@ const deadlineText = computed<string | null>(() => {
     left: 0;
     width: 100%;
     height: 100%;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
     background: rgba(0, 0, 0, 0.35);
     display: flex;
     align-items: center;
     justify-content: center;
 
     i {
-      font-size: 3rem;
+      font-size: $font-size-icon-lg;
       color: var(--p-green-400);
     }
   }
 
   &__title {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    margin: 0 0 $space-2 0;
     line-height: 1.4;
   }
 
   &__deadline {
-    font-size: 0.8125rem;
+    font-size: $font-size-xs; // snap from 13px
     color: var(--p-surface-500);
   }
 
   &__progress-label {
-    font-size: 0.75rem;
+    font-size: $font-size-xs;
     color: var(--p-surface-500);
   }
 

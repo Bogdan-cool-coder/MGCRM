@@ -51,8 +51,9 @@ const { embed } = useVideoEmbed(computed(() => props.videoUrl))
     width: 100%;
     aspect-ratio: 16 / 9;
     overflow: hidden;
-    border-radius: 8px;
-    background: #000;
+    border-radius: $radius-lg;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: #000; // video player always black
   }
 
   &__iframe {

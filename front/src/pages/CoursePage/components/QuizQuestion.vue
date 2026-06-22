@@ -60,14 +60,14 @@ defineEmits<{
 <style lang="scss" scoped>
 .quiz-question {
   &__text {
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     margin-bottom: 0.75rem;
     line-height: 1.5;
   }
 
   &__option-label {
     cursor: pointer;
-    font-size: 0.9375rem;
+    font-size: $font-size-sm; // snap from 15px (0.9375rem)
     line-height: 1.4;
   }
 }

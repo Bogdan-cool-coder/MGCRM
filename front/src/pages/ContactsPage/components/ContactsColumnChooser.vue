@@ -107,7 +107,7 @@ function onApply() {
   font-size: $font-size-sm;
   color: $surface-700;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-200);
   }
 }

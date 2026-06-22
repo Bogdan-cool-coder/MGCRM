@@ -92,7 +92,7 @@ const segments = computed((): Segment[] => {
 
 .stage-progress__seg {
   height: 100%;
-  border-radius: 2px;
+  border-radius: $radius-2xs;
   transition: opacity 0.15s;
 
   &:hover {

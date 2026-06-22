@@ -639,6 +639,71 @@ class ActivityService
     }
 
     /**
+     * Batched "last contact" date per deal — the date of the most recent COMPLETED
+     * client-facing event (call / follow-up / meeting / presentation) on each deal,
+     * powering the deals-list «Посл. контакт» column + its freshness colour
+     * (SalesFunnel-spec §5.2/§5.3). The Sales domain never queries activities
+     * directly (DDD §2); it asks the Activity domain through this method, mirroring
+     * nextTasksForDeals() so the list enrichment stays one batched query (no N+1).
+     *
+     * "Completed" = status = done with a completed_at timestamp; only event-class
+     * kinds count (a note/task is documentation, not a contact). Returns a map of
+     * deal id → ISO-8601 date; deals with no completed contact are simply absent
+     * (the resource renders null).
+     *
+     * @param  list<int>  $dealIds
+     * @return array<int, string>
+     */
+    public function lastContactDatesForDeals(array $dealIds): array
+    {
+        if ($dealIds === []) {
+            return [];
+        }
+
+        $base = Activity::query()
+            ->where('target_type', ActivityTargetType::Deal->value)
+            ->whereIn('target_id', $dealIds)
+            ->whereIn('kind', ActivityType::eventValues())
+            ->where('status', ActivityStatus::Done->value)
+            ->whereNotNull('completed_at');
+
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            // One row per deal: the latest-completed contact via ROW_NUMBER().
+            $ranked = (clone $base)
+                ->selectRaw('target_id, completed_at, '.
+                    'ROW_NUMBER() OVER (PARTITION BY target_id ORDER BY completed_at DESC, id DESC) AS rn');
+
+            $rows = Activity::query()
+                ->fromSub($ranked, 'ranked')
+                ->where('rn', 1)
+                ->get(['target_id', 'completed_at']);
+        } else {
+            // SQLite fallback: keep the newest-completed contact per deal in PHP.
+            // The set is bounded by the list page size, so this stays cheap.
+            $rows = (clone $base)
+                ->orderByDesc('completed_at')
+                ->orderByDesc('id')
+                ->get(['id', 'target_id', 'completed_at'])
+                ->unique('target_id')
+                ->values();
+        }
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $completedAt = $row->completed_at; // Carbon (datetime cast)
+
+            if ($completedAt === null) {
+                continue;
+            }
+
+            $map[(int) $row->target_id] = $completedAt->toIso8601String();
+        }
+
+        return $map;
+    }
+
+    /**
      * Key-action timeline dates for a single deal's card header (DealPage 2.0 —
      * «ключевые действия»). The Sales domain never queries the activities table
      * directly (DDD §2); it asks the Activity domain through this method.

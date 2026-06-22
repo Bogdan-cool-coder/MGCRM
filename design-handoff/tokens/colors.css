@@ -1,0 +1,91 @@
+/* ===========================================================================
+   MACRO Global — Color primitives
+   Single source of truth: brand/MACRO-Global-Brandbook.pdf (pp. 14–15)
+   + front/src/theme/tokens/colors.ts
+   These are RAW palette steps. Semantic aliases live in semantic.css.
+   =========================================================================== */
+
+:root {
+  /* ─── Brand (фирменные цвета) ─────────────────────────────────────────── */
+  --mg-primary: #172747;        /* brand-primary — deep navy */
+  --mg-primary-dark: #0E172B;   /* brand-primary-dark */
+  --mg-primary-light: #2B4987;  /* brand-primary-light */
+
+  --mg-secondary: #6C757D;
+  --mg-secondary-dark: #54595E;
+  --mg-secondary-light: #ABB5BE;
+
+  /* ─── Primary scale (navy, #172747 = 900) ─────────────────────────────── */
+  --mg-primary-50:  #f5f7fb;
+  --mg-primary-100: #e3e8f3;
+  --mg-primary-200: #c7d0e6;
+  --mg-primary-300: #9fb0d4;
+  --mg-primary-400: #6f87bc;
+  --mg-primary-500: #4a67a3;
+  --mg-primary-600: #334d8a;
+  --mg-primary-700: #263a6e;
+  --mg-primary-800: #1f2f5a;
+  --mg-primary-900: #172747;
+  --mg-primary-950: #0E172B;
+
+  /* ─── Gray / surface scale (брендбук стр. 14) ─────────────────────────── */
+  --mg-gray-0:   #FFFFFF;
+  --mg-gray-50:  #F9FAFB;
+  --mg-gray-100: #F1F2F3;
+  --mg-gray-200: #E3E4E6;
+  --mg-gray-300: #D5D6D8;
+  --mg-gray-400: #B8B9BB;
+  --mg-gray-500: #9B9C9F;
+  --mg-gray-600: #7E7F82;
+  --mg-gray-700: #616263;
+  --mg-gray-800: #444547;
+  --mg-gray-900: #272829;
+  --mg-gray-950: #000000;
+
+  /* ─── Status solids (брендбук стр. 15) ────────────────────────────────── */
+  --mg-success: #A7EFAA;
+  --mg-danger:  #FF5A44;
+  --mg-warning: #FFB38A;
+  --mg-info:    #8DD9FF;
+
+  /* ─── Green scale (success) ───────────────────────────────────────────── */
+  --mg-green-50:  #f0fdf0;
+  --mg-green-100: #dcfadc;
+  --mg-green-300: #93eba4;
+  --mg-green-500: #A7EFAA;
+  --mg-green-700: #36a04b;
+  --mg-green-900: #2b6b38;
+
+  /* ─── Red scale (danger) ──────────────────────────────────────────────── */
+  --mg-red-50:  #fff5f4;
+  --mg-red-100: #ffe8e6;
+  --mg-red-200: #ffd1cd;
+  --mg-red-300: #ffaba5;
+  --mg-red-500: #FF5A44;
+  --mg-red-600: #ff3a2a;
+  --mg-red-700: #e61c14;
+  --mg-red-900: #9b1917;
+
+  /* ─── Orange scale (warning) ──────────────────────────────────────────── */
+  --mg-orange-50:  #fff9f5;
+  --mg-orange-100: #fff0e8;
+  --mg-orange-300: #ffc8ad;
+  --mg-orange-500: #FFB38A;
+  --mg-orange-700: #e6643a;
+  --mg-orange-900: #9b4029;
+
+  /* ─── Blue scale (info) ───────────────────────────────────────────────── */
+  --mg-blue-50:  #f5faff;
+  --mg-blue-100: #e8f4ff;
+  --mg-blue-300: #a3d5ff;
+  --mg-blue-500: #8DD9FF;
+  --mg-blue-700: #2a84e6;
+  --mg-blue-900: #22589b;
+
+  /* ─── Pipeline-stage palette (kanban column headers) ──────────────────── */
+  --mg-stage-teal:  #1D9E75;
+  --mg-stage-blue:  #378ADD;
+  --mg-stage-amber: #EF9F27;
+  --mg-stage-pink:  #D4537E;
+  --mg-stage-purple:#7F77DD;
+}

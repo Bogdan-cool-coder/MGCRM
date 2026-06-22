@@ -142,14 +142,14 @@ function commitRename() {
     width: 2px;
     height: 20px;
     background-color: var(--p-surface-300);
-    border-radius: 1px;
+    border-radius: $radius-2xs; // snap from 1px
     flex-shrink: 0;
   }
 
   &__dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: $radius-circle;
     flex-shrink: 0;
   }
 

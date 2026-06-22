@@ -1,34 +1,25 @@
 <template>
   <div class="kanban-col" :data-stage-id="column.stage.id">
-    <!-- Column header with full color fill -->
+    <!-- Column header: tint bg + border-top color strip -->
     <div
       class="kanban-col__header"
       :style="headerStyle"
     >
-      <!-- Title row: count (left) · stage name (centre) · add button (right) -->
+      <!-- Title row: count pill (left) · stage name (centre) · spacer (right) -->
       <div class="kanban-col__title-row">
-        <span class="kanban-col__count" :style="{ color: headerTextColorMuted }">
+        <span class="kanban-col__count">
           {{ column.total }}
         </span>
-        <span class="kanban-col__name" :style="{ color: headerTextColor }">
+        <span class="kanban-col__name">
           {{ column.stage.name }}
         </span>
-        <Button
-          icon="pi pi-plus"
-          text
-          size="small"
-          class="kanban-col__add-btn"
-          :style="{ color: headerTextColor }"
-          :title="t('sales.deals.page.kanban.addDeal')"
-          @click="emit('addDeal', column.stage.id)"
-        />
+        <span />
       </div>
       <!-- Sum row: centred -->
       <div class="kanban-col__sum-row">
         <span
           ref="sumRef"
           class="kanban-col__sum"
-          :style="{ color: headerTextColorMuted }"
           @mouseenter="showPopover"
           @mouseleave="hidePopover"
           @click="showPopover"
@@ -38,7 +29,6 @@
         <i
           v-if="column.multi_currency_warning"
           class="pi pi-info-circle kanban-col__multi-icon"
-          :style="{ color: headerTextColorMuted }"
         />
       </div>
     </div>
@@ -97,8 +87,8 @@
       </template>
     </draggable>
 
-    <!-- Load more -->
-    <div v-if="column.has_more" class="kanban-col__load-more">
+    <!-- Load more (hidden until backend supports no-pagination — B4) -->
+    <div v-if="false && column.has_more" class="kanban-col__load-more">
       <Button
         :label="t('sales.deals.page.kanban.loadMore', { n: column.total - localDeals.length })"
         severity="secondary"
@@ -114,7 +104,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useThemeStore } from '@/stores/theme'
 import draggable from 'vuedraggable'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -126,17 +115,16 @@ const props = defineProps<{
   column: BoardColumnDto
   loading?: boolean
   loadingMore?: boolean
+  columnIndex?: number
 }>()
 
 const emit = defineEmits<{
   drop: [card: DealCardDto, fromStageId: number, toStageId: number]
   titleChange: [cardId: number, title: string]
   loadMore: [stageId: number]
-  addDeal: [stageId: number]
 }>()
 
 const { t } = useI18n()
-const themeStore = useThemeStore()
 
 // ── Local deals (vuedraggable) ─────────────────────────────────────────────────
 
@@ -164,78 +152,32 @@ function onDragEnd(event: { item: HTMLElement; from: HTMLElement; to: HTMLElemen
   emit('drop', movedCard, fromStageId, toStageId)
 }
 
-// ── Stage color palette ────────────────────────────────────────────────────────
+// ── Header style — tint 13% + border-top 3px ──────────────────────────────────
 
-const BRIGHT_COLORS = new Set([
-  '#1D9E75', '#378ADD', '#EF9F27', '#D4537E', '#7F77DD',
-])
+// DS stage palette fallback by index (teal/blue/amber/pink/purple)
+const DS_STAGE_PALETTE = [
+  '#0D9488', // teal
+  '#2563EB', // blue
+  '#D97706', // amber
+  '#DB2777', // pink
+  '#7C3AED', // purple
+  '#059669', // emerald
+  '#DC2626', // red
+  '#0891B2', // cyan
+]
 
-// Saturated soft set — medium-vivid fills with near-black dark text for WCAG AA contrast.
-const SOFT_TEXT_MAP: Record<string, string> = {
-  '#52D4A4': '#0A3D28',
-  '#5AAAE8': '#0B2E5A',
-  '#F5C15A': '#5A3200',
-  '#E87AAD': '#5A0F2C',
-  '#92CF5F': '#1E4010',
-}
-
-// Bright border colour to use in dark mode for each soft colour (same hue family)
-const SOFT_DARK_BORDER_MAP: Record<string, string> = {
-  '#52D4A4': '#1D9E75',
-  '#5AAAE8': '#378ADD',
-  '#F5C15A': '#EF9F27',
-  '#E87AAD': '#D4537E',
-  '#92CF5F': '#1D9E75',
-}
-
-const stageColor = computed(() => props.column.stage.color ?? null)
-
-const isBrightColor = computed(() =>
-  stageColor.value ? BRIGHT_COLORS.has(stageColor.value.toUpperCase()) || BRIGHT_COLORS.has(stageColor.value) : false,
-)
-
-const isSoftColor = computed(() =>
-  stageColor.value ? Object.keys(SOFT_TEXT_MAP).includes(stageColor.value) : false,
-)
-
-const isDark = computed(() => themeStore.theme === 'dark')
+const effectiveStageColor = computed(() => {
+  if (props.column.stage.color) return props.column.stage.color
+  const idx = (props.columnIndex ?? 0) % DS_STAGE_PALETTE.length
+  return DS_STAGE_PALETTE[idx] as string
+})
 
 const headerStyle = computed(() => {
-  const color = stageColor.value
-  if (!color) return {}
-  if (isDark.value && isSoftColor.value) {
-    // Soft colours in dark mode: neutral surface bg + prominent left border of the bright sibling
-    const borderColor = SOFT_DARK_BORDER_MAP[color] ?? color
-    return {
-      backgroundColor: 'var(--p-surface-700)',
-      borderLeft: `4px solid ${borderColor}`,
-    }
+  const color = effectiveStageColor.value
+  return {
+    borderTop: `3px solid ${color}`,
+    backgroundColor: `color-mix(in srgb, ${color} 13%, var(--p-surface-card))`,
   }
-  // Bright colours (both themes) and soft colours in light mode: full background fill
-  return { backgroundColor: color }
-})
-
-const headerTextColor = computed(() => {
-  const color = stageColor.value
-  if (!color) return undefined
-  if (isBrightColor.value) {
-    // Exception: amber gets dark text
-    if (color === '#EF9F27') return '#6B4A00'
-    return '#ffffff'
-  }
-  if (isSoftColor.value) {
-    // In dark mode soft colours use a neutral surface bg — text should be the default
-    // surface-100 colour (let SCSS handle it via .kanban-col__name dark override)
-    if (isDark.value) return undefined
-    return SOFT_TEXT_MAP[color] ?? undefined
-  }
-  return undefined
-})
-
-const headerTextColorMuted = computed(() => {
-  const color = headerTextColor.value
-  if (!color) return undefined
-  return color + 'b3' // ~70% opacity via hex
 })
 
 // ── Sum formatting ─────────────────────────────────────────────────────────────
@@ -255,11 +197,8 @@ const plainSum = computed(() => {
   return `${Math.round(rub)} ${sign}`
 })
 
-// When fx rate is unavailable, show native amounts without the ≈ approximation prefix
 const formattedSum = computed(() => {
   if (!props.column.fx_rate_available) {
-    // No conversion available — show amounts_by_currency inline if multi-currency,
-    // or the plain native amount without ≈
     const keys = Object.keys(props.column.amounts_by_currency)
     if (keys.length === 1 && keys[0]) {
       const cur = keys[0]
@@ -269,7 +208,6 @@ const formattedSum = computed(() => {
       }
     }
     if (keys.length > 1) {
-      // Multiple currencies, rate unavailable: show first + ellipsis
       const firstKey = keys[0]
       if (firstKey) {
         const amount = props.column.amounts_by_currency[firstKey]
@@ -278,7 +216,6 @@ const formattedSum = computed(() => {
         }
       }
     }
-    // Fall back to base amount without ≈
     return plainSum.value
   }
   return `≈ ${plainSum.value}`
@@ -312,79 +249,71 @@ function hidePopover() {
 
 <style lang="scss" scoped>
 .kanban-col {
-  width: 280px;
-  min-width: 280px;
+  width: 284px;
+  min-width: 284px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: $surface-card;
-  border: 1px solid $surface-200;
+  border: 1px solid var(--p-surface-200);
   border-radius: $radius-lg;
   overflow: hidden;
+  max-height: 100%;
 
-  :global(.app-dark) & {
-    border-color: var(--p-surface-700);
-    background: var(--p-surface-900);
+  .app-dark & {
+    border-color: var(--p-surface-300);
   }
 }
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 .kanban-col__header {
-  padding: $space-3 $space-3 $space-2;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 11px 13px 9px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08); // subtle divider under tint header — no token matches alpha-blend intent
   flex-shrink: 0;
-  background: $surface-50;
-
-  :global(.app-dark) & {
-    background: var(--p-surface-800);
-    border-bottom-color: var(--p-surface-700);
-  }
 }
 
-// Title row: count pill (left) · stage name (centred, fills remaining space) · add button (right)
+// Title row: grid 34px 1fr 34px
 .kanban-col__title-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
   align-items: center;
-  gap: $space-2;
   margin-bottom: $space-1;
 }
 
-.kanban-col__name {
-  // Large, bold, centred — the visual anchor of the column header
-  flex: 1;
+.kanban-col__count {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  color: $surface-600;
+  background: $surface-card;
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-pill;
+  padding: 1px 0;
+  min-width: 26px;
   text-align: center;
-  font-size: $font-size-md;       // 16px — up from 14px
-  font-weight: $font-weight-bold; // 700 — up from 600
-  line-height: $line-height-tight;
-  color: $surface-800;
+  justify-self: start;
+
+  .app-dark & {
+    background: var(--p-surface-200);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-50);
+  }
+}
+
+.kanban-col__name {
+  text-align: center;
+  font-size: $font-size-sm; // 14px — uppercase stage name
+  font-weight: $font-weight-bold;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $surface-900;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  :global(.app-dark) & {
-    color: var(--p-surface-0);
-  }
-}
-
-.kanban-col__count {
-  font-size: $font-size-xs;        // 12px — compact counter
-  color: $surface-500;
-  font-weight: $font-weight-bold;
-  flex-shrink: 0;
-  min-width: 1.5rem;               // reserve width so name stays centred
-
-  :global(.app-dark) & {
-    color: var(--p-surface-300);
-  }
-}
-
-.kanban-col__add-btn {
-  flex-shrink: 0;
-  opacity: 0.75;
-
-  &:hover {
-    opacity: 1;
+  .app-dark & {
+    color: var(--p-surface-50);
   }
 }
 
@@ -399,20 +328,20 @@ function hidePopover() {
 .kanban-col__sum {
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $primary-color;
+  color: $surface-500;
   cursor: pointer;
 
   &:hover {
     text-decoration: underline;
   }
 
-  :global(.app-dark) & {
-    color: var(--p-primary-color);
+  .app-dark & {
+    color: var(--p-surface-400);
   }
 }
 
 .kanban-col__multi-icon {
-  font-size: 11px;
+  font-size: $font-size-2xs;
   color: $surface-400;
 }
 
@@ -431,7 +360,7 @@ function hidePopover() {
   border-bottom: 1px solid $surface-100;
   margin-bottom: $space-1;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-100);
     border-bottom-color: var(--p-surface-700);
   }
@@ -461,7 +390,7 @@ function hidePopover() {
   color: $surface-700;
   font-weight: $font-weight-semibold;
 
-  :global(.app-dark) & {
+  .app-dark & {
     color: var(--p-surface-100);
   }
 }
@@ -492,7 +421,7 @@ function hidePopover() {
   display: flex;
   justify-content: center;
 
-  :global(.app-dark) & {
+  .app-dark & {
     border-top-color: var(--p-surface-700);
   }
 }

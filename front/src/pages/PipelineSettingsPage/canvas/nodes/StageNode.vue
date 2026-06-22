@@ -74,7 +74,7 @@ const accentColor = computed<string>(() => {
   min-height: 120px;
   background: var(--p-surface-card);
   border: 1px solid var(--p-surface-border);
-  border-radius: 8px;
+  border-radius: $radius-lg;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -94,8 +94,8 @@ const accentColor = computed<string>(() => {
   }
 
   &__name {
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     color: var(--p-text-color);
     flex: 1;
     min-width: 0;
@@ -117,7 +117,7 @@ const accentColor = computed<string>(() => {
   }
 
   &__stat {
-    font-size: 0.75rem;
+    font-size: $font-size-xs;
     color: var(--p-text-muted-color);
   }
 

@@ -15,7 +15,7 @@
         :disabled="uploading"
         @select="onSelect"
       />
-      <p class="text-secondary mt-2 mb-0" style="font-size: 0.8rem;">
+      <p class="text-secondary mt-2 mb-0 template-upload-card__hint">
         {{ t('templates.card.upload.limit') }}
       </p>
     </template>
@@ -44,3 +44,9 @@ function onSelect(event: { files: File[] }) {
   if (file) emit('upload', file)
 }
 </script>
+
+<style lang="scss" scoped>
+.template-upload-card__hint {
+  font-size: $font-size-2xs; // snap from 0.8rem (12.8px)
+}
+</style>

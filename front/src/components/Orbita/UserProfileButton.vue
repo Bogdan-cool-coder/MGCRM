@@ -152,7 +152,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 }
 
 .orbita-action-btn__label {
-  font-size: 13px;
+  font-size: $font-size-xs; // snap from 13px
   font-weight: $font-weight-medium;
   white-space: nowrap;
   pointer-events: none;
@@ -212,7 +212,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   border-radius: $radius-sm;
   background: rgba($primary, 0.15);
   color: $primary;
-  font-size: 11px;
+  font-size: $font-size-2xs;
   font-weight: $font-weight-bold;
   display: inline-flex;
   align-items: center;
@@ -244,7 +244,8 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 
 @media (forced-colors: active) {
   .orbita-action-btn__label {
-    color: ButtonText;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    color: ButtonText; // a11y forced-colors system keyword
   }
 }
 </style>

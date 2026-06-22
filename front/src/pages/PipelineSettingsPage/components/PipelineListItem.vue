@@ -168,7 +168,7 @@ async function commitRename() {
   &__dot {
     width: 10px;
     height: 10px;
-    border-radius: 50%;
+    border-radius: $radius-circle;
     background-color: var(--p-primary-500);
     flex-shrink: 0;
   }

@@ -149,7 +149,7 @@
 
                 <div class="totp-qr-placeholder mb-4">
                   <p class="totp-qr-placeholder__text">{{ totpSetupSecret }}</p>
-                  <p class="text-muted" style="font-size: 12px; word-break: break-all;">{{ totpSetupUri }}</p>
+                  <p class="text-muted totp-uri-text" style="word-break: break-all;">{{ totpSetupUri }}</p>
                 </div>
 
                 <p class="mb-3">{{ t('profile.security.totp_enter_code') }}</p>
@@ -522,12 +522,17 @@ interface SystemSection {
 }
 
 const systemSections: SystemSection[] = [
-  { key: 'pipeline',          route: '/settings/pipeline',           icon: 'pi pi-sliders-h',   titleKey: 'settings.sections.pipeline.title',         descKey: 'settings.sections.pipeline.desc' },
-  { key: 'templates',         route: '/admin/templates',             icon: 'pi pi-file-edit',   titleKey: 'settings.sections.templates.title',        descKey: 'settings.sections.templates.desc' },
-  { key: 'templateVariables', route: '/admin/template-variables',    icon: 'pi pi-list',        titleKey: 'settings.sections.templateVariables.title', descKey: 'settings.sections.templateVariables.desc' },
-  { key: 'approvalRoutes',    route: '/admin/approval-routes',       icon: 'pi pi-sitemap',     titleKey: 'settings.sections.approvalRoutes.title',   descKey: 'settings.sections.approvalRoutes.desc' },
-  { key: 'messageTemplates',  route: '/admin/message-templates',     icon: 'pi pi-envelope',    titleKey: 'settings.sections.messageTemplates.title', descKey: 'settings.sections.messageTemplates.desc' },
-  { key: 'automationRuns',    route: '/admin/automation-runs',       icon: 'pi pi-clock',       titleKey: 'settings.sections.automationRuns.title',   descKey: 'settings.sections.automationRuns.desc' },
+  { key: 'users',                route: '/admin/users',                  icon: 'pi pi-users',       titleKey: 'settings.sections.users.title',               descKey: 'settings.sections.users.desc' },
+  { key: 'pipeline',             route: '/settings/pipeline',            icon: 'pi pi-sliders-h',   titleKey: 'settings.sections.pipeline.title',            descKey: 'settings.sections.pipeline.desc' },
+  { key: 'catalog',              route: '/admin/products',               icon: 'pi pi-box',         titleKey: 'settings.sections.catalog.title',             descKey: 'settings.sections.catalog.desc' },
+  { key: 'exchangeRates',        route: '/admin/exchange-rates',         icon: 'pi pi-dollar',      titleKey: 'settings.sections.exchangeRates.title',       descKey: 'settings.sections.exchangeRates.desc' },
+  { key: 'templates',            route: '/admin/templates',              icon: 'pi pi-file-edit',   titleKey: 'settings.sections.templates.title',           descKey: 'settings.sections.templates.desc' },
+  { key: 'templateVariables',    route: '/admin/template-variables',     icon: 'pi pi-list',        titleKey: 'settings.sections.templateVariables.title',   descKey: 'settings.sections.templateVariables.desc' },
+  { key: 'approvalRoutes',       route: '/admin/approval-routes',        icon: 'pi pi-sitemap',     titleKey: 'settings.sections.approvalRoutes.title',      descKey: 'settings.sections.approvalRoutes.desc' },
+  { key: 'messageTemplates',     route: '/admin/message-templates',      icon: 'pi pi-envelope',    titleKey: 'settings.sections.messageTemplates.title',    descKey: 'settings.sections.messageTemplates.desc' },
+  { key: 'automationRuns',       route: '/admin/automation-runs',        icon: 'pi pi-clock',       titleKey: 'settings.sections.automationRuns.title',      descKey: 'settings.sections.automationRuns.desc' },
+  { key: 'acquisitionChannels',  route: '/admin/acquisition-channels',   icon: 'pi pi-filter',      titleKey: 'settings.sections.acquisitionChannels.title', descKey: 'settings.sections.acquisitionChannels.desc' },
+  { key: 'disconnectReasons',    route: '/admin/disconnect-reasons',     icon: 'pi pi-ban',         titleKey: 'settings.sections.disconnectReasons.title',   descKey: 'settings.sections.disconnectReasons.desc' },
 ]
 
 // ─── Section mode: header title + icon ───────────────────────────────────────
@@ -638,7 +643,8 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 
   &:hover:not(.settings-card--disabled) {
     border-color: var(--p-primary-300);
-    box-shadow: 0 2px 12px rgba(23, 39, 71, 0.08);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: $shadow-card-hover;
   }
 
   &:focus-visible {
@@ -678,12 +684,12 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   justify-content: center;
 
   :global(.app-dark) & {
-    background-color: rgba(23, 39, 71, 0.3);
+    background-color: rgba($primary-900, 0.3);
   }
 }
 
 .settings-card__icon {
-  font-size: 20px;
+  font-size: $font-size-xl;
   color: var(--p-primary-600);
 
   :global(.app-dark) & {
@@ -729,7 +735,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 }
 
 .settings-card__arrow {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
   transition: color var(--app-transition-fast), transform var(--app-transition-fast);
@@ -793,12 +799,16 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   border: 1px solid $surface-200;
   border-radius: $radius-md;
   display: inline-block;
-  font-family: monospace;
+  font-family: $font-family-mono;
 
   :global(.app-dark) & {
     background-color: var(--p-surface-800);
     border-color: var(--p-surface-700);
   }
+}
+
+.totp-uri-text {
+  font-size: $font-size-xs;
 }
 
 .totp-qr-placeholder__text {
@@ -825,7 +835,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   background-color: $surface-100;
   border: 1px solid $surface-200;
   border-radius: $radius-sm;
-  font-family: monospace;
+  font-family: $font-family-mono;
   font-size: $font-size-sm;
   color: $surface-900;
   text-align: center;
@@ -861,7 +871,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   }
 
   &__icon {
-    font-size: 28px;
+    font-size: $font-size-3xl;
     color: var(--p-text-muted-color);
     margin-top: 2px;
     flex-shrink: 0;
@@ -935,7 +945,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   }
 
   &__icon {
-    font-size: 24px;
+    font-size: $font-size-2xl;
     color: $primary;
   }
 
@@ -959,7 +969,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
     position: absolute;
     top: $space-2;
     right: $space-2;
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $primary;
   }
 }
@@ -1003,7 +1013,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 
 .quick-actions-preview__icon {
   color: $primary;
-  font-size: 1rem;
+  font-size: $font-size-md;
 }
 
 .quick-actions-preview__label {
@@ -1040,7 +1050,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   }
 
   &__icon {
-    font-size: 1.25rem;
+    font-size: $font-size-xl;
     color: var(--p-red-500);
     flex-shrink: 0;
     margin-top: 2px;
@@ -1087,7 +1097,7 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
 }
 
 .coming-soon-block__icon {
-  font-size: 48px;
+  font-size: $font-size-icon-2xl;
   opacity: 0.4;
 }
 </style>

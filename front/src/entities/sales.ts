@@ -108,6 +108,29 @@ export interface DealDto {
   kp_sent_at?: string | null
   /** ISO timestamp of contract submission; null when not yet sent. */
   contract_sent_at?: string | null
+  /** True when deal products use perpetual (one-time) pricing model. */
+  perpetual_license?: boolean
+  /** True when deal amount is manually locked (does not auto-recalc from line items). */
+  amount_locked?: boolean
+  /** ISO date: actual contract signing date (факт). */
+  signed_at?: string | null
+  /** ISO date: actual payment date (факт). */
+  paid_at?: string | null
+  /**
+   * ISO-2 lowercase country code (e.g. "kz") from company.
+   * Present on list payloads when backend eager-loads company country.
+   */
+  country?: string | null
+  /**
+   * Deal category: L (large), M (medium), S1 / S2 (small tiers).
+   * S1+S2 should be aggregated as "S" in UI KPI chips.
+   */
+  category?: 'L' | 'M' | 'S1' | 'S2' | null
+  /**
+   * ISO-8601 timestamp of last activity (contact) on this deal.
+   * Used for freshness colouring in list view.
+   */
+  last_contact_at?: string | null
 }
 
 // ─── Activity type (used in NextTaskDto) ─────────────────────────────────────
@@ -325,8 +348,12 @@ export interface UpdateDealPayload {
   expected_close_date?: string | null
   expected_sign_date?: string | null
   expected_payment_date?: string | null
+  signed_at?: string | null
+  paid_at?: string | null
   owner_user_id?: number
   extra_fields?: Record<string, unknown>
+  perpetual_license?: boolean
+  amount_locked?: boolean
 }
 
 export interface MoveDealPayload {
@@ -411,10 +438,26 @@ export interface DealListParams {
   view?: 'list' | 'board'
   pipeline_id?: number
   stage_id?: number | null
+  stage_ids?: number[]
   owner_id?: number | null
+  owner_ids?: number[]
   q?: string | null
   page?: number
   per_page?: number
+  // Extended overlay filters
+  status?: 'open' | 'won' | 'lost' | null
+  only_mine?: boolean
+  only_no_task?: boolean
+  only_overdue?: boolean
+  product_q?: string | null
+  country?: string | null
+  city?: string | null
+  budget_from?: number | null
+  budget_to?: number | null
+  tags?: string[]
+  created_from?: string | null
+  created_to?: string | null
+  archived?: boolean
 }
 
 // ─── Bulk payloads (PATCH /api/deals/bulk, DELETE /api/deals/bulk) ────────────

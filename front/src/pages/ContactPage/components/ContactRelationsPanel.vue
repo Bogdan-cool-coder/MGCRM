@@ -305,7 +305,7 @@ function onDelete(rel: ContactRelation) {
 }
 
 .contact-relations__empty-icon {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   color: $surface-300;
 }
 
@@ -334,7 +334,7 @@ function onDelete(rel: ContactRelation) {
   }
 
   i {
-    font-size: 11px;
+    font-size: $font-size-2xs;
   }
 
   &--cta {

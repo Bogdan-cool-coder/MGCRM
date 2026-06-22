@@ -232,7 +232,7 @@ const groupedVariables = computed(() => {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--p-surface-200);
-    padding-bottom: 0.25rem;
+    padding-bottom: $space-1;
   }
 
   &__field-label {
@@ -246,14 +246,14 @@ const groupedVariables = computed(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    padding: 2rem;
+    gap: $space-2;
+    padding: $space-6;
     color: var(--p-text-muted-color);
     text-align: center;
   }
 
   &__empty-icon {
-    font-size: 2rem;
+    font-size: $font-size-icon-lg;
     opacity: 0.3;
   }
 }

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Domain\Contracts\Services;
 
+use App\Domain\Contracts\Enums\DocumentKind;
 use App\Domain\Contracts\Enums\TemplateVariableType;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\TemplateVariable;
 use App\Domain\Contracts\Services\Helpers\MoneyFormatter;
 use App\Domain\Contracts\Services\Helpers\NumberToWordsHelper;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyRequisite;
+use App\Domain\Crm\Services\CompanyRequisiteService;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -38,6 +41,7 @@ class ContractContextBuilder
 {
     public function __construct(
         private readonly YamlTemplateParser $yamlParser,
+        private readonly CompanyRequisiteService $requisiteService,
     ) {}
 
     /**
@@ -160,33 +164,106 @@ class ContractContextBuilder
     }
 
     /**
-     * Build sublicensee.* keys from Company relation or context['sublicensee'].
+     * Build sublicensee.* keys.
+     *
+     * Priority (highest → lowest):
+     *  1. Document.company_requisite_id pin  — the snapshot requisite explicitly
+     *     chosen at document creation time. This is the correct approach for
+     *     multiple-requisite companies and fixes the legacy extra_fields bug
+     *     where fields like director_genitive lived outside Company columns.
+     *  2. Company current requisite          — fallback when pin is absent but
+     *     source_company_id is present (auto-resolve current set).
+     *  3. context['sublicensee']             — legacy / manual override stored
+     *     in the JSONB context (free-standing documents without a company link).
      *
      * @return array<string, string>
      */
     private function buildSublicensee(Document $doc): array
     {
-        // Priority: source_company_id relation > context['sublicensee']
-        if ($doc->source_company_id !== null) {
-            $company = Company::query()->find($doc->source_company_id);
-            if ($company !== null) {
-                return $this->flattenSection('sublicensee', [
-                    'name' => $company->name ?? '',
-                    'director_genitive' => $company->extra_fields['director_genitive'] ?? '',
-                    'director_short' => $company->extra_fields['director_short'] ?? '',
-                    'tax_id' => $company->extra_fields['tax_id'] ?? '',
-                    'address' => $company->extra_fields['address'] ?? $company->city ?? '',
-                    'bank' => $company->extra_fields['bank'] ?? '',
-                    'account' => $company->extra_fields['account'] ?? '',
-                    'phone' => $company->phone ?? '',
-                    'email' => $company->email ?? '',
-                ]);
+        // 1. Pinned requisite (preferred)
+        if ($doc->company_requisite_id !== null) {
+            $requisite = CompanyRequisite::query()->find($doc->company_requisite_id);
+            if ($requisite !== null) {
+                return $this->buildSublicenseeFromRequisite($requisite, $doc);
             }
         }
 
+        // 2. Company current requisite (auto-resolve)
+        if ($doc->source_company_id !== null) {
+            $company = Company::query()->find($doc->source_company_id);
+            if ($company !== null) {
+                $current = $this->requisiteService->current($company);
+                if ($current !== null) {
+                    return $this->buildSublicenseeFromRequisite($current, $doc);
+                }
+
+                // Fallback to Company columns (legacy denorm mirror)
+                return $this->buildSublicenseeFromCompany($company);
+            }
+        }
+
+        // 3. Manual context override
         $sublicensee = (array) ($doc->context['sublicensee'] ?? []);
 
         return $this->flattenSection('sublicensee', $sublicensee);
+    }
+
+    /**
+     * Build sublicensee section from a CompanyRequisite (the canonical source).
+     *
+     * @return array<string, string>
+     */
+    private function buildSublicenseeFromRequisite(CompanyRequisite $requisite, Document $doc): array
+    {
+        $company = $requisite->company ?? Company::query()->find($requisite->company_id);
+
+        $bankDetails = (array) ($requisite->bank_details ?? []);
+
+        return $this->flattenSection('sublicensee', [
+            'name' => $company?->name ?? '',
+            'legal_name' => (string) ($requisite->legal_name ?? ''),
+            'full_legal_form' => (string) ($requisite->full_legal_form ?? ''),
+            'legal_form' => (string) ($requisite->legal_form ?? ''),
+            'director_genitive' => (string) ($requisite->director_genitive ?? ''),
+            'director_short' => (string) ($requisite->director_short ?? ''),
+            'director_position' => (string) ($requisite->director_position ?? ''),
+            'acts_basis' => (string) ($requisite->acts_basis ?? ''),
+            'tax_id_label' => (string) ($requisite->tax_id_label ?? ''),
+            'tax_id' => (string) ($requisite->tax_id ?? ''),
+            'address' => (string) ($requisite->address ?? ''),
+            'bank' => (string) ($bankDetails['bank'] ?? ''),
+            'bank_code' => (string) ($bankDetails['bank_code'] ?? ''),
+            'account' => (string) ($bankDetails['account'] ?? ''),
+            'phone' => (string) ($company?->phone ?? ''),
+            'email' => (string) ($company?->email ?? ''),
+        ]);
+    }
+
+    /**
+     * Build sublicensee section from Company columns (legacy denorm mirror fallback).
+     *
+     * @return array<string, string>
+     */
+    private function buildSublicenseeFromCompany(Company $company): array
+    {
+        return $this->flattenSection('sublicensee', [
+            'name' => (string) ($company->name ?? ''),
+            'legal_name' => (string) ($company->legal_name ?? ''),
+            'full_legal_form' => (string) ($company->full_legal_form ?? ''),
+            'legal_form' => (string) ($company->legal_form ?? ''),
+            'director_genitive' => (string) ($company->director_genitive ?? ''),
+            'director_short' => (string) ($company->director_short ?? ''),
+            'director_position' => (string) ($company->director_position ?? ''),
+            'acts_basis' => (string) ($company->acts_basis ?? ''),
+            'tax_id_label' => (string) ($company->tax_id_label ?? ''),
+            'tax_id' => (string) ($company->tax_id ?? ''),
+            'address' => (string) ($company->address ?? ''),
+            'bank' => (string) ($company->bank ?? ''),
+            'bank_code' => (string) ($company->bank_code ?? ''),
+            'account' => (string) ($company->account ?? ''),
+            'phone' => (string) ($company->phone ?? ''),
+            'email' => (string) ($company->email ?? ''),
+        ]);
     }
 
     /**
@@ -270,13 +347,27 @@ class ContractContextBuilder
         $missing = [];
         $result = [];
 
+        // Termination-agreement variables are seeded required with empty
+        // product/country wildcards, so forContext() returns them for EVERY
+        // document. Their required-ness must be scoped to the termination flow,
+        // otherwise generating a normal contract would 422 demanding fields that
+        // only make sense for a дополнительное соглашение о расторжении. Values
+        // still pass through when present; only the *required* gate is kind-scoped.
+        $terminationKeys = DocumentKind::terminationVariableKeys();
+        $isTermination = $doc->kind === DocumentKind::TerminationAgreement;
+
         foreach ($variables as $var) {
             $rawValue = $customValues[$var->key] ?? null;
             $hasDefault = $var->default_value !== null && trim($var->default_value) !== '';
             $hasValue = $rawValue !== null && trim((string) $rawValue) !== '';
 
+            // Required is enforced unless this is a termination-scoped variable on
+            // a non-termination document.
+            $required = $var->required
+                && ! (in_array($var->key, $terminationKeys, true) && ! $isTermination);
+
             // Validate required
-            if ($var->required && $var->var_type !== TemplateVariableType::Checkbox) {
+            if ($required && $var->var_type !== TemplateVariableType::Checkbox) {
                 if (! $hasValue && ! $hasDefault) {
                     $missing[] = $var->label;
 

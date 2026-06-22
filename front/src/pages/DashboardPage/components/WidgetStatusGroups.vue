@@ -124,7 +124,7 @@ const trendSeverity = (group: StatusGroup): 'success' | 'danger' => {
 }
 
 .kpi-card__icon {
-  font-size: 18px;
+  font-size: $font-size-lg;
   flex-shrink: 0;
 }
 
@@ -134,7 +134,7 @@ const trendSeverity = (group: StatusGroup): 'success' | 'danger' => {
 .kpi-card__icon--total { color: $surface-600; }
 
 .kpi-card__count {
-  font-size: 2rem;
+  font-size: $font-size-icon-lg;
   font-weight: $font-weight-bold;
   color: $surface-900;
   line-height: 1;
@@ -169,7 +169,7 @@ const trendSeverity = (group: StatusGroup): 'success' | 'danger' => {
 }
 
 .widget-status-groups__empty-icon {
-  font-size: 2.5rem;
+  font-size: $font-size-icon-xl;
   color: $surface-400;
 }
 

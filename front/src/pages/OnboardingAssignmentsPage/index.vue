@@ -60,7 +60,7 @@
         <template #body="{ data: a }">
           <div class="d-flex align-items-center gap-2">
             <ProgressBar :value="a.progress_pct" style="height: 8px; flex: 1;" />
-            <span style="font-size: 0.8rem; white-space: nowrap;">{{ a.progress_pct }}%</span>
+            <span class="assignments-page__progress-pct">{{ a.progress_pct }}%</span>
           </div>
         </template>
       </Column>
@@ -201,13 +201,18 @@ onMounted(() => {
     flex-direction: column;
     align-items: center;
     gap: $space-3;
-    padding: 2.5rem;
+    padding: $space-8;
     text-align: center;
   }
 
   &__empty-icon {
-    font-size: 3rem;
+    font-size: $font-size-icon-2xl;
     color: var(--p-surface-400);
+  }
+
+  &__progress-pct {
+    font-size: $font-size-2xs; // snap from 0.8rem (12.8px)
+    white-space: nowrap;
   }
 }
 </style>

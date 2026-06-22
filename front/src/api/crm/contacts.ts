@@ -5,17 +5,38 @@ import type {
   ContactCompanyLink,
   ContactRelation,
   PaginatedResponse,
+  ChannelHistoryEntry,
 } from '@/entities/crm'
 
 export interface ContactListParams {
   page?: number
   per_page?: number
   search?: string
-  source?: string
-  country_code?: string
+  // multi-value filters (arrays sent as owner_ids[])
+  owner_ids?: number[]
+  author_ids?: number[]
+  sources?: string[]
   tags?: string[]
-  company_id?: number
+  // single-value filters
+  position?: string
+  country_code?: string
   engagement_tier?: 'fresh' | 'cooling' | 'cold'
+  // date-range filters (ISO date strings)
+  created_from?: string
+  created_to?: string
+  last_touch_from?: string
+  last_touch_to?: string
+  // open deals range
+  open_deals_min?: number
+  open_deals_max?: number
+  // presets
+  only_mine?: boolean
+  only_active?: boolean
+  only_with_deals?: boolean
+  only_no_task?: boolean
+  // legacy single params kept for backward compat
+  source?: string
+  company_id?: number
   sort?: string
   direction?: 'asc' | 'desc'
 }
@@ -58,14 +79,44 @@ export interface AttachContactCompanyPayload {
   company_id: number
   position?: string
   employment_status?: 'works' | 'left'
+  is_primary?: boolean
+}
+
+export interface ContactsKpiResponse {
+  data: {
+    entity: string
+    total: number
+    // companies
+    clients?: number
+    cat_l?: number
+    cat_m?: number
+    cat_s?: number
+    // contacts
+    active?: number
+    no_touch_30?: number
+    // shared
+    new_week?: number
+  }
 }
 
 export const contactsApi = {
+  async kpi(entity: 'company' | 'contact'): Promise<ContactsKpiResponse> {
+    const res = await apiClient.get<ContactsKpiResponse>('/api/contacts/kpi', {
+      params: { entity },
+    })
+    return res.data
+  },
+
   async list(params: ContactListParams = {}): Promise<PaginatedResponse<Contact>> {
     const searchParams: Record<string, unknown> = { ...params }
-    if (params.tags?.length) {
-      searchParams['tags[]'] = params.tags
-      delete searchParams['tags']
+    // Serialize array params to bracket notation for Laravel
+    const arrayKeys: Array<keyof ContactListParams> = ['owner_ids', 'author_ids', 'sources', 'tags']
+    for (const key of arrayKeys) {
+      const val = params[key] as unknown[] | undefined
+      if (val?.length) {
+        searchParams[`${key}[]`] = val
+      }
+      delete searchParams[key]
     }
     const res = await apiClient.get<PaginatedResponse<Contact>>('/api/contacts', {
       params: searchParams,
@@ -225,5 +276,14 @@ export const contactsApi = {
       { responseType: 'blob' },
     )
     return res.data
+  },
+
+  // ── Channel History (N1) ──────────────────────────────────────────────────
+
+  async getChannelHistory(contactId: number): Promise<ChannelHistoryEntry[]> {
+    const res = await apiClient.get<{ data: ChannelHistoryEntry[] }>(
+      `/api/contacts/${contactId}/channel-history`,
+    )
+    return res.data.data ?? []
   },
 }
