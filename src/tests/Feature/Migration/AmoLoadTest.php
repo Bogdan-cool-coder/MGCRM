@@ -264,6 +264,160 @@ class AmoLoadTest extends TestCase
         $this->assertNotNull($company->unique_client_since);
     }
 
+    /**
+     * BUG 1 regression: the primary flag must be PERSISTED in the DB, not just
+     * computed in memory. After a fresh load of a single won deal, the row in
+     * `deals` must have is_primary_deal=true (re-read from the database, not the
+     * in-memory model the loader held).
+     */
+    public function test_first_won_deal_persists_is_primary_in_database(): void
+    {
+        $this->writeStaging([
+            'leads' => [[
+                'id' => 3100, 'name' => 'Won persist', 'price' => 5000,
+                'status_id' => 142, // won
+                'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 6100, 'is_main' => true]], 'contacts' => []],
+                'custom_fields_values' => [
+                    ['field_id' => 584603, 'values' => [['value' => 1577836800]]], // signed
+                ],
+            ]],
+            'companies' => [['id' => 6100, 'name' => 'Клиент Persist']],
+        ]);
+
+        $this->loader()->load();
+
+        $deal = Deal::query()->firstOrFail();
+
+        // Re-read the raw column straight from the DB — proves it was persisted,
+        // not left true only on the in-memory instance.
+        $persisted = (bool) DB::table('deals')->where('id', $deal->id)->value('is_primary_deal');
+        $this->assertTrue($persisted, 'is_primary_deal must be persisted on the won deal');
+    }
+
+    /**
+     * BUG 1 regression (the production shape): TWO won deals on the SAME company.
+     * The earlier-signed deal must be the primary one, and the later won deal must
+     * NOT carry the flag — even though the later deal was the one that found the
+     * company already a unique client. Proves the flag is decoupled from the
+     * company stamp and pinned to the earliest-won deal.
+     */
+    public function test_primary_flag_pins_to_earliest_won_deal_of_company(): void
+    {
+        $this->writeStaging([
+            'leads' => [
+                [
+                    'id' => 3201, 'name' => 'Earlier won', 'price' => 1000,
+                    'status_id' => 142, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                    'created_at' => 1577836800,
+                    '_embedded' => ['companies' => [['id' => 6200, 'is_main' => true]], 'contacts' => []],
+                    'custom_fields_values' => [
+                        ['field_id' => 584603, 'values' => [['value' => 1577836800]]], // 2020-01-01 signed
+                    ],
+                ],
+                [
+                    'id' => 3202, 'name' => 'Later won', 'price' => 2000,
+                    'status_id' => 142, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                    'created_at' => 1609459200,
+                    '_embedded' => ['companies' => [['id' => 6200, 'is_main' => true]], 'contacts' => []],
+                    'custom_fields_values' => [
+                        ['field_id' => 584603, 'values' => [['value' => 1609459200]]], // 2021-01-01 signed
+                    ],
+                ],
+            ],
+            'companies' => [['id' => 6200, 'name' => 'Двойной клиент']],
+        ]);
+
+        $this->loader()->load();
+
+        $earlier = Deal::query()->where('title', 'Earlier won')->firstOrFail();
+        $later = Deal::query()->where('title', 'Later won')->firstOrFail();
+
+        $this->assertTrue((bool) DB::table('deals')->where('id', $earlier->id)->value('is_primary_deal'));
+        $this->assertFalse((bool) DB::table('deals')->where('id', $later->id)->value('is_primary_deal'));
+        $this->assertSame(1, Deal::query()->where('company_id', $earlier->company_id)->where('is_primary_deal', true)->count());
+    }
+
+    /**
+     * BUG 2 regression: a won deal loaded while its manager had no MGCRM account
+     * (owner fell back to the import service user). The manager is then seeded and
+     * the loader re-runs. The re-load must RE-RESOLVE the owner to the real user
+     * and UPDATE owner_user_id on the existing row — with no duplicate deal.
+     */
+    public function test_reload_updates_owner_from_fallback_to_real_user(): void
+    {
+        // AMO user 2810827 → yu.rusakova@macrocrm.ru, NOT seeded yet → owner falls
+        // back to import-amo@mgcrm.local on the first load.
+        $this->writeStaging([
+            'leads' => [[
+                'id' => 3300, 'name' => 'Owner reload', 'price' => 4000,
+                'status_id' => 142, 'pipeline_id' => 6149857, 'responsible_user_id' => 2810827,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 6300, 'is_main' => true]], 'contacts' => []],
+                'custom_fields_values' => [
+                    ['field_id' => 584603, 'values' => [['value' => 1577836800]]],
+                ],
+            ]],
+            'companies' => [['id' => 6300, 'name' => 'Owner Co']],
+        ]);
+
+        $this->loader()->load();
+
+        $fallback = User::query()->where('email', 'import-amo@mgcrm.local')->firstOrFail();
+        $deal = Deal::query()->firstOrFail();
+        $this->assertSame($fallback->id, $deal->owner_user_id, 'owner should be the import fallback on first load');
+
+        // Manager appears, re-load (fresh resolver — new loader instance).
+        $manager = User::factory()->create(['email' => 'yu.rusakova@macrocrm.ru', 'full_name' => 'Yu Rusakova']);
+
+        $result = $this->loader()->load();
+
+        $deal->refresh();
+        $this->assertSame($manager->id, $deal->owner_user_id, 'owner must be re-resolved to the real manager on re-load');
+        $this->assertSame(1, Deal::query()->count(), 'no duplicate deal on re-load');
+        $this->assertSame(1, ExternalRef::query()->where('entity_type', 'deal')->count());
+        $this->assertSame(1, $result['stats']['deals_updated']);
+        $this->assertSame(0, $result['stats']['deals_created']);
+    }
+
+    /**
+     * BUG 2 regression for is_primary_deal: a won deal loaded before its company
+     * had any other deals carries the primary flag; re-loading must keep it true
+     * on the same row (idempotent, no duplicate) and never lose it.
+     */
+    public function test_reload_keeps_is_primary_on_existing_deal(): void
+    {
+        $this->writeStaging([
+            'leads' => [[
+                'id' => 3400, 'name' => 'Primary reload', 'price' => 6000,
+                'status_id' => 142, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 6400, 'is_main' => true]], 'contacts' => []],
+                'custom_fields_values' => [
+                    ['field_id' => 584603, 'values' => [['value' => 1577836800]]],
+                ],
+            ]],
+            'companies' => [['id' => 6400, 'name' => 'Primary Co']],
+        ]);
+
+        $this->loader()->load();
+
+        $deal = Deal::query()->firstOrFail();
+        // Simulate the production defect: the row exists but the flag was never
+        // persisted. A re-load must REPAIR it.
+        DB::table('deals')->where('id', $deal->id)->update(['is_primary_deal' => false]);
+        $this->assertFalse((bool) DB::table('deals')->where('id', $deal->id)->value('is_primary_deal'));
+
+        $this->loader()->load();
+
+        $this->assertTrue(
+            (bool) DB::table('deals')->where('id', $deal->id)->value('is_primary_deal'),
+            'a re-load must repair is_primary_deal on the existing won deal'
+        );
+        $this->assertSame(1, Deal::query()->count());
+    }
+
     public function test_no_company_synthesizes_from_primary_contact(): void
     {
         $this->writeStaging([

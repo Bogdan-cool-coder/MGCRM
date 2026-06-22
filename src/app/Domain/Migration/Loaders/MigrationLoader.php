@@ -21,6 +21,7 @@ use App\Domain\Migration\Transformers\NoteTransformer;
 use App\Domain\Migration\Transformers\TaskTransformer;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealStageHistory;
+use App\Domain\Sales\Models\PipelineStage;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -422,6 +423,17 @@ final class MigrationLoader
     private function loadDeal(array $dealData, array $amoLead, int $companyId, array $embedded, array $contactIds): int
     {
         if (($existing = $this->refs->resolve('deal', $dealData['amo_id'])) !== null) {
+            // Idempotent re-load: the deal already exists, but its import-owned
+            // columns may need re-syncing. The classic case: a deal was loaded
+            // while its manager had no MGCRM account yet (owner fell back to the
+            // import service user); once the manager is seeded, a re-load must
+            // re-resolve and persist the real owner. We ONLY touch columns the
+            // import fully owns (owner_user_id is always derived from AMO's
+            // responsible_user_id; created_by_id; the stage/amount/date snapshot
+            // from AMO) — never user-editable free text the operator may have
+            // corrected by hand. is_primary_deal is reconciled separately by
+            // maybeMarkUniqueClient (which runs after this) so it self-heals too.
+            $this->resyncDeal($existing, $dealData, $companyId);
             $this->bump('deals_updated');
 
             return $existing;
@@ -455,6 +467,43 @@ final class MigrationLoader
         $this->loadDealContacts($deal->id, $contactIds, $createdAt);
 
         return $deal->id;
+    }
+
+    /**
+     * Re-sync an already-imported deal's import-owned columns on a re-load.
+     *
+     * Why: deals loaded before their managers were seeded carry the fallback
+     * owner; once managers exist, a re-load must re-resolve and persist the real
+     * owner_user_id. The placement snapshot (stage/pipeline/amount/dates) is also
+     * re-applied from AMO so a corrected status_map propagates on re-run.
+     *
+     * Scope guard — we ONLY overwrite columns the import fully owns and always
+     * derives from the AMO source (owner, author, the AMO placement snapshot).
+     * We deliberately DO NOT touch is_primary_deal here (reconciled by
+     * maybeMarkUniqueClient), company_id/company_requisite_id (already pinned at
+     * first load), the backdated created_at, or any operator-editable free text
+     * (title/tags/lost_reason/extra notes) — re-running the import must never
+     * clobber a hand correction. We use a plain query-builder UPDATE so we don't
+     * bump updated_at into "today" or fire model events.
+     *
+     * @param  array{deal: array<string, mixed>, owner_amo_id: ?int, created_by_amo_id: ?int}  $dealData
+     */
+    private function resyncDeal(int $dealId, array $dealData, int $companyId): void
+    {
+        $attrs = $dealData['deal'];
+
+        $update = [
+            'owner_user_id' => $this->resolver->ownerUserId($dealData['owner_amo_id']),
+            'created_by_id' => $this->resolver->userId($dealData['created_by_amo_id']),
+            // AMO placement snapshot — re-applied so a fixed status_map / re-pulled
+            // budget propagates. These are import-owned (the deal can only move
+            // stage in MGCRM through DealMoveService, which the import bypasses).
+            'stage_id' => $attrs['stage_id'],
+            'pipeline_id' => $attrs['pipeline_id'],
+            'amount' => $attrs['amount'],
+        ];
+
+        Deal::query()->where('id', $dealId)->update($update);
     }
 
     /**
@@ -735,8 +784,23 @@ final class MigrationLoader
 
     /**
      * Stamp the company's first won deal as primary + mark the company a unique
-     * client. Only the FIRST won deal (earliest signed_at) does this — idempotent
-     * via CompanyService::markAsUniqueClient + the is_primary_deal flag.
+     * client. Only the FIRST won deal (earliest signed_at) is the «primary» one.
+     *
+     * Two responsibilities, deliberately DECOUPLED (this is the bug this method
+     * used to have — they were fused behind one early-return):
+     *
+     *   1) Company stamp — `markAsUniqueClient` flips `unique_client_since` +
+     *      client_status once, and is itself idempotent (no-op if already set).
+     *
+     *   2) Deal flag — `is_primary_deal=true` on the EARLIEST-won deal of the
+     *      company. This is computed from the persisted deals (min signed_at,
+     *      then min id as a stable tiebreaker) and written EVERY time, so it
+     *      persists on first load AND self-heals on re-load. The previous code
+     *      set the flag inside the company-stamp branch, so it was skipped the
+     *      moment the company was already a unique client — which is exactly how
+     *      production ended up with `unique_client_since` set but every deal at
+     *      `is_primary_deal=false` (a later won deal of the same company flipped
+     *      the company first, and a re-load could never repair the flag).
      *
      * @param  array{is_won: bool, deal: array<string, mixed>}  $dealData
      */
@@ -748,19 +812,68 @@ final class MigrationLoader
 
         $company = Company::query()->find($companyId);
 
-        if ($company === null || $company->unique_client_since !== null) {
-            return; // already converted by an earlier won deal
+        if ($company === null) {
+            return;
         }
 
-        $signedAt = $dealData['deal']['signed_at'] ?? null;
-        $signedAtDate = $signedAt !== null
-            ? CarbonImmutable::parse($signedAt)
-            : CarbonImmutable::now();
+        // 1) Company stamp — idempotent; markAsUniqueClient no-ops if already set.
+        if ($company->unique_client_since === null) {
+            $signedAt = $dealData['deal']['signed_at'] ?? null;
+            $signedAtDate = $signedAt !== null
+                ? CarbonImmutable::parse($signedAt)
+                : CarbonImmutable::now();
 
-        $this->companyService->markAsUniqueClient($company, $signedAtDate, null);
+            $this->companyService->markAsUniqueClient($company, $signedAtDate, null);
+        }
 
-        Deal::query()->where('id', $dealId)->update(['is_primary_deal' => true]);
-        $this->bump('primary_deals');
+        // 2) Deal flag — always reconciled, independent of the company stamp.
+        $this->reconcilePrimaryDeal($companyId);
+    }
+
+    /**
+     * Set is_primary_deal=true on exactly the earliest-won deal of a company
+     * (min signed_at, min id as a stable tiebreaker) and false on the rest.
+     *
+     * Idempotent and self-healing: safe to run on every won deal of the company
+     * and on every re-load. A targeted query-builder UPDATE avoids touching
+     * updated_at or firing model events. We scope strictly to won deals (a deal
+     * sitting on a won stage) so reopened / non-won deals never carry the flag.
+     */
+    private function reconcilePrimaryDeal(int $companyId): void
+    {
+        // The won stages of all pipelines (is_won = true on the stage).
+        $wonStageIds = PipelineStage::query()->where('is_won', true)->pluck('id');
+
+        if ($wonStageIds->isEmpty()) {
+            return;
+        }
+
+        $primaryId = Deal::query()
+            ->where('company_id', $companyId)
+            ->whereIn('stage_id', $wonStageIds)
+            ->orderByRaw('signed_at IS NULL') // non-null signed_at first
+            ->orderBy('signed_at')
+            ->orderBy('id')
+            ->value('id');
+
+        if ($primaryId === null) {
+            return;
+        }
+
+        // Promote the primary, demote any stale primaries on the same company.
+        $wasPrimary = (bool) Deal::query()->where('id', $primaryId)->value('is_primary_deal');
+
+        Deal::query()
+            ->where('company_id', $companyId)
+            ->where('id', '!=', $primaryId)
+            ->where('is_primary_deal', true)
+            ->update(['is_primary_deal' => false]);
+
+        Deal::query()->where('id', $primaryId)->update(['is_primary_deal' => true]);
+
+        if (! $wasPrimary) {
+            $this->bump('primary_deals');
+        }
     }
 
     private function resolveStageFromAmoStatus(?int $amoStatusId, ?int $amoPipelineId): ?int
