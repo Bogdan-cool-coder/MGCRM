@@ -2,17 +2,18 @@
   <div class="contact-deals-panel">
     <!-- Loading -->
     <div v-if="loading" class="contact-deals-panel__skeleton">
-      <Skeleton height="40px" class="mb-2" />
-      <Skeleton height="40px" class="mb-2" />
-      <Skeleton height="40px" />
+      <Skeleton height="32px" class="mb-2" />
+      <Skeleton height="32px" class="mb-2" />
+      <Skeleton height="32px" />
     </div>
 
-    <!-- List -->
+    <!-- 3-column mini-table (spec §4): Сделка · Этап (чип) · Сумма (right, 700, navy) -->
     <template v-else>
+      <!-- No table header per spec §4 -->
       <div
         v-for="deal in deals"
         :key="deal.id"
-        class="contact-deals-panel__item"
+        class="contact-deals-panel__row"
       >
         <RouterLink
           :to="`/deals/${deal.id}`"
@@ -25,14 +26,11 @@
           :value="deal.stage.name"
           severity="secondary"
           size="small"
-          class="contact-deals-panel__stage-tag"
+          class="contact-deals-panel__stage"
+          :style="deal.stage?.color ? { background: deal.stage.color + '22', color: deal.stage.color } : {}"
         />
-        <Tag
-          v-if="deal.status"
-          :value="dealStatusLabel(deal.status)"
-          :severity="dealStatusSeverity(deal.status)"
-          size="small"
-        />
+        <span v-else class="contact-deals-panel__stage-empty">—</span>
+        <span class="contact-deals-panel__amount">{{ formatKopecks(deal.amount, deal.currency) }}</span>
       </div>
 
       <!-- Empty -->
@@ -75,26 +73,18 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-type DealStatus = 'active' | 'won' | 'lost' | 'archived'
-
-function dealStatusLabel(status: DealStatus | string): string {
-  const map: Record<string, string> = {
-    active: t('sales.deal.status.active'),
-    won: t('sales.deal.status.won'),
-    lost: t('sales.deal.status.lost'),
-    archived: t('sales.deal.status.archived'),
+function formatKopecks(kopecks: number, currency: string): string {
+  const units = Math.round(kopecks / 100)
+  try {
+    return new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(units)
+  } catch {
+    return `${units.toLocaleString('ru-RU')} ${currency}`
   }
-  return map[status] ?? status
-}
-
-function dealStatusSeverity(status: DealStatus | string): 'success' | 'danger' | 'secondary' | 'info' {
-  const map: Record<string, 'success' | 'danger' | 'secondary' | 'info'> = {
-    active: 'info',
-    won: 'success',
-    lost: 'danger',
-    archived: 'secondary',
-  }
-  return map[status] ?? 'secondary'
 }
 </script>
 
@@ -102,38 +92,48 @@ function dealStatusSeverity(status: DealStatus | string): 'success' | 'danger' |
 .contact-deals-panel {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
 }
 
 .contact-deals-panel__skeleton {
   display: flex;
   flex-direction: column;
+  padding: $space-2 0;
 }
 
-.contact-deals-panel__item {
-  display: flex;
+// ── 3-column mini-table row — spec §4 ─────────────────────────────────────────
+// Columns: Сделка (flex:1) · Этап (shrink:0) · Сумма (text-right, navy, 700)
+
+.contact-deals-panel__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: $space-2;
-  padding: $space-2 0;
+  padding: $space-2 $space-3;
   border-bottom: 1px solid var(--p-surface-100);
-  flex-wrap: wrap;
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-800);
-  }
+  transition: background var(--app-transition-fast);
 
   &:last-child {
     border-bottom: none;
   }
+
+  &:hover {
+    background: var(--p-surface-50);
+
+    .app-dark & {
+      background: var(--p-surface-100);
+    }
+  }
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-700);
+  }
 }
 
 .contact-deals-panel__deal-name {
-  flex: 1;
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: var(--p-primary-color);
   text-decoration: none;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -143,9 +143,31 @@ function dealStatusSeverity(status: DealStatus | string): 'success' | 'danger' |
   }
 }
 
-.contact-deals-panel__stage-tag {
+.contact-deals-panel__stage {
   flex-shrink: 0;
 }
+
+.contact-deals-panel__stage-empty {
+  font-size: $font-size-sm;
+  color: $surface-400;
+  flex-shrink: 0;
+}
+
+// Amount: right-aligned, 700, navy — spec §4
+.contact-deals-panel__amount {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $primary-900;
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+
+  .app-dark & {
+    color: var(--p-primary-300);
+  }
+}
+
+// ── Empty ─────────────────────────────────────────────────────────────────────
 
 .contact-deals-panel__empty {
   display: flex;
@@ -166,6 +188,8 @@ function dealStatusSeverity(status: DealStatus | string): 'success' | 'danger' |
   color: $surface-500;
   margin: 0;
 }
+
+// ── Load more ─────────────────────────────────────────────────────────────────
 
 .contact-deals-panel__load-more {
   display: flex;

@@ -141,6 +141,8 @@ const { t } = useI18n()
 const toast = useToast()
 const confirm = useConfirm()
 
+defineExpose({ openAdd: () => { openDialog.value = true } })
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function relatedId(rel: ContactRelation): number {

@@ -105,14 +105,11 @@
                         :count="channels.length || undefined"
                       >
                         <template #header-action>
-                          <Button
-                            icon="pi pi-plus"
-                            text
-                            severity="secondary"
-                            size="small"
-                            :title="t('crm.contact.channels.addChannel')"
-                            @click.stop="openAddChannel"
-                          />
+                          <!-- spec §4: AddBtn = text-link with icon + label, NOT icon-only Button -->
+                          <button type="button" class="contact-page-v2__add-btn" @click.stop="openAddChannel">
+                            <i class="pi pi-plus" />
+                            {{ t('crm.contact.channels.addChannel') }}
+                          </button>
                         </template>
                         <ContactChannelsBlock
                           ref="channelsBlockRef"
@@ -131,14 +128,10 @@
                         :count="companies.length || undefined"
                       >
                         <template #header-action>
-                          <Button
-                            icon="pi pi-plus"
-                            text
-                            severity="secondary"
-                            size="small"
-                            :title="t('contact.page.companies.add')"
-                            @click.stop="openAttachCompany"
-                          />
+                          <button type="button" class="contact-page-v2__add-btn" @click.stop="openAttachCompany">
+                            <i class="pi pi-plus" />
+                            {{ t('contact.page.companies.add') }}
+                          </button>
                         </template>
                         <ContactCompaniesPanel
                           :companies="companies"
@@ -157,7 +150,14 @@
                         :default-collapsed="false"
                         :count="relations.length || undefined"
                       >
+                        <template #header-action>
+                          <button type="button" class="contact-page-v2__add-btn" @click.stop="openAddRelation">
+                            <i class="pi pi-plus" />
+                            {{ t('crm.contact.relations.add') }}
+                          </button>
+                        </template>
                         <ContactRelationsPanel
+                          ref="relationsBlockRef"
                           :contact-id="contact.id"
                           :relations="relations"
                           :loading="relationsLoading"
@@ -173,6 +173,12 @@
                         :default-collapsed="false"
                         :count="deals.length || undefined"
                       >
+                        <template #header-action>
+                          <button type="button" class="contact-page-v2__add-btn" @click.stop="addToDealOpen = true">
+                            <i class="pi pi-plus" />
+                            {{ t('crm.contact.deals.add') }}
+                          </button>
+                        </template>
                         <ContactDealsPanel
                           :deals="deals"
                           :loading="dealsLoading"
@@ -190,14 +196,10 @@
                         :default-collapsed="false"
                       >
                         <template #header-action>
-                          <Button
-                            icon="pi pi-plus"
-                            text
-                            severity="secondary"
-                            size="small"
-                            :title="t('crm.contact.sections.notes')"
-                            @click.stop="goToActivityTab"
-                          />
+                          <button type="button" class="contact-page-v2__add-btn" @click.stop="goToActivityTab">
+                            <i class="pi pi-plus" />
+                            {{ t('crm.contact.sections.notes') }}
+                          </button>
                         </template>
                         <div class="contact-page-v2__notes-field">
                           <InlineEditableField
@@ -250,6 +252,7 @@
             <TabPanel value="activity">
               <div class="contact-page-v2__tab-body">
                 <EntityActivitiesTab
+                  ref="activitiesTabRef"
                   entity-type="contact"
                   :entity-id="contact.id"
                 />
@@ -321,6 +324,14 @@
       </template>
     </Dialog>
 
+    <!-- Add to deal dialog (B5) -->
+    <AddContactToDealDialog
+      v-if="contact"
+      v-model="addToDealOpen"
+      :contact-id="contact.id"
+      @added="loadDeals()"
+    />
+
     <Toast position="top-right" />
     <ConfirmDialog />
   </div>
@@ -359,6 +370,7 @@ import ContactRelationsPanel from './components/ContactRelationsPanel.vue'
 import ContactDealsPanel from './components/ContactDealsPanel.vue'
 import ContactDealsTab from './components/ContactDealsTab.vue'
 import ContactFilesTab from './components/ContactFilesTab.vue'
+import AddContactToDealDialog from './components/AddContactToDealDialog.vue'
 import { useContactPageData } from './composables/useContactPageData'
 import { useContactPageActions } from './composables/useContactPageActions'
 import { useDirectoriesStore } from '@/stores/directories'
@@ -372,6 +384,7 @@ const { isMobile, isTablet } = useBreakpoints()
 
 const activeTab = ref('overview')
 const attachCompanyIsPrimary = ref(false)
+const addToDealOpen = ref(false)
 
 const {
   contact,
@@ -545,12 +558,18 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: t('crm.contact.menu.addNote'),
     icon: 'pi pi-comment',
-    command: () => { activeTab.value = 'activity' },
+    command: () => {
+      activeTab.value = 'activity'
+      void nextTick(() => activitiesTabRef.value?.focusNote())
+    },
   },
   {
     label: t('crm.contact.menu.addRelation'),
     icon: 'pi pi-link',
-    command: () => { activeTab.value = 'overview' },
+    command: () => {
+      activeTab.value = 'overview'
+      void nextTick(() => relationsBlockRef.value?.openAdd())
+    },
   },
   {
     label: t('crm.contact.menu.copyLink'),
@@ -583,6 +602,8 @@ async function submitAttachCompanyWithPrimary() {
 // ── Navigation helpers ────────────────────────────────────────────────────────
 
 const channelsBlockRef = ref<{ openAdd: () => void } | null>(null)
+const relationsBlockRef = ref<{ openAdd: () => void } | null>(null)
+const activitiesTabRef = ref<{ focusNote: () => void; focusTask: () => void } | null>(null)
 
 function openAddChannel() {
   // Make sure we're on overview tab so the block is mounted
@@ -590,6 +611,13 @@ function openAddChannel() {
   // Delegate to ContactChannelsBlock exposed openAdd (via defineExpose)
   void nextTick(() => {
     channelsBlockRef.value?.openAdd()
+  })
+}
+
+function openAddRelation() {
+  activeTab.value = 'overview'
+  void nextTick(() => {
+    relationsBlockRef.value?.openAdd()
   })
 }
 
@@ -648,10 +676,19 @@ void attachCompanyStatus
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
+// hidden scrollbar — spec §13 global rule
 .contact-page-v2__body {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 }
 
 .contact-page-v2__mobile-tab-select {
@@ -761,6 +798,42 @@ void attachCompanyStatus
 
   .app-dark & {
     color: var(--p-surface-300);
+  }
+}
+
+// ── AddBtn (spec §4) — text-link with icon + label ───────────────────────────
+
+.contact-page-v2__add-btn {
+  display: inline-flex;
+  align-items: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  gap: 5px; // spec §4: gap 5px
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--p-primary-color);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 4px 9px; // spec §4: padding 4px 9px
+  border-radius: $radius-sm;
+  white-space: nowrap;
+  transition: background var(--app-transition-fast);
+
+  &:hover {
+    background: $primary-100;
+  }
+
+  .app-dark & {
+    color: var(--p-primary-300);
+
+    &:hover {
+      background: var(--p-primary-900);
+    }
+  }
+
+  i {
+    font-size: $font-size-xs;
   }
 }
 

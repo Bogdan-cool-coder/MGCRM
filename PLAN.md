@@ -457,8 +457,8 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ### DS-5. Редизайн карточки сущности (контакт + компания)
 
-**Статус:** DONE (2026-06-22). designer→backend-specialist→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields.
-**ТЗ:** `design-handoff/redesign/EntityCard-spec.md` + `entity-card.html`.
+**Статус:** QA PARTIAL (2026-06-23). Round 3 — 2 medium-priority bugs remain open (BUG-DARK-PANEL-HOVER, BUG-META-FS). Uncommitted, ветка feat/amo-native-fields. Требует ещё 1 итерации frontend-specialist → QA.
+**ТЗ:** `design-handoff/redesign/EntityCard-spec.md` + `entity-card.html` + `DealCard-spec.md §11/§12`.
 **Агенты:** `backend-specialist` (KPI-агрегат контакта) + `frontend-specialist` (редизайн компонентов и страниц).
 
 **Что сделано:**
@@ -475,11 +475,26 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] **i18n:** полная симметрия RU+EN (0 расхождений). Новые ключи: `crm.entity.*`, `contact.page.*`, `company.page.*`, `crm.contact.*`, `crm.company.*`, `crm.files.*`.
 - [x] **QA:** tsc+lint:ds+build clean. qa-tester: 5/6 визуальных пунктов PASS; §1 мета 10.5px vs «12px» → BY-DESIGN (14px root, корректный токен `$font-size-xs`, задокументировано в `typography.ts`).
 
-**Беклог (не блокеры):**
-- **B-3:** кнопка «Добавить в сделку» в `ContactDealsTab` disabled — требует `POST /api/deals/{id}/contacts` (будущий слайс).
-- **B-4:** `ContactFilesTab` и `CompanyFilesTab` — graceful «скоро»; двухпанельный layout реализуется после появления `GET /api/{contacts|companies}/{id}/files`.
+**QA Round 3 — открытые баги (2026-06-23):**
+- **BUG-DARK-PANEL-HOVER (medium):** `InfoPanel.vue` — в dark-теме hover на `.info-panel__header` даёт `background: var(--p-surface-200)=#616263`, совпадающий с цветом `.info-panel__title` в dark (`color: var(--p-surface-200)=#616263`) — заголовок панели невидим на hover. Fix: изменить hover bg в dark на `var(--p-surface-300)` или title color на `var(--p-surface-400)`. Файл: `front/src/components/crm/entity/InfoPanel.vue` строки 119-153.
+- **BUG-META-FS (low, перенесён из round 2):** мета-строка `entity-header__meta-row` рендерится на 10.5px (0.75rem × 14px база), spec требует 12px. Root: `$font-size-xs = 0.75rem`, base 14px. Fix: `front/src/theme/tokens/typography.ts` — `xs` с `'0.75rem'` на `'12px'` (literal). Файл: `typography.ts`.
+
+**Беклог backend-gaps (не реализованы, ждут следующего слайса):**
+- **BG-1 (S):** `PATCH /api/companies/{company}/employees/{contact}` — не существует. `CompanyEmployeeController` нужен метод `update()`, маршрут `Route::patch('employees/{contact}', ...)`, `CompanyService::updateEmployee()`. FE уже вызывает `companiesApi.updateEmployeeLink()` → 404/405.
+- **BG-2 (S):** `DocumentService::list()` не фильтрует по `source_company_id`. Фильтр передаётся FE, но сервис его игнорирует → «Документы» компании показывают все документы. Добавить `->where('source_company_id', ...)` в `list()` после существующего `deal_id` блока.
+- **BG-3 (S):** `CompanyController::show()` KPI-поле называется `open_deals_count` (строка 85), а FE читает `kpi?.open_count` (CompanyPage/index.vue:617). FE падает в fallback `openDealsCount.value` (клиентский счётчик) — визуально работает, но не сервер-авторитетно. `won_count` вообще не включён в KPI-ответ → «Выиграно» всегда 0.
+- **BG-4 (L):** Файловое API — `CrmFile`/`CrmFolder` модели есть, роутов нет. Требуется `CrmFileController` + `CrmFolderController` + маршруты `/contacts/{contact}/files`, `/companies/{company}/files` + storage. FE-кнопки disabled с TODO B-4.
+- **BG-5 (S):** `DealCreateDrawer` не смонтирован на `ContactPage` → кнопка «Создать сделку» в `ContactDealsTab` disabled. Только FE-работа — импорт + ref + монтирование (бэкенд `POST /api/deals` уже принимает `contact_id`).
+- **BG-6 (S):** Меню «Добавить заметку» (Contact+Company) только переключает таб — не фокусирует `EntityComposer`. Нужны `defineExpose({ focusNote, focusTask })` в `EntityComposer.vue` + ref + вызов в `nextTick` из menu command. Только FE.
+- **BG-7 (S):** Меню «Добавить связь» (Contact) только переключает таб — не открывает форму в `ContactRelationsPanel`. Нужны `defineExpose({ openAdd })` + ref + вызов. Только FE.
+- **BG-8 (M):** Edit-кнопка для задач не реализована ни в `OpenTasksList`, ни в `EntityActivitiesTab`. `ActivityFormDialog.vue` существует. Только FE.
+- **BG-9 (M):** «+Добавить в сделку» на ContactPage (overview, disabled, TODO B-CONTACT-DEALS) — требует `AddContactToDealDialog` (autocomplete deals + `POST /api/deals/{id}/contacts`). Только FE.
+
+**Беклог (не блокеры, перенесено из предыдущих итераций):**
+- **B-3:** кнопка «Добавить в сделку» в `ContactDealsTab` disabled — BG-5/BG-9.
+- **B-4:** `ContactFilesTab` и `CompanyFilesTab` — graceful stub; двухпанельный layout реализуется после BG-4.
 - **position-wire (DS-4 хвост):** фильтр position не пробрасывается из `buildContactParams()` — отдельный слайс фильтров.
-- **CompanyPage TODO-команды** (строки ~700–729): `open task/note/call/email/export` — заглушки `command: () => {}`, реализуются при добавлении соответствующих диалогов.
+- **CompanyPage menu TODO:** `open task/note` — BG-6; остальные (`call/email/export`) — заглушки.
 
 ---
 

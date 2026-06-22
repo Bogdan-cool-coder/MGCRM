@@ -1,25 +1,10 @@
 <template>
   <div class="entity-header">
-    <!-- Top row: back + id + menu -->
-    <div class="entity-header__top-row">
-      <button class="entity-header__btn-icon" :aria-label="t('common.back')" @click="emit('back')">
-        <i class="pi pi-arrow-left" />
-      </button>
-      <div class="entity-header__spacer" />
-      <span class="entity-header__id">#{{ entityId }}</span>
-      <button
-        ref="menuBtnRef"
-        class="entity-header__btn-icon"
-        :aria-label="t('common.actions')"
-        @click="menuRef?.toggle($event)"
-      >
-        <i class="pi pi-ellipsis-v" />
-      </button>
-      <EntityActionMenu ref="menuRef" :items="menuItems" />
-    </div>
-
-    <!-- Top section: avatar + info column -->
-    <div class="entity-header__top-section">
+    <!--
+      Single flex row: avatar-col → info-col (flex:1) → control-col.
+      NO separate top-row above avatar. Spec §1.
+    -->
+    <div class="entity-header__main-row">
       <!-- Avatar -->
       <div class="entity-header__avatar-col">
         <EntityAvatar
@@ -32,25 +17,12 @@
 
       <!-- Info column -->
       <div class="entity-header__info-col">
-        <!-- Title + engagement chip + status badge slot -->
+        <!-- Title row: name + engagement chip + status badge + category badge -->
         <div class="entity-header__title-row">
           <h2 class="entity-header__title">{{ title }}</h2>
-          <EngagementChip
-            v-if="engagementTier"
-            :tier="engagementTier"
-            :last-activity-at="lastActivityAt"
-            class="entity-header__engagement"
-          />
           <!-- Client status badge (company only, optional) -->
           <slot name="status" />
-        </div>
-
-        <!-- Subtitle (position for contact, above meta-row) -->
-        <p v-if="subtitle" class="entity-header__subtitle">{{ subtitle }}</p>
-
-        <!-- Metadata row -->
-        <div class="entity-header__meta-row">
-          <!-- Category chip (company only) -->
+          <!-- Category badge (company only) -->
           <Tag
             v-if="categoryCode"
             :value="categoryCode"
@@ -58,6 +30,18 @@
             size="small"
             class="entity-header__category-tag"
           />
+          <EngagementChip
+            v-if="engagementTier"
+            :tier="engagementTier"
+            :last-activity-at="lastActivityAt"
+            class="entity-header__engagement"
+          />
+        </div>
+
+        <!-- Meta row: subtitle (contact position) first, then meta items -->
+        <div class="entity-header__meta-row">
+          <!-- Subtitle (position for contacts) — first in meta row, 13px muted -->
+          <span v-if="subtitle" class="entity-header__subtitle">{{ subtitle }}</span>
           <!-- Author -->
           <span class="entity-header__meta-item">
             <span class="entity-header__meta-label">{{ t('crm.entity.author') }}:</span>
@@ -109,6 +93,21 @@
             class="entity-header__tag"
           />
         </div>
+      </div>
+
+      <!-- Control column: back arrow + ⋮ menu, right-aligned, flex-shrink:0 -->
+      <div class="entity-header__control-col">
+        <button class="entity-header__btn-icon" :aria-label="t('common.back')" @click="emit('back')">
+          <i class="pi pi-arrow-left" />
+        </button>
+        <button
+          class="entity-header__btn-icon"
+          :aria-label="t('common.actions')"
+          @click="menuRef?.toggle($event)"
+        >
+          <i class="pi pi-ellipsis-v" />
+        </button>
+        <EntityActionMenu ref="menuRef" :items="menuItems" />
       </div>
     </div>
   </div>
@@ -218,60 +217,15 @@ function formatDate(iso: string): string {
 .entity-header {
   background: $brand-header-bg;
   padding: $space-3 $space-4 $space-4;
-  display: flex;
-  flex-direction: column;
-  gap: $space-2;
   flex-shrink: 0;
 }
 
-.entity-header__top-row {
+// ── Single main row: avatar → info → control ──────────────────────────────────
+
+.entity-header__main-row {
   display: flex;
-  align-items: center;
-  gap: $space-1;
-}
-
-.entity-header__spacer {
-  flex: 1;
-}
-
-.entity-header__id {
-  font-size: $font-size-xs;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  color: rgba(255, 255, 255, 0.4); // brand header overlay — static muted text on navy panel
-  letter-spacing: 0.02em;
-}
-
-.entity-header__btn-icon {
-  background: transparent;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  border: 1px solid rgba(255, 255, 255, 0.22); // brand header overlay — static border on navy
-  cursor: pointer;
-  color: $sidebar-text-active;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: $radius-sm;
-  transition: background 0.15s;
-  padding: 0;
-
-  &:hover {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    background: rgba(255, 255, 255, 0.12); // brand header overlay — static hover on navy panel
-  }
-
-  i {
-    font-size: $font-size-sm;
-  }
-}
-
-// ── Top section: avatar + info col ─────────────────────────────────────────────
-
-.entity-header__top-section {
-  display: flex;
-  gap: $space-3;
   align-items: flex-start;
+  gap: $space-3;
 }
 
 .entity-header__avatar-col {
@@ -316,16 +270,12 @@ function formatDate(iso: string): string {
   margin-top: 3px;
 }
 
-// ── Subtitle (position, contact only) ─────────────────────────────────────────
-
-.entity-header__subtitle {
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  color: rgba(255, 255, 255, 0.6); // brand header overlay — static subtitle on navy panel
-  font-size: $font-size-sm;
-  margin: 0;
+.entity-header__category-tag {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-// ── Meta row ───────────────────────────────────────────────────────────────────
+// ── Meta row: subtitle as first entry + meta items ────────────────────────────
 
 .entity-header__meta-row {
   display: flex;
@@ -333,18 +283,24 @@ function formatDate(iso: string): string {
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
   gap: 18px; // brand header overlay — meta gap (not a token)
   flex-wrap: wrap;
-  font-size: $font-size-xs; // spec §1: meta row = 12px
+  // spec §1: meta row = 12px; $font-size-xs = 0.75rem × 14px = 10.5px is too small;
+  // $font-size-sm = 0.875rem × 14px ≈ 12.25px matches spec
+  font-size: $font-size-sm;
 }
 
-.entity-header__category-tag {
-  flex-shrink: 0;
+// Subtitle inside meta row — 13px muted white, spec §1
+.entity-header__subtitle {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.6); // brand header overlay — static subtitle on navy panel
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  font-size: 13px; // spec §1: subtitle 13px
 }
 
 .entity-header__meta-item {
   display: flex;
   align-items: center;
   gap: $space-1;
-  font-size: $font-size-xs;
+  font-size: $font-size-sm; // inherits from meta-row — kept explicit to avoid cascade override
 }
 
 .entity-header__meta-label {
@@ -378,5 +334,40 @@ function formatDate(iso: string): string {
 
 .entity-header__tag {
   flex-shrink: 0;
+}
+
+// ── Control column: back + ⋮ menu ─────────────────────────────────────────────
+
+.entity-header__control-col {
+  display: flex;
+  align-items: center;
+  gap: 6px; // spec §1: gap 6px between control buttons
+  flex-shrink: 0;
+  padding-top: 2px; // align with title baseline
+}
+
+.entity-header__btn-icon {
+  background: transparent;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  border: 1px solid rgba(255, 255, 255, 0.22); // brand header overlay — static border on navy
+  cursor: pointer;
+  color: $sidebar-text-active;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-md; // spec §1 §13: icon-only buttons → radius-md (6px)
+  transition: background 0.15s;
+  padding: 0;
+
+  &:hover {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(255, 255, 255, 0.12); // brand header overlay — static hover on navy panel
+  }
+
+  i {
+    font-size: $font-size-sm;
+  }
 }
 </style>

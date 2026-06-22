@@ -189,6 +189,8 @@ const props = defineProps<{
   pipelines: PipelineDto[]
   owners?: OwnerOption[]
   initialStageId?: number | null
+  /** Optional company prefill — e.g. when opening from a CompanyPage (spec §11) */
+  initialCompany?: CompanyOption | null
 }>()
 
 const emit = defineEmits<{
@@ -222,7 +224,7 @@ interface DealCreateForm {
 }
 
 const defaultForm = (): DealCreateForm => ({
-  company: null,
+  company: props.initialCompany ?? null,
   title: '',
   pipeline_id: props.pipelines[0]?.id ?? null,
   stage_id: props.initialStageId ?? null,
@@ -270,6 +272,16 @@ watch(
     if (open) {
       form.value = defaultForm()
       errors.value = {}
+    }
+  },
+)
+
+// If initialCompany changes while the drawer is already open, update the form
+watch(
+  () => props.initialCompany,
+  (c) => {
+    if (c != null && !form.value.company) {
+      form.value.company = c
     }
   },
 )

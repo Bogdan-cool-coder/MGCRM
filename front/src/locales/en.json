@@ -410,6 +410,7 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "copied": "Copied",
+    "copy": "Copy",
     "select": "Select...",
     "createdAt": "Created"
   },
@@ -3208,6 +3209,7 @@
       "requisites": {
         "current": "Active",
         "add": "Add requisites",
+        "copyTooltip": "Copy details",
         "edit": "Edit requisites",
         "setCurrent": "Set as active",
         "delete": "Delete",
@@ -3297,6 +3299,7 @@
         "valuePlaceholder": "Value",
         "call": "Call",
         "sendEmail": "Send email",
+        "openChat": "Open chat",
         "empty": "No channels added",
         "added": "Channel added",
         "deleted": "Channel deleted",
@@ -3337,7 +3340,15 @@
         "delete": "Delete"
       },
       "deals": {
-        "addComingSoon": "Add to deal (coming soon)"
+        "addComingSoon": "Add to deal (coming soon)",
+        "add": "Add to deal",
+        "create": "Create deal",
+        "addDialog": {
+          "title": "Add to deal",
+          "dealLabel": "Deal",
+          "dealPlaceholder": "Search open deals...",
+          "success": "Contact added to deal"
+        }
       }
     },
     "log": {
@@ -3438,7 +3449,13 @@
       "upload": "Upload file",
       "emptyFiles": "No files",
       "emptyFolders": "No folders",
-      "comingSoon": "Files will be available in upcoming updates"
+      "comingSoon": "Files will be available in upcoming updates",
+      "selectFolder": "Select a folder",
+      "folders": {
+        "manager": "Deal manager folder",
+        "contractScans": "Contract scans / amendments",
+        "oks": "OKS manager folder"
+      }
     }
   },
   "contacts_filter": {

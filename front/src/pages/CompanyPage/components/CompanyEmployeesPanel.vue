@@ -7,14 +7,11 @@
     :default-collapsed="false"
   >
     <template #header-action>
-      <Button
-        icon="pi pi-plus"
-        size="small"
-        text
-        severity="secondary"
-        :aria-label="t('company.page.employees.add')"
-        @click.stop="$emit('addEmployee')"
-      />
+      <!-- spec §4: AddBtn text-link (icon + label), not icon-only button -->
+      <button type="button" class="employees-panel__add-btn" @click.stop="$emit('addEmployee')">
+        <i class="pi pi-plus" />
+        {{ t('company.page.employees.add') }}
+      </button>
     </template>
 
     <!-- Empty state -->
@@ -123,6 +120,41 @@ const firstFive = computed(() => props.employees.slice(0, 5))
   margin: 0;
 }
 
+// spec §4: AddBtn text-link
+.employees-panel__add-btn {
+  display: inline-flex;
+  align-items: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  gap: 5px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--p-primary-color);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 4px 9px;
+  border-radius: $radius-sm;
+  white-space: nowrap;
+  transition: background var(--app-transition-fast);
+
+  &:hover {
+    background: $primary-100;
+  }
+
+  .app-dark & {
+    color: var(--p-primary-300);
+
+    &:hover {
+      background: var(--p-primary-900);
+    }
+  }
+
+  i {
+    font-size: $font-size-xs;
+  }
+}
+
 .employees-panel__see-all {
   display: flex;
   align-items: center;
@@ -157,7 +189,7 @@ const firstFive = computed(() => props.employees.slice(0, 5))
     color: var(--p-primary-color);
 
     .app-dark & {
-      background: var(--p-surface-800);
+      background: var(--p-surface-200);
     }
   }
 

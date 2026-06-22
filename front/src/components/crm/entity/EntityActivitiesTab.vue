@@ -1,9 +1,9 @@
 <template>
   <div class="entity-activities">
     <!--
-      Layout (top → bottom):
+      Layout (top → bottom, spec §5):
         [Filter chips — Все / События / Изменения]
-        [Feed — scrollable, bottom-up: oldest at top, newest near composer]
+        [Feed — scrollable, bottom-up: spacer + oldest at top + newest near composer]
         [OpenTasksList — compact rows for pending tasks]
         [EntityComposer — note/task creation]
     -->
@@ -36,8 +36,16 @@
       </button>
     </div>
 
+    <!--
+      Feed scroll area — spec §5: fixed ~68vh, bottom-up (margin-top:auto on spacer),
+      hidden scrollbar. The feed-inner is a column-flex container:
+        [spacer (flex:1)] → [groups oldest→newest] → [load-more at bottom of inner]
+    -->
     <div ref="scrollEl" class="entity-activities__feed-wrap">
       <div class="entity-activities__feed-inner">
+        <!-- Flex spacer — pushes content to bottom (bottom-up layout, DealCard §11) -->
+        <div class="entity-activities__spacer" />
+
         <!-- Loading skeleton -->
         <div v-if="loading && groups.length === 0" class="entity-activities__skeleton">
           <Skeleton height="60px" class="mb-2" />
@@ -52,7 +60,7 @@
           <p class="entity-activities__empty-hint">{{ t('sales.deal.feed.empty.subtitle') }}</p>
         </div>
 
-        <!-- Chronological groups (oldest→newest, scrolled to bottom) -->
+        <!-- Chronological groups -->
         <template v-else>
           <!-- Load more (at top for bottom-up layout) -->
           <div v-if="feed.hasMore.value" class="entity-activities__load-more">
@@ -88,10 +96,23 @@
                 :key="item.id"
                 class="entity-activities__item"
               >
-                <!-- Activity item (only completed activities appear here) -->
-                <div v-if="item.activity" class="entity-activities__activity-card">
+                <!--
+                  Activity card (only completed activities appear here per DealCard §11).
+                  Kind icon = colored circle tile. Card border tinted to type color.
+                -->
+                <div
+                  v-if="item.activity"
+                  class="entity-activities__activity-card"
+                  :style="activityCardStyle(item.activity.kind)"
+                >
                   <div class="entity-activities__activity-row">
-                    <i :class="['pi', kindIcon(item.activity.kind), 'entity-activities__kind-icon']" />
+                    <!-- Colored circle-tile with kind icon, spec §5 / DealCard §11 -->
+                    <span
+                      class="entity-activities__kind-tile"
+                      :style="kindTileStyle(item.activity.kind)"
+                    >
+                      <i :class="['pi', resolvedKindIcon(item.activity.kind)]" />
+                    </span>
                     <span
                       class="entity-activities__activity-title"
                       :class="{ 'entity-activities__activity-title--done': item.activity.is_closed }"
@@ -111,30 +132,44 @@
                   >
                     {{ item.activity.body }}
                   </p>
+                  <!--
+                    Meta line: «дата · время · ответственный» — ONE line, spec DealCard §12.
+                  -->
                   <div class="entity-activities__activity-meta">
-                    <span v-if="item.activity.due_at" class="entity-activities__due">
-                      {{ formatDueDate(item.activity.due_at) }}
-                    </span>
-                    <span v-if="item.actor" class="entity-activities__actor">
-                      {{ item.actor.full_name }}
+                    <span class="entity-activities__activity-meta-line">
+                      <template v-if="item.activity.due_at || item.actor">
+                        <template v-if="item.activity.due_at">{{ formatDueDateLine(item.activity.due_at) }}</template>
+                        <template v-if="item.activity.due_at && item.actor"> · </template>
+                        <template v-if="item.actor">{{ item.actor.full_name }}</template>
+                      </template>
                     </span>
                   </div>
                 </div>
 
-                <!-- Field change item — лог-строка §5 -->
+                <!--
+                  Field change log row — ONE line format per DealCard §11:
+                  «Автор · дата · время · действие · ~~старое~~ → новое»
+                -->
                 <div v-else-if="item.fieldChanges" class="entity-activities__field-change">
                   <div class="entity-activities__fc-circle">
                     <i class="pi pi-pencil" />
                   </div>
                   <span class="entity-activities__fc-text">
                     <strong>{{ item.actor?.full_name ?? t('common.system') }}</strong>
+                    <template v-if="item.timestamp"> · {{ formatTimestamp(item.timestamp) }}</template>
                     {{ t('sales.deal.feed.changedField') }}:
                     <span v-for="(fc, idx) in item.fieldChanges" :key="idx" class="entity-activities__fc-field">
                       {{ fc.field }}
                       <template v-if="fc.old_value !== undefined && fc.new_value !== undefined">
-                        <span class="entity-activities__fc-arrow">{{ fc.old_value }} → {{ fc.new_value }}</span>
+                        <!-- old value struck-through, spec DealCard §11 -->
+                        <s class="entity-activities__fc-old">{{ fc.old_value }}</s>
+                        <span class="entity-activities__fc-arrow"> → </span>
+                        <span class="entity-activities__fc-new">{{ fc.new_value }}</span>
                       </template>
                     </span>
+                  </span>
+                  <span v-if="item.timestamp" class="entity-activities__fc-time">
+                    {{ formatTime(item.timestamp) }}
                   </span>
                 </div>
               </div>
@@ -151,10 +186,19 @@
       :target-id="entityId"
       @completed="onTaskCompleted"
       @deleted="onTaskDeleted"
+      @edit="onEditTask"
+    />
+
+    <!-- Edit task dialog (B4) — mounted here so it's always available -->
+    <ActivityFormDialog
+      v-model="editDialogVisible"
+      :activity-id="editActivityId"
+      @updated="onTaskUpdated"
     />
 
     <!-- Composer (note/task creation) -->
     <EntityComposer
+      ref="composerRef"
       :entity-type="entityType"
       :entity-id="entityId"
       @created="onActivityCreated"
@@ -170,9 +214,10 @@ import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import EntityComposer from './EntityComposer.vue'
 import OpenTasksList from './OpenTasksList.vue'
+import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import { useEntityFeed } from './composables/useEntityFeed'
-import { kindIcon, statusSeverity, formatDueDate } from '@/utils/activity'
-import type { ActivityDto } from '@/entities/activity'
+import { kindIcon, kindColor, statusSeverity } from '@/utils/activity'
+import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
 export type EntityFeedType = 'company' | 'contact'
 type FeedFilter = 'all' | 'events' | 'changes'
@@ -186,6 +231,12 @@ const { t } = useI18n()
 
 const scrollEl = ref<HTMLElement | null>(null)
 const feedFilter = ref<FeedFilter>('all')
+const composerRef = ref<InstanceType<typeof EntityComposer> | null>(null)
+
+// ─── Edit task dialog state (B4) ─────────────────────────────────────────────
+
+const editDialogVisible = ref(false)
+const editActivityId = ref<number | null>(null)
 
 const feed = useEntityFeed(
   () => props.entityType,
@@ -209,6 +260,66 @@ const filteredGroups = computed(() => {
     }))
     .filter((g) => g.items.length > 0)
 })
+
+// ─── Kind icon resolution ─────────────────────────────────────────────────────
+
+/** Returns the PI class name (without 'pi' prefix) for the given kind */
+function resolvedKindIcon(kind: ActivityKind): string {
+  // kindIcon returns full 'pi pi-xxx' string; extract the second class
+  return kindIcon(kind).split(' ')[1] ?? 'pi-circle'
+}
+
+// ─── Colored kind tile styles (spec §5 / DealCard §11) ───────────────────────
+
+/**
+ * Circle tile background = light tint of type color.
+ * Note/task = neutral (no tint, just surface-100).
+ */
+function kindTileStyle(kind: ActivityKind): Record<string, string> {
+  const color = kindColor(kind)
+  if (!color) {
+    return {
+      background: 'var(--p-surface-100)',
+      color: 'var(--p-surface-500)',
+    }
+  }
+  return {
+    background: `color-mix(in srgb, ${color} 16%, var(--p-card-background))`,
+    color: color,
+  }
+}
+
+/**
+ * Card border tinted to type color.
+ * Note/task = neutral border.
+ */
+function activityCardStyle(kind: ActivityKind): Record<string, string> {
+  const color = kindColor(kind)
+  if (!color) return {}
+  return {
+    borderColor: `color-mix(in srgb, ${color} 45%, var(--p-surface-200))`,
+  }
+}
+
+// ─── Date/time formatters ─────────────────────────────────────────────────────
+
+function formatDueDateLine(dateStr: string): string {
+  const d = new Date(dateStr)
+  const date = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return `${date} · ${time}`
+}
+
+function formatTimestamp(ts: string | number | Date): string {
+  const d = new Date(ts)
+  const date = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return `${date}, ${time}`
+}
+
+function formatTime(ts: string | number | Date): string {
+  return new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+}
 
 // ─── Auto-scroll to bottom ────────────────────────────────────────────────────
 
@@ -240,6 +351,15 @@ function onTaskDeleted(activityId: number) {
   feed.removeActivityLocal(activityId)
 }
 
+function onEditTask(activity: ActivityDto) {
+  editActivityId.value = activity.id
+  editDialogVisible.value = true
+}
+
+function onTaskUpdated(activity: ActivityDto) {
+  feed.updateActivityLocal(activity)
+}
+
 function formatGroupDate(dateStr: string): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -248,13 +368,21 @@ function formatGroupDate(dateStr: string): string {
 onMounted(() => {
   void feed.load()
 })
+
+defineExpose({
+  focusNote: () => composerRef.value?.focusNote(),
+  focusTask: () => composerRef.value?.focusTask(),
+})
 </script>
 
 <style lang="scss" scoped>
+// ─── Root container ───────────────────────────────────────────────────────────
+
 .entity-activities {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  // spec §5: fixed ~68vh so filter chips + feed + composer fill the viewport
+  height: 68vh;
   min-height: 400px;
   overflow: hidden;
 }
@@ -269,10 +397,6 @@ onMounted(() => {
   border-bottom: 1px solid var(--p-surface-200);
   flex-shrink: 0;
   flex-wrap: wrap;
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
 }
 
 .entity-activities__chip {
@@ -314,12 +438,21 @@ onMounted(() => {
 }
 
 // ─── Feed scrollable area ─────────────────────────────────────────────────────
+// Hidden scrollbar — spec §5 / DealCard §0
 
 .entity-activities__feed-wrap {
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 }
 
 .entity-activities__feed-inner {
@@ -328,7 +461,13 @@ onMounted(() => {
   gap: $space-2;
   padding: $space-3 $space-4;
   min-height: 100%;
-  justify-content: flex-end; // push groups to bottom when short
+  // bottom-up: no justify-content:flex-end — use flex spacer instead (DealCard §11)
+}
+
+// Flex spacer: pushes content to bottom (bottom-up layout)
+.entity-activities__spacer {
+  flex: 1;
+  min-height: 0;
 }
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
@@ -398,10 +537,6 @@ onMounted(() => {
   flex: 1;
   height: 1px;
   background: var(--p-surface-200);
-
-  .app-dark & {
-    background: var(--p-surface-700);
-  }
 }
 
 .entity-activities__date-label {
@@ -426,10 +561,6 @@ onMounted(() => {
   gap: $space-2;
   padding-left: $space-3;
   border-left: 2px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-left-color: var(--p-surface-700);
-  }
 }
 
 .entity-activities__item {
@@ -437,18 +568,16 @@ onMounted(() => {
   flex-direction: column;
 }
 
+// ─── Activity card ────────────────────────────────────────────────────────────
+
 .entity-activities__activity-card {
   background: $surface-card;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--p-surface-200); // base; overridden by inline style for typed cards
   border-radius: $radius-md;
   padding: $space-3;
   display: flex;
   flex-direction: column;
   gap: $space-1;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
 }
 
 .entity-activities__activity-row {
@@ -458,10 +587,22 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.entity-activities__kind-icon {
-  font-size: $font-size-sm;
-  color: $surface-400;
+// Colored kind icon tile — 24×24 circle, spec §5 / DealCard §11
+.entity-activities__kind-tile {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  width: 24px; // spec: 24px circle tile
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  height: 24px;
+  border-radius: $radius-circle;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  // background and color set via :style (dynamic per kind type)
+
+  i {
+    font-size: $font-size-xs;
+  }
 }
 
 .entity-activities__activity-title {
@@ -495,20 +636,18 @@ onMounted(() => {
   }
 }
 
+// Meta line — ONE line «дата · время · ответственный», spec DealCard §12
 .entity-activities__activity-meta {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  flex-wrap: wrap;
   font-size: $font-size-xs;
-}
-
-.entity-activities__due {
   color: $surface-400;
 }
 
-.entity-activities__actor {
-  color: $surface-500;
+.entity-activities__activity-meta-line {
+  color: $surface-400;
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
 }
 
 // ─── Field change (лог-строка §5) ────────────────────────────────────────────
@@ -569,12 +708,30 @@ onMounted(() => {
   }
 }
 
+// Old value — struck-through, spec DealCard §11
+.entity-activities__fc-old {
+  text-decoration: line-through;
+  color: $surface-400;
+}
+
 .entity-activities__fc-arrow {
   color: $surface-500;
-  margin-left: $space-1;
+  margin: 0 1px;
+}
+
+.entity-activities__fc-new {
+  color: $surface-700;
+  font-weight: $font-weight-medium;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-200);
   }
+}
+
+.entity-activities__fc-time {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 </style>

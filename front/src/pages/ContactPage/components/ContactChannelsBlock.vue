@@ -2,70 +2,73 @@
   <div class="contact-channels">
     <!-- Loading -->
     <div v-if="loading" class="contact-channels__skeleton">
-      <Skeleton height="32px" class="mb-2" />
-      <Skeleton height="32px" class="mb-2" />
-      <Skeleton height="32px" />
+      <Skeleton height="36px" class="mb-2" />
+      <Skeleton height="36px" class="mb-2" />
+      <Skeleton height="36px" />
     </div>
 
     <!-- Content -->
     <template v-else>
-      <KeyFactsBlock v-if="channels.length > 0">
-        <KeyFactsItem
-          v-for="ch in channels"
-          :key="ch.id"
-          :label="channelLabel(ch.channel_type)"
+      <!-- Channel rows — spec §4: circular action icon 30px that turns navy on hover -->
+      <div
+        v-for="ch in channels"
+        :key="ch.id"
+        class="contact-channels__row"
+        @mouseenter="hoveredId = ch.id"
+        @mouseleave="hoveredId = null"
+      >
+        <!-- Left: circular action icon 30×30 -->
+        <component
+          :is="channelHref(ch)"
+          :href="channelHref(ch)"
+          :target="channelLinkTarget(ch)"
+          :rel="channelLinkTarget(ch) ? 'noopener noreferrer' : undefined"
+          class="contact-channels__action-icon"
+          :class="{ 'contact-channels__action-icon--hovered': hoveredId === ch.id }"
+          :title="channelActionLabel(ch)"
         >
-          <div class="contact-channels__row">
-            <span class="contact-channels__value">{{ ch.value }}</span>
-            <div class="contact-channels__row-actions">
-              <a
-                v-if="ch.channel_type === 'phone'"
-                :href="`tel:${ch.value}`"
-                class="contact-channels__link-btn"
-                :title="t('crm.contact.channels.call')"
-              >
-                <i class="pi pi-phone" />
-              </a>
-              <a
-                v-else-if="ch.channel_type === 'email'"
-                :href="`mailto:${ch.value}`"
-                class="contact-channels__link-btn"
-                :title="t('crm.contact.channels.sendEmail')"
-              >
-                <i class="pi pi-envelope" />
-              </a>
-              <a
-                v-else-if="ch.channel_type === 'tg'"
-                :href="`https://t.me/${ch.value.replace('@','')}`"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="contact-channels__link-btn"
-              >
-                <i class="pi pi-send" />
-              </a>
-              <a
-                v-else-if="ch.channel_type === 'wa'"
-                :href="`https://wa.me/${ch.value.replace(/\D/g,'')}`"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="contact-channels__link-btn"
-              >
-                <i class="pi pi-whatsapp" />
-              </a>
-              <button
-                class="contact-channels__delete-btn"
-                :title="t('common.delete')"
-                @click="onDeleteChannel(ch)"
-              >
-                <i class="pi pi-times" />
-              </button>
-            </div>
-          </div>
-        </KeyFactsItem>
-      </KeyFactsBlock>
+          <i :class="['pi', channelIcon(ch)]" />
+        </component>
+
+        <!-- Center: value + right label (action on hover) -->
+        <div class="contact-channels__info">
+          <span class="contact-channels__value">{{ ch.value }}</span>
+          <span
+            class="contact-channels__action-label"
+            :class="{ 'contact-channels__action-label--visible': hoveredId === ch.id }"
+          >
+            {{ channelActionLabel(ch) }}
+          </span>
+        </div>
+
+        <!-- Right: copy icon -->
+        <button
+          type="button"
+          class="contact-channels__copy-btn"
+          :title="t('common.copy')"
+          @click.stop="copyValue(ch.value)"
+        >
+          <i class="pi pi-copy" />
+        </button>
+
+        <!-- Edit / Delete menu trigger -->
+        <button
+          type="button"
+          class="contact-channels__more-btn"
+          :title="t('common.actions')"
+          @click.stop="onMenuClick($event, ch)"
+        >
+          <i class="pi pi-ellipsis-v" />
+        </button>
+        <Menu
+          :ref="(el) => setMenuRef(ch.id, el)"
+          :model="channelMenuItems(ch)"
+          popup
+        />
+      </div>
 
       <!-- Empty -->
-      <div v-else class="contact-channels__empty">
+      <div v-if="channels.length === 0" class="contact-channels__empty">
         <i class="pi pi-phone contact-channels__empty-icon" />
         <p class="contact-channels__empty-text">{{ t('crm.contact.channels.empty') }}</p>
       </div>
@@ -101,16 +104,6 @@
           @click="cancelAdd"
         />
       </div>
-
-      <!-- Add button -->
-      <button
-        v-if="!addingOpen"
-        class="contact-channels__add-btn"
-        @click="openAdd"
-      >
-        <i class="pi pi-plus" />
-        {{ t('crm.contact.channels.addChannel') }}
-      </button>
     </template>
   </div>
 </template>
@@ -124,8 +117,7 @@ import Button from 'primevue/button'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
-import KeyFactsBlock from '@/components/crm/entity/KeyFactsBlock.vue'
-import KeyFactsItem from '@/components/crm/entity/KeyFactsItem.vue'
+import Menu from 'primevue/menu'
 import { contactsApi } from '@/api/crm/contacts'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { ContactChannel, ChannelType } from '@/entities/crm'
@@ -144,6 +136,75 @@ const { t } = useI18n()
 const toast = useToast()
 const confirm = useConfirm()
 
+const hoveredId = ref<number | null>(null)
+const menuRefs = ref<Map<number, InstanceType<typeof Menu>>>(new Map())
+
+// ── Channel action helpers (spec §4) ──────────────────────────────────────────
+
+function channelIcon(ch: ContactChannel): string {
+  const map: Record<ChannelType, string> = {
+    phone: 'pi-phone',
+    email: 'pi-envelope',
+    tg: 'pi-send',
+    wa: 'pi-whatsapp',
+    linkedin: 'pi-linkedin',
+    instagram: 'pi-instagram',
+    viber: 'pi-phone',
+  }
+  return map[ch.channel_type] ?? 'pi-comment'
+}
+
+function channelHref(ch: ContactChannel): string {
+  if (ch.channel_type === 'phone') return `tel:${ch.value}`
+  if (ch.channel_type === 'email') return `mailto:${ch.value}`
+  if (ch.channel_type === 'tg') return `https://t.me/${ch.value.replace('@', '')}`
+  if (ch.channel_type === 'wa') return `https://wa.me/${ch.value.replace(/\D/g, '')}`
+  return '#'
+}
+
+function channelLinkTarget(ch: ContactChannel): string | undefined {
+  if (ch.channel_type === 'tg' || ch.channel_type === 'wa') return '_blank'
+  return undefined
+}
+
+function channelActionLabel(ch: ContactChannel): string {
+  if (ch.channel_type === 'phone') return t('crm.contact.channels.call')
+  if (ch.channel_type === 'email') return t('crm.contact.channels.sendEmail')
+  return t('crm.contact.channels.openChat')
+}
+
+// ── Menu ──────────────────────────────────────────────────────────────────────
+
+function setMenuRef(id: number, el: unknown) {
+  if (el) menuRefs.value.set(id, el as InstanceType<typeof Menu>)
+  else menuRefs.value.delete(id)
+}
+
+function onMenuClick(event: Event, ch: ContactChannel) {
+  menuRefs.value.get(ch.id)?.toggle(event)
+}
+
+function channelMenuItems(ch: ContactChannel) {
+  return [
+    {
+      label: t('common.delete'),
+      icon: 'pi pi-times',
+      command: () => onDeleteChannel(ch),
+    },
+  ]
+}
+
+// ── Copy ──────────────────────────────────────────────────────────────────────
+
+async function copyValue(value: string) {
+  try {
+    await navigator.clipboard.writeText(value)
+    toast.add({ severity: 'success', summary: t('common.copied', 'Скопировано'), life: 1500 })
+  } catch {
+    // silent fail
+  }
+}
+
 // ── Add form ──────────────────────────────────────────────────────────────────
 
 const addingOpen = ref(false)
@@ -157,19 +218,6 @@ const channelTypeOptions = computed(() => [
   { value: 'tg', label: t('crm.contact.channels.telegram') },
   { value: 'wa', label: t('crm.contact.channels.whatsapp') },
 ])
-
-function channelLabel(type: ChannelType): string {
-  const map: Record<ChannelType, string> = {
-    phone: t('crm.contact.channels.phone'),
-    email: t('crm.contact.channels.email'),
-    tg: t('crm.contact.channels.telegram'),
-    wa: t('crm.contact.channels.whatsapp'),
-    linkedin: 'LinkedIn',
-    instagram: 'Instagram',
-    viber: 'Viber',
-  }
-  return map[type] ?? type
-}
 
 function channelPlaceholder(type: ChannelType | null): string {
   if (!type) return t('crm.contact.channels.valuePlaceholder')
@@ -245,91 +293,157 @@ function onDeleteChannel(ch: ContactChannel) {
 .contact-channels {
   display: flex;
   flex-direction: column;
-  gap: $space-2;
 }
 
 .contact-channels__skeleton {
   display: flex;
   flex-direction: column;
+  padding: $space-2 0;
 }
+
+// ─── Channel row — spec §4 ────────────────────────────────────────────────────
 
 .contact-channels__row {
   display: flex;
   align-items: center;
-  gap: $space-2;
-  width: 100%;
+  gap: $space-3;
+  padding: $space-2 $space-3;
+  border-bottom: 1px solid var(--p-surface-100);
+  transition: background var(--app-transition-fast);
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--p-surface-50);
+
+    .app-dark & {
+      background: var(--p-surface-100);
+    }
+  }
+}
+
+// ─── Action icon circle 30×30 — spec §4 ──────────────────────────────────────
+
+.contact-channels__action-icon {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  width: 30px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  height: 30px;
+  border-radius: $radius-circle;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: $primary-100;
+  color: $primary-900;
+  text-decoration: none;
+  transition: background var(--app-transition-fast), color var(--app-transition-fast);
+  cursor: pointer;
+
+  i {
+    font-size: $font-size-sm;
+  }
+
+  // On hover: turns navy (#172747) with white icon — spec §4
+  &--hovered {
+    background: $brand-header-bg;
+    color: $sidebar-text-active;
+  }
+
+  .app-dark & {
+    background: var(--p-primary-900);
+    color: var(--p-primary-200);
+
+    &.contact-channels__action-icon--hovered {
+      background: $brand-header-bg;
+      color: $sidebar-text-active;
+    }
+  }
+}
+
+// ─── Info column (value + action label) ──────────────────────────────────────
+
+.contact-channels__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .contact-channels__value {
-  flex: 1;
   font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
   color: $surface-800;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 
   .app-dark & {
     color: var(--p-surface-100);
   }
 }
 
-.contact-channels__row-actions {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
+// Action label — shown on hover; spec §4: right label = «Позвонить / Написать / Открыть чат»
+.contact-channels__action-label {
+  font-size: $font-size-2xs;
+  color: $primary-900;
+  font-weight: $font-weight-semibold;
   opacity: 0;
   transition: opacity var(--app-transition-fast);
-  flex-shrink: 0;
+  white-space: nowrap;
 
-  .contact-channels__row:hover & {
+  &--visible {
     opacity: 1;
+  }
+
+  .app-dark & {
+    color: var(--p-primary-200);
   }
 }
 
-.contact-channels__link-btn,
-.contact-channels__delete-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
+// ─── Right actions (copy + more) ─────────────────────────────────────────────
+
+.contact-channels__copy-btn,
+.contact-channels__more-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  width: 24px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  height: 24px;
   border-radius: $radius-sm;
-  padding: 0;
-  text-decoration: none;
-  transition: background var(--app-transition-fast);
+  border: none;
+  background: transparent;
+  color: $surface-400;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--app-transition-fast), background var(--app-transition-fast);
 
   i {
     font-size: $font-size-2xs;
   }
-}
 
-.contact-channels__link-btn {
-  color: var(--p-primary-color);
-
-  &:hover {
-    background: var(--p-primary-100);
+  .contact-channels__row:hover & {
+    opacity: 1;
   }
-
-  .app-dark &:hover {
-    background: var(--p-primary-900);
-  }
-}
-
-.contact-channels__delete-btn {
-  color: $surface-400;
 
   &:hover {
     background: var(--p-surface-100);
-    color: var(--p-red-500);
-  }
+    color: $surface-600;
 
-  .app-dark &:hover {
-    background: var(--p-surface-800);
+    .app-dark & {
+      background: var(--p-surface-200);
+      color: var(--p-surface-200);
+    }
   }
 }
+
+// ─── Empty ────────────────────────────────────────────────────────────────────
 
 .contact-channels__empty {
   display: flex;
@@ -351,12 +465,15 @@ function onDeleteChannel(ch: ContactChannel) {
   margin: 0;
 }
 
+// ─── Add form ─────────────────────────────────────────────────────────────────
+
 .contact-channels__add-form {
   display: flex;
   align-items: center;
   gap: $space-2;
   flex-wrap: wrap;
-  padding-top: $space-2;
+  padding: $space-2 $space-3;
+  border-top: 1px solid var(--p-surface-100);
 }
 
 .contact-channels__type-select {
@@ -367,27 +484,5 @@ function onDeleteChannel(ch: ContactChannel) {
 .contact-channels__value-input {
   flex: 1;
   min-width: 0;
-}
-
-.contact-channels__add-btn {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--p-primary-color);
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  padding: $space-1 0;
-  transition: opacity var(--app-transition-fast);
-
-  &:hover {
-    opacity: 0.75;
-  }
-
-  i {
-    font-size: $font-size-2xs;
-  }
 }
 </style>

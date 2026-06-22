@@ -3,10 +3,27 @@
  */
 import type { ActivityKind, ActivityStatus, ActivityPriority } from '@/entities/activity'
 
+/**
+ * Type-color map for activity kind icons.
+ * Used to tint the icon circle tile and the card border (DealCard §11, EntityCard §5).
+ * call=#2A6FDB  meeting=#1F8A5B  follow_up/КП=#E8A317  task=navy  note/other=neutral
+ */
+const KIND_COLORS: Partial<Record<ActivityKind, string>> = {
+  call: '#2A6FDB',       // spec: синий — pi-phone
+  meeting: '#1F8A5B',    // spec: зелёный — pi-calendar
+  follow_up: '#E8A317',  // spec: жёлтый — pi-file-check/pi-file-edit (КП/предложение)
+  presentation: '#E8A317', // same as follow_up per spec
+}
+
+/** Returns the accent color for a given activity kind, or null for neutral (note/task/etc.) */
+export function kindColor(kind: ActivityKind): string | null {
+  return KIND_COLORS[kind] ?? null
+}
+
 export function kindIcon(kind: ActivityKind): string {
   const map: Record<ActivityKind, string> = {
     call: 'pi pi-phone',
-    meeting: 'pi pi-users',
+    meeting: 'pi pi-calendar', // spec §5/DealCard §11: meeting icon = pi-calendar
     task: 'pi pi-check-square',
     note: 'pi pi-file',
     follow_up: 'pi pi-reply',

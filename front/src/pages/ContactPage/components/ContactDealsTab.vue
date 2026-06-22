@@ -1,18 +1,20 @@
 <template>
   <div class="contact-deals-tab">
-    <!-- TabHead -->
+    <!-- TabHead — spec §6: «Создать сделку» primary button pi-plus -->
     <div class="contact-deals-tab__head">
       <span class="contact-deals-tab__head-title">{{ t('contact.page.tabs.deals') }}</span>
+      <!--
+        TODO B-CONTACT-DEAL-CREATE: «Создать сделку» — MISSING backend.
+        POST /api/deals endpoint exists but no in-card DealCreateDrawer is mounted here.
+        Button is inert until DealCreateDrawer is wired on ContactPage.
+      -->
       <Button
         icon="pi pi-plus"
-        :label="t('crm.contact.sections.dealsParticipation')"
+        :label="t('crm.contact.deals.create', 'Создать сделку')"
         size="small"
-        severity="secondary"
-        outlined
         disabled
         :title="t('crm.contact.deals.addComingSoon')"
       />
-      <!-- TODO B-3: кнопка «Добавить в сделку» — требует POST /api/deals/{id}/contacts -->
     </div>
 
     <!-- Loading -->

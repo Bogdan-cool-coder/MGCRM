@@ -28,6 +28,7 @@
       <div v-if="activeTab === 'note'" class="entity-composer__frame">
         <div class="entity-composer__textarea-wrap">
           <Textarea
+            ref="noteTextareaRef"
             v-model="noteForm.body"
             :placeholder="t('sales.deal.composer.notePlaceholder')"
             :rows="2"
@@ -80,15 +81,18 @@
             class="entity-composer__task-type"
           />
         </div>
-        <!-- Bottom row: textarea + add button -->
+        <!-- Bottom row: colon separator + textarea + add button, spec §5 -->
         <div class="entity-composer__task-body">
+          <span class="entity-composer__colon">:</span>
           <div class="entity-composer__textarea-wrap">
-            <InputText
+            <!-- spec §5: task body = textarea (multi-line, wraps), NOT InputText -->
+            <Textarea
               v-model="taskForm.title"
               :placeholder="t('sales.deal.composer.titlePlaceholder')"
-              :invalid="!!errors.title"
+              :rows="2"
+              auto-resize
               fluid
-              class="entity-composer__task-title"
+              class="entity-composer__textarea entity-composer__task-title"
             />
             <small v-if="errors.title" class="entity-composer__error">{{ errors.title }}</small>
           </div>
@@ -106,11 +110,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
 import Select from 'primevue/select'
@@ -138,6 +141,7 @@ const mutation = useMutation<ActivityDto>()
 const saving = computed(() => mutation.isPending.value)
 
 const activeTab = ref<ComposerTab>('note')
+const noteTextareaRef = ref<{ $el?: HTMLElement } | null>(null)
 const errors = ref<{ title?: string; body?: string }>({})
 
 const taskSubtypeOptions = computed(() => [
@@ -221,6 +225,25 @@ async function submitTask() {
   }
 }
 
+// ── Exposed API (for parent components) ──────────────────────────────────────
+
+/** Switch to note mode and focus the textarea */
+function focusNote() {
+  activeTab.value = 'note'
+  void nextTick(() => {
+    const el = noteTextareaRef.value?.$el
+    const textarea = el?.querySelector?.('textarea') ?? (el instanceof HTMLTextAreaElement ? el : null)
+    textarea?.focus()
+  })
+}
+
+/** Switch to task mode (focuses naturally via v-if render) */
+function focusTask() {
+  activeTab.value = 'task'
+}
+
+defineExpose({ focusNote, focusTask })
+
 const usersList = computed(() => props.usersList ?? [])
 </script>
 
@@ -228,14 +251,16 @@ const usersList = computed(() => props.usersList ?? [])
 .entity-composer {
   display: flex;
   gap: $space-3;
+  // spec §5: composer bg = --c-hover (#F9FAFB light / #3a3b3d dark = surface-200)
   background: var(--p-surface-50);
   padding: $space-3 $space-4;
   border-top: 1px solid var(--p-surface-200);
   flex-shrink: 0;
 
   .app-dark & {
-    background: var(--p-surface-100);
-    border-top-color: var(--p-surface-700);
+    // --c-hover in dark = #3a3b3d = var(--p-surface-200) in our dark scale
+    background: var(--p-surface-200);
+    border-top-color: var(--p-surface-600);
   }
 }
 
@@ -304,9 +329,10 @@ const usersList = computed(() => props.usersList ?? [])
   border: 1px solid var(--p-surface-300);
   border-radius: $radius-md;
   padding: $space-2;
-  min-height: 78px;
+  min-height: 78px; // spec §5: min-height = 78px (height of two mode buttons)
   display: flex;
-  align-items: flex-end;
+  // spec §5: button «Добавить» vertically centered — note mode uses align-items:center
+  align-items: center;
   gap: $space-2;
   background: $surface-card;
 
@@ -341,7 +367,22 @@ const usersList = computed(() => props.usersList ?? [])
 
 .entity-composer__add-btn {
   flex-shrink: 0;
-  align-self: flex-end;
+  // note mode: frame is align-items:center → button is centered by flex container
+  // task mode: __task-body is flex + align-items:flex-end → add-btn aligns to bottom
+}
+
+// spec §5: colon separator before task textarea
+.entity-composer__colon {
+  color: $surface-400;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+  line-height: 1;
+  align-self: flex-start;
+  padding-top: 2px;
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
 }
 
 .entity-composer__error {

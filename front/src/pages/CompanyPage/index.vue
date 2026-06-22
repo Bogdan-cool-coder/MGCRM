@@ -107,9 +107,9 @@
               {{ t('company.page.tabs.documents') }}
               <Badge v-if="documents.length" :value="documents.length" severity="secondary" size="small" class="ms-1" />
             </Tab>
-            <Tab value="payments">{{ t('crm.company.tabs.payments') }}</Tab>
-            <Tab value="holding">{{ t('company.page.tabs.holding') }}</Tab>
+            <!-- spec §3: tab order — Файлы before Холдинг; NO «Платежи» tab -->
             <Tab value="files">{{ t('crm.company.tabs.files') }}</Tab>
+            <Tab value="holding">{{ t('company.page.tabs.holding') }}</Tab>
           </TabList>
 
           <TabPanels>
@@ -144,14 +144,11 @@
                         :count="deals.length || undefined"
                       >
                         <template #header-action>
-                          <Button
-                            icon="pi pi-plus"
-                            text
-                            severity="secondary"
-                            size="small"
-                            :title="t('company.page.deals.createDeal')"
-                            @click.stop="onCreateDeal"
-                          />
+                          <!-- spec §4: AddBtn text-link style -->
+                          <button type="button" class="company-page-v2__add-btn" @click.stop="onCreateDeal">
+                            <i class="pi pi-plus" />
+                            {{ t('company.page.deals.createDeal') }}
+                          </button>
                         </template>
                         <CompanyMiniDealsPanel :deals="deals" />
                       </InfoPanel>
@@ -164,14 +161,10 @@
                         :default-collapsed="true"
                       >
                         <template #header-action>
-                          <Button
-                            icon="pi pi-plus"
-                            text
-                            severity="secondary"
-                            size="small"
-                            :title="t('crm.company.holding.addParent')"
-                            @click.stop="showAttachHolding = true"
-                          />
+                          <button type="button" class="company-page-v2__add-btn" @click.stop="showAttachHolding = true">
+                            <i class="pi pi-plus" />
+                            {{ t('crm.company.holding.addParent') }}
+                          </button>
                         </template>
                         <HoldingTree
                           :tree="holding"
@@ -221,6 +214,7 @@
             <TabPanel value="activity">
               <div class="company-page-v2__tab-content">
                 <EntityActivitiesTab
+                  ref="companyActivitiesTabRef"
                   entity-type="company"
                   :entity-id="company.id"
                 />
@@ -275,12 +269,10 @@
               </div>
             </TabPanel>
 
-            <!-- ── Payments tab (M9 placeholder) ─────────────────── -->
-            <TabPanel value="payments">
-              <div class="company-page-v2__tab-content company-page-v2__payments-tab">
-                <i class="pi pi-lock company-page-v2__payments-tab-icon" />
-                <p class="company-page-v2__payments-tab-title">{{ t('crm.company.payments.placeholder') }}</p>
-                <p class="company-page-v2__payments-tab-hint">{{ t('crm.company.payments.hint') }}</p>
+            <!-- ── Files tab — spec §3: Файлы before Холдинг ────── -->
+            <TabPanel value="files">
+              <div class="company-page-v2__tab-content company-page-v2__tab-content--no-pad">
+                <CompanyFilesTab />
               </div>
             </TabPanel>
 
@@ -300,20 +292,15 @@
                   />
                 </div>
                 <div class="company-page-v2__holding-tab-wrapper">
+                  <!-- spec §10: standalone mode — no InfoPanel wrapper, raw tree content -->
                   <HoldingTree
                     :tree="holding"
                     :loading="holdingLoading"
+                    :standalone="true"
                     @attach-parent="showAttachHolding = true"
                     @detach-parent="onDetachHolding"
                   />
                 </div>
-              </div>
-            </TabPanel>
-
-            <!-- ── Files tab ──────────────────────────────────────── -->
-            <TabPanel value="files">
-              <div class="company-page-v2__tab-content company-page-v2__tab-content--no-pad">
-                <CompanyFilesTab />
               </div>
             </TabPanel>
           </TabPanels>
@@ -445,11 +432,23 @@
       @company-updated="onCompanyUpdatedFromTermination"
     />
 
+    <!--
+      spec §11: DealCreateDrawer right-500 pre-filled with company.
+      EXISTS_NOT_WIRED → now wired: prefill company; on @created refresh deal list.
+    -->
+    <DealCreateDrawer
+      v-if="dealCreatePipelines.length > 0"
+      v-model="dealCreateOpen"
+      :pipelines="dealCreatePipelines"
+      :initial-company="company ? { id: company.id, name: company.name } : undefined"
+      @created="onDealCreated"
+    />
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
@@ -465,6 +464,8 @@ import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
 import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
+import DealCreateDrawer from '@/pages/DealsPage/components/DealCreateDrawer.vue'
+import { salesApi } from '@/api/sales'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
 import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
@@ -501,31 +502,6 @@ const confirm = useConfirm()
 
 const { isTablet, isMobile } = useBreakpoints()
 
-// ── Menu action helpers ────────────────────────────────────────────────────────
-
-function onMenuCall() {
-  // Find first phone channel across primary employee's channels
-  const primaryEmp = employees.value.find((e) => e.is_primary) ?? employees.value[0] ?? null
-  const contact = primaryEmp?.contact as ({ phone?: string | null } | null) | undefined
-  const phone = contact?.phone ?? null
-  if (phone) {
-    window.location.href = `tel:${phone}`
-  } else {
-    toast.add({ severity: 'info', summary: t('company.page.menu.noPhone', 'Нет номера телефона'), life: 3000 })
-  }
-}
-
-function onMenuEmail() {
-  const primaryEmp = employees.value.find((e) => e.is_primary) ?? employees.value[0] ?? null
-  const contact = primaryEmp?.contact as ({ email?: string | null } | null) | undefined
-  const email = contact?.email ?? null
-  if (email) {
-    window.location.href = `mailto:${email}`
-  } else {
-    toast.add({ severity: 'info', summary: t('company.page.menu.noEmail', 'Нет адреса email'), life: 3000 })
-  }
-}
-
 // ── Disconnect / Termination state ─────────────────────────────────────────────
 
 const disconnectDialogOpen = ref(false)
@@ -535,6 +511,11 @@ const terminationDoc = ref<DocumentDto | null>(null)
 const activeTab = ref('overview')
 const employeeSearch = ref('')
 const showAttachHolding = ref(false)
+const companyActivitiesTabRef = ref<{ focusNote: () => void; focusTask: () => void } | null>(null)
+
+// ── DealCreateDrawer state ─────────────────────────────────────────────────────
+const dealCreateOpen = ref(false)
+const dealCreatePipelines = ref<import('@/entities/sales').PipelineDto[]>([])
 
 
 // Inline contact creation (from employee autocomplete)
@@ -560,6 +541,7 @@ const {
   loadAll,
   loadEmployees,
   loadHolding,
+  loadDeals,
   directoriesStore,
 } = useCompanyPageData()
 
@@ -633,13 +615,15 @@ function formatKopecks(kopecks: number | null | undefined): string {
 const companyKpiItems = computed((): KpiItem[] => {
   const ext = company.value as CompanyExtended | null
   const lastAt = ext?.last_activity_at ?? null
-  const kpi = (ext as (CompanyExtended & { kpi?: { open_count?: number; base_total?: number; employees_count?: number; documents_count?: number; won_count?: number; upsell_count?: number } | null }) | null)?.kpi ?? null
-  const openCount = kpi?.open_count ?? openDealsCount.value
+  const kpi = (ext as (CompanyExtended & { kpi?: { open_deals_count?: number; open_count?: number; base_total?: number; employees_count?: number; documents_count?: number; won_count?: number } | null }) | null)?.kpi ?? null
+  // backend sends open_deals_count; open_count kept as legacy fallback
+  const openCount = kpi?.open_deals_count ?? kpi?.open_count ?? openDealsCount.value
   const dealsSum = kpi?.base_total ?? null
   const employeesCount = kpi?.employees_count ?? employees.value.length
   const documentsCount = kpi?.documents_count ?? documents.value.length
   const wonCount = kpi?.won_count ?? 0
-  const upsellCount = kpi?.upsell_count ?? 0
+  // spec §2 company: 6 chips — Откр.сделки · Сумма · Выиграно · Сотрудники · Документы · Послед.активность
+  // NO upsell chip; pi-wallet for deals_sum (not pi-chart-line)
   return [
     {
       key: 'open_deals',
@@ -652,7 +636,7 @@ const companyKpiItems = computed((): KpiItem[] => {
     },
     {
       key: 'deals_sum',
-      icon: 'pi-chart-line',
+      icon: 'pi-wallet', // spec §2: pi-wallet (not pi-chart-line)
       label: 'company.kpi.dealsSum',
       value: formatKopecks(dealsSum),
       accent: 'brand',
@@ -663,13 +647,6 @@ const companyKpiItems = computed((): KpiItem[] => {
       label: 'company.kpi.wonDeals',
       value: wonCount,
       accent: 'success',
-    },
-    {
-      key: 'upsell_deals',
-      icon: 'pi-refresh',
-      label: 'company.kpi.upsellDeals',
-      value: upsellCount,
-      accent: 'info',
     },
     {
       key: 'employees',
@@ -713,91 +690,50 @@ const filteredEmployees = computed(() => {
 // ── Menu items ─────────────────────────────────────────────────────────────────
 
 const menuItems = computed((): MenuItem[] => {
-  const items: MenuItem[] = [
-    {
-      label: t('company.page.menu.createDeal'),
-      icon: 'pi pi-briefcase',
-      command: onCreateDeal,
-    },
-    {
-      label: t('company.page.menu.addTask'),
-      icon: 'pi pi-check-square',
-      // Switch to activity tab — EntityComposer default is task mode
-      command: () => { goToTab('activity') },
-    },
+  // spec §1: menu = 5 items only: Добавить заметку · Добавить связь · Скопировать ссылку · — · Удалить
+  return [
     {
       label: t('company.page.menu.addNote'),
       icon: 'pi pi-comment',
-      // Switch to activity tab — user picks note tab in composer
-      command: () => { goToTab('activity') },
+      command: () => {
+        goToTab('activity')
+        void nextTick(() => companyActivitiesTabRef.value?.focusNote())
+      },
     },
     {
-      // Call: use first phone channel from primary employee or show toast "no phone"
-      label: t('company.page.menu.call'),
-      icon: 'pi pi-phone',
-      command: onMenuCall,
+      label: t('crm.contact.menu.addRelation'),
+      icon: 'pi pi-link',
+      command: () => { goToTab('overview') },
     },
-    {
-      // Email: use first email channel from primary employee or show toast "no email"
-      label: t('company.page.menu.email'),
-      icon: 'pi pi-envelope',
-      command: onMenuEmail,
-    },
-    { separator: true },
     {
       label: t('company.page.menu.copyLink'),
-      icon: 'pi pi-link',
+      icon: 'pi pi-copy',
       command: () => {
         void navigator.clipboard.writeText(window.location.href)
         toast.add({ severity: 'success', summary: t('common.copied'), life: 2000 })
       },
     },
-    {
-      label: `${t('company.page.menu.export')} (${t('common.comingSoon', 'скоро')})`,
-      icon: 'pi pi-download',
-      disabled: true,
-    },
     { separator: true },
+    {
+      label: t('common.delete'),
+      icon: 'pi pi-trash',
+      command: onDeleteCompany,
+    },
   ]
-
-  // Client lifecycle actions
-  const clientStatus = company.value?.client_status
-  if (clientStatus === 'active') {
-    items.push({
-      label: t('crm.company.menu.disconnect'),
-      icon: 'pi pi-times-circle',
-      class: 'menu-item--danger',
-      command: () => { disconnectDialogOpen.value = true },
-    })
-  } else if (clientStatus === 'disconnected') {
-    items.push({
-      label: t('crm.company.menu.reconnect'),
-      icon: 'pi pi-refresh',
-      command: onReconnect,
-    })
-  }
-
-  items.push({ separator: true })
-  items.push({
-    label: t('common.delete'),
-    icon: 'pi pi-trash',
-    command: onDeleteCompany,
-  })
-
-  return items
 })
 
 // ── Tab navigation options (mobile Select) ─────────────────────────────────────
 
+// spec §3: 7 tabs in order — Обзор·Активность·Сотрудники·Сделки·Документы·Файлы·Холдинг
+// NO «Платежи» tab
 const tabOptions = computed(() => [
   { label: t('company.page.tabs.overview'), value: 'overview' },
   { label: t('crm.company.tabs.activity'), value: 'activity' },
   { label: t('crm.company.tabs.employees'), value: 'contacts' },
   { label: t('company.page.tabs.deals'), value: 'deals' },
   { label: t('company.page.tabs.documents'), value: 'documents' },
-  { label: t('crm.company.tabs.payments'), value: 'payments' },
-  { label: t('company.page.tabs.holding'), value: 'holding' },
   { label: t('crm.company.tabs.files'), value: 'files' },
+  { label: t('company.page.tabs.holding'), value: 'holding' },
 ])
 
 // ── Actions ────────────────────────────────────────────────────────────────────
@@ -806,10 +742,25 @@ function goToTab(tab: string) {
   activeTab.value = tab
 }
 
-function onCreateDeal() {
-  if (company.value) {
-    void router.push(`/deals?company_id=${company.value.id}&create=1`)
+async function onCreateDeal() {
+  if (!company.value) return
+  // spec §11: open DealCreateDrawer (right 500px) pre-filled with company
+  if (dealCreatePipelines.value.length === 0) {
+    try {
+      dealCreatePipelines.value = await salesApi.getPipelines()
+    } catch {
+      // fall back to redirect if pipelines fail to load
+      void router.push(`/deals?company_id=${company.value.id}&create=1`)
+      return
+    }
   }
+  dealCreateOpen.value = true
+}
+
+function onDealCreated() {
+  dealCreateOpen.value = false
+  void loadDeals()
+  toast.add({ severity: 'success', summary: t('sales.deals.form.createSuccess'), life: 3000 })
 }
 
 // ── Disconnect / Reconnect ────────────────────────────────────────────────────
@@ -820,31 +771,6 @@ function onDisconnectCreated(doc: DocumentDto) {
   // Build a generate-compatible payload from what was sent (drawer re-uses it for generate)
   // The doc carries the context implicitly; we just open the drawer
   terminationDrawerOpen.value = true
-}
-
-function onReconnect() {
-  if (!company.value) return
-  confirm.require({
-    message: t('crm.company.reconnect.confirm'),
-    header: t('crm.company.menu.reconnect'),
-    icon: 'pi pi-refresh',
-    acceptLabel: t('common.confirm', 'Подтвердить'),
-    rejectLabel: t('common.cancel'),
-    accept: async () => {
-      if (!company.value) return
-      try {
-        const updated = await companiesApi.reconnect(company.value.id)
-        Object.assign(company.value, updated)
-        toast.add({ severity: 'success', summary: t('crm.company.reconnect.success'), life: 3000 })
-      } catch (err) {
-        toast.add({
-          severity: 'error',
-          summary: getApiErrorMessage(err, t('errors.server_error')),
-          life: 4000,
-        })
-      }
-    },
-  })
 }
 
 async function onCompanyUpdatedFromTermination() {
@@ -1063,11 +989,55 @@ onMounted(async () => {
   margin: 0;
 }
 
-// ── Body ───────────────────────────────────────────────────────────────────────
+// ── Body — hidden scrollbar (spec §13 global rule) ────────────────────────────
 .company-page-v2__body {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+}
+
+// ── AddBtn (spec §4) — text-link with icon + label ────────────────────────────
+
+.company-page-v2__add-btn {
+  display: inline-flex;
+  align-items: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  gap: 5px; // spec §4: gap 5px
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--p-primary-color);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 4px 9px; // spec §4: padding 4px 9px
+  border-radius: $radius-sm;
+  white-space: nowrap;
+  transition: background var(--app-transition-fast);
+
+  &:hover {
+    background: $primary-100;
+  }
+
+  .app-dark & {
+    color: var(--p-primary-300);
+
+    &:hover {
+      background: var(--p-primary-900);
+    }
+  }
+
+  i {
+    font-size: $font-size-xs;
+  }
 }
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────

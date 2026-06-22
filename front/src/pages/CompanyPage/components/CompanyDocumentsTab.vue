@@ -16,7 +16,7 @@
     <!-- Loading -->
     <Skeleton v-if="loading" height="120px" />
 
-    <!-- Table -->
+    <!-- Table — spec §8 column order: № · Статус · Вид · Дата · actions -->
     <DataTable
       v-else
       :value="documents"
@@ -24,11 +24,7 @@
       row-hover
       @row-click="onRowClick"
     >
-      <Column :header="t('documents.list.filters.status')" style="width: 150px">
-        <template #body="{ data }">
-          <DocumentStatusTag :status="data.status" />
-        </template>
-      </Column>
+      <!-- № — first column per spec §8 -->
       <Column :header="'№'" style="width: 130px">
         <template #body="{ data }">
           <span :class="!data.number ? 'text-secondary' : 'fw-medium'">
@@ -36,10 +32,18 @@
           </span>
         </template>
       </Column>
+      <!-- Статус — second column per spec §8 -->
+      <Column :header="t('documents.list.filters.status')" style="width: 150px">
+        <template #body="{ data }">
+          <DocumentStatusTag :status="data.status" />
+        </template>
+      </Column>
+      <!-- Вид — third column per spec §8 -->
       <Column :header="t('documents.create.kind')" style="width: 110px">
         <template #body="{ data }">{{ t(`documents.kinds.${data.kind}`, data.kind) }}</template>
       </Column>
-      <Column :header="t('common.date', 'Дата')" style="width: 90px">
+      <!-- Дата — fourth column per spec §8, format ДД.ММ.ГГГГ -->
+      <Column :header="t('common.date', 'Дата')" style="width: 100px">
         <template #body="{ data }">{{ formatDate(data.created_at) }}</template>
       </Column>
       <Column style="width: 100px">
@@ -144,7 +148,16 @@ function onCreated(docId: number) {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
+  // spec §8: format ДД.ММ.ГГГГ
+  try {
+    return new Date(dateStr).toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  } catch {
+    return dateStr
+  }
 }
 
 onMounted(() => void load())

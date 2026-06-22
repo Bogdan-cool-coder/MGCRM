@@ -1,19 +1,22 @@
 <template>
+  <!--
+    standalone=true: renders tree content without InfoPanel wrapper (full Holding tab §10).
+    standalone=false (default): wraps in InfoPanel (Overview panel §4).
+  -->
   <InfoPanel
+    v-if="!standalone"
     :title="t('crm.company.sections.holding')"
     icon="pi-sitemap"
     panel-key="company-holding"
     :count="childrenCount || undefined"
     :default-collapsed="true"
   >
-    <!-- Loading -->
+    <!-- ── Tree content ── -->
     <div v-if="loading" class="holding-tree__skeleton">
       <Skeleton height="32px" class="mb-2" />
       <Skeleton height="32px" class="mb-2" />
       <Skeleton height="32px" />
     </div>
-
-    <!-- Empty: not part of any group -->
     <div v-else-if="!tree" class="holding-tree__empty">
       <i class="pi pi-sitemap holding-tree__empty-icon" />
       <p class="holding-tree__empty-text">{{ t('crm.company.holding.noHolding') }}</p>
@@ -26,10 +29,7 @@
         @click="$emit('attachParent')"
       />
     </div>
-
-    <!-- Tree view -->
     <div v-else class="holding-tree__tree">
-      <!-- Ancestors (chain up) -->
       <div
         v-for="(ancestor, idx) in tree.ancestors"
         :key="ancestor.id"
@@ -48,8 +48,6 @@
           class="holding-tree__role-tag"
         />
       </div>
-
-      <!-- Current company (you are here) -->
       <div
         class="holding-tree__node holding-tree__node--current"
         :style="{ paddingLeft: `${tree.ancestors.length * 16}px` }"
@@ -63,8 +61,6 @@
           class="holding-tree__you-tag"
         />
       </div>
-
-      <!-- Children (subsidiaries) -->
       <div
         v-for="child in tree.children"
         :key="child.id"
@@ -83,8 +79,6 @@
           class="holding-tree__role-tag"
         />
       </div>
-
-      <!-- Actions -->
       <div class="holding-tree__actions">
         <Button
           icon="pi pi-times"
@@ -97,6 +91,88 @@
       </div>
     </div>
   </InfoPanel>
+
+  <!-- standalone mode: raw tree content (full Holding tab §10) -->
+  <template v-else>
+    <div v-if="loading" class="holding-tree__skeleton">
+      <Skeleton height="32px" class="mb-2" />
+      <Skeleton height="32px" class="mb-2" />
+      <Skeleton height="32px" />
+    </div>
+    <div v-else-if="!tree" class="holding-tree__empty">
+      <i class="pi pi-sitemap holding-tree__empty-icon" />
+      <p class="holding-tree__empty-text">{{ t('crm.company.holding.noHolding') }}</p>
+      <Button
+        icon="pi pi-plus"
+        :label="t('crm.company.holding.addParent')"
+        size="small"
+        severity="secondary"
+        outlined
+        @click="$emit('attachParent')"
+      />
+    </div>
+    <div v-else class="holding-tree__tree holding-tree__tree--pad">
+      <div
+        v-for="(ancestor, idx) in tree.ancestors"
+        :key="ancestor.id"
+        class="holding-tree__node holding-tree__node--ancestor"
+        :style="{ paddingLeft: `${idx * 16}px` }"
+      >
+        <RouterLink :to="`/companies/${ancestor.id}`" class="holding-tree__node-link">
+          <i class="pi pi-building holding-tree__node-icon" />
+          <span class="holding-tree__node-name">{{ ancestor.name }}</span>
+        </RouterLink>
+        <Tag
+          v-if="ancestor.holding_role"
+          :value="holdingRoleLabel(ancestor.holding_role)"
+          severity="secondary"
+          size="small"
+          class="holding-tree__role-tag"
+        />
+      </div>
+      <div
+        class="holding-tree__node holding-tree__node--current"
+        :style="{ paddingLeft: `${tree.ancestors.length * 16}px` }"
+      >
+        <i class="pi pi-map-marker holding-tree__you-icon" />
+        <span class="holding-tree__you-name">{{ tree.company.name }}</span>
+        <Tag
+          :value="t('crm.company.holding.youAreHere')"
+          severity="info"
+          size="small"
+          class="holding-tree__you-tag"
+        />
+      </div>
+      <div
+        v-for="child in tree.children"
+        :key="child.id"
+        class="holding-tree__node holding-tree__node--child"
+        :style="{ paddingLeft: `${(tree.ancestors.length + 1) * 16}px` }"
+      >
+        <RouterLink :to="`/companies/${child.id}`" class="holding-tree__node-link">
+          <i class="pi pi-building holding-tree__node-icon" />
+          <span class="holding-tree__node-name">{{ child.name }}</span>
+        </RouterLink>
+        <Tag
+          v-if="child.holding_role"
+          :value="holdingRoleLabel(child.holding_role)"
+          severity="secondary"
+          size="small"
+          class="holding-tree__role-tag"
+        />
+      </div>
+      <div class="holding-tree__actions">
+        <Button
+          icon="pi pi-times"
+          :label="t('crm.company.holding.detach')"
+          size="small"
+          severity="secondary"
+          text
+          @click="$emit('detachParent')"
+        />
+      </div>
+    </div>
+  </template>
 </template>
 
 <script setup lang="ts">
@@ -112,6 +188,8 @@ import type { HoldingTreeDto, HoldingRole, HoldingCompanyNode } from '@/entities
 const props = defineProps<{
   tree: HoldingTreeDto | null
   loading: boolean
+  /** When true, renders tree content without InfoPanel wrapper (full Holding tab §10). */
+  standalone?: boolean
 }>()
 
 defineEmits<{
@@ -174,6 +252,11 @@ function holdingRoleLabel(role: HoldingRole | null): string {
 .holding-tree__tree {
   display: flex;
   flex-direction: column;
+
+  &--pad {
+    padding: $space-4;
+    max-width: 600px;
+  }
   gap: $space-1;
   padding: 0 0 $space-3;
 }

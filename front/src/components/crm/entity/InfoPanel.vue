@@ -16,13 +16,11 @@
 
       <span class="info-panel__title">{{ title }}</span>
 
-      <Badge
+      <!-- spec §4: count pill — raw span, NOT PrimeVue Badge -->
+      <span
         v-if="count !== null && count !== undefined"
-        :value="count"
-        severity="secondary"
-        size="small"
         class="info-panel__count"
-      />
+      >{{ count }}</span>
 
       <div class="info-panel__header-actions" @click.stop>
         <slot name="header-action" />
@@ -42,7 +40,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import Badge from 'primevue/badge'
 
 const props = withDefaults(
   defineProps<{
@@ -120,7 +117,8 @@ defineExpose({ collapse, expand, collapsed })
     background: var(--p-surface-50);
 
     .app-dark & {
-      background: var(--p-surface-800);
+      // dark surface-300 = #7e7f81 — distinct from title colour (surface-200 = #616263)
+      background: var(--p-surface-300);
     }
   }
 }
@@ -153,12 +151,26 @@ defineExpose({ collapse, expand, collapsed })
   color: $surface-700;
 
   .app-dark & {
-    color: var(--p-surface-200);
+    // surface-400 = #9b9c9e — sufficiently bright against dark surfaces (50/100/200/300)
+    color: var(--p-surface-400);
   }
 }
 
+// spec §4: count pill — raw span styled as lightweight chip (not PrimeVue Badge)
 .info-panel__count {
   flex-shrink: 0;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  color: $surface-500;
+  background: var(--p-surface-50);
+  border-radius: $radius-circle;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 1px 8px; // spec §4: pill padding 1px 8px
+
+  .app-dark & {
+    background: var(--p-surface-200);
+    color: var(--p-surface-400);
+  }
 }
 
 .info-panel__header-actions {

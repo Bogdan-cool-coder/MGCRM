@@ -198,7 +198,7 @@ function channelIcon(type: string): string {
 }
 
 .employees-tab__table {
-  border: 1px solid $surface-200;
+  border: 1px solid var(--p-surface-200);
   border-radius: $radius-md;
   overflow: hidden;
 }
@@ -255,7 +255,7 @@ function channelIcon(type: string): string {
 
   .app-dark & {
     background: var(--p-surface-200);
-    color: var(--p-surface-200);
+    color: var(--p-surface-800);
     border-color: var(--p-surface-600);
   }
 

@@ -29,21 +29,19 @@
   </InfoPanel>
 
   <!-- ── Requisites list (FE-A.4) ────────────────────────────────────────────── -->
+  <!-- spec §4: requisites panel icon = pi-id-card (not pi-building) -->
   <InfoPanel
     :title="t('crm.company.sections.requisites')"
-    icon="pi-building"
+    icon="pi-id-card"
     panel-key="company-requisites"
     :default-collapsed="false"
   >
     <template #header-action>
-      <Button
-        icon="pi pi-plus"
-        :label="t('crm.company.requisites.add')"
-        text
-        severity="secondary"
-        size="small"
-        @click="openCreate"
-      />
+      <!-- spec §4: AddBtn text-link style -->
+      <button type="button" class="requisites-panel__add-btn" @click="openCreate">
+        <i class="pi pi-plus" />
+        {{ t('crm.company.requisites.add') }}
+      </button>
     </template>
 
     <!-- Loading -->
@@ -327,5 +325,40 @@ onMounted(() => {
   font-size: $font-size-sm;
   color: $surface-500;
   margin: 0;
+}
+
+// spec §4: AddBtn text-link
+.requisites-panel__add-btn {
+  display: inline-flex;
+  align-items: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  gap: 5px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--p-primary-color);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 4px 9px;
+  border-radius: $radius-sm;
+  white-space: nowrap;
+  transition: background var(--app-transition-fast);
+
+  &:hover {
+    background: $primary-100;
+  }
+
+  .app-dark & {
+    color: var(--p-primary-300);
+
+    &:hover {
+      background: var(--p-primary-900);
+    }
+  }
+
+  i {
+    font-size: $font-size-xs;
+  }
 }
 </style>
