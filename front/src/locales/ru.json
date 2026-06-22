@@ -378,6 +378,7 @@
     "no": "Нет",
     "or": "или",
     "coming_soon": "Скоро",
+    "comingSoon": "Скоро",
     "expand": "Развернуть",
     "collapse": "Свернуть",
     "total": "Итого: {count}",

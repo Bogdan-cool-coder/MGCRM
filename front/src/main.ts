@@ -52,8 +52,10 @@ const themeStore = useThemeStore(pinia)
 if (themeStore.theme === 'dark') {
   document.documentElement.classList.add('app-dark')
 } else if (themeStore.theme === 'light' && layoutStore.isDarkMode) {
-  // Migrate: old persisted dark mode → themeStore
+  // One-time migration: old persisted dark mode → themeStore
   themeStore.setTheme('dark')
+  // Reset isDarkMode so this branch never fires again on subsequent boots
+  layoutStore.$patch({ isDarkMode: false })
 }
 
 const router = createAppRouter(pinia)
