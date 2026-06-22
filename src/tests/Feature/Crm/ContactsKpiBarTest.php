@@ -11,6 +11,7 @@ use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -462,5 +463,44 @@ class ContactsKpiBarTest extends TestCase
 
         $response = $this->getJson('/api/contacts')->assertOk();
         $this->assertCount(3, $response->json('data'));
+    }
+
+    // =========================================================================
+    // N5 graceful degradation — client_status column absent (AMO migration not applied)
+    // =========================================================================
+
+    /**
+     * When the AMO N5 migration (client_status column) has NOT been applied on the
+     * target environment, forCompanies() must return clients=0 instead of 500-ing.
+     *
+     * We simulate the "column absent" branch by partial-mocking Schema::hasColumn
+     * so that it returns false for 'client_status' while returning true for any other
+     * column check (preserving normal Schema behaviour for the test itself).
+     */
+    public function test_company_kpi_clients_returns_zero_when_client_status_column_absent(): void
+    {
+        $user = $this->managerActs();
+
+        // Create a company that *would* match client_status='active' if the column existed
+        Company::factory()->create([
+            'owner_user_id' => $user->id,
+            'client_status' => ClientStatus::Active,
+        ]);
+
+        // Simulate the column being absent on production
+        Schema::shouldReceive('hasColumn')
+            ->with('crm_companies', 'client_status')
+            ->once()
+            ->andReturn(false);
+
+        // All other Schema calls pass through to the real implementation
+        Schema::shouldReceive('hasColumn')
+            ->withAnyArgs()
+            ->andReturnUsing(fn (string $table, string $col): bool => \Illuminate\Support\Facades\Schema::getFacadeRoot()->hasColumn($table, $col));
+
+        $this->getJson('/api/contacts/kpi?entity=company')
+            ->assertOk()
+            ->assertJsonPath('data.clients', 0)
+            ->assertJsonPath('data.total', 1); // total still works — no guard needed there
     }
 }

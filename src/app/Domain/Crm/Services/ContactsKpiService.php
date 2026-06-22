@@ -12,6 +12,7 @@ use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * ContactsKpiService — aggregated list-level KPI counters for the Contacts section.
@@ -58,9 +59,15 @@ class ContactsKpiService
         $base = DB::table('crm_companies')->whereNull('deleted_at');
         $base = $this->applyCompanyScope($base, $user);
 
+        // client_status is an AMO N5 column (migration 2026_06_27_100001); it may not
+        // exist on production yet. Guard gracefully: return 0 instead of 500-ing.
+        $clientsCount = Schema::hasColumn('crm_companies', 'client_status')
+            ? (int) (clone $base)->where('client_status', ClientStatus::Active->value)->count()
+            : 0;
+
         return [
             'total' => (int) (clone $base)->count(),
-            'clients' => (int) (clone $base)->where('client_status', ClientStatus::Active->value)->count(),
+            'clients' => $clientsCount,
             'cat_l' => (int) (clone $base)->where('category_code', CategoryCode::L->value)->count(),
             'cat_m' => (int) (clone $base)->where('category_code', CategoryCode::M->value)->count(),
             'cat_s' => (int) (clone $base)->whereIn('category_code', [CategoryCode::S1->value, CategoryCode::S2->value])->count(),
