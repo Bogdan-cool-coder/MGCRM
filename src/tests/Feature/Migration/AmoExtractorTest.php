@@ -158,6 +158,78 @@ class AmoExtractorTest extends TestCase
         $this->assertCount(2, $this->readJsonl('leads'));
     }
 
+    public function test_lead_extractor_default_filters_by_pipeline_only(): void
+    {
+        Http::fake([
+            'macro.amocrm.ru/*' => Http::response([
+                '_embedded' => ['leads' => [['id' => 1]]],
+                '_links' => [],
+            ], 200),
+        ]);
+
+        (new LeadExtractor($this->client()))->run();
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $q);
+
+            // No --status → filter by pipeline only, no statuses array.
+            $pipelineOk = ($q['filter']['pipeline_id'] ?? null) === ['6149857', '10915373'];
+            $noStatuses = ! isset($q['filter']['statuses']);
+
+            return $pipelineOk && $noStatuses;
+        });
+    }
+
+    public function test_lead_extractor_status_filter_expands_across_both_pipelines(): void
+    {
+        Http::fake([
+            'macro.amocrm.ru/*' => Http::response([
+                '_embedded' => ['leads' => [['id' => 1]]],
+                '_links' => [],
+            ], 200),
+        ]);
+
+        (new LeadExtractor($this->client()))->withStatuses([142])->run();
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $q);
+
+            // --status=142 → filter[statuses] = one {pipeline,142} pair per funnel,
+            // pipeline_id pinned by the statuses array (no separate pipeline_id).
+            $statuses = $q['filter']['statuses'] ?? null;
+            $noPipelineFilter = ! isset($q['filter']['pipeline_id']);
+
+            return $noPipelineFilter && $statuses === [
+                ['pipeline_id' => '6149857', 'status_id' => '142'],
+                ['pipeline_id' => '10915373', 'status_id' => '142'],
+            ];
+        });
+    }
+
+    public function test_lead_extractor_status_filter_with_multiple_ids_is_a_cartesian_product(): void
+    {
+        Http::fake([
+            'macro.amocrm.ru/*' => Http::response([
+                '_embedded' => ['leads' => [['id' => 1]]],
+                '_links' => [],
+            ], 200),
+        ]);
+
+        (new LeadExtractor($this->client()))->withStatuses([142, 143])->run();
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $q);
+
+            // 2 pipelines × 2 statuses = 4 {pipeline,status} pairs (pipeline outer).
+            return ($q['filter']['statuses'] ?? null) === [
+                ['pipeline_id' => '6149857', 'status_id' => '142'],
+                ['pipeline_id' => '6149857', 'status_id' => '143'],
+                ['pipeline_id' => '10915373', 'status_id' => '142'],
+                ['pipeline_id' => '10915373', 'status_id' => '143'],
+            ];
+        });
+    }
+
     public function test_contact_extractor_reads_sidecar_and_batches(): void
     {
         // Seed the contacts sidecar (normally written by LeadExtractor).

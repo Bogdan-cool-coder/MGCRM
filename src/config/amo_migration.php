@@ -115,6 +115,7 @@ return [
         53169825 => ['pipeline_code' => 'macro_global', 'stage_code' => 'outbound'],
         53169829 => ['pipeline_code' => 'macro_global', 'stage_code' => 'inbound'],
         53233417 => ['pipeline_code' => 'macro_global', 'stage_code' => 'qualification'],
+        53233413 => ['pipeline_code' => 'macro_global', 'stage_code' => 'schedule'], // deleted MACRO Global stage → folds into 'schedule'
         53233425 => ['pipeline_code' => 'macro_global', 'stage_code' => 'schedule'],
         83123365 => ['pipeline_code' => 'macro_global', 'stage_code' => 'walking'],
         53233429 => ['pipeline_code' => 'macro_global', 'stage_code' => 'meeting'],

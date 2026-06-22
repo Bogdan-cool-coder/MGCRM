@@ -28,6 +28,9 @@ abstract class AbstractExtractor
 
     protected bool $resume = false;
 
+    /** @var list<int> amo status ids to restrict the lead pull to (empty = all). */
+    protected array $statuses = [];
+
     public function __construct(
         protected readonly AmoClient $client,
     ) {
@@ -62,6 +65,22 @@ abstract class AbstractExtractor
     public function withResume(bool $resume): static
     {
         $this->resume = $resume;
+
+        return $this;
+    }
+
+    /**
+     * Restrict the pull to specific AMO status ids (LeadExtractor only). An empty
+     * list keeps the default (all statuses). Non-positive ids are dropped.
+     *
+     * @param  list<int>  $statuses
+     */
+    public function withStatuses(array $statuses): static
+    {
+        $this->statuses = array_values(array_unique(array_filter(
+            array_map('intval', $statuses),
+            static fn (int $id): bool => $id > 0,
+        )));
 
         return $this;
     }

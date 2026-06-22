@@ -13,6 +13,13 @@ namespace App\Domain\Migration\Extractors;
  * across ALL statuses (including 142 won / 143 lost — full archive). Each lead
  * is written verbatim (raw AMO object) as one JSONL line.
  *
+ * When --status is given (withStatuses), the pull is narrowed to those statuses
+ * via AMO's filter[statuses] — an array of {pipeline_id, status_id} objects. We
+ * expand the requested status ids across BOTH source pipelines, e.g. --status=142
+ * yields filter[statuses][0]={6149857,142} + filter[statuses][1]={10915373,142},
+ * pulling only won deals from each funnel. (filter[pipeline_id] is dropped when
+ * statuses are set — the statuses array already pins the pipelines.)
+ *
  * Side effect: collects the unique contact_id / company_id referenced from each
  * lead's _embedded and persists them to contacts.ids.json / companies.ids.json
  * sidecars, which Contact/CompanyExtractor consume to fetch in id batches.
@@ -39,11 +46,19 @@ class LeadExtractor extends AbstractExtractor
 
         $writer = $this->makeWriter();
 
-        $pipelineIds = (array) config('amo_migration.api.pipeline_ids', []);
+        $pipelineIds = array_values((array) config('amo_migration.api.pipeline_ids', []));
         $startPage = $this->resume ? max(1, $checkpoint->page() + 1) : 1;
 
+        // No --status → filter only by pipeline (full archive, every status).
+        // --status given → expand each status across both pipelines into AMO's
+        // filter[statuses] = [{pipeline_id, status_id}, ...]; the statuses array
+        // already pins the pipelines, so filter[pipeline_id] is omitted.
+        $filter = $this->statuses === []
+            ? ['pipeline_id' => $pipelineIds]
+            : ['statuses' => $this->buildStatusFilter($pipelineIds, $this->statuses)];
+
         $query = [
-            'filter' => ['pipeline_id' => array_values($pipelineIds)],
+            'filter' => $filter,
             'with' => 'contacts,companies,catalog_elements',
             'limit' => 250,
             'page' => $startPage,
@@ -101,6 +116,32 @@ class LeadExtractor extends AbstractExtractor
         ));
 
         return $count;
+    }
+
+    /**
+     * Build AMO's filter[statuses] — the cartesian product of every source
+     * pipeline with every requested status id. Each element is an object with
+     * pipeline_id + status_id (both required), serialised by the HTTP client to
+     * filter[statuses][N][pipeline_id]=..&filter[statuses][N][status_id]=..
+     *
+     * @param  list<int>  $pipelineIds
+     * @param  list<int>  $statuses
+     * @return list<array{pipeline_id: int, status_id: int}>
+     */
+    private function buildStatusFilter(array $pipelineIds, array $statuses): array
+    {
+        $pairs = [];
+
+        foreach ($pipelineIds as $pipelineId) {
+            foreach ($statuses as $statusId) {
+                $pairs[] = [
+                    'pipeline_id' => (int) $pipelineId,
+                    'status_id' => (int) $statusId,
+                ];
+            }
+        }
+
+        return $pairs;
     }
 
     /**

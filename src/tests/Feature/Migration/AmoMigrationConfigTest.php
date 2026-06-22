@@ -44,9 +44,10 @@ class AmoMigrationConfigTest extends TestCase
     {
         $statusMap = config('amo_migration.status_map');
 
-        // 12 non-terminal stages of MACRO Global (6149857).
+        // 13 non-terminal stages of MACRO Global (6149857) — incl. the deleted
+        // stage 53233413 that folds into 'schedule'.
         $macroGlobal = [
-            53169821, 55884061, 53169825, 53169829, 53233417, 53233425,
+            53169821, 55884061, 53169825, 53169829, 53233417, 53233413, 53233425,
             83123365, 53233429, 53233421, 53169833, 83123369, 53233433,
         ];
         // 11 non-terminal stages of MACRO AI Global (10915373).
@@ -64,8 +65,18 @@ class AmoMigrationConfigTest extends TestCase
             $this->assertNotNull($statusMap[$id]['stage_code']);
         }
 
-        // 23 non-terminal + 2 shared terminals = 25 keys.
-        $this->assertCount(25, $statusMap);
+        // 24 non-terminal (incl. deleted MACRO Global 53233413) + 2 shared
+        // terminals = 26 keys.
+        $this->assertCount(26, $statusMap);
+    }
+
+    public function test_deleted_macro_global_stage_53233413_maps_to_schedule(): void
+    {
+        $statusMap = config('amo_migration.status_map');
+
+        $this->assertArrayHasKey(53233413, $statusMap);
+        $this->assertSame('macro_global', $statusMap[53233413]['pipeline_code']);
+        $this->assertSame('schedule', $statusMap[53233413]['stage_code']);
     }
 
     public function test_pipeline_codes_in_status_map_resolve_to_a_configured_pipeline(): void

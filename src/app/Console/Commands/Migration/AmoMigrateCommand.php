@@ -37,6 +37,8 @@ use Throwable;
  *
  * Flags:
  *   --only=leads,contacts   (extract) run a subset of extractors, in order
+ *   --status=142            (extract) restrict the lead pull to AMO status ids
+ *                           (CSV; 142 = won), expanded across both pipelines
  *   --limit=50              cap records (smoke / sample runs)
  *   --resume                (extract) reuse checkpoints + append
  *   --dry-run               (load) transform + count without writing
@@ -50,6 +52,7 @@ class AmoMigrateCommand extends Command
     protected $signature = 'amo:migrate
         {phase=extract : Migration phase (extract|transform|load|verify)}
         {--only= : CSV subset of extractors (leads,contacts,companies,tasks,events,notes)}
+        {--status= : (extract) CSV of AMO status ids to restrict the lead pull to (e.g. 142 = won)}
         {--limit= : Cap records (smoke/sample runs)}
         {--resume : (extract) Reuse checkpoints and append instead of truncating}
         {--dry-run : (load) Transform + count without writing}';
@@ -89,11 +92,13 @@ class AmoMigrateCommand extends Command
 
         $limit = $this->option('limit') !== null ? (int) $this->option('limit') : null;
         $resume = (bool) $this->option('resume');
+        $statuses = $this->resolveStatuses();
         $selected = $this->resolveSelection();
 
         $this->info(sprintf(
-            'AMO extract: %s%s%s',
+            'AMO extract: %s%s%s%s',
             implode(', ', $selected),
+            $statuses !== [] ? ' (status='.implode(',', $statuses).')' : '',
             $limit !== null ? " (limit={$limit})" : '',
             $resume ? ' (resume)' : '',
         ));
@@ -106,7 +111,8 @@ class AmoMigrateCommand extends Command
             $extractor = $extractors[$name];
             $extractor->withProgress(fn (string $msg) => $this->line('  '.$msg))
                 ->withLimit($limit)
-                ->withResume($resume);
+                ->withResume($resume)
+                ->withStatuses($statuses);
 
             $this->line("→ {$name}");
 
@@ -150,6 +156,29 @@ class AmoMigrateCommand extends Command
 
         // Keep canonical order regardless of how --only was ordered.
         return array_values(array_filter(self::ORDER, static fn (string $n): bool => in_array($n, $requested, true)));
+    }
+
+    /**
+     * Parse --status (CSV of AMO status ids) into a deduped list of positive
+     * ints. Empty / absent → [] (full archive, every status). Applied to the
+     * lead pull only; other extractors ignore it.
+     *
+     * @return list<int>
+     */
+    private function resolveStatuses(): array
+    {
+        $raw = $this->option('status');
+
+        if ($raw === null || trim((string) $raw) === '') {
+            return [];
+        }
+
+        $ids = array_map('trim', explode(',', (string) $raw));
+
+        return array_values(array_unique(array_filter(
+            array_map('intval', $ids),
+            static fn (int $id): bool => $id > 0,
+        )));
     }
 
     /**
