@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Crm\Services;
 
+use App\Domain\Activity\Enums\ActivityStatus;
+use App\Domain\Activity\Enums\ActivityTargetType;
+use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
@@ -30,6 +33,19 @@ class ContactService
      */
     public function list(array $filters, int $perPage = 25): LengthAwarePaginator
     {
+        // Resolve owner_ids[]: canonical multi-owner filter.
+        // Also accept legacy `owner_id` (scalar) as an alias.
+        $ownerIds = $this->resolveIds($filters, 'owner_ids', 'owner_id');
+
+        // Resolve author_ids[]: filter by the creating user (created_by_id).
+        $authorIds = $this->resolveIds($filters, 'author_ids');
+
+        // sources[]: multi-source filter; legacy scalar `source` is an alias.
+        $sources = $this->resolveStrings($filters, 'sources', 'source');
+
+        // tags[]: any-match — contact must have at least one of the supplied tags.
+        $tags = $this->resolveStrings($filters, 'tags');
+
         $query = Contact::query()
             ->with(['owner', 'companyLinks.company'])
             ->when(isset($filters['search']), function (Builder $q) use ($filters): void {
@@ -43,14 +59,20 @@ class ContactService
             ->when(isset($filters['status']), function (Builder $q) use ($filters): void {
                 $q->where('status', $filters['status']);
             })
-            ->when(isset($filters['source']), function (Builder $q) use ($filters): void {
-                $q->where('source', $filters['source']);
+            // Multi-source (sources[] / scalar source alias).
+            ->when($sources !== [], function (Builder $q) use ($sources): void {
+                $q->whereIn('source', $sources);
             })
             ->when(isset($filters['acquisition_channel_id']), function (Builder $q) use ($filters): void {
                 $q->where('acquisition_channel_id', $filters['acquisition_channel_id']);
             })
-            ->when(isset($filters['owner_id']), function (Builder $q) use ($filters): void {
-                $q->where('owner_id', $filters['owner_id']);
+            // Multi-owner (owner_ids[] / scalar owner_id alias).
+            ->when($ownerIds !== [], function (Builder $q) use ($ownerIds): void {
+                $q->whereIn('owner_id', $ownerIds);
+            })
+            // Author / creator filter.
+            ->when($authorIds !== [], function (Builder $q) use ($authorIds): void {
+                $q->whereIn('created_by_id', $authorIds);
             })
             ->when(isset($filters['company_id']), function (Builder $q) use ($filters): void {
                 $q->whereHas('companyLinks', function (Builder $inner) use ($filters): void {
@@ -58,19 +80,25 @@ class ContactService
                 });
             })
             ->when(isset($filters['position']), function (Builder $q) use ($filters): void {
-                // Filter by job position (stored as a free-text string on crm_contacts.position).
                 // Partial match so the UI can send a ContactPosition label or free text.
                 $q->where('position', 'like', '%'.$filters['position'].'%');
             })
+            // Tags: JSON-stored array, any-match via LIKE (portable across PG+SQLite).
+            // Only % needs escaping (% in a tag value). Underscore is NOT escaped
+            // because no ESCAPE clause is used and \_ would be a literal backslash+_.
+            ->when($tags !== [], function (Builder $q) use ($tags): void {
+                $q->where(function (Builder $inner) use ($tags): void {
+                    foreach ($tags as $tag) {
+                        $inner->orWhere('tags', 'like', '%'.str_replace('%', '\%', (string) $tag).'%');
+                    }
+                });
+            })
             ->when(isset($filters['engagement_tier']), function (Builder $q) use ($filters): void {
-                // Normalise engagement tier filter to a date range comparison in PHP
-                // (portable across PG and SQLite — no DB::raw with NOW()).
                 [$from, $to] = $this->engagementTierDateRange(
                     EngagementTier::from((string) $filters['engagement_tier']),
                     'contact',
                 );
                 if ($from === null && $to === null) {
-                    // Cold: null OR older than cold_days
                     $q->where(function (Builder $inner): void {
                         $coldCutoff = now()->subDays((int) config('crm.engagement.contact.cold_days', 45));
                         $inner->whereNull('last_activity_at')
@@ -81,6 +109,74 @@ class ContactService
                 } elseif ($from !== null) {
                     $q->where('last_activity_at', '>=', $from);
                 }
+            })
+            // Date ranges: created_at window.
+            ->when(isset($filters['created_from']), function (Builder $q) use ($filters): void {
+                $q->where('created_at', '>=', Carbon::parse((string) $filters['created_from'])->startOfDay());
+            })
+            ->when(isset($filters['created_to']), function (Builder $q) use ($filters): void {
+                $q->where('created_at', '<=', Carbon::parse((string) $filters['created_to'])->endOfDay());
+            })
+            // Date ranges: last_activity_at (last touch) window.
+            ->when(isset($filters['last_touch_from']), function (Builder $q) use ($filters): void {
+                $q->where('last_activity_at', '>=', Carbon::parse((string) $filters['last_touch_from'])->startOfDay());
+            })
+            ->when(isset($filters['last_touch_to']), function (Builder $q) use ($filters): void {
+                $q->where('last_activity_at', '<=', Carbon::parse((string) $filters['last_touch_to'])->endOfDay());
+            })
+            // open_deals range: count deals via deal_contacts JOIN.
+            // Uses a subquery count for portability (no HAVING on agg in SQLite without subquery).
+            ->when(isset($filters['open_deals_min']) || isset($filters['open_deals_max']), function (Builder $q) use ($filters): void {
+                $sub = DB::table('deal_contacts')
+                    ->join('deals', 'deals.id', '=', 'deal_contacts.deal_id')
+                    ->join('pipeline_stages', 'pipeline_stages.id', '=', 'deals.stage_id')
+                    ->whereColumn('deal_contacts.contact_id', 'crm_contacts.id')
+                    ->whereNull('deals.deleted_at')
+                    ->where('pipeline_stages.is_won', false)
+                    ->where('pipeline_stages.is_lost', false)
+                    ->selectRaw('COUNT(*)');
+
+                if (isset($filters['open_deals_min'])) {
+                    $q->whereRaw('('.$sub->toSql().') >= ?', [...$sub->getBindings(), (int) $filters['open_deals_min']]);
+                }
+                if (isset($filters['open_deals_max'])) {
+                    $q->whereRaw('('.$sub->toSql().') <= ?', [...$sub->getBindings(), (int) $filters['open_deals_max']]);
+                }
+            })
+            // Presets -----------------------------------------------------------
+            // only_mine: contacts where the current auth user is the owner.
+            ->when(! empty($filters['only_mine']) && isset($filters['_auth_user_id']), function (Builder $q) use ($filters): void {
+                $q->where('owner_id', $filters['_auth_user_id']);
+            })
+            // only_active: contacts that had activity in the last warm_days window
+            // (same logic as engagement_tier=fresh, without overriding engagement_tier).
+            ->when(! empty($filters['only_active']), function (Builder $q): void {
+                $warmDays = (int) config('crm.engagement.contact.warm_days', 14);
+                $q->where('last_activity_at', '>=', now()->subDays($warmDays));
+            })
+            // only_with_deals: contact has at least one deal (any status).
+            ->when(! empty($filters['only_with_deals']), function (Builder $q): void {
+                $q->whereExists(function ($inner): void {
+                    $inner->from('deal_contacts')
+                        ->join('deals', 'deals.id', '=', 'deal_contacts.deal_id')
+                        ->whereColumn('deal_contacts.contact_id', 'crm_contacts.id')
+                        ->whereNull('deals.deleted_at');
+                });
+            })
+            // only_no_task: contact has NO open task-like activity.
+            ->when(! empty($filters['only_no_task']), function (Builder $q): void {
+                $taskKinds = ActivityType::taskLikeValues();
+                $targetType = ActivityTargetType::Contact->value;
+                $doneStatus = ActivityStatus::Done->value;
+
+                $q->whereNotExists(function ($inner) use ($taskKinds, $targetType, $doneStatus): void {
+                    $inner->from('activities')
+                        ->whereColumn('activities.target_id', 'crm_contacts.id')
+                        ->where('activities.target_type', $targetType)
+                        ->whereIn('activities.kind', $taskKinds)
+                        ->where('activities.is_closed', false)
+                        ->where('activities.status', '!=', $doneStatus);
+                });
             })
             ->when(isset($filters['sort']) && $filters['sort'] === 'last_activity_at', function (Builder $q) use ($filters): void {
                 $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
@@ -136,6 +232,62 @@ class ContactService
         DB::transaction(function () use ($contact): void {
             $contact->delete();
         });
+    }
+
+    /**
+     * Resolve a multi-value filter into a flat array of integer IDs.
+     * Accepts an array key (e.g. `owner_ids`) and an optional scalar alias
+     * (`owner_id`). Empty / invalid values are silently ignored.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<int>
+     */
+    private function resolveIds(array $filters, string $key, ?string $alias = null): array
+    {
+        $raw = $filters[$key] ?? ($alias !== null ? $filters[$alias] ?? null : null);
+
+        if ($raw === null || $raw === '' || $raw === []) {
+            return [];
+        }
+
+        $list = is_array($raw) ? $raw : [$raw];
+
+        $ids = [];
+        foreach ($list as $v) {
+            if (is_numeric($v) && (int) $v > 0) {
+                $ids[] = (int) $v;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Resolve a multi-value string filter.
+     * Accepts an array key and an optional scalar alias. Non-string / empty values ignored.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<string>
+     */
+    private function resolveStrings(array $filters, string $key, ?string $alias = null): array
+    {
+        $raw = $filters[$key] ?? ($alias !== null ? $filters[$alias] ?? null : null);
+
+        if ($raw === null || $raw === '' || $raw === []) {
+            return [];
+        }
+
+        $list = is_array($raw) ? $raw : [$raw];
+
+        $strings = [];
+        foreach ($list as $v) {
+            $s = trim((string) $v);
+            if ($s !== '') {
+                $strings[] = $s;
+            }
+        }
+
+        return array_values(array_unique($strings));
     }
 
     /**

@@ -23,8 +23,10 @@ use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\DealStageHistory;
 use App\Domain\Sales\Models\Pipeline;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -158,24 +160,44 @@ class DealService
      */
     public function list(array $filters, VisibilityScope $scope, User $user, int $perPage = 25): LengthAwarePaginator
     {
-        return $this->scopedQuery($scope, $user)
-            ->with(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name'])
-            ->when(isset($filters['pipeline_id']), fn (Builder $q) => $q->where('pipeline_id', $filters['pipeline_id']))
-            ->when(isset($filters['stage_id']), fn (Builder $q) => $q->where('stage_id', $filters['stage_id']))
-            ->when(isset($filters['owner_id']), fn (Builder $q) => $q->where('owner_user_id', $filters['owner_id']))
-            ->when(isset($filters['q']), function (Builder $q) use ($filters): void {
-                $q->where('title', 'like', '%'.$filters['q'].'%');
-            })
-            // Archived deals are hidden by default; ?archived=true returns ONLY
-            // archived ones. Soft-deleted deals are excluded automatically by the
-            // SoftDeletes global scope (no deleted_at filter needed here).
-            ->when(
-                $filters['archived'] ?? false,
-                fn (Builder $q) => $q->whereNotNull('archived_at'),
-                fn (Builder $q) => $q->whereNull('archived_at'),
-            )
+        // The company select carries country_code / category_code so the list
+        // DealResource can render the «Страна» (B1) and «Категории L/M/S» (B3)
+        // columns straight off the loaded relation — no per-row query (N+1).
+        $query = $this->scopedQuery($scope, $user)
+            ->with(['pipeline:id,name,kind', 'stage', 'company:id,name,country_code,category_code', 'owner:id,full_name']);
+
+        $this->applyFilters($query, $filters, $user);
+
+        $deals = $query
             ->orderByDesc('created_at')
             ->paginate($perPage);
+
+        $this->stampLastContact($deals->getCollection());
+
+        return $deals;
+    }
+
+    /**
+     * Stamp `last_contact_at_payload` onto a page of deals for the list
+     * «Посл. контакт» column (B2). The dates are resolved in ONE batched query
+     * across the whole page via ActivityService — mirroring how board() batches
+     * next_task / primary_product — so the list view never N+1s the activities
+     * table. Deals with no completed contact are stamped null.
+     *
+     * @param  Collection<int, Deal>  $deals
+     */
+    private function stampLastContact(Collection $deals): void
+    {
+        if ($deals->isEmpty()) {
+            return;
+        }
+
+        $dealIds = $deals->map(static fn (Deal $deal): int => (int) $deal->id)->all();
+        $lastContact = $this->activityService->lastContactDatesForDeals($dealIds);
+
+        foreach ($deals as $deal) {
+            $deal->setAttribute('last_contact_at_payload', $lastContact[(int) $deal->id] ?? null);
+        }
     }
 
     /**
@@ -189,18 +211,189 @@ class DealService
      */
     public function filteredQuery(array $filters, VisibilityScope $scope, User $user): Builder
     {
-        return $this->scopedQuery($scope, $user)
-            ->with(['pipeline:id,name,kind', 'stage:id,name', 'company:id,name', 'owner:id,full_name'])
+        $query = $this->scopedQuery($scope, $user)
+            ->with(['pipeline:id,name,kind', 'stage:id,name', 'company:id,name', 'owner:id,full_name']);
+
+        $this->applyFilters($query, $filters, $user);
+
+        return $query->orderByDesc('created_at');
+    }
+
+    /**
+     * Apply the full deal-list / board filter set to a base Deal query. Every
+     * dimension is guarded by when() so absent / empty / invalid inputs are a
+     * silent no-op (the listing is never narrowed by a filter the user did not
+     * set). All values flow through the query builder's bindings — no string
+     * interpolation, so the filters are injection-safe. The visibility scope is
+     * applied by the caller (scopedQuery) BEFORE this, so $user here is only the
+     * "current user" the only_mine / owner presets resolve against.
+     *
+     * Archived handling is part of the set: archived deals are hidden by default
+     * and ?archived=true returns ONLY archived ones (soft-deleted rows are
+     * already excluded by the SoftDeletes global scope).
+     *
+     * @param  Builder<Deal>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyFilters(Builder $query, array $filters, User $user): void
+    {
+        $query
+            // ----- pipeline / stage placement -----
             ->when(isset($filters['pipeline_id']), fn (Builder $q) => $q->where('pipeline_id', $filters['pipeline_id']))
             ->when(isset($filters['stage_id']), fn (Builder $q) => $q->where('stage_id', $filters['stage_id']))
-            ->when(isset($filters['owner_id']), fn (Builder $q) => $q->where('owner_user_id', $filters['owner_id']))
-            ->when(isset($filters['q']), fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'))
             ->when(
-                $filters['archived'] ?? false,
+                $this->nonEmptyList($filters['stage_ids'] ?? null),
+                fn (Builder $q) => $q->whereIn('stage_id', $filters['stage_ids']),
+            )
+
+            // ----- ownership (single owner_id kept as an alias of owner_ids) -----
+            ->when(isset($filters['owner_id']), fn (Builder $q) => $q->where('owner_user_id', $filters['owner_id']))
+            ->when(
+                $this->nonEmptyList($filters['owner_ids'] ?? null),
+                fn (Builder $q) => $q->whereIn('owner_user_id', $filters['owner_ids']),
+            )
+            // only_mine preset: restrict to the current user's own deals (applied
+            // on top of any owner filter — an AND, not an override).
+            ->when(
+                $this->isTruthy($filters['only_mine'] ?? null),
+                fn (Builder $q) => $q->where('owner_user_id', $user->id),
+            )
+
+            // ----- title search -----
+            ->when(
+                $this->nonEmptyString($filters['q'] ?? null),
+                fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'),
+            )
+
+            // ----- status (open|won|lost) → stage flags -----
+            ->when(
+                $this->nonEmptyString($filters['status'] ?? null),
+                fn (Builder $q) => $this->applyStatusFilter($q, (string) $filters['status']),
+            )
+
+            // ----- tags (JSON array — whereJsonContains is SQLite+PG portable) -----
+            ->when(
+                $this->nonEmptyList($filters['tags'] ?? null),
+                function (Builder $q) use ($filters): void {
+                    $q->where(function (Builder $sub) use ($filters): void {
+                        // Match any of the requested tags (OR semantics).
+                        foreach ($filters['tags'] as $tag) {
+                            $sub->orWhereJsonContains('tags', $tag);
+                        }
+                    });
+                },
+            )
+
+            // ----- product_q: name search over the deal's line items -----
+            ->when(
+                $this->nonEmptyString($filters['product_q'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'products.product',
+                    fn (Builder $p) => $p->where('catalog_products.name', 'like', '%'.$filters['product_q'].'%'),
+                ),
+            )
+
+            // ----- company geography -----
+            ->when(
+                $this->nonEmptyString($filters['country'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'company',
+                    fn (Builder $c) => $c->where('country_code', $filters['country']),
+                ),
+            )
+            ->when(
+                $this->nonEmptyString($filters['city'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'company',
+                    fn (Builder $c) => $c->where('city', 'like', '%'.$filters['city'].'%'),
+                ),
+            )
+
+            // ----- budget range (kopecks, on the denormalised Deal.amount) -----
+            ->when(
+                isset($filters['budget_from']),
+                fn (Builder $q) => $q->where('amount', '>=', (int) $filters['budget_from']),
+            )
+            ->when(
+                isset($filters['budget_to']),
+                fn (Builder $q) => $q->where('amount', '<=', (int) $filters['budget_to']),
+            )
+
+            // ----- created_at range (inclusive day boundaries) -----
+            ->when(
+                $this->nonEmptyString($filters['created_from'] ?? null),
+                fn (Builder $q) => $q->where('created_at', '>=', Carbon::parse((string) $filters['created_from'])->startOfDay()),
+            )
+            ->when(
+                $this->nonEmptyString($filters['created_to'] ?? null),
+                fn (Builder $q) => $q->where('created_at', '<=', Carbon::parse((string) $filters['created_to'])->endOfDay()),
+            )
+
+            // ----- task presets (open task-like activity on the deal) -----
+            ->when(
+                $this->isTruthy($filters['only_no_task'] ?? null),
+                fn (Builder $q) => $q->whereDoesntHave('nextTask'),
+            )
+            ->when(
+                $this->isTruthy($filters['only_overdue'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'nextTask',
+                    fn (Builder $t) => $t->where('due_at', '<', now()),
+                ),
+            )
+
+            // ----- archived (hidden by default) -----
+            ->when(
+                $this->isTruthy($filters['archived'] ?? null),
                 fn (Builder $q) => $q->whereNotNull('archived_at'),
                 fn (Builder $q) => $q->whereNull('archived_at'),
-            )
-            ->orderByDesc('created_at');
+            );
+    }
+
+    /**
+     * status (open|won|lost) → stage flags. The deal has no status column —
+     * "won"/"lost" are derived from the current stage's is_won/is_lost booleans,
+     * and "open" is neither (mirrors Deal::status()). Implemented via whereHas on
+     * the stage relation so it composes with the other filters and stays
+     * scope-safe. An unknown status string is ignored (no rows are excluded by a
+     * value the FormRequest would have rejected anyway — defence in depth).
+     *
+     * @param  Builder<Deal>  $query
+     */
+    private function applyStatusFilter(Builder $query, string $status): void
+    {
+        match ($status) {
+            'won' => $query->whereHas('stage', fn (Builder $s) => $s->where('is_won', true)),
+            'lost' => $query->whereHas('stage', fn (Builder $s) => $s->where('is_lost', true)),
+            'open' => $query->whereHas('stage', fn (Builder $s) => $s->where('is_won', false)->where('is_lost', false)),
+            default => null,
+        };
+    }
+
+    /**
+     * True when $value is a non-empty array (the multi-value filters). An empty
+     * array (e.g. owner_ids[]= with no items) is treated as "no filter" so it
+     * never produces a whereIn([]) that would silently return zero rows.
+     */
+    private function nonEmptyList(mixed $value): bool
+    {
+        return is_array($value) && $value !== [];
+    }
+
+    /** True when $value is a non-empty, non-whitespace string. */
+    private function nonEmptyString(mixed $value): bool
+    {
+        return is_string($value) && trim($value) !== '';
+    }
+
+    /**
+     * Truthy coercion for the boolean preset flags. The FormRequest's `boolean`
+     * rule normalises "1"/"true"/"on"/"yes" to true, but the service is also
+     * called directly (tests / cross-domain) with raw values, so coerce here too.
+     */
+    private function isTruthy(mixed $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -240,12 +433,30 @@ class DealService
      * `days_in_stage`. The next-task and primary-product lookups are BATCHED
      * across the whole board (two queries total, not per-card) to avoid N+1.
      *
+     * The same cross-cutting filter set as list() is honoured here so the board
+     * narrows in lockstep with the list view. pipeline_id and the stage filters
+     * are NOT re-applied from $filters — the board's pipeline is fixed by the
+     * argument and the stage is fixed per column by the loop (applying a
+     * stage_id/stage_ids filter would just blank out other columns, which the
+     * funnel does by hiding them in the UI, not by emptying them server-side).
+     *
+     * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    public function board(int $pipelineId, VisibilityScope $scope, User $user): array
+    public function board(int $pipelineId, VisibilityScope $scope, User $user, array $filters = []): array
     {
         $pipeline = Pipeline::query()->with('stages')->findOrFail($pipelineId);
         $baseCurrency = config('crm.currencies.default', 'RUB');
+
+        // Strip pipeline/stage placement keys: the board owns those (fixed
+        // pipeline arg + per-column stage loop). The rest of the filter set
+        // (owner, status, tags, geography, budget, dates, presets, …) applies.
+        $columnFilters = $filters;
+        unset(
+            $columnFilters['pipeline_id'],
+            $columnFilters['stage_id'],
+            $columnFilters['stage_ids'],
+        );
 
         $multiCurrencyWarning = false;
 
@@ -256,6 +467,8 @@ class DealService
             $base = $this->scopedQuery($scope, $user)
                 ->where('pipeline_id', $pipelineId)
                 ->where('stage_id', $stage->id);
+
+            $this->applyFilters($base, $columnFilters, $user);
 
             $total = (clone $base)->count();
 

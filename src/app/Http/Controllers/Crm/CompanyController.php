@@ -37,7 +37,11 @@ class CompanyController extends Controller
     {
         $this->authorize('viewAny', Company::class);
 
-        $companies = $this->service->list($request->query(), (int) $request->query('per_page', 25));
+        $filters = $request->query();
+        // Inject auth user ID so service can apply `only_mine` without touching Auth.
+        $filters['_auth_user_id'] = $request->user()?->id;
+
+        $companies = $this->service->list($filters, (int) $request->query('per_page', 25));
 
         return CompanyResource::collection($companies);
     }

@@ -34,7 +34,12 @@ class ContactController extends Controller
     {
         $this->authorize('viewAny', Contact::class);
 
-        $contacts = $this->service->list($request->query(), (int) $request->query('per_page', 25));
+        $filters = $request->query();
+        // Inject the auth user ID so the service can apply `only_mine` without
+        // knowing about HTTP/Auth; the service never reads Auth directly.
+        $filters['_auth_user_id'] = $request->user()?->id;
+
+        $contacts = $this->service->list($filters, (int) $request->query('per_page', 25));
 
         return ContactResource::collection($contacts);
     }
