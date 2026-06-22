@@ -281,4 +281,149 @@ class AmoLoadTest extends TestCase
         $this->assertSame('Сергей Физлицов (физлицо)', $company->name);
         $this->assertSame(1, $result['stats']['companies_synthetic']);
     }
+
+    // ---- Hardening: never crash on unmapped / malformed AMO data ----
+
+    /**
+     * The production crash: a status-change event whose TARGET AMO status has no
+     * status_map entry → to_stage_id resolves to null. The history row must be
+     * SKIPPED (not a NOT NULL violation), the deal + its other rows untouched, and
+     * the unmapped status tallied for the report.
+     */
+    public function test_unmapped_target_status_skips_history_row_not_crashes(): void
+    {
+        $this->writeStaging([
+            'leads' => [[
+                'id' => 1100, 'name' => 'Deal with bad event', 'price' => 1000,
+                'status_id' => 53233417, // qualification — deal itself is fine
+                'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 5100, 'is_main' => true]], 'contacts' => []],
+            ]],
+            'companies' => [['id' => 5100, 'name' => 'ООО Краевой случай']],
+            'events' => [
+                ['id' => 'g1', 'type' => 'lead_added', '_lead_id' => 1100, 'created_at' => 1577836800, 'created_by' => 2435437],
+                [
+                    // value_after points at an UNMAPPED status id (999999).
+                    'id' => 'bad1', 'type' => 'lead_status_changed', '_lead_id' => 1100,
+                    'created_at' => 1577923200, 'created_by' => 2435437,
+                    'value_before' => [['lead_status' => ['id' => 53233417, 'pipeline_id' => 6149857]]],
+                    'value_after' => [['lead_status' => ['id' => 999999, 'pipeline_id' => 6149857]]],
+                ],
+            ],
+        ]);
+
+        $result = $this->loader()->load();
+
+        // The deal still loaded.
+        $deal = Deal::query()->where('title', 'Deal with bad event')->first();
+        $this->assertNotNull($deal);
+
+        // Only the GENESIS history row survives — the bad stage-change is skipped.
+        $this->assertSame(1, DealStageHistory::query()->where('deal_id', $deal->id)->count());
+        $this->assertSame(0, DealStageHistory::query()->whereNull('to_stage_id')->count());
+
+        // Skip was tallied + reported, the run did not abort.
+        $this->assertSame(1, $result['stats']['history_skipped']);
+        $this->assertSame(1, $result['stats']['skipped_history:unmapped_target_status']);
+        $this->assertSame(1, $result['unmapped']['status']['999999']);
+        $this->assertSame(0, $result['stats']['failed_deals']);
+    }
+
+    /**
+     * A deal whose own status is unmapped is gated (whole deal skipped, logged),
+     * but the run continues and the NEXT, good deal still loads. Proves one bad
+     * deal never aborts the batch.
+     */
+    public function test_unmapped_deal_status_is_skipped_and_run_continues(): void
+    {
+        $this->writeStaging([
+            'leads' => [
+                [
+                    'id' => 1200, 'name' => 'Bad deal', 'price' => 10,
+                    'status_id' => 999999, // no status_map entry → critical skip
+                    'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                    '_embedded' => ['companies' => [['id' => 5200]], 'contacts' => []],
+                ],
+                [
+                    'id' => 1201, 'name' => 'Good deal', 'price' => 20,
+                    'status_id' => 53233417, // qualification — fine
+                    'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                    '_embedded' => ['companies' => [['id' => 5201]], 'contacts' => []],
+                ],
+            ],
+            'companies' => [
+                ['id' => 5200, 'name' => 'Co Bad'],
+                ['id' => 5201, 'name' => 'Co Good'],
+            ],
+        ]);
+
+        $result = $this->loader()->load();
+
+        // Bad deal gated, good deal loaded — run did not stop on the first.
+        $this->assertSame(1, Deal::query()->count());
+        $this->assertSame('Good deal', Deal::query()->firstOrFail()->title);
+        $this->assertSame(1, $result['stats']['unmapped_deals']);
+        $this->assertSame(1, $result['stats']['skipped_deal:unmapped_status']);
+        $this->assertSame(1, $result['unmapped']['status']['999999']);
+        $this->assertSame(0, $result['stats']['failed_deals']);
+    }
+
+    /**
+     * Dry-run on a DIRTY fixture (one unmapped-status deal, one good deal with a
+     * bad stage-change event) must: write NOTHING, not abort on the first problem,
+     * and return a complete coverage report (would-create counts + skip tallies +
+     * unmapped buckets) in a single pass.
+     */
+    public function test_dry_run_collects_full_report_and_writes_nothing(): void
+    {
+        $this->writeStaging([
+            'leads' => [
+                [
+                    'id' => 1300, 'name' => 'Dirty unmapped', 'price' => 10,
+                    'status_id' => 888888, // unmapped → would skip whole deal
+                    'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                    '_embedded' => ['companies' => [['id' => 5300]], 'contacts' => []],
+                ],
+                [
+                    'id' => 1301, 'name' => 'Good with bad event', 'price' => 30,
+                    'status_id' => 53233417, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                    'created_at' => 1577836800,
+                    '_embedded' => ['companies' => [['id' => 5301, 'is_main' => true]], 'contacts' => []],
+                ],
+            ],
+            'companies' => [
+                ['id' => 5300, 'name' => 'Co Dirty'],
+                ['id' => 5301, 'name' => 'Co Good'],
+            ],
+            'events' => [
+                ['id' => 'g2', 'type' => 'lead_added', '_lead_id' => 1301, 'created_at' => 1577836800, 'created_by' => 2435437],
+                [
+                    'id' => 'bad2', 'type' => 'lead_status_changed', '_lead_id' => 1301,
+                    'created_at' => 1577923200, 'created_by' => 2435437,
+                    'value_before' => [['lead_status' => ['id' => 53233417, 'pipeline_id' => 6149857]]],
+                    'value_after' => [['lead_status' => ['id' => 777777, 'pipeline_id' => 6149857]]], // unmapped target
+                ],
+            ],
+        ]);
+
+        $result = $this->loader()->load(['dry_run' => true]);
+
+        // 1) NOTHING persisted.
+        $this->assertSame(0, Deal::query()->count());
+        $this->assertSame(0, Company::query()->count());
+        $this->assertSame(0, DealStageHistory::query()->count());
+        $this->assertSame(0, ExternalRef::query()->count());
+
+        // 2) Full collect-and-report in one pass.
+        $this->assertTrue($result['dry_run']);
+        $this->assertSame(1, $result['stats']['deals_created']); // the good deal WOULD load
+        $this->assertSame(1, $result['stats']['unmapped_deals']); // the dirty one WOULD skip
+        $this->assertSame(1, $result['stats']['history_skipped']); // the bad event WOULD skip
+        $this->assertSame(0, $result['stats']['failed_deals']); // no crash anywhere
+
+        // 3) Both unmapped status ids collected with counts (not just the first).
+        $this->assertSame(1, $result['unmapped']['status']['888888']);
+        $this->assertSame(1, $result['unmapped']['status']['777777']);
+    }
 }

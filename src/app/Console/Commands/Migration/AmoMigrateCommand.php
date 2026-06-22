@@ -200,23 +200,129 @@ class AmoMigrateCommand extends Command
             'progress' => fn (string $msg) => $this->line('  '.$msg),
         ]);
 
-        $this->newLine();
-        $this->info(($dryRun ? 'Transform' : 'Load').' complete in '.round(microtime(true) - $startedAt, 1).'s:');
+        $this->renderCoverageReport($dryRun, $result, microtime(true) - $startedAt);
 
-        foreach ($result['stats'] as $key => $count) {
-            $this->line(sprintf('  %-22s %d', $key, $count));
+        return self::SUCCESS;
+    }
+
+    /**
+     * Collect-and-report coverage summary. ONE pass shows everything: what WOULD be
+     * created, what was SKIPPED (and why), and every unmapped reference grouped
+     * with an occurrence count — so an operator can patch config in one go rather
+     * than re-running until the next crash.
+     *
+     * @param  array{stats: array<string, int>, conflicts: list<array<string, mixed>>, unmapped: array<string, array<string, int>>, dry_run: bool}  $result
+     */
+    private function renderCoverageReport(bool $dryRun, array $result, float $elapsed): void
+    {
+        $stats = $result['stats'];
+        $verb = $dryRun ? 'WOULD create' : 'Created';
+
+        $this->newLine();
+        $this->info(($dryRun ? 'Transform (dry-run)' : 'Load').' complete in '.round($elapsed, 1).'s'.($dryRun ? ' — nothing written' : '').'.');
+
+        // ----- What would be / was created -----
+        $this->newLine();
+        $this->line("<options=bold>{$verb}:</>");
+        foreach ([
+            'deals_created' => 'deals',
+            'companies_created' => 'companies (real)',
+            'companies_synthetic' => 'companies (synthetic)',
+            'contacts_created' => 'contacts',
+            'deal_contacts' => 'deal_contacts',
+            'stage_history' => 'stage-history rows',
+            'audits' => 'audit rows',
+            'activities' => 'activities (tasks+notes)',
+            'entity_logs' => 'entity-log rows',
+            'primary_deals' => 'primary/unique-client deals',
+        ] as $key => $label) {
+            $count = $key === 'activities'
+                ? (($stats['tasks_created'] ?? 0) + ($stats['notes_created'] ?? 0))
+                : ($stats[$key] ?? 0);
+            $this->line(sprintf('  %-30s %d', $label, $count));
         }
 
-        $conflicts = $result['conflicts'];
-        if ($conflicts !== []) {
+        // ----- What was skipped (and why) -----
+        $skippedDeals = $stats['unmapped_deals'] ?? 0;
+        $failedDeals = $stats['failed_deals'] ?? 0;
+        $skippedHistory = $stats['history_skipped'] ?? 0;
+        $skippedNotes = $stats['notes_skipped'] ?? 0;
+        $skippedActs = $stats['activities_skipped'] ?? 0;
+
+        if ($skippedDeals + $failedDeals + $skippedHistory + $skippedNotes + $skippedActs > 0) {
             $this->newLine();
-            $this->warn(count($conflicts).' conflict(s) needing review:');
-            foreach (array_slice($conflicts, 0, 20) as $conflict) {
-                $this->line('  '.json_encode($conflict, JSON_UNESCAPED_UNICODE));
+            $this->warn('SKIPPED:');
+            if ($skippedDeals > 0) {
+                $this->line(sprintf('  %-30s %d', 'deals (unresolvable stage/etc)', $skippedDeals).$this->breakdown($stats, 'skipped_deal:'));
+            }
+            if ($failedDeals > 0) {
+                $this->line(sprintf('  %-30s %d', 'deals (unexpected error)', $failedDeals));
+            }
+            if ($skippedHistory > 0) {
+                $this->line(sprintf('  %-30s %d', 'timeline rows', $skippedHistory).$this->breakdown($stats, 'skipped_history:'));
+            }
+            if ($skippedActs > 0) {
+                $this->line(sprintf('  %-30s %d', 'activities (malformed)', $skippedActs));
+            }
+            if ($skippedNotes > 0) {
+                $this->line(sprintf('  %-30s %d', 'notes (mapped to skip)', $skippedNotes));
             }
         }
 
-        return self::SUCCESS;
+        // ----- Unmapped references (grouped, count-sorted) -----
+        $unmapped = $result['unmapped'] ?? [];
+        $hasUnmapped = false;
+        foreach ($unmapped as $ids) {
+            if ($ids !== []) {
+                $hasUnmapped = true;
+                break;
+            }
+        }
+
+        if ($hasUnmapped) {
+            $this->newLine();
+            $this->warn('UNMAPPED references (add to config/amo_migration.php):');
+            foreach ($unmapped as $bucket => $ids) {
+                if ($ids === []) {
+                    continue;
+                }
+                $pairs = [];
+                foreach ($ids as $id => $count) {
+                    $pairs[] = "{$id}×{$count}";
+                }
+                $this->line(sprintf('  %-12s %s', $bucket.':', implode(', ', $pairs)));
+            }
+        }
+
+        // ----- Raw conflict tail (operator drill-down) -----
+        $conflicts = $result['conflicts'];
+        if ($conflicts !== []) {
+            $this->newLine();
+            $this->warn(count($conflicts).' conflict(s) total — first 20:');
+            foreach (array_slice($conflicts, 0, 20) as $conflict) {
+                $this->line('  '.json_encode($conflict, JSON_UNESCAPED_UNICODE));
+            }
+        } else {
+            $this->newLine();
+            $this->info('No conflicts — full coverage.');
+        }
+    }
+
+    /**
+     * Render a " (reason=n, reason2=m)" breakdown from prefixed stat keys.
+     *
+     * @param  array<string, int>  $stats
+     */
+    private function breakdown(array $stats, string $prefix): string
+    {
+        $parts = [];
+        foreach ($stats as $key => $count) {
+            if ($count > 0 && str_starts_with($key, $prefix)) {
+                $parts[] = substr($key, strlen($prefix)).'='.$count;
+            }
+        }
+
+        return $parts === [] ? '' : ' ('.implode(', ', $parts).')';
     }
 
     private function runVerify(): int

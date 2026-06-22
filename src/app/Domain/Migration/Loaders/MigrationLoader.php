@@ -23,6 +23,7 @@ use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealStageHistory;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * MigrationLoader — the idempotent AMO → MGCRM load orchestrator. Temporary
@@ -40,8 +41,20 @@ use Illuminate\Support\Facades\DB;
  * through them would collapse every row onto the run date. DealStageHistory's
  * created_at IS fillable, so it can go through the model.
  *
- * --dry-run runs the full transform + parity counters but writes nothing (the
- * whole run executes inside a rolled-back transaction).
+ * --dry-run runs the full transform + parity counters but writes nothing: EACH
+ * deal runs inside its own transaction that is ALWAYS rolled back in a finally
+ * block (guaranteed even on exception), so dry-run is fully non-persisting. It is
+ * also collect-and-report: a deal that throws is caught, tallied as a conflict,
+ * and the run continues — one pass surfaces every problem instead of dying on the
+ * first bad row.
+ *
+ * Resilience strategy (so 4986 real deals never abort the run on one bad edge):
+ *   - CRITICAL unresolved (deal stage / pipeline / currency) → skip the WHOLE deal,
+ *     tally + conflict, continue.
+ *   - NON-CRITICAL unresolved (one stage-history target status, one audit field) →
+ *     skip just that timeline row, tally + conflict, keep the deal.
+ *   - Any unexpected exception → per-deal transaction rolls back (no partial graph),
+ *     tally + conflict, continue.
  */
 final class MigrationLoader
 {
@@ -50,6 +63,9 @@ final class MigrationLoader
 
     /** @var list<array<string, mixed>> dedup / unmapped conflicts for operator review */
     private array $conflicts = [];
+
+    /** @var array<string, array<string, int>> bucket (status|user|product|country) => [id => occurrences] */
+    private array $unmapped = [];
 
     public function __construct(
         private readonly StagingReader $reader,
@@ -92,7 +108,7 @@ final class MigrationLoader
      * Run the load.
      *
      * @param  array{dry_run?: bool, limit?: ?int, progress?: callable(string): void}  $options
-     * @return array{stats: array<string, int>, conflicts: list<array<string, mixed>>}
+     * @return array{stats: array<string, int>, conflicts: list<array<string, mixed>>, unmapped: array<string, array<string, int>>, dry_run: bool}
      */
     public function load(array $options = []): array
     {
@@ -102,6 +118,7 @@ final class MigrationLoader
 
         $this->stats = $this->emptyStats();
         $this->conflicts = [];
+        $this->unmapped = [];
 
         // Pre-index the child entities once (grouped by AMO lead id) and build the
         // contact/company lookups for _embedded enrichment.
@@ -132,16 +149,30 @@ final class MigrationLoader
                 'events' => $eventsByLead[$leadId] ?? [],
             ];
 
+            // One bad lead must NEVER kill the whole run. Every deal is isolated:
+            // its work happens inside a transaction that is rolled back on any
+            // failure (so no partial graph is ever persisted), and the failure is
+            // recorded as a conflict so the run keeps going. dry-run additionally
+            // rolls back even on success (it writes nothing, ever).
             if ($dryRun) {
                 DB::beginTransaction();
 
                 try {
                     $this->loadOneDeal($amoLead, $children);
+                } catch (Throwable $e) {
+                    $this->recordDealFailure($leadId, $e);
                 } finally {
+                    // GUARANTEED rollback — dry-run is fully non-persisting even
+                    // when loadOneDeal succeeds, and a failed deal leaves no trace.
                     DB::rollBack();
                 }
             } else {
-                DB::transaction(fn () => $this->loadOneDeal($amoLead, $children));
+                try {
+                    DB::transaction(fn () => $this->loadOneDeal($amoLead, $children));
+                } catch (Throwable $e) {
+                    // DB::transaction already rolled back; nothing partial persisted.
+                    $this->recordDealFailure($leadId, $e);
+                }
             }
 
             $processed++;
@@ -157,7 +188,19 @@ final class MigrationLoader
 
         $progress("done: {$processed} deals processed");
 
-        return ['stats' => $this->stats, 'conflicts' => $this->conflicts];
+        // Sort each unmapped bucket by descending occurrence so the report leads
+        // with the highest-impact gaps.
+        foreach ($this->unmapped as &$bucket) {
+            arsort($bucket);
+        }
+        unset($bucket);
+
+        return [
+            'stats' => $this->stats,
+            'conflicts' => $this->conflicts,
+            'unmapped' => $this->unmapped,
+            'dry_run' => $dryRun,
+        ];
     }
 
     /**
@@ -170,15 +213,31 @@ final class MigrationLoader
     {
         $dealData = $this->dealTransformer->transform($amoLead);
 
+        // CRITICAL gate #1: a deal with an unresolved stage can never be placed
+        // (stage_id / pipeline_id are NOT NULL) — skip the whole deal, log it.
         if ($dealData['unmapped_status']) {
-            $this->conflicts[] = [
-                'kind' => 'unmapped_status',
-                'amo_lead_id' => $dealData['amo_id'],
+            $this->skipDeal('unmapped_status', $dealData['amo_id'], [
                 'amo_status_id' => $dealData['amo_status_id'],
-            ];
-            $this->bump('unmapped_deals');
+                'amo_pipeline_id' => $dealData['amo_pipeline_id'],
+            ]);
 
-            return; // hard-gate: never load a deal with an unresolved stage
+            return;
+        }
+
+        // CRITICAL gate #2: defence-in-depth. If the transformer ever yields a
+        // null stage_id/pipeline_id/currency without flagging unmapped_status (an
+        // unexpected map gap), still skip rather than hit a NOT NULL violation.
+        $dealAttrs = $dealData['deal'];
+        if (($dealAttrs['stage_id'] ?? null) === null
+            || ($dealAttrs['pipeline_id'] ?? null) === null
+            || ($dealAttrs['currency'] ?? null) === null) {
+            $this->skipDeal('unresolved_deal_placement', $dealData['amo_id'], [
+                'stage_id' => $dealAttrs['stage_id'] ?? null,
+                'pipeline_id' => $dealAttrs['pipeline_id'] ?? null,
+                'currency' => $dealAttrs['currency'] ?? null,
+            ]);
+
+            return;
         }
 
         $embedded = $amoLead['_embedded'] ?? [];
@@ -461,11 +520,26 @@ final class MigrationLoader
         $at = $this->resolver->toDateTime($row['created_at']) ?? now()->format('Y-m-d H:i:s');
         $actorId = $this->resolver->userId($row['actor_amo_id']);
 
+        // Genesis to_stage = the deal's current stage. The deal was already gated
+        // on a non-null stage_id, so this is normally present — but guard anyway
+        // so a deleted/raced deal never trips the NOT NULL to_stage_id column.
+        $toStageId = Deal::query()->where('id', $dealId)->value('stage_id');
+
+        if ($toStageId === null) {
+            $this->skipHistory('genesis_no_stage', $dealId, $row, null);
+
+            // The genesis EntityLog ('created') does not need a stage, so we still
+            // record the creation marker even when the history row is skipped.
+            $this->insertEntityLog($dealId, $actorId, LogAction::Created, [], $at);
+
+            return;
+        }
+
         // Genesis stage history (from=null) via the model — created_at is fillable.
         DealStageHistory::query()->create([
             'deal_id' => $dealId,
             'from_stage_id' => null,
-            'to_stage_id' => Deal::query()->where('id', $dealId)->value('stage_id'),
+            'to_stage_id' => $toStageId,
             'user_id' => $actorId,
             'created_at' => $at,
         ]);
@@ -484,6 +558,18 @@ final class MigrationLoader
 
         $fromStageId = $this->resolveStageFromAmoStatus($row['amo_status_from'], $row['amo_pipeline_id']);
         $toStageId = $this->resolveStageFromAmoStatus($row['amo_status_to'], $row['amo_pipeline_id']);
+
+        // NON-CRITICAL skip — the production crash: the AMO target status has no
+        // status_map entry → to_stage_id resolves to null → NOT NULL violation on
+        // deal_stage_history.to_stage_id. Skip JUST this one history row (the deal
+        // and the rest of its timeline are fine), tally the unmapped target status.
+        // from_stage_id=null is allowed (genesis-like) so we only gate on the
+        // target.
+        if ($toStageId === null) {
+            $this->skipHistory('unmapped_target_status', $dealId, $row, $row['amo_status_to']);
+
+            return;
+        }
 
         DealStageHistory::query()->create([
             'deal_id' => $dealId,
@@ -508,11 +594,22 @@ final class MigrationLoader
         $at = $this->resolver->toDateTime($row['created_at']) ?? now()->format('Y-m-d H:i:s');
         $actorId = $this->resolver->userId($row['actor_amo_id']);
 
+        // NON-CRITICAL skip — deal_audits.field is NOT NULL string(100). A data
+        // change with no field name (malformed event) is noise; skip just this
+        // audit row rather than crash the deal. Field is clamped to 100 chars.
+        $field = $row['field'] !== null ? trim((string) $row['field']) : '';
+        if ($field === '') {
+            $this->skipHistory('audit_no_field', $dealId, $row, null);
+
+            return;
+        }
+        $field = mb_substr($field, 0, 100);
+
         // DealAudit is an immutable log: raw insert with explicit created_at.
         DB::table('deal_audits')->insert([
             'deal_id' => $dealId,
             'user_id' => $actorId,
-            'field' => (string) $row['field'],
+            'field' => $field,
             'old_value' => $row['old_value'],
             'new_value' => $row['new_value'],
             'created_at' => $at,
@@ -520,7 +617,7 @@ final class MigrationLoader
         $this->bump('audits');
 
         $this->insertEntityLog($dealId, $actorId, LogAction::DataChanged, [
-            'field' => $row['field'],
+            'field' => $field,
         ], $at);
     }
 
@@ -589,14 +686,30 @@ final class MigrationLoader
             return;
         }
 
+        // NON-CRITICAL skip — activities.kind / title are NOT NULL. Both
+        // transformers always supply a fallback, so this only triggers on
+        // malformed transformer output; skip the one row rather than crash.
+        $kind = trim((string) ($activity['kind'] ?? ''));
+        $title = trim((string) ($activity['title'] ?? ''));
+        if ($kind === '' || $title === '') {
+            $this->bump('activities_skipped');
+            $this->conflicts[] = [
+                'kind' => 'activity_missing_required',
+                'amo_'.$refKind.'_id' => $amoId,
+                'deal_id' => $dealId,
+            ];
+
+            return;
+        }
+
         $now = now()->format('Y-m-d H:i:s');
         $createdAt = $activity['created_at'] ?? $now;
 
         $localId = DB::table('activities')->insertGetId([
-            'kind' => $activity['kind'],
+            'kind' => $kind,
             'target_type' => $activity['target_type'],
             'target_id' => $dealId,
-            'title' => $activity['title'],
+            'title' => mb_substr($title, 0, 255),
             'body' => $activity['body'] ?? null,
             'due_at' => $activity['due_at'] ?? null,
             'completed_at' => $activity['completed_at'] ?? null,
@@ -716,6 +829,77 @@ final class MigrationLoader
         return null;
     }
 
+    /**
+     * CRITICAL skip — the whole deal cannot be placed. Tally + record a conflict
+     * so the run keeps going and the report shows every skipped deal in one pass.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function skipDeal(string $reason, int $amoLeadId, array $context = []): void
+    {
+        $this->bump('unmapped_deals');
+        $this->bump('skipped_deal:'.$reason);
+
+        // Tally unmapped status ids for the coverage report (id => count).
+        if ($reason === 'unmapped_status' && isset($context['amo_status_id'])) {
+            $this->tallyUnmapped('status', (string) $context['amo_status_id']);
+        }
+
+        $this->conflicts[] = array_merge([
+            'kind' => $reason,
+            'amo_lead_id' => $amoLeadId,
+        ], $context);
+    }
+
+    /**
+     * NON-CRITICAL skip — one timeline row (stage history / audit) is dropped, the
+     * deal and the rest of its timeline are untouched. Tally + record so the
+     * coverage report lists every dropped row and its cause.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function skipHistory(string $reason, int $dealId, array $row, ?int $unmappedStatusId): void
+    {
+        $this->bump('history_skipped');
+        $this->bump('skipped_history:'.$reason);
+
+        if ($reason === 'unmapped_target_status' && $unmappedStatusId !== null) {
+            $this->tallyUnmapped('status', (string) $unmappedStatusId);
+        }
+
+        $this->conflicts[] = [
+            'kind' => $reason,
+            'deal_id' => $dealId,
+            'amo_event_id' => $row['amo_id'] ?? null,
+            'amo_status_to' => $unmappedStatusId,
+        ];
+    }
+
+    /**
+     * A deal blew up despite the gates (unexpected exception). The transaction was
+     * already rolled back (per-deal isolation) — record it and keep going so one
+     * bad row never aborts the run. This is what makes dry-run collect-and-report.
+     */
+    private function recordDealFailure(int $amoLeadId, Throwable $e): void
+    {
+        $this->bump('failed_deals');
+        $this->conflicts[] = [
+            'kind' => 'deal_load_failed',
+            'amo_lead_id' => $amoLeadId,
+            'error' => $e->getMessage(),
+        ];
+    }
+
+    /**
+     * Accumulate an unmapped reference id (status / user / product / country) with
+     * an occurrence count, for the coverage report's "unmapped references" block.
+     */
+    private function tallyUnmapped(string $bucket, string $id): void
+    {
+        $this->unmapped[$bucket] ??= [];
+        $this->unmapped[$bucket][$id] = ($this->unmapped[$bucket][$id] ?? 0) + 1;
+    }
+
     private function bump(string $key, int $by = 1): void
     {
         $this->stats[$key] = ($this->stats[$key] ?? 0) + $by;
@@ -729,9 +913,10 @@ final class MigrationLoader
         return array_fill_keys([
             'companies_created', 'companies_updated', 'companies_synthetic',
             'contacts_created', 'contacts_updated', 'contact_company_links',
-            'deals_created', 'deals_updated', 'unmapped_deals', 'primary_deals',
-            'deal_contacts', 'stage_history', 'audits', 'entity_logs',
-            'tasks_created', 'notes_created', 'notes_skipped', 'activities_updated',
+            'deals_created', 'deals_updated', 'unmapped_deals', 'failed_deals',
+            'primary_deals', 'deal_contacts', 'stage_history', 'history_skipped',
+            'audits', 'entity_logs', 'tasks_created', 'notes_created',
+            'notes_skipped', 'activities_updated', 'activities_skipped',
         ], 0);
     }
 }
