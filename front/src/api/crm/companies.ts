@@ -10,6 +10,7 @@ import type {
   CreateRequisitePayload,
   UpdateRequisitePayload,
   CompanyClientStatusLogEntry,
+  CompanyChannel,
 } from '@/entities/crm'
 import type { DocumentDto } from '@/entities/document'
 
@@ -37,11 +38,12 @@ export interface CompanyListParams {
   only_active?: boolean
   only_with_deals?: boolean
   only_no_task?: boolean
+  // sorting — backend contract: sort_by + sort_dir
+  sort_by?: 'name' | 'category' | 'country' | 'deals' | 'last_contact' | 'engagement' | 'owner' | 'created'
+  sort_dir?: 'asc' | 'desc'
   // legacy single params kept for backward compat
   company_type_id?: number
   source?: string
-  sort?: string
-  direction?: 'asc' | 'desc'
 }
 
 export interface BulkCompanyPayload {
@@ -310,5 +312,41 @@ export const companiesApi = {
       payload,
     )
     return res.data
+  },
+
+  // ── Company Channels ──────────────────────────────────────────────────────
+
+  async getChannels(companyId: number): Promise<CompanyChannel[]> {
+    const res = await apiClient.get<{ data: CompanyChannel[] }>(
+      `/api/companies/${companyId}/channels`,
+    )
+    return res.data.data ?? []
+  },
+
+  async addChannel(
+    companyId: number,
+    payload: { channel_type: string; value: string },
+  ): Promise<CompanyChannel> {
+    const res = await apiClient.post<{ data: CompanyChannel }>(
+      `/api/companies/${companyId}/channels`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async updateChannel(
+    companyId: number,
+    channelId: number,
+    payload: { channel_type?: string; value?: string },
+  ): Promise<CompanyChannel> {
+    const res = await apiClient.patch<{ data: CompanyChannel }>(
+      `/api/companies/${companyId}/channels/${channelId}`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  async deleteChannel(companyId: number, channelId: number): Promise<void> {
+    await apiClient.delete(`/api/companies/${companyId}/channels/${channelId}`)
   },
 }

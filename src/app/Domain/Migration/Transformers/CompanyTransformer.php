@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Migration\Transformers;
 
+use App\Domain\Crm\Enums\ChannelType;
 use App\Domain\Crm\Enums\CompanySpecialization;
 use App\Domain\Migration\Support\AmoFieldReader;
 use App\Domain\Migration\Support\AmoFields;
@@ -26,11 +27,11 @@ use App\Domain\Migration\Support\AmoReferenceResolver;
  *
  * The CONTACT fields (phone / email / website / address) live on the AMO COMPANY
  * object itself (confirmed on live data, CF ids 2709 / 2711 / 2713 / 2717), NOT on
- * the lead. Phone/email are AMO multitext (multi-value): we denormalise the PRIMARY
- * value (first; a WORK-coded value wins if present) onto the company row and stash
- * any extra values under extra_fields.amo_company_phones / amo_company_emails
- * (DEC-E: the migration does not create company_channels rows). website/address are
- * single-value fields read straight through.
+ * the lead. Phone/email are AMO multitext (multi-value): we fan those out into
+ * company_channels rows (mirroring ContactTransformer) and denormalise the PRIMARY
+ * value (first; a WORK-coded value wins if present) onto company.phone / company.email
+ * / company.website for list/dedup queries. address (2717) is a single textarea field
+ * written to company.address. website (2713) produces a single Website channel row.
  */
 final class CompanyTransformer
 {
@@ -39,8 +40,8 @@ final class CompanyTransformer
     ) {}
 
     /**
-     * Build company + requisite attrs from an AMO company object plus the owning
-     * lead's custom fields (country / tax id live on the lead).
+     * Build company + requisite attrs + channel rows from an AMO company object
+     * plus the owning lead's custom fields (country / tax id live on the lead).
      *
      * @param  array<string, mixed>  $amoCompany  Raw AMO company (or lead _embedded company stub).
      * @param  array<string, mixed>  $amoLead  The owning lead (for country / tax id).
@@ -48,6 +49,7 @@ final class CompanyTransformer
      *     amo_id: int,
      *     company: array<string, mixed>,
      *     requisite: array<string, mixed>,
+     *     channels: list<array<string, mixed>>,
      *     created_by_amo_id: ?int
      * }
      */
@@ -68,21 +70,45 @@ final class CompanyTransformer
         $channelId = $this->resolver->channelIdForEnum($channelEnum);
 
         // Contact fields — read off the COMPANY object (CF 2709/2711/2713/2717).
-        [$phone, $extraPhones] = $this->resolveMultiContactField($companyFields, AmoFields::COMPANY_PHONE);
-        [$email, $extraEmails] = $this->resolveMultiContactField($companyFields, AmoFields::COMPANY_EMAIL);
+        $phoneRows = $this->resolveMultiContactFieldRows($companyFields, AmoFields::COMPANY_PHONE);
+        $emailRows = $this->resolveMultiContactFieldRows($companyFields, AmoFields::COMPANY_EMAIL);
         $website = $companyFields->string(AmoFields::COMPANY_WEBSITE);
         $address = $companyFields->string(AmoFields::COMPANY_ADDRESS);
+
+        // Denormalize primary values onto the company row (for list/dedup queries).
+        $phone = $phoneRows[0]['value'] ?? null;
+        $email = $emailRows[0]['value'] ?? null;
+
+        // Build company_channels rows (mirrors ContactTransformer channel fan-out).
+        $channels = [];
+        foreach ($phoneRows as $row) {
+            $channels[] = [
+                'channel_type' => ChannelType::Phone->value,
+                'value' => $row['value'],
+                'label' => $row['label'],
+                'is_primary_for_channel' => $row['is_first'],
+            ];
+        }
+        foreach ($emailRows as $row) {
+            $channels[] = [
+                'channel_type' => ChannelType::Email->value,
+                'value' => $row['value'],
+                'label' => $row['label'],
+                'is_primary_for_channel' => $row['is_first'],
+            ];
+        }
+        if ($website !== null && $website !== '') {
+            $channels[] = [
+                'channel_type' => ChannelType::Website->value,
+                'value' => $website,
+                'label' => null,
+                'is_primary_for_channel' => true,
+            ];
+        }
 
         $extraFields = [];
         if ($regionLabel !== null) {
             $extraFields['amo_region'] = $regionLabel;
-        }
-        // DEC-E: no company_channels — extra phone/email values are stashed here.
-        if ($extraPhones !== []) {
-            $extraFields['amo_company_phones'] = $extraPhones;
-        }
-        if ($extraEmails !== []) {
-            $extraFields['amo_company_emails'] = $extraEmails;
         }
 
         $company = [
@@ -114,6 +140,7 @@ final class CompanyTransformer
             'amo_id' => (int) ($amoCompany['id'] ?? 0),
             'company' => $company,
             'requisite' => $requisite,
+            'channels' => $channels,
             'created_by_amo_id' => isset($amoCompany['created_by']) ? (int) $amoCompany['created_by'] : null,
         ];
     }
@@ -169,55 +196,67 @@ final class CompanyTransformer
                 'country_code' => $countryCode,
                 'is_current' => true,
             ],
+            'channels' => [], // synthetic company has no AMO contact fields
             'created_by_amo_id' => isset($amoLead['created_by']) ? (int) $amoLead['created_by'] : null,
         ];
     }
 
     /**
-     * Read an AMO multitext field (phone / email) off the company. Returns the
-     * PRIMARY value plus any extras. The primary is the first WORK-coded value if
-     * one is present, else the first value overall; the remaining values (in source
-     * order, deduped) are the extras stashed in extra_fields.
+     * Read an AMO multitext field (phone / email) off the company and return a list
+     * of channel rows, each with value / label / is_first. Mirrors ContactTransformer::channelValues().
      *
-     * @return array{0: ?string, 1: list<string>} [primary, extras]
+     * The first WORK-coded value wins as primary (is_first=true) if one is present,
+     * else the first value overall is primary.
+     *
+     * @return list<array{value: string, label: ?string, is_first: bool}>
      */
-    private function resolveMultiContactField(AmoFieldReader $fields, int $fieldId): array
+    private function resolveMultiContactFieldRows(AmoFieldReader $fields, int $fieldId): array
     {
-        $values = [];
+        $raw = [];
 
         foreach ($fields->values($fieldId) as $row) {
-            $raw = trim((string) ($row['value'] ?? ''));
-            if ($raw === '') {
+            $value = trim((string) ($row['value'] ?? ''));
+            if ($value === '') {
                 continue;
             }
-            $code = isset($row['enum_code']) ? mb_strtoupper((string) $row['enum_code']) : null;
-            $values[] = ['value' => $raw, 'is_work' => $code === 'WORK'];
+            $label = isset($row['enum_code']) ? (string) $row['enum_code'] : null;
+            $isWork = $label !== null && mb_strtoupper($label) === 'WORK';
+            $raw[] = ['value' => $value, 'label' => $label, 'is_work' => $isWork];
         }
 
-        if ($values === []) {
-            return [null, []];
+        if ($raw === []) {
+            return [];
         }
 
         // Prefer a WORK-coded value as primary; else the first value.
         $primaryIndex = 0;
-        foreach ($values as $i => $row) {
+        foreach ($raw as $i => $row) {
             if ($row['is_work']) {
                 $primaryIndex = $i;
                 break;
             }
         }
 
-        $primary = $values[$primaryIndex]['value'];
-
-        $extras = [];
-        foreach ($values as $i => $row) {
+        $out = [];
+        $seen = [];
+        // Put primary first.
+        $primary = $raw[$primaryIndex];
+        if (! in_array($primary['value'], $seen, true)) {
+            $out[] = ['value' => $primary['value'], 'label' => $primary['label'], 'is_first' => true];
+            $seen[] = $primary['value'];
+        }
+        foreach ($raw as $i => $row) {
             if ($i === $primaryIndex) {
                 continue;
             }
-            $extras[] = $row['value'];
+            if (in_array($row['value'], $seen, true)) {
+                continue;
+            }
+            $out[] = ['value' => $row['value'], 'label' => $row['label'], 'is_first' => false];
+            $seen[] = $row['value'];
         }
 
-        return [$primary, array_values(array_unique($extras))];
+        return $out;
     }
 
     /**

@@ -79,12 +79,12 @@ class CompanyController extends Controller
             ->count();
 
         return CompanyResource::make(
-            $company->load(['companyType', 'responsibleUser', 'ownerUser', 'contactLinks.contact'])
+            $company->load(['companyType', 'responsibleUser', 'ownerUser', 'contactLinks.contact', 'channels'])
         )->additional([
             'deal_totals' => $dealTotals->toArray(),
             'kpi' => [
                 'open_deals_count' => $dealTotals->open_count,
-                'won_count'        => $wonCount,
+                'won_count' => $wonCount,
                 'deals_sum' => $dealTotals->base_total,
                 'deals_sum_currency' => $dealTotals->base_currency,
                 'employees_count' => $employeesCount,

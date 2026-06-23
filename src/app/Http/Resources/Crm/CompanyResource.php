@@ -110,6 +110,9 @@ class CompanyResource extends JsonResource
             // All requisite sets (when loaded via with('requisites'))
             'requisites' => $this->whenLoaded('requisites', fn () => CompanyRequisiteResource::collection($this->requisites)),
 
+            // Communication channels (phone, email, website, etc.) — loaded on show()
+            'channels' => $this->whenLoaded('channels', fn () => CompanyChannelResource::collection($this->channels)),
+
             // Client lifecycle (N5)
             'client_status' => $this->client_status?->value,
             'unique_client_since' => $this->unique_client_since?->toDateString(),

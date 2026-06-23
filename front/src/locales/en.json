@@ -1672,6 +1672,7 @@
           "title": "Open tasks: {n}"
         },
         "types": {
+          "all": "All",
           "stage_change": "Stage change",
           "field_change": "Field changes",
           "note": "Notes",
@@ -1696,6 +1697,7 @@
         "participants": "{'@'} Participants",
         "location": "Location",
         "save": "Save",
+        "add": "Add",
         "successCreate": "Added to feed",
         "taskSubtype": "Task type",
         "subtypes": {
@@ -3185,7 +3187,8 @@
         "totals": "Totals",
         "payments": "Payments",
         "marketing": "Marketing",
-        "dealsInProgress": "Deals in progress"
+        "dealsInProgress": "Deals in progress",
+        "channels": "Contact channels"
       },
       "rail": {
         "author": "Created by",
@@ -3305,6 +3308,24 @@
       "payments": {
         "placeholder": "Payments are available after connecting the finance module (M9)",
         "hint": "The finance module will be available in release M9"
+      },
+      "channels": {
+        "phone": "Phone",
+        "email": "Email",
+        "website": "Website",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "addChannel": "Add channel",
+        "selectType": "Channel type",
+        "valuePlaceholder": "Value",
+        "call": "Call",
+        "sendEmail": "Send email",
+        "openSite": "Open website",
+        "openChat": "Open chat",
+        "empty": "No channels added",
+        "added": "Channel added",
+        "deleted": "Channel deleted",
+        "deleteConfirm": "Delete this channel?"
       }
     },
     "contact": {

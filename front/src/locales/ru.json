@@ -1672,6 +1672,7 @@
           "title": "Открытые задачи: {n}"
         },
         "types": {
+          "all": "Все",
           "stage_change": "Смена стадии",
           "field_change": "Изменения полей",
           "note": "Примечания",
@@ -1696,6 +1697,7 @@
         "participants": "{'@'} Участники",
         "location": "Место встречи",
         "save": "Сохранить",
+        "add": "Добавить",
         "successCreate": "Добавлено в ленту",
         "taskSubtype": "Тип задачи",
         "subtypes": {
@@ -3185,7 +3187,8 @@
         "totals": "Итоги",
         "payments": "Платежи",
         "marketing": "Маркетинг",
-        "dealsInProgress": "Сделки в работе"
+        "dealsInProgress": "Сделки в работе",
+        "channels": "Каналы связи"
       },
       "rail": {
         "author": "Автор",
@@ -3305,6 +3308,24 @@
       "payments": {
         "placeholder": "Платежи доступны после подключения финансового модуля (M9)",
         "hint": "Финансовый модуль будет доступен в релизе M9"
+      },
+      "channels": {
+        "phone": "Телефон",
+        "email": "Email",
+        "website": "Сайт",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "addChannel": "Добавить канал",
+        "selectType": "Тип канала",
+        "valuePlaceholder": "Значение",
+        "call": "Позвонить",
+        "sendEmail": "Написать email",
+        "openSite": "Открыть сайт",
+        "openChat": "Открыть чат",
+        "empty": "Каналы связи не указаны",
+        "added": "Канал добавлен",
+        "deleted": "Канал удалён",
+        "deleteConfirm": "Удалить этот канал связи?"
       }
     },
     "contact": {

@@ -219,7 +219,7 @@ class AmoTransformTest extends TestCase
     {
         $out = (new CompanyTransformer($this->resolver))->transform(
             ['id' => 510, 'name' => 'ООО Связь', 'custom_fields_values' => [
-                // Phone (multitext): WORK is primary, the rest go to extra_fields.
+                // Phone (multitext): WORK is primary, the rest fan out into channels.
                 ['field_id' => 2709, 'values' => [
                     ['value' => '+74950000000', 'enum_code' => 'WORK'],
                     ['value' => '+74950001111', 'enum_code' => 'OTHER'],
@@ -236,13 +236,21 @@ class AmoTransformTest extends TestCase
             [], // lead — no geo/tax here
         );
 
-        $this->assertSame('+74950000000', $out['company']['phone']); // WORK → primary
+        $this->assertSame('+74950000000', $out['company']['phone']); // WORK → primary denorm
         $this->assertSame('info@svyaz.ru', $out['company']['email']);
         $this->assertSame('https://svyaz.ru', $out['company']['website']);
         $this->assertSame('г. Москва, ул. Связи, 1', $out['company']['address']);
-        // The extra (non-primary) phone is stashed, not lost.
-        $this->assertSame(['+74950001111'], $out['company']['extra_fields']['amo_company_phones']);
+
+        // Extra phones fan out into channels (not stashed in extra_fields).
+        $this->assertArrayNotHasKey('amo_company_phones', $out['company']['extra_fields']);
         $this->assertArrayNotHasKey('amo_company_emails', $out['company']['extra_fields']);
+
+        // channels: 2 phones + 1 email + 1 website = 4 rows.
+        $this->assertCount(4, $out['channels']);
+        $phones = array_filter($out['channels'], fn (array $c) => $c['channel_type'] === 'phone');
+        $this->assertCount(2, $phones);
+        $primaryPhone = array_values(array_filter($phones, fn (array $c) => $c['is_primary_for_channel']))[0];
+        $this->assertSame('+74950000000', $primaryPhone['value']);
     }
 
     public function test_company_contact_fields_default_to_null_when_absent(): void
@@ -256,6 +264,7 @@ class AmoTransformTest extends TestCase
         $this->assertNull($out['company']['email']);
         $this->assertNull($out['company']['website']);
         $this->assertNull($out['company']['address']);
+        $this->assertSame([], $out['channels']);
     }
 
     public function test_company_phone_primary_falls_back_to_first_without_work_code(): void
@@ -271,7 +280,11 @@ class AmoTransformTest extends TestCase
         );
 
         $this->assertSame('+70000000001', $out['company']['phone']); // first when no WORK
-        $this->assertSame(['+70000000002'], $out['company']['extra_fields']['amo_company_phones']);
+        // Both phones fan out into channels (not stashed in extra_fields).
+        $this->assertArrayNotHasKey('amo_company_phones', $out['company']['extra_fields']);
+        $this->assertCount(2, $out['channels']);
+        $this->assertTrue($out['channels'][0]['is_primary_for_channel']); // first is primary
+        $this->assertFalse($out['channels'][1]['is_primary_for_channel']);
     }
 
     public function test_company_synthesized_from_contact_when_no_company(): void
@@ -281,6 +294,8 @@ class AmoTransformTest extends TestCase
 
         $this->assertSame('Иван Петров (физлицо)', $out['company']['name']);
         $this->assertTrue($out['company']['extra_fields']['amo_synthetic_company']);
+        // Synthetic company has no AMO contact fields → no channels.
+        $this->assertSame([], $out['channels']);
     }
 
     public function test_company_synthesized_fallback_when_no_contact(): void

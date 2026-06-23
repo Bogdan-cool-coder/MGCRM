@@ -281,13 +281,27 @@ export interface HoldingTreeDto {
 
 // ─── Contact Channel (Phase G) ────────────────────────────────────────────────
 
-export type ChannelType = 'phone' | 'email' | 'tg' | 'wa' | 'linkedin' | 'instagram' | 'viber'
+export type ChannelType = 'phone' | 'email' | 'tg' | 'wa' | 'linkedin' | 'instagram' | 'viber' | 'website'
 
 export interface ContactChannel {
   id: number
   contact_id: number
   channel_type: ChannelType
   value: string
+  label: string | null
+  is_primary_for_channel: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+// ─── Company Channel ──────────────────────────────────────────────────────────
+
+export interface CompanyChannel {
+  id: number
+  company_id: number
+  channel_type: ChannelType
+  value: string
+  label: string | null
   is_primary_for_channel: boolean
   created_at: string | null
   updated_at: string | null

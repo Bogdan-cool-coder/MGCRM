@@ -171,6 +171,12 @@ class Company extends Model
         return $this->belongsTo(AcquisitionChannel::class, 'acquisition_channel_id');
     }
 
+    /** Communication channels (phone, email, website, tg, wa, etc.) for this company. */
+    public function channels(): HasMany
+    {
+        return $this->hasMany(CompanyChannel::class)->orderBy('channel_type');
+    }
+
     // ---- Client lifecycle (N5) ----
 
     public function disconnectReason(): BelongsTo

@@ -13,6 +13,7 @@ enum ChannelType: string
     case LinkedIn = 'linkedin';
     case Instagram = 'instagram';
     case Viber = 'viber';
+    case Website = 'website';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum ChannelType: string
             self::LinkedIn => 'LinkedIn',
             self::Instagram => 'Instagram',
             self::Viber => 'Viber',
+            self::Website => 'Сайт',
         };
     }
 }

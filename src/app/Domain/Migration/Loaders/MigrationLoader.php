@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Migration\Loaders;
 
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyChannel;
 use App\Domain\Crm\Models\CompanyRequisite;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactChannel;
@@ -312,7 +313,7 @@ final class MigrationLoader
     }
 
     /**
-     * @param  array{amo_id: int, company: array<string, mixed>, requisite: array<string, mixed>, created_by_amo_id: ?int}  $data
+     * @param  array{amo_id: int, company: array<string, mixed>, requisite: array<string, mixed>, channels: list<array<string, mixed>>, created_by_amo_id: ?int}  $data
      * @param  array<string, mixed>|null  $payload
      */
     private function persistCompany(array $data, ?int $amoCompanyId, ?array $payload, string $refType = 'company', ?int $refExternalId = null): int
@@ -324,6 +325,12 @@ final class MigrationLoader
 
         $this->refs->remember($refType, $refExternalId ?? $amoCompanyId ?? $company->id, $company->id, $payload);
         $this->createRequisite($company->id, $data['requisite']);
+
+        foreach ($data['channels'] as $channel) {
+            $channel['company_id'] = $company->id;
+            CompanyChannel::query()->create($channel);
+        }
+
         $this->bump('companies_created');
 
         return $company->id;
@@ -344,32 +351,34 @@ final class MigrationLoader
      * fields were confirmed, so phone/email/website/address landed empty).
      *
      * Scope guard — we ONLY overwrite the columns the import fully owns and always
-     * derives from the AMO company object: phone, email, website, address, plus the
-     * extra_fields buckets the transformer fills (amo_company_phones /
-     * amo_company_emails). We deliberately DO NOT touch the company name,
-     * legal_name, tax_id, country_code, specialization or acquisition_channel_id —
-     * the name is operator-editable and the rest are pinned at first load /
-     * curated by hand. extra_fields is MERGED (not replaced) so operator-added keys
-     * survive. A plain query-builder UPDATE avoids bumping updated_at / firing
-     * model events. Idempotent: re-running writes the same values, no duplicates.
+     * derives from the AMO company object: phone, email, website, address.
+     * We deliberately DO NOT touch the company name, legal_name, tax_id,
+     * country_code, specialization or acquisition_channel_id — the name is
+     * operator-editable and the rest are pinned at first load / curated by hand.
+     * extra_fields is MERGED (not replaced) so operator-added keys survive.
+     * A plain query-builder UPDATE avoids bumping updated_at / firing model events.
      *
-     * @param  array{company: array<string, mixed>}  $data
+     * Channels are re-synced by UPSERT on (company_id, channel_type, value): an
+     * existing channel has its label / is_primary_for_channel refreshed, a new AMO
+     * value is inserted. Idempotent (no duplicates); operator-added channels with a
+     * value AMO does not have are left untouched.
+     *
+     * @param  array{company: array<string, mixed>, channels: list<array<string, mixed>>}  $data
      */
     private function resyncCompany(int $companyId, array $data): void
     {
         $attrs = $data['company'];
 
-        // Merge the import-owned extra_fields buckets into whatever is already there
-        // so hand-added keys (and amo_region / amo_synthetic_company) are preserved.
+        // Merge extra_fields so hand-added keys (amo_region, amo_synthetic_company)
+        // are preserved; stash buckets amo_company_phones/emails are no longer written.
         $existingExtra = DB::table('crm_companies')->where('id', $companyId)->value('extra_fields');
         $extra = is_string($existingExtra) ? (json_decode($existingExtra, true) ?: []) : [];
         if (! is_array($extra)) {
             $extra = [];
         }
-        foreach (['amo_company_phones', 'amo_company_emails'] as $key) {
-            if (array_key_exists($key, $attrs['extra_fields'])) {
-                $extra[$key] = $attrs['extra_fields'][$key];
-            }
+        // Carry over any import-owned keys the transformer still sets (amo_region).
+        foreach ($attrs['extra_fields'] as $key => $value) {
+            $extra[$key] = $value;
         }
 
         DB::table('crm_companies')->where('id', $companyId)->update([
@@ -379,6 +388,35 @@ final class MigrationLoader
             'address' => $attrs['address'],
             'extra_fields' => json_encode($extra, JSON_UNESCAPED_UNICODE),
         ]);
+
+        // Channels: upsert by (company_id, channel_type, value), no duplicates.
+        foreach ($data['channels'] as $channel) {
+            $existingId = DB::table('company_channels')
+                ->where('company_id', $companyId)
+                ->where('channel_type', $channel['channel_type'])
+                ->where('value', $channel['value'])
+                ->value('id');
+
+            if ($existingId !== null) {
+                DB::table('company_channels')->where('id', $existingId)->update([
+                    'label' => $channel['label'],
+                    'is_primary_for_channel' => $channel['is_primary_for_channel'],
+                ]);
+
+                continue;
+            }
+
+            DB::table('company_channels')->insert([
+                'company_id' => $companyId,
+                'channel_type' => $channel['channel_type'],
+                'value' => $channel['value'],
+                'label' => $channel['label'],
+                'is_primary_for_channel' => $channel['is_primary_for_channel'],
+                'created_at' => now()->format('Y-m-d H:i:s'),
+                'updated_at' => now()->format('Y-m-d H:i:s'),
+            ]);
+            $this->bump('company_channels_synced');
+        }
     }
 
     /**
@@ -1125,6 +1163,7 @@ final class MigrationLoader
     {
         return array_fill_keys([
             'companies_created', 'companies_updated', 'companies_synthetic',
+            'company_channels_synced',
             'contacts_created', 'contacts_updated', 'contact_company_links',
             'contact_channels_synced',
             'deals_created', 'deals_updated', 'unmapped_deals', 'failed_deals',

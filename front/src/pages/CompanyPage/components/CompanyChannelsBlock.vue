@@ -1,7 +1,7 @@
 <template>
-  <div class="contact-channels">
+  <div class="company-channels">
     <!-- Loading -->
-    <div v-if="loading" class="contact-channels__skeleton">
+    <div v-if="loading" class="company-channels__skeleton">
       <Skeleton height="36px" class="mb-2" />
       <Skeleton height="36px" class="mb-2" />
       <Skeleton height="36px" />
@@ -13,29 +13,29 @@
       <div
         v-for="ch in channels"
         :key="ch.id"
-        class="contact-channels__row"
+        class="company-channels__row"
         @mouseenter="hoveredId = ch.id"
         @mouseleave="hoveredId = null"
       >
         <!-- Left: circular action icon 30×30 -->
         <component
-          :is="channelHref(ch)"
+          :is="channelLinkTag(ch)"
           :href="channelHref(ch)"
           :target="channelLinkTarget(ch)"
           :rel="channelLinkTarget(ch) ? 'noopener noreferrer' : undefined"
-          class="contact-channels__action-icon"
-          :class="{ 'contact-channels__action-icon--hovered': hoveredId === ch.id }"
+          class="company-channels__action-icon"
+          :class="{ 'company-channels__action-icon--hovered': hoveredId === ch.id }"
           :title="channelActionLabel(ch)"
         >
           <i :class="['pi', channelIcon(ch)]" />
         </component>
 
-        <!-- Center: value + right label (action on hover) -->
-        <div class="contact-channels__info">
-          <span class="contact-channels__value">{{ ch.value }}</span>
+        <!-- Center: value + action label on hover -->
+        <div class="company-channels__info">
+          <span class="company-channels__value">{{ ch.value }}</span>
           <span
-            class="contact-channels__action-label"
-            :class="{ 'contact-channels__action-label--visible': hoveredId === ch.id }"
+            class="company-channels__action-label"
+            :class="{ 'company-channels__action-label--visible': hoveredId === ch.id }"
           >
             {{ channelActionLabel(ch) }}
           </span>
@@ -44,7 +44,7 @@
         <!-- Right: copy icon -->
         <button
           type="button"
-          class="contact-channels__copy-btn"
+          class="company-channels__copy-btn"
           :title="t('common.copy')"
           @click.stop="copyValue(ch.value)"
         >
@@ -54,7 +54,7 @@
         <!-- Edit / Delete menu trigger -->
         <button
           type="button"
-          class="contact-channels__more-btn"
+          class="company-channels__more-btn"
           :title="t('common.actions')"
           @click.stop="onMenuClick($event, ch)"
         >
@@ -68,25 +68,25 @@
       </div>
 
       <!-- Empty -->
-      <div v-if="channels.length === 0" class="contact-channels__empty">
-        <i class="pi pi-phone contact-channels__empty-icon" />
-        <p class="contact-channels__empty-text">{{ t('crm.contact.channels.empty') }}</p>
+      <div v-if="channels.length === 0" class="company-channels__empty">
+        <i class="pi pi-phone company-channels__empty-icon" />
+        <p class="company-channels__empty-text">{{ t('crm.company.channels.empty') }}</p>
       </div>
 
       <!-- Add channel form -->
-      <div v-if="addingOpen" class="contact-channels__add-form">
+      <div v-if="addingOpen" class="company-channels__add-form">
         <Select
           v-model="newChannelType"
           :options="channelTypeOptions"
           option-label="label"
           option-value="value"
-          :placeholder="t('crm.contact.channels.selectType')"
-          class="contact-channels__type-select"
+          :placeholder="t('crm.company.channels.selectType')"
+          class="company-channels__type-select"
         />
         <InputText
           v-model="newChannelValue"
           :placeholder="channelPlaceholder(newChannelType)"
-          class="contact-channels__value-input"
+          class="company-channels__value-input"
           @keyup.enter="submitAddChannel"
         />
         <Button
@@ -118,18 +118,18 @@ import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
 import Menu from 'primevue/menu'
-import { contactsApi } from '@/api/crm/contacts'
+import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { ContactChannel, ChannelType } from '@/entities/crm'
+import type { CompanyChannel, ChannelType } from '@/entities/crm'
 
 const props = defineProps<{
-  contactId: number
-  channels: ContactChannel[]
+  companyId: number
+  channels: CompanyChannel[]
   loading?: boolean
 }>()
 
 const emit = defineEmits<{
-  updated: [channels: ContactChannel[]]
+  updated: [channels: CompanyChannel[]]
 }>()
 
 const { t } = useI18n()
@@ -139,9 +139,9 @@ const confirm = useConfirm()
 const hoveredId = ref<number | null>(null)
 const menuRefs = ref<Map<number, InstanceType<typeof Menu>>>(new Map())
 
-// ── Channel action helpers (spec §4) ──────────────────────────────────────────
+// ── Channel action helpers ────────────────────────────────────────────────────
 
-function channelIcon(ch: ContactChannel): string {
+function channelIcon(ch: CompanyChannel): string {
   const map: Record<ChannelType, string> = {
     phone: 'pi-phone',
     email: 'pi-envelope',
@@ -155,23 +155,32 @@ function channelIcon(ch: ContactChannel): string {
   return map[ch.channel_type] ?? 'pi-comment'
 }
 
-function channelHref(ch: ContactChannel): string {
+function channelHref(ch: CompanyChannel): string {
   if (ch.channel_type === 'phone') return `tel:${ch.value}`
   if (ch.channel_type === 'email') return `mailto:${ch.value}`
   if (ch.channel_type === 'tg') return `https://t.me/${ch.value.replace('@', '')}`
   if (ch.channel_type === 'wa') return `https://wa.me/${ch.value.replace(/\D/g, '')}`
+  if (ch.channel_type === 'website') {
+    const url = ch.value.startsWith('http') ? ch.value : `https://${ch.value}`
+    return url
+  }
   return '#'
 }
 
-function channelLinkTarget(ch: ContactChannel): string | undefined {
-  if (ch.channel_type === 'tg' || ch.channel_type === 'wa') return '_blank'
+function channelLinkTag(ch: CompanyChannel): string {
+  return ['phone', 'email', 'tg', 'wa', 'website'].includes(ch.channel_type) ? 'a' : 'span'
+}
+
+function channelLinkTarget(ch: CompanyChannel): string | undefined {
+  if (['tg', 'wa', 'website', 'linkedin', 'instagram'].includes(ch.channel_type)) return '_blank'
   return undefined
 }
 
-function channelActionLabel(ch: ContactChannel): string {
-  if (ch.channel_type === 'phone') return t('crm.contact.channels.call')
-  if (ch.channel_type === 'email') return t('crm.contact.channels.sendEmail')
-  return t('crm.contact.channels.openChat')
+function channelActionLabel(ch: CompanyChannel): string {
+  if (ch.channel_type === 'phone') return t('crm.company.channels.call')
+  if (ch.channel_type === 'email') return t('crm.company.channels.sendEmail')
+  if (ch.channel_type === 'website') return t('crm.company.channels.openSite')
+  return t('crm.company.channels.openChat')
 }
 
 // ── Menu ──────────────────────────────────────────────────────────────────────
@@ -181,11 +190,11 @@ function setMenuRef(id: number, el: unknown) {
   else menuRefs.value.delete(id)
 }
 
-function onMenuClick(event: Event, ch: ContactChannel) {
+function onMenuClick(event: Event, ch: CompanyChannel) {
   menuRefs.value.get(ch.id)?.toggle(event)
 }
 
-function channelMenuItems(ch: ContactChannel) {
+function channelMenuItems(ch: CompanyChannel) {
   return [
     {
       label: t('common.delete'),
@@ -214,18 +223,20 @@ const newChannelValue = ref('')
 const saving = ref(false)
 
 const channelTypeOptions = computed(() => [
-  { value: 'phone', label: t('crm.contact.channels.phone') },
-  { value: 'email', label: t('crm.contact.channels.email') },
-  { value: 'tg', label: t('crm.contact.channels.telegram') },
-  { value: 'wa', label: t('crm.contact.channels.whatsapp') },
+  { value: 'phone', label: t('crm.company.channels.phone') },
+  { value: 'email', label: t('crm.company.channels.email') },
+  { value: 'website', label: t('crm.company.channels.website') },
+  { value: 'tg', label: t('crm.company.channels.telegram') },
+  { value: 'wa', label: t('crm.company.channels.whatsapp') },
 ])
 
 function channelPlaceholder(type: ChannelType | null): string {
-  if (!type) return t('crm.contact.channels.valuePlaceholder')
+  if (!type) return t('crm.company.channels.valuePlaceholder')
   if (type === 'phone') return '+7 (999) 000-00-00'
   if (type === 'email') return 'email@example.com'
   if (type === 'tg') return '@username'
   if (type === 'wa') return '+7 (999) 000-00-00'
+  if (type === 'website') return 'https://example.com'
   return ''
 }
 
@@ -245,13 +256,13 @@ async function submitAddChannel() {
   if (!newChannelType.value || !newChannelValue.value.trim()) return
   saving.value = true
   try {
-    const created = await contactsApi.addChannel(props.contactId, {
+    const created = await companiesApi.addChannel(props.companyId, {
       channel_type: newChannelType.value,
       value: newChannelValue.value.trim(),
     })
     emit('updated', [...props.channels, created])
     addingOpen.value = false
-    toast.add({ severity: 'success', summary: t('crm.contact.channels.added'), life: 2500 })
+    toast.add({ severity: 'success', summary: t('crm.company.channels.added'), life: 2500 })
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -266,17 +277,17 @@ async function submitAddChannel() {
 
 // ── Delete ────────────────────────────────────────────────────────────────────
 
-function onDeleteChannel(ch: ContactChannel) {
+function onDeleteChannel(ch: CompanyChannel) {
   confirm.require({
-    message: t('crm.contact.channels.deleteConfirm'),
+    message: t('crm.company.channels.deleteConfirm'),
     header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        await contactsApi.deleteChannel(props.contactId, ch.id)
+        await companiesApi.deleteChannel(props.companyId, ch.id)
         emit('updated', props.channels.filter((c) => c.id !== ch.id))
-        toast.add({ severity: 'success', summary: t('crm.contact.channels.deleted'), life: 2500 })
+        toast.add({ severity: 'success', summary: t('crm.company.channels.deleted'), life: 2500 })
       } catch (err) {
         toast.add({
           severity: 'error',
@@ -291,20 +302,20 @@ function onDeleteChannel(ch: ContactChannel) {
 </script>
 
 <style lang="scss" scoped>
-.contact-channels {
+.company-channels {
   display: flex;
   flex-direction: column;
 }
 
-.contact-channels__skeleton {
+.company-channels__skeleton {
   display: flex;
   flex-direction: column;
   padding: $space-2 0;
 }
 
-// ─── Channel row — spec §4 ────────────────────────────────────────────────────
+// ─── Channel row ─────────────────────────────────────────────────────────────
 
-.contact-channels__row {
+.company-channels__row {
   display: flex;
   align-items: center;
   gap: $space-3;
@@ -325,9 +336,9 @@ function onDeleteChannel(ch: ContactChannel) {
   }
 }
 
-// ─── Action icon circle 30×30 — spec §4 ──────────────────────────────────────
+// ─── Action icon circle 30×30 ─────────────────────────────────────────────────
 
-.contact-channels__action-icon {
+.company-channels__action-icon {
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
   width: 30px;
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
@@ -347,7 +358,6 @@ function onDeleteChannel(ch: ContactChannel) {
     font-size: $font-size-sm;
   }
 
-  // On hover: turns navy (#172747) with white icon — spec §4
   &--hovered {
     background: $brand-header-bg;
     color: $sidebar-text-active;
@@ -357,7 +367,7 @@ function onDeleteChannel(ch: ContactChannel) {
     background: var(--p-primary-900);
     color: var(--p-primary-200);
 
-    &.contact-channels__action-icon--hovered {
+    &.company-channels__action-icon--hovered {
       background: $brand-header-bg;
       color: $sidebar-text-active;
     }
@@ -366,7 +376,7 @@ function onDeleteChannel(ch: ContactChannel) {
 
 // ─── Info column (value + action label) ──────────────────────────────────────
 
-.contact-channels__info {
+.company-channels__info {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -374,7 +384,7 @@ function onDeleteChannel(ch: ContactChannel) {
   gap: 1px;
 }
 
-.contact-channels__value {
+.company-channels__value {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-800;
@@ -387,8 +397,7 @@ function onDeleteChannel(ch: ContactChannel) {
   }
 }
 
-// Action label — shown on hover; spec §4: right label = «Позвонить / Написать / Открыть чат»
-.contact-channels__action-label {
+.company-channels__action-label {
   font-size: $font-size-2xs;
   color: $primary-900;
   font-weight: $font-weight-semibold;
@@ -407,8 +416,8 @@ function onDeleteChannel(ch: ContactChannel) {
 
 // ─── Right actions (copy + more) ─────────────────────────────────────────────
 
-.contact-channels__copy-btn,
-.contact-channels__more-btn {
+.company-channels__copy-btn,
+.company-channels__more-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -429,7 +438,7 @@ function onDeleteChannel(ch: ContactChannel) {
     font-size: $font-size-2xs;
   }
 
-  .contact-channels__row:hover & {
+  .company-channels__row:hover & {
     opacity: 1;
   }
 
@@ -446,7 +455,7 @@ function onDeleteChannel(ch: ContactChannel) {
 
 // ─── Empty ────────────────────────────────────────────────────────────────────
 
-.contact-channels__empty {
+.company-channels__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -455,12 +464,12 @@ function onDeleteChannel(ch: ContactChannel) {
   text-align: center;
 }
 
-.contact-channels__empty-icon {
+.company-channels__empty-icon {
   font-size: $font-size-2xl;
   color: $surface-300;
 }
 
-.contact-channels__empty-text {
+.company-channels__empty-text {
   font-size: $font-size-sm;
   color: $surface-500;
   margin: 0;
@@ -468,7 +477,7 @@ function onDeleteChannel(ch: ContactChannel) {
 
 // ─── Add form ─────────────────────────────────────────────────────────────────
 
-.contact-channels__add-form {
+.company-channels__add-form {
   display: flex;
   align-items: center;
   gap: $space-2;
@@ -477,12 +486,12 @@ function onDeleteChannel(ch: ContactChannel) {
   border-top: 1px solid var(--p-surface-100);
 }
 
-.contact-channels__type-select {
+.company-channels__type-select {
   width: 140px;
   flex-shrink: 0;
 }
 
-.contact-channels__value-input {
+.company-channels__value-input {
   flex: 1;
   min-width: 0;
 }

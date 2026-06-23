@@ -127,6 +127,28 @@
                         @save="patchField"
                       />
 
+                      <!-- 1b. Каналы связи -->
+                      <InfoPanel
+                        :title="t('crm.company.sections.channels')"
+                        icon="pi-phone"
+                        panel-key="company-channels"
+                        :default-collapsed="false"
+                        :count="companyChannels.length || undefined"
+                      >
+                        <template #header-action>
+                          <button type="button" class="company-page-v2__add-btn" @click.stop="openAddChannel">
+                            <i class="pi pi-plus" />
+                            {{ t('crm.company.channels.addChannel') }}
+                          </button>
+                        </template>
+                        <CompanyChannelsBlock
+                          ref="channelsBlockRef"
+                          :company-id="company.id"
+                          :channels="companyChannels"
+                          @updated="onChannelsUpdated"
+                        />
+                      </InfoPanel>
+
                       <!-- 2. Сотрудники (обзор) -->
                       <CompanyEmployeesPanel
                         :employees="employees"
@@ -490,7 +512,7 @@ import { useCompanyPageActions } from './composables/useCompanyPageActions'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { CompanyExtended, EmploymentStatus, Company, Contact } from '@/entities/crm'
+import type { CompanyExtended, EmploymentStatus, Company, Contact, CompanyChannel } from '@/entities/crm'
 import type { DocumentDto } from '@/entities/document'
 import type { MenuItem } from 'primevue/menuitem'
 import { useConfirm } from 'primevue/useconfirm'
@@ -525,6 +547,19 @@ const holdingParentSearch = ref('')
 const holdingParentId = ref<number | null>(null)
 const holdingParentSuggestions = ref<Array<{ id: number; name: string }>>([])
 const holdingAttaching = ref(false)
+
+// ── Channels state ─────────────────────────────────────────────────────────────
+
+const companyChannels = ref<CompanyChannel[]>([])
+const channelsBlockRef = ref<{ openAdd: () => void } | null>(null)
+
+function onChannelsUpdated(updated: CompanyChannel[]) {
+  companyChannels.value = updated
+}
+
+function openAddChannel() {
+  channelsBlockRef.value?.openAdd()
+}
 
 const {
   companyId,
@@ -952,6 +987,14 @@ onMounted(async () => {
   await loadAll()
   // Load entity log (company may now be loaded)
   if (companyId.value) void companyLog.load()
+  // Load company channels
+  if (companyId.value) {
+    try {
+      companyChannels.value = await companiesApi.getChannels(companyId.value)
+    } catch {
+      // non-critical: channels panel will show empty state
+    }
+  }
 })
 </script>
 

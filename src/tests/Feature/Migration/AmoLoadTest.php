@@ -449,6 +449,13 @@ class AmoLoadTest extends TestCase
         $this->assertSame('hi@kontakty.ru', $company->email);
         $this->assertSame('https://kontakty.ru', $company->website);
         $this->assertSame('Москва, ул. Тест, 5', $company->address);
+
+        // Channels: 1 phone + 1 email + 1 website = 3 rows persisted.
+        $this->assertSame(3, DB::table('company_channels')->where('company_id', $company->id)->count());
+        $this->assertSame(1, DB::table('company_channels')
+            ->where('company_id', $company->id)->where('channel_type', 'phone')->count());
+        $this->assertSame(1, DB::table('company_channels')
+            ->where('company_id', $company->id)->where('channel_type', 'website')->count());
     }
 
     /**
@@ -494,6 +501,8 @@ class AmoLoadTest extends TestCase
         $this->assertSame(1, Company::query()->count());
         $this->assertSame(1, $result['stats']['companies_updated']);
         $this->assertSame(0, $result['stats']['companies_created']);
+        // No duplicate channels on re-load: 1 phone + 1 website.
+        $this->assertSame(2, DB::table('company_channels')->where('company_id', $company->id)->count());
     }
 
     /**
