@@ -114,12 +114,10 @@ defineExpose({ collapse, expand, collapsed })
   min-height: 44px;
 
   &:hover {
-    background: var(--p-surface-50);
-
-    .app-dark & {
-      // dark surface-300 = #7e7f81 — distinct from title colour (surface-200 = #616263)
-      background: var(--p-surface-300);
-    }
+    // --mg-surface-hover is reactive: light = surface-50 (#F9FAFB), dark = #3a3b3d
+    // (between surface-50/#272829 and surface-100/#444547 — subtly darker than the card).
+    // Defined in theme/scss/foundation/_colors.scss; no dark override needed here.
+    background: var(--mg-surface-hover);
   }
 }
 
