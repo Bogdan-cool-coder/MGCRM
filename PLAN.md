@@ -562,6 +562,29 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] i18n RU+EN симметрия (0 расхождений).
 - [x] **QA:** 23 контрольные точки — dark воронки, фильтры шлют параметры, мёртвых кнопок нет, 0 console/network ошибок. PASS.
 
+**DS-6 QA FAIL (2026-06-23) — 11 дефектов, фикс-итерация требуется (frontend-specialist):**
+
+Корневая причина кластера A (BUG-7, BUG-12): `color-mix()` в `DealsKanbanColumn.vue:179` и `DealsListView.vue:200` ссылается на `var(--p-surface-card)` — переменная не объявлена PrimeVue (есть только `--p-card-background` и `--app-surface-card`). Исправление: заменить `var(--p-surface-card)` на `var(--p-card-background)` в обоих местах.
+Корневая причина кластера B (BUG-2, BUG-8): dark-оверрайды цвета текста в `DealsToolbar.vue` и `DealsKanbanColumn.vue` используют `var(--p-surface-50)` = `#272829` (near-black) — PrimeVue scale INVERTED в тёмной теме (низкие цифры = тёмные, высокие = светлые). Исправление: заменить на `var(--p-surface-900)`.
+
+Список дефектов (frontend-specialist, ветка feat/amo-native-fields):
+- **BUG-1 CRITICAL** — `DealsKanbanBoard.vue:17` `allColumnsEmpty` убирает ВСЕ колонки когда 0 сделок. Спек требует: колонки всегда видны, empty-state только когда `visibleColumns.length === 0`. Fix: убрать `v-else-if="!loading && allColumnsEmpty"`; empty-state показывать только по `visibleColumns.length === 0`.
+- **BUG-7 CRITICAL** — `DealsKanbanColumn.vue:179` headerStyle: `var(--p-surface-card)` не определён → `color-mix()` → прозрачный фон шапки в обеих темах. Fix: `var(--p-card-background)`.
+- **BUG-12 CRITICAL** — `DealsListView.vue:200` styleAttr stage chip: та же причина. Fix: `var(--p-card-background)` + dark-оверрайд цвета текста `var(--p-surface-900)`.
+- **BUG-2 HIGH** — `DealsToolbar.vue` dark h1: `var(--p-surface-50)` = `#272829` невидим. Fix: `var(--p-surface-900)`.
+- **BUG-8 HIGH** — `DealsKanbanColumn.vue` `.kanban-col__name`/`.kanban-col__count` dark: `var(--p-surface-50)` = `#272829` невидим. Fix: `var(--p-surface-900)`.
+- **BUG-11 HIGH** — `DealsKanbanCard.vue` dark amount `$primary-color` = `#172747` на `#444547` контраст 2.1:1 WCAG FAIL. Fix: `.app-dark & { color: var(--p-primary-300); }` на `.kanban-card__amount`.
+- **BUG-5 MEDIUM** — `DealsFilterOverlay.vue` dark inactive chip border `var(--p-surface-600)` = `#D5D6D8` (слишком светлый). Fix: `var(--p-surface-300)` = `#54595E`.
+- **BUG-6 MEDIUM** — `DealsPipelineMenu.vue` нет закрытия по клику вне меню. Fix: click-outside обработчик или директива на `.pipeline-menu`.
+- **BUG-10 MEDIUM** — `DealsKanbanCard.vue` `.kanban-card__title` `$font-size-sm` = 12.25px vs 13px по спеку. Fix: explicit `font-size: 13px // stylelint-disable-line`.
+- **BUG-3 LOW** — `DealsToolbar.vue` `.deals-toolbar__subtitle` `$font-size-xs` = 10.5px vs 12px. Fix: explicit `font-size: 12px // stylelint-disable-line`.
+- **BUG-4 LOW** — i18n `sales.deals.page.filters.presets` = «Сохранённые пресеты» vs «ПРЕСЕТЫ» по спеку. Fix: `ru.json` → «ПРЕСЕТЫ», `en.json` → «PRESETS».
+
+Backend gaps (не блокируют текущую QA-итерацию, беклог DS-6):
+- **B-GAP-1 (M)** — `IndexDealRequest`/`DealService::list()` не поддерживают `sort_by`/`sort_dir`; DataTable стрелки инертны.
+- **B-GAP-2 (L)** — Импорт сделок (`POST /api/deals/import`) не реализован; кнопка задизаблена (coming soon) — корректно.
+- **B-GAP-3 (M)** — Кнопка «Настроить, какие статусы скрывать» (filter overlay) — нет backend-персистентности per-user скрытых стадий; тумблеры per-session — корректно для MVP, дополнительный endpoint нужен в будущем.
+
 **DS-6 хвосты (закрыты 2026-06-22, PM APPROVE):**
 
 - [x] **Deals KPI endpoint — `GET /api/deals/kpi` (backend-specialist + frontend-specialist):** серверный агрегат воронки, заменяет page-local Vue computed() chips (недосчитывал сделки за пределами per_page 25). Бэкенд: `DealKpiService::forFunnel(filters, scope, user)` клонирует `DealService::kpiBaseQuery()` (новый public seam, sibling filteredQuery без with/orderBy/paginate) для каждого chip-счётчика — структурный паритет со списком, pagination не применяется. `DealKpiController` — thin `__invoke`, reuses `IndexDealRequest` verbatim (identical validation + viewAny gate). Visibility scope через `ResolveVisibility::ATTRIBUTE` (fail-closed → Own). Chip-определения: `in_work` (DISTINCT company_id non-won), `cat_l/cat_m/cat_s` (S=S1+S2 combined), `won`, `no_task`, `overdue`. Маршрут `GET /api/deals/kpi` зарегистрирован **перед** `deals/{deal}` (избегает 'kpi'-as-id binding). Ответ `{ data: { pipeline_id, in_work, cat_l, cat_m, cat_s, won, no_task, overdue } }` — plain JSON (no Resource class, mirrors ContactsKpiController). 21 PHPUnit-тест `DealKpiTest`: whole-funnel-not-page (30 deals > per_page 25), full shape, in_work distinct, won, categories S1+S2, no_task, overdue, filter parity (status/owner/country/budget/tags/only_overdue/archived), pipeline_id default+echo, 401, Own/Department/All visibility scope. Сьют Sales 638/638 PASS. Фронт: `DealKpiDto` в entities/sales.ts, `getDealKpi()` в salesApi, `useDealsKpi.ts` composable (useAsyncResource), `DealsKpiChips.vue` rewired (сервер-данные + loading skeleton), пробрасывается через `DealsListView.vue` → `DealsPage/index.vue` (параллельная загрузка в filter-change callback и reload()). KPI chips видны только в list-view (kanban — без бара, by design). QA: light+dark PASS, API stable per_page=1 vs 100 (идентичные ответы), 638 тестов PASS.

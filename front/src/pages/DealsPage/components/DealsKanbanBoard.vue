@@ -12,9 +12,11 @@
       </div>
     </template>
 
-    <!-- Empty state: no deals in pipeline at all -->
+    <!-- Empty state: no stages configured in pipeline (visibleColumns === 0) -->
+    <!-- Spec §4: columns are ALWAYS visible even when empty; this CTA shows only
+         when the pipeline has NO stages at all (not when stages have 0 deals). -->
     <div
-      v-else-if="!loading && allColumnsEmpty"
+      v-else-if="!loading && visibleColumns.length === 0"
       class="kanban-board__empty"
     >
       <i class="pi pi-briefcase kanban-board__empty-icon" />
@@ -27,7 +29,7 @@
       />
     </div>
 
-    <!-- Columns (visible only; hidden stages controlled via FilterPanel) -->
+    <!-- Columns always visible (even if 0 deals per stage) -->
     <template v-else>
       <DealsKanbanColumn
         v-for="(col, idx) in visibleColumns"
@@ -45,7 +47,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -66,10 +67,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const allColumnsEmpty = computed(() => {
-  return props.visibleColumns.every((col) => col.total === 0)
-})
-
 function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   emit('drop', card, fromStageId, toStageId)
 }
@@ -81,7 +78,7 @@ function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   flex-direction: row;
   gap: $space-3;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   padding-bottom: $space-4;
   min-height: 400px;
   align-items: flex-start;
@@ -90,21 +87,12 @@ function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 
-  // Custom scrollbar
-  scrollbar-width: thin;
-  scrollbar-color: $surface-300 transparent;
+  // Hidden scrollbars per spec §4
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
   &::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $surface-300;
-    border-radius: $radius-xs;
+    display: none;
   }
 }
 

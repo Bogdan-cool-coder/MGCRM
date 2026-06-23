@@ -1240,7 +1240,7 @@
           "period": "Период",
           "reset": "Сбросить",
           "apply": "Применить",
-          "presets": "Сохранённые пресеты",
+          "presets": "ПРЕСЕТЫ",
           "properties": "Свойства сделок",
           "presetOpen": "Открытые сделки",
           "presetMine": "Только мои",
@@ -1372,6 +1372,11 @@
         "list": {
           "today": "Сегодня",
           "daysAgo": "{n} дн назад",
+          "daysInStage_one": "{n} день",
+          "daysInStage_few": "{n} дня",
+          "daysInStage_many": "{n} дней",
+          "overdueLabel": "Просрочено",
+          "noTaskLabel": "Нет задачи",
           "columns": {
             "country": "Страна",
             "inStage": "В статусе",

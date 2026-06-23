@@ -55,23 +55,23 @@
       </Column>
 
       <!-- 2. Страна -->
-      <Column :header="t('sales.deals.page.list.columns.country')" style="width: 80px">
+      <Column :header="t('sales.deals.page.list.columns.country')" sortable style="width: 100px">
         <template #body="{ data }">
           <span class="deals-list__country">
-            {{ data.country ? data.country.toUpperCase() : '—' }}
+            {{ data.country || '—' }}
           </span>
         </template>
       </Column>
 
       <!-- 3. Сумма -->
-      <Column :header="t('sales.deals.page.columns.amount')" sortable style="text-align: right; width: 120px">
+      <Column :header="t('sales.deals.page.columns.amount')" sortable style="text-align: right; width: 130px">
         <template #body="{ data }">
           <span class="deals-list__amount">{{ formatCurrency(data.amount, data.currency) }}</span>
         </template>
       </Column>
 
-      <!-- 4. Статус (stage chip with tint) -->
-      <Column :header="t('sales.deals.page.columns.stage')">
+      <!-- 4. Статус (stage chip with tint 22%) -->
+      <Column :header="t('sales.deals.page.columns.stage')" sortable>
         <template #body="{ data }">
           <span
             v-if="data.stage"
@@ -85,8 +85,8 @@
         </template>
       </Column>
 
-      <!-- 5. В статусе (days in stage) -->
-      <Column :header="t('sales.deals.page.list.columns.inStage')" style="width: 100px">
+      <!-- 5. В статусе (days in stage, plural) -->
+      <Column :header="t('sales.deals.page.list.columns.inStage')" sortable style="width: 110px">
         <template #body="{ data }">
           <span
             class="deals-list__days"
@@ -98,7 +98,7 @@
       </Column>
 
       <!-- 6. Посл. контакт (freshness) -->
-      <Column :header="t('sales.deals.page.list.columns.lastContact')" style="width: 120px">
+      <Column :header="t('sales.deals.page.list.columns.lastContact')" sortable style="width: 130px">
         <template #body="{ data }">
           <span
             class="deals-list__freshness"
@@ -109,55 +109,44 @@
         </template>
       </Column>
 
-      <!-- 7. Задача -->
-      <Column :header="t('sales.deals.page.columns.task')">
+      <!-- 7. Задача (custom pills per spec §5.2) -->
+      <Column :header="t('sales.deals.page.columns.task')" sortable>
         <template #body="{ data }">
-          <Tag
-            v-if="data.next_task && !data.next_task.is_overdue"
-            severity="secondary"
-            :value="taskTagLabel(data.next_task)"
-            :icon="taskTypeIcon(data.next_task.type)"
-          />
-          <Tag
-            v-else-if="data.next_task && data.next_task.is_overdue"
-            severity="danger"
-            :value="t('sales.deals.page.card.overdue', { type: taskTypeLabel(data.next_task.type), when: '' }).trim()"
-          />
-          <Tag
+          <!-- overdue → red pill -->
+          <span
+            v-if="data.next_task && data.next_task.is_overdue"
+            class="deals-list__task-pill deals-list__task-pill--overdue"
+          >
+            {{ t('sales.deals.page.list.overdueLabel') }}
+          </span>
+          <!-- ok → icon + date -->
+          <span
+            v-else-if="data.next_task"
+            class="deals-list__task-ok"
+          >
+            <i :class="taskTypeIcon(data.next_task.type)" class="deals-list__task-icon" />
+            {{ taskDateShort(data.next_task.due_at) }}
+          </span>
+          <!-- no task → orange pill -->
+          <span
             v-else
-            severity="warn"
-            :value="t('sales.deals.page.card.noTask')"
-          />
+            class="deals-list__task-pill deals-list__task-pill--no-task"
+          >
+            {{ t('sales.deals.page.card.noTask') }}
+          </span>
         </template>
       </Column>
 
-      <!-- 8. Ответственный (avatar + name) -->
-      <Column field="owner.name" :header="t('sales.deals.page.columns.owner')" style="width: 140px">
+      <!-- 8. Ответственный (avatar 22px + full name) -->
+      <Column field="owner.name" :header="t('sales.deals.page.columns.owner')" sortable style="width: 150px">
         <template #body="{ data }">
           <div class="deals-list__owner">
-            <span class="deals-list__owner-avatar">{{ ownerInitial(data.owner.name) }}</span>
-            <span class="deals-list__owner-name">{{ data.owner.name }}</span>
+            <span class="deals-list__owner-avatar">{{ ownerInitial(data.owner?.name ?? '') }}</span>
+            <span class="deals-list__owner-name">{{ data.owner?.name ?? '—' }}</span>
           </div>
         </template>
       </Column>
-
-      <!-- 9. Действия (kebab menu) -->
-      <Column style="width: 44px; padding: 0 6px" :header="''">
-        <template #body="{ data }">
-          <button
-            type="button"
-            class="deals-list__row-menu-btn"
-            :title="t('common.actions')"
-            @click.stop="openMenu($event, data)"
-          >
-            <i class="pi pi-ellipsis-v" />
-          </button>
-        </template>
-      </Column>
     </DataTable>
-
-    <!-- Row action menu -->
-    <Menu ref="rowMenu" :model="rowMenuItems" popup />
 
     <!-- Total count -->
     <div v-if="total > 0" class="deals-list__total">
@@ -167,14 +156,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, RouterLink } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
-import Menu from 'primevue/menu'
-import Tag from 'primevue/tag'
 import { formatCurrency } from '@/utils/currency'
 import DealsKpiChips from './DealsKpiChips.vue'
 import type { DealDto, ActivityType, PipelineStageDto, DealKpiDto } from '@/entities/sales'
@@ -201,40 +187,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const router = useRouter()
 
-const rowMenu = ref<InstanceType<typeof Menu> | null>(null)
-const activeDeal = ref<DealDto | null>(null)
-
-const rowMenuItems = ref([
-  {
-    label: t('sales.deals.page.actions.edit'),
-    icon: 'pi pi-pencil',
-    command: () => {
-      if (activeDeal.value) void router.push(`/deals/${activeDeal.value.id}`)
-    },
-  },
-  {
-    label: t('sales.deals.page.actions.changeStage'),
-    icon: 'pi pi-arrows-h',
-    command: () => {
-      if (activeDeal.value) emit('changeStage', activeDeal.value)
-    },
-  },
-  { separator: true },
-  {
-    label: t('sales.deals.page.actions.delete'),
-    icon: 'pi pi-trash',
-    class: 'text-danger',
-    command: () => {
-      if (activeDeal.value) emit('delete', activeDeal.value)
-    },
-  },
-])
-
-function openMenu(event: MouseEvent, deal: DealDto) {
-  activeDeal.value = deal
-  rowMenu.value?.toggle(event)
-}
-
 function onRowClick(event: { data: DealDto }) {
   void router.push(`/deals/${event.data.id}`)
 }
@@ -245,7 +197,7 @@ function stageChipStyle(stage: PipelineStageDto): Record<string, string> {
   const color = stage.color
   if (!color) return {}
   return {
-    backgroundColor: `color-mix(in srgb, ${color} 22%, var(--p-surface-card))`,
+    backgroundColor: `color-mix(in srgb, ${color} 22%, var(--mg-surface-card))`,
   }
 }
 
@@ -256,7 +208,7 @@ function stageIndex(stage: PipelineStageDto): number {
   return idx >= 0 ? idx + 1 : 1
 }
 
-// ── Days in stage ──────────────────────────────────────────────────────────────
+// ── Days in stage (с правильным склонением) ────────────────────────────────────
 
 const FALLBACK_WARN_DAYS = 7
 const FALLBACK_DANGER_DAYS = 14
@@ -268,8 +220,21 @@ function effectiveDays(deal: DealDto): number {
 }
 
 function daysInStageText(deal: DealDto): string {
-  const d = effectiveDays(deal)
-  return t('sales.deals.page.list.daysAgo', { n: d })
+  const n = effectiveDays(deal)
+  // Russian plural: 1 → день, 2-4 → дня, 5+ → дней
+  const mod10 = n % 10
+  const mod100 = n % 100
+  let key: string
+  if (mod100 >= 11 && mod100 <= 19) {
+    key = 'sales.deals.page.list.daysInStage_many'
+  } else if (mod10 === 1) {
+    key = 'sales.deals.page.list.daysInStage_one'
+  } else if (mod10 >= 2 && mod10 <= 4) {
+    key = 'sales.deals.page.list.daysInStage_few'
+  } else {
+    key = 'sales.deals.page.list.daysInStage_many'
+  }
+  return t(key, { n })
 }
 
 function rottingClass(deal: DealDto): string {
@@ -277,25 +242,25 @@ function rottingClass(deal: DealDto): string {
   const warnDays = deal.stage?.warn_days ?? FALLBACK_WARN_DAYS
   const dangerDays = deal.stage?.danger_days ?? FALLBACK_DANGER_DAYS
   if (days >= dangerDays) return 'deals-list__days--rotting'
-  if (days >= Math.floor(warnDays * 0.7)) return 'deals-list__days--warn'
+  if (days >= warnDays) return 'deals-list__days--warn'
   return ''
 }
 
-// ── Freshness (last_contact_at) ────────────────────────────────────────────────
+// ── Freshness (last_contact_at) §5.3 ──────────────────────────────────────────
 
 function freshnessColor(deal: DealDto): string {
-  if (!deal.last_contact_at) return 'var(--p-surface-400)'
+  if (!deal.last_contact_at) return 'var(--p-surface-500)'
   const days = Math.floor((Date.now() - new Date(deal.last_contact_at).getTime()) / 86400000)
   const isOverdue = deal.next_task?.is_overdue ?? false
   if (isOverdue || days >= 21) return 'var(--p-red-600)'
-  if (days >= 7) return 'var(--p-orange-600)'
-  return 'var(--p-green-600)'
+  if (days >= 7) return 'var(--p-orange-700)'
+  return 'var(--p-green-700)'
 }
 
 function freshnessText(deal: DealDto): string {
   if (!deal.last_contact_at) return '—'
   const days = Math.floor((Date.now() - new Date(deal.last_contact_at).getTime()) / 86400000)
-  if (days <= 0) return t('sales.deals.page.list.today')
+  if (days <= 1) return t('sales.deals.page.list.today')
   return t('sales.deals.page.list.daysAgo', { n: days })
 }
 
@@ -319,34 +284,18 @@ function taskTypeIcon(type: ActivityType): string {
   return map[type] ?? 'pi pi-check-square'
 }
 
-function taskTypeLabel(type: ActivityType): string {
-  return t(`sales.deals.page.taskTypes.${type}`)
-}
-
-function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): string {
-  if (!nextTask.due_at) return taskTypeLabel(nextTask.type)
-  const d = new Date(nextTask.due_at)
+function taskDateShort(dueAt: string | null): string {
+  if (!dueAt) return ''
+  const d = new Date(dueAt)
   const day = String(d.getDate()).padStart(2, '0')
   const month = String(d.getMonth() + 1).padStart(2, '0')
-  return `${taskTypeLabel(nextTask.type)} · ${day}.${month}`
+  return `${day}.${month}`
 }
-
-// ── Country display ────────────────────────────────────────────────────────────
 </script>
 
 <style lang="scss" scoped>
 .deals-list {
   background: transparent;
-}
-
-// KPI chips wrapper handled by DealsKpiChips itself
-
-.deals-list__table-wrap {
-  background: $surface-card;
-  border-radius: $radius-lg;
-  border: 1px solid var(--p-surface-200);
-  box-shadow: $shadow-card;
-  overflow: hidden;
 }
 
 :deep(.p-datatable) {
@@ -365,9 +314,8 @@ function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): 
 :deep(.p-datatable-thead th) {
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: $surface-500;
+  background: $surface-card;
 
   .app-dark & {
     color: var(--p-surface-400);
@@ -387,8 +335,10 @@ function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): 
 .deals-list__country {
   font-size: $font-size-xs;
   color: $surface-500;
-  font-weight: $font-weight-medium;
-  letter-spacing: 0.03em;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
 }
 
 .deals-list__amount {
@@ -406,10 +356,10 @@ function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): 
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
   color: $surface-800;
-  // background set by :style color-mix
+  // background set by :style color-mix (uses --mg-surface-card for proper tint base)
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-900); // dark surface-900 = #F9FAFB — readable on color-mix tint bg
   }
 }
 
@@ -425,6 +375,10 @@ function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): 
   font-size: $font-size-xs;
   color: $surface-500;
 
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+
   &--warn {
     color: var(--p-orange-500);
   }
@@ -439,6 +393,55 @@ function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): 
 .deals-list__freshness {
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
+}
+
+// Task column — custom pills per §5.2
+.deals-list__task-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+
+  &--overdue {
+    background: var(--p-red-50);
+    color: var(--p-red-700);
+
+    .app-dark & {
+      background: rgba(200, 50, 50, 0.2);
+      color: var(--p-red-300);
+    }
+  }
+
+  &--no-task {
+    background: var(--p-orange-50);
+    color: var(--p-orange-900);
+
+    .app-dark & {
+      background: rgba(200, 120, 30, 0.2);
+      color: var(--p-orange-300);
+    }
+  }
+}
+
+.deals-list__task-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  color: $surface-600;
+  white-space: nowrap;
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
+}
+
+.deals-list__task-icon {
+  font-size: $font-size-xs;
+  flex-shrink: 0;
 }
 
 // Owner cell
@@ -483,35 +486,6 @@ function taskTagLabel(nextTask: { type: ActivityType; due_at: string | null }): 
 
   .app-dark & {
     border-top-color: var(--p-surface-700);
-  }
-}
-
-// Row kebab action button
-.deals-list__row-menu-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  border-radius: $radius-sm;
-  color: $surface-400;
-  cursor: pointer;
-  transition: background var(--app-transition-fast), color var(--app-transition-fast);
-
-  i {
-    font-size: $font-size-sm;
-  }
-
-  &:hover {
-    background: var(--p-surface-100);
-    color: $surface-700;
-
-    .app-dark & {
-      background: var(--p-surface-100);
-      color: var(--p-surface-200);
-    }
   }
 }
 

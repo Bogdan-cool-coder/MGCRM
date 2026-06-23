@@ -176,7 +176,7 @@ const headerStyle = computed(() => {
   const color = effectiveStageColor.value
   return {
     borderTop: `3px solid ${color}`,
-    backgroundColor: `color-mix(in srgb, ${color} 13%, var(--p-surface-card))`,
+    backgroundColor: `color-mix(in srgb, ${color} 13%, var(--mg-surface-card))`,
   }
 })
 
@@ -252,6 +252,7 @@ function hidePopover() {
   width: 284px;
   min-width: 284px;
   flex-shrink: 0;
+  align-self: flex-start;
   display: flex;
   flex-direction: column;
   background: $surface-card;
@@ -269,8 +270,7 @@ function hidePopover() {
 
 .kanban-col__header {
   padding: 11px 13px 9px;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08); // subtle divider under tint header — no token matches alpha-blend intent
+  border-bottom: 1px solid var(--p-surface-200);
   flex-shrink: 0;
 }
 
@@ -295,9 +295,9 @@ function hidePopover() {
   justify-self: start;
 
   .app-dark & {
-    background: var(--p-surface-200);
-    border-color: var(--p-surface-300);
-    color: var(--p-surface-50);
+    background: var(--p-surface-100);
+    border-color: var(--p-surface-200);
+    color: var(--p-surface-900); // dark surface-900 = #F9FAFB (light text on dark bg)
   }
 }
 
@@ -313,7 +313,7 @@ function hidePopover() {
   white-space: nowrap;
 
   .app-dark & {
-    color: var(--p-surface-50);
+    color: var(--p-surface-900); // dark surface-900 = #F9FAFB (light text on dark bg)
   }
 }
 
@@ -327,7 +327,7 @@ function hidePopover() {
 
 .kanban-col__sum {
   font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
+  font-weight: $font-weight-normal;
   color: $surface-500;
   cursor: pointer;
 
@@ -405,6 +405,12 @@ function hidePopover() {
   flex-direction: column;
   gap: $space-2;
   min-height: 80px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   &--empty {
     min-height: 100px;

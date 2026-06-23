@@ -1230,7 +1230,7 @@
           "period": "Period",
           "reset": "Reset",
           "apply": "Apply",
-          "presets": "Saved presets",
+          "presets": "PRESETS",
           "properties": "Deal properties",
           "presetOpen": "Open deals",
           "presetMine": "Mine only",
@@ -1372,6 +1372,11 @@
         "list": {
           "today": "Today",
           "daysAgo": "{n}d ago",
+          "daysInStage_one": "{n} day",
+          "daysInStage_few": "{n} days",
+          "daysInStage_many": "{n} days",
+          "overdueLabel": "Overdue",
+          "noTaskLabel": "No task",
           "columns": {
             "country": "Country",
             "inStage": "In stage",

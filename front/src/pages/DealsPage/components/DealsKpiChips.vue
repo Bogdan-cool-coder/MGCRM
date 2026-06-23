@@ -11,14 +11,14 @@
     <template v-else>
       <!-- In work: unique companies with non-won deals -->
       <span class="deals-kpi__chip deals-kpi__chip--brand">
-        <i class="pi pi-building deals-kpi__chip-icon" />
+        <i class="pi pi-briefcase deals-kpi__chip-icon" />
         {{ t('sales.deals.page.kpi.inWork') }}:
         <strong>{{ t('sales.deals.page.kpi.inWorkValue', { n: props.kpi.in_work }) }}</strong>
       </span>
 
       <!-- Categories L/M/S -->
       <span class="deals-kpi__chip deals-kpi__chip--info">
-        <i class="pi pi-chart-bar deals-kpi__chip-icon" />
+        <i class="pi pi-tags deals-kpi__chip-icon" />
         {{ t('sales.deals.page.kpi.categories') }}:
         <strong>{{ props.kpi.cat_l }}L / {{ props.kpi.cat_m }}M / {{ props.kpi.cat_s }}S</strong>
       </span>
@@ -81,7 +81,7 @@ const { t } = useI18n()
   font-size: $font-size-xs;
 
   strong {
-    font-weight: $font-weight-semibold;
+    font-weight: $font-weight-bold;
   }
 
   &--skeleton {
@@ -100,7 +100,7 @@ const { t } = useI18n()
     color: $primary-900;
 
     .app-dark & {
-      background: rgba(23, 39, 71, 0.35);
+      background: color-mix(in srgb, #{$primary-900} 35%, transparent);
       color: var(--p-primary-200);
     }
   }
@@ -127,7 +127,7 @@ const { t } = useI18n()
 
   &--warning {
     background: var(--p-orange-50);
-    color: var(--p-orange-700);
+    color: var(--p-orange-900);
 
     .app-dark & {
       background: rgba(200, 120, 30, 0.2);

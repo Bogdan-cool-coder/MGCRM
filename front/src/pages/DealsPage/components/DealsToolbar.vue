@@ -16,14 +16,14 @@
 
     <!-- Filter button with badge -->
     <div class="deals-toolbar__filter-wrap">
-      <Button
-        :label="t('sales.deals.page.toolbar.searchAndFilter')"
-        icon="pi pi-search"
-        severity="secondary"
-        outlined
+      <button
+        type="button"
         :class="['deals-toolbar__filter-btn', { 'deals-toolbar__filter-btn--active': filterActive }]"
         @click="emit('openFilter')"
-      />
+      >
+        <i class="pi pi-search" />
+        <span>{{ t('sales.deals.page.toolbar.searchAndFilter') }}</span>
+      </button>
       <span v-if="filterCount > 0" class="deals-toolbar__filter-badge">{{ filterCount }}</span>
     </div>
 
@@ -134,7 +134,7 @@ const moreBtnEl = ref<HTMLElement | null>(null)
 const mergeDialogOpen = ref(false)
 
 const subtitle = computed(() =>
-  `${props.pipelineName} · ${props.totalDeals} сделок · ≈ ${props.totalSum}`,
+  `MACRO Global · ${props.totalDeals} сделок · ≈ ${props.totalSum}`,
 )
 
 const menuItems = computed(() => [
@@ -193,7 +193,7 @@ const menuItems = computed(() => [
   justify-content: center;
 
   .app-dark & {
-    background: rgba(23, 39, 71, 0.35);
+    background: color-mix(in srgb, $primary-900 35%, transparent);
   }
 
   i {
@@ -222,12 +222,13 @@ const menuItems = computed(() => [
   line-height: 1.1;
 
   .app-dark & {
-    color: var(--p-surface-50);
+    color: var(--p-surface-900); // dark surface-900 = #F9FAFB (light text on dark bg)
   }
 }
 
 .deals-toolbar__subtitle {
-  font-size: $font-size-xs;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  font-size: 12px; // spec §2 = 12px; $font-size-xs = 10.5px (no exact token for 12px)
   color: $surface-500;
   margin-top: 2px;
 
@@ -249,6 +250,39 @@ const menuItems = computed(() => [
 
 .deals-toolbar__filter-btn {
   height: 38px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  border: 1px solid $surface-200;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $surface-600;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--app-transition-fast), color var(--app-transition-fast), border-color var(--app-transition-fast);
+
+  i {
+    font-size: $font-size-sm;
+  }
+
+  &:hover {
+    background: var(--p-surface-50);
+    border-color: $surface-300;
+  }
+
+  .app-dark & {
+    border-color: var(--p-surface-600);
+    color: var(--p-surface-300);
+
+    &:hover {
+      background: var(--p-surface-100);
+      border-color: var(--p-surface-400);
+    }
+  }
 }
 
 .deals-toolbar__filter-btn--active {
@@ -257,7 +291,7 @@ const menuItems = computed(() => [
   border-color: $primary-900 !important;
 
   .app-dark & {
-    background: rgba(23, 39, 71, 0.4) !important;
+    background: color-mix(in srgb, $primary-900 40%, transparent) !important;
     border-color: var(--p-primary-300) !important;
     color: var(--p-primary-300) !important;
   }
@@ -294,9 +328,11 @@ const menuItems = computed(() => [
 
   &--open {
     border-color: $primary-900 !important;
+    color: $primary-900 !important;
 
     .app-dark & {
       border-color: var(--p-primary-300) !important;
+      color: var(--p-primary-200) !important;
     }
   }
 }
@@ -362,7 +398,7 @@ const menuItems = computed(() => [
   color: $primary-900;
 
   .app-dark & {
-    background: rgba(23, 39, 71, 0.45);
+    background: color-mix(in srgb, $primary-900 45%, transparent);
     color: var(--p-primary-200);
   }
 
@@ -371,7 +407,7 @@ const menuItems = computed(() => [
     color: $primary-900;
 
     .app-dark & {
-      background: rgba(23, 39, 71, 0.45);
+      background: color-mix(in srgb, $primary-900 45%, transparent);
       color: var(--p-primary-200);
     }
   }

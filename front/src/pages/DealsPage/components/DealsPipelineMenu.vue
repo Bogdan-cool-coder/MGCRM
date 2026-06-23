@@ -1,5 +1,5 @@
 <template>
-  <div v-if="open" class="pipeline-menu">
+  <div v-if="open" ref="menuEl" class="pipeline-menu">
     <div
       v-for="pipeline in pipelines"
       :key="pipeline.id"
@@ -27,11 +27,12 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { PipelineDto } from '@/entities/sales'
 
-defineProps<{
+const props = defineProps<{
   open: boolean
   pipelines: PipelineDto[]
   activePipelineId: number | null
@@ -44,6 +45,34 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
+const menuEl = ref<HTMLElement | null>(null)
+
+// ── Outside-click close ────────────────────────────────────────────────────────
+
+function onDocumentClick(event: MouseEvent) {
+  if (menuEl.value && !menuEl.value.contains(event.target as Node)) {
+    emit('close')
+  }
+}
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      // Defer so the click that opened the menu (pipeline toggle button) doesn't
+      // immediately trigger our outside-click handler and close it again.
+      setTimeout(() => {
+        document.addEventListener('click', onDocumentClick)
+      }, 0)
+    } else {
+      document.removeEventListener('click', onDocumentClick)
+    }
+  },
+)
+
+onUnmounted(() => {
+  document.removeEventListener('click', onDocumentClick)
+})
 
 function pipelineIcon(kind: string | null): string {
   if (kind === 'onboarding') return 'pi pi-flag'
@@ -106,7 +135,7 @@ function onSettings() {
     background: $primary-100;
 
     .app-dark & {
-      background: rgba(23, 39, 71, 0.35);
+      background: color-mix(in srgb, $primary-900 35%, transparent);
     }
   }
 

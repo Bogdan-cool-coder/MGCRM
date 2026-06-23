@@ -51,7 +51,9 @@ $red-700: var(--app-red-700);
 $green-100: var(--app-green-100);
 $green-500: var(--app-green-500);
 $green-900: var(--app-green-900);
+$orange-50: var(--app-orange-50);
 $orange-100: var(--app-orange-100);
+$orange-700: var(--app-orange-700);
 $orange-900: var(--app-orange-900);
 $blue-900: var(--app-blue-900);
 $teal-100: var(--app-teal-100);
@@ -73,6 +75,22 @@ $primary-950: var(--app-primary-950);
 
 // Compatibility aliases
 $background-color: $surface-100;
+
+// ─── Kanban/list surface-card color-mix base ─────────────────────────────────
+// --mg-surface-card is a DEFINED custom property (unlike --p-surface-card which
+// does not exist in PrimeVue). Used as the "white" base for color-mix() in
+// kanban column header tint and list-view stage chip tint, so they render a
+// real (non-transparent) tinted color in BOTH light and dark themes.
+//   light: surface-0 = #FFFFFF (white card bg)
+//   dark:  surface-100 = #444547 (dark card bg per §5.2 canon)
+// Injected into :root / .app-dark via appVariables.ts or the index.scss block.
+:root {
+  --mg-surface-card: var(--p-surface-0);
+}
+
+.app-dark {
+  --mg-surface-card: var(--p-surface-100);
+}
 
 // ─── Brand header token ───────────────────────────────────────────────────────
 // Бренд-инвариант: хедер карточки сделки всегда тёмный (из брендбука).

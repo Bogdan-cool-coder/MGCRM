@@ -169,7 +169,7 @@ const dangerDays = computed(() => props.stage?.danger_days ?? FALLBACK_DANGER_DA
 const rottingClass = computed(() => {
   const d = effectiveDaysInStage.value
   if (d >= dangerDays.value) return 'kanban-card__days--rotting'
-  if (d >= Math.floor(warnDays.value * 0.7)) return 'kanban-card__days--warn'
+  if (d >= warnDays.value) return 'kanban-card__days--warn'
   return ''
 })
 
@@ -354,11 +354,13 @@ const ownerInitial = computed(() => {
 }
 
 .kanban-card__body {
-  padding: $space-3;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 11px 12px; // spec §4.2 exact: 11px top/bottom (no token for 11px), 12px = $space-3
 }
 
 .kanban-card__title {
-  font-size: $font-size-sm;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  font-size: 13px; // spec §4.2 = 13px/600; $font-size-sm = 12.25px (no exact token for 13px)
   font-weight: $font-weight-semibold;
   color: $surface-800;
   margin-bottom: $space-2;
@@ -394,6 +396,10 @@ const ownerInitial = computed(() => {
   color: $primary-color;
   white-space: nowrap;
   flex-shrink: 0;
+
+  .app-dark & {
+    color: var(--p-primary-300); // #172747 is low-contrast on #444547 in dark; use primary-300
+  }
 }
 
 .kanban-card__product-chip {
@@ -476,7 +482,7 @@ const ownerInitial = computed(() => {
   flex-shrink: 0;
 
   &--warn {
-    color: var(--p-orange-500);
+    color: $orange-700; // --mg-orange-700 per spec §4.2 ≥7 days
   }
 
   &--rotting {
@@ -499,36 +505,33 @@ const ownerInitial = computed(() => {
   display: flex;
   align-items: center;
   gap: $space-2;
-  padding: $space-2 $space-3;
-  border-top: 1px solid $surface-200;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 7px 12px; // spec §4.2 exact: 7px top/bottom (no token), 12px = $space-3
+  border-top: 1px solid var(--p-surface-200);
   font-size: $font-size-2xs; // snap from 11px
   min-height: 28px;
 
-  .app-dark & {
-    border-top-color: var(--p-surface-200);
-  }
-
   &--neutral {
-    background: var(--p-surface-50);
+    background: var(--p-surface-50); // --c-hover light = surface-50; dark = surface-100 via PrimeVue
 
     .app-dark & {
-      background: var(--p-surface-50);
+      background: var(--p-surface-100);
     }
   }
 
   &--warning {
-    background: $color-warning-bg;
+    background: $orange-50; // --mg-orange-50 = $orange-50 (#fff9f5)
 
     .app-dark & {
-      background: rgba(255, 179, 138, 0.15);
+      background: var(--p-surface-100); // dark: same hover tone to preserve readability
     }
   }
 
   &--danger {
-    background: $color-danger-bg;
+    background: $red-50; // --mg-red-50 = $red-50 (#fff5f4)
 
     .app-dark & {
-      background: rgba(255, 90, 68, 0.15);
+      background: var(--p-surface-100);
     }
   }
 }
@@ -555,19 +558,19 @@ const ownerInitial = computed(() => {
   }
 
   &--muted {
-    color: $color-warning-text;
+    color: $orange-900; // --mg-orange-900 per spec §4.2 no-task strip
 
     .app-dark & {
-      color: $color-warning;
+      color: var(--p-orange-500);
     }
   }
 
   &--danger {
-    color: $color-danger-text;
+    color: $red-700; // --mg-red-700 per spec §4.2 overdue strip
     font-weight: $font-weight-medium;
 
     .app-dark & {
-      color: $color-danger;
+      color: var(--p-red-400);
     }
   }
 }

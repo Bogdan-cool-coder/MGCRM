@@ -1,6 +1,6 @@
 <template>
   <div class="filter-overlay">
-    <!-- Search row (above presets) -->
+    <!-- Search row (standalone, max-width 460) -->
     <div class="filter-overlay__search-row">
       <div class="filter-overlay__search-wrap">
         <i class="pi pi-search filter-overlay__search-icon" />
@@ -10,18 +10,9 @@
           class="filter-overlay__search-input"
         />
       </div>
-
-      <Button
-        icon="pi pi-times"
-        text
-        severity="secondary"
-        size="small"
-        class="filter-overlay__close-btn"
-        @click="emit('close')"
-      />
     </div>
 
-    <!-- Presets row (pill chips) -->
+    <!-- Presets row: label + chips + spacer + close button -->
     <div class="filter-overlay__presets">
       <span class="filter-overlay__section-label">{{ t('sales.deals.page.filters.presets') }}</span>
       <div class="filter-overlay__preset-chips">
@@ -40,11 +31,18 @@
           {{ preset.label }}
         </button>
       </div>
+      <div class="filter-overlay__presets-spacer" />
+      <Button
+        icon="pi pi-times"
+        text
+        severity="secondary"
+        size="small"
+        class="filter-overlay__close-btn"
+        @click="emit('close')"
+      />
     </div>
 
-    <div class="filter-overlay__divider" />
-
-    <!-- Fields grid (4 col) -->
+    <!-- Fields grid (4 col, no divider) -->
     <div class="filter-overlay__grid">
       <!-- Ответственный -->
       <div class="filter-overlay__field">
@@ -78,7 +76,7 @@
         <InputText v-model="localFilters.product_q" class="w-100" placeholder="..." />
       </div>
 
-      <!-- Страна -->
+      <!-- Регион / страна -->
       <div class="filter-overlay__field">
         <label class="filter-overlay__label">{{ t('sales.deals.page.filters.country') }}</label>
         <InputText v-model="localFilters.country" class="w-100" />
@@ -90,8 +88,8 @@
         <InputText v-model="localFilters.city" class="w-100" />
       </div>
 
-      <!-- Бюджет -->
-      <div class="filter-overlay__field filter-overlay__field--budget">
+      <!-- Бюджет (single column, two inputs 50/50) -->
+      <div class="filter-overlay__field">
         <label class="filter-overlay__label">{{ t('sales.deals.page.filters.budgetFrom') }}</label>
         <div class="filter-overlay__budget-row">
           <InputNumber
@@ -149,18 +147,19 @@
       </div>
     </div>
 
-    <!-- Hidden stages accordion -->
+    <!-- Hidden stages accordion (max-width 50%) -->
     <div v-if="hiddenStages.length > 0" class="filter-overlay__hidden">
       <button
         type="button"
         class="filter-overlay__hidden-toggle"
         @click="hiddenExpanded = !hiddenExpanded"
       >
-        <i :class="['pi', hiddenExpanded ? 'pi-chevron-up' : 'pi-chevron-down', 'filter-overlay__hidden-chevron']" />
-        <span>{{ t('sales.deals.page.filters.hiddenStages') }}</span>
-        <span class="filter-overlay__hidden-count">
-          {{ t('sales.deals.page.filters.hiddenStagesCount', { n: hiddenStages.length }) }}
+        <i class="pi pi-eye-slash filter-overlay__hidden-eye" />
+        <span class="filter-overlay__hidden-label">{{ t('sales.deals.page.filters.hiddenStages') }}</span>
+        <span class="filter-overlay__hidden-count-pill">
+          {{ shownHiddenStageIds.length }} вкл.
         </span>
+        <i :class="['pi', hiddenExpanded ? 'pi-chevron-up' : 'pi-chevron-down', 'filter-overlay__hidden-chevron']" />
       </button>
 
       <div v-if="hiddenExpanded" class="filter-overlay__hidden-body">
@@ -177,12 +176,18 @@
           <button
             type="button"
             class="filter-overlay__toggle"
-            :class="{ 'filter-overlay__toggle--on': false }"
+            :class="{ 'filter-overlay__toggle--on': shownHiddenStageIds.includes(col.stage.id) }"
             @click="emit('toggleHiddenStage', col.stage.id)"
           >
             <span class="filter-overlay__toggle-knob" />
           </button>
         </div>
+
+        <div class="filter-overlay__hidden-settings-divider" />
+        <button type="button" class="filter-overlay__hidden-settings-btn" @click="() => {}">
+          <i class="pi pi-cog" />
+          <span>{{ t('sales.deals.page.filters.hiddenStagesSettings') }}</span>
+        </button>
       </div>
     </div>
 
@@ -240,6 +245,7 @@ const props = defineProps<{
   tags: string[]
   filters: OverlayFilters
   hiddenStages: BoardColumnDto[]
+  shownHiddenStageIds: number[]
 }>()
 
 const emit = defineEmits<{
@@ -365,23 +371,19 @@ function onReset() {
   flex-shrink: 0;
 
   .app-dark & {
-    background: var(--p-surface-50);
+    background: var(--p-surface-100);
     border-bottom-color: var(--p-surface-300);
   }
 }
 
-// Search row
+// Search row (standalone, max-width 460)
 .filter-overlay__search-row {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
   margin-bottom: $space-3;
 }
 
 .filter-overlay__search-wrap {
   position: relative;
   max-width: 460px;
-  flex: 1;
 }
 
 .filter-overlay__search-icon {
@@ -400,12 +402,7 @@ function onReset() {
   height: 38px;
 }
 
-.filter-overlay__close-btn {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-// Presets row
+// Presets row (label + chips + spacer + close)
 .filter-overlay__presets {
   display: flex;
   align-items: center;
@@ -429,6 +426,14 @@ function onReset() {
   gap: $space-2;
 }
 
+.filter-overlay__presets-spacer {
+  flex: 1;
+}
+
+.filter-overlay__close-btn {
+  flex-shrink: 0;
+}
+
 // Pill chip — custom (NOT ToggleButton)
 .filter-overlay__chip {
   display: inline-flex;
@@ -439,14 +444,14 @@ function onReset() {
   border: 1px solid $surface-200;
   background: transparent;
   color: $surface-600;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   cursor: pointer;
   transition: background var(--app-transition-fast), color var(--app-transition-fast), border-color var(--app-transition-fast);
   line-height: 1;
 
   .app-dark & {
-    border-color: var(--p-surface-600);
+    border-color: var(--p-surface-300); // dark surface-300 = #54595E (not too light)
     color: var(--p-surface-300);
   }
 
@@ -465,7 +470,7 @@ function onReset() {
     color: $primary-900;
 
     .app-dark & {
-      background: rgba(23, 39, 71, 0.4);
+      background: color-mix(in srgb, $primary-900 40%, transparent);
       border-color: var(--p-primary-300);
       color: var(--p-primary-200);
     }
@@ -477,7 +482,7 @@ function onReset() {
     color: var(--p-green-700);
 
     .app-dark & {
-      background: rgba(34, 130, 70, 0.2);
+      background: color-mix(in srgb, var(--p-green-600) 20%, transparent);
       border-color: var(--p-green-400);
       color: var(--p-green-300);
     }
@@ -489,7 +494,7 @@ function onReset() {
     color: var(--p-red-700);
 
     .app-dark & {
-      background: rgba(200, 50, 50, 0.2);
+      background: color-mix(in srgb, var(--p-red-600) 20%, transparent);
       border-color: var(--p-red-400);
       color: var(--p-red-300);
     }
@@ -501,7 +506,7 @@ function onReset() {
     color: var(--p-orange-700);
 
     .app-dark & {
-      background: rgba(200, 120, 30, 0.2);
+      background: color-mix(in srgb, var(--p-orange-600) 20%, transparent);
       border-color: var(--p-orange-400);
       color: var(--p-orange-300);
     }
@@ -512,27 +517,12 @@ function onReset() {
   font-size: $font-size-2xs;
 }
 
-// Divider
-.filter-overlay__divider {
-  height: 1px;
-  background: $surface-100;
-  margin: $space-3 0;
-
-  .app-dark & {
-    background: var(--p-surface-700);
-  }
-}
-
-// Fields grid (4 col)
+// Fields grid (4 col, no divider)
 .filter-overlay__grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px 18px;
   margin-bottom: $space-3;
-}
-
-.filter-overlay__field--budget {
-  grid-column: span 2;
 }
 
 .filter-overlay__field {
@@ -589,16 +579,17 @@ function onReset() {
   padding: $space-2 0;
 }
 
-// Hidden stages accordion
+// Hidden stages accordion (max-width 50%)
 .filter-overlay__hidden {
   max-width: 50%;
   margin-bottom: $space-3;
   border: 1px solid $surface-200;
   border-radius: $radius-md;
   overflow: hidden;
+  background: $surface-card;
 
   .app-dark & {
-    border-color: var(--p-surface-700);
+    border-color: var(--p-surface-600);
   }
 }
 
@@ -622,16 +613,46 @@ function onReset() {
   }
 }
 
-.filter-overlay__hidden-chevron {
-  font-size: $font-size-xs;
-  color: $surface-400;
+.filter-overlay__hidden-eye {
+  font-size: $font-size-sm;
+  color: $surface-500;
+  flex-shrink: 0;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
 }
 
-.filter-overlay__hidden-count {
+.filter-overlay__hidden-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $surface-700;
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+}
+
+.filter-overlay__hidden-count-pill {
+  background: $primary-100;
+  color: $primary-900;
+  border-radius: $radius-pill;
+  padding: 1px $space-2;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  .app-dark & {
+    background: color-mix(in srgb, $primary-900 30%, transparent);
+    color: var(--p-primary-200);
+  }
+}
+
+.filter-overlay__hidden-chevron {
   margin-left: auto;
   font-size: $font-size-xs;
   color: $surface-400;
-  font-weight: $font-weight-normal;
 }
 
 .filter-overlay__hidden-body {
@@ -654,8 +675,8 @@ function onReset() {
 }
 
 .filter-overlay__hidden-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: $radius-circle;
   flex-shrink: 0;
 }
@@ -715,6 +736,46 @@ function onReset() {
   border-radius: $radius-circle;
   background: $surface-0;
   transition: transform var(--app-transition-fast);
+}
+
+// Hidden settings row
+.filter-overlay__hidden-settings-divider {
+  height: 1px;
+  background: $surface-100;
+  margin: $space-1 0;
+
+  .app-dark & {
+    background: var(--p-surface-700);
+  }
+}
+
+.filter-overlay__hidden-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $surface-500;
+  padding: $space-1 0;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+
+  &:hover {
+    color: $surface-700;
+
+    .app-dark & {
+      color: var(--p-surface-200);
+    }
+  }
+
+  i {
+    font-size: $font-size-sm;
+  }
 }
 
 // Footer

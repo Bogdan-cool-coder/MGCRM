@@ -46,6 +46,7 @@
       :tags="[]"
       :filters="toOverlayFilters()"
       :hidden-stages="hiddenColumns"
+      :shown-hidden-stage-ids="shownHiddenStageIdsArray"
       @close="filterOverlayVisible = false"
       @apply="onFilterApply"
       @reset="onFilterReset"
@@ -286,7 +287,10 @@ const {
   updateCardTitle,
   toggleHiddenStage,
   loadMoreInColumn,
+  visibleHiddenStageIds,
 } = boardComposable
+
+const shownHiddenStageIdsArray = computed(() => Array.from(visibleHiddenStageIds.value))
 
 // ── Summary (counts + sum) ─────────────────────────────────────────────────────
 
@@ -623,10 +627,16 @@ onMounted(async () => {
 
 .deals-page__board-wrap {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   padding: $space-4 $space-5;
   display: flex;
   flex-direction: column;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .deals-page__list-wrap {
