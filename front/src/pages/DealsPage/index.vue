@@ -162,6 +162,7 @@ import { useDealsList } from './composables/useDealsList'
 import { useDealsKpi } from './composables/useDealsKpi'
 import { useSalesStore } from '@/stores/salesStore'
 import { useUiTriggersStore } from '@/stores/uiTriggers'
+import { useDirectoriesStore } from '@/stores/directories'
 import { salesApi } from '@/api/sales'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
@@ -177,6 +178,7 @@ const toast = useToast()
 const confirm = useConfirm()
 const salesStore = useSalesStore()
 const uiTriggers = useUiTriggersStore()
+const directoriesStore = useDirectoriesStore()
 
 // ── Filter overlay ─────────────────────────────────────────────────────────────
 
@@ -596,6 +598,11 @@ async function reload() {
 }
 
 onMounted(async () => {
+  // Ensure directories are loaded so the country filter Select has options
+  if (!directoriesStore.loaded) {
+    void directoriesStore.fetchAll()
+  }
+
   // Load pipelines
   await pipelinesResource.run(() => salesApi.getPipelines('sales'), {
     commit: (result) => {

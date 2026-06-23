@@ -123,12 +123,12 @@ export const useCountriesPage = () => {
           toast.add({ severity: 'success', summary: t('common.deleted'), life: 2000 })
         } catch (err: unknown) {
           // Backend returns 422 when the country is referenced by companies / cities / requisites
-          const axiosErr = err as { response?: { status?: number; data?: { message?: string } } }
+          const axiosErr = err as { response?: { status?: number } }
           if (axiosErr?.response?.status === 422) {
             toast.add({
               severity: 'warn',
               summary: t('admin.countries.deleteBlockedTitle'),
-              detail: axiosErr.response.data?.message ?? t('admin.countries.deleteBlockedDetail'),
+              detail: t('admin.countries.deleteBlockedDetail'),
               life: 6000,
             })
           } else {

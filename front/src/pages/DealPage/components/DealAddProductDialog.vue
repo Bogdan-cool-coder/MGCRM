@@ -167,6 +167,7 @@ const props = defineProps<{
     plan_id?: number | null
     quantity: number
     unit_price?: number | null
+    currency?: string | null
   }) => Promise<DealProductDto>
 }>()
 
@@ -310,6 +311,7 @@ async function onSubmit() {
         plan_id: null,
         quantity: quantity.value,
         unit_price: unitPriceKopecks.value || null,
+        currency: form.value.currency || null,
       }),
     )
 

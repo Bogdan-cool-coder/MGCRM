@@ -422,6 +422,8 @@ export interface AddDealProductPayload {
   plan_id?: number | null
   quantity: number
   unit_price?: number | null
+  /** ISO 4217 currency code for this product line (e.g. 'KZT', 'RUB'). */
+  currency?: string | null
 }
 
 export interface UpdateDealProductPayload {

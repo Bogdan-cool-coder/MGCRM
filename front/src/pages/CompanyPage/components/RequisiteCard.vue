@@ -225,14 +225,8 @@ function formatDate(dateStr: string): string {
     background: var(--p-surface-100); // dark card bg
   }
 
-  // E3: active requisite — border accent only, no green background shading (badge is enough indicator)
-  &--current {
-    border-color: var(--p-green-300);
-
-    .app-dark & {
-      border-color: var(--p-green-700);
-    }
-  }
+  // Active requisite — badge is the only indicator; border remains neutral (same as inactive)
+  // Removing any color accent from the border so the card looks plain.
 
   & + & {
     margin-top: $space-3;
