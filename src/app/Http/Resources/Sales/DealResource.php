@@ -17,6 +17,10 @@ class DealResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'amount' => $this->amount, // kopecks
+            // Deal-level discount in PERCENT (0..50). Applied uniformly to the line
+            // items to derive products_net_total below; the per-line discount on
+            // each product (kopecks) is separate. Always present (defaults to 0).
+            'discount_percent' => (int) ($this->discount_percent ?? 0),
             // When true, amount is a fixed budget and is NOT re-derived from line
             // items (it may differ from sum(products) by design).
             'amount_locked' => (bool) $this->amount_locked,
@@ -121,6 +125,14 @@ class DealResource extends JsonResource
                 'products',
                 fn (): int => (int) $this->products->sum('discount'),
             ),
+            // Recomputed line totals after applying the deal-level discount_percent
+            // uniformly to each (already per-line-discounted) product amount. All
+            // kopecks; the deal-level percent is applied AFTER the per-line discount.
+            // products_gross_total = Σ line.amount (== Deal.amount when unlocked).
+            // products_net_total   = Σ round(line.amount * (1 - pct/100)).
+            // products_discounted  = [{ id, net_amount }] so the FE can render the
+            //   discounted price under each line. Only when products are loaded.
+            $this->mergeWhen($this->resource->relationLoaded('products'), fn (): array => $this->discountedTotals()),
             'contacts' => DealContactResource::collection($this->whenLoaded('dealContacts')),
 
             // Deal-card «Активность» tab metrics block (six figures). Stamped onto
@@ -134,6 +146,54 @@ class DealResource extends JsonResource
 
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Recompute the product line totals after applying the deal-level
+     * discount_percent uniformly. Each line's net amount = round(line.amount *
+     * (1 - pct/100)) in integer kopecks (the per-line discount is already baked
+     * into line.amount). Returns:
+     *   products_gross_total — Σ line.amount (pre deal-level discount, kopecks),
+     *   products_net_total   — Σ per-line net amounts (post deal-level discount),
+     *   products_discounted  — [{ id, net_amount }] for per-line FE rendering.
+     *
+     * pct = 0 → net == gross. Computed off the already-loaded products relation
+     * (no extra query). Rounding is per line (consistent with each row's display)
+     * then summed, so the grand total equals the sum of the shown line prices.
+     *
+     * @return array{
+     *     products_gross_total: int,
+     *     products_net_total: int,
+     *     products_discounted: list<array{id: int, net_amount: int}>,
+     * }
+     */
+    private function discountedTotals(): array
+    {
+        $pct = max(0, min(50, (int) ($this->discount_percent ?? 0)));
+
+        $gross = 0;
+        $net = 0;
+        $perLine = [];
+
+        foreach ($this->products as $line) {
+            $lineGross = (int) $line->amount;
+            // Integer-kopeck rounding: gross * (100 - pct) / 100.
+            $lineNet = (int) round($lineGross * (100 - $pct) / 100);
+
+            $gross += $lineGross;
+            $net += $lineNet;
+
+            $perLine[] = [
+                'id' => (int) $line->id,
+                'net_amount' => $lineNet,
+            ];
+        }
+
+        return [
+            'products_gross_total' => $gross,
+            'products_net_total' => $net,
+            'products_discounted' => $perLine,
         ];
     }
 

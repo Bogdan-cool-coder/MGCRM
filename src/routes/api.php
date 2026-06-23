@@ -52,6 +52,8 @@ use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\ContactRelationController;
 use App\Http\Controllers\Crm\ContactsKpiController;
 use App\Http\Controllers\Crm\CrmFeedController;
+use App\Http\Controllers\Crm\CrmFileController;
+use App\Http\Controllers\Crm\CrmFolderController;
 use App\Http\Controllers\Crm\CustomFieldDefController;
 use App\Http\Controllers\Crm\DedupController;
 use App\Http\Controllers\Crm\HoldingController;
@@ -201,6 +203,15 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Acquisition channel change history for a contact.
         Route::get('channel-history', [AcquisitionChannelHistoryController::class, 'forContact'])->name('channel-history.index');
+
+        // Files API — folders and uploads (M2)
+        Route::get('folders', [CrmFolderController::class, 'indexForContact'])->name('folders.index');
+        Route::post('folders', [CrmFolderController::class, 'storeForContact'])->name('folders.store');
+        Route::delete('folders/{folder}', [CrmFolderController::class, 'destroyForContact'])->name('folders.destroy');
+        Route::get('folders/{folder}/files', [CrmFileController::class, 'indexForContact'])->name('folders.files.index');
+        Route::post('folders/{folder}/files', [CrmFileController::class, 'uploadForContact'])->name('folders.files.upload');
+        Route::get('files/{file}/download', [CrmFileController::class, 'downloadForContact'])->name('files.download');
+        Route::delete('files/{file}', [CrmFileController::class, 'destroyForContact'])->name('files.destroy');
     });
 
     // =========================================================================
@@ -248,6 +259,15 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::patch('requisites/{requisite}', [CompanyRequisiteController::class, 'update'])->name('requisites.update');
         Route::delete('requisites/{requisite}', [CompanyRequisiteController::class, 'destroy'])->name('requisites.destroy');
         Route::post('requisites/{requisite}/set-current', [CompanyRequisiteController::class, 'setCurrent'])->name('requisites.set-current');
+
+        // Files API — folders and uploads (M2)
+        Route::get('folders', [CrmFolderController::class, 'indexForCompany'])->name('folders.index');
+        Route::post('folders', [CrmFolderController::class, 'storeForCompany'])->name('folders.store');
+        Route::delete('folders/{folder}', [CrmFolderController::class, 'destroyForCompany'])->name('folders.destroy');
+        Route::get('folders/{folder}/files', [CrmFileController::class, 'indexForCompany'])->name('folders.files.index');
+        Route::post('folders/{folder}/files', [CrmFileController::class, 'uploadForCompany'])->name('folders.files.upload');
+        Route::get('files/{file}/download', [CrmFileController::class, 'downloadForCompany'])->name('files.download');
+        Route::delete('files/{file}', [CrmFileController::class, 'destroyForCompany'])->name('files.destroy');
     });
 
     // =========================================================================

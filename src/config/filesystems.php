@@ -66,6 +66,21 @@ return [
             'directory_visibility' => 'public',
         ],
 
+        /*
+        |----------------------------------------------------------------------
+        | CRM Files disk (entity card uploads — M2)
+        |----------------------------------------------------------------------
+        | Non-public local storage for files uploaded to contact / company cards.
+        | Swap driver to 's3' (and provide AWS_* env vars) for production use.
+        | Access via Sanctum Bearer + CrmFileService::download().
+        */
+        'crm_files' => [
+            'driver' => env('CRM_FILES_DISK_DRIVER', 'local'),
+            'root'   => storage_path('app/private/crm_files'),
+            'serve'  => false,
+            'throw'  => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

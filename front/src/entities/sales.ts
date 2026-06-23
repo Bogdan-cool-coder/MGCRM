@@ -140,6 +140,25 @@ export interface DealDto {
    * NOT included in list/board/store/update payloads.
    */
   metrics?: DealMetricsDto
+  /**
+   * Deal-level discount percent (0..50). Present on all payloads, defaults 0.
+   */
+  discount_percent: number
+  /**
+   * Sum of all product line amounts before deal-level discount (kopecks).
+   * Present on SHOW endpoint only (products relation loaded).
+   */
+  products_gross_total?: number
+  /**
+   * Grand total after deal-level discount_percent applied (kopecks).
+   * Present on SHOW endpoint only.
+   */
+  products_net_total?: number
+  /**
+   * Per-line net amounts after deal-level discount_percent.
+   * Present on SHOW endpoint only.
+   */
+  products_discounted?: Array<{ id: number; net_amount: number }>
 }
 
 // ─── Activity type (used in NextTaskDto) ─────────────────────────────────────
@@ -377,6 +396,8 @@ export interface UpdateDealPayload {
   signed_at?: string | null
   paid_at?: string | null
   owner_user_id?: number
+  /** Change the deal's associated company. */
+  company_id?: number
   extra_fields?: Record<string, unknown>
   perpetual_license?: boolean
   amount_locked?: boolean
@@ -384,6 +405,8 @@ export interface UpdateDealPayload {
   paid_amount?: number | null
   /** ISO currency code for the payment (RUB, USD, EUR, KZT, UZS, AED). */
   payment_currency?: string | null
+  /** Deal-level discount percent (0..50). FE clamps; backend clamps >50 silently. */
+  discount_percent?: number
 }
 
 export interface MoveDealPayload {

@@ -1567,7 +1567,8 @@
           "expectedPaymentDate": "Дата оплаты (план)",
           "daysInWork": "Дней в работе",
           "plannedContract": "План договора",
-          "plannedPayment": "План оплаты"
+          "plannedPayment": "План оплаты",
+          "changeCompany": "Изменить компанию"
         },
         "groups": {
           "products": "Продукты",
@@ -3491,10 +3492,13 @@
     "files": {
       "createFolder": "Создать папку",
       "upload": "Загрузить файл",
+      "download": "Скачать",
       "emptyFiles": "Нет файлов",
       "emptyFolders": "Нет папок",
       "comingSoon": "Файлы появятся в ближайших обновлениях",
       "selectFolder": "Выберите папку",
+      "folderName": "Название папки",
+      "folderNamePlaceholder": "Введите название папки",
       "folders": {
         "manager": "Папка менеджера сделки",
         "contractScans": "Сканы договоров / ДС",

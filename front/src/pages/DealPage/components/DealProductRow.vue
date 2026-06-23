@@ -5,8 +5,16 @@
       <span class="deal-product-row__name">{{ item.product.name }}</span>
       <span class="deal-product-row__sub">{{ subLine }}</span>
     </div>
-    <!-- Amount right -->
-    <span class="deal-product-row__amount">{{ formatCurrency(item.amount, currency) }}</span>
+    <!-- Amount right: show discounted net when deal-level discount active -->
+    <span class="deal-product-row__amount">
+      <template v-if="netAmount !== undefined && netAmount !== item.amount">
+        <span class="deal-product-row__amount-original">{{ formatCurrency(item.amount, currency) }}</span>
+        {{ formatCurrency(netAmount, currency) }}
+      </template>
+      <template v-else>
+        {{ formatCurrency(item.amount, currency) }}
+      </template>
+    </span>
     <!-- Remove on hover -->
     <button
       class="deal-product-row__remove"
@@ -31,6 +39,8 @@ const props = defineProps<{
   currency: string
   saving?: boolean
   deleting?: boolean
+  /** Net amount after deal-level discount (kopecks). When provided, shown instead of item.amount. */
+  netAmount?: number
 }>()
 
 const emit = defineEmits<{
@@ -121,6 +131,21 @@ const subLine = computed(() => {
   color: var(--p-primary-color);
   flex-shrink: 0;
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.deal-product-row__amount-original {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-normal;
+  color: $surface-400;
+  text-decoration: line-through;
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
 }
 
 .deal-product-row__remove {

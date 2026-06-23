@@ -20,6 +20,14 @@ class UpdateDealRequest extends FormRequest
 
         return [
             'title' => ['sometimes', 'string', 'max:255'],
+            // Deal-level discount in PERCENT. The business rule caps it at 50, but a
+            // larger value is NOT a 422: DealService CLAMPs it to 50 on save. So we
+            // only floor it here (min:0) and leave the upper bound to the service —
+            // sending 51 must succeed and persist 50.
+            'discount_percent' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            // Allow changing the deal's company after creation; the service
+            // re-resolves the company-derived data (requisite pin + department).
+            'company_id' => ['sometimes', 'integer', 'exists:crm_companies,id'],
             'currency' => ['sometimes', 'string', Rule::in($currencies)],
             'owner_user_id' => ['sometimes', 'integer', 'exists:users,id'],
             'department_id' => ['sometimes', 'nullable', 'integer', 'exists:departments,id'],

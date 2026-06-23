@@ -37,6 +37,7 @@
           @remove-product="(id) => $emit('removeProduct', id)"
           @remove-contact="(id) => $emit('removeContact', id)"
           @contacts-updated="(list) => $emit('contactsUpdated', list)"
+          @reload-deal="$emit('reloadDeal')"
         />
       </template>
 
@@ -113,6 +114,8 @@ const emit = defineEmits<{
   collapseAllGroups: []
   expandAllGroups: []
   scrollToFeedType: [type: KeyActionType]
+  /** Bubble up from DealTabMain: full deal reload needed (e.g. discount change). */
+  reloadDeal: []
 }>()
 
 const { t } = useI18n()

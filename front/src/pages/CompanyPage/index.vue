@@ -272,7 +272,7 @@
             <!-- ── Files tab — spec §3: Файлы before Холдинг ────── -->
             <TabPanel value="files">
               <div class="company-page-v2__tab-content company-page-v2__tab-content--no-pad">
-                <CompanyFilesTab />
+                <CompanyFilesTab :company-id="companyId" />
               </div>
             </TabPanel>
 

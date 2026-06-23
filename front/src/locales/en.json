@@ -1567,7 +1567,8 @@
           "expectedPaymentDate": "Expected payment date",
           "daysInWork": "Days in progress",
           "plannedContract": "Planned contract",
-          "plannedPayment": "Planned payment"
+          "plannedPayment": "Planned payment",
+          "changeCompany": "Change company"
         },
         "groups": {
           "products": "Products",
@@ -3491,10 +3492,13 @@
     "files": {
       "createFolder": "Create folder",
       "upload": "Upload file",
+      "download": "Download",
       "emptyFiles": "No files",
       "emptyFolders": "No folders",
       "comingSoon": "Files will be available in upcoming updates",
       "selectFolder": "Select a folder",
+      "folderName": "Folder name",
+      "folderNamePlaceholder": "Enter folder name",
       "folders": {
         "manager": "Deal manager folder",
         "contractScans": "Contract scans / amendments",

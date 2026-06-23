@@ -106,6 +106,7 @@
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
+          @reload-deal="load"
         />
       </div>
 
@@ -147,6 +148,7 @@
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
+          @reload-deal="load"
         />
       </Drawer>
 
@@ -184,6 +186,7 @@
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
+          @reload-deal="load"
         />
       </div>
 

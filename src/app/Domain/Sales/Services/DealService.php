@@ -937,6 +937,26 @@ class DealService
     {
         unset($data['stage_id']);
 
+        // Deal-level discount percent — CLAMP into [0,50] rather than reject. The
+        // FormRequest only floors it (min:0); the 50 ceiling is enforced here so a
+        // larger value (e.g. 51) is SAVED as 50 instead of 422. A null clears it to
+        // 0 (the column's default / "no discount").
+        if (array_key_exists('discount_percent', $data)) {
+            $data['discount_percent'] = $this->clampDiscountPercent($data['discount_percent']);
+        }
+
+        // Company change (task 14): re-resolve the company-derived data the way
+        // create() does — re-pin the new company's CURRENT requisite set and
+        // re-stamp the department — but ONLY when company_id actually changes to a
+        // different company. An unchanged or absent company_id is a no-op so an
+        // unrelated field edit never re-pins requisites.
+        if (array_key_exists('company_id', $data)
+            && $data['company_id'] !== null
+            && (int) $data['company_id'] !== (int) $deal->company_id
+        ) {
+            $this->resolveCompanyDerivedData($data, $deal);
+        }
+
         // Snapshot of the pre-merge extra_fields for the audit diff. writeFields
         // mutates the model in place (and persists), so capture before calling it.
         $extraBefore = $deal->extra_fields ?? [];
@@ -1337,6 +1357,63 @@ class DealService
             'documents_count' => $documentsCount,
             'last_activity_at' => $activityStats['last_activity_at'],
         ];
+    }
+
+    /** The deal-level discount percent ceiling (business rule: max 50%). */
+    private const MAX_DISCOUNT_PERCENT = 50;
+
+    /**
+     * Clamp an incoming deal-level discount percent into [0, MAX_DISCOUNT_PERCENT].
+     * A value above the ceiling is SAVED as the ceiling (50), never rejected
+     * (business rule). null → 0 (no discount). Non-numeric input coerces to int 0.
+     */
+    private function clampDiscountPercent(mixed $value): int
+    {
+        if ($value === null) {
+            return 0;
+        }
+
+        $percent = (int) $value;
+
+        return max(0, min(self::MAX_DISCOUNT_PERCENT, $percent));
+    }
+
+    /**
+     * Re-resolve the company-derived data when a deal's company changes (task 14),
+     * mirroring DealService::create(). Mutates $data in place:
+     *   - company_requisite_id: re-pinned to the NEW company's current requisite
+     *     set (null when the new company has none — same 0-requisites path as
+     *     create), UNLESS the caller pinned one explicitly in the same request.
+     *   - department_id: re-stamped from the deal owner (create stamps department
+     *     from the owner, not the company) — the owner being the about-to-be-saved
+     *     owner_user_id if changing in the same request, else the deal's current
+     *     owner. This keeps the deal's department consistent after a company move
+     *     so the visibility scope stays correct even if the new company sits
+     *     elsewhere, without ever wiping a valid department to null.
+     *
+     * @param  array<string, mixed>  $data  the update payload (mutated)
+     */
+    private function resolveCompanyDerivedData(array &$data, Deal $deal): void
+    {
+        $company = Company::find($data['company_id']);
+
+        if ($company === null) {
+            return;
+        }
+
+        // Re-pin the new company's current requisite set unless explicitly pinned.
+        if (empty($data['company_requisite_id'])) {
+            $data['company_requisite_id'] = $this->requisites->current($company)?->id;
+        }
+
+        // Re-stamp department from the owner (create()'s rule), unless the caller
+        // is setting department_id explicitly in this same request. The owner is
+        // the new owner (if changing here) or the deal's existing owner.
+        if (! array_key_exists('department_id', $data)) {
+            $ownerId = $data['owner_user_id'] ?? $deal->owner_user_id;
+            $owner = $ownerId !== null ? User::find($ownerId) : null;
+            $data['department_id'] = $owner?->department_id;
+        }
     }
 
     /**

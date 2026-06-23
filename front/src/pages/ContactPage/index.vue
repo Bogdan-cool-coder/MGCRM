@@ -275,7 +275,7 @@
             <!-- ── Files ─────────────────────────────────────────────────────── -->
             <TabPanel value="files">
               <div class="contact-page-v2__tab-body contact-page-v2__tab-body--no-pad">
-                <ContactFilesTab />
+                <ContactFilesTab :contact-id="contactId" />
               </div>
             </TabPanel>
           </TabPanels>

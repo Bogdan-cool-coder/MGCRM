@@ -247,4 +247,18 @@ return [
         'run_polling' => filter_var(env('RUN_TELEGRAM_POLLING', false), FILTER_VALIDATE_BOOL),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | CRM Entity Files (M2 — files sub-step)
+    |--------------------------------------------------------------------------
+    |
+    | max_size_kb: maximum upload size per file in kilobytes (default 20 MB).
+    |              Checked in UploadFileRequest and passed to the Laravel
+    |              'max' validation rule (which takes kibibytes).
+    |
+    */
+    'files' => [
+        'max_size_kb' => (int) env('CRM_FILES_MAX_SIZE_KB', 20 * 1024),
+    ],
+
 ];

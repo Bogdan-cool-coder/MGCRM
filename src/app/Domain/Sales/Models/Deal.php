@@ -51,6 +51,11 @@ class Deal extends Model
         'company_requisite_id',
         'title',
         'amount',
+        // Deal-level discount in PERCENT (0..50). Applied uniformly to the line
+        // items to derive the displayed net total (see DealResource); the per-line
+        // discount on deal_products is a separate, absolute kopeck reduction.
+        // Clamped to [0,50] in DealService::update (a >50 value is saved as 50).
+        'discount_percent',
         // When true, amount is a fixed budget and is NOT re-derived from
         // deal_products (DealService::recalcAmount returns early). amount may then
         // differ from sum(deal_products) — see the migration's cross-domain note.
@@ -96,6 +101,7 @@ class Deal extends Model
     {
         return [
             'amount' => 'integer', // kopecks
+            'discount_percent' => 'integer', // percent (0..50)
             'amount_locked' => 'boolean',
             'perpetual_license' => 'boolean',
             'is_primary_deal' => 'boolean',

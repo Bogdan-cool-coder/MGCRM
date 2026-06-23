@@ -10,7 +10,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * File stored under a CRM folder.
- * S1.1 scope: schema + model only; upload logic deferred to a later sub-step.
+ *
+ * Columns:
+ *   - disk: storage disk name (default 'crm_files'; swap to 's3' without DB migration)
+ *   - file_path: relative path within the disk
+ *   - original_name: display name as uploaded
+ *   - file_size: bytes (uint)
+ *   - mime_type: nullable MIME string
+ *   - uploaded_by_user_id: FK users (null-on-delete)
+ *
+ * The "Сканы договоров" virtual folder never holds CrmFile rows.
+ * Its "files" listing is provided by CrmFileService::listDocumentsForScansFolder().
  */
 class CrmFile extends Model
 {
@@ -18,6 +28,7 @@ class CrmFile extends Model
 
     protected $fillable = [
         'folder_id',
+        'disk',
         'owner_entity_type',
         'owner_entity_id',
         'file_path',
@@ -33,6 +44,8 @@ class CrmFile extends Model
             'file_size' => 'integer',
         ];
     }
+
+    // ---- Relations ----
 
     public function folder(): BelongsTo
     {

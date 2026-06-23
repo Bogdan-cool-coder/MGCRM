@@ -483,7 +483,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - ~~**BG-1 (S):** DONE (S-batch 2026-06-23)~~ `PATCH /api/companies/{company}/employees/{contact}` реализован: `CompanyEmployeeController::update()` + `CompanyService::updateEmployee()` + `UpdateEmployeeLinkRequest`. 8 тестов green (433 CRM assertions). ✅
 - ~~**BG-2 (S):** DONE (S-batch 2026-06-23)~~ `DocumentService::list()` теперь фильтрует по `source_company_id`. 2 новых теста green (289 Contracts). ✅
 - ~~**BG-3 (S):** DONE (S-batch 2026-06-23)~~ `CompanyController::show()` KPI-блок включает `won_count` (через `DealService::countWonForCompany()`); FE `CompanyPage/index.vue` уже читал оба ключа через `open_deals_count ?? open_count` — алиас совместим. 5 новых тестов green. ✅
-- **BG-4 (L):** Файловое API — `CrmFile`/`CrmFolder` модели есть, роутов нет. Требуется `CrmFileController` + `CrmFolderController` + маршруты `/contacts/{contact}/files`, `/companies/{company}/files` + storage. FE-кнопки disabled с TODO B-4.
+- ~~**BG-4 (L):** DONE (L-batch 2026-06-29)~~ Файловое API полностью реализовано: `CrmFolderController` + `CrmFileController`, маршруты `/contacts/{contact}/folders|files` + `/companies/{company}/folders|files`, диск `crm_files` (S3-swappable), виртуальная папка «Сканы договоров» (read-only, источник — Documents.source_company_id), ленивый сид системных папок, IDOR-гард, скачивание. Миграция `2026_06_29_100000` (sort_order + disk). FE: `filesApi` + `EntityFilesTab.vue` + `ContactFilesTab.vue` + `CompanyFilesTab.vue` — двухпанельный layout, полностью wired. 12/12 CrmFilesTest + 932 total CRM PASS. ✅
 - **BG-5 (S):** `DealCreateDrawer` не смонтирован на `ContactPage` → кнопка «Создать сделку» в `ContactDealsTab` disabled. Только FE-работа — импорт + ref + монтирование (бэкенд `POST /api/deals` уже принимает `contact_id`).
 - **BG-6 (S):** Меню «Добавить заметку» (Contact+Company) только переключает таб — не фокусирует `EntityComposer`. Нужны `defineExpose({ focusNote, focusTask })` в `EntityComposer.vue` + ref + вызов в `nextTick` из menu command. Только FE.
 - **BG-7 (S):** Меню «Добавить связь» (Contact) только переключает таб — не открывает форму в `ContactRelationsPanel`. Нужны `defineExpose({ openAdd })` + ref + вызов. Только FE.
@@ -492,7 +492,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 **Беклог (не блокеры, перенесено из предыдущих итераций):**
 - **B-3:** кнопка «Добавить в сделку» в `ContactDealsTab` disabled — BG-5/BG-9.
-- **B-4:** `ContactFilesTab` и `CompanyFilesTab` — graceful stub; двухпанельный layout реализуется после BG-4.
+- ~~**B-4:** DONE (L-batch 2026-06-29)~~ `ContactFilesTab` + `CompanyFilesTab` — полноценный двухпанельный layout через `EntityFilesTab.vue`, wired на `filesApi`. ✅
 - **position-wire (DS-4 хвост):** фильтр position не пробрасывается из `buildContactParams()` — отдельный слайс фильтров.
 - **CompanyPage menu TODO:** `open task/note` — BG-6; остальные (`call/email/export`) — заглушки.
 
@@ -531,8 +531,8 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - ~~**BG-DC-1 (S):** DONE (S-batch 2026-06-23)~~ Миграция `2026_06_28_120010_add_payment_fields_to_deals_table` (additive, nullable); `Deal.$fillable` + casts; `UpdateDealRequest` + `DealResource` включают `paid_amount`/`payment_currency`. 2 новых теста green (310 Sales assertions). FE `DealTabFinances.vue` полностью wired. ✅
 - **BG-DC-2 (L):** Graf платежей — нет модели DealPayment / таблицы / эндпоинтов. Полная разработка в Finance sprint.
 - ~~**BG-DC-3 (S):** DONE (S-batch 2026-06-23)~~ `DealContactController::update()` + `DealContactService::setPrimary()` + `UpdateDealContactRequest` реализованы. Маршрут `PATCH /api/deals/{deal}/contacts/{dealContact}`. 4 новых теста green. ✅
-- **BG-DC-4 (M):** Скидка% — UI inert; frontend может конвертить % в копейки существующего `discount` поля (рекомендуемый подход A); deal-level percent потребует новой колонки.
-- **BG-DC-5 (M):** `company_id` в UpdateDealRequest отсутствует — Компания иммутабельна после создания (или добавить в UpdateDealRequest с re-resolve department).
+- ~~**BG-DC-4 (M):** DONE (L-batch 2026-06-29)~~ Deal-level `discount_percent` (0..50): миграция `2026_06_29_120000` (unsignedTinyInteger, default 0), `Deal.$fillable`+casts, `UpdateDealRequest` (min:0, без max — сервис clamp), `DealService::clampDiscountPercent()`, `DealResource::discountedTotals()` (gross/net/per-line), FE `DealProductsGroup.vue` wired, `DealProductRow.vue` показывает зачёркнутую/нетто-цену. 9 новых тестов `DealDiscountAndCompanyChangeTest`. ✅
+- ~~**BG-DC-5 (M):** DONE (L-batch 2026-06-29)~~ `company_id` добавлен в `UpdateDealRequest` (`exists:crm_companies,id`); `DealService::update()` re-resolve `company_requisite_id` + `department_id` при смене компании через `resolveCompanyDerivedData()`. 4 теста в том же файле. ✅
 - **BG-DC-6 (M):** Метрики Активности (6 штук) — нет единого endpoint; собирать либо в DealResource show(), либо через DealMetricsController.
 
 **Открытые баги QA (CHANGES_REQUESTED):**

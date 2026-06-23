@@ -40,10 +40,11 @@
         <InputNumber
           v-model="localDiscount"
           :min="0"
-          :max="100"
-          :max-fraction-digits="1"
+          :max="50"
+          :max-fraction-digits="0"
           class="deal-products-group__discount-input"
           :placeholder="'0'"
+          @update:model-value="onDiscountInput"
           @blur="onDiscountBlur"
         />
         <span class="deal-products-group__discount-pct">%</span>
@@ -73,6 +74,7 @@
         :currency="currency"
         :saving="updatingId === item.id"
         :deleting="deletingId === item.id"
+        :net-amount="discountedMap[item.id]"
         @remove="(id) => emit('removeItem', id)"
       />
     </div>
@@ -100,12 +102,19 @@ const props = defineProps<{
   perpetualLicense: boolean
   perpetualSaving: boolean
   lockSaving: boolean
+  /** Deal-level discount percent (0..50). Bound to deal.discount_percent. */
+  discountPercent: number
+  /** Products net total after deal-level discount (kopecks), from SHOW endpoint. */
+  productsNetTotal?: number
+  /** Per-line discounted amounts from SHOW endpoint — keyed by dealProductId. */
+  productsDiscounted?: Array<{ id: number; net_amount: number }>
 }>()
 
 const emit = defineEmits<{
   addProduct: []
   removeItem: [id: number]
   togglePerpetual: [newValue: boolean]
+  updateDiscount: [percent: number]
 }>()
 
 const { t } = useI18n()
@@ -118,14 +127,34 @@ watch(() => props.perpetualLicense, (v) => {
   localPerpetual.value = v
 })
 
-// ── Discount% (deal-level; MISSING backend — inert + TODO) ───────────────────
+// ── Discount% (deal-level, 0..50) ────────────────────────────────────────────
 
-// TODO: MISSING — no deal-level discount% field on backend. This is display-only until
-// the backend exposes a discount_percent field.
-const localDiscount = ref<number | null>(null)
+const localDiscount = ref<number | null>(props.discountPercent ?? 0)
+
+watch(
+  () => props.discountPercent,
+  (v) => {
+    // Sync from parent (e.g. after reload). Guard to avoid echo-cycle.
+    const clamped = Math.min(50, Math.max(0, v ?? 0))
+    if (localDiscount.value !== clamped) {
+      localDiscount.value = clamped
+    }
+  },
+)
+
+function clampDiscount(v: number | null): number {
+  if (v === null || isNaN(v)) return 0
+  return Math.min(50, Math.max(0, Math.round(v)))
+}
+
+function onDiscountInput(v: number | null) {
+  localDiscount.value = clampDiscount(v)
+}
 
 function onDiscountBlur() {
-  // TODO MISSING: wire to PATCH /api/deals/{deal} when backend adds discount_percent
+  const clamped = clampDiscount(localDiscount.value)
+  localDiscount.value = clamped
+  emit('updateDiscount', clamped)
 }
 
 // ── Total label for header ────────────────────────────────────────────────────
@@ -133,6 +162,26 @@ function onDiscountBlur() {
 const totalAmount = computed(() =>
   props.items.reduce((sum, item) => sum + item.amount, 0),
 )
+
+/** Net total: prefer backend-computed value when deal-level discount is active. */
+const displayTotal = computed(() => {
+  if (props.amountLocked) return props.dealAmount
+  // Use backend net total when discount is active and backend has returned it
+  if ((localDiscount.value ?? 0) > 0 && props.productsNetTotal !== undefined) {
+    return props.productsNetTotal
+  }
+  return totalAmount.value
+})
+
+/** Map dealProductId → net_amount for discounted row rendering. */
+const discountedMap = computed<Record<number, number>>(() => {
+  if (!props.productsDiscounted?.length) return {}
+  const m: Record<number, number> = {}
+  for (const entry of props.productsDiscounted) {
+    m[entry.id] = entry.net_amount
+  }
+  return m
+})
 
 // Period label from plan name (e.g. "12 мес")
 function getPeriodLabel(item: DealProductDto): string {
@@ -161,7 +210,7 @@ const headerPeriod = computed(() => {
 })
 
 const totalLabel = computed(() => {
-  const amt = formatCurrency(props.amountLocked ? props.dealAmount : totalAmount.value, props.currency)
+  const amt = formatCurrency(displayTotal.value, props.currency)
   const period = headerPeriod.value
   return period && period !== 'разово' ? `${amt} · ${period}` : amt
 })

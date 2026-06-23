@@ -47,13 +47,62 @@
         </div>
       </div>
 
-      <!-- Компания — read-only link -->
+      <!-- Компания — link + editable picker -->
       <div class="deal-tab-main__quick-row">
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.company') }}</span>
-        <div class="deal-tab-main__quick-value">
-          <RouterLink :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
-            {{ deal.company.name }}
-          </RouterLink>
+        <div class="deal-tab-main__quick-value deal-tab-main__quick-value--company" @click.stop>
+          <div class="deal-tab-main__company-row">
+            <RouterLink :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
+              {{ deal.company.name }}
+            </RouterLink>
+            <button
+              class="deal-tab-main__company-edit-btn"
+              type="button"
+              :title="t('sales.deal.info.fields.changeCompany')"
+              @click="companyPickerOpen = !companyPickerOpen"
+            >
+              <i class="pi pi-pencil" />
+            </button>
+            <i v-if="companySaving" class="pi pi-spin pi-spinner deal-tab-main__company-saving" />
+          </div>
+          <!-- Company search popover -->
+          <div
+            v-if="companyPickerOpen"
+            v-click-outside="() => { companyPickerOpen = false }"
+            class="deal-tab-main__company-picker"
+            @click.stop
+          >
+            <div class="deal-tab-main__owner-picker-search">
+              <i class="pi pi-search deal-tab-main__owner-picker-icon" />
+              <input
+                ref="companySearchRef"
+                v-model="companyQuery"
+                class="deal-tab-main__owner-picker-input"
+                :placeholder="t('common.search_placeholder')"
+                @input="onCompanyQueryInput"
+              />
+            </div>
+            <div class="deal-tab-main__owner-picker-options">
+              <div v-if="companySearching" class="deal-tab-main__owner-empty">
+                <i class="pi pi-spin pi-spinner" />
+              </div>
+              <template v-else>
+                <div
+                  v-for="c in companyOptions"
+                  :key="c.id"
+                  class="deal-tab-main__owner-option"
+                  :class="{ 'deal-tab-main__owner-option--active': c.id === deal.company.id }"
+                  @click="selectCompany(c)"
+                >
+                  <i v-if="c.id === deal.company.id" class="pi pi-check deal-tab-main__owner-check" />
+                  <span class="deal-tab-main__owner-option-name">{{ c.name }}</span>
+                </div>
+                <div v-if="!companySearching && companyOptions.length === 0" class="deal-tab-main__owner-empty">
+                  {{ t('common.no_results') }}
+                </div>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -93,9 +142,13 @@
       :perpetual-license="deal.perpetual_license ?? false"
       :perpetual-saving="perpetualSaving"
       :lock-saving="false"
+      :discount-percent="deal.discount_percent ?? 0"
+      :products-net-total="deal.products_net_total"
+      :products-discounted="deal.products_discounted"
       @add-product="emit('openAddProduct')"
       @remove-item="onRemoveProduct"
       @toggle-perpetual="onTogglePerpetual"
+      @update-discount="onUpdateDiscount"
     />
 
     <!-- ── Group: Contacts (accent, open by default) ──────────────────────────── -->
@@ -180,7 +233,7 @@ import DealContactsGroup from './DealContactsGroup.vue'
 import DealCompanyGroup from './DealCompanyGroup.vue'
 import DateField from '@/components/crm/DateField.vue'
 import { salesApi } from '@/api/sales'
-import { companiesApi } from '@/api/crm/companies'
+import { companiesApi, type CompanyListParams } from '@/api/crm/companies'
 import { useMutation } from '@/composables/async/useMutation'
 import { useDealCustomFields } from '../composables/useDealCustomFields'
 import { getApiErrorMessage } from '@/utils/errors'
@@ -210,6 +263,8 @@ const emit = defineEmits<{
   removeProduct: [id: number]
   removeContact: [contactId: number]
   contactsUpdated: [contacts: DealContactDto[]]
+  /** Emitted when caller must do a full deal reload (e.g. discount % change). */
+  reloadDeal: []
 }>()
 
 const { t } = useI18n()
@@ -295,6 +350,97 @@ watch(ownerPickerOpen, (open) => {
     nextTick(() => ownerSearchRef.value?.focus())
   }
 })
+
+// ── Company picker ─────────────────────────────────────────────────────────────
+
+const companyPickerOpen = ref(false)
+const companyQuery = ref('')
+const companySearchRef = ref<HTMLInputElement | null>(null)
+const companyOptions = ref<Array<{ id: number; name: string }>>([])
+const companySearching = ref(false)
+const companyMutation = useMutation<DealDto>()
+const companySaving = computed(() => companyMutation.isPending.value)
+
+let companySearchTimer: ReturnType<typeof setTimeout> | null = null
+
+async function doCompanySearch(q: string) {
+  companySearching.value = true
+  try {
+    const params: CompanyListParams = { per_page: 20 }
+    if (q.trim()) params.search = q.trim()
+    const res = await companiesApi.list(params)
+    companyOptions.value = res.data.map((c: Company) => ({ id: c.id, name: c.name }))
+  } catch {
+    companyOptions.value = []
+  } finally {
+    companySearching.value = false
+  }
+}
+
+function onCompanyQueryInput() {
+  if (companySearchTimer) clearTimeout(companySearchTimer)
+  companySearchTimer = setTimeout(() => {
+    void doCompanySearch(companyQuery.value)
+  }, 250)
+}
+
+async function selectCompany(c: { id: number; name: string }) {
+  if (c.id === props.deal.company.id) {
+    companyPickerOpen.value = false
+    return
+  }
+  try {
+    const updated = await companyMutation.run(() =>
+      salesApi.updateDeal(props.deal.id, { company_id: c.id }),
+    )
+    emit('dealUpdated', {
+      company: updated.company,
+      department_id: updated.department_id,
+    })
+    companyPickerOpen.value = false
+    toast.add({ severity: 'success', summary: t('sales.deal.info.fields.changeCompany'), life: 2000 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
+
+watch(companyPickerOpen, (open) => {
+  if (open) {
+    companyQuery.value = ''
+    companyOptions.value = []
+    void doCompanySearch('')
+    nextTick(() => companySearchRef.value?.focus())
+  } else {
+    if (companySearchTimer) clearTimeout(companySearchTimer)
+  }
+})
+
+// ── Discount update ───────────────────────────────────────────────────────────
+
+const discountMutation = useMutation<DealDto>()
+
+async function onUpdateDiscount(percent: number) {
+  try {
+    await discountMutation.run(() =>
+      salesApi.updateDeal(props.deal.id, { discount_percent: percent }),
+    )
+    // Full reload needed: PATCH response omits products_discounted (products not loaded).
+    // The SHOW endpoint returns the complete payload with discounted line amounts.
+    emit('reloadDeal')
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  }
+}
 
 // ── Date field save (expected_sign_date / expected_payment_date) ───────────────
 
@@ -644,7 +790,17 @@ watch(() => props.deal.company.id, (newId, oldId) => {
   color: $surface-400;
 }
 
-// ── Company link ───────────────────────────────────────────────────────────────
+// ── Company field ─────────────────────────────────────────────────────────────
+
+.deal-tab-main__quick-value--company {
+  position: relative;
+}
+
+.deal-tab-main__company-row {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+}
 
 .deal-tab-main__company-link {
   font-size: $font-size-sm;
@@ -655,6 +811,53 @@ watch(() => props.deal.company.id, (newId, oldId) => {
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.deal-tab-main__company-edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: $radius-sm;
+  color: $surface-400;
+  font-size: $font-size-xs;
+  opacity: 0;
+  transition: opacity var(--app-transition-fast), color var(--app-transition-fast);
+
+  .deal-tab-main__quick-value--company:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: var(--p-primary-color);
+  }
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
+}
+
+.deal-tab-main__company-saving {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  flex-shrink: 0;
+}
+
+.deal-tab-main__company-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  min-width: 260px;
+  background: var(--p-card-background);
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+
+  .app-dark & {
+    border-color: var(--p-surface-700);
   }
 }
 </style>
