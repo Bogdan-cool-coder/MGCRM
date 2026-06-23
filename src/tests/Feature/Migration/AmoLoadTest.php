@@ -418,6 +418,130 @@ class AmoLoadTest extends TestCase
         $this->assertSame(1, Deal::query()->count());
     }
 
+    /**
+     * The contact-fields fix: a company carrying phone/website CF must land them on
+     * the company row on first load (off the COMPANY object, not the lead).
+     */
+    public function test_company_contact_fields_loaded_from_company_object(): void
+    {
+        $this->writeStaging([
+            'leads' => [[
+                'id' => 5500, 'name' => 'Deal Contactful', 'price' => 1000,
+                'status_id' => 53233417, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 7700, 'is_main' => true]], 'contacts' => []],
+            ]],
+            'companies' => [[
+                'id' => 7700, 'name' => 'ООО Контакты',
+                'custom_fields_values' => [
+                    ['field_id' => 2709, 'values' => [['value' => '+74951234567', 'enum_code' => 'WORK']]],
+                    ['field_id' => 2711, 'values' => [['value' => 'hi@kontakty.ru', 'enum_code' => 'WORK']]],
+                    ['field_id' => 2713, 'values' => [['value' => 'https://kontakty.ru']]],
+                    ['field_id' => 2717, 'values' => [['value' => 'Москва, ул. Тест, 5']]],
+                ],
+            ]],
+        ]);
+
+        $this->loader()->load();
+
+        $company = Company::query()->where('name', 'ООО Контакты')->firstOrFail();
+        $this->assertSame('+74951234567', $company->phone);
+        $this->assertSame('hi@kontakty.ru', $company->email);
+        $this->assertSame('https://kontakty.ru', $company->website);
+        $this->assertSame('Москва, ул. Тест, 5', $company->address);
+    }
+
+    /**
+     * resyncCompany: a company imported with EMPTY contact fields (the production
+     * defect) must be backfilled on a re-load from the AMO company object — without
+     * duplicating the company.
+     */
+    public function test_reload_resyncs_company_contact_fields_without_duplicates(): void
+    {
+        $this->writeStaging([
+            'leads' => [[
+                'id' => 5600, 'name' => 'Deal Resync Co', 'price' => 1000,
+                'status_id' => 53233417, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 7800, 'is_main' => true]], 'contacts' => []],
+            ]],
+            'companies' => [[
+                'id' => 7800, 'name' => 'ООО Ресинк',
+                'custom_fields_values' => [
+                    ['field_id' => 2709, 'values' => [['value' => '+78120000000', 'enum_code' => 'WORK']]],
+                    ['field_id' => 2713, 'values' => [['value' => 'https://resync.ru']]],
+                ],
+            ]],
+        ]);
+
+        $this->loader()->load();
+
+        $company = Company::query()->where('name', 'ООО Ресинк')->firstOrFail();
+        // Simulate the production defect: the row exists but contact fields were
+        // never populated (loaded before the CF mapping was fixed).
+        DB::table('crm_companies')->where('id', $company->id)->update([
+            'phone' => null, 'website' => null, 'extra_fields' => json_encode(['amo_region' => 'г. Москва']),
+        ]);
+
+        $result = $this->loader()->load();
+
+        $company->refresh();
+        $this->assertSame('+78120000000', $company->phone, 're-load must backfill the phone');
+        $this->assertSame('https://resync.ru', $company->website, 're-load must backfill the website');
+        // Operator-set extra_fields key survives the merge.
+        $this->assertSame('г. Москва', $company->extra_fields['amo_region']);
+        // No duplicate company, and the update was counted.
+        $this->assertSame(1, Company::query()->count());
+        $this->assertSame(1, $result['stats']['companies_updated']);
+        $this->assertSame(0, $result['stats']['companies_created']);
+    }
+
+    /**
+     * resyncContact: a contact imported with an empty position (the dead-read
+     * defect) must get its position backfilled from the AMO contact CF on re-load,
+     * and its phone channel re-synced — with no duplicate contact or channel.
+     */
+    public function test_reload_resyncs_contact_position_and_channels_without_duplicates(): void
+    {
+        $this->writeStaging([
+            'leads' => [[
+                'id' => 5700, 'name' => 'Deal Resync Contact', 'price' => 1000,
+                'status_id' => 53233417, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => [
+                    'companies' => [['id' => 7900, 'is_main' => true]],
+                    'contacts' => [['id' => 8100, 'is_main' => true]],
+                ],
+            ]],
+            'companies' => [['id' => 7900, 'name' => 'ООО Контактная']],
+            'contacts' => [[
+                'id' => 8100, 'name' => 'Пётр Должностной',
+                'custom_fields_values' => [
+                    ['field_id' => 583865, 'values' => [['value' => 'Коммерческий директор', 'enum_id' => 777]]],
+                    ['field_code' => 'PHONE', 'values' => [['value' => '+79991112233', 'enum_code' => 'WORK']]],
+                ],
+            ]],
+        ]);
+
+        $this->loader()->load();
+
+        $contact = Contact::query()->where('full_name', 'Пётр Должностной')->firstOrFail();
+        $this->assertSame('Коммерческий директор', $contact->position, 'position loaded on first run');
+
+        // Simulate the production defect: the row exists but position is empty.
+        DB::table('crm_contacts')->where('id', $contact->id)->update(['position' => null]);
+
+        $result = $this->loader()->load();
+
+        $contact->refresh();
+        $this->assertSame('Коммерческий директор', $contact->position, 're-load must backfill position');
+        // No duplicate contact, no duplicate phone channel.
+        $this->assertSame(1, Contact::query()->count());
+        $this->assertSame(1, $contact->channels()->where('value', '+79991112233')->count());
+        $this->assertSame(1, $result['stats']['contacts_updated']);
+        $this->assertSame(0, $result['stats']['contacts_created']);
+    }
+
     public function test_no_company_synthesizes_from_primary_contact(): void
     {
         $this->writeStaging([

@@ -215,6 +215,65 @@ class AmoTransformTest extends TestCase
         $this->assertNotNull($out['company']['acquisition_channel_id']);
     }
 
+    public function test_company_reads_contact_fields_off_the_company_object(): void
+    {
+        $out = (new CompanyTransformer($this->resolver))->transform(
+            ['id' => 510, 'name' => 'ООО Связь', 'custom_fields_values' => [
+                // Phone (multitext): WORK is primary, the rest go to extra_fields.
+                ['field_id' => 2709, 'values' => [
+                    ['value' => '+74950000000', 'enum_code' => 'WORK'],
+                    ['value' => '+74950001111', 'enum_code' => 'OTHER'],
+                ]],
+                // Email (multitext): single value.
+                ['field_id' => 2711, 'values' => [
+                    ['value' => 'info@svyaz.ru', 'enum_code' => 'WORK'],
+                ]],
+                // Website (url, single).
+                ['field_id' => 2713, 'values' => [['value' => 'https://svyaz.ru']]],
+                // Address (textarea, single).
+                ['field_id' => 2717, 'values' => [['value' => 'г. Москва, ул. Связи, 1']]],
+            ]],
+            [], // lead — no geo/tax here
+        );
+
+        $this->assertSame('+74950000000', $out['company']['phone']); // WORK → primary
+        $this->assertSame('info@svyaz.ru', $out['company']['email']);
+        $this->assertSame('https://svyaz.ru', $out['company']['website']);
+        $this->assertSame('г. Москва, ул. Связи, 1', $out['company']['address']);
+        // The extra (non-primary) phone is stashed, not lost.
+        $this->assertSame(['+74950001111'], $out['company']['extra_fields']['amo_company_phones']);
+        $this->assertArrayNotHasKey('amo_company_emails', $out['company']['extra_fields']);
+    }
+
+    public function test_company_contact_fields_default_to_null_when_absent(): void
+    {
+        $out = (new CompanyTransformer($this->resolver))->transform(
+            ['id' => 511, 'name' => 'Пустышка'],
+            [],
+        );
+
+        $this->assertNull($out['company']['phone']);
+        $this->assertNull($out['company']['email']);
+        $this->assertNull($out['company']['website']);
+        $this->assertNull($out['company']['address']);
+    }
+
+    public function test_company_phone_primary_falls_back_to_first_without_work_code(): void
+    {
+        $out = (new CompanyTransformer($this->resolver))->transform(
+            ['id' => 512, 'name' => 'Без WORK', 'custom_fields_values' => [
+                ['field_id' => 2709, 'values' => [
+                    ['value' => '+70000000001', 'enum_code' => 'MOB'],
+                    ['value' => '+70000000002', 'enum_code' => 'OTHER'],
+                ]],
+            ]],
+            [],
+        );
+
+        $this->assertSame('+70000000001', $out['company']['phone']); // first when no WORK
+        $this->assertSame(['+70000000002'], $out['company']['extra_fields']['amo_company_phones']);
+    }
+
     public function test_company_synthesized_from_contact_when_no_company(): void
     {
         $out = (new CompanyTransformer($this->resolver))
@@ -255,6 +314,50 @@ class AmoTransformTest extends TestCase
         $this->assertSame('p@example.com', $out['contact']['email']);
         $this->assertCount(3, $out['channels']); // 2 phones + 1 email
         $this->assertTrue($out['channels'][0]['is_primary_for_channel']);
+    }
+
+    public function test_contact_reads_position_from_select_with_text_fallback(): void
+    {
+        // Select 583865 present → its value (the label) wins.
+        $out = (new ContactTransformer($this->resolver))->transform([
+            'id' => 201,
+            'name' => 'Анна',
+            'custom_fields_values' => [
+                ['field_id' => 583865, 'values' => [['value' => 'Директор', 'enum_id' => 555]]],
+                ['field_id' => 2707, 'values' => [['value' => 'Игнорируемый текст']]],
+            ],
+        ]);
+
+        $this->assertSame('Директор', $out['contact']['position']);
+    }
+
+    public function test_contact_position_falls_back_to_text_when_select_empty(): void
+    {
+        $out = (new ContactTransformer($this->resolver))->transform([
+            'id' => 202,
+            'name' => 'Борис',
+            'custom_fields_values' => [
+                ['field_id' => 2707, 'values' => [['value' => 'Главный инженер']]],
+            ],
+        ]);
+
+        $this->assertSame('Главный инженер', $out['contact']['position']);
+    }
+
+    public function test_contact_acquisition_channel_is_always_null(): void
+    {
+        // Even if a 708366-shaped value is present on the contact (it never is in
+        // AMO), the contact channel is set by hand in MGCRM, not by the import.
+        $out = (new ContactTransformer($this->resolver))->transform([
+            'id' => 203,
+            'name' => 'Виктор',
+            'custom_fields_values' => [
+                ['field_id' => 708366, 'values' => [['enum_id' => 1136342]]],
+            ],
+        ]);
+
+        $this->assertNull($out['contact']['acquisition_channel_id']);
+        $this->assertNull($out['contact']['position']);
     }
 
     // ---- Event ----

@@ -18,6 +18,12 @@ use App\Domain\Migration\Support\AmoReferenceResolver;
  * PERSONAL …) in its enum_code. We fan those out into contact_channels and
  * denormalise the FIRST phone / email back onto the contact row (the columns the
  * list/dedup queries use).
+ *
+ * Position (job title) is read from the contact's own CF: the select 583865 (its
+ * value is the human-readable label) with a fallback to the free-text 2707.
+ *
+ * acquisition_channel_id is always null here: AMO has no acquisition-channel field
+ * ON the contact (708366 is a lead/company field), so it is set by hand in MGCRM.
  */
 final class ContactTransformer
 {
@@ -69,13 +75,17 @@ final class ContactTransformer
             ];
         }
 
-        $channelEnum = $fields->enumId(AmoFields::COMPANY_CHANNEL);
+        // Position: select 583865 (value = label) → fallback to free-text 2707.
+        $position = $fields->string(AmoFields::CONTACT_POSITION_SELECT)
+            ?? $fields->string(AmoFields::CONTACT_POSITION_TEXT);
 
         $contact = [
             'full_name' => $name,
+            'position' => $position,
             'phone' => $phones[0]['value'] ?? null,
             'email' => $emails[0]['value'] ?? null,
-            'acquisition_channel_id' => $this->resolver->channelIdForEnum($channelEnum),
+            // No acquisition-channel field on the AMO contact — set manually in MGCRM.
+            'acquisition_channel_id' => null,
         ];
 
         return [

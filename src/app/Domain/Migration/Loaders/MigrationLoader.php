@@ -275,14 +275,18 @@ final class MigrationLoader
         if ($embeddedCompany !== null && isset($embeddedCompany['id'])) {
             $amoCompanyId = (int) $embeddedCompany['id'];
 
+            $full = $companiesById[$amoCompanyId] ?? $embeddedCompany;
+
             if (($existing = $this->refs->resolve('company', $amoCompanyId)) !== null) {
-                $this->updateCompanyRequisiteIfNeeded($existing, $amoCompanyId, $amoLead, $companiesById);
+                // Idempotent re-load: re-sync the import-owned contact fields
+                // (phone / email / website / address) from the AMO company object.
+                $data = $this->companyTransformer->transform($full, $amoLead);
+                $this->resyncCompany($existing, $data);
                 $this->bump('companies_updated');
 
                 return $existing;
             }
 
-            $full = $companiesById[$amoCompanyId] ?? $embeddedCompany;
             $data = $this->companyTransformer->transform($full, $amoLead);
 
             return $this->persistCompany($data, $amoCompanyId, $full);
@@ -335,13 +339,46 @@ final class MigrationLoader
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $companiesById
-     * @param  array<string, mixed>  $amoLead
+     * Re-sync an already-imported company's import-owned contact columns on a
+     * re-load (the classic case: the first load ran before the AMO company contact
+     * fields were confirmed, so phone/email/website/address landed empty).
+     *
+     * Scope guard — we ONLY overwrite the columns the import fully owns and always
+     * derives from the AMO company object: phone, email, website, address, plus the
+     * extra_fields buckets the transformer fills (amo_company_phones /
+     * amo_company_emails). We deliberately DO NOT touch the company name,
+     * legal_name, tax_id, country_code, specialization or acquisition_channel_id —
+     * the name is operator-editable and the rest are pinned at first load /
+     * curated by hand. extra_fields is MERGED (not replaced) so operator-added keys
+     * survive. A plain query-builder UPDATE avoids bumping updated_at / firing
+     * model events. Idempotent: re-running writes the same values, no duplicates.
+     *
+     * @param  array{company: array<string, mixed>}  $data
      */
-    private function updateCompanyRequisiteIfNeeded(int $companyId, int $amoCompanyId, array $amoLead, array $companiesById): void
+    private function resyncCompany(int $companyId, array $data): void
     {
-        // On a re-run the requisite already exists; nothing to backfill. Kept as
-        // an extension point for incremental field updates.
+        $attrs = $data['company'];
+
+        // Merge the import-owned extra_fields buckets into whatever is already there
+        // so hand-added keys (and amo_region / amo_synthetic_company) are preserved.
+        $existingExtra = DB::table('crm_companies')->where('id', $companyId)->value('extra_fields');
+        $extra = is_string($existingExtra) ? (json_decode($existingExtra, true) ?: []) : [];
+        if (! is_array($extra)) {
+            $extra = [];
+        }
+        foreach (['amo_company_phones', 'amo_company_emails'] as $key) {
+            if (array_key_exists($key, $attrs['extra_fields'])) {
+                $extra[$key] = $attrs['extra_fields'][$key];
+            }
+        }
+
+        DB::table('crm_companies')->where('id', $companyId)->update([
+            'phone' => $attrs['phone'],
+            'email' => $attrs['email'],
+            'website' => $attrs['website'],
+            'address' => $attrs['address'],
+            'extra_fields' => json_encode($extra, JSON_UNESCAPED_UNICODE),
+        ]);
     }
 
     /**
@@ -361,12 +398,16 @@ final class MigrationLoader
             $amoContactId = (int) $stub['id'];
             $isMain = (bool) ($stub['is_main'] ?? false);
 
+            $full = $contactsById[$amoContactId] ?? $stub;
             $contactId = $this->refs->resolve('contact', $amoContactId);
 
             if ($contactId === null) {
-                $full = $contactsById[$amoContactId] ?? $stub;
                 $contactId = $this->persistContact($full, $amoContactId);
             } else {
+                // Idempotent re-load: re-sync the import-owned contact column
+                // (position) + re-sync the phone/email channels from AMO.
+                $data = $this->contactTransformer->transform($full);
+                $this->resyncContact($contactId, $data);
                 $this->bump('contacts_updated');
             }
 
@@ -398,6 +439,65 @@ final class MigrationLoader
         $this->bump('contacts_created');
 
         return $contact->id;
+    }
+
+    /**
+     * Re-sync an already-imported contact's import-owned column (position) and its
+     * phone/email channels on a re-load (the classic case: the first load ran with
+     * the dead position read and landed an empty position).
+     *
+     * Scope guard — we ONLY overwrite `position` (always derived from the AMO
+     * contact CF) and DO NOT touch the contact name, email/phone denormalised
+     * columns are refreshed from the primary channel, acquisition_channel_id (set
+     * by hand in MGCRM), notes/tags or any other operator-editable field. We use a
+     * plain query-builder UPDATE so we don't bump updated_at / fire model events.
+     *
+     * Channels are re-synced by UPSERT on (contact_id, channel_type, value): an
+     * existing channel has its label / is_primary_for_channel refreshed, a new AMO
+     * value is inserted. Idempotent (no duplicates); operator-added channels with a
+     * value AMO does not have are left untouched.
+     *
+     * @param  array{contact: array<string, mixed>, channels: list<array<string, mixed>>}  $data
+     */
+    private function resyncContact(int $contactId, array $data): void
+    {
+        $attrs = $data['contact'];
+
+        // position (+ refresh the denormalised primary phone/email from AMO).
+        DB::table('crm_contacts')->where('id', $contactId)->update([
+            'position' => $attrs['position'],
+            'phone' => $attrs['phone'],
+            'email' => $attrs['email'],
+        ]);
+
+        // Channels: upsert by (contact_id, channel_type, value), no duplicates.
+        foreach ($data['channels'] as $channel) {
+            $existingId = DB::table('contact_channels')
+                ->where('contact_id', $contactId)
+                ->where('channel_type', $channel['channel_type'])
+                ->where('value', $channel['value'])
+                ->value('id');
+
+            if ($existingId !== null) {
+                DB::table('contact_channels')->where('id', $existingId)->update([
+                    'label' => $channel['label'],
+                    'is_primary_for_channel' => $channel['is_primary_for_channel'],
+                ]);
+
+                continue;
+            }
+
+            DB::table('contact_channels')->insert([
+                'contact_id' => $contactId,
+                'channel_type' => $channel['channel_type'],
+                'value' => $channel['value'],
+                'label' => $channel['label'],
+                'is_primary_for_channel' => $channel['is_primary_for_channel'],
+                'created_at' => now()->format('Y-m-d H:i:s'),
+                'updated_at' => now()->format('Y-m-d H:i:s'),
+            ]);
+            $this->bump('contact_channels_synced');
+        }
     }
 
     private function linkContactToCompany(int $contactId, int $companyId, bool $isPrimary): void
@@ -1026,6 +1126,7 @@ final class MigrationLoader
         return array_fill_keys([
             'companies_created', 'companies_updated', 'companies_synthetic',
             'contacts_created', 'contacts_updated', 'contact_company_links',
+            'contact_channels_synced',
             'deals_created', 'deals_updated', 'unmapped_deals', 'failed_deals',
             'primary_deals', 'deal_contacts', 'stage_history', 'history_skipped',
             'audits', 'entity_logs', 'tasks_created', 'notes_created',

@@ -46,6 +46,29 @@ final class AmoFields
     /** Acquisition channel (select) — via channel_map. */
     public const COMPANY_CHANNEL = 708366;
 
+    // ---- Company contact fields (multitext/url/textarea on the COMPANY object) ----
+    // Confirmed on live data: these live on the AMO company entity itself (not the
+    // lead). Phone/email are AMO multitext (multi-value with enum_code subtype);
+    // website/address are single url/textarea fields.
+    /** Phone (multitext, multi-value). Primary denormalised onto company.phone. */
+    public const COMPANY_PHONE = 2709;
+
+    /** Email (multitext, multi-value). Primary denormalised onto company.email. */
+    public const COMPANY_EMAIL = 2711;
+
+    /** Website (url, single). */
+    public const COMPANY_WEBSITE = 2713;
+
+    /** Address (textarea, single). */
+    public const COMPANY_ADDRESS = 2717;
+
+    // ---- Contact fields ----
+    /** Job title / position (select). Primary source. */
+    public const CONTACT_POSITION_SELECT = 583865;
+
+    /** Job title / position (text). Fallback when the select is empty. */
+    public const CONTACT_POSITION_TEXT = 2707;
+
     // AMO well-known terminal statuses (account-wide, both funnels).
     public const STATUS_WON = 142;
 

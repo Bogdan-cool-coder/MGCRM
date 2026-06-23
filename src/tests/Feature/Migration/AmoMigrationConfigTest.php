@@ -107,6 +107,16 @@ class AmoMigrationConfigTest extends TestCase
         }
     }
 
+    public function test_user_map_2351116_points_to_byadykin_macroglobal(): void
+    {
+        // This AMO user is a real MGCRM user — a re-load attaches their deals to
+        // the seeded macroglobaltech.com account.
+        $this->assertSame(
+            'b.yadykin@macroglobaltech.com',
+            config('amo_migration.user_map.2351116'),
+        );
+    }
+
     public function test_pipelines_default_to_rub(): void
     {
         foreach (config('amo_migration.pipelines') as $pipeline) {
