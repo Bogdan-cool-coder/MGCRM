@@ -274,6 +274,27 @@ export const adminNavItems: NavItem[] = [
     labelKey: 'nav.automationRuns',
     adminOnly: true,
   },
+  {
+    key: 'countries',
+    route: '/admin/countries',
+    icon: 'pi pi-globe',
+    labelKey: 'nav.countries',
+    adminOnly: true,
+  },
+  {
+    key: 'acquisition-channels',
+    route: '/admin/acquisition-channels',
+    icon: 'pi pi-megaphone',
+    labelKey: 'nav.acquisitionChannels',
+    adminOnly: true,
+  },
+  {
+    key: 'disconnect-reasons',
+    route: '/admin/disconnect-reasons',
+    icon: 'pi pi-ban',
+    labelKey: 'nav.disconnectReasons',
+    adminOnly: true,
+  },
 ]
 
 /**

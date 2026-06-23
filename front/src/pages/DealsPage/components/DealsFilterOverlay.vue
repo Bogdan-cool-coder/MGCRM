@@ -79,7 +79,16 @@
       <!-- Регион / страна -->
       <div class="filter-overlay__field">
         <label class="filter-overlay__label">{{ t('sales.deals.page.filters.country') }}</label>
-        <InputText v-model="localFilters.country" class="w-100" />
+        <Select
+          v-model="localFilters.country"
+          :options="countriesOptions"
+          option-label="name"
+          option-value="code"
+          filter
+          show-clear
+          class="w-100"
+          :placeholder="t('sales.deals.page.filters.country')"
+        />
       </div>
 
       <!-- Город -->
@@ -215,10 +224,12 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import MultiSelect from 'primevue/multiselect'
+import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Checkbox from 'primevue/checkbox'
 import type { PipelineStageDto, UserRefDto, HiddenStageDto } from '@/entities/sales'
 import { useSalesStore } from '@/stores/salesStore'
+import { useDirectoriesStore } from '@/stores/directories'
 
 export interface OverlayFilters {
   q: string
@@ -256,6 +267,9 @@ const emit = defineEmits<{
 }>()
 
 const salesStore = useSalesStore()
+const directoriesStore = useDirectoriesStore()
+
+const countriesOptions = computed(() => directoriesStore.activeCountries)
 
 const { t } = useI18n()
 

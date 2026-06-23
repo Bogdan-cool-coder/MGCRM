@@ -31,6 +31,7 @@
     "automationRuns": "Журнал автоматизаций",
     "acquisitionChannels": "Каналы привлечения",
     "disconnectReasons": "Причины отключения",
+    "countries": "Страны",
     "sections": {
       "learning": "Обучение"
     }
@@ -234,6 +235,13 @@
   "settings": {
     "title": "Настройки",
     "subtitle": "Управление параметрами системы",
+    "groups": {
+      "directories": "Справочники",
+      "catalog": "Каталог",
+      "sales": "Продажи",
+      "documents": "Документы",
+      "system": "Система"
+    },
     "sections": {
       "pipeline": {
         "title": "Настройки воронки",
@@ -278,6 +286,10 @@
       "disconnectReasons": {
         "title": "Причины отключения",
         "desc": "Справочник причин ухода клиента"
+      },
+      "countries": {
+        "title": "Страны",
+        "desc": "Справочник стран и телефонных кодов"
       }
     }
   },
@@ -358,6 +370,34 @@
         "name": "Название *",
         "sortOrder": "Порядок сортировки",
         "isActive": "Активна"
+      }
+    },
+    "countries": {
+      "title": "Страны",
+      "add": "Добавить страну",
+      "edit": "Редактировать страну",
+      "empty": "Страны не добавлены",
+      "deleteConfirm": "Удалить страну «{name}»?",
+      "deleteBlockedTitle": "Невозможно удалить",
+      "deleteBlockedDetail": "Страна используется в компаниях, реквизитах или городах. Деактивируйте её вместо удаления.",
+      "columns": {
+        "code": "Код",
+        "name": "Название (RU)",
+        "nameEn": "Название (EN)",
+        "phonePrefix": "Телефонный код",
+        "sortOrder": "Порядок",
+        "isActive": "Активна"
+      },
+      "fields": {
+        "code": "ISO-код (2 буквы) *",
+        "name": "Название (RU) *",
+        "nameEn": "Название (EN)",
+        "phonePrefix": "Телефонный код",
+        "sortOrder": "Порядок сортировки",
+        "isActive": "Активна"
+      },
+      "errors": {
+        "codeRequired": "Введите ISO-код (2 буквы)"
       }
     }
   },

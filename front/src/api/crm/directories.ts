@@ -20,9 +20,28 @@ export const directoriesApi = {
     return res.data.data ?? []
   },
 
-  async getCountries(): Promise<Country[]> {
-    const res = await apiClient.get<{ data: Country[] }>('/api/admin/countries')
+  async getCountries(params: { active_only?: boolean } = {}): Promise<Country[]> {
+    const res = await apiClient.get<{ data: Country[] }>('/api/admin/countries', { params })
     return res.data.data ?? []
+  },
+
+  async createCountry(
+    data: { code: string; name: string; name_en?: string; phone_prefix?: string; sort_order?: number; is_active?: boolean },
+  ): Promise<Country> {
+    const res = await apiClient.post<{ data: Country }>('/api/admin/countries', data)
+    return res.data.data
+  },
+
+  async updateCountry(
+    id: number,
+    data: Partial<{ name: string; name_en: string; phone_prefix: string; sort_order: number; is_active: boolean }>,
+  ): Promise<Country> {
+    const res = await apiClient.patch<{ data: Country }>(`/api/admin/countries/${id}`, data)
+    return res.data.data
+  },
+
+  async deleteCountry(id: number): Promise<void> {
+    await apiClient.delete(`/api/admin/countries/${id}`)
   },
 
   async getCities(countryCode?: string): Promise<City[]> {

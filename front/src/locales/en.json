@@ -31,6 +31,7 @@
     "automationRuns": "Automation log",
     "acquisitionChannels": "Acquisition Channels",
     "disconnectReasons": "Disconnect Reasons",
+    "countries": "Countries",
     "sections": {
       "learning": "Learning"
     }
@@ -234,6 +235,13 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Manage system configuration",
+    "groups": {
+      "directories": "Directories",
+      "catalog": "Catalog",
+      "sales": "Sales",
+      "documents": "Documents",
+      "system": "System"
+    },
     "sections": {
       "pipeline": {
         "title": "Pipeline settings",
@@ -278,6 +286,10 @@
       "disconnectReasons": {
         "title": "Disconnect reasons",
         "desc": "Client churn reason dictionary"
+      },
+      "countries": {
+        "title": "Countries",
+        "desc": "Country and phone prefix reference"
       }
     }
   },
@@ -358,6 +370,34 @@
         "name": "Name *",
         "sortOrder": "Sort order",
         "isActive": "Active"
+      }
+    },
+    "countries": {
+      "title": "Countries",
+      "add": "Add country",
+      "edit": "Edit country",
+      "empty": "No countries added",
+      "deleteConfirm": "Delete country \"{name}\"?",
+      "deleteBlockedTitle": "Cannot delete",
+      "deleteBlockedDetail": "This country is referenced by companies, requisites or cities. Deactivate it instead of deleting.",
+      "columns": {
+        "code": "Code",
+        "name": "Name (RU)",
+        "nameEn": "Name (EN)",
+        "phonePrefix": "Phone prefix",
+        "sortOrder": "Order",
+        "isActive": "Active"
+      },
+      "fields": {
+        "code": "ISO code (2 letters) *",
+        "name": "Name (RU) *",
+        "nameEn": "Name (EN)",
+        "phonePrefix": "Phone prefix",
+        "sortOrder": "Sort order",
+        "isActive": "Active"
+      },
+      "errors": {
+        "codeRequired": "Enter ISO code (2 letters)"
       }
     }
   },

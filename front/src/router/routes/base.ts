@@ -269,6 +269,17 @@ export const routes: RouteRecordRaw[] = [
     },
   },
 
+  {
+    path: '/admin/countries',
+    name: 'Countries',
+    component: () => import('@/pages/CountriesPage/index.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['admin', 'director'],
+      title: 'admin.countries.title',
+    },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

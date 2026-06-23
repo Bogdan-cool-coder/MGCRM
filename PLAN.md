@@ -559,7 +559,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 **Открытые хвосты:**
 - **SORT-BACKEND-GAP (medium):** `ContactService::list()` и `CompanyService::list()` не имеют `applySort()` — legacy `$filters['sort']` ветка остаётся. Тесты проходят по validation-пути, но реальный sort в приложении не работает для новых ключей. Требует `applySort()` в обоих сервисах + интеграционные happy-path тесты.
 - **BUG-DARK-PANEL-HOVER + BUG-META-FS** — открыты из DS-5 round3, не закрыты в этой итерации.
-- **D4 (countries/settings feature)** — в беклоге, не в этой итерации.
+- [x] **D4 (countries/settings feature) DONE 2026-06-24** — Countries CRUD (`GET/POST/PATCH/DELETE /api/admin/countries`), additive seeder `ru`+`ae`, delete-guard (companies/requisites/cities), `code` immutable on update. FE: `CountriesPage` + `CountryDialog` + `useCountriesPage` composable. Все справочные разделы (Страны / Каналы привлечения / Причины отключения) объединены в группу «Справочники» на хабе `ProfilePage`. Маршрут `/admin/countries` + `adminNavItems` обновлены. RU+EN i18n. Build 8.32s, lint:ds 0, vue-tsc 0. 23 тестов `CountryDirectoryTest` (62 assertions). Полный сьют 515 PASS.
 
 **Открытые баги QA (CHANGES_REQUESTED):**
 - **BUG-TITLE-FONT-SIZE:** h2 в DealInfoHeader.vue — 15.75px (via $font-size-lg) vs spec 18px. Fix: `font-size: 18px` literal.

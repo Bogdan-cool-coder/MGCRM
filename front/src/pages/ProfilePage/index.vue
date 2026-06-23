@@ -53,28 +53,34 @@
           </div>
         </div>
 
-        <!-- System group (admin/director only) -->
-        <div v-if="isAdminOrDirector" class="hub-group">
-          <h2 class="hub-group__label">{{ t('account.groupSystem') }}</h2>
-          <div class="row g-3">
-            <div
-              v-for="section in systemSections"
-              :key="section.key"
-              class="col-md-6 col-lg-4"
-            >
-              <router-link :to="section.route" class="settings-card" tabindex="0">
-                <div class="settings-card__icon-wrap">
-                  <i :class="['settings-card__icon', section.icon]" />
-                </div>
-                <div class="settings-card__body">
-                  <h3 class="settings-card__title">{{ t(section.titleKey) }}</h3>
-                  <p v-if="section.descKey" class="settings-card__desc">{{ t(section.descKey) }}</p>
-                </div>
-                <i class="pi pi-chevron-right settings-card__arrow" />
-              </router-link>
+        <!-- System groups (admin/director only) -->
+        <template v-if="isAdminOrDirector">
+          <div
+            v-for="group in systemGroups"
+            :key="group.key"
+            class="hub-group"
+          >
+            <h2 class="hub-group__label">{{ t(group.labelKey) }}</h2>
+            <div class="row g-3">
+              <div
+                v-for="section in group.sections"
+                :key="section.key"
+                class="col-md-6 col-lg-4"
+              >
+                <router-link :to="section.route" class="settings-card" tabindex="0">
+                  <div class="settings-card__icon-wrap">
+                    <i :class="['settings-card__icon', section.icon]" />
+                  </div>
+                  <div class="settings-card__body">
+                    <h3 class="settings-card__title">{{ t(section.titleKey) }}</h3>
+                    <p v-if="section.descKey" class="settings-card__desc">{{ t(section.descKey) }}</p>
+                  </div>
+                  <i class="pi pi-chevron-right settings-card__arrow" />
+                </router-link>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
     </template>
 
@@ -512,7 +518,7 @@ const accountSections: AccountSection[] = [
   { key: 'segments',     tab: 'segments',     icon: 'pi pi-tag',            titleKey: 'account.sections.segments.title',     disabled: true },
 ]
 
-// ─── Hub: system sections ─────────────────────────────────────────────────────
+// ─── Hub: system groups ───────────────────────────────────────────────────────
 interface SystemSection {
   key: string
   route: string
@@ -521,18 +527,55 @@ interface SystemSection {
   descKey?: string
 }
 
-const systemSections: SystemSection[] = [
-  { key: 'users',                route: '/admin/users',                  icon: 'pi pi-users',       titleKey: 'settings.sections.users.title',               descKey: 'settings.sections.users.desc' },
-  { key: 'pipeline',             route: '/settings/pipeline',            icon: 'pi pi-sliders-h',   titleKey: 'settings.sections.pipeline.title',            descKey: 'settings.sections.pipeline.desc' },
-  { key: 'catalog',              route: '/admin/products',               icon: 'pi pi-box',         titleKey: 'settings.sections.catalog.title',             descKey: 'settings.sections.catalog.desc' },
-  { key: 'exchangeRates',        route: '/admin/exchange-rates',         icon: 'pi pi-dollar',      titleKey: 'settings.sections.exchangeRates.title',       descKey: 'settings.sections.exchangeRates.desc' },
-  { key: 'templates',            route: '/admin/templates',              icon: 'pi pi-file-edit',   titleKey: 'settings.sections.templates.title',           descKey: 'settings.sections.templates.desc' },
-  { key: 'templateVariables',    route: '/admin/template-variables',     icon: 'pi pi-list',        titleKey: 'settings.sections.templateVariables.title',   descKey: 'settings.sections.templateVariables.desc' },
-  { key: 'approvalRoutes',       route: '/admin/approval-routes',        icon: 'pi pi-sitemap',     titleKey: 'settings.sections.approvalRoutes.title',      descKey: 'settings.sections.approvalRoutes.desc' },
-  { key: 'messageTemplates',     route: '/admin/message-templates',      icon: 'pi pi-envelope',    titleKey: 'settings.sections.messageTemplates.title',    descKey: 'settings.sections.messageTemplates.desc' },
-  { key: 'automationRuns',       route: '/admin/automation-runs',        icon: 'pi pi-clock',       titleKey: 'settings.sections.automationRuns.title',      descKey: 'settings.sections.automationRuns.desc' },
-  { key: 'acquisitionChannels',  route: '/admin/acquisition-channels',   icon: 'pi pi-filter',      titleKey: 'settings.sections.acquisitionChannels.title', descKey: 'settings.sections.acquisitionChannels.desc' },
-  { key: 'disconnectReasons',    route: '/admin/disconnect-reasons',     icon: 'pi pi-ban',         titleKey: 'settings.sections.disconnectReasons.title',   descKey: 'settings.sections.disconnectReasons.desc' },
+interface SystemGroup {
+  key: string
+  labelKey: string
+  sections: SystemSection[]
+}
+
+const systemGroups: SystemGroup[] = [
+  {
+    key: 'directories',
+    labelKey: 'settings.groups.directories',
+    sections: [
+      { key: 'countries',           route: '/admin/countries',             icon: 'pi pi-globe',       titleKey: 'settings.sections.countries.title',           descKey: 'settings.sections.countries.desc' },
+      { key: 'acquisitionChannels', route: '/admin/acquisition-channels',  icon: 'pi pi-megaphone',   titleKey: 'settings.sections.acquisitionChannels.title', descKey: 'settings.sections.acquisitionChannels.desc' },
+      { key: 'disconnectReasons',   route: '/admin/disconnect-reasons',    icon: 'pi pi-ban',         titleKey: 'settings.sections.disconnectReasons.title',   descKey: 'settings.sections.disconnectReasons.desc' },
+    ],
+  },
+  {
+    key: 'catalog',
+    labelKey: 'settings.groups.catalog',
+    sections: [
+      { key: 'catalog',       route: '/admin/products',       icon: 'pi pi-box',    titleKey: 'settings.sections.catalog.title',       descKey: 'settings.sections.catalog.desc' },
+      { key: 'exchangeRates', route: '/admin/exchange-rates', icon: 'pi pi-dollar', titleKey: 'settings.sections.exchangeRates.title', descKey: 'settings.sections.exchangeRates.desc' },
+    ],
+  },
+  {
+    key: 'sales',
+    labelKey: 'settings.groups.sales',
+    sections: [
+      { key: 'pipeline', route: '/settings/pipeline', icon: 'pi pi-sliders-h', titleKey: 'settings.sections.pipeline.title', descKey: 'settings.sections.pipeline.desc' },
+    ],
+  },
+  {
+    key: 'documents',
+    labelKey: 'settings.groups.documents',
+    sections: [
+      { key: 'templates',         route: '/admin/templates',          icon: 'pi pi-file-edit', titleKey: 'settings.sections.templates.title',         descKey: 'settings.sections.templates.desc' },
+      { key: 'templateVariables', route: '/admin/template-variables', icon: 'pi pi-list',      titleKey: 'settings.sections.templateVariables.title', descKey: 'settings.sections.templateVariables.desc' },
+      { key: 'approvalRoutes',    route: '/admin/approval-routes',    icon: 'pi pi-sitemap',   titleKey: 'settings.sections.approvalRoutes.title',    descKey: 'settings.sections.approvalRoutes.desc' },
+      { key: 'messageTemplates',  route: '/admin/message-templates',  icon: 'pi pi-envelope',  titleKey: 'settings.sections.messageTemplates.title',  descKey: 'settings.sections.messageTemplates.desc' },
+    ],
+  },
+  {
+    key: 'system',
+    labelKey: 'settings.groups.system',
+    sections: [
+      { key: 'users',         route: '/admin/users',           icon: 'pi pi-users', titleKey: 'settings.sections.users.title',        descKey: 'settings.sections.users.desc' },
+      { key: 'automationRuns', route: '/admin/automation-runs', icon: 'pi pi-clock', titleKey: 'settings.sections.automationRuns.title', descKey: 'settings.sections.automationRuns.desc' },
+    ],
+  },
 ]
 
 // ─── Section mode: header title + icon ───────────────────────────────────────
