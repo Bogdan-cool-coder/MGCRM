@@ -39,7 +39,7 @@
           <span class="entity-mini-timeline__actor">
             {{ entry.user?.full_name ?? t('crm.log.system') }}
           </span>
-          <span class="entity-mini-timeline__event">{{ eventLabel(entry.event_type) }}</span>
+          <span class="entity-mini-timeline__event">{{ eventLabel(entry.action) }}</span>
           <span v-if="entry.description" class="entity-mini-timeline__desc">
             {{ truncateDesc(entry.description) }}
           </span>

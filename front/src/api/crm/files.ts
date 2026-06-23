@@ -22,7 +22,7 @@ export interface CrmFileDto {
   id: number | string          // string "doc_7" for scans-of-contracts folder items
   folder_id: number
   original_name: string
-  mime_type: string
+  mime_type: string | null
   file_size: number | null
   disk?: string
   source?: 'document'          // only present for Сканы договоров document-backed items

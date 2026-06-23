@@ -1490,6 +1490,8 @@
           "sectionTitle": "Deal contacts",
           "addContact": "Add contact",
           "primary": "Primary",
+          "setPrimary": "Set as primary",
+          "setPrimarySuccess": "Primary contact updated",
           "empty": {
             "title": "No contacts linked",
             "subtitle": "Add responsible persons for this deal"
@@ -3421,7 +3423,13 @@
         "employee_removed": "removed employee",
         "relation_added": "added relation",
         "relation_removed": "removed relation",
-        "custom_field_changed": "changed custom field"
+        "custom_field_changed": "changed custom field",
+        "kp_sent": "sent KP",
+        "contract_sent": "sent contract",
+        "data_changed": "changed data",
+        "contract_event": "contract event",
+        "finance_event": "finance event",
+        "unknown": "performed action"
       },
       "metrics": {
         "openDeals": "Open deals",

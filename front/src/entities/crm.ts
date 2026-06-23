@@ -439,10 +439,20 @@ export type EntityLogEventType =
   | 'relation_added'
   | 'relation_removed'
   | 'custom_field_changed'
+  // Backend LogAction enum values (MGCRM-native)
+  | 'kp_sent'
+  | 'contract_sent'
+  | 'data_changed'
+  | 'contract_event'
+  | 'finance_event'
 
 export interface EntityLogEntry {
   id: number
-  event_type: EntityLogEventType
+  /**
+   * Backend EntityLogResource returns this field as `action` (LogAction enum value).
+   * Frontend type alias kept as `action` to match the wire format exactly.
+   */
+  action: EntityLogEventType
   /** Human-readable description from backend */
   description: string | null
   /** Old value (for field changes / stage changes) */

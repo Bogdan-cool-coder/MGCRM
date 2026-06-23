@@ -33,6 +33,15 @@
               <span v-if="link.is_primary" class="deal-contacts-group__primary-badge">
                 {{ t('sales.deal.page.contacts.primary') }}
               </span>
+              <button
+                v-else
+                type="button"
+                class="deal-contacts-group__set-primary-link"
+                :disabled="settingPrimaryId === link.contact.id"
+                @click.stop="doSetPrimary(link)"
+              >
+                {{ t('sales.deal.page.contacts.setPrimary') }}
+              </button>
             </div>
             <!-- ⋮ menu trigger -->
             <div class="deal-contacts-group__menu-wrap">
@@ -406,6 +415,33 @@ onUnmounted(() => {
   document.removeEventListener('click', onDocClick)
 })
 
+// ── One-click set-primary ─────────────────────────────────────────────────────
+
+const settingPrimaryId = ref<number | null>(null)
+
+async function doSetPrimary(link: DealContactDto): Promise<void> {
+  if (link.is_primary || settingPrimaryId.value !== null) return
+  settingPrimaryId.value = link.contact.id
+  try {
+    const updatedContacts = await salesApi.updateDealContact(
+      props.dealId,
+      link.id,
+      { is_primary: true },
+    )
+    emit('contactsUpdated', updatedContacts)
+    toast.add({ severity: 'success', summary: t('sales.deal.page.contacts.setPrimarySuccess'), life: 2000 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    settingPrimaryId.value = null
+  }
+}
+
 // ── Inline edit state ─────────────────────────────────────────────────────────
 
 const editingContactId = ref<number | null>(null)
@@ -648,6 +684,35 @@ async function submitAddChannel(contactId: number) {
   .app-dark & {
     background: var(--p-blue-900);
     color: var(--p-blue-300);
+  }
+}
+
+.deal-contacts-group__set-primary-link {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  color: var(--p-primary-color);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-decoration: none;
+  opacity: 0.7;
+  transition: opacity var(--app-transition-fast), text-decoration var(--app-transition-fast);
+
+  &:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .app-dark & {
+    color: var(--p-primary-300);
   }
 }
 

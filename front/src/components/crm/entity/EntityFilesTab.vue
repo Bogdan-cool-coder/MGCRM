@@ -383,7 +383,8 @@ function formatDate(iso: string): string {
   return `${dd}.${mm}.${yyyy}`
 }
 
-function mimeIcon(mime: string): string {
+function mimeIcon(mime: string | null | undefined): string {
+  if (!mime) return 'pi-file'
   if (mime.startsWith('image/')) return 'pi-image'
   if (mime === 'application/pdf') return 'pi-file-pdf'
   if (

@@ -5,7 +5,7 @@
 import { useI18n } from 'vue-i18n'
 import type { EntityLogEventType } from '@/entities/crm'
 
-export const EVENT_ICONS: Record<EntityLogEventType, string> = {
+export const EVENT_ICONS: Partial<Record<EntityLogEventType, string>> & Record<string, string> = {
   created: 'pi-plus-circle',
   updated: 'pi-pencil',
   stage_changed: 'pi-arrow-right-arrow-left',
@@ -23,17 +23,28 @@ export const EVENT_ICONS: Record<EntityLogEventType, string> = {
   relation_added: 'pi-share-alt',
   relation_removed: 'pi-minus-circle',
   custom_field_changed: 'pi-sliders-h',
+  // MGCRM-native backend actions
+  kp_sent: 'pi-send',
+  contract_sent: 'pi-file-export',
+  data_changed: 'pi-pencil',
+  contract_event: 'pi-file',
+  finance_event: 'pi-wallet',
 }
 
 export function useEntityLogFormat() {
   const { t } = useI18n()
 
-  function eventIcon(type: EntityLogEventType): string {
+  function eventIcon(type: EntityLogEventType | string | null | undefined): string {
+    if (!type) return 'pi-info-circle'
     return EVENT_ICONS[type] ?? 'pi-info-circle'
   }
 
-  function eventLabel(type: EntityLogEventType): string {
-    return t(`crm.log.events.${type}`, type)
+  function eventLabel(type: EntityLogEventType | string | null | undefined): string {
+    if (!type) return t('crm.log.events.unknown')
+    const key = `crm.log.events.${type}`
+    const label = t(key)
+    // vue-i18n returns the key itself when missing; treat that as unknown
+    return label === key ? t('crm.log.events.unknown') : label
   }
 
   function formatDate(iso: string): string {

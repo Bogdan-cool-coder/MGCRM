@@ -53,7 +53,7 @@ import Skeleton from 'primevue/skeleton'
 import DealsKanbanColumn from './DealsKanbanColumn.vue'
 import type { BoardColumnDto, DealCardDto } from '@/entities/sales'
 
-const props = defineProps<{
+defineProps<{
   visibleColumns: BoardColumnDto[]
   loading: boolean
 }>()

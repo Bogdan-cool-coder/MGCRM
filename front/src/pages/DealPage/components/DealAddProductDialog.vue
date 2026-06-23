@@ -419,7 +419,7 @@ async function onSubmit() {
   color: $surface-800;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800);
   }
 }
 

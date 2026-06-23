@@ -49,7 +49,7 @@
       >
         <!-- Icon badge -->
         <div class="entity-log-tab__icon-wrap">
-          <i :class="['pi', eventIcon(entry.event_type), 'entity-log-tab__icon']" />
+          <i :class="['pi', eventIcon(entry.action), 'entity-log-tab__icon']" />
         </div>
 
         <!-- Content -->
@@ -59,22 +59,22 @@
               {{ entry.user?.full_name ?? t('crm.log.system') }}
             </span>
             <span class="entity-log-tab__event-label">
-              {{ eventLabel(entry.event_type) }}
+              {{ eventLabel(entry.action) }}
             </span>
             <!-- Stage change: old → new -->
-            <template v-if="entry.event_type === 'stage_changed' && entry.old_value && entry.new_value">
+            <template v-if="entry.action === 'stage_changed' && entry.old_value && entry.new_value">
               <span class="entity-log-tab__stage-old">{{ entry.old_value }}</span>
               <i class="pi pi-arrow-right entity-log-tab__arrow" />
               <span class="entity-log-tab__stage-new">{{ entry.new_value }}</span>
             </template>
             <!-- Field change -->
-            <template v-else-if="entry.event_type === 'updated' && entry.description">
+            <template v-else-if="(entry.action === 'updated' || entry.action === 'data_changed') && entry.description">
               <span class="entity-log-tab__description">{{ entry.description }}</span>
             </template>
           </div>
           <!-- Description for non-field events -->
           <div
-            v-if="entry.description && entry.event_type !== 'updated' && entry.event_type !== 'stage_changed'"
+            v-if="entry.description && entry.action !== 'updated' && entry.action !== 'data_changed' && entry.action !== 'stage_changed'"
             class="entity-log-tab__desc"
           >
             {{ entry.description }}

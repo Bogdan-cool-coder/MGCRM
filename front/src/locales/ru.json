@@ -1490,6 +1490,8 @@
           "sectionTitle": "Контакты сделки",
           "addContact": "Добавить контакт",
           "primary": "Основной",
+          "setPrimary": "Сделать основным",
+          "setPrimarySuccess": "Основной контакт обновлён",
           "empty": {
             "title": "Контакты не привязаны",
             "subtitle": "Добавьте ответственных лиц по сделке"
@@ -3421,7 +3423,13 @@
         "employee_removed": "удалил сотрудника",
         "relation_added": "добавил связь",
         "relation_removed": "удалил связь",
-        "custom_field_changed": "изменил доп. поле"
+        "custom_field_changed": "изменил доп. поле",
+        "kp_sent": "отправил КП",
+        "contract_sent": "отправил договор",
+        "data_changed": "изменил данные",
+        "contract_event": "событие по договору",
+        "finance_event": "финансовое событие",
+        "unknown": "выполнил действие"
       },
       "metrics": {
         "openDeals": "Открытых сделок",
