@@ -1,6 +1,9 @@
 /**
  * Board (Kanban) composable for DealsPage.
  * Manages columns, optimistic drag-and-drop with rollback.
+ *
+ * Revealed-stage state lives in salesStore (in-memory, survives SPA navigation,
+ * resets on full page reload — no localStorage).
  */
 import { ref, computed } from 'vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
@@ -11,6 +14,7 @@ import type {
   BoardResponseDto,
   BoardColumnDto,
   DealCardDto,
+  HiddenStageDto,
   MoveDealPayload,
 } from '@/entities/sales'
 import type { DealsFilters } from './useDealsFilters'
@@ -36,29 +40,33 @@ export function useDealsBoard(
   // Local mutable columns for optimistic UI
   const localColumns = ref<BoardColumnDto[]>([])
 
-  // Which hidden columns are currently shown
-  const visibleHiddenStageIds = ref<Set<number>>(new Set())
+  // Hidden stages metadata from the backend (all hidden stages, regardless of revealed set)
+  const hiddenStagesMeta = ref<HiddenStageDto[]>([])
 
   const loading = computed(() => resource.loading.value)
   const error = computed(() => resource.error.value)
   const pipeline = computed(() => resource.data.value?.pipeline ?? null)
 
-  const visibleColumns = computed(() => {
-    return localColumns.value.filter(
-      (col) => !col.stage.hidden_by_default || visibleHiddenStageIds.value.has(col.stage.id),
-    )
-  })
+  /**
+   * Visible columns: non-hidden stages + any revealed hidden stages.
+   * The board only shows columns the backend sent (it already filters by
+   * revealed_stage_ids), so all localColumns are "visible". We still derive
+   * this for backward-compatible usage in the parent.
+   */
+  const visibleColumns = computed(() => localColumns.value)
 
-  const hiddenColumns = computed(() => {
-    return localColumns.value.filter(
-      (col) => col.stage.hidden_by_default && !visibleHiddenStageIds.value.has(col.stage.id),
-    )
-  })
+  /**
+   * Hidden columns: derived from hiddenStagesMeta — those NOT in revealedStageIds.
+   * Used for count/display in the filter overlay.
+   */
+  const hiddenStages = computed<HiddenStageDto[]>(() => hiddenStagesMeta.value)
 
   async function load() {
     const pid = pipelineId()
     const f = filters.value
     const dateRange = f.dateRange
+    const revealedIds = Array.from(salesStore.revealedStageIds)
+
     await resource.run(
       () =>
         salesApi.getDealsBoard({
@@ -78,6 +86,7 @@ export function useDealsBoard(
           tags: f.tags.length ? f.tags : undefined,
           created_from: dateRange?.[0] ? dateRange[0].toISOString().slice(0, 10) : undefined,
           created_to: dateRange?.[1] ? dateRange[1].toISOString().slice(0, 10) : undefined,
+          revealed_stage_ids: revealedIds.length ? revealedIds : undefined,
         }),
       {
         commit: (result) => {
@@ -88,7 +97,9 @@ export function useDealsBoard(
             ...col,
             deals: [...col.deals],
           }))
-          // Cache stages extracted from columns (adapter embeds stage in each column)
+          // Store hidden stages metadata from response
+          hiddenStagesMeta.value = result.hidden_stages ?? []
+          // Cache stages extracted from columns
           if (result.pipeline) {
             const stages = result.columns.map((col) => col.stage)
             salesStore.cacheStages(result.pipeline.id, stages)
@@ -98,14 +109,12 @@ export function useDealsBoard(
     )
   }
 
+  /**
+   * Toggle a hidden stage's revealed state (stored in the Pinia store).
+   * Caller must call load() after toggling to fetch the updated board.
+   */
   function toggleHiddenStage(stageId: number) {
-    const next = new Set(visibleHiddenStageIds.value)
-    if (next.has(stageId)) {
-      next.delete(stageId)
-    } else {
-      next.add(stageId)
-    }
-    visibleHiddenStageIds.value = next
+    salesStore.toggleRevealedStage(stageId)
   }
 
   /**
@@ -216,8 +225,7 @@ export function useDealsBoard(
     pipeline,
     localColumns,
     visibleColumns,
-    hiddenColumns,
-    visibleHiddenStageIds,
+    hiddenStages,
     load,
     loadMoreInColumn,
     moveDeal,

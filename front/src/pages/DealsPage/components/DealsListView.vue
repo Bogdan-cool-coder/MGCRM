@@ -13,7 +13,6 @@
       :rows-per-page-options="[25, 50, 100]"
       :total-records="total"
       data-key="id"
-      sort-icon="pi pi-sort-alt"
       class="deals-list__table"
       @row-click="onRowClick"
       @page="emit('pageChange', $event)"
@@ -46,7 +45,13 @@
       </template>
 
       <!-- 1. Название (link) -->
-      <Column field="title" :header="t('sales.deals.page.columns.title')" sortable>
+      <Column field="title">
+        <template #header>
+          <button class="deals-list__sort-btn" @click="emit('sort', 'name')">
+            {{ t('sales.deals.page.columns.title') }}
+            <i :class="sortIcon('name')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <RouterLink :to="`/deals/${data.id}`" class="deals-list__link" @click.stop>
             {{ data.title }}
@@ -55,7 +60,13 @@
       </Column>
 
       <!-- 2. Страна -->
-      <Column :header="t('sales.deals.page.list.columns.country')" sortable style="width: 100px">
+      <Column style="width: 100px">
+        <template #header>
+          <button class="deals-list__sort-btn" @click="emit('sort', 'country')">
+            {{ t('sales.deals.page.list.columns.country') }}
+            <i :class="sortIcon('country')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <span class="deals-list__country">
             {{ data.country || '—' }}
@@ -64,14 +75,26 @@
       </Column>
 
       <!-- 3. Сумма -->
-      <Column :header="t('sales.deals.page.columns.amount')" sortable style="text-align: right; width: 130px">
+      <Column style="text-align: right; width: 130px">
+        <template #header>
+          <button class="deals-list__sort-btn" @click="emit('sort', 'amount')">
+            {{ t('sales.deals.page.columns.amount') }}
+            <i :class="sortIcon('amount')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <span class="deals-list__amount">{{ formatCurrency(data.amount, data.currency) }}</span>
         </template>
       </Column>
 
       <!-- 4. Статус (stage chip with tint 22%) -->
-      <Column :header="t('sales.deals.page.columns.stage')" sortable>
+      <Column>
+        <template #header>
+          <button class="deals-list__sort-btn" @click="emit('sort', 'stage')">
+            {{ t('sales.deals.page.columns.stage') }}
+            <i :class="sortIcon('stage')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <span
             v-if="data.stage"
@@ -86,7 +109,13 @@
       </Column>
 
       <!-- 5. В статусе (days in stage, plural) -->
-      <Column :header="t('sales.deals.page.list.columns.inStage')" sortable style="width: 110px">
+      <Column style="width: 110px">
+        <template #header>
+          <button class="deals-list__sort-btn" @click="emit('sort', 'days_in_stage')">
+            {{ t('sales.deals.page.list.columns.inStage') }}
+            <i :class="sortIcon('days_in_stage')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <span
             class="deals-list__days"
@@ -98,7 +127,13 @@
       </Column>
 
       <!-- 6. Посл. контакт (freshness) -->
-      <Column :header="t('sales.deals.page.list.columns.lastContact')" sortable style="width: 130px">
+      <Column style="width: 130px">
+        <template #header>
+          <button class="deals-list__sort-btn" @click="emit('sort', 'last_contact')">
+            {{ t('sales.deals.page.list.columns.lastContact') }}
+            <i :class="sortIcon('last_contact')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <span
             class="deals-list__freshness"
@@ -110,7 +145,14 @@
       </Column>
 
       <!-- 7. Задача (custom pills per spec §5.2) -->
-      <Column :header="t('sales.deals.page.columns.task')" sortable>
+      <Column>
+        <template #header>
+          <!-- Task column: no dedicated server sort key — maps to 'created' as nearest field -->
+          <button class="deals-list__sort-btn" @click="emit('sort', 'created')">
+            {{ t('sales.deals.page.columns.task') }}
+            <i :class="sortIcon('created')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <!-- overdue → red pill -->
           <span
@@ -138,7 +180,13 @@
       </Column>
 
       <!-- 8. Ответственный (avatar 22px + full name) -->
-      <Column field="owner.name" :header="t('sales.deals.page.columns.owner')" sortable style="width: 150px">
+      <Column style="width: 150px">
+        <template #header>
+          <button class="deals-list__sort-btn" @click="emit('sort', 'owner')">
+            {{ t('sales.deals.page.columns.owner') }}
+            <i :class="sortIcon('owner')" class="deals-list__sort-icon" />
+          </button>
+        </template>
         <template #body="{ data }">
           <div class="deals-list__owner">
             <span class="deals-list__owner-avatar">{{ ownerInitial(data.owner?.name ?? '') }}</span>
@@ -164,6 +212,7 @@ import Button from 'primevue/button'
 import { formatCurrency } from '@/utils/currency'
 import DealsKpiChips from './DealsKpiChips.vue'
 import type { DealDto, ActivityType, PipelineStageDto, DealKpiDto } from '@/entities/sales'
+import type { DealSortKey, DealSortState } from '../composables/useDealsList'
 
 const props = defineProps<{
   deals: DealDto[]
@@ -174,6 +223,7 @@ const props = defineProps<{
   stages: PipelineStageDto[]
   kpi: DealKpiDto
   kpiLoading: boolean
+  sortState: DealSortState
 }>()
 
 const emit = defineEmits<{
@@ -182,6 +232,7 @@ const emit = defineEmits<{
   create: []
   changeStage: [deal: DealDto]
   delete: [deal: DealDto]
+  sort: [key: DealSortKey]
 }>()
 
 const { t } = useI18n()
@@ -189,6 +240,13 @@ const router = useRouter()
 
 function onRowClick(event: { data: DealDto }) {
   void router.push(`/deals/${event.data.id}`)
+}
+
+// ── Sort icon helper ────────────────────────────────────────────────────────────
+
+function sortIcon(key: DealSortKey): string {
+  if (props.sortState.sortBy !== key) return 'pi pi-sort-alt'
+  return props.sortState.sortDir === 'asc' ? 'pi pi-sort-amount-up' : 'pi pi-sort-amount-down'
 }
 
 // ── Stage chip style (tint 22%) ────────────────────────────────────────────────
@@ -316,10 +374,65 @@ function taskDateShort(dueAt: string | null): string {
   font-weight: $font-weight-semibold;
   color: $surface-500;
   background: $surface-card;
+  // Remove default PrimeVue header padding so our button fills it
+  padding: 0 !important;
 
   .app-dark & {
     color: var(--p-surface-400);
   }
+}
+
+// Sort button inside each column header
+.deals-list__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  width: 100%;
+  padding: $space-2 $space-3;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $surface-500;
+  text-align: left;
+  white-space: nowrap;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $surface-700;
+
+    .app-dark & {
+      color: var(--p-surface-200);
+    }
+  }
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.deals-list__sort-icon {
+  font-size: $font-size-2xs;
+  flex-shrink: 0;
+  color: $surface-400;
+  transition: color 0.15s;
+
+  // Active sort icon gets primary color
+  .pi-sort-amount-up &,
+  .pi-sort-amount-down & {
+    color: var(--p-primary-color);
+  }
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
+}
+
+// Override: when the button contains an active sort icon, highlight icon
+:deep(.p-datatable-thead th) .deals-list__sort-btn .pi-sort-amount-up,
+:deep(.p-datatable-thead th) .deals-list__sort-btn .pi-sort-amount-down {
+  color: var(--p-primary-color);
 }
 
 .deals-list__link {

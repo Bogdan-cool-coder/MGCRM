@@ -45,12 +45,11 @@
       :users="[]"
       :tags="[]"
       :filters="toOverlayFilters()"
-      :hidden-stages="hiddenColumns"
-      :shown-hidden-stage-ids="shownHiddenStageIdsArray"
+      :hidden-stages="hiddenStages"
       @close="filterOverlayVisible = false"
       @apply="onFilterApply"
       @reset="onFilterReset"
-      @toggle-hidden-stage="toggleHiddenStage"
+      @toggle-hidden-stage="onToggleHiddenStage"
     />
 
     <!-- Board view -->
@@ -76,11 +75,13 @@
         :stages="currentStages"
         :kpi="kpi"
         :kpi-loading="kpiLoading"
+        :sort-state="sortState"
         @page-change="onPageChange"
         @reset-filters="resetFilters"
         @create="createDrawerOpen = true"
         @change-stage="openMoveDialog"
         @delete="confirmDelete"
+        @sort="onSort"
       />
     </div>
 
@@ -236,6 +237,8 @@ function onFilterReset() {
 
 function onSetPipeline(id: number) {
   salesStore.setActivePipeline(id)
+  // Reset revealed set when switching pipelines — stage IDs are not portable
+  salesStore.resetRevealedStages()
   pipelineMenuOpen.value = false
   const pipeline = pipelines.value.find((p) => p.id === id)
   if (pipeline?.stages) {
@@ -281,16 +284,22 @@ const boardComposable = useDealsBoard(
 )
 const {
   visibleColumns,
-  hiddenColumns,
+  hiddenStages,
   loading: boardLoading,
   moveDeal,
   updateCardTitle,
   toggleHiddenStage,
   loadMoreInColumn,
-  visibleHiddenStageIds,
 } = boardComposable
 
-const shownHiddenStageIdsArray = computed(() => Array.from(visibleHiddenStageIds.value))
+/**
+ * Toggle a hidden stage and refetch the board so the revealed column appears
+ * at its correct sort_order position (backend controls the column set).
+ */
+async function onToggleHiddenStage(stageId: number) {
+  toggleHiddenStage(stageId)
+  void boardComposable.load()
+}
 
 // ── Summary (counts + sum) ─────────────────────────────────────────────────────
 
@@ -316,7 +325,9 @@ const {
   total,
   loading: listLoading,
   perPage,
+  sortState,
   onPageChange,
+  onSort,
 } = listComposable
 
 // ── KPI composable (whole-funnel aggregate) ─────────────────────────────────────

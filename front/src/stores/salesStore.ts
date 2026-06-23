@@ -29,6 +29,12 @@ export const useSalesStore = defineStore('sales', () => {
   const bulkMode = ref(false)
   const bulkSelection = ref<number[]>([])
 
+  /**
+   * Revealed hidden stage IDs — in-memory only (intentionally NOT persisted).
+   * Survives SPA navigation; resets on full page reload (per spec).
+   */
+  const revealedStageIds = ref<Set<number>>(new Set())
+
   // Stage cache per pipeline (populated on first board load)
   const stagesCache = ref<Map<number, PipelineStageDto[]>>(new Map())
 
@@ -89,6 +95,20 @@ export const useSalesStore = defineStore('sales', () => {
     lostReasonsCache.value = reasons
   }
 
+  function toggleRevealedStage(stageId: number) {
+    const next = new Set(revealedStageIds.value)
+    if (next.has(stageId)) {
+      next.delete(stageId)
+    } else {
+      next.add(stageId)
+    }
+    revealedStageIds.value = next
+  }
+
+  function resetRevealedStages() {
+    revealedStageIds.value = new Set()
+  }
+
   function invalidateStagesCache(pipelineId?: number) {
     if (pipelineId != null) {
       const m = new Map(stagesCache.value)
@@ -107,6 +127,7 @@ export const useSalesStore = defineStore('sales', () => {
     bulkSelection,
     stagesCache,
     lostReasonsCache,
+    revealedStageIds,
     setActivePipeline,
     setActiveView,
     setBoardSort,
@@ -119,5 +140,7 @@ export const useSalesStore = defineStore('sales', () => {
     getCachedStages,
     cacheLostReasons,
     invalidateStagesCache,
+    toggleRevealedStage,
+    resetRevealedStages,
   }
 })

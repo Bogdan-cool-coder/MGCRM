@@ -123,6 +123,15 @@ class DealResource extends JsonResource
             ),
             'contacts' => DealContactResource::collection($this->whenLoaded('dealContacts')),
 
+            // Deal-card «Активность» tab metrics block (six figures). Stamped onto
+            // the model as `metrics_payload` by DealController::show() ONLY — absent
+            // on list/board/store/update payloads (the key is then omitted, never a
+            // half-computed null). See DealService::metricsFor().
+            $this->mergeWhen(
+                $this->resource->getAttribute('metrics_payload') !== null,
+                fn (): array => ['metrics' => $this->resource->getAttribute('metrics_payload')],
+            ),
+
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

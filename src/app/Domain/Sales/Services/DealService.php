@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Activity\Enums\ActivityStatus;
+use App\Domain\Activity\Enums\ActivityTargetType;
+use App\Domain\Activity\Enums\ActivityType;
+use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Services\ActivityService;
+use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
@@ -23,6 +28,7 @@ use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\DealStageHistory;
 use App\Domain\Sales\Models\Pipeline;
+use App\Domain\Sales\Models\PipelineStage;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -167,14 +173,92 @@ class DealService
             ->with(['pipeline:id,name,kind', 'stage', 'company:id,name,country_code,category_code', 'owner:id,full_name']);
 
         $this->applyFilters($query, $filters, $user);
+        $this->applySort($query, $filters);
 
-        $deals = $query
-            ->orderByDesc('created_at')
-            ->paginate($perPage);
+        $deals = $query->paginate($perPage);
 
         $this->stampLastContact($deals->getCollection());
 
         return $deals;
+    }
+
+    /**
+     * Apply the validated header sort (sort_by + sort_dir) to a list query, or fall
+     * back to the default `created_at DESC` when no sort is given. sort_by is one of
+     * IndexDealRequest::SORTABLE_COLUMNS (validated upstream — an off-list value
+     * never reaches here); sort_dir defaults to desc.
+     *
+     * Relation columns are reached with LEFT JOINs (company / owner / stage) or a
+     * correlated subquery (last_contact), so the visibility scope + filters already
+     * on the query stay intact and a deal with a missing relation still appears
+     * (NULLs sort last/first per the driver, never dropped). The select is pinned to
+     * `deals.*` so the joins never leak foreign columns into the hydrated models
+     * (which would corrupt the DealResource). A stable `deals.id` tiebreaker keeps
+     * pagination deterministic when the sort key has ties.
+     *
+     * @param  Builder<Deal>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applySort(Builder $query, array $filters): void
+    {
+        $sortBy = $filters['sort_by'] ?? null;
+        $dir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+
+        if ($sortBy === null) {
+            // Default ordering — unchanged contract (newest first).
+            $query->orderByDesc('deals.created_at')->orderByDesc('deals.id');
+
+            return;
+        }
+
+        // Keep the hydrated models clean: joins must not overwrite deal columns.
+        $query->select('deals.*');
+
+        match ($sortBy) {
+            'name' => $query->orderBy('deals.title', $dir),
+            'amount' => $query->orderBy('deals.amount', $dir),
+            // Older stage_changed_at = longer in stage. "days_in_stage asc" (shortest
+            // first) therefore means most-recent change first → stage_changed_at desc.
+            'days_in_stage' => $query->orderBy('deals.stage_changed_at', $dir === 'asc' ? 'desc' : 'asc'),
+            'created' => $query->orderBy('deals.created_at', $dir),
+            'country' => $query
+                ->leftJoin('crm_companies as sort_company', 'sort_company.id', '=', 'deals.company_id')
+                ->orderBy('sort_company.country_code', $dir),
+            'owner' => $query
+                ->leftJoin('users as sort_owner', 'sort_owner.id', '=', 'deals.owner_user_id')
+                ->orderBy('sort_owner.full_name', $dir),
+            'stage' => $query
+                ->leftJoin('pipeline_stages as sort_stage', 'sort_stage.id', '=', 'deals.stage_id')
+                ->orderBy('sort_stage.sort_order', $dir),
+            'last_contact' => $query->orderBy(
+                $this->lastContactSortSubquery(),
+                $dir,
+            ),
+            default => $query->orderByDesc('deals.created_at'),
+        };
+
+        // Deterministic tiebreaker so equal sort keys never reshuffle across pages.
+        $query->orderBy('deals.id', 'desc');
+    }
+
+    /**
+     * Correlated subquery returning a deal's latest completed-contact date — the
+     * order-by expression for the «Посл. контакт» (last_contact) sort. Mirrors
+     * ActivityService::lastContactDatesForDeals (event-class kinds, status=done,
+     * completed_at not null) but as a scalar MAX so it composes into ORDER BY
+     * without a join that would multiply rows. Deals with no contact sort as NULL.
+     *
+     * @return Builder<Activity>
+     */
+    private function lastContactSortSubquery(): Builder
+    {
+        return Activity::query()
+            ->selectRaw('MAX(completed_at)')
+            ->whereColumn('target_id', 'deals.id')
+            ->where('target_type', ActivityTargetType::Deal->value)
+            ->whereIn('kind', ActivityType::eventValues())
+            ->where('status', ActivityStatus::Done->value)
+            ->whereNotNull('completed_at');
     }
 
     /**
@@ -476,6 +560,21 @@ class DealService
             $columnFilters['pipeline_id'],
             $columnFilters['stage_id'],
             $columnFilters['stage_ids'],
+            $columnFilters['revealed_stage_ids'],
+        );
+
+        // Hidden-by-default stages keep their funnel position but are dropped from
+        // the board unless the user reveals them through the funnel filter. The set
+        // of revealed ids is intersected with this pipeline's stages — an id for a
+        // foreign pipeline is silently ignored (never injects a phantom column).
+        $revealedStageIds = array_map('intval', $filters['revealed_stage_ids'] ?? []);
+
+        // Visible columns = always-visible stages + revealed hidden ones, both in
+        // the relation's sort_order (system won/lost last) — a revealed hidden stage
+        // therefore renders at its real position, not appended at the end.
+        $visibleStages = $pipeline->stages->filter(
+            static fn (PipelineStage $stage): bool => ! $stage->hidden_by_default
+                || in_array((int) $stage->id, $revealedStageIds, true),
         );
 
         $multiCurrencyWarning = false;
@@ -483,7 +582,7 @@ class DealService
         $rawColumns = [];
         $allDealIds = [];
 
-        foreach ($pipeline->stages as $stage) {
+        foreach ($visibleStages as $stage) {
             $base = $this->scopedQuery($scope, $user)
                 ->where('pipeline_id', $pipelineId)
                 ->where('stage_id', $stage->id);
@@ -560,10 +659,37 @@ class DealService
             ];
         }
 
+        // Hidden-stage toggles for the filter panel: every hidden-by-default stage
+        // (in funnel order) with its scope+filter-aware deal count so the panel can
+        // render "Reveal «Stage» (N)". A revealed hidden stage still appears here so
+        // its toggle stays in the panel and shows the live count.
+        $hiddenStages = [];
+        foreach ($pipeline->stages as $stage) {
+            if (! $stage->hidden_by_default) {
+                continue;
+            }
+
+            $count = $this->scopedQuery($scope, $user)
+                ->where('pipeline_id', $pipelineId)
+                ->where('stage_id', $stage->id);
+            $this->applyFilters($count, $columnFilters, $user);
+
+            $hiddenStages[] = [
+                'id' => (int) $stage->id,
+                'name' => $stage->name,
+                'color' => $stage->color,
+                'sort_order' => (int) $stage->sort_order,
+                'deals_count' => (clone $count)->count(),
+            ];
+        }
+
         return [
             'pipeline' => $pipeline,
-            'stages' => $pipeline->stages,
+            // Only the rendered columns' stages (always-visible + revealed) so the
+            // board never paints a header for a still-hidden stage.
+            'stages' => $visibleStages->values(),
             'columns' => $columns,
+            'hidden_stages' => $hiddenStages,
             'base_currency' => $baseCurrency,
             'multi_currency_warning' => $multiCurrencyWarning,
         ];
@@ -1151,6 +1277,66 @@ class DealService
         $deal->refresh();
 
         return $deal;
+    }
+
+    /**
+     * The six metrics for the deal-card «Активность» tab (DealPage metrics block):
+     *
+     *   days_in_deal        — whole days since the deal was created.
+     *   days_in_stage       — whole days in the current stage. Reuses the SAME
+     *                         source as the navy header's "N дн. в стадии"
+     *                         (Deal::daysInStage(), off stage_changed_at) so the
+     *                         tab can never drift from the header.
+     *   activities_count    — total activities linked to the deal (any kind/status).
+     *   stage_changes_count — DealStageHistory rows (real stage transitions; the
+     *                         creation row, from_stage_id = null, is excluded so
+     *                         the figure counts MOVES, not the initial placement).
+     *   documents_count     — Documents generated from this deal (any status).
+     *   last_activity_at    — ISO-8601 created_at of the newest activity, or null.
+     *
+     * The counts are batched: one aggregate query in the Activity domain
+     * (dealActivityStats), one COUNT in the Contracts domain (countForDeal) and one
+     * COUNT on stage history — no per-row queries (ARCHITECTURE.md §3 N+1). Cross-
+     * domain reads go through the owning Service: ActivityService (constructor-
+     * injected) and DocumentService (resolved lazily via app() — it constructor-
+     * injects DealService, so injecting it here would be a DI cycle, mirroring the
+     * applyLicenseMode pattern in update()).
+     *
+     * @return array{
+     *     days_in_deal: int,
+     *     days_in_stage: int,
+     *     activities_count: int,
+     *     stage_changes_count: int,
+     *     documents_count: int,
+     *     last_activity_at: ?string,
+     * }
+     */
+    public function metricsFor(Deal $deal): array
+    {
+        $daysInDeal = $deal->created_at !== null
+            ? (int) $deal->created_at->copy()->startOfDay()->diffInDays(now()->startOfDay())
+            : 0;
+
+        $activityStats = $this->activityService->dealActivityStats((int) $deal->id);
+
+        // Real stage transitions only — the creation row (from_stage_id = null) is
+        // the initial placement, not a move.
+        $stageChangesCount = (int) DealStageHistory::query()
+            ->where('deal_id', $deal->id)
+            ->whereNotNull('from_stage_id')
+            ->count();
+
+        $documentsCount = app(DocumentService::class)
+            ->countForDeal((int) $deal->id);
+
+        return [
+            'days_in_deal' => $daysInDeal,
+            'days_in_stage' => $deal->daysInStage(),
+            'activities_count' => $activityStats['activities_count'],
+            'stage_changes_count' => $stageChangesCount,
+            'documents_count' => $documentsCount,
+            'last_activity_at' => $activityStats['last_activity_at'],
+        ];
     }
 
     /**

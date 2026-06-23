@@ -35,6 +35,31 @@ class IndexDealRequest extends FormRequest
         'owner_ids',
         'stage_ids',
         'tags',
+        'revealed_stage_ids',
+    ];
+
+    /**
+     * Sortable list columns (the deals-list header sort arrows). A WHITELIST — the
+     * service maps each key to a concrete column / relation join; an off-list value
+     * is rejected here so the order-by can never be steered by arbitrary input.
+     *   name         → deals.title
+     *   country      → company.country_code
+     *   amount       → deals.amount (kopecks)
+     *   stage        → stage.sort_order (funnel position)
+     *   days_in_stage→ deals.stage_changed_at (older = longer in stage)
+     *   last_contact → latest completed contact activity date
+     *   owner        → owner user full_name
+     *   created      → deals.created_at (default)
+     */
+    public const SORTABLE_COLUMNS = [
+        'name',
+        'country',
+        'amount',
+        'stage',
+        'days_in_stage',
+        'last_contact',
+        'owner',
+        'created',
     ];
 
     public function authorize(): bool
@@ -81,6 +106,11 @@ class IndexDealRequest extends FormRequest
             'view' => ['sometimes', 'string', Rule::in(['list', 'board'])],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
 
+            // ----- list sorting (header arrows). Whitelisted column + direction;
+            //        default = created desc when omitted. -----
+            'sort_by' => ['sometimes', 'string', Rule::in(self::SORTABLE_COLUMNS)],
+            'sort_dir' => ['sometimes', 'string', Rule::in(['asc', 'desc'])],
+
             // ----- existing dimensions (unchanged contract) -----
             'pipeline_id' => ['sometimes', 'integer', 'exists:pipelines,id'],
             'stage_id' => ['sometimes', 'integer', 'exists:pipeline_stages,id'],
@@ -94,6 +124,11 @@ class IndexDealRequest extends FormRequest
             'owner_ids.*' => ['integer', 'exists:users,id'],
             'stage_ids' => ['sometimes', 'array'],
             'stage_ids.*' => ['integer', 'exists:pipeline_stages,id'],
+            // Board-only: hidden-by-default stages the user has revealed via the
+            // funnel filter. These columns are added back at their real sort_order
+            // position alongside the always-visible stages (ignored on list view).
+            'revealed_stage_ids' => ['sometimes', 'array'],
+            'revealed_stage_ids.*' => ['integer', 'exists:pipeline_stages,id'],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'max:64'],
 

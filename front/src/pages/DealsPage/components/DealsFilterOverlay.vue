@@ -157,7 +157,7 @@
         <i class="pi pi-eye-slash filter-overlay__hidden-eye" />
         <span class="filter-overlay__hidden-label">{{ t('sales.deals.page.filters.hiddenStages') }}</span>
         <span class="filter-overlay__hidden-count-pill">
-          {{ shownHiddenStageIds.length }} вкл.
+          {{ revealedCount }} вкл.
         </span>
         <i :class="['pi', hiddenExpanded ? 'pi-chevron-up' : 'pi-chevron-down', 'filter-overlay__hidden-chevron']" />
       </button>
@@ -165,19 +165,19 @@
       <div v-if="hiddenExpanded" class="filter-overlay__hidden-body">
         <p class="filter-overlay__hidden-hint">{{ t('sales.deals.page.filters.hiddenStagesHint') }}</p>
         <div
-          v-for="col in hiddenStages"
-          :key="col.stage.id"
+          v-for="hs in hiddenStages"
+          :key="hs.id"
           class="filter-overlay__hidden-row"
         >
-          <span class="filter-overlay__hidden-dot" :style="{ background: col.stage.color ?? 'var(--p-surface-400)' }" />
-          <span class="filter-overlay__hidden-name">{{ col.stage.name }}</span>
-          <span class="filter-overlay__hidden-count-badge">{{ col.total }}</span>
-          <!-- Custom toggle switch -->
+          <span class="filter-overlay__hidden-dot" :style="{ background: hs.color ?? 'var(--p-surface-400)' }" />
+          <span class="filter-overlay__hidden-name">{{ hs.name }}</span>
+          <span class="filter-overlay__hidden-count-badge">{{ hs.deals_count }}</span>
+          <!-- Custom toggle switch — state from Pinia store (in-memory, SPA-persistent) -->
           <button
             type="button"
             class="filter-overlay__toggle"
-            :class="{ 'filter-overlay__toggle--on': shownHiddenStageIds.includes(col.stage.id) }"
-            @click="emit('toggleHiddenStage', col.stage.id)"
+            :class="{ 'filter-overlay__toggle--on': salesStore.revealedStageIds.has(hs.id) }"
+            @click="emit('toggleHiddenStage', hs.id)"
           >
             <span class="filter-overlay__toggle-knob" />
           </button>
@@ -217,7 +217,8 @@ import InputNumber from 'primevue/inputnumber'
 import MultiSelect from 'primevue/multiselect'
 import DatePicker from 'primevue/datepicker'
 import Checkbox from 'primevue/checkbox'
-import type { PipelineStageDto, UserRefDto, BoardColumnDto } from '@/entities/sales'
+import type { PipelineStageDto, UserRefDto, HiddenStageDto } from '@/entities/sales'
+import { useSalesStore } from '@/stores/salesStore'
 
 export interface OverlayFilters {
   q: string
@@ -244,8 +245,7 @@ const props = defineProps<{
   users: UserRefDto[]
   tags: string[]
   filters: OverlayFilters
-  hiddenStages: BoardColumnDto[]
-  shownHiddenStageIds: number[]
+  hiddenStages: HiddenStageDto[]
 }>()
 
 const emit = defineEmits<{
@@ -255,7 +255,17 @@ const emit = defineEmits<{
   toggleHiddenStage: [stageId: number]
 }>()
 
+const salesStore = useSalesStore()
+
 const { t } = useI18n()
+
+// ── Revealed stage count (from store, for the pill in the accordion header) ────
+
+const revealedCount = computed(() => {
+  // Count only hidden stages that are currently revealed (intersection)
+  const ids = salesStore.revealedStageIds
+  return props.hiddenStages.filter((hs) => ids.has(hs.id)).length
+})
 
 // ── Local state ────────────────────────────────────────────────────────────────
 

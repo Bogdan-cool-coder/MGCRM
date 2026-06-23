@@ -135,6 +135,11 @@ export interface DealDto {
    * Used for freshness colouring in list view.
    */
   last_contact_at?: string | null
+  /**
+   * Aggregated deal metrics — present on SHOW endpoint only.
+   * NOT included in list/board/store/update payloads.
+   */
+  metrics?: DealMetricsDto
 }
 
 // ─── Activity type (used in NextTaskDto) ─────────────────────────────────────
@@ -213,9 +218,25 @@ export interface BoardColumnDto {
   has_more: boolean
 }
 
+// ─── Hidden stage entry (returned by board endpoint) ─────────────────────────
+
+/**
+ * A hidden-by-default stage entry returned in the top-level `hidden_stages`
+ * array of the board response. Deals_count is scope+filter-aware.
+ */
+export interface HiddenStageDto {
+  id: number
+  name: string
+  color: string | null
+  sort_order: number
+  deals_count: number
+}
+
 export interface BoardResponseDto {
   pipeline: { id: number; name: string; kind: string | null }
   columns: BoardColumnDto[]
+  /** All hidden-by-default stages in funnel order (regardless of revealed set). */
+  hidden_stages: HiddenStageDto[]
 }
 
 /**
@@ -251,6 +272,7 @@ export interface BoardRawResponseDto {
   pipeline: { id: number; name: string; kind: string | null }
   stages: PipelineStageDto[]
   columns: Record<string, BoardRawColumnDto>
+  hidden_stages?: HiddenStageDto[]
 }
 
 // ─── Deal Product (line-item) ─────────────────────────────────────────────────
@@ -440,6 +462,23 @@ export interface ReorderStageItem {
   sort_order?: number
 }
 
+// ─── Deal metrics (present on SHOW only — not on list/board/store/update payloads) ───
+
+export interface DealMetricsDto {
+  /** Calendar days from deal created_at until now */
+  days_in_deal: number
+  /** Calendar days the deal has been in the current stage */
+  days_in_stage: number
+  /** Total count of activities on the deal */
+  activities_count: number
+  /** Number of stage transitions (excludes the creation row) */
+  stage_changes_count: number
+  /** Number of documents attached to the deal */
+  documents_count: number
+  /** ISO-8601 timestamp of the latest activity, or null */
+  last_activity_at: string | null
+}
+
 // ─── API list params ─────────────────────────────────────────────────────────
 
 export interface DealListParams {
@@ -466,6 +505,18 @@ export interface DealListParams {
   created_from?: string | null
   created_to?: string | null
   archived?: boolean
+  /**
+   * Server-side sort column key. Whitelist:
+   * name | country | amount | stage | days_in_stage | last_contact | owner | created
+   */
+  sort_by?: string | null
+  /** Sort direction (default: desc) */
+  sort_dir?: 'asc' | 'desc' | null
+  /**
+   * Board-only: stage IDs to reveal in addition to always-visible stages.
+   * Sends as repeated query param: revealed_stage_ids[]=12&revealed_stage_ids[]=18
+   */
+  revealed_stage_ids?: number[]
 }
 
 // ─── KPI aggregate (GET /api/deals/kpi) ──────────────────────────────────────

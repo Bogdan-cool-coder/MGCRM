@@ -420,6 +420,20 @@ class DocumentService
     }
 
     /**
+     * Count the documents generated from a deal — the «документов» figure on the
+     * deal-card «Активность» metrics block. Cross-domain read entry point for the
+     * Sales domain (it never queries the documents table directly, DDD §2),
+     * parallel to hasActiveContractForDeal(). Counts every Document with this
+     * source_deal_id regardless of status (the timeline total, not just live ones).
+     */
+    public function countForDeal(int $dealId): int
+    {
+        return Document::query()
+            ->where('source_deal_id', $dealId)
+            ->count();
+    }
+
+    /**
      * Record generated file paths on a Document (called by S2.4 GenerationService).
      */
     public function recordGenerated(Document $doc, string $docxPath, string $pdfPath, ?int $templateVersionId): Document

@@ -9,12 +9,23 @@ import type { DealDto, SalesPaginatedResponse } from '@/entities/sales'
 import type { DealsFilters } from './useDealsFilters'
 import type { Ref } from 'vue'
 
+// Server-supported sort column keys (from backend whitelist)
+export type DealSortKey = 'name' | 'country' | 'amount' | 'stage' | 'days_in_stage' | 'last_contact' | 'owner' | 'created'
+
+export interface DealSortState {
+  sortBy: DealSortKey | null
+  sortDir: 'asc' | 'desc'
+}
+
 export function useDealsList(
   filters: Ref<DealsFilters>,
   pipelineId: () => number | null,
 ) {
   const page = ref(1)
   const perPage = ref(25)
+
+  // ── Sort state ───────────────────────────────────────────────────────────────
+  const sortState = ref<DealSortState>({ sortBy: null, sortDir: 'desc' })
 
   const resource = useAsyncResource<SalesPaginatedResponse<DealDto>>(() => ({
     data: [],
@@ -37,6 +48,7 @@ export function useDealsList(
     const pid = pipelineId()
     const f = filters.value
     const dateRange = f.dateRange
+    const { sortBy, sortDir } = sortState.value
     await resource.run(() =>
       salesApi.getDeals({
         view: 'list',
@@ -58,6 +70,8 @@ export function useDealsList(
         created_to: dateRange?.[1] ? dateRange[1].toISOString().slice(0, 10) : undefined,
         page: page.value,
         per_page: perPage.value,
+        sort_by: sortBy ?? undefined,
+        sort_dir: sortBy ? sortDir : undefined,
       }),
     )
   }
@@ -65,6 +79,23 @@ export function useDealsList(
   function onPageChange(event: { page: number; rows: number }) {
     page.value = event.page + 1
     perPage.value = event.rows
+    void load()
+  }
+
+  /**
+   * Cycle sort for a column: if this column is already active, toggle asc/desc.
+   * If a different column, switch to it with desc direction.
+   */
+  function onSort(key: DealSortKey) {
+    if (sortState.value.sortBy === key) {
+      sortState.value = {
+        sortBy: key,
+        sortDir: sortState.value.sortDir === 'desc' ? 'asc' : 'desc',
+      }
+    } else {
+      sortState.value = { sortBy: key, sortDir: 'desc' }
+    }
+    page.value = 1
     void load()
   }
 
@@ -79,8 +110,10 @@ export function useDealsList(
     error,
     page,
     perPage,
+    sortState,
     load,
     onPageChange,
+    onSort,
     resetPage,
   }
 }

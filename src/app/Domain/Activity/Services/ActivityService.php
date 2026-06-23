@@ -21,6 +21,7 @@ use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Models\Deal;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -762,6 +763,40 @@ class ActivityService
             'last_presentation_at' => $lastPresentation?->toIso8601String(),
             'last_touch_at' => $lastTouch?->toIso8601String(),
             'last_event_at' => $lastEvent?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Activity stats for a single deal's «Активность» tab (DealPage metrics block):
+     * the total number of activities linked to the deal and the timestamp of the
+     * most recent one (by created_at). The Sales domain never queries the
+     * activities table directly (DDD §2); it asks the Activity domain here.
+     *
+     * "Activities count" counts every activity targeted at the deal regardless of
+     * kind or status (calls, meetings, tasks, notes — the whole timeline). The
+     * last-activity timestamp is the newest activity's created_at, or null when the
+     * deal has none. Resolved in ONE aggregate query (no per-row hydration).
+     *
+     * @return array{activities_count: int, last_activity_at: ?string}
+     */
+    public function dealActivityStats(int $dealId): array
+    {
+        $row = Activity::query()
+            ->where('target_type', ActivityTargetType::Deal->value)
+            ->where('target_id', $dealId)
+            ->selectRaw('COUNT(*) as activities_count, MAX(created_at) as last_activity_at')
+            ->first();
+
+        $count = (int) ($row?->activities_count ?? 0);
+        $lastRaw = $row?->last_activity_at;
+
+        $lastActivityAt = $lastRaw !== null
+            ? Carbon::parse((string) $lastRaw)->toIso8601String()
+            : null;
+
+        return [
+            'activities_count' => $count,
+            'last_activity_at' => $lastActivityAt,
         ];
     }
 

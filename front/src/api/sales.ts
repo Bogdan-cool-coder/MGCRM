@@ -104,7 +104,11 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
   // Sort columns by stage sort_order
   columns.sort((a, b) => a.stage.sort_order - b.stage.sort_order)
 
-  return { pipeline: raw.pipeline, columns }
+  return {
+    pipeline: raw.pipeline,
+    columns,
+    hidden_stages: raw.hidden_stages ?? [],
+  }
 }
 
 // ─── API Object ───────────────────────────────────────────────────────────────

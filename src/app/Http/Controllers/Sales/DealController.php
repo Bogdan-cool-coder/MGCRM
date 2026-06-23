@@ -97,6 +97,9 @@ class DealController extends Controller
             $this->activities->keyActionDatesForDeal((int) $deal->id),
         );
 
+        // Six «Активность»-tab metrics — only computed on the single-deal card.
+        $deal->setAttribute('metrics_payload', $this->service->metricsFor($deal));
+
         return DealResource::make($deal);
     }
 
@@ -356,6 +359,9 @@ class DealController extends Controller
             'base_currency' => $board['base_currency'],
             'multi_currency_warning' => $board['multi_currency_warning'],
             'stages' => PipelineStageResource::collection($board['stages']),
+            // Hidden-by-default stages (funnel order) with scope+filter-aware deal
+            // counts — the filter panel renders a reveal toggle per entry.
+            'hidden_stages' => $board['hidden_stages'],
             'columns' => $columns,
         ]);
     }

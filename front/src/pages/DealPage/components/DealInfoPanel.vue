@@ -74,7 +74,7 @@ import DealTabDocuments from './DealTabDocuments.vue'
 import DealTabFinances from './DealTabFinances.vue'
 import EntityLogTab, { type LogMetric } from '@/components/crm/entity/EntityLogTab.vue'
 import { useEntityLog } from '@/composables/crm/useEntityLog'
-import type { DealDto, DealProductDto, DealContactDto, PipelineStageDto, DealStageHistoryDto, NextTaskDto, KeyActionType } from '@/entities/sales'
+import type { DealDto, DealProductDto, DealContactDto, PipelineStageDto, DealStageHistoryDto, NextTaskDto, KeyActionType, DealMetricsDto } from '@/entities/sales'
 import type { ActivityDto } from '@/entities/activity'
 
 interface MenuUser {
@@ -125,28 +125,60 @@ const entityLog = useEntityLog('deal', () => props.deal.id)
 entityLog.load()
 
 // ── Compact metrics bar ───────────────────────────────────────────────────────
+// Prefer server-computed metrics from deal.metrics (SHOW endpoint only).
+// Fall back to client-side computation when the field is absent.
+
+const serverMetrics = computed((): DealMetricsDto | null => props.deal.metrics ?? null)
 
 const daysInDeal = computed((): number => {
+  if (serverMetrics.value != null) return serverMetrics.value.days_in_deal
   const diff = Date.now() - new Date(props.deal.created_at).getTime()
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
 })
 
+const activitiesCount = computed((): number => {
+  if (serverMetrics.value != null) return serverMetrics.value.activities_count
+  return props.activities.length
+})
+
+const stageChangesCount = computed((): number => {
+  if (serverMetrics.value != null) return serverMetrics.value.stage_changes_count
+  return props.history.length
+})
+
+const documentsCount = computed((): number => {
+  if (serverMetrics.value != null) return serverMetrics.value.documents_count
+  return docsCount.value
+})
+
+const daysInStageFinal = computed((): number => {
+  if (serverMetrics.value != null) return serverMetrics.value.days_in_stage
+  return props.daysInStage
+})
+
+function formatLastActivity(iso: string | null): string {
+  if (!iso) return '—'
+  const diffDays = Math.floor(
+    (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24),
+  )
+  if (diffDays <= 0) return t('sales.deals.page.list.today')
+  return `${diffDays} ${t('sales.deal.stats.daysAgoShort')}`
+}
+
 const lastActivityLabel = computed((): string => {
+  if (serverMetrics.value != null) return formatLastActivity(serverMetrics.value.last_activity_at)
   const last = props.activities[0]
   if (!last) return '—'
   const dateRef = last.due_at ?? last.created_at
-  const diffDays = Math.floor(
-    (Date.now() - new Date(dateRef).getTime()) / (1000 * 60 * 60 * 24),
-  )
-  return `${diffDays} ${t('sales.deal.stats.daysAgoShort')}`
+  return formatLastActivity(dateRef)
 })
 
 const dealMetrics = computed((): LogMetric[] => [
   { key: 'daysInDeal', label: t('sales.deal.stats.daysInDeal'), metricValue: daysInDeal.value },
-  { key: 'daysInStage', label: t('sales.deal.stats.daysInStage'), metricValue: props.daysInStage },
-  { key: 'activities', label: t('sales.deal.stats.activities'), metricValue: props.activities.length },
-  { key: 'stageChanges', label: t('sales.deal.stats.stageChanges'), metricValue: props.history.length },
-  { key: 'documents', label: t('sales.deal.stats.documents'), metricValue: docsCount.value },
+  { key: 'daysInStage', label: t('sales.deal.stats.daysInStage'), metricValue: daysInStageFinal.value },
+  { key: 'activities', label: t('sales.deal.stats.activities'), metricValue: activitiesCount.value },
+  { key: 'stageChanges', label: t('sales.deal.stats.stageChanges'), metricValue: stageChangesCount.value },
+  { key: 'documents', label: t('sales.deal.stats.documents'), metricValue: documentsCount.value },
   { key: 'lastActivity', label: t('sales.deal.stats.lastActivity'), metricValue: lastActivityLabel.value },
 ])
 

@@ -403,7 +403,9 @@ class DealCrudTest extends TestCase
             ->assertOk()
             ->assertJsonPath("columns.{$newStageId}.total", 3)
             ->assertJsonPath("columns.{$newStageId}.sum_amount", 3000)
-            ->assertJsonCount(11, 'stages');
+            // 11 seeded stages minus the 2 hidden-by-default ones (cold, lost):
+            // the board renders only visible columns by default.
+            ->assertJsonCount(9, 'stages');
     }
 
     public function test_board_without_pipeline_id_resolves_default_sales_pipeline(): void
@@ -417,6 +419,7 @@ class DealCrudTest extends TestCase
         $this->getJson('/api/deals?view=board')
             ->assertOk()
             ->assertJsonPath('pipeline.id', $pipeline->id)
-            ->assertJsonCount(11, 'stages');
+            // Visible stages only — 2 of the 11 seeded stages are hidden_by_default.
+            ->assertJsonCount(9, 'stages');
     }
 }
