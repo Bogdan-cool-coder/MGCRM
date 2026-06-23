@@ -107,13 +107,23 @@ class AmoMigrationConfigTest extends TestCase
         }
     }
 
-    public function test_user_map_2351116_points_to_byadykin_macroglobal(): void
+    public function test_user_map_2351116_points_to_shared_admin_account(): void
     {
-        // This AMO user is a real MGCRM user — a re-load attaches their deals to
-        // the seeded macroglobaltech.com account.
+        // AMO 2351116 is the shared second-admin login, NOT b.yadykin — its deals
+        // attach to the dedicated Admin account (AmoAdminUserSeeder) by this email.
+        $this->assertSame(
+            'svkv42@gmail.com',
+            config('amo_migration.user_map.2351116'),
+        );
+    }
+
+    public function test_user_map_2435437_points_to_byadykin_macroglobal(): void
+    {
+        // AMO 2435437 is b.yadykin's own legacy AMO login — its 632 deals attach to
+        // his real MGCRM account (b.yadykin@macroglobaltech.com) on re-load.
         $this->assertSame(
             'b.yadykin@macroglobaltech.com',
-            config('amo_migration.user_map.2351116'),
+            config('amo_migration.user_map.2435437'),
         );
     }
 
