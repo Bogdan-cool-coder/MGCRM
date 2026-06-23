@@ -34,10 +34,8 @@
           @deal-updated="(updates) => $emit('dealUpdated', updates)"
           @open-add-product="$emit('openAddProduct')"
           @open-add-contact="$emit('openAddContact')"
-          @update-product="(id, payload) => $emit('updateProduct', id, payload)"
           @remove-product="(id) => $emit('removeProduct', id)"
           @remove-contact="(id) => $emit('removeContact', id)"
-          @amount-changed="(total) => $emit('amountChanged', total)"
         />
       </template>
 
@@ -49,7 +47,10 @@
       </template>
 
       <template #finances>
-        <DealTabFinances />
+        <DealTabFinances
+          :deal="deal"
+          @deal-updated="(d) => $emit('dealUpdated', d)"
+        />
       </template>
 
       <template #log>
@@ -105,10 +106,8 @@ const emit = defineEmits<{
   dealArchived: []
   openAddProduct: []
   openAddContact: []
-  updateProduct: [id: number, payload: { quantity?: number; unit_price?: number; discount?: number }]
   removeProduct: [id: number]
   removeContact: [contactId: number]
-  amountChanged: [total: number]
   collapseAllGroups: []
   expandAllGroups: []
   scrollToFeedType: [type: KeyActionType]

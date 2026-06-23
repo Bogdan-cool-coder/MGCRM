@@ -100,10 +100,8 @@
           @deal-archived="onDealArchived"
           @open-add-product="addProductDialogOpen = true"
           @open-add-contact="addContactDialogOpen = true"
-          @update-product="onUpdateProduct"
           @remove-product="onRemoveProduct"
           @remove-contact="onRemoveContact"
-          @amount-changed="onAmountChanged"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
@@ -142,10 +140,8 @@
           @deal-archived="onDealArchived"
           @open-add-product="addProductDialogOpen = true"
           @open-add-contact="addContactDialogOpen = true"
-          @update-product="onUpdateProduct"
           @remove-product="onRemoveProduct"
           @remove-contact="onRemoveContact"
-          @amount-changed="onAmountChanged"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
@@ -180,10 +176,8 @@
           @deal-archived="onDealArchived"
           @open-add-product="addProductDialogOpen = true"
           @open-add-contact="addContactDialogOpen = true"
-          @update-product="onUpdateProduct"
           @remove-product="onRemoveProduct"
           @remove-contact="onRemoveContact"
-          @amount-changed="onAmountChanged"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
@@ -200,6 +194,7 @@
           ref="dealFeedRef"
           :deal-id="deal.id"
           :feed="feedComposable"
+          :key-actions="deal.key_actions"
           class="deal-page-v2__feed"
           @open-composer-tab="onOpenComposerTab"
         />
@@ -208,6 +203,7 @@
           :tasks="feedComposable.openTasks.value"
           target-type="deal"
           :target-id="deal.id"
+          :users-list="usersList"
           @completed="onTaskCompleted"
           @deleted="onTaskDeleted"
         />
@@ -266,7 +262,7 @@ import DealFeed from './components/DealFeed.vue'
 import DealComposer from './components/DealComposer.vue'
 import DealAddProductDialog from './components/DealAddProductDialog.vue'
 import DealAddContactDialog from './components/DealAddContactDialog.vue'
-import MoveDealDialog from '../DealsPage/components/MoveDealDialog.vue'
+import MoveDealDialog from './components/MoveDealDialog.vue'
 import OpenTasksList from '@/components/crm/entity/OpenTasksList.vue'
 import { useDealPage } from './composables/useDealPage'
 import { useDealProducts } from './composables/useDealProducts'
@@ -436,20 +432,6 @@ function onContactAdded() {
   // list updated by composable
 }
 
-function onAmountChanged(newTotal: number) {
-  updateDealLocal({ amount: newTotal })
-}
-
-// Product events forwarded from DealInfoPanel → DealTabMain → DealProductsGroup
-async function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number; discount?: number }) {
-  await dealProductsComposable.update(id, payload)
-  // Recalculate amount
-  if (deal.value) {
-    const total = dealProductsComposable.products.value.reduce((s, p) => s + p.amount, 0)
-    updateDealLocal({ amount: total })
-  }
-}
-
 async function onRemoveProduct(id: number) {
   await dealProductsComposable.remove(id)
   if (deal.value) {
@@ -527,24 +509,28 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
+// ── Global scrollbar hide for this page ─────────────────────────────────────
+:deep(*) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+}
+
 .deal-page-v2 {
   display: flex;
   height: 100vh;
   overflow: hidden;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
 
-  // ── Wide desktop ≥1280px ───────────────────────────────────────────────────
-
-  @media (min-width: 1280px) {
-    .deal-page-v2__left {
-      width: 420px;
-    }
-  }
-
-  // ── Standard desktop 1024–1279px ──────────────────────────────────────────
+  // ── Left panel: fixed 420px at ALL desktop widths ─────────────────────────
 
   &__left {
-    width: 380px;
+    width: 420px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -552,21 +538,37 @@ onMounted(async () => {
     border-right: 1px solid var(--p-surface-200);
     background: var(--p-card-background);
 
-    :global(.app-dark) & {
+    // Correct dark-theme idiom (no :global())
+    .app-dark & {
       border-right-color: var(--p-surface-700);
+    }
+
+    // Hidden scrollbar
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
   }
 
+  // ── Right panel: --c-feed background ─────────────────────────────────────
+  // Light: --c-feed = #F1F2F3 = surfacePalette[100] = var(--p-surface-100).
+  // Dark:  --c-feed spec = #1f2021 (between surface-50 #272829 and surface-0 #000).
+  //        Closest available token: var(--p-surface-50) in dark = #272829.
+  //        No exact token exists — using surface-50 as approved approximation.
   &__right {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background: var(--p-surface-50);
+    background: var(--p-surface-100);
     overflow: hidden;
 
-    :global(.app-dark) & {
-      background: var(--p-surface-900);
+    .app-dark & {
+      background: var(--p-surface-50);
     }
   }
 
@@ -594,6 +596,15 @@ onMounted(async () => {
     min-height: 0;
     overflow-y: auto;
     border-right: none;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
+    }
   }
 
   &__right--mobile-active {
@@ -615,7 +626,8 @@ onMounted(async () => {
     background: var(--p-card-background);
     flex-shrink: 0;
 
-    :global(.app-dark) & {
+    // Correct dark-theme idiom (no :global())
+    .app-dark & {
       border-bottom-color: var(--p-surface-700);
     }
   }

@@ -1,22 +1,19 @@
 <template>
   <div class="deal-header">
-    <!-- Top row: back btn + id + menu btn -->
-    <div class="deal-header__top-row">
-      <button class="deal-header__btn-icon" @click="$emit('back')">
-        <i class="pi pi-arrow-left" />
-      </button>
-      <div class="deal-header__spacer" />
-      <span class="deal-header__id">#{{ deal.id }}</span>
-      <button ref="menuBtnRef" class="deal-header__btn-icon" @click="toggleMenu">
-        <i class="pi pi-ellipsis-v" />
-      </button>
-      <Menu ref="menuRef" :model="dealMenuItems" popup />
+    <!-- ── Row 1: title + icon buttons ────────────────────────────────────────── -->
+    <div class="deal-header__row1">
+      <h2 class="deal-header__title">{{ deal.title }}</h2>
+      <div class="deal-header__btns">
+        <button class="deal-header__btn-icon" :aria-label="t('common.back')" @click="$emit('back')">
+          <i class="pi pi-arrow-left" />
+        </button>
+        <button ref="menuBtnRef" class="deal-header__btn-icon" :aria-label="t('sales.deal.page.menu.copyLink')" @click="toggleMenu">
+          <i class="pi pi-ellipsis-v" />
+        </button>
+      </div>
     </div>
 
-    <!-- Title -->
-    <h2 class="deal-header__title">{{ deal.title }}</h2>
-
-    <!-- Stage row: clickable tag + health chip -->
+    <!-- ── Row 2: stage + category badge + health chip + spacer + N дн. ──────── -->
     <div class="deal-header__stage-row">
       <button
         class="deal-header__stage-btn"
@@ -24,12 +21,33 @@
         @click="$emit('openMoveDialog')"
       >
         <DealStageTag :stage="deal.stage" />
-        <i class="pi pi-chevron-down deal-header__stage-chevron" />
       </button>
+
+      <!-- Category badge (L/M/S from deal.category) -->
+      <span v-if="categoryLabel" class="deal-header__category-badge">
+        {{ categoryLabel }}
+      </span>
+
+      <!-- Health chip -->
       <DealHealthChip :next-task="nextTask" />
+
+      <span class="deal-header__spacer" />
+
+      <!-- N дн. в стадии -->
+      <span class="deal-header__days-hint">
+        {{ daysInStage }} {{ t('sales.deal.page.daysInStage') }}
+      </span>
     </div>
 
-    <!-- Progress bar -->
+    <!-- ── Row 3: tag chips ────────────────────────────────────────────────────── -->
+    <div v-if="deal.tags && deal.tags.length > 0" class="deal-header__tags-row">
+      <span v-for="tag in deal.tags" :key="tag" class="deal-header__tag-chip">
+        <i class="pi pi-tag deal-header__tag-icon" />
+        {{ tag }}
+      </span>
+    </div>
+
+    <!-- ── Stage progress bar ─────────────────────────────────────────────────── -->
     <DealStageProgressBar
       :stages="stages"
       :current-stage-id="deal.stage.id"
@@ -37,39 +55,58 @@
       @stage-click="onSegmentClick"
     />
 
-    <!-- Days in stage info (just N дн., no deal name duplication) -->
-    <p class="deal-header__days-hint">
-      {{ daysInStage }} {{ t('sales.deal.page.daysInStage') }}
-    </p>
+    <!-- ── ⋮ Menu popover (opens RIGHT of button) ─────────────────────────────── -->
+    <Teleport to="body">
+      <Transition name="deal-menu-fade">
+        <div
+          v-if="menuOpen"
+          ref="menuPanelRef"
+          class="deal-header__menu-panel"
+          :style="menuPanelStyle"
+          role="menu"
+          @click.stop
+        >
+          <button class="deal-header__menu-item" role="menuitem" @click="copyLink">
+            <i class="pi pi-link deal-header__menu-icon" />
+            {{ t('sales.deal.page.menu.copyLink') }}
+          </button>
+          <div class="deal-header__menu-sep" />
+          <button class="deal-header__menu-item" role="menuitem" @click="openRenameDialog">
+            <i class="pi pi-pencil deal-header__menu-icon" />
+            {{ t('sales.deal.page.menu.rename') }}
+          </button>
+          <button class="deal-header__menu-item" role="menuitem" @click="openTagsDialog">
+            <i class="pi pi-tag deal-header__menu-icon" />
+            {{ t('sales.deal.page.menu.editTags') }}
+          </button>
+          <div class="deal-header__menu-sep" />
+          <button class="deal-header__menu-item" role="menuitem" @click="onCollapseAll">
+            <i class="pi pi-arrows-v deal-header__menu-icon" />
+            {{ t('sales.deal.page.menu.collapseAll') }}
+          </button>
+          <button class="deal-header__menu-item" role="menuitem" @click="onExpandAll">
+            <i class="pi pi-arrows-v deal-header__menu-icon" />
+            {{ t('sales.deal.page.menu.expandAll') }}
+          </button>
+          <button class="deal-header__menu-item" role="menuitem" @click="goCustomizeFields">
+            <i class="pi pi-cog deal-header__menu-icon" />
+            {{ t('sales.deal.page.menu.customizeFields') }}
+          </button>
+          <div class="deal-header__menu-sep" />
+          <button class="deal-header__menu-item deal-header__menu-item--danger" role="menuitem" @click="confirmDelete">
+            <i class="pi pi-trash deal-header__menu-icon" />
+            {{ t('sales.deal.page.menu.delete') }}
+          </button>
+        </div>
+      </Transition>
+    </Teleport>
 
-    <!-- Planned dates row -->
-    <div class="deal-header__planned-dates">
-      <div class="deal-header__planned-date-block">
-        <span class="deal-header__planned-date-label">{{ t('sales.deal.info.fields.plannedContract') }}</span>
-        <span class="deal-header__planned-date-value" :class="{ 'deal-header__planned-date-value--empty': !deal.expected_sign_date }">
-          {{ formatDate(deal.expected_sign_date) }}
-        </span>
-      </div>
-      <div class="deal-header__planned-date-sep" />
-      <div class="deal-header__planned-date-block">
-        <span class="deal-header__planned-date-label">{{ t('sales.deal.info.fields.plannedPayment') }}</span>
-        <span class="deal-header__planned-date-value" :class="{ 'deal-header__planned-date-value--empty': !deal.expected_payment_date }">
-          {{ formatDate(deal.expected_payment_date) }}
-        </span>
-      </div>
-    </div>
+    <!-- Backdrop to close menu -->
+    <Teleport to="body">
+      <div v-if="menuOpen" class="deal-header__menu-backdrop" @click="menuOpen = false" />
+    </Teleport>
 
-    <!-- Key actions bar -->
-    <DealKeyActionsBar
-      v-if="deal.key_actions && deal.key_actions.length > 0"
-      :deal-id="deal.id"
-      :key-actions="deal.key_actions"
-      class="deal-header__key-actions"
-      @deal-updated="onKeyActionsDealUpdated"
-      @scroll-to-type="(type) => $emit('scrollToFeedType', type)"
-    />
-
-    <!-- Dialogs: rename, tags -->
+    <!-- ── Dialogs: rename, tags ─────────────────────────────────────────────── -->
     <Dialog
       v-model:visible="renameDialogVisible"
       :header="t('sales.deal.page.menu.rename')"
@@ -118,30 +155,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { useRouter } from 'vue-router'
-import Menu from 'primevue/menu'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
+import { Tooltip } from 'primevue'
 import DealStageTag from './DealStageTag.vue'
 import DealStageProgressBar from './DealStageProgressBar.vue'
 import DealHealthChip from './DealHealthChip.vue'
-import DealKeyActionsBar from './DealKeyActionsBar.vue'
 import { useMutation } from '@/composables/async/useMutation'
 import { salesApi } from '@/api/sales'
 import { getApiErrorMessage } from '@/utils/errors'
-import type { DealDto, PipelineStageDto, NextTaskDto, DealKeyAction, KeyActionType } from '@/entities/sales'
+import type { DealDto, PipelineStageDto, NextTaskDto, KeyActionType } from '@/entities/sales'
 
-function formatDate(val: string | null | undefined): string {
-  if (!val) return '—'
-  const d = new Date(val)
-  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+const vTooltip = Tooltip
 
 interface MenuUser {
   id: number
@@ -173,70 +205,98 @@ const toast = useToast()
 const confirm = useConfirm()
 const router = useRouter()
 
-// ── Menu ────────────────────────────────────────────────────────────────────────
-const menuRef = ref<InstanceType<typeof Menu> | null>(null)
-const menuBtnRef = ref<HTMLElement | null>(null)
+// ── Category badge ───────────────────────────────────────────────────────────────
 
-function toggleMenu(event: MouseEvent) {
-  menuRef.value?.toggle(event)
+const categoryLabel = computed((): string => {
+  const cat = props.deal.category
+  if (!cat) return ''
+  // S1 and S2 both display as 'S'
+  if (cat === 'S1' || cat === 'S2') return 'S'
+  return cat
+})
+
+// ── Right-positioned menu popover ───────────────────────────────────────────────
+
+const menuOpen = ref(false)
+const menuBtnRef = ref<HTMLElement | null>(null)
+const menuPanelRef = ref<HTMLElement | null>(null)
+
+const menuPanelStyle = ref<Record<string, string>>({})
+
+async function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+  if (menuOpen.value) {
+    await nextTick()
+    positionMenu()
+  }
 }
+
+function positionMenu() {
+  const btn = menuBtnRef.value
+  if (!btn) return
+  const rect = btn.getBoundingClientRect()
+  // Position panel to the right of the button, aligned to top
+  menuPanelStyle.value = {
+    position: 'fixed',
+    top: `${rect.top}px`,
+    left: `${rect.right + 6}px`,
+    zIndex: '9999',
+  }
+}
+
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && menuOpen.value) {
+    menuOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onKeyDown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeyDown)
+})
 
 function copyLink() {
   void navigator.clipboard.writeText(window.location.href)
   toast.add({ severity: 'success', summary: t('sales.deal.page.menu.copyLink'), life: 2000 })
+  menuOpen.value = false
 }
-
-const dealMenuItems = computed(() => [
-  {
-    label: t('sales.deal.page.menu.rename'),
-    icon: 'pi pi-pencil',
-    command: openRenameDialog,
-  },
-  {
-    label: t('sales.deal.page.menu.editTags'),
-    icon: 'pi pi-tag',
-    command: openTagsDialog,
-  },
-  { separator: true },
-  {
-    label: t('sales.deal.page.menu.collapseAll'),
-    icon: 'pi pi-arrows-v',
-    command: () => emit('collapseAllGroups'),
-  },
-  {
-    label: t('sales.deal.page.menu.expandAll'),
-    icon: 'pi pi-arrows-v',
-    command: () => emit('expandAllGroups'),
-  },
-  {
-    label: t('sales.deal.page.menu.customizeFields'),
-    icon: 'pi pi-cog',
-    command: () => void router.push('/admin/custom-fields?scope=deal'),
-  },
-  {
-    label: t('sales.deal.page.menu.copyLink'),
-    icon: 'pi pi-link',
-    command: copyLink,
-  },
-  { separator: true },
-  {
-    label: t('sales.deal.page.menu.delete'),
-    icon: 'pi pi-trash',
-    class: 'text-red-500',
-    command: confirmDelete,
-  },
-])
-
-// ── Rename dialog ────────────────────────────────────────────────────────────────
-const renameDialogVisible = ref(false)
-const renameForm = ref({ title: '' })
-const renameMutation = useMutation<DealDto>()
-const renameSaving = computed(() => renameMutation.isPending.value)
 
 function openRenameDialog() {
   renameForm.value.title = props.deal.title
   renameDialogVisible.value = true
+  menuOpen.value = false
 }
+
+function openTagsDialog() {
+  tagsForm.value.tags = [...(props.deal.tags ?? [])]
+  tagsDialogVisible.value = true
+  menuOpen.value = false
+}
+
+function onCollapseAll() {
+  emit('collapseAllGroups')
+  menuOpen.value = false
+}
+
+function onExpandAll() {
+  emit('expandAllGroups')
+  menuOpen.value = false
+}
+
+function goCustomizeFields() {
+  void router.push('/admin/custom-fields?scope=deal')
+  menuOpen.value = false
+}
+
+// ── Rename dialog ─────────────────────────────────────────────────────────────────
+
+const renameDialogVisible = ref(false)
+const renameForm = ref({ title: '' })
+const renameMutation = useMutation<DealDto>()
+const renameSaving = computed(() => renameMutation.isPending.value)
 
 async function submitRename() {
   if (!renameForm.value.title.trim()) return
@@ -257,16 +317,12 @@ async function submitRename() {
   }
 }
 
-// ── Tags dialog ──────────────────────────────────────────────────────────────────
+// ── Tags dialog ───────────────────────────────────────────────────────────────────
+
 const tagsDialogVisible = ref(false)
 const tagsForm = ref<{ tags: string[] }>({ tags: [] })
 const tagsMutation = useMutation<DealDto>()
 const tagsSaving = computed(() => tagsMutation.isPending.value)
-
-function openTagsDialog() {
-  tagsForm.value.tags = [...(props.deal.tags ?? [])]
-  tagsDialogVisible.value = true
-}
 
 async function submitTags() {
   try {
@@ -286,21 +342,18 @@ async function submitTags() {
   }
 }
 
-// ── Key actions bar ──────────────────────────────────────────────────────────────
-function onKeyActionsDealUpdated(keyActions: DealKeyAction[]) {
-  // Merge key_actions back into deal by emitting a partial update
-  emit('dealUpdated', { ...props.deal, key_actions: keyActions })
-}
+// ── Segment click → open move dialog with stage ───────────────────────────────────
 
-// ── Segment click ────────────────────────────────────────────────────────────────
 function onSegmentClick(stageId: number) {
   emit('openMoveDialogWithStage', stageId)
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────────
+
 const deleteMutation = useMutation()
 
 function confirmDelete() {
+  menuOpen.value = false
   confirm.require({
     header: t('sales.deal.page.menu.deleteConfirm'),
     message: t('sales.deal.page.menu.deleteDetail'),
@@ -326,29 +379,42 @@ function confirmDelete() {
 </script>
 
 <style lang="scss" scoped>
+// ── Container ──────────────────────────────────────────────────────────────────
 .deal-header {
-  background: $brand-header-bg;
-  padding: $space-3 $space-4 $space-4;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: #172747; // brand invariant navy
+  padding: 14px $space-4 $space-4;
   display: flex;
   flex-direction: column;
   gap: $space-2;
   flex-shrink: 0;
 }
 
-.deal-header__top-row {
+// ── Row 1: h2 + icon buttons ──────────────────────────────────────────────────
+.deal-header__row1 {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+}
+
+.deal-header__title {
+  flex: 1;
+  color: $sidebar-text-active;
+  font-size: 18px; // stylelint-disable-line scale-unlimited/declaration-strict-value
+  font-weight: $font-weight-semibold;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
+}
+
+.deal-header__btns {
   display: flex;
   align-items: center;
-  gap: $space-1;
-}
-
-.deal-header__spacer {
-  flex: 1;
-}
-
-.deal-header__id {
-  font-size: $font-size-xs;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.02em;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .deal-header__btn-icon {
@@ -366,7 +432,8 @@ function confirmDelete() {
   padding: 0;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.12);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(255, 255, 255, 0.12); // decorative alpha tint on brand navy header
   }
 
   i {
@@ -374,18 +441,7 @@ function confirmDelete() {
   }
 }
 
-.deal-header__title {
-  color: $sidebar-text-active;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.35;
-}
-
+// ── Row 2: stage + badges + spacer + days ─────────────────────────────────────
 .deal-header__stage-row {
   display: flex;
   align-items: center;
@@ -409,73 +465,156 @@ function confirmDelete() {
   }
 }
 
-.deal-header__stage-chevron {
-  font-size: $font-size-3xs; // snap from 10px
-  color: rgba(255, 255, 255, 0.6);
+.deal-header__category-badge {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: #c0392b; // --mg-red-600 brand invariant
+  color: $sidebar-text-active;
+  font-size: $font-size-3xs;
+  font-weight: $font-weight-bold;
+  border-radius: $radius-sm;
+  padding: 2px 5px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
+.deal-header__spacer {
+  flex: 1;
+}
+
+.deal-header__days-hint {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.5); // alpha overlay on brand navy — no token
+  font-size: $font-size-xs;
+  white-space: nowrap;
+}
+
+// ── Row 3: tag chips ──────────────────────────────────────────────────────────
+.deal-header__tags-row {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  flex-wrap: wrap;
+}
+
+.deal-header__tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: rgba(255, 255, 255, 0.12); // decorative alpha tint on brand navy
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.9); // brand nav overlay
+  font-size: $font-size-xs;
+  padding: 2px 8px;
+  border-radius: $radius-pill;
+}
+
+.deal-header__tag-icon {
+  font-size: $font-size-3xs;
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
 .deal-header__progress {
   margin-top: $space-1;
 }
 
-.deal-header__days-hint {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: $font-size-xs;
-  margin: 0;
-}
-
-.deal-header__planned-dates {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  margin-top: $space-1;
-  border-radius: $radius-sm;
-  background: rgba(255, 255, 255, 0.07);
-  overflow: hidden;
-}
-
-.deal-header__planned-date-block {
-  flex: 1;
+// ── Menu panel (Teleport, right-side popover) ─────────────────────────────────
+.deal-header__menu-panel {
+  background: var(--p-card-background);
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  min-width: 210px;
+  padding: $space-1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: $space-2 $space-3;
-}
+  gap: 1px;
 
-.deal-header__planned-date-sep {
-  width: 1px;
-  background: rgba(255, 255, 255, 0.15);
-  flex-shrink: 0;
-}
-
-.deal-header__planned-date-label {
-  font-size: $font-size-xs;
-  color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.deal-header__planned-date-value {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $sidebar-text-active;
-
-  &--empty {
-    color: rgba(255, 255, 255, 0.35);
-    font-weight: $font-weight-normal;
+  .app-dark & {
+    border-color: var(--p-surface-600);
   }
 }
 
-.deal-header__key-actions {
-  margin-top: $space-1;
+.deal-header__menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
 }
 
+.deal-header__menu-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 7px $space-3;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--p-text-color);
+  text-align: left;
+  transition: background 0.12s;
+
+  &:hover {
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      background: var(--p-surface-700);
+    }
+  }
+
+  &--danger {
+    color: var(--p-red-500);
+
+    .app-dark & {
+      color: var(--p-red-400);
+    }
+  }
+}
+
+.deal-header__menu-icon {
+  font-size: $font-size-sm;
+  flex-shrink: 0;
+  color: $surface-500;
+
+  .deal-header__menu-item--danger & {
+    color: var(--p-red-500);
+
+    .app-dark & {
+      color: var(--p-red-400);
+    }
+  }
+}
+
+.deal-header__menu-sep {
+  height: 1px;
+  background: var(--p-surface-200);
+  margin: $space-1 0;
+
+  .app-dark & {
+    background: var(--p-surface-700);
+  }
+}
+
+// ── Dialog body ───────────────────────────────────────────────────────────────
 .deal-header__dialog-body {
   padding: $space-2 0 $space-4;
   display: flex;
   flex-direction: column;
   gap: $space-3;
+}
+
+// ── Fade transition ───────────────────────────────────────────────────────────
+.deal-menu-fade-enter-active,
+.deal-menu-fade-leave-active {
+  transition: opacity 0.12s, transform 0.12s;
+}
+
+.deal-menu-fade-enter-from,
+.deal-menu-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-4px);
 }
 </style>

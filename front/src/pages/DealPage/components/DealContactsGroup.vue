@@ -1,5 +1,6 @@
 <template>
   <DealFieldGroup
+    ref="groupRef"
     :title="t('sales.deal.info.groups.contacts')"
     icon="pi-users"
     group-key="contacts"
@@ -19,147 +20,261 @@
         :key="link.id"
         class="deal-contacts-group__item"
       >
-        <!-- Contact header -->
-        <div class="deal-contacts-group__item-header">
-          <div class="deal-contacts-group__item-name-row">
-            <RouterLink
-              :to="`/contacts/${link.contact.id}`"
-              class="deal-contacts-group__link"
-            >
-              {{ link.contact.full_name }}
-            </RouterLink>
-            <Tag
-              v-if="link.is_primary"
-              :value="t('sales.deal.page.contacts.primary')"
-              severity="info"
-              size="small"
-            />
-          </div>
-          <Button
-            icon="pi pi-times"
-            text
-            severity="secondary"
-            size="small"
-            :loading="removingId === link.contact.id"
-            @click="emit('removeContact', link.contact.id)"
-          />
-        </div>
-
-        <!-- Position -->
-        <p v-if="link.contact.position" class="deal-contacts-group__position">
-          {{ link.contact.position }}
-        </p>
-
-        <!-- Channels from GET /api/crm/contacts/{contact}/channels -->
-        <div class="deal-contacts-group__channels">
-          <!-- Loading channels -->
-          <template v-if="channelsLoading[link.contact.id]">
-            <span class="deal-contacts-group__channels-loading">
-              <i class="pi pi-spin pi-spinner deal-contacts-group__spinner" />
-            </span>
-          </template>
-          <!-- Channel tags -->
-          <template v-else>
-            <template v-if="getChannels(link.contact.id).length > 0">
-              <span
-                v-for="ch in getChannels(link.contact.id)"
-                :key="ch.id"
-                class="deal-contacts-group__channel-tag"
-                :title="ch.value"
+        <!-- ── View mode ──────────────────────────────────────────────────────── -->
+        <template v-if="editingContactId !== link.contact.id">
+          <div class="deal-contacts-group__item-header">
+            <div class="deal-contacts-group__item-name-row">
+              <RouterLink
+                :to="`/contacts/${link.contact.id}`"
+                class="deal-contacts-group__link"
               >
+                {{ link.contact.full_name }}
+              </RouterLink>
+              <span v-if="link.is_primary" class="deal-contacts-group__primary-badge">
+                {{ t('sales.deal.page.contacts.primary') }}
+              </span>
+            </div>
+            <!-- ⋮ menu trigger -->
+            <div class="deal-contacts-group__menu-wrap">
+              <button
+                class="deal-contacts-group__menu-btn"
+                type="button"
+                @click.stop="toggleMenu(link.contact.id)"
+              >
+                <i class="pi pi-ellipsis-v" />
+              </button>
+              <!-- Inline popover menu -->
+              <div
+                v-if="openMenuId === link.contact.id"
+                class="deal-contacts-group__menu-popover"
+                @click.stop
+              >
+                <button
+                  class="deal-contacts-group__menu-item"
+                  type="button"
+                  @click="startEdit(link)"
+                >
+                  <i class="pi pi-pencil" />
+                  {{ t('common.edit') }}
+                </button>
+                <button
+                  class="deal-contacts-group__menu-item deal-contacts-group__menu-item--danger"
+                  type="button"
+                  :disabled="removingId === link.contact.id"
+                  @click="doUnlink(link.contact.id)"
+                >
+                  <i class="pi pi-times-circle" />
+                  {{ t('sales.deal.info.contacts.unlink') }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Position -->
+          <p v-if="link.contact.position" class="deal-contacts-group__position">
+            {{ link.contact.position }}
+          </p>
+
+          <!-- Channels -->
+          <div class="deal-contacts-group__channels">
+            <template v-if="channelsLoading[link.contact.id]">
+              <i class="pi pi-spin pi-spinner deal-contacts-group__spinner" />
+            </template>
+            <template v-else>
+              <template v-if="getChannels(link.contact.id).length > 0">
                 <a
-                  v-if="channelUrl(ch)"
+                  v-for="ch in getChannels(link.contact.id)"
+                  :key="ch.id"
                   :href="channelUrl(ch) ?? undefined"
-                  target="_blank"
+                  :target="channelUrl(ch) ? '_blank' : undefined"
                   rel="noopener noreferrer"
-                  class="deal-contacts-group__channel-link"
+                  class="deal-contacts-group__channel-tag"
+                  :title="ch.value"
                 >
                   <i :class="['pi', channelIcon(ch.channel_type)]" />
                   <span class="deal-contacts-group__channel-value">{{ ch.value }}</span>
                 </a>
-                <span v-else class="deal-contacts-group__channel-link">
-                  <i :class="['pi', channelIcon(ch.channel_type)]" />
-                  <span class="deal-contacts-group__channel-value">{{ ch.value }}</span>
-                </span>
-                <button
-                  class="deal-contacts-group__channel-remove"
-                  type="button"
-                  :disabled="deletingChannel[ch.id]"
-                  @click="removeChannel(link.contact.id, ch.id)"
+              </template>
+              <template v-else>
+                <a
+                  v-if="link.contact.phone"
+                  :href="`tel:${link.contact.phone}`"
+                  class="deal-contacts-group__channel-tag"
                 >
-                  <i class="pi pi-times deal-contacts-group__remove-icon" />
-                </button>
-              </span>
+                  <i class="pi pi-phone" />
+                  <span class="deal-contacts-group__channel-value">{{ link.contact.phone }}</span>
+                </a>
+                <a
+                  v-if="link.contact.email"
+                  :href="`mailto:${link.contact.email}`"
+                  class="deal-contacts-group__channel-tag"
+                >
+                  <i class="pi pi-envelope" />
+                  <span class="deal-contacts-group__channel-value">{{ link.contact.email }}</span>
+                </a>
+              </template>
             </template>
-            <!-- Fallback: phone/email/tg from Contact dto if no channels -->
-            <template v-else>
-              <a
-                v-if="link.contact.phone"
-                :href="`tel:${link.contact.phone}`"
-                class="deal-contacts-group__channel-tag deal-contacts-group__channel-tag--legacy"
-              >
-                <i class="pi pi-phone" />
-                <span class="deal-contacts-group__channel-value">{{ link.contact.phone }}</span>
-              </a>
-              <a
-                v-if="link.contact.email"
-                :href="`mailto:${link.contact.email}`"
-                class="deal-contacts-group__channel-tag deal-contacts-group__channel-tag--legacy"
-              >
-                <i class="pi pi-envelope" />
-                <span class="deal-contacts-group__channel-value">{{ link.contact.email }}</span>
-              </a>
-            </template>
-          </template>
 
-          <!-- Add channel button -->
-          <button
-            class="deal-contacts-group__add-channel"
-            type="button"
-            @click="openAddChannel(link.contact.id)"
-          >
-            <i class="pi pi-plus" />
-            {{ t('sales.deal.info.contacts.addChannel') }}
-          </button>
-        </div>
+            <!-- Add channel button (inline popover) -->
+            <div class="deal-contacts-group__add-ch-wrap">
+              <button
+                class="deal-contacts-group__add-channel"
+                type="button"
+                @click.stop="openAddChannelPopover(link.contact.id)"
+              >
+                <i class="pi pi-plus" />
+                {{ t('sales.deal.info.contacts.addChannel') }}
+              </button>
+              <!-- Inline add-channel popover -->
+              <div
+                v-if="addChContactId === link.contact.id"
+                class="deal-contacts-group__add-ch-popover"
+                @click.stop
+              >
+                <div class="deal-contacts-group__add-ch-type-row">
+                  <button
+                    v-for="opt in channelTypeOptions"
+                    :key="opt.value"
+                    type="button"
+                    class="deal-contacts-group__type-btn"
+                    :class="{ 'deal-contacts-group__type-btn--active': addChType === opt.value }"
+                    @click="addChType = opt.value"
+                  >
+                    <i :class="['pi', opt.icon]" />
+                  </button>
+                </div>
+                <InputText
+                  v-model="addChValue"
+                  :placeholder="t('sales.deal.addChannel.valuePlaceholder')"
+                  size="small"
+                  fluid
+                  @keydown.enter="submitAddChannel(link.contact.id)"
+                />
+                <Button
+                  :label="t('common.add')"
+                  size="small"
+                  :loading="addChSaving"
+                  :disabled="!addChValue.trim()"
+                  @click="submitAddChannel(link.contact.id)"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ── Edit mode ──────────────────────────────────────────────────────── -->
+        <template v-else>
+          <div class="deal-contacts-group__edit-form">
+            <!-- Имя -->
+            <div class="deal-contacts-group__edit-field">
+              <label class="deal-contacts-group__edit-label">{{ t('crm.contact.fields.name') }}</label>
+              <InputText v-model="editForm.full_name" size="small" fluid />
+            </div>
+            <!-- Должность -->
+            <div class="deal-contacts-group__edit-field">
+              <label class="deal-contacts-group__edit-label">{{ t('crm.contact.fields.position') }}</label>
+              <InputText v-model="editForm.position" size="small" fluid />
+            </div>
+            <!-- Channels edit -->
+            <div class="deal-contacts-group__edit-field">
+              <label class="deal-contacts-group__edit-label">{{ t('crm.contact.fields.channels') }}</label>
+              <div class="deal-contacts-group__edit-channels">
+                <div
+                  v-for="ch in editChannels"
+                  :key="ch.id"
+                  class="deal-contacts-group__edit-channel-row"
+                >
+                  <i :class="['pi', channelIcon(ch.channel_type), 'deal-contacts-group__ch-icon']" />
+                  <InputText v-model="ch.value" size="small" class="deal-contacts-group__ch-input" />
+                  <button
+                    type="button"
+                    class="deal-contacts-group__ch-remove"
+                    @click="removeEditChannel(ch.id)"
+                  >
+                    <i class="pi pi-times" />
+                  </button>
+                </div>
+                <!-- Add channel row -->
+                <div class="deal-contacts-group__edit-add-ch">
+                  <div class="deal-contacts-group__add-ch-type-row">
+                    <button
+                      v-for="opt in channelTypeOptions"
+                      :key="opt.value"
+                      type="button"
+                      class="deal-contacts-group__type-btn"
+                      :class="{ 'deal-contacts-group__type-btn--active': editNewChType === opt.value }"
+                      @click="editNewChType = opt.value"
+                    >
+                      <i :class="['pi', opt.icon]" />
+                    </button>
+                  </div>
+                  <InputText
+                    v-model="editNewChValue"
+                    :placeholder="t('sales.deal.addChannel.valuePlaceholder')"
+                    size="small"
+                    fluid
+                  />
+                  <Button
+                    :label="t('common.add')"
+                    size="small"
+                    :disabled="!editNewChValue.trim()"
+                    text
+                    @click="addEditChannel"
+                  />
+                </div>
+              </div>
+            </div>
+            <!-- Основной контакт toggle -->
+            <div class="deal-contacts-group__edit-primary">
+              <label class="deal-contacts-group__edit-label">{{ t('sales.deal.page.contacts.addDialog.fields.isPrimary') }}</label>
+              <ToggleSwitch v-model="editForm.is_primary" />
+            </div>
+            <!-- Actions -->
+            <div class="deal-contacts-group__edit-actions">
+              <Button
+                :label="t('common.cancel')"
+                size="small"
+                text
+                severity="secondary"
+                @click="cancelEdit"
+              />
+              <Button
+                :label="t('common.save')"
+                size="small"
+                :loading="editSaving"
+                @click="submitEdit(link.contact.id)"
+              />
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
     <!-- Add contact button -->
     <div class="deal-contacts-group__footer">
-      <Button
-        :label="t('sales.deal.info.contacts.addContact')"
-        icon="pi pi-user-plus"
-        text
-        severity="secondary"
-        size="small"
-        @click="emit('addContact')"
-      />
+      <button class="deal-contacts-group__add-contact-btn" type="button" @click="emit('addContact')">
+        <i class="pi pi-user-plus" />
+        {{ t('sales.deal.info.contacts.addContact') }}
+      </button>
     </div>
   </DealFieldGroup>
-
-  <!-- Add channel dialog -->
-  <DealAddChannelDialog
-    v-if="addChannelContactId !== null"
-    v-model="addChannelVisible"
-    :contact-id="addChannelContactId"
-    @added="onChannelAdded"
-  />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
-import Tag from 'primevue/tag'
+import InputText from 'primevue/inputtext'
+import ToggleSwitch from 'primevue/toggleswitch'
 import DealFieldGroup from './DealFieldGroup.vue'
-import DealAddChannelDialog from './DealAddChannelDialog.vue'
 import { contactsApi } from '@/api/crm/contacts'
+import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { DealContactDto } from '@/entities/sales'
 import type { ContactChannel, ChannelType } from '@/entities/crm'
+
 
 const props = defineProps<{
   contacts: DealContactDto[]
@@ -174,11 +289,17 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 
+// ── Group ref ─────────────────────────────────────────────────────────────────
+
+const groupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
+function collapse() { groupRef.value?.collapse?.() }
+function expand() { groupRef.value?.expand?.() }
+defineExpose({ collapse, expand })
+
 // ── Channels state ─────────────────────────────────────────────────────────────
 
 const channelsMap = ref<Record<number, ContactChannel[]>>({})
 const channelsLoading = ref<Record<number, boolean>>({})
-const deletingChannel = ref<Record<number, boolean>>({})
 
 async function loadChannels(contactId: number) {
   if (channelsMap.value[contactId] !== undefined) return
@@ -187,7 +308,6 @@ async function loadChannels(contactId: number) {
     const channels = await contactsApi.getChannels(contactId)
     channelsMap.value = { ...channelsMap.value, [contactId]: channels }
   } catch {
-    // Non-critical — fallback to dto fields
     channelsMap.value = { ...channelsMap.value, [contactId]: [] }
   } finally {
     channelsLoading.value[contactId] = false
@@ -204,9 +324,7 @@ onMounted(() => {
   }
 })
 
-// Load channels when contacts list changes
 const _prevContactIds = ref<number[]>([])
-import { watch } from 'vue'
 watch(
   () => props.contacts.map((c) => c.contact.id),
   (ids) => {
@@ -220,6 +338,14 @@ watch(
 )
 
 // ── Channel helpers ────────────────────────────────────────────────────────────
+
+const channelTypeOptions = [
+  { label: 'TG', value: 'tg', icon: 'pi-send' },
+  { label: 'WA', value: 'wa', icon: 'pi-whatsapp' },
+  { label: 'LI', value: 'linkedin', icon: 'pi-linkedin' },
+  { label: 'Email', value: 'email', icon: 'pi-envelope' },
+  { label: 'Тел.', value: 'phone', icon: 'pi-phone' },
+]
 
 function channelIcon(type: ChannelType | string): string {
   const icons: Record<string, string> = {
@@ -237,29 +363,135 @@ function channelIcon(type: ChannelType | string): string {
 function channelUrl(ch: ContactChannel): string | null {
   const v = ch.value
   switch (ch.channel_type) {
-    case 'tg':
-      return `https://t.me/${v.replace(/^@/, '')}`
-    case 'wa':
-      return `https://wa.me/${v.replace(/\D/g, '')}`
-    case 'email':
-      return `mailto:${v}`
-    case 'linkedin':
-      return v.startsWith('http') ? v : `https://linkedin.com/in/${v}`
-    case 'instagram':
-      return `https://instagram.com/${v.replace(/^@/, '')}`
-    default:
-      return null
+    case 'tg': return `https://t.me/${v.replace(/^@/, '')}`
+    case 'wa': return `https://wa.me/${v.replace(/\D/g, '')}`
+    case 'email': return `mailto:${v}`
+    case 'linkedin': return v.startsWith('http') ? v : `https://linkedin.com/in/${v}`
+    case 'instagram': return `https://instagram.com/${v.replace(/^@/, '')}`
+    default: return null
   }
 }
 
-async function removeChannel(contactId: number, channelId: number) {
-  deletingChannel.value = { ...deletingChannel.value, [channelId]: true }
+// ── ⋮ Menu state ──────────────────────────────────────────────────────────────
+
+const openMenuId = ref<number | null>(null)
+
+function toggleMenu(id: number) {
+  openMenuId.value = openMenuId.value === id ? null : id
+}
+
+function closeMenu() {
+  openMenuId.value = null
+}
+
+function doUnlink(contactId: number) {
+  openMenuId.value = null
+  emit('removeContact', contactId)
+}
+
+// Close menus on any document click (not inside popover — popover itself has @click.stop)
+function onDocClick() {
+  if (openMenuId.value !== null) closeMenu()
+  if (addChContactId.value !== null) closeAddChannelPopover()
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+})
+
+// ── Inline edit state ─────────────────────────────────────────────────────────
+
+const editingContactId = ref<number | null>(null)
+const editForm = ref({ full_name: '', position: '', is_primary: false })
+
+interface EditableChannel {
+  id: number
+  channel_type: string
+  value: string
+  _isNew?: boolean
+}
+
+const editChannels = ref<EditableChannel[]>([])
+const editNewChType = ref('tg')
+const editNewChValue = ref('')
+
+const editSaving = ref(false)
+
+function startEdit(link: DealContactDto) {
+  openMenuId.value = null
+  editingContactId.value = link.contact.id
+  editForm.value = {
+    full_name: link.contact.full_name,
+    position: link.contact.position ?? '',
+    is_primary: link.is_primary,
+  }
+  editChannels.value = getChannels(link.contact.id).map((ch) => ({
+    id: ch.id,
+    channel_type: ch.channel_type,
+    value: ch.value,
+  }))
+  editNewChType.value = 'tg'
+  editNewChValue.value = ''
+}
+
+function cancelEdit() {
+  editingContactId.value = null
+}
+
+function removeEditChannel(channelId: number) {
+  editChannels.value = editChannels.value.filter((ch) => ch.id !== channelId)
+}
+
+function addEditChannel() {
+  if (!editNewChValue.value.trim()) return
+  editChannels.value.push({
+    id: Date.now(), // temporary id
+    channel_type: editNewChType.value,
+    value: editNewChValue.value.trim(),
+    _isNew: true,
+  })
+  editNewChValue.value = ''
+}
+
+async function submitEdit(contactId: number) {
+  editSaving.value = true
   try {
-    await contactsApi.deleteChannel(contactId, channelId)
+    // Update contact basic info
+    await contactsApi.update(contactId, {
+      full_name: editForm.value.full_name,
+      position: editForm.value.position || null,
+    })
+
+    // Sync channels: delete removed, add new
+    const originalChannels = getChannels(contactId)
+    const remainingIds = new Set(editChannels.value.filter((c) => !c._isNew).map((c) => c.id))
+    const toDelete = originalChannels.filter((ch) => !remainingIds.has(ch.id))
+    for (const ch of toDelete) {
+      await contactsApi.deleteChannel(contactId, ch.id)
+    }
+    const toAdd = editChannels.value.filter((c) => c._isNew)
+    const addedChannels: ContactChannel[] = []
+    for (const ch of toAdd) {
+      const added = await contactsApi.addChannel(contactId, {
+        channel_type: ch.channel_type,
+        value: ch.value,
+      })
+      addedChannels.push(added)
+    }
+
+    // Update channels map
+    const surviving = originalChannels.filter((ch) => remainingIds.has(ch.id))
     channelsMap.value = {
       ...channelsMap.value,
-      [contactId]: (channelsMap.value[contactId] ?? []).filter((c) => c.id !== channelId),
+      [contactId]: [...surviving, ...addedChannels],
     }
+
+    toast.add({ severity: 'success', summary: t('common.saved'), life: 2000 })
+    editingContactId.value = null
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -268,25 +500,53 @@ async function removeChannel(contactId: number, channelId: number) {
       life: 4000,
     })
   } finally {
-    deletingChannel.value = { ...deletingChannel.value, [channelId]: false }
+    editSaving.value = false
   }
 }
 
-// ── Add channel dialog ─────────────────────────────────────────────────────────
+// ── Inline add-channel popover (collapsed view) ───────────────────────────────
 
-const addChannelVisible = ref(false)
-const addChannelContactId = ref<number | null>(null)
+const addChContactId = ref<number | null>(null)
+const addChType = ref('tg')
+const addChValue = ref('')
+const addChMutation = useMutation<ContactChannel>()
+const addChSaving = ref(false)
 
-function openAddChannel(contactId: number) {
-  addChannelContactId.value = contactId
-  addChannelVisible.value = true
+function openAddChannelPopover(contactId: number) {
+  addChContactId.value = contactId
+  addChType.value = 'tg'
+  addChValue.value = ''
 }
 
-function onChannelAdded(channel: ContactChannel) {
-  const cid = channel.contact_id
-  channelsMap.value = {
-    ...channelsMap.value,
-    [cid]: [...(channelsMap.value[cid] ?? []), channel],
+function closeAddChannelPopover() {
+  addChContactId.value = null
+}
+
+async function submitAddChannel(contactId: number) {
+  if (!addChValue.value.trim()) return
+  addChSaving.value = true
+  try {
+    const channel = await addChMutation.run(() =>
+      contactsApi.addChannel(contactId, {
+        channel_type: addChType.value,
+        value: addChValue.value.trim(),
+      }),
+    )
+    channelsMap.value = {
+      ...channelsMap.value,
+      [contactId]: [...(channelsMap.value[contactId] ?? []), channel],
+    }
+    addChContactId.value = null
+    toast.add({ severity: 'success', summary: t('sales.deal.addChannel.success'), life: 2000 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    addChSaving.value = false
   }
 }
 </script>
@@ -304,14 +564,6 @@ function onChannelAdded(channel: ContactChannel) {
 .deal-contacts-group__empty-icon {
   font-size: $font-size-2xl;
   color: $surface-300;
-}
-
-.deal-contacts-group__spinner {
-  font-size: $font-size-3xs;
-}
-
-.deal-contacts-group__remove-icon {
-  font-size: $font-size-3xs; // snap from 9px (-1px)
 }
 
 .deal-contacts-group__empty-text {
@@ -338,10 +590,13 @@ function onChannelAdded(channel: ContactChannel) {
   }
 }
 
+// ── View mode ─────────────────────────────────────────────────────────────────
+
 .deal-contacts-group__item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: $space-1;
 }
 
 .deal-contacts-group__item-name-row {
@@ -366,11 +621,141 @@ function onChannelAdded(channel: ContactChannel) {
   }
 }
 
+.deal-contacts-group__primary-badge {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-semibold;
+  padding: 2px 6px;
+  border-radius: $radius-sm;
+  background: var(--p-blue-100);
+  color: var(--p-blue-700);
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .app-dark & {
+    background: var(--p-blue-900);
+    color: var(--p-blue-300);
+  }
+}
+
 .deal-contacts-group__position {
   font-size: $font-size-xs;
   color: $surface-500;
   margin: 2px 0 $space-1;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
 }
+
+// ── ⋮ Menu ────────────────────────────────────────────────────────────────────
+
+.deal-contacts-group__menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.deal-contacts-group__menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: $surface-400;
+  display: flex;
+  align-items: center;
+  border-radius: $radius-sm;
+  transition: color var(--app-transition-fast), background var(--app-transition-fast);
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
+
+  &:hover {
+    color: $surface-700;
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      color: var(--p-surface-200);
+      background: var(--p-surface-700);
+    }
+  }
+
+  .pi {
+    font-size: $font-size-xs;
+  }
+}
+
+.deal-contacts-group__menu-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  min-width: 160px;
+  background: var(--p-card-background);
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  padding: $space-1;
+
+  .app-dark & {
+    border-color: var(--p-surface-700);
+  }
+}
+
+.deal-contacts-group__menu-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  padding: $space-2 $space-3;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  color: $surface-700;
+  border-radius: $radius-sm;
+  text-align: left;
+  transition: background var(--app-transition-fast);
+
+  .app-dark & {
+    color: var(--p-surface-100);
+  }
+
+  &:hover {
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      background: var(--p-surface-700);
+    }
+  }
+
+  &--danger {
+    color: var(--p-red-600);
+
+    .app-dark & {
+      color: var(--p-red-400);
+    }
+
+    &:hover {
+      background: var(--p-red-50);
+
+      .app-dark & {
+        background: var(--p-red-950);
+      }
+    }
+  }
+
+  .pi {
+    font-size: $font-size-xs;
+    flex-shrink: 0;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ── Channels ──────────────────────────────────────────────────────────────────
 
 .deal-contacts-group__channels {
   display: flex;
@@ -380,9 +765,9 @@ function onChannelAdded(channel: ContactChannel) {
   align-items: center;
 }
 
-.deal-contacts-group__channels-loading {
-  color: $surface-400;
+.deal-contacts-group__spinner {
   font-size: $font-size-xs;
+  color: $surface-400;
 }
 
 .deal-contacts-group__channel-tag {
@@ -404,29 +789,13 @@ function onChannelAdded(channel: ContactChannel) {
     color: var(--p-surface-300);
   }
 
-  &--legacy {
-    // fallback styling — same as channel tags but no remove button
+  &:hover {
+    border-color: var(--p-primary-400);
+    color: $primary-color;
   }
 
   .pi {
     font-size: $font-size-3xs;
-  }
-}
-
-a.deal-contacts-group__channel-tag,
-.deal-contacts-group__channel-link {
-  color: $surface-600;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
-
-  &:hover {
-    color: $primary-color;
   }
 }
 
@@ -437,25 +806,10 @@ a.deal-contacts-group__channel-tag,
   white-space: nowrap;
 }
 
-.deal-contacts-group__channel-remove {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: $surface-400;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  margin-left: 2px;
-  line-height: 1;
+// ── Add channel (inline popover) ──────────────────────────────────────────────
 
-  &:hover:not(:disabled) {
-    color: var(--p-red-500);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
+.deal-contacts-group__add-ch-wrap {
+  position: relative;
 }
 
 .deal-contacts-group__add-channel {
@@ -485,7 +839,190 @@ a.deal-contacts-group__channel-tag,
   }
 }
 
+.deal-contacts-group__add-ch-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  min-width: 220px;
+  background: var(--p-card-background);
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  box-shadow: $shadow-md;
+  padding: $space-3;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+
+  .app-dark & {
+    border-color: var(--p-surface-700);
+  }
+}
+
+.deal-contacts-group__add-ch-type-row {
+  display: flex;
+  gap: $space-1;
+  flex-wrap: wrap;
+}
+
+.deal-contacts-group__type-btn {
+  padding: $space-1 $space-2;
+  border: 1px solid var(--p-surface-300);
+  border-radius: $radius-sm;
+  background: transparent;
+  cursor: pointer;
+  font-size: $font-size-xs;
+  color: $surface-600;
+  transition: all var(--app-transition-fast);
+
+  .app-dark & {
+    border-color: var(--p-surface-600);
+    color: var(--p-surface-300);
+  }
+
+  &:hover {
+    border-color: var(--p-primary-400);
+    color: $primary-color;
+  }
+
+  &--active {
+    border-color: var(--p-primary-color);
+    background: var(--p-primary-50);
+    color: var(--p-primary-color);
+
+    .app-dark & {
+      background: var(--p-primary-900);
+    }
+  }
+
+  .pi {
+    font-size: $font-size-xs;
+  }
+}
+
+// ── Edit form ─────────────────────────────────────────────────────────────────
+
+.deal-contacts-group__edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-2 0;
+}
+
+.deal-contacts-group__edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deal-contacts-group__edit-label {
+  font-size: $font-size-xs;
+  color: $surface-500;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.deal-contacts-group__edit-channels {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.deal-contacts-group__edit-channel-row {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+}
+
+.deal-contacts-group__ch-icon {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  flex-shrink: 0;
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
+}
+
+.deal-contacts-group__ch-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.deal-contacts-group__ch-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $surface-400;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--p-red-500);
+  }
+
+  .pi {
+    font-size: $font-size-xs;
+  }
+}
+
+.deal-contacts-group__edit-add-ch {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  margin-top: $space-1;
+  padding: $space-2;
+  background: var(--p-surface-50);
+  border: 1px dashed var(--p-surface-300);
+  border-radius: $radius-sm;
+
+  .app-dark & {
+    background: var(--p-surface-800);
+    border-color: var(--p-surface-600);
+  }
+}
+
+.deal-contacts-group__edit-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-1 0;
+}
+
+.deal-contacts-group__edit-actions {
+  display: flex;
+  gap: $space-2;
+  justify-content: flex-end;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
 .deal-contacts-group__footer {
-  padding: $space-2 $space-3;
+  padding: $space-2 $space-4;
+}
+
+.deal-contacts-group__add-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  color: var(--p-primary-color);
+  font-weight: $font-weight-medium;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  .pi {
+    font-size: $font-size-xs;
+  }
 }
 </style>

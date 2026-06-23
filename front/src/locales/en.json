@@ -412,7 +412,10 @@
     "copied": "Copied",
     "copy": "Copy",
     "select": "Select...",
-    "createdAt": "Created"
+    "createdAt": "Created",
+    "add": "Add",
+    "no_results": "No results",
+    "search_placeholder": "Start typing…"
   },
   "contacts": {
     "page": {
@@ -1462,7 +1465,11 @@
               "plan": "Plan",
               "quantity": "Quantity",
               "unitPrice": "Unit price (snapshot)",
-              "unitPriceOverrideHint": "Price manually overridden"
+              "unitPriceOverrideHint": "Price manually overridden",
+              "period": "Period",
+              "currency": "Currency",
+              "sum": "Sum (auto)",
+              "productPlaceholder": "Start typing product name…"
             },
             "preview": "Total: {amount}",
             "snapshotHint": "Price snapshot from catalog at time of addition",
@@ -1543,7 +1550,8 @@
           "documents": "Documents",
           "finances": "Finances",
           "stats": "Stats",
-          "log": "Log"
+          "log": "Log",
+          "activity": "Activity"
         },
         "fields": {
           "owner": "Owner",
@@ -1567,11 +1575,13 @@
           "empty": "No items",
           "add": "+ Add",
           "total": "Total",
-          "discount": "Discount"
+          "discount": "Discount",
+          "discountLabel": "Discount"
         },
         "contacts": {
           "addContact": "+ Add contact",
-          "addChannel": "+ Add channel"
+          "addChannel": "+ Add channel",
+          "unlink": "Unlink"
         }
       },
       "addChannel": {
@@ -1586,17 +1596,25 @@
           "phone": "+7XXXXXXXXXX"
         },
         "submit": "Add",
-        "success": "Channel added"
+        "success": "Channel added",
+        "valuePlaceholder": "Enter value…"
       },
       "documents": {
         "generate": "Generate PDF",
         "downloadDocx": "Download DOCX",
         "templateLabel": "Template",
+        "templatePlaceholder": "Choose template…",
         "contractFields": "Contract fields",
         "approval": "Approval",
+        "approveBtn": "Approve",
+        "rejectBtn": "Reject",
+        "rejectReason": "Rejection reason",
+        "rejectReasonPlaceholder": "Specify reason…",
+        "resubmit": "Resubmit for approval",
         "finalDocs": "Final documents",
         "uploadScan": "Upload signed scan",
         "signedAt": "Actual signing date",
+        "contractFactDate": "Contract — fact (signing date)",
         "empty": {
           "title": "No documents",
           "subtitle": "Generate the first contract from a template"
@@ -1605,7 +1623,14 @@
       "finances": {
         "stub": "Financial terms",
         "stubHint": "Payment terms from the contract will appear here: deadlines, periods, amounts, acts.",
-        "waitingForDoc": "Waiting for contract"
+        "waitingForDoc": "Waiting for contract",
+        "paymentFixation": "Payment fixation",
+        "paidAt": "Payment — fact (date)",
+        "paymentAmount": "Payment amount",
+        "amountPlaceholder": "0",
+        "fixPayment": "Fix payment",
+        "missingNote": "Amount and currency fields will appear after the finance sprint",
+        "scheduleTitle": "Payment schedule"
       },
       "stats": {
         "daysInDeal": "Days in deal",
@@ -1699,7 +1724,12 @@
         "markKpTooltip": "Mark proposal as sent",
         "markContractTooltip": "Mark contract as sent",
         "kpMarked": "Proposal marked as sent",
-        "contractMarked": "Contract marked as sent"
+        "contractMarked": "Contract marked as sent",
+        "presentation": "Presentation",
+        "kp": "Proposal",
+        "contract": "Contract",
+        "touch": "Touch",
+        "event": "Event"
       },
       "fields": {
         "perpetualLicense": "Perpetual License"
@@ -1729,6 +1759,10 @@
         "paymentFact": "Payment — actual",
         "overdueBy": "Overdue by {n} days",
         "factDone": "Done"
+      },
+      "license": {
+        "subscription": "Subscription",
+        "perpetual": "Perpetual"
       }
     },
     "move": {
@@ -3349,6 +3383,11 @@
           "dealPlaceholder": "Search open deals...",
           "success": "Contact added to deal"
         }
+      },
+      "fields": {
+        "name": "Name",
+        "position": "Position",
+        "channels": "Channels"
       }
     },
     "log": {

@@ -1,25 +1,15 @@
 <template>
   <div class="deal-tab-docs">
-    <!-- ── Empty state (no documents yet) ──────────────────────────────────── -->
-    <template v-if="!loading && documents.length === 0">
-      <div class="deal-tab-docs__empty">
-        <i class="pi pi-file-edit deal-tab-docs__empty-icon" />
-        <p class="deal-tab-docs__empty-title">{{ t('sales.deal.documents.empty.title') }}</p>
-        <p class="deal-tab-docs__empty-sub">{{ t('sales.deal.documents.empty.subtitle') }}</p>
-      </div>
-    </template>
-
     <!-- ── Loading skeleton ─────────────────────────────────────────────────── -->
-    <template v-else-if="loading">
+    <template v-if="loading">
       <Skeleton height="120px" class="mb-3" />
       <Skeleton height="80px" class="mb-3" />
       <Skeleton height="60px" />
     </template>
 
-    <!-- ── Main content ─────────────────────────────────────────────────────── -->
     <template v-else>
-      <!-- Document selector (compact list) -->
-      <div class="deal-tab-docs__doc-list mb-3">
+      <!-- ── Document list ─────────────────────────────────────────────────── -->
+      <div v-if="documents.length > 0" class="deal-tab-docs__doc-list">
         <div
           v-for="doc in documents"
           :key="doc.id"
@@ -34,185 +24,246 @@
           <span class="deal-tab-docs__doc-date">{{ formatDate(doc.created_at) }}</span>
         </div>
       </div>
-    </template>
 
-    <!-- ── Section 1: Create document (inline form, always visible) ──────── -->
-    <div class="deal-tab-docs__section">
-      <p class="deal-tab-docs__section-title">
-        <i class="pi pi-file-plus me-1" />
-        {{ t('documents.create.title') }}
-      </p>
-
-      <!-- Template selector -->
-      <div class="mb-2">
-        <label class="deal-tab-docs__label">{{ t('sales.deal.documents.templateLabel') }}</label>
-        <Select
-          v-model="generateForm.template_id"
-          :options="templateOptions"
-          option-label="label"
-          option-value="value"
-          :loading="loadingTemplates"
-          :placeholder="t('sales.deal.documents.templateLabel')"
-          :invalid="!!generateErrors.template_id"
-          class="w-100 mt-1"
-          size="small"
-        />
-        <small v-if="generateErrors.template_id" class="p-error">
-          {{ generateErrors.template_id }}
-        </small>
+      <!-- ── Empty state ─────────────────────────────────────────────────────── -->
+      <div v-else class="deal-tab-docs__empty">
+        <i class="pi pi-file-edit deal-tab-docs__empty-icon" />
+        <p class="deal-tab-docs__empty-title">{{ t('sales.deal.documents.empty.title') }}</p>
+        <p class="deal-tab-docs__empty-sub">{{ t('sales.deal.documents.empty.subtitle') }}</p>
       </div>
 
-      <div class="d-flex gap-2 mt-2">
-        <Button
-          icon="pi pi-file-pdf"
-          :label="t('sales.deal.documents.generate')"
-          size="small"
-          :loading="generating"
-          :disabled="!generateForm.template_id"
-          @click="generateDoc"
-        />
-        <Button
-          v-if="activeDoc?.docx_path"
-          icon="pi pi-download"
-          :label="t('sales.deal.documents.downloadDocx')"
-          severity="secondary"
-          outlined
-          size="small"
-          @click="downloadDocx"
-        />
-      </div>
-    </div>
-
-    <!-- ── Section 2: Contract fields (gen-fields from template metadata) ─── -->
-    <!-- Hidden until template binding exposes editable fields (future sprint) -->
-    <div v-if="false" class="deal-tab-docs__section">
-      <p class="deal-tab-docs__section-title">
-        <i class="pi pi-list me-1" />
-        {{ t('sales.deal.documents.contractFields') }}
-      </p>
-    </div>
-
-    <!-- ── Section 3: Approval ──────────────────────────────────────────────── -->
-    <div v-if="activeDoc" class="deal-tab-docs__section">
-      <p class="deal-tab-docs__section-title">
-        <i class="pi pi-send me-1" />
-        {{ t('sales.deal.documents.approval') }}
-      </p>
-
-      <ApprovalPanel
-        :approval="approval"
-        :loading="loadingApproval"
-        :deciding="deciding"
-        @approve="handleApprove"
-        @open-decide="openDecide"
-      />
-
-      <div class="d-flex gap-2 mt-2">
-        <Button
-          v-if="canSubmit"
-          icon="pi pi-send"
-          :label="t('documents.card.actions.submit')"
-          size="small"
-          :loading="submitting"
-          @click="handleSubmit"
-        />
-        <Button
-          v-if="canResubmit"
-          icon="pi pi-refresh"
-          :label="t('documents.card.actions.resubmit')"
-          size="small"
-          severity="secondary"
-          outlined
-          :loading="submitting"
-          @click="handleSubmit"
-        />
-      </div>
-    </div>
-
-    <!-- ── Section 4: Final documents ──────────────────────────────────────── -->
-    <div v-if="activeDoc" class="deal-tab-docs__section">
-      <p class="deal-tab-docs__section-title">
-        <i class="pi pi-file-check me-1" />
-        {{ t('sales.deal.documents.finalDocs') }}
-      </p>
-
-      <!-- Upload scan -->
-      <div class="mb-3">
-        <label class="deal-tab-docs__label">{{ t('sales.deal.documents.uploadScan') }}</label>
-        <FileUpload
-          mode="basic"
-          accept=".pdf,.jpg,.jpeg,.png,.webp"
-          :max-file-size="15728640"
-          :auto="true"
-          custom-upload
-          :choose-label="t('sales.deal.documents.uploadScan')"
-          choose-icon="pi pi-upload"
-          class="mt-1"
-          :disabled="uploading"
-          @uploader="uploadScan"
-        />
-      </div>
-
-      <!-- Signed date -->
-      <div class="mb-3">
-        <label class="deal-tab-docs__label">{{ t('sales.deal.documents.signedAt') }}</label>
-        <div class="d-flex gap-2 align-items-center mt-1">
-          <DatePicker
-            v-model="signedAt"
-            show-icon
-            date-format="dd.mm.yy"
-            :placeholder="t('sales.deal.documents.signedAt')"
-            size="small"
+      <!-- ── Section 1: Create document ───────────────────────────────────── -->
+      <div class="deal-tab-docs__section">
+        <!-- Template SearchPicker -->
+        <div class="deal-tab-docs__field-row">
+          <label class="deal-tab-docs__label">{{ t('sales.deal.documents.templateLabel') }}</label>
+          <SearchPicker
+            v-model="generateForm.template_id"
+            :options="templateOptions"
+            option-label="label"
+            option-value="value"
+            :placeholder="t('sales.deal.documents.templatePlaceholder')"
+            class="w-100"
           />
-          <Button
-            icon="pi pi-check"
-            :label="t('common.save', 'Сохранить')"
-            size="small"
-            :loading="savingSignedAt"
-            :disabled="!signedAt"
-            @click="saveSignedAt"
-          />
+          <small v-if="generateErrors.template_id" class="p-error">
+            {{ generateErrors.template_id }}
+          </small>
         </div>
-      </div>
 
-      <!-- Attachments list -->
-      <div v-if="attachments.length > 0" class="deal-tab-docs__attachments">
-        <div
-          v-for="att in attachments"
-          :key="att.id"
-          class="deal-tab-docs__att-item"
-        >
-          <i class="pi pi-file deal-tab-docs__att-icon" />
-          <span class="deal-tab-docs__att-name">{{ att.original_name }}</span>
-          <span class="deal-tab-docs__att-size">{{ formatSize(att.size) }}</span>
+        <div class="d-flex gap-2 mt-3">
+          <Button
+            icon="pi pi-file-pdf"
+            :label="t('sales.deal.documents.generate')"
+            size="small"
+            :loading="generating"
+            :disabled="!generateForm.template_id"
+            @click="generateDoc"
+          />
           <Button
             icon="pi pi-download"
-            text
+            :label="t('sales.deal.documents.downloadDocx')"
             severity="secondary"
+            outlined
             size="small"
-            :title="t('common.download', 'Скачать')"
-            @click="downloadAttachment(att)"
-          />
-          <Button
-            icon="pi pi-times"
-            text
-            severity="danger"
-            size="small"
-            :title="t('common.delete', 'Удалить')"
-            :loading="deletingAttId === att.id"
-            @click="deleteAtt(att.id)"
+            :disabled="!activeDoc?.docx_path"
+            @click="downloadDocx"
           />
         </div>
       </div>
-    </div>
 
-    <!-- ── DecideDialog ─────────────────────────────────────────────────────── -->
-    <DecideDialog
-      v-model="decideDialogOpen"
-      :loading="deciding"
-      :required="decideAction !== 'approved'"
-      @confirm="(comment) => submitDecision(comment)"
-    />
+      <!-- ── Section 2: Approval ───────────────────────────────────────────── -->
+      <div v-if="activeDoc" class="deal-tab-docs__section">
+        <p class="deal-tab-docs__section-label">
+          <i class="pi pi-send me-1" />
+          {{ t('sales.deal.documents.approval') }}
+        </p>
+
+        <template v-if="loadingApproval">
+          <Skeleton height="80px" />
+        </template>
+
+        <template v-else-if="approval">
+          <!-- Approvers list -->
+          <div class="deal-tab-docs__approvers">
+            <div
+              v-for="vote in flatVotes"
+              :key="vote.user_id"
+              class="deal-tab-docs__approver-row"
+            >
+              <div class="deal-tab-docs__approver-avatar">
+                {{ initials(vote.user_name) }}
+              </div>
+              <span class="deal-tab-docs__approver-name">{{ vote.user_name }}</span>
+              <span
+                class="deal-tab-docs__approver-badge"
+                :class="`deal-tab-docs__approver-badge--${vote.decision}`"
+              >{{ voteLabel(vote.decision) }}</span>
+            </div>
+          </div>
+
+          <!-- Rejected reason plate -->
+          <div
+            v-if="approval.decision === 'rejected' && approval.comment"
+            class="deal-tab-docs__reject-plate"
+          >
+            <i class="pi pi-times-circle me-1" />
+            {{ approval.comment }}
+          </div>
+
+          <!-- Reject inline form -->
+          <div v-if="showRejectForm" class="deal-tab-docs__reject-form">
+            <label class="deal-tab-docs__label">{{ t('sales.deal.documents.rejectReason') }}</label>
+            <textarea
+              v-model="rejectComment"
+              class="deal-tab-docs__reject-textarea"
+              :placeholder="t('sales.deal.documents.rejectReasonPlaceholder')"
+              rows="3"
+            />
+            <div class="d-flex gap-2 mt-2">
+              <Button
+                :label="t('common.cancel')"
+                severity="secondary"
+                outlined
+                size="small"
+                @click="showRejectForm = false; rejectComment = ''"
+              />
+              <Button
+                :label="t('sales.deal.documents.rejectBtn')"
+                severity="danger"
+                size="small"
+                :loading="deciding"
+                :disabled="!rejectComment.trim()"
+                @click="handleReject"
+              />
+            </div>
+          </div>
+
+          <!-- Decision buttons -->
+          <div
+            v-else-if="approval.is_current_user_approver && !showRejectForm"
+            class="d-flex gap-2 mt-3 flex-wrap"
+          >
+            <Button
+              icon="pi pi-check"
+              :label="t('sales.deal.documents.approveBtn')"
+              severity="success"
+              size="small"
+              :loading="deciding"
+              @click="handleApprove"
+            />
+            <Button
+              icon="pi pi-times"
+              :label="t('documents.approval.decide.reject')"
+              severity="danger"
+              outlined
+              size="small"
+              @click="showRejectForm = true"
+            />
+          </div>
+
+          <!-- Resubmit -->
+          <div v-if="canResubmit" class="mt-3">
+            <Button
+              icon="pi pi-refresh"
+              :label="t('sales.deal.documents.resubmit')"
+              severity="secondary"
+              outlined
+              size="small"
+              :loading="submitting"
+              @click="handleSubmit"
+            />
+          </div>
+        </template>
+
+        <!-- No approval yet — submit flow -->
+        <div v-else class="deal-tab-docs__no-approval">
+          <p class="deal-tab-docs__no-approval-hint">{{ t('documents.approval.noApproval') }}</p>
+        </div>
+
+        <!-- Submit -->
+        <div v-if="canSubmit" class="mt-3">
+          <Button
+            icon="pi pi-send"
+            :label="t('documents.card.actions.submit')"
+            size="small"
+            :loading="submitting"
+            @click="handleSubmit"
+          />
+        </div>
+      </div>
+
+      <!-- ── Section 3: Final documents ────────────────────────────────────── -->
+      <div v-if="activeDoc" class="deal-tab-docs__section">
+        <p class="deal-tab-docs__section-label">
+          <i class="pi pi-file-check me-1" />
+          {{ t('sales.deal.documents.finalDocs') }}
+        </p>
+
+        <!-- Upload signed scan -->
+        <div class="deal-tab-docs__field-row">
+          <FileUpload
+            mode="basic"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            :max-file-size="15728640"
+            :auto="true"
+            custom-upload
+            :choose-label="t('sales.deal.documents.uploadScan')"
+            choose-icon="pi pi-upload"
+            severity="secondary"
+            outlined
+            size="small"
+            :disabled="uploading"
+            @uploader="uploadScan"
+          />
+        </div>
+
+        <!-- Signed at DateField + Save -->
+        <div class="deal-tab-docs__field-row mt-2">
+          <label class="deal-tab-docs__label">{{ t('sales.deal.documents.contractFactDate') }}</label>
+          <div class="d-flex gap-2 align-items-center mt-1">
+            <DateField
+              v-model="signedAtIso"
+              placeholder="ДД.ММ.ГГГГ"
+            />
+            <Button
+              :label="t('common.save')"
+              size="small"
+              :loading="savingSignedAt"
+              :disabled="!signedAtIso"
+              @click="saveSignedAt"
+            />
+          </div>
+        </div>
+
+        <!-- Attachments -->
+        <div v-if="attachments.length > 0" class="deal-tab-docs__attachments">
+          <div
+            v-for="att in attachments"
+            :key="att.id"
+            class="deal-tab-docs__att-item"
+          >
+            <i class="pi pi-file deal-tab-docs__att-icon" />
+            <span class="deal-tab-docs__att-name">{{ att.original_name }}</span>
+            <span class="deal-tab-docs__att-size">{{ formatSize(att.size) }}</span>
+            <Button
+              icon="pi pi-download"
+              text
+              severity="secondary"
+              size="small"
+              @click="downloadAttachment(att)"
+            />
+            <Button
+              icon="pi pi-times"
+              text
+              severity="danger"
+              size="small"
+              :loading="deletingAttId === att.id"
+              @click="deleteAtt(att.id)"
+            />
+          </div>
+        </div>
+      </div>
+    </template>
 
     <Toast position="top-right" />
   </div>
@@ -222,14 +273,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
-import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
 import FileUpload, { type FileUploadUploaderEvent } from 'primevue/fileupload'
-import DatePicker from 'primevue/datepicker'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
-import ApprovalPanel from '@/pages/DocumentPage/components/ApprovalPanel.vue'
-import DecideDialog from '@/components/shared/DecideDialog.vue'
+import SearchPicker from '@/components/crm/SearchPicker.vue'
+import DateField from '@/components/crm/DateField.vue'
 import DocumentStatusTag from '@/components/shared/DocumentStatusTag.vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
@@ -239,16 +288,15 @@ import type {
   DocumentListItemDto,
   DocumentAttachmentDto,
   ApprovalSummaryDto,
+  ApprovalDecision,
 } from '@/entities/document'
 
 const props = defineProps<{
   dealId: number
-  /** Activities count — passed from parent for stats tab */
   activitiesCount?: number
 }>()
 
 const emit = defineEmits<{
-  /** Notifies parent of current document count (for DealTabStats) */
   docsCountChanged: [count: number]
 }>()
 
@@ -274,7 +322,6 @@ async function loadDocuments() {
   documents.value = docsResource.data.value
   loading.value = false
   emit('docsCountChanged', documents.value.length)
-  // Auto-select first doc
   const firstDoc = documents.value[0]
   if (firstDoc !== undefined && activeDocId.value === null) {
     activeDocId.value = firstDoc.id
@@ -325,15 +372,10 @@ async function generateDoc() {
         template_id: generateForm.value.template_id!,
       }),
     )
-    // Prepend to list and select
     documents.value = [doc, ...documents.value.filter((d) => d.id !== doc.id)]
     activeDocId.value = doc.id
     emit('docsCountChanged', documents.value.length)
-    toast.add({
-      severity: 'success',
-      summary: t('documents.create.title'),
-      life: 3000,
-    })
+    toast.add({ severity: 'success', summary: t('documents.create.title'), life: 3000 })
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   }
@@ -349,14 +391,20 @@ function downloadDocx() {
 const approvalResource = useAsyncResource<ApprovalSummaryDto | null>(() => null)
 const approval = ref<ApprovalSummaryDto | null>(null)
 const loadingApproval = ref(false)
+const showRejectForm = ref(false)
+const rejectComment = ref('')
+
+// Flatten all stage votes for rendering
+const flatVotes = computed(() => {
+  if (!approval.value) return []
+  return approval.value.stages.flatMap((s) => s.approvals)
+})
 
 async function loadApproval() {
   if (!activeDocId.value) return
   loadingApproval.value = true
   try {
-    await approvalResource.run(() =>
-      documentsApi.getApprovalSummary(activeDocId.value!),
-    )
+    await approvalResource.run(() => documentsApi.getApprovalSummary(activeDocId.value!))
     approval.value = approvalResource.data.value
   } catch {
     approval.value = null
@@ -365,13 +413,14 @@ async function loadApproval() {
   }
 }
 
-const canSubmit = computed(() =>
-  activeDoc.value?.status === 'draft' && !!activeDoc.value?.docx_path,
+const canSubmit = computed(
+  () => activeDoc.value?.status === 'draft' && !!activeDoc.value?.docx_path,
 )
 
-const canResubmit = computed(() =>
-  (activeDoc.value?.status === 'rejected' || activeDoc.value?.status === 'needs_rework') &&
-  !!activeDoc.value?.docx_path,
+const canResubmit = computed(
+  () =>
+    (activeDoc.value?.status === 'rejected' || activeDoc.value?.status === 'needs_rework') &&
+    !!activeDoc.value?.docx_path,
 )
 
 const submitMutation = useMutation<DocumentListItemDto>()
@@ -383,7 +432,6 @@ async function handleSubmit() {
     const updated = await submitMutation.run(() =>
       documentsApi.submitDocument(activeDocId.value!),
     )
-    // Update local doc status
     const idx = documents.value.findIndex((d) => d.id === updated.id)
     if (idx >= 0) documents.value[idx] = updated
     await loadApproval()
@@ -393,17 +441,8 @@ async function handleSubmit() {
   }
 }
 
-// ── Decide ─────────────────────────────────────────────────────────────────────
-
-const decideDialogOpen = ref(false)
-const decideAction = ref<'approved' | 'rejected' | 'needs_rework'>('approved')
 const decideMutation = useMutation<DocumentListItemDto>()
 const deciding = computed(() => decideMutation.isPending.value)
-
-function openDecide(action: 'rejected' | 'needs_rework') {
-  decideAction.value = action
-  decideDialogOpen.value = true
-}
 
 async function handleApprove() {
   if (!activeDocId.value) return
@@ -412,27 +451,51 @@ async function handleApprove() {
       documentsApi.decideDocument(activeDocId.value!, { decision: 'approved' }),
     )
     await loadApproval()
-    toast.add({ severity: 'success', summary: t('documents.approval.decide.approve'), life: 2000 })
+    toast.add({
+      severity: 'success',
+      summary: t('documents.approval.decide.approve'),
+      life: 2000,
+    })
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   }
 }
 
-async function submitDecision(comment: string) {
-  if (!activeDocId.value) return
+async function handleReject() {
+  if (!activeDocId.value || !rejectComment.value.trim()) return
   try {
     await decideMutation.run(() =>
       documentsApi.decideDocument(activeDocId.value!, {
-        decision: decideAction.value,
-        comment: comment || null,
+        decision: 'rejected',
+        comment: rejectComment.value,
       }),
     )
-    decideDialogOpen.value = false
+    showRejectForm.value = false
+    rejectComment.value = ''
     await loadApproval()
-    toast.add({ severity: 'success', summary: t('documents.approval.title'), life: 2000 })
+    toast.add({ severity: 'info', summary: t('documents.approval.title'), life: 2000 })
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   }
+}
+
+function voteLabel(decision: ApprovalDecision): string {
+  const map: Record<ApprovalDecision, string> = {
+    approved: t('documents.approval.approved'),
+    rejected: t('documents.approval.rejected'),
+    needs_rework: t('documents.approval.needs_rework'),
+    pending: t('documents.approval.pending'),
+  }
+  return map[decision] ?? decision
+}
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0] ?? '')
+    .join('')
+    .toUpperCase()
 }
 
 // ── Attachments ────────────────────────────────────────────────────────────────
@@ -456,13 +519,13 @@ async function uploadScan(event: FileUploadUploaderEvent) {
   if (!activeDocId.value || !file) return
   uploading.value = true
   try {
-    const att = await documentsApi.uploadAttachment(
-      activeDocId.value,
-      file,
-      'signed_scan',
-    )
+    const att = await documentsApi.uploadAttachment(activeDocId.value, file, 'signed_scan')
     attachments.value.push(att)
-    toast.add({ severity: 'success', summary: t('sales.deal.documents.uploadScan'), life: 2000 })
+    toast.add({
+      severity: 'success',
+      summary: t('sales.deal.documents.uploadScan'),
+      life: 2000,
+    })
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   } finally {
@@ -488,19 +551,23 @@ async function deleteAtt(attId: number) {
   }
 }
 
-// ── Signed date ────────────────────────────────────────────────────────────────
+// ── Signed date (DateField — ISO string) ──────────────────────────────────────
 
-const signedAt = ref<Date | null>(null)
+const signedAtIso = ref<string | null>(null)
 const savingSignedAt = ref(false)
 
 async function saveSignedAt() {
-  if (!activeDocId.value || !signedAt.value) return
+  if (!activeDocId.value || !signedAtIso.value) return
   savingSignedAt.value = true
   try {
     await documentsApi.patchDocument(activeDocId.value, {
-      signed_at: signedAt.value.toISOString(),
+      signed_at: signedAtIso.value,
     })
-    toast.add({ severity: 'success', summary: t('sales.deal.documents.signedAt'), life: 2000 })
+    toast.add({
+      severity: 'success',
+      summary: t('sales.deal.documents.contractFactDate'),
+      life: 2000,
+    })
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   } finally {
@@ -524,6 +591,8 @@ function formatSize(bytes: number): string {
 
 watch(activeDocId, async (id) => {
   if (id !== null) {
+    showRejectForm.value = false
+    rejectComment.value = ''
     await Promise.all([loadApproval(), loadAttachments()])
   }
 })
@@ -538,33 +607,9 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .deal-tab-docs {
   padding: $space-3;
-
-  &__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $space-2;
-    padding: $space-8 $space-4;
-    text-align: center;
-  }
-
-  &__empty-icon {
-    font-size: $font-size-icon-xl;
-    color: var(--p-text-muted-color);
-    opacity: 0.35;
-  }
-
-  &__empty-title {
-    font-weight: $font-weight-semibold;
-    margin: 0;
-    color: $surface-700;
-  }
-
-  &__empty-sub {
-    font-size: $font-size-sm;
-    color: $surface-500;
-    margin: 0;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
 
   &__doc-list {
     display: flex;
@@ -580,13 +625,13 @@ onMounted(async () => {
     border-radius: $radius-sm;
     cursor: pointer;
     font-size: $font-size-sm;
-    transition: background 0.15s;
+    transition: background var(--app-transition-fast);
 
     &:hover {
       background: var(--p-surface-100);
 
       .app-dark & {
-        background: var(--p-surface-800);
+        background: var(--p-surface-100);
       }
     }
 
@@ -607,39 +652,202 @@ onMounted(async () => {
   }
 
   &__doc-date {
-    color: $surface-500;
+    color: var(--p-text-muted-color);
     font-size: $font-size-xs;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-6 $space-4;
+    text-align: center;
+  }
+
+  &__empty-icon {
+    font-size: $font-size-icon-xl;
+    color: var(--p-text-muted-color);
+    opacity: 0.35;
+  }
+
+  &__empty-title {
+    font-weight: $font-weight-semibold;
+    margin: 0;
+    color: var(--p-text-color);
+  }
+
+  &__empty-sub {
+    font-size: $font-size-sm;
+    color: var(--p-text-muted-color);
+    margin: 0;
   }
 
   &__section {
     border: 1px solid var(--p-surface-200);
     border-radius: $radius-md;
     padding: $space-3;
-    margin-bottom: $space-3;
 
     .app-dark & {
-      border-color: var(--p-surface-700);
+      border-color: var(--p-surface-200);
     }
   }
 
-  &__section-title {
+  &__section-label {
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    color: $surface-700;
+    color: var(--p-text-color);
     margin: 0 0 $space-2;
+  }
 
-    .app-dark & {
-      color: $surface-200;
-    }
+  &__field-row {
+    display: flex;
+    flex-direction: column;
   }
 
   &__label {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: var(--p-text-color);
-    display: block;
+    font-size: $font-size-xs;
+    color: var(--p-text-muted-color);
+    margin-bottom: $space-1;
   }
 
+  // Approvers list
+  &__approvers {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    margin-bottom: $space-3;
+  }
+
+  &__approver-row {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    font-size: $font-size-sm;
+  }
+
+  &__approver-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-circle;
+    background: $primary-900;
+    color: $surface-0;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__approver-name {
+    flex: 1;
+    font-weight: $font-weight-medium;
+  }
+
+  &__approver-badge {
+    font-size: $font-size-xs;
+    padding: 2px $space-1;
+    border-radius: $radius-sm;
+
+    &--approved {
+      background: var(--p-green-100);
+      color: var(--p-green-700);
+
+      .app-dark & {
+        background: var(--p-green-900);
+        color: var(--p-green-300);
+      }
+    }
+
+    &--rejected {
+      background: var(--p-red-100);
+      color: var(--p-red-700);
+
+      .app-dark & {
+        background: var(--p-red-900);
+        color: var(--p-red-300);
+      }
+    }
+
+    &--needs_rework {
+      background: var(--p-orange-100);
+      color: var(--p-orange-700);
+
+      .app-dark & {
+        background: var(--p-orange-900);
+        color: var(--p-orange-300);
+      }
+    }
+
+    &--pending {
+      background: var(--p-surface-100);
+      color: var(--p-text-muted-color);
+
+      .app-dark & {
+        background: var(--p-surface-100);
+      }
+    }
+  }
+
+  // Rejected reason plate
+  &__reject-plate {
+    background: var(--p-red-50);
+    border: 1px solid var(--p-red-200);
+    border-radius: $radius-sm;
+    padding: $space-2 $space-3;
+    font-size: $font-size-sm;
+    color: var(--p-red-700);
+    margin-bottom: $space-2;
+
+    .app-dark & {
+      background: transparent;
+      border-color: var(--p-red-500);
+      color: var(--p-red-400);
+    }
+  }
+
+  // Inline reject form
+  &__reject-form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    margin-top: $space-2;
+  }
+
+  &__reject-textarea {
+    width: 100%;
+    min-height: 72px;
+    padding: $space-2 $space-2;
+    border: 1px solid var(--p-surface-300);
+    border-radius: $radius-sm;
+    background: var(--p-card-background);
+    font-size: $font-size-sm;
+    color: var(--p-text-color);
+    resize: vertical;
+    outline: none;
+    font-family: inherit;
+
+    &:focus {
+      border-color: var(--p-primary-color);
+    }
+
+    .app-dark & {
+      border-color: var(--p-surface-600);
+    }
+  }
+
+  &__no-approval {
+    padding: $space-2 0;
+  }
+
+  &__no-approval-hint {
+    font-size: $font-size-sm;
+    color: var(--p-text-muted-color);
+    margin: 0;
+  }
+
+  // Attachments
   &__attachments {
     display: flex;
     flex-direction: column;
@@ -657,7 +865,7 @@ onMounted(async () => {
     font-size: $font-size-sm;
 
     .app-dark & {
-      background: var(--p-surface-800);
+      background: var(--p-surface-50);
     }
   }
 
@@ -674,7 +882,7 @@ onMounted(async () => {
   }
 
   &__att-size {
-    color: $surface-500;
+    color: var(--p-text-muted-color);
     font-size: $font-size-xs;
     white-space: nowrap;
   }

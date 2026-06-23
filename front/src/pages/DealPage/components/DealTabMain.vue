@@ -2,30 +2,80 @@
   <div class="deal-tab-main">
     <!-- ── Quick fields ─────────────────────────────────────────────────────────── -->
     <div class="deal-tab-main__quick-fields">
-      <!-- Owner — inline select -->
-      <div class="deal-tab-main__quick-row">
+
+      <!-- Ответственный — avatar circle + name → SearchPicker -->
+      <div class="deal-tab-main__quick-row" @click="ownerPickerOpen = true">
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.owner') }}</span>
-        <div class="deal-tab-main__quick-value deal-tab-main__quick-value--owner">
-          <InlineEditableField
-            :model-value="deal.owner.id"
-            field-key="owner_user_id"
-            field-type="select"
-            :options="usersList as Array<Record<string, unknown>>"
-            option-label="name"
-            option-value="id"
-            :saving="ownerSaving"
-            @save="saveOwner"
-          />
+        <div class="deal-tab-main__quick-value deal-tab-main__quick-value--owner" @click.stop>
+          <div class="deal-tab-main__owner-row" @click="ownerPickerOpen = !ownerPickerOpen">
+            <span class="deal-tab-main__owner-avatar">{{ ownerInitials }}</span>
+            <span class="deal-tab-main__owner-name">{{ deal.owner.name }}</span>
+          </div>
+          <!-- Owner SearchPicker popover -->
+          <div
+            v-if="ownerPickerOpen"
+            v-click-outside="() => { ownerPickerOpen = false }"
+            class="deal-tab-main__owner-picker"
+            @click.stop
+          >
+            <div class="deal-tab-main__owner-picker-search">
+              <i class="pi pi-search deal-tab-main__owner-picker-icon" />
+              <input
+                ref="ownerSearchRef"
+                v-model="ownerQuery"
+                class="deal-tab-main__owner-picker-input"
+                :placeholder="t('common.search_placeholder')"
+              />
+            </div>
+            <div class="deal-tab-main__owner-picker-options">
+              <div
+                v-for="u in filteredUsers"
+                :key="u.id"
+                class="deal-tab-main__owner-option"
+                :class="{ 'deal-tab-main__owner-option--active': u.id === deal.owner.id }"
+                @click="selectOwner(u)"
+              >
+                <i v-if="u.id === deal.owner.id" class="pi pi-check deal-tab-main__owner-check" />
+                <span class="deal-tab-main__owner-option-name">{{ u.name }}</span>
+                <i v-if="ownerSaving && ownerPendingId === u.id" class="pi pi-spin pi-spinner deal-tab-main__owner-saving" />
+              </div>
+              <div v-if="filteredUsers.length === 0" class="deal-tab-main__owner-empty">
+                {{ t('common.no_results') }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Company — read-only link -->
+      <!-- Компания — read-only link -->
       <div class="deal-tab-main__quick-row">
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.company') }}</span>
         <div class="deal-tab-main__quick-value">
           <RouterLink :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
             {{ deal.company.name }}
           </RouterLink>
+        </div>
+      </div>
+
+      <!-- Договор план — DateField -->
+      <div class="deal-tab-main__quick-row">
+        <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.plannedContract') }}</span>
+        <div class="deal-tab-main__quick-value">
+          <DateField
+            :model-value="deal.expected_sign_date"
+            @update:model-value="saveDateField('expected_sign_date', $event)"
+          />
+        </div>
+      </div>
+
+      <!-- Оплата план — DateField -->
+      <div class="deal-tab-main__quick-row">
+        <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.plannedPayment') }}</span>
+        <div class="deal-tab-main__quick-value">
+          <DateField
+            :model-value="deal.expected_payment_date"
+            @update:model-value="saveDateField('expected_payment_date', $event)"
+          />
         </div>
       </div>
     </div>
@@ -42,20 +92,10 @@
       :amount-locked="deal.amount_locked ?? false"
       :perpetual-license="deal.perpetual_license ?? false"
       :perpetual-saving="perpetualSaving"
-      :lock-saving="lockSaving"
+      :lock-saving="false"
       @add-product="emit('openAddProduct')"
-      @update-item="onUpdateProduct"
       @remove-item="onRemoveProduct"
-      @amount-changed="emit('amountChanged', $event)"
       @toggle-perpetual="onTogglePerpetual"
-      @toggle-lock="onToggleLock"
-    />
-
-    <!-- ── Group: Key dates ─────────────────────────────────────────────────── -->
-    <DealDatesGroup
-      ref="datesGroupRef"
-      :deal="deal"
-      @deal-updated="(updates) => emit('dealUpdated', updates)"
     />
 
     <!-- ── Group: Contacts (accent, open by default) ──────────────────────────── -->
@@ -67,7 +107,7 @@
       @remove-contact="onRemoveContact"
     />
 
-    <!-- ── Group: Company (quiet, collapsed by default) ─────────────────────── -->
+    <!-- ── Group: Company (accent, collapsed by default) ─────────────────────── -->
     <DealCompanyGroup
       v-if="companyFull"
       ref="companyGroupRef"
@@ -76,13 +116,14 @@
       @company-updated="onCompanyUpdated"
     />
 
-    <!-- ── Custom fields (scope=deal, quiet, collapsed by default) ────────────── -->
+    <!-- ── Custom fields (scope=deal, accent, collapsed by default) ────────────── -->
     <DealFieldGroup
       v-if="dealCustomDefs.length > 0"
       ref="customGroupRef"
       :title="t('sales.deal.info.groups.customFields')"
       icon="pi-sliders-h"
       group-key="deal-custom"
+      :accent="true"
       :default-collapsed="true"
     >
       <DealFieldRow
@@ -101,17 +142,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
+
+// ── Click-outside directive ───────────────────────────────────────────────────
+
+const vClickOutside = {
+  mounted(el: HTMLElement, binding: { value: () => void }) {
+    el.__clickOutsideHandlerTab = (event: MouseEvent) => {
+      if (!el.contains(event.target as Node)) {
+        binding.value()
+      }
+    }
+    document.addEventListener('click', el.__clickOutsideHandlerTab)
+  },
+  unmounted(el: HTMLElement) {
+    if (el.__clickOutsideHandlerTab) {
+      document.removeEventListener('click', el.__clickOutsideHandlerTab)
+      delete el.__clickOutsideHandlerTab
+    }
+  },
+}
+
+declare global {
+  interface HTMLElement {
+    __clickOutsideHandlerTab?: (event: MouseEvent) => void
+  }
+}
 import DealFieldGroup from './DealFieldGroup.vue'
 import DealFieldRow from './DealFieldRow.vue'
 import DealProductsGroup from './DealProductsGroup.vue'
-import DealDatesGroup from './DealDatesGroup.vue'
 import DealContactsGroup from './DealContactsGroup.vue'
 import DealCompanyGroup from './DealCompanyGroup.vue'
-import InlineEditableField from '@/components/crm/InlineEditableField.vue'
+import DateField from '@/components/crm/DateField.vue'
 import { salesApi } from '@/api/sales'
 import { companiesApi } from '@/api/crm/companies'
 import { useMutation } from '@/composables/async/useMutation'
@@ -140,10 +205,8 @@ const emit = defineEmits<{
   dealUpdated: [updates: Partial<DealDto>]
   openAddProduct: []
   openAddContact: []
-  updateProduct: [id: number, payload: { quantity?: number; unit_price?: number; discount?: number }]
   removeProduct: [id: number]
   removeContact: [contactId: number]
-  amountChanged: [total: number]
 }>()
 
 const { t } = useI18n()
@@ -152,12 +215,10 @@ const toast = useToast()
 // ── Refs for collapse/expand all ───────────────────────────────────────────────
 
 const productsGroupRef = ref<InstanceType<typeof DealProductsGroup> | null>(null)
-const datesGroupRef = ref<InstanceType<typeof DealDatesGroup> | null>(null)
 const contactsGroupRef = ref<InstanceType<typeof DealContactsGroup> | null>(null)
 const companyGroupRef = ref<InstanceType<typeof DealCompanyGroup> | null>(null)
 const customGroupRef = ref<InstanceType<typeof DealFieldGroup> | null>(null)
 
-// Watch signals to collapse/expand all groups
 watch(
   () => props.collapseAllSignal,
   (val, old) => {
@@ -178,19 +239,70 @@ watch(
   },
 )
 
-// ── Owner save ─────────────────────────────────────────────────────────────────
+// ── Owner SearchPicker ─────────────────────────────────────────────────────────
+
+const ownerPickerOpen = ref(false)
+const ownerQuery = ref('')
+const ownerSearchRef = ref<HTMLInputElement | null>(null)
+const ownerPendingId = ref<number | null>(null)
+
+const ownerInitials = computed(() => {
+  const name = props.deal.owner.name ?? ''
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+})
+
+const filteredUsers = computed(() => {
+  const q = ownerQuery.value.toLowerCase()
+  return props.usersList.filter((u) => u.name.toLowerCase().includes(q))
+})
 
 const ownerMutation = useMutation<DealDto>()
 const ownerSaving = computed(() => ownerMutation.isPending.value)
 
-async function saveOwner(_key: string, value: string | number | null) {
-  if (!value) return
+async function selectOwner(u: { id: number; name: string }) {
+  if (u.id === props.deal.owner.id) {
+    ownerPickerOpen.value = false
+    return
+  }
+  ownerPendingId.value = u.id
   try {
     const updated = await ownerMutation.run(() =>
-      salesApi.updateDeal(props.deal.id, { owner_user_id: Number(value) }),
+      salesApi.updateDeal(props.deal.id, { owner_user_id: u.id }),
     )
     emit('dealUpdated', { owner: updated.owner })
+    ownerPickerOpen.value = false
     toast.add({ severity: 'success', summary: t('sales.deal.page.menu.changeOwner'), life: 2000 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    ownerPendingId.value = null
+  }
+}
+
+watch(ownerPickerOpen, (open) => {
+  if (open) {
+    ownerQuery.value = ''
+    nextTick(() => ownerSearchRef.value?.focus())
+  }
+})
+
+// ── Date field save (expected_sign_date / expected_payment_date) ───────────────
+
+const dateMutation = useMutation<DealDto>()
+
+async function saveDateField(field: 'expected_sign_date' | 'expected_payment_date', value: string | null) {
+  try {
+    const updated = await dateMutation.run(() =>
+      salesApi.updateDeal(props.deal.id, { [field]: value }),
+    )
+    emit('dealUpdated', { [field]: updated[field] })
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -202,10 +314,6 @@ async function saveOwner(_key: string, value: string | number | null) {
 }
 
 // ── Products ───────────────────────────────────────────────────────────────────
-
-function onUpdateProduct(id: number, payload: { quantity?: number; unit_price?: number; discount?: number }) {
-  emit('updateProduct', id, payload)
-}
 
 function onRemoveProduct(id: number) {
   emit('removeProduct', id)
@@ -264,37 +372,6 @@ async function onTogglePerpetual(newValue: boolean) {
   }
 }
 
-// ── Budget lock toggle ─────────────────────────────────────────────────────────
-
-const lockMutation = useMutation<DealDto>()
-const lockSaving = computed(() => lockMutation.isPending.value)
-
-async function onToggleLock() {
-  const newLocked = !(props.deal.amount_locked ?? false)
-  try {
-    const updated = await lockMutation.run(() =>
-      salesApi.updateDeal(props.deal.id, { amount_locked: newLocked }),
-    )
-    emit('dealUpdated', {
-      amount_locked: updated.amount_locked,
-      amount: updated.amount,
-    })
-    toast.add({
-      severity: 'success',
-      summary: newLocked
-        ? t('sales.deal.budget.lockedSuccess')
-        : t('sales.deal.budget.unlockedSuccess'),
-      life: 2000,
-    })
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      detail: getApiErrorMessage(err, t('errors.server_error')),
-      life: 4000,
-    })
-  }
-}
 
 // ── Custom fields (scope=deal) ─────────────────────────────────────────────────
 
@@ -340,7 +417,6 @@ onMounted(async () => {
   ])
 })
 
-// Reload company if deal.company.id changes
 watch(() => props.deal.company.id, (newId, oldId) => {
   if (newId !== oldId) {
     void loadCompanyFull()
@@ -367,8 +443,8 @@ watch(() => props.deal.company.id, (newId, oldId) => {
 
 .deal-tab-main__quick-row {
   display: grid;
-  grid-template-columns: 100px 1fr;
-  align-items: start;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
   gap: $space-2;
   padding: $space-1 $space-4;
   min-height: 32px;
@@ -377,7 +453,10 @@ watch(() => props.deal.company.id, (newId, oldId) => {
 .deal-tab-main__quick-label {
   font-size: $font-size-xs;
   color: $surface-500;
-  padding-top: 6px;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
 }
 
 .deal-tab-main__quick-value {
@@ -386,19 +465,179 @@ watch(() => props.deal.company.id, (newId, oldId) => {
   min-width: 0;
   flex-wrap: wrap;
   gap: $space-1;
+  position: relative;
+}
 
-  // Owner field: pencil icon only on hover
-  &--owner {
-    :deep(.inline-edit-icon) {
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
+// ── Owner row ──────────────────────────────────────────────────────────────────
 
-    &:hover :deep(.inline-edit-icon) {
-      opacity: 1;
+.deal-tab-main__quick-value--owner {
+  position: relative;
+}
+
+.deal-tab-main__owner-row {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: $radius-sm;
+  transition: background var(--app-transition-fast);
+
+  &:hover {
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      background: var(--p-surface-700);
     }
   }
 }
+
+.deal-tab-main__owner-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: $radius-circle;
+  background: $primary-900;
+  color: rgba(255, 255, 255, 1);
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.deal-tab-main__owner-name {
+  font-size: $font-size-sm;
+  color: $surface-800;
+
+  .app-dark & {
+    color: var(--p-surface-100);
+  }
+}
+
+// ── Owner picker popover ──────────────────────────────────────────────────────
+
+.deal-tab-main__owner-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  min-width: 220px;
+  background: var(--p-card-background);
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+
+  .app-dark & {
+    border-color: var(--p-surface-700);
+  }
+}
+
+.deal-tab-main__owner-picker-search {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-2 $space-3;
+  border-bottom: 1px solid var(--p-surface-200);
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-700);
+  }
+}
+
+.deal-tab-main__owner-picker-icon {
+  font-size: $font-size-xs;
+  color: $surface-400;
+}
+
+.deal-tab-main__owner-picker-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: $font-size-sm;
+  color: $surface-800;
+
+  .app-dark & {
+    color: var(--p-surface-100);
+  }
+
+  &::placeholder {
+    color: $surface-400;
+  }
+}
+
+.deal-tab-main__owner-picker-options {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: $space-1;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    display: none;
+  }
+}
+
+.deal-tab-main__owner-option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  color: $surface-700;
+  transition: background var(--app-transition-fast);
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+
+  &:hover {
+    background: var(--p-surface-50);
+
+    .app-dark & {
+      background: var(--p-surface-700);
+    }
+  }
+
+  &--active {
+    background: var(--p-primary-50);
+    color: var(--p-primary-color);
+
+    .app-dark & {
+      background: var(--p-primary-900);
+    }
+  }
+}
+
+.deal-tab-main__owner-option-name {
+  flex: 1;
+}
+
+.deal-tab-main__owner-check {
+  font-size: $font-size-xs;
+  color: var(--p-primary-color);
+  flex-shrink: 0;
+}
+
+.deal-tab-main__owner-saving {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  flex-shrink: 0;
+}
+
+.deal-tab-main__owner-empty {
+  padding: $space-3;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $surface-400;
+}
+
+// ── Company link ───────────────────────────────────────────────────────────────
 
 .deal-tab-main__company-link {
   font-size: $font-size-sm;

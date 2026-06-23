@@ -35,10 +35,6 @@
       <div class="deal-field-group__header-actions" @click.stop>
         <slot name="header-action" />
       </div>
-      <i
-        class="pi deal-field-group__chevron"
-        :class="collapsed ? 'pi-chevron-right' : 'pi-chevron-down'"
-      />
     </button>
     <div v-if="!collapsed" class="deal-field-group__body">
       <slot />
@@ -132,12 +128,12 @@ defineExpose({ collapse, expand })
   }
 }
 
-// Accent mode header
+// Accent mode header — bg --c-sub (surface-50 light / surface-100 dark)
 .deal-field-group--accent .deal-field-group__header {
   background: var(--p-surface-50);
 
   .app-dark & {
-    background: var(--p-surface-800);
+    background: var(--p-surface-100);
   }
 }
 
@@ -200,13 +196,6 @@ defineExpose({ collapse, expand })
   display: flex;
   align-items: center;
   gap: $space-1;
-}
-
-.deal-field-group__chevron {
-  font-size: $font-size-xs;
-  color: $surface-400;
-  flex-shrink: 0;
-  transition: transform var(--app-transition-fast);
 }
 
 .deal-field-group__body {

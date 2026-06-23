@@ -498,6 +498,52 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
+### DS-5b. Карточка сделки — точное воспроизведение мокапа (DealPage exact-rebuild)
+
+**Статус:** QA FAIL (2026-06-23) — 5 визуальных отклонений подтверждены computed-styles. Требует fix-итерации frontend-specialist → re-QA.
+**ТЗ:** `design-handoff/redesign/DealCard-spec.md` + `redesign/deal-card.html`.
+**Агенты:** `frontend-specialist` (rebuild) + `qa-tester` (3 functional, dark-mode visual).
+
+**Что сделано (22 файла, uncommitted, ветка main):**
+
+- [x] `DealPage/index.vue` — двухпанельный layout 420px/flex:1, mobile/tablet breakpoints, loading-skeleton, error-state.
+- [x] `DealInfoHeader.vue` — navy шапка #172747, h2 название (line-clamp:2), ← + ⋮ справа, тег стадии кликабельный → MoveDealDialog, category badge (--mg-red-600), DealHealthChip, days-in-stage, теги-строка, прогресс-бар этапов, меню-поповер справа от кнопки (8 пунктов + разделители). Rename + Tags dialogs wired (useMutation).
+- [x] `DealInfoTabs.vue` — PrimeVue Tabs: Основное/Документы/Финансы/Активность; hidden scrollbar на панелях.
+- [x] `DealFieldGroup.vue` — аккордеон без шеврона, accent-mode (bg --c-sub), icon-плитка 24×24, count-badge, totalLabel, collapse/expand/localStorage persist, defineExpose.
+- [x] `DealTabMain.vue` — быстрые поля grid 110px/1fr (Ответственный/Компания/Даты); группы Продукты/Контакты/Компания/Доп.поля.
+- [x] `DealProductsGroup.vue` — сегмент Подписка/Вечная (bg --mg-gray-100), скидка% (inert TODO), product rows, header totalLabel.
+- [x] `DealContactsGroup.vue` — контакты с ⋮ (Редактировать/Отвязать), inline-edit форма (каналы/должность/тумблер Основной), кнопка добавить.
+- [x] `DealCompanyGroup.vue` — Телефон/Email/Сайт/Адрес/Тип (без БИН/Категории).
+- [x] `DealTabDocuments.vue` — список документов, SearchPicker шаблонов, флоу согласования (Согласовать/Отклонить+причина/повторно), факт-дата.
+- [x] `DealTabFinances.vue` — фиксация оплаты (paid_at WIRED), paid_amount/payment_currency (inert stub с TODO), график-заглушка (pi-lock + Skeleton).
+- [x] `DealFeed.vue` — топбар: key-action чипы (scroll-to, не создают события) + pi-search; лента bottom-up (margin-top:auto); date-group коллапс.
+- [x] `DealFeedItem.vue` — системные события (серый текст без карточки), заметки/задачи (карточка, тип-цвет кольцо+рамка).
+- [x] `DealComposer.vue` — Заметка/Задача toggle (navy active), кнопка Добавить по центру, 3 поля задачи в ряд.
+- [x] `OpenTasksList.vue` — Тип/Дата/Ответственный, 3-click delete, expand/collapse, TaskQuickForm mode=complete.
+- [x] `MoveDealDialog.vue` — список стадий с цвет-dot + выбранная pl-check + --mg-primary-100.
+- [x] `DealAddProductDialog.vue` — Период/Валюта/Продукт/Сумма(авто), без Тарифный план/Цена.
+- [x] `DateField.vue` (NEW shared) — авто-формат ДД.ММ.ГГГГ + calendar popover, click-outside, ISO emit.
+- [x] `SearchPicker.vue` (NEW shared) — trigger+chevron, popover+поиск, selected --mg-primary-100+pi-check, hidden scrollbar.
+- [x] `ru.json` / `en.json` — все ключи `sales.deal.*` для rebuild.
+- [x] Функциональный QA: 4 таба, collapse/expand, MoveDealDialog, DealAddProductDialog, AddContactDialog, Composer Note/Task, ⋮ меню (8 пунктов), DateField авто-формат, feed bottom-up, Активность-метрики, 44 API 200 OK, 0 console errors.
+
+**Backend gaps (задокументированы, UI inert с TODO):**
+- **BG-DC-1 (S):** `paid_amount` + `payment_currency` — нет колонок в deals; PATCH /api/deals/{deal} не принимает. Нужна миграция + fillable + UpdateDealRequest + DealResource.
+- **BG-DC-2 (L):** Graf платежей — нет модели DealPayment / таблицы / эндпоинтов. Полная разработка в Finance sprint.
+- **BG-DC-3 (S):** `PATCH /api/deals/{deal}/contacts/{dealContact}` — нет метода update для смены is_primary у существующего контакта.
+- **BG-DC-4 (M):** Скидка% — UI inert; frontend может конвертить % в копейки существующего `discount` поля (рекомендуемый подход A); deal-level percent потребует новой колонки.
+- **BG-DC-5 (M):** `company_id` в UpdateDealRequest отсутствует — Компания иммутабельна после создания (или добавить в UpdateDealRequest с re-resolve department).
+- **BG-DC-6 (M):** Метрики Активности (6 штук) — нет единого endpoint; собирать либо в DealResource show(), либо через DealMetricsController.
+
+**Открытые баги QA (CHANGES_REQUESTED):**
+- **BUG-TITLE-FONT-SIZE:** h2 в DealInfoHeader.vue — 15.75px (via $font-size-lg) vs spec 18px. Fix: `font-size: 18px` literal.
+- **BUG-GROUP-ACCENT-DARK:** DealFieldGroup.vue accent header dark bg = var(--p-surface-800) → белый. Fix: `.app-dark &` → `var(--p-surface-100)`.
+- **BUG-SEGMENTED-CONTAINER-DARK:** DealProductsGroup.vue segmented dark bg = var(--p-surface-700) → светлый. Fix: `.app-dark &` → `var(--p-surface-200)`.
+- **BUG-TABS-DARK-ACTIVE:** DealInfoTabs.vue — active tab цвет/border = --p-primary-400 (#6f87bc) в dark vs spec #172747. Fix: `:deep(.p-tab[aria-selected='true']) { .app-dark & { color: #172747; border-bottom-color: #172747; } }`.
+- **BUG-DISCOUNT-LABEL-ORDER:** DealProductsGroup.vue — DOM порядок [segmented, discount-field, discount-label] рендерит «0 % Скидка». Fix: переставить discount-label перед discount-field.
+
+---
+
 ### DS-6. Редизайн воронки (SalesFunnel 2.0)
 
 **Статус:** DONE (2026-06-22). backend-specialist→frontend-specialist→qa-tester PASS. Uncommitted, ветка feat/amo-native-fields. PM APPROVE.

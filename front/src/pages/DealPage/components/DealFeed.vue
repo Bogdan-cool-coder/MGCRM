@@ -1,7 +1,21 @@
 <template>
   <div class="deal-feed">
-    <!-- ─── Top bar: search icon ───────────────────────────────────────────────── -->
+    <!-- ─── Top bar: key-action chips (LEFT) + pi-search (RIGHT) ────────────── -->
     <div class="deal-feed__topbar">
+      <!-- Key action pill chips — spec §7.1 (scroll-to only, do NOT create events) -->
+      <div v-if="visibleChips.length > 0" class="deal-feed__topbar-chips">
+        <button
+          v-for="chip in visibleChips"
+          :key="chip.type"
+          type="button"
+          v-tooltip.bottom="chip.tooltip"
+          class="deal-feed__topbar-chip"
+          @click="scrollToFeedItem(chip.type)"
+        >
+          <i :class="['pi', chip.icon]" class="deal-feed__topbar-chip-icon" />
+          <span class="deal-feed__topbar-chip-label">{{ chip.label }}</span>
+        </button>
+      </div>
       <span class="deal-feed__topbar-spacer" />
       <Button
         icon="pi pi-search"
@@ -19,9 +33,9 @@
       />
     </div>
 
-    <!-- ─── Feed content (scrolls bottom-up) ─────────────────────────────────── -->
+    <!-- ─── Feed content (scrolls bottom-up via margin-top:auto) ────────────── -->
     <div ref="scrollEl" class="deal-feed__content">
-      <!-- Inner wrapper reversed so oldest is at top, newest near composer -->
+      <!-- Inner wrapper: margin-top:auto pushes content to bottom spec §11 -->
       <div class="deal-feed__inner">
         <!-- Loading skeleton -->
         <div v-if="feed.loading.value && feed.groups.value.length === 0" class="deal-feed__skeleton">
@@ -70,7 +84,7 @@
             :key="group.date"
             class="deal-feed__group"
           >
-            <!-- Date header -->
+            <!-- Date header — click collapses/expands; NO chevron icon per spec §7.2 -->
             <button
               type="button"
               class="deal-feed__date-header"
@@ -79,10 +93,6 @@
               <span class="deal-feed__date-line" />
               <span class="deal-feed__date-label">{{ formatGroupDate(group.date) }}</span>
               <span class="deal-feed__date-line" />
-              <i
-                class="pi deal-feed__date-toggle"
-                :class="group.collapsed ? 'pi-chevron-down' : 'pi-chevron-up'"
-              />
             </button>
 
             <!-- Items -->
@@ -109,22 +119,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
-import type { KeyActionType } from '@/entities/sales'
+import { ref, computed, nextTick } from 'vue'
+import type { KeyActionType, DealKeyAction } from '@/entities/sales'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
+import { Tooltip } from 'primevue'
 import DealFeedItem from './DealFeedItem.vue'
 import FeedSearchOverlay from './FeedSearchOverlay.vue'
 import type { useDealFeed, FeedItem } from '../composables/useDealFeed'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
+
+const vTooltip = Tooltip
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
 const props = defineProps<{
   dealId: number
   feed: ReturnType<typeof useDealFeed>
+  /** Key actions from deal DTO for topbar chips */
+  keyActions?: DealKeyAction[]
 }>()
 
 const emit = defineEmits<{
@@ -142,7 +157,80 @@ const searchOverlayOpen = ref(false)
 const scrollEl = ref<HTMLElement | null>(null)
 const highlightedItemId = ref<string | null>(null)
 
-// ─── Auto-scroll to bottom whenever groups change (new events) ────────────────
+// ─── Topbar key-action chips (spec §7.1) ─────────────────────────────────────
+// Chips scroll-to feed item with 2s highlight; they do NOT create events.
+
+interface ChipConfig {
+  type: KeyActionType
+  icon: string
+  label: string
+  tooltip: string
+}
+
+function formatChipDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+const visibleChips = computed((): ChipConfig[] => {
+  const actions = props.keyActions ?? []
+  const chips: ChipConfig[] = []
+
+  for (const action of actions) {
+    if (!action.date) continue
+
+    const dateStr = formatChipDate(action.date)
+
+    switch (action.type) {
+      case 'last_presentation':
+        chips.push({
+          type: action.type,
+          icon: 'pi-desktop',
+          label: `${t('sales.deal.keyActions.presentation')}: ${dateStr}`,
+          tooltip: t('sales.deal.keyActions.lastPresentationTooltip', { date: dateStr }),
+        })
+        break
+      case 'kp_sent':
+        chips.push({
+          type: action.type,
+          icon: 'pi-file-check',
+          label: `${t('sales.deal.keyActions.kp')}: ${dateStr}`,
+          tooltip: t('sales.deal.keyActions.kpSentTooltip', { date: dateStr }),
+        })
+        break
+      case 'contract_sent':
+        chips.push({
+          type: action.type,
+          icon: 'pi-file-edit',
+          label: `${t('sales.deal.keyActions.contract')}: ${dateStr}`,
+          tooltip: t('sales.deal.keyActions.contractSentTooltip', { date: dateStr }),
+        })
+        break
+      case 'last_touch':
+        chips.push({
+          type: action.type,
+          icon: 'pi-phone',
+          label: `${t('sales.deal.keyActions.touch')}: ${dateStr}`,
+          tooltip: t('sales.deal.keyActions.lastTouchTooltip', { date: dateStr }),
+        })
+        break
+      case 'last_event':
+        chips.push({
+          type: action.type,
+          icon: 'pi-calendar',
+          label: `${t('sales.deal.keyActions.event')}: ${dateStr}`,
+          tooltip: t('sales.deal.keyActions.lastEventTooltip', { date: dateStr }),
+        })
+        break
+      default:
+        break
+    }
+  }
+
+  return chips
+})
+
+// ─── Scroll to bottom (called after new activity created) ────────────────────
 
 function scrollToBottom() {
   nextTick(() => {
@@ -151,24 +239,9 @@ function scrollToBottom() {
   })
 }
 
-watch(
-  () => props.feed.groups.value,
-  () => scrollToBottom(),
-  { deep: false },
-)
-
 /**
  * Scroll the feed to the most-recent item that matches the given key-action type.
- *
- * Mapping:
- *   last_presentation → activity kind === 'presentation' (completed)
- *   max_stage         → first stage_change item (highest sort_order is best effort)
- *   kp_sent / contract_sent → first field_change or stage_change (fallback: bottom)
- *   last_touch        → activity kind in ['call', 'follow_up'] (completed)
- *   last_event        → activity kind in ['call', 'follow_up', 'meeting', 'presentation'] (completed)
- *
- * Strategy: walk all groups newest-first and find the first matching item.
- * Then scroll to it via data-feed-id attribute and flash the highlight class.
+ * Highlights with border+ring for ~2s per spec §7.1.
  */
 function scrollToFeedItem(actionType: KeyActionType) {
   const el = scrollEl.value
@@ -177,7 +250,6 @@ function scrollToFeedItem(actionType: KeyActionType) {
   // Sort groups newest-first for look-up
   const allGroups = [...props.feed.groups.value].reverse()
 
-  // Predicate for each action type
   type FeedItemPredicate = (item: FeedItem) => boolean
   const predicates: Record<KeyActionType, FeedItemPredicate> = {
     last_presentation: (item) =>
@@ -211,30 +283,31 @@ function scrollToFeedItem(actionType: KeyActionType) {
     }
   }
 
-  // Highlight + scroll
   if (targetId) {
     highlightedItemId.value = null
     nextTick(() => {
-      const target = el.querySelector(`[data-feed-id="${targetId}"]`) as HTMLElement | null
+      // spec §7.2/§11: scroll target is identified by data-ka="<type>" attribute.
+      // querySelectorAll returns DOM order (oldest→newest); take the last match = most recent.
+      const allMatches = el.querySelectorAll(`[data-ka="${actionType}"]`)
+      const target = allMatches.length > 0
+        ? (allMatches[allMatches.length - 1] as HTMLElement)
+        : null
       if (target) {
         target.scrollIntoView({ behavior: 'smooth', block: 'center' })
         highlightedItemId.value = targetId
-        // Clear highlight after animation (1.6s + 200ms buffer)
         setTimeout(() => {
           if (highlightedItemId.value === targetId) highlightedItemId.value = null
-        }, 1800)
+        }, 2000)
       } else {
-        // Item not found (maybe in collapsed group or not loaded) — scroll to bottom
         el.scrollTop = el.scrollHeight
       }
     })
   } else {
-    // No matching item — scroll to bottom where newest events are
     el.scrollTop = el.scrollHeight
   }
 }
 
-// Expose for parent to trigger (e.g. after initial load)
+// Expose for parent
 defineExpose({ scrollToBottom, scrollToFeedItem })
 
 // ─── Search / filter handlers ─────────────────────────────────────────────────
@@ -293,12 +366,12 @@ async function onPin(id: number, isPinned: boolean) {
   overflow: hidden;
 }
 
-// ─── Top bar ────────────────────────────────────────────────────────────────
+// ─── Top bar (spec §7.1) ─────────────────────────────────────────────────────
 
 .deal-feed__topbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  gap: $space-2;
   padding: $space-2 $space-3;
   border-bottom: 1px solid var(--p-surface-200);
   background: var(--p-card-background);
@@ -308,6 +381,60 @@ async function onPin(id: number, isPinned: boolean) {
   .app-dark & {
     border-bottom-color: var(--p-surface-700);
   }
+}
+
+// Key-action chips (neutral, scroll-to only)
+.deal-feed__topbar-chips {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.deal-feed__topbar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: $radius-pill;
+  background: var(--p-surface-100);
+  border: 1px solid var(--p-surface-200);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  color: $surface-600;
+  white-space: nowrap;
+  font-size: $font-size-xs;
+
+  .app-dark & {
+    background: var(--p-surface-700);
+    border-color: var(--p-surface-600);
+    color: var(--p-surface-300);
+  }
+
+  &:hover {
+    background: var(--p-surface-200);
+    border-color: var(--p-surface-300);
+
+    .app-dark & {
+      background: var(--p-surface-600);
+    }
+  }
+}
+
+.deal-feed__topbar-chip-icon {
+  font-size: $font-size-3xs;
+  color: $surface-400;
+  flex-shrink: 0;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.deal-feed__topbar-chip-label {
+  font-weight: $font-weight-medium;
+  line-height: 1;
 }
 
 .deal-feed__topbar-spacer {
@@ -321,17 +448,27 @@ async function onPin(id: number, isPinned: boolean) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+
+  // Hidden scrollbar — spec §0
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 }
 
-// Inner wrapper: fills from top, items flow naturally top-down
-// Auto-scroll keeps newest at bottom near composer
+// Inner wrapper: margin-top:auto pushes content to bottom spec §11
+// (NOT justify-content:flex-end — that breaks margin-top:auto behavior)
 .deal-feed__inner {
   display: flex;
   flex-direction: column;
   gap: $space-2;
   padding: $space-4;
   min-height: 100%;
-  justify-content: flex-end; // push content to bottom when list is short
+  margin-top: auto; // spec §11: снизу вверх
 }
 
 // ─── Loading skeleton ────────────────────────────────────────────────────────
@@ -356,7 +493,7 @@ async function onPin(id: number, isPinned: boolean) {
 }
 
 .deal-feed__empty-icon {
-  font-size: $font-size-icon-2xl; // 3rem
+  font-size: $font-size-icon-2xl;
   color: $surface-300;
 }
 
@@ -392,6 +529,7 @@ async function onPin(id: number, isPinned: boolean) {
   gap: $space-3;
 }
 
+// Date divider — NO chevron (spec §7.2: «без иконки»)
 .deal-feed__date-header {
   display: flex;
   align-items: center;
@@ -425,12 +563,6 @@ async function onPin(id: number, isPinned: boolean) {
   .app-dark & {
     color: var(--p-surface-500);
   }
-}
-
-.deal-feed__date-toggle {
-  font-size: $font-size-xs;
-  color: $surface-400;
-  flex-shrink: 0;
 }
 
 // ─── List (vertical line) ────────────────────────────────────────────────────

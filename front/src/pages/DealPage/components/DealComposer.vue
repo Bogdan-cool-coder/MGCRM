@@ -1,111 +1,104 @@
 <template>
+  <!--
+    DealComposer — spec §7.4.
+    Layout: flex row — LEFT: two stacked mode btns (108px each: Заметка / Задача, active=navy).
+    RIGHT: bordered content box (min-height:74), «Добавить» vertically centered.
+    Task mode: top row 3 fields (дата+время · ответственный · тип) + colon + textarea below.
+  -->
   <div class="deal-composer">
-    <!-- Type selector dropdown -->
-    <div class="deal-composer__header">
-      <Select
-        v-model="activeTab"
-        :options="composerTypeOptions"
-        option-label="label"
-        option-value="value"
-        class="deal-composer__type-select"
-        size="small"
-      />
+    <!-- LEFT: stacked mode buttons -->
+    <div class="deal-composer__modes">
+      <button
+        type="button"
+        class="deal-composer__mode-btn"
+        :class="{ 'deal-composer__mode-btn--active': activeTab === 'note' }"
+        @click="activeTab = 'note'"
+      >
+        <i class="pi pi-file" />
+        {{ t('sales.deal.composer.note') }}
+      </button>
+      <button
+        type="button"
+        class="deal-composer__mode-btn"
+        :class="{ 'deal-composer__mode-btn--active': activeTab === 'task' }"
+        @click="activeTab = 'task'"
+      >
+        <i class="pi pi-check-square" />
+        {{ t('sales.deal.composer.task') }}
+      </button>
     </div>
 
-    <!-- Form body -->
-    <div class="deal-composer__body">
-      <!-- ─── Note ──────────────────────────────────────────────────────────── -->
+    <!-- RIGHT: content box with border -->
+    <div class="deal-composer__box">
+      <!-- ─── Note mode ───────────────────────────────────────────── -->
       <template v-if="activeTab === 'note'">
         <Textarea
           v-model="noteForm.body"
           :placeholder="t('sales.deal.composer.notePlaceholder')"
-          :rows="3"
           auto-resize
           fluid
           class="deal-composer__textarea"
+          @keydown.ctrl.enter="submitNote"
         />
-        <div class="deal-composer__footer">
-          <Button
-            icon="pi pi-send"
-            :label="t('sales.deal.composer.save')"
-            :loading="saving"
-            @click="submitNote"
-          />
-        </div>
       </template>
 
-      <!-- ─── Task (with subtype selector) ─────────────────────────────────── -->
+      <!-- ─── Task mode ───────────────────────────────────────────── -->
       <template v-else>
-        <div class="row g-2">
-          <!-- Task subtype -->
-          <div class="col-12">
-            <Select
-              v-model="taskForm.subtype"
-              :options="taskSubtypeOptions"
-              option-label="label"
-              option-value="value"
-              :placeholder="t('sales.deal.composer.taskSubtype')"
-              fluid
-              append-to="body"
-            />
-          </div>
-          <div class="col-12">
-            <InputText
-              v-model="taskForm.title"
-              :placeholder="t('sales.deal.composer.titlePlaceholder')"
-              :invalid="!!errors.title"
-              fluid
-            />
-            <small v-if="errors.title" class="deal-composer__error">{{ errors.title }}</small>
-          </div>
-          <div class="col-6">
-            <DatePicker
-              v-model="taskForm.dueAt"
-              show-time
-              show-icon
-              fluid
-              :placeholder="t('common.date')"
-            />
-          </div>
-          <div class="col-6">
-            <Select
-              v-model="taskForm.responsibleId"
-              :options="usersList"
-              option-label="name"
-              option-value="id"
-              :placeholder="t('activity.fields.responsible')"
-              show-clear
-              fluid
-              append-to="body"
-            />
-          </div>
-          <div class="col-12">
-            <Textarea
-              v-model="taskForm.body"
-              :placeholder="t('sales.deal.composer.notePlaceholder')"
-              :rows="2"
-              fluid
-            />
-          </div>
-          <div class="col-12">
-            <SelectButton
-              v-model="taskForm.priority"
-              :options="priorityOptions"
-              option-label="label"
-              option-value="value"
-              size="small"
-            />
-          </div>
-        </div>
-        <div class="deal-composer__footer">
-          <Button
-            icon="pi pi-send"
-            :label="t('sales.deal.composer.save')"
-            :loading="saving"
-            @click="submitTask"
+        <!-- Top row: дата+время · ответственный · тип задачи -->
+        <div class="deal-composer__task-row">
+          <DatePicker
+            v-model="taskForm.dueAt"
+            show-time
+            show-icon
+            :placeholder="t('common.date')"
+            class="deal-composer__task-field"
+            append-to="body"
+          />
+          <Select
+            v-model="taskForm.responsibleId"
+            :options="usersList"
+            option-label="name"
+            option-value="id"
+            :placeholder="t('activity.fields.responsible')"
+            show-clear
+            class="deal-composer__task-field"
+            append-to="body"
+          />
+          <Select
+            v-model="taskForm.subtype"
+            :options="taskSubtypeOptions"
+            option-label="label"
+            option-value="value"
+            :placeholder="t('sales.deal.composer.taskSubtype')"
+            class="deal-composer__task-field"
+            append-to="body"
           />
         </div>
+        <!-- Colon + textarea -->
+        <div class="deal-composer__task-body">
+          <span class="deal-composer__colon">:</span>
+          <Textarea
+            v-model="taskForm.title"
+            :placeholder="t('sales.deal.composer.titlePlaceholder')"
+            :invalid="!!errors.title"
+            auto-resize
+            fluid
+            class="deal-composer__textarea"
+            @keydown.ctrl.enter="submitTask"
+          />
+        </div>
+        <small v-if="errors.title" class="deal-composer__error">{{ errors.title }}</small>
       </template>
+
+      <!-- «Добавить» — vertically centered (Y midpoint between two mode buttons) -->
+      <div class="deal-composer__add-wrap">
+        <Button
+          :label="t('sales.deal.composer.save')"
+          :loading="saving"
+          size="small"
+          @click="activeTab === 'note' ? submitNote() : submitTask()"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -115,11 +108,9 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
 import Select from 'primevue/select'
-import SelectButton from 'primevue/selectbutton'
 import { activityApi } from '@/api/activity'
 import { useMutation } from '@/composables/async/useMutation'
 import type { ActivityDto, ActivityKind, ActivityPriority, CreateActivityPayload } from '@/entities/activity'
@@ -127,9 +118,6 @@ import type { ActivityDto, ActivityKind, ActivityPriority, CreateActivityPayload
 // ─── Task subtype type ────────────────────────────────────────────────────────
 
 type TaskSubtype = 'task' | 'call' | 'meeting' | 'follow_up'
-
-// ─── Composer top-level tab (only note / task) ───────────────────────────────
-
 type ComposerTab = 'note' | 'task'
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
@@ -151,7 +139,6 @@ const toast = useToast()
 const mutation = useMutation<ActivityDto>()
 const saving = computed(() => mutation.isPending.value)
 
-/** Map any incoming ActivityKind to the two composer tabs */
 function kindToTab(kind: ActivityKind | undefined): ComposerTab {
   if (!kind || kind === 'note') return 'note'
   return 'task'
@@ -163,7 +150,6 @@ watch(
   () => props.initialTab,
   (kind) => {
     activeTab.value = kindToTab(kind)
-    // When switching from outside with a specific subtype, mirror it
     if (kind && kind !== 'note') {
       const subtypes: TaskSubtype[] = ['task', 'call', 'meeting', 'follow_up']
       if (subtypes.includes(kind as TaskSubtype)) {
@@ -175,13 +161,6 @@ watch(
 
 const errors = ref<{ title?: string }>({})
 
-// ─── Type dropdown options (only Note + Task) ─────────────────────────────────
-
-const composerTypeOptions = computed(() => [
-  { value: 'note' as ComposerTab, label: t('sales.deal.composer.note') },
-  { value: 'task' as ComposerTab, label: t('sales.deal.composer.task') },
-])
-
 // ─── Task subtype options ─────────────────────────────────────────────────────
 
 const taskSubtypeOptions = computed(() => [
@@ -191,26 +170,14 @@ const taskSubtypeOptions = computed(() => [
   { value: 'follow_up' as TaskSubtype, label: t('sales.deal.composer.subtypes.follow_up') },
 ])
 
-// ─── Priority options ─────────────────────────────────────────────────────────
-
-const priorityOptions = computed(() => [
-  { value: 'low' as ActivityPriority, label: t('activity.priorities.low') },
-  { value: 'normal' as ActivityPriority, label: t('activity.priorities.normal') },
-  { value: 'high' as ActivityPriority, label: t('activity.priorities.high') },
-])
-
 // ─── Form state ───────────────────────────────────────────────────────────────
 
-const noteForm = ref({
-  body: '',
-})
+const noteForm = ref({ body: '' })
 
 const taskForm = ref({
   title: '',
-  body: '',
   dueAt: null as Date | null,
   responsibleId: null as number | null,
-  priority: 'normal' as ActivityPriority,
   subtype: 'task' as TaskSubtype,
 })
 
@@ -221,11 +188,9 @@ function resetNote() {
 function resetTask() {
   taskForm.value = {
     title: '',
-    body: '',
     dueAt: null,
     responsibleId: null,
-    priority: 'normal',
-    subtype: taskForm.value.subtype, // preserve subtype between submissions
+    subtype: taskForm.value.subtype,
   }
 }
 
@@ -273,10 +238,10 @@ async function submitTask() {
     const payload: CreateActivityPayload = {
       kind: taskForm.value.subtype,
       title: taskForm.value.title.trim(),
-      body: taskForm.value.body || null,
+      body: null,
       due_at: taskForm.value.dueAt ? taskForm.value.dueAt.toISOString() : null,
       responsible_id: taskForm.value.responsibleId,
-      priority: taskForm.value.priority,
+      priority: 'normal' as ActivityPriority,
       target_type: 'deal',
       target_id: props.dealId,
     }
@@ -303,7 +268,12 @@ defineExpose({ setTab })
 </script>
 
 <style lang="scss" scoped>
+// spec §7.4: border-top; padding:12px 16px; background:--c-card; display:flex; gap:10; align-items:center
 .deal-composer {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: $space-3 $space-4;
   background: var(--p-card-background);
   border-top: 1px solid var(--p-surface-200);
   flex-shrink: 0;
@@ -313,57 +283,166 @@ defineExpose({ setTab })
   }
 }
 
-.deal-composer__header {
-  display: flex;
-  align-items: center;
-  padding: $space-2 $space-4 0;
-  border-bottom: 1px solid var(--p-surface-100);
+// ─── LEFT: two stacked mode buttons ──────────────────────────────────────────
+// spec §7.4: «Заметка / Задача, active — заливка --mg-primary-900, белая»
 
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
-}
-
-.deal-composer__type-select {
-  :deep(.p-select) {
-    border: none;
-    background: transparent;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $surface-700;
-    padding: 0;
-    box-shadow: none;
-
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
-  }
-}
-
-.deal-composer__body {
-  padding: $space-3 $space-4;
+.deal-composer__modes {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.deal-composer__mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  width: 108px;
+  padding: $space-2 $space-2;
+  border-radius: $radius-md;
+  border: 1px solid var(--p-surface-200);
+  background: var(--p-surface-50);
+  color: $surface-600;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: background var(--app-transition-fast), color var(--app-transition-fast), border-color var(--app-transition-fast);
+  white-space: nowrap;
+
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-color: var(--p-surface-700);
+    color: var(--p-surface-300);
+  }
+
+  &:hover:not(.deal-composer__mode-btn--active) {
+    background: var(--p-surface-100);
+    border-color: var(--p-surface-300);
+
+    .app-dark & {
+      background: var(--p-surface-200);
+      border-color: var(--p-surface-600);
+    }
+  }
+
+  // Active state: navy fill, white text — dedicated BEM modifier (no compound &.active)
+  &--active {
+    background: $primary-900;
+    border-color: $primary-900;
+    color: $sidebar-text-active;
+
+    .app-dark & {
+      background: $primary-900;
+      border-color: $primary-900;
+      color: $sidebar-text-active;
+    }
+  }
+
+  i {
+    font-size: $font-size-xs;
+  }
+}
+
+// ─── RIGHT: bordered content box ──────────────────────────────────────────────
+// spec §7.4: «поле в рамке (min-height 74)»
+
+.deal-composer__box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  padding: $space-2 $space-3;
+  min-height: 74px;
+  position: relative;
+
+  .app-dark & {
+    border-color: var(--p-surface-700);
+  }
+}
+
+// Task top row: three fields in one flex row
+.deal-composer__task-row {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.deal-composer__task-field {
+  flex: 1;
+  min-width: 0;
+
+  // Make PrimeVue DatePicker/Select compact inside this row
+  :deep(.p-datepicker) {
+    width: 100%;
+  }
+
+  :deep(.p-select) {
+    width: 100%;
+  }
+}
+
+// «:» + textarea row (task body)
+.deal-composer__task-body {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+}
+
+.deal-composer__colon {
+  font-size: $font-size-sm;
+  color: $surface-500;
+  padding-top: 2px;
+  flex-shrink: 0;
 }
 
 .deal-composer__textarea {
-  width: 100%;
-  resize: vertical;
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  font-size: $font-size-sm;
+  color: $surface-800;
+  font-family: inherit;
+  line-height: $line-height-normal;
+
+  // Override PrimeVue Textarea styling
+  :deep(.p-textarea) {
+    border: none;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
+
+  .app-dark & {
+    color: var(--p-text-color);
+  }
 }
 
-.deal-composer__footer {
+// «Добавить» — vertically centered (aligned to Y midpoint between the two mode buttons)
+// spec §7.4: «кнопка «Добавить» по центру по вертикали»
+.deal-composer__add-wrap {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  gap: $space-2;
-  margin-top: $space-1;
+  align-items: flex-end;
+  flex: 1;
+  margin-top: auto;
 }
 
 .deal-composer__error {
   color: var(--p-red-500);
   font-size: $font-size-xs;
   display: block;
-  margin-top: $space-1;
 }
 </style>

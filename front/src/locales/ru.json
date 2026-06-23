@@ -412,7 +412,10 @@
     "copied": "Скопировано",
     "copy": "Копировать",
     "select": "Выберите...",
-    "createdAt": "Создана"
+    "createdAt": "Создана",
+    "add": "Добавить",
+    "no_results": "Нет результатов",
+    "search_placeholder": "Начните вводить…"
   },
   "contacts": {
     "page": {
@@ -1462,7 +1465,11 @@
               "plan": "Тарифный план",
               "quantity": "Количество",
               "unitPrice": "Цена/ед. (снимок)",
-              "unitPriceOverrideHint": "Цена изменена вручную"
+              "unitPriceOverrideHint": "Цена изменена вручную",
+              "period": "Период",
+              "currency": "Валюта",
+              "sum": "Сумма (авто)",
+              "productPlaceholder": "Начните вводить название продукта…"
             },
             "preview": "Итого: {amount}",
             "snapshotHint": "Снимок цены из каталога на момент добавления",
@@ -1543,7 +1550,8 @@
           "documents": "Документы",
           "finances": "Финансы",
           "stats": "Статистика",
-          "log": "Лог"
+          "log": "Лог",
+          "activity": "Активность"
         },
         "fields": {
           "owner": "Ответственный",
@@ -1567,11 +1575,13 @@
           "empty": "Нет позиций",
           "add": "+ Добавить",
           "total": "Итого",
-          "discount": "Скидка"
+          "discount": "Скидка",
+          "discountLabel": "Скидка"
         },
         "contacts": {
           "addContact": "+ Добавить контакт",
-          "addChannel": "+ Добавить канал"
+          "addChannel": "+ Добавить канал",
+          "unlink": "Отвязать"
         }
       },
       "addChannel": {
@@ -1586,17 +1596,25 @@
           "phone": "+7XXXXXXXXXX"
         },
         "submit": "Добавить",
-        "success": "Канал добавлен"
+        "success": "Канал добавлен",
+        "valuePlaceholder": "Введите значение…"
       },
       "documents": {
         "generate": "Сформировать PDF",
         "downloadDocx": "Скачать DOCX",
         "templateLabel": "Шаблон",
+        "templatePlaceholder": "Выберите шаблон…",
         "contractFields": "Поля договора",
         "approval": "Согласование",
+        "approveBtn": "Согласовать",
+        "rejectBtn": "Отклонить",
+        "rejectReason": "Причина отклонения",
+        "rejectReasonPlaceholder": "Укажите причину…",
+        "resubmit": "Отправить на согласование повторно",
         "finalDocs": "Итоговые документы",
         "uploadScan": "Загрузить подписанный скан",
         "signedAt": "Фактическая дата подписания",
+        "contractFactDate": "Договор — факт (дата подписания)",
         "empty": {
           "title": "Нет документов",
           "subtitle": "Сформируйте первый договор по шаблону"
@@ -1605,7 +1623,14 @@
       "finances": {
         "stub": "Финансовые условия",
         "stubHint": "Здесь будут условия оплаты из договора: сроки, периоды, суммы, актирование.",
-        "waitingForDoc": "Ожидает договора"
+        "waitingForDoc": "Ожидает договора",
+        "paymentFixation": "Фиксация оплаты",
+        "paidAt": "Оплата — факт (дата)",
+        "paymentAmount": "Сумма оплаты",
+        "amountPlaceholder": "0",
+        "fixPayment": "Зафиксировать оплату",
+        "missingNote": "Поля суммы и валюты появятся после финансового спринта",
+        "scheduleTitle": "График платежей"
       },
       "stats": {
         "daysInDeal": "Дней в сделке",
@@ -1699,7 +1724,12 @@
         "markKpTooltip": "Отметить КП как отправленное",
         "markContractTooltip": "Отметить договор как отправленный",
         "kpMarked": "КП отмечено как отправленное",
-        "contractMarked": "Договор отмечен как отправленный"
+        "contractMarked": "Договор отмечен как отправленный",
+        "presentation": "Презентация",
+        "kp": "КП",
+        "contract": "Договор",
+        "touch": "Касание",
+        "event": "Событие"
       },
       "fields": {
         "perpetualLicense": "Вечная лицензия"
@@ -1729,6 +1759,10 @@
         "paymentFact": "Оплата — факт",
         "overdueBy": "Просрочено на {n} дн.",
         "factDone": "Выполнено"
+      },
+      "license": {
+        "subscription": "Подписка",
+        "perpetual": "Вечная"
       }
     },
     "move": {
@@ -3349,6 +3383,11 @@
           "dealPlaceholder": "Поиск открытых сделок...",
           "success": "Контакт добавлен в сделку"
         }
+      },
+      "fields": {
+        "name": "Имя",
+        "position": "Должность",
+        "channels": "Каналы связи"
       }
     },
     "log": {

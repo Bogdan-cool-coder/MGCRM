@@ -1,10 +1,15 @@
 <template>
   <!--
-    OpenTasksList — compact list of open (non-closed) tasks shown above the composer.
-    DealCard §11: type chip + date + responsible in meta row (NOT grey icon left of title).
-    Click on card = expand; collapse only via clickOutside; 3-step delete.
+    OpenTasksList — spec DealCard §7.3 + §11.
+    - Row order: Тип chip · Дата · Ответственный (all clickable).
+    - ONE click on card = expand; collapse ONLY via click-outside.
+    - Double-click title = edit (blur = exit edit).
+    - «Выполнить» always visible top-right; expand → required result textarea; 2nd click → complete.
+    - ✕ = 3-click delete (reddens, shows remaining).
+    - Default OPEN (headerCollapsed=false).
   -->
   <div v-if="tasks.length > 0" class="open-tasks" v-click-outside="collapseAll">
+    <!-- Header: «Открытые задачи: N» — click collapses the list -->
     <button
       type="button"
       class="open-tasks__header"
@@ -14,7 +19,10 @@
       <span class="open-tasks__header-label">
         {{ t('sales.deal.feed.openTasks.title', { n: tasks.length }) }}
       </span>
-      <i class="pi open-tasks__header-chevron" :class="headerCollapsed ? 'pi-chevron-down' : 'pi-chevron-up'" />
+      <i
+        class="pi open-tasks__header-chevron"
+        :class="headerCollapsed ? 'pi-chevron-down' : 'pi-chevron-up'"
+      />
     </button>
 
     <div v-if="!headerCollapsed" class="open-tasks__list">
@@ -27,7 +35,7 @@
           'open-tasks__row--expanded': expandedId === task.id,
         }"
       >
-        <!-- Compact row (collapsed state) — click anywhere on card = expand -->
+        <!-- ─── Compact card (collapses only on outside click) ────────────────── -->
         <div
           v-if="expandedId !== task.id"
           class="open-tasks__compact"
@@ -37,60 +45,139 @@
           @keydown.enter="expandTask(task.id)"
           @keydown.space.prevent="expandTask(task.id)"
         >
-          <!-- Title (main content) -->
-          <span class="open-tasks__title text-truncate">{{ task.title }}</span>
-
-          <!-- Meta row: type chip · due date · responsible (DealCard §11 order) -->
-          <div class="open-tasks__meta">
-            <!-- Type chip with kind color -->
-            <span
-              class="open-tasks__type-chip"
-              :style="typeChipStyle(task.kind)"
-            >
-              <i :class="['pi', resolvedKindIcon(task.kind)]" />
-              {{ kindLabel(task.kind) }}
-            </span>
-            <!-- Due date (clickable — calendar) -->
-            <span
-              v-if="task.due_at"
-              class="open-tasks__due"
-              :class="{ 'open-tasks__due--overdue': task.is_overdue }"
-            >
-              <i class="pi pi-clock open-tasks__due-icon" />
-              {{ formatDueDate(task.due_at) }}
-            </span>
-            <!-- Responsible -->
-            <span v-if="task.responsible" class="open-tasks__responsible">
-              {{ task.responsible.full_name }}
-            </span>
+          <!-- Title — dbl-click = edit -->
+          <div class="open-tasks__title-row" @click.stop>
+            <textarea
+              ref="titleInputRefs"
+              class="open-tasks__title"
+              :class="{ 'open-tasks__title--editing': editingTitleId === task.id }"
+              :readonly="editingTitleId !== task.id"
+              :value="taskTitleDraft[task.id] ?? task.title"
+              rows="1"
+              @dblclick.stop="startEditTitle(task)"
+              @blur="saveEditTitle(task)"
+              @change="(e) => onTitleChange(task.id, e)"
+              @keydown.enter.prevent="saveEditTitle(task)"
+              @keydown.escape="cancelEditTitle(task.id)"
+              @click.stop="(e) => { if (editingTitleId !== task.id) return; e.stopPropagation(); }"
+            />
           </div>
 
-          <!-- Right corner: Edit + Complete + 3-step Delete buttons (always visible) -->
+          <!-- Meta row: Тип chip · Дата · Ответственный — all clickable (spec §11) -->
+          <div class="open-tasks__meta" @click.stop>
+            <!-- Type chip — click opens type picker popover -->
+            <div class="open-tasks__picker-wrap">
+              <button
+                type="button"
+                class="open-tasks__type-chip"
+                :style="typeChipStyle(task.kind)"
+                @click.stop="toggleTypePicker(task.id)"
+              >
+                <i :class="['pi', resolvedKindIcon(task.kind)]" />
+                {{ kindLabel(task.kind) }}
+              </button>
+              <!-- Type picker popover -->
+              <div
+                v-if="typePickerOpenId === task.id"
+                class="open-tasks__picker-popover"
+                @click.stop
+              >
+                <button
+                  v-for="opt in taskTypeOptions"
+                  :key="opt.value"
+                  type="button"
+                  class="open-tasks__picker-option"
+                  :class="{ 'open-tasks__picker-option--active': task.kind === opt.value }"
+                  @click.stop="patchKind(task, opt.value)"
+                >
+                  <i :class="['pi', opt.icon]" />
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Due date — click opens calendar popover -->
+            <div class="open-tasks__picker-wrap">
+              <button
+                type="button"
+                class="open-tasks__due"
+                :class="{ 'open-tasks__due--overdue': task.is_overdue }"
+                @click.stop="toggleDatePicker(task.id)"
+              >
+                <i class="pi pi-clock open-tasks__meta-icon" />
+                {{ task.due_at ? formatDueDateShort(task.due_at) : t('activity.fields.dueAt') }}
+              </button>
+              <!-- DatePicker inline -->
+              <div
+                v-if="datePickerOpenId === task.id"
+                class="open-tasks__picker-popover open-tasks__picker-popover--date"
+                @click.stop
+              >
+                <DatePicker
+                  :model-value="taskDueDrafts[task.id] ?? (task.due_at ? new Date(task.due_at) : null)"
+                  inline
+                  show-time
+                  @date-select="(d: Date) => patchDueAt(task, d)"
+                />
+              </div>
+            </div>
+
+            <!-- Responsible — click opens user search popover -->
+            <div class="open-tasks__picker-wrap">
+              <button
+                type="button"
+                class="open-tasks__responsible"
+                @click.stop="toggleResponsiblePicker(task.id)"
+              >
+                <i class="pi pi-user open-tasks__meta-icon" />
+                {{ task.responsible?.full_name ?? t('activity.fields.responsible') }}
+              </button>
+              <!-- Responsible picker popover -->
+              <div
+                v-if="responsiblePickerOpenId === task.id"
+                class="open-tasks__picker-popover"
+                @click.stop
+              >
+                <div class="open-tasks__picker-search">
+                  <i class="pi pi-search open-tasks__picker-search-icon" />
+                  <input
+                    v-model="responsibleSearch"
+                    type="text"
+                    class="open-tasks__picker-search-input"
+                    :placeholder="t('common.search')"
+                    @click.stop
+                  />
+                </div>
+                <button
+                  v-for="user in filteredUsers"
+                  :key="user.id"
+                  type="button"
+                  class="open-tasks__picker-option"
+                  :class="{ 'open-tasks__picker-option--active': task.responsible?.id === user.id }"
+                  @click.stop="patchResponsible(task, user)"
+                >
+                  <i v-if="task.responsible?.id === user.id" class="pi pi-check" />
+                  {{ user.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: «Выполнить» (always visible) + 3-step ✕ -->
           <div class="open-tasks__actions" @click.stop>
-            <!-- Edit button (B4) -->
-            <button
-              type="button"
-              class="open-tasks__edit-btn"
-              :title="t('common.edit')"
-              @click="emit('edit', task)"
-            >
-              <i class="pi pi-pencil" />
-            </button>
             <button
               type="button"
               class="open-tasks__complete-btn"
-              :title="t('activity.actions.complete')"
               @click="expandTask(task.id)"
             >
               <i class="pi pi-check" />
               <span class="open-tasks__complete-label">{{ t('activity.actions.complete') }}</span>
             </button>
-            <!-- 3-step delete, spec DealCard §11 -->
             <button
               type="button"
               class="open-tasks__delete-btn"
               :class="{
-                'open-tasks__delete-btn--warn': (deleteClickCounts[task.id] ?? 0) >= 1,
+                'open-tasks__delete-btn--warn': (deleteClickCounts[task.id] ?? 0) === 1,
                 'open-tasks__delete-btn--danger': (deleteClickCounts[task.id] ?? 0) >= 2,
               }"
               :title="deleteTooltip(task.id)"
@@ -101,7 +188,7 @@
           </div>
         </div>
 
-        <!-- Expanded: inline TaskQuickForm (complete mode) -->
+        <!-- ─── Expanded view ────────────────────────────────────────────────── -->
         <Transition name="tqf-slide">
           <TaskQuickForm
             v-if="expandedId === task.id"
@@ -122,11 +209,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
+import DatePicker from 'primevue/datepicker'
 import TaskQuickForm from '@/components/tasks/TaskQuickForm.vue'
-import { kindIcon, kindColor, formatDueDate } from '@/utils/activity'
+import { kindIcon } from '@/utils/activity'
+import { activityApi } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityTargetType } from '@/entities/activity'
 
 // ─── Click-outside directive ─────────────────────────────────────────────────
@@ -154,8 +243,6 @@ declare module 'vue' {
   }
 }
 
-// ─── Extend HTMLElement for handler storage ──────────────────────────────────
-
 declare global {
   interface HTMLElement {
     __clickOutsideHandler?: (event: MouseEvent) => void
@@ -164,16 +251,17 @@ declare global {
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
-defineProps<{
+const props = defineProps<{
   tasks: ActivityDto[]
   targetType: ActivityTargetType
   targetId: number
+  /** Optional user list for responsible picker */
+  usersList?: Array<{ id: number; name: string }>
 }>()
 
 const emit = defineEmits<{
   completed: [activity: ActivityDto]
   deleted: [activityId: number]
-  edit: [activity: ActivityDto]
 }>()
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -182,9 +270,119 @@ const { t } = useI18n()
 const toast = useToast()
 
 const expandedId = ref<number | null>(null)
-const headerCollapsed = ref(false)
+const headerCollapsed = ref(false) // default OPEN per spec
+
 // 3-step delete counter per task id
 const deleteClickCounts = reactive<Record<number, number>>({})
+
+// ─── Title inline edit state ──────────────────────────────────────────────────
+
+const editingTitleId = ref<number | null>(null)
+const taskTitleDraft = reactive<Record<number, string>>({})
+
+function startEditTitle(task: ActivityDto) {
+  editingTitleId.value = task.id
+  if (taskTitleDraft[task.id] === undefined) {
+    taskTitleDraft[task.id] = task.title
+  }
+}
+
+function onTitleChange(taskId: number, e: Event) {
+  taskTitleDraft[taskId] = (e.target as HTMLTextAreaElement).value
+}
+
+async function saveEditTitle(task: ActivityDto) {
+  if (editingTitleId.value !== task.id) return
+  const draft = taskTitleDraft[task.id] ?? task.title
+  editingTitleId.value = null
+  if (draft.trim() && draft !== task.title) {
+    try {
+      await activityApi.updateActivity(task.id, { title: draft.trim() })
+    } catch {
+      taskTitleDraft[task.id] = task.title
+    }
+  }
+}
+
+function cancelEditTitle(taskId: number) {
+  delete taskTitleDraft[taskId]
+  editingTitleId.value = null
+}
+
+// ─── Type picker ──────────────────────────────────────────────────────────────
+
+const typePickerOpenId = ref<number | null>(null)
+
+const taskTypeOptions = computed(() => [
+  { value: 'task' as ActivityKind, label: t('activity.kinds.task'), icon: 'pi-check-square' },
+  { value: 'call' as ActivityKind, label: t('activity.kinds.call'), icon: 'pi-phone' },
+  { value: 'meeting' as ActivityKind, label: t('activity.kinds.meeting'), icon: 'pi-calendar' },
+  { value: 'follow_up' as ActivityKind, label: t('activity.kinds.follow_up'), icon: 'pi-reply' },
+])
+
+function toggleTypePicker(taskId: number) {
+  // Close others first
+  datePickerOpenId.value = null
+  responsiblePickerOpenId.value = null
+  typePickerOpenId.value = typePickerOpenId.value === taskId ? null : taskId
+}
+
+async function patchKind(task: ActivityDto, kind: ActivityKind) {
+  typePickerOpenId.value = null
+  try {
+    await activityApi.updateActivity(task.id, { kind })
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  }
+}
+
+// ─── Date picker ──────────────────────────────────────────────────────────────
+
+const datePickerOpenId = ref<number | null>(null)
+const taskDueDrafts = reactive<Record<number, Date | null>>({})
+
+function toggleDatePicker(taskId: number) {
+  typePickerOpenId.value = null
+  responsiblePickerOpenId.value = null
+  datePickerOpenId.value = datePickerOpenId.value === taskId ? null : taskId
+}
+
+async function patchDueAt(task: ActivityDto, date: Date | null) {
+  datePickerOpenId.value = null
+  try {
+    await activityApi.updateActivity(task.id, { due_at: date ? date.toISOString() : null })
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  }
+}
+
+// ─── Responsible picker ───────────────────────────────────────────────────────
+
+const responsiblePickerOpenId = ref<number | null>(null)
+const responsibleSearch = ref('')
+
+const filteredUsers = computed(() => {
+  const list = props.usersList ?? []
+  const q = responsibleSearch.value.toLowerCase()
+  if (!q) return list
+  return list.filter((u) => u.name.toLowerCase().includes(q))
+})
+
+function toggleResponsiblePicker(taskId: number) {
+  typePickerOpenId.value = null
+  datePickerOpenId.value = null
+  responsibleSearch.value = ''
+  responsiblePickerOpenId.value = responsiblePickerOpenId.value === taskId ? null : taskId
+}
+
+async function patchResponsible(task: ActivityDto, user: { id: number; name: string }) {
+  responsiblePickerOpenId.value = null
+  try {
+    await activityApi.updateActivity(task.id, { responsible_id: user.id })
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  }
+}
 
 // ─── Kind helpers ─────────────────────────────────────────────────────────────
 
@@ -205,8 +403,16 @@ function kindLabel(kind: ActivityKind): string {
 }
 
 // Type chip style — background tint of kind color (DealCard §11)
+const KIND_COLORS: Partial<Record<ActivityKind, string>> = {
+  call: '#2A6FDB',
+  meeting: '#1F8A5B',
+  follow_up: '#E8A317',
+  presentation: '#E8A317',
+  task: '#172747',
+}
+
 function typeChipStyle(kind: ActivityKind): Record<string, string> {
-  const color = kindColor(kind)
+  const color = KIND_COLORS[kind]
   if (!color) {
     return {
       background: 'var(--p-surface-100)',
@@ -219,14 +425,26 @@ function typeChipStyle(kind: ActivityKind): Record<string, string> {
   }
 }
 
+function formatDueDateShort(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 // ─── Expand / collapse ────────────────────────────────────────────────────────
 
 function expandTask(id: number) {
+  // Close all pickers
+  typePickerOpenId.value = null
+  datePickerOpenId.value = null
+  responsiblePickerOpenId.value = null
   expandedId.value = id
 }
 
 function collapseAll() {
   expandedId.value = null
+  typePickerOpenId.value = null
+  datePickerOpenId.value = null
+  responsiblePickerOpenId.value = null
 }
 
 // ─── 3-step delete (DealCard §11) ─────────────────────────────────────────────
@@ -242,14 +460,12 @@ function handleDeleteClick(task: ActivityDto) {
   const current = deleteClickCounts[task.id] ?? 0
   if (current < 2) {
     deleteClickCounts[task.id] = current + 1
-    // Reset after 3 seconds if not clicked again
     setTimeout(() => {
       if ((deleteClickCounts[task.id] ?? 0) <= current + 1) {
         deleteClickCounts[task.id] = 0
       }
     }, 3000)
   } else {
-    // 3rd click — confirm delete
     deleteClickCounts[task.id] = 0
     onDelete(task.id)
   }
@@ -274,6 +490,10 @@ function onDelete(id: number) {
   background: var(--p-card-background);
   border-top: 1px solid var(--p-surface-200);
   flex-shrink: 0;
+
+  .app-dark & {
+    border-top-color: var(--p-surface-700);
+  }
 }
 
 // ─── Header ──────────────────────────────────────────────────────────────────
@@ -293,7 +513,7 @@ function onDelete(id: number) {
   text-align: left;
 
   .app-dark & {
-    background: var(--p-surface-100); // dark: #444547 (card bg)
+    background: var(--p-surface-100);
     border-bottom-color: var(--p-surface-700);
   }
 }
@@ -322,7 +542,7 @@ function onDelete(id: number) {
   color: $surface-400;
 }
 
-// ─── List — hidden scrollbar ──────────────────────────────────────────────────
+// ─── List ─────────────────────────────────────────────────────────────────────
 
 .open-tasks__list {
   display: flex;
@@ -343,6 +563,7 @@ function onDelete(id: number) {
 
 .open-tasks__row {
   border-bottom: 1px solid var(--p-surface-100);
+  position: relative;
 
   .app-dark & {
     border-bottom-color: var(--p-surface-700);
@@ -355,12 +576,12 @@ function onDelete(id: number) {
   &--overdue {
     .open-tasks__compact {
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: rgba(239, 68, 68, 0.04); // subtle red tint for overdue
+      background: rgba(239, 68, 68, 0.04);
     }
   }
 }
 
-// ─── Compact row ─────────────────────────────────────────────────────────────
+// ─── Compact card ─────────────────────────────────────────────────────────────
 
 .open-tasks__compact {
   display: flex;
@@ -375,75 +596,240 @@ function onDelete(id: number) {
     background: var(--p-surface-50);
 
     .app-dark & {
-      background: var(--p-surface-100); // dark: subtle hover
+      background: var(--p-surface-100);
     }
   }
 }
 
+// ─── Title row (dbl-click = edit) ────────────────────────────────────────────
+
+.open-tasks__title-row {
+  padding-right: 124px; // reserve for action buttons
+}
+
 .open-tasks__title {
+  display: block;
+  width: 100%;
   font-size: $font-size-sm;
   color: $surface-700;
   font-weight: $font-weight-medium;
-  padding-right: 120px; // reserve space for action buttons
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  padding: 0;
+  resize: none;
+  font-family: inherit;
+  line-height: $line-height-normal;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  min-height: 20px;
+  overflow: hidden;
+  cursor: default;
 
   .app-dark & {
     color: var(--p-surface-200);
   }
+
+  &--editing {
+    border-color: var(--p-primary-color);
+    background: var(--p-surface-0);
+    padding: 0 $space-1;
+    cursor: text;
+
+    .app-dark & {
+      background: var(--p-surface-200);
+    }
+  }
 }
 
-// Meta row: type chip · date · responsible
+// ─── Meta row: type chip · date · responsible ────────────────────────────────
+
 .open-tasks__meta {
   display: flex;
   align-items: center;
   gap: $space-2;
   flex-wrap: wrap;
+  margin-top: 2px;
 }
 
-// Type chip — colored pill (DealCard §11: type shown as chip, not icon left of title)
+// Wrapper for each picker button + popover
+.open-tasks__picker-wrap {
+  position: relative;
+}
+
+// ─── Type chip (clickable, DealCard §11) ──────────────────────────────────────
+
 .open-tasks__type-chip {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  padding: 2px 6px; // compact chip
+  padding: 2px 6px;
   border-radius: $radius-sm;
   font-size: $font-size-2xs;
   font-weight: $font-weight-semibold;
+  cursor: pointer;
+  border: none;
+  transition: opacity var(--app-transition-fast);
   // background and color set via :style (dynamic per kind)
+
+  &:hover {
+    opacity: 0.8;
+  }
 
   i {
     font-size: $font-size-3xs;
   }
 }
 
-.open-tasks__due {
+// ─── Date / Responsible buttons ───────────────────────────────────────────────
+
+.open-tasks__due,
+.open-tasks__responsible {
   font-size: $font-size-xs;
   color: $surface-400;
   display: inline-flex;
   align-items: center;
   gap: 3px;
   white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--app-transition-fast);
 
-  &--overdue {
-    color: var(--p-red-500);
-    font-weight: $font-weight-medium;
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+
+  &:hover {
+    color: $surface-600;
+
+    .app-dark & {
+      color: var(--p-surface-300);
+    }
   }
 }
 
-.open-tasks__due-icon {
+.open-tasks__due--overdue {
+  color: var(--p-red-500);
+  font-weight: $font-weight-medium;
+}
+
+.open-tasks__meta-icon {
   font-size: $font-size-3xs;
 }
 
-.open-tasks__responsible {
-  font-size: $font-size-xs;
-  color: $surface-400;
-  white-space: nowrap;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+// ─── Picker popovers ──────────────────────────────────────────────────────────
+
+.open-tasks__picker-popover {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--p-card-background);
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  box-shadow: $shadow-md;
+  min-width: 160px;
+  padding: $space-1;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-dark & {
+    border-color: var(--p-surface-700);
+  }
+
+  // Date picker variant: wider
+  &--date {
+    min-width: 280px;
+    padding: $space-2;
+  }
 }
 
-// ─── Actions (top-right corner, always visible) ───────────────────────────────
+.open-tasks__picker-search {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 $space-2;
+  border-bottom: 1px solid var(--p-surface-100);
+  margin-bottom: $space-1;
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-700);
+  }
+}
+
+.open-tasks__picker-search-icon {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  flex-shrink: 0;
+}
+
+.open-tasks__picker-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: $font-size-sm;
+  color: $surface-700;
+  font-family: inherit;
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+}
+
+.open-tasks__picker-option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  padding: $space-1 $space-2;
+  border: none;
+  background: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $surface-700;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--app-transition-fast);
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+
+  &:hover {
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      background: var(--p-surface-200);
+    }
+  }
+
+  &--active {
+    background: var(--p-primary-50);
+    color: var(--p-primary-700);
+    font-weight: $font-weight-medium;
+
+    .app-dark & {
+      background: var(--p-surface-200);
+      color: var(--p-primary-300);
+    }
+  }
+
+  i {
+    font-size: $font-size-xs;
+    flex-shrink: 0;
+    width: 14px;
+  }
+}
+
+// ─── Actions (top-right, ALWAYS visible) ─────────────────────────────────────
 
 .open-tasks__actions {
   position: absolute;
@@ -454,42 +840,7 @@ function onDelete(id: number) {
   gap: $space-1;
 }
 
-// ─── Edit button (B4) ────────────────────────────────────────────────────────
-
-.open-tasks__edit-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  width: 20px;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  height: 20px;
-  border: 1px solid var(--p-surface-300);
-  border-radius: $radius-sm;
-  background: transparent;
-  color: $surface-400;
-  font-size: $font-size-3xs;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all var(--app-transition-fast);
-
-  &:hover {
-    border-color: var(--p-primary-color);
-    color: var(--p-primary-color);
-  }
-
-  .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-400);
-
-    &:hover {
-      border-color: var(--p-primary-300);
-      color: var(--p-primary-300);
-    }
-  }
-}
-
-// ─── Complete button ──────────────────────────────────────────────────────────
+// ─── «Выполнить» — always visible (NOT hover-only) per spec §11 ──────────────
 
 .open-tasks__complete-btn {
   display: inline-flex;
@@ -507,17 +858,14 @@ function onDelete(id: number) {
   flex-shrink: 0;
   transition: all var(--app-transition-fast);
 
-  .open-tasks__complete-label {
-    display: none;
-  }
-
   &:hover {
     background: var(--p-green-500);
     color: $sidebar-text-active;
+  }
 
-    .open-tasks__complete-label {
-      display: inline;
-    }
+  .open-tasks__complete-label {
+    // Always show label (not hover-only per spec §11)
+    display: inline;
   }
 
   .pi {
@@ -525,7 +873,7 @@ function onDelete(id: number) {
   }
 }
 
-// ─── 3-step delete button (DealCard §11) ─────────────────────────────────────
+// ─── 3-step delete (small gray ✕) ────────────────────────────────────────────
 
 .open-tasks__delete-btn {
   display: inline-flex;
@@ -550,14 +898,12 @@ function onDelete(id: number) {
   }
 
   &--warn {
-    // 1st click: slightly larger + orange
     transform: scale(1.15);
     border-color: var(--p-orange-400);
     color: var(--p-orange-500);
   }
 
   &--danger {
-    // 2nd click: red — final confirmation
     transform: scale(1.25);
     border-color: var(--p-red-500);
     color: var(--p-red-500);
@@ -571,7 +917,7 @@ function onDelete(id: number) {
   margin: $space-2 $space-4;
 }
 
-// ─── TQF slide transition ─────────────────────────────────────────────────────
+// ─── Slide transition ─────────────────────────────────────────────────────────
 
 .tqf-slide-enter-active,
 .tqf-slide-leave-active {

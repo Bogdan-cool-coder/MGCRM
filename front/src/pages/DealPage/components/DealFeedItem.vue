@@ -10,82 +10,66 @@
     :data-feed-id="item.id"
     :data-feed-type="item.type"
     :data-activity-kind="item.activity?.kind ?? null"
+    :data-ka="itemKeyActionType"
   >
-    <!-- Timeline dot -->
+    <!-- Timeline dot — 22px for system, 26px for activity (spec §7.2) -->
     <div
       class="feed-item__dot"
-      :class="{
-        'feed-item__dot--primary': dotColor === 'primary',
-        'feed-item__dot--green': dotColor === 'green',
-        'feed-item__dot--red': dotColor === 'red',
-        'feed-item__dot--surface': dotColor === 'surface',
-      }"
+      :class="[
+        `feed-item__dot--${dotSize}`,
+        {
+          'feed-item__dot--primary': dotVariant === 'primary',
+          'feed-item__dot--green': dotVariant === 'green',
+          'feed-item__dot--red': dotVariant === 'red',
+          'feed-item__dot--surface': dotVariant === 'surface',
+          'feed-item__dot--kind': !!kindAccentColor,
+        },
+      ]"
+      :style="kindAccentColor ? { '--kind-color': kindAccentColor } : {}"
     >
       <i :class="['pi', itemIcon]" class="feed-item__dot-icon" />
     </div>
 
-    <!-- Content card -->
-    <div class="feed-item__card">
-      <!-- ─── stage_change ─────────────────────────────────────────────────── -->
-      <template v-if="item.type === 'stage_change'">
-        <div class="feed-item__header">
-          <span class="feed-item__event-title">{{ t('sales.deal.feed.events.stageChanged') }}</span>
-          <span class="feed-item__time">{{ formatTime(item.timestamp) }}</span>
-        </div>
-        <div class="feed-item__stage-change">
-          <span class="feed-item__stage-from">{{ item.fromStage?.name ?? '—' }}</span>
-          <i class="pi pi-arrow-right feed-item__stage-arrow" />
-          <span class="feed-item__stage-to">{{ item.toStage?.name ?? '—' }}</span>
-        </div>
-        <div v-if="item.actor" class="feed-item__meta">
-          {{ item.actor.full_name }}
-        </div>
-      </template>
-
-      <!-- ─── deal_created ────────────────────────────────────────────────── -->
-      <template v-else-if="item.type === 'deal_created'">
-        <div class="feed-item__header">
-          <span class="feed-item__event-title">{{ t('sales.deal.feed.events.dealCreated') }}</span>
-          <span class="feed-item__time">{{ formatTime(item.timestamp) }}</span>
-        </div>
-        <div v-if="item.actor" class="feed-item__meta">
-          {{ item.actor.full_name }}
-        </div>
-      </template>
-
-      <!-- ─── field_change ────────────────────────────────────────────────── -->
-      <template v-else-if="item.type === 'field_change'">
-        <div class="feed-item__header">
-          <span class="feed-item__event-title">{{ t('sales.deal.feed.events.fieldsChanged') }}</span>
-          <span class="feed-item__time">{{ formatTime(item.timestamp) }}</span>
-        </div>
-        <div v-if="item.actor" class="feed-item__meta">
-          {{ item.actor.full_name }}
-        </div>
-        <div class="feed-item__field-changes">
-          <div
-            v-for="(change, i) in visibleChanges"
-            :key="i"
-            class="feed-item__field-row"
-          >
-            <span class="feed-item__field-name">{{ change.field }}:</span>
-            <span class="feed-item__field-old">{{ change.old_value ?? '—' }}</span>
-            <i class="pi pi-arrow-right feed-item__field-arrow" />
-            <span class="feed-item__field-new">{{ change.new_value ?? '—' }}</span>
-          </div>
-          <button
-            v-if="hiddenChangesCount > 0 && !changesExpanded"
-            type="button"
-            class="feed-item__expand-btn"
-            @click="changesExpanded = true"
-          >
-            <i class="pi pi-chevron-right" />
-            {{ t('sales.deal.feed.events.moreChanges', { n: hiddenChangesCount }) }}
-          </button>
+    <!-- Content — system events: no card; activities: card with kind tint border -->
+    <div
+      class="feed-item__card"
+      :class="{
+        'feed-item__card--no-bg': isSystem,
+        'feed-item__card--kind': isActivity && !!kindAccentColor,
+      }"
+      :style="isActivity && kindAccentColor ? { '--kind-color': kindAccentColor } : {}"
+    >
+      <!-- ─── system events: ONE LINE per spec §11 ───────────────────────────── -->
+      <template v-if="isSystem">
+        <div class="feed-item__system-line">
+          <span v-if="item.actor" class="feed-item__sys-actor">{{ item.actor.full_name }},</span>
+          <span class="feed-item__sys-date">{{ formatSystemDate(item.timestamp) }}</span>
+          <span class="feed-item__sys-verb">{{ systemVerb }}</span>
+          <!-- stage change -->
+          <template v-if="item.type === 'stage_change'">
+            <s v-if="item.fromStage" class="feed-item__sys-old">{{ item.fromStage.name }}</s>
+            <i class="pi pi-arrow-right feed-item__sys-arrow" />
+            <span class="feed-item__sys-new">{{ item.toStage?.name ?? '—' }}</span>
+          </template>
+          <!-- field changes -->
+          <template v-else-if="item.type === 'field_change'">
+            <span
+              v-for="(change, i) in (item.fieldChanges ?? [])"
+              :key="i"
+              class="feed-item__sys-change"
+            >
+              <template v-if="i > 0">&nbsp;·&nbsp;</template>
+              {{ change.field }}:
+              <s v-if="change.old_value" class="feed-item__sys-old">{{ change.old_value }}</s>
+              <i class="pi pi-arrow-right feed-item__sys-arrow" />
+              <span class="feed-item__sys-new">{{ change.new_value ?? '—' }}</span>
+            </span>
+          </template>
+          <span class="feed-item__sys-time">{{ formatTime(item.timestamp) }}</span>
         </div>
       </template>
 
-      <!-- ─── activity (note / task / call / meeting) ─────────────────────── -->
+      <!-- ─── activity (note / task / call / meeting / follow_up / presentation) -->
       <template v-else-if="isActivity && item.activity">
         <div class="feed-item__header">
           <div class="feed-item__title-wrap">
@@ -96,13 +80,6 @@
               <s v-if="item.activity.status === 'done'">{{ item.activity.title }}</s>
               <template v-else>{{ item.activity.title }}</template>
             </span>
-            <Tag
-              v-if="item.activity.is_pinned"
-              icon="pi pi-bookmark-fill"
-              severity="secondary"
-              size="small"
-              class="ms-1"
-            />
           </div>
           <div class="feed-item__header-right">
             <Tag
@@ -115,8 +92,8 @@
           </div>
         </div>
 
-        <!-- Meta row -->
-        <div class="feed-item__meta">
+        <!-- Meta row: due date · time · responsible — all in ONE row per spec §11 -->
+        <div v-if="item.activity.due_at || item.activity.responsible" class="feed-item__meta-row">
           <span
             v-if="item.activity.due_at"
             class="feed-item__due"
@@ -124,34 +101,27 @@
               'feed-item__due--overdue': item.activity.is_overdue && !item.activity.is_closed,
             }"
           >
+            <i class="pi pi-calendar feed-item__meta-icon" />
             {{ formatDueDate(item.activity.due_at) }}
           </span>
-          <Tag
-            v-if="item.activity.is_overdue && !item.activity.is_closed"
-            severity="danger"
-            :value="t('activity.timeline.overdueBadge')"
-            size="small"
-          />
           <span v-if="item.activity.responsible" class="feed-item__responsible">
-            <i class="pi pi-user feed-item__responsible-icon" />
+            <i class="pi pi-user feed-item__meta-icon" />
             {{ item.activity.responsible.full_name }}
           </span>
-          <Tag
-            v-if="item.activity?.kind !== 'note' && item.activity.priority"
-            :severity="prioritySeverity(item.activity.priority)"
-            :value="t(`activity.priorities.${item.activity.priority}`)"
-            size="small"
-          />
         </div>
 
         <!-- Body preview for note -->
-        <p v-if="item.activity.body && item.activity?.kind === 'note'" class="feed-item__body">
+        <p v-if="item.activity.body" class="feed-item__body">
           {{ item.activity.body }}
         </p>
 
-        <!-- Actions (hover-only; no "Complete" btn — open tasks live above composer) -->
+        <!-- Author (bottom, 11px muted) -->
+        <div v-if="item.actor" class="feed-item__author">
+          {{ item.actor.full_name }}
+        </div>
+
+        <!-- Actions (hover-only) -->
         <div class="feed-item__actions">
-          <!-- Reopen: shown when task was completed (done) -->
           <Button
             v-if="item.activity.status === 'done' && item.activity.kind !== 'note'"
             icon="pi pi-refresh"
@@ -163,7 +133,6 @@
             class="feed-item__hover-btn"
             @click="onReopen"
           />
-          <!-- Edit -->
           <Button
             v-if="item.activity.kind !== 'note'"
             icon="pi pi-pencil"
@@ -173,7 +142,6 @@
             class="feed-item__hover-btn"
             @click="onEdit"
           />
-          <!-- More menu (pin / delete) -->
           <Button
             icon="pi pi-ellipsis-v"
             severity="secondary"
@@ -187,7 +155,7 @@
     </div>
   </div>
 
-  <!-- Context menu (outside card, teleported by PrimeVue) -->
+  <!-- Context menu -->
   <Menu
     v-if="isActivity"
     ref="menuRef"
@@ -225,9 +193,21 @@ import Tag from 'primevue/tag'
 import Menu from 'primevue/menu'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import MeetingReportDialog from '@/components/MeetingReportDialog.vue'
-import { statusSeverity, prioritySeverity, formatDueDate } from '@/utils/activity'
+import { statusSeverity, formatDueDate } from '@/utils/activity'
 import type { FeedItem } from '../composables/useDealFeed'
 import type { ActivityDto } from '@/entities/activity'
+
+// ─── Kind accent colours — spec §11 ──────────────────────────────────────────
+// call=#2A6FDB  meeting=#1F8A5B  follow_up/presentation=#E8A317  contract/task=#172747
+
+const KIND_META: Record<string, { color: string; icon: string }> = {
+  call:         { color: '#2A6FDB', icon: 'pi-phone' },
+  meeting:      { color: '#1F8A5B', icon: 'pi-calendar' },
+  follow_up:    { color: '#E8A317', icon: 'pi-file-edit' },
+  presentation: { color: '#E8A317', icon: 'pi-desktop' },
+  task:         { color: '#172747', icon: 'pi-check-square' },
+  note:         { color: '', icon: 'pi-file' },
+}
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
@@ -257,7 +237,6 @@ const menuRef = ref<InstanceType<typeof Menu> | null>(null)
 const formDialogOpen = ref(false)
 const editingActivityId = ref<number | null>(null)
 const meetingReportOpen = ref(false)
-const changesExpanded = ref(false)
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 
@@ -278,11 +257,23 @@ const isSystem = computed(
     props.item.type === 'deal_created',
 )
 
-const dotColor = computed((): 'primary' | 'green' | 'red' | 'surface' => {
+/** Dot size: 22px for system events, 26px for activities (spec §7.2) */
+const dotSize = computed((): 'sm' | 'lg' => (isSystem.value ? 'sm' : 'lg'))
+
+/** Accent color for kind-tinted dot / card border */
+const kindAccentColor = computed((): string | null => {
+  if (!isActivity.value) return null
+  const kind = props.item.activity?.kind
+  if (!kind) return null
+  return KIND_META[kind]?.color || null
+})
+
+const dotVariant = computed((): 'primary' | 'green' | 'red' | 'surface' | 'kind' => {
   if (props.item.type === 'deal_created') return 'green'
   if (props.item.type === 'stage_change') return 'primary'
   if (props.item.type === 'field_change') return 'surface'
-  // activity
+  if (kindAccentColor.value) return 'kind'
+  // fallback activity
   const a = props.item.activity
   if (!a) return 'primary'
   if (a.status === 'done') return 'green'
@@ -291,32 +282,41 @@ const dotColor = computed((): 'primary' | 'green' | 'red' | 'surface' => {
 })
 
 const itemIcon = computed((): string => {
+  const kind = props.item.activity?.kind
+  if (kind && KIND_META[kind]) return KIND_META[kind].icon
   switch (props.item.type) {
     case 'stage_change': return 'pi-flag'
     case 'deal_created': return 'pi-plus-circle'
     case 'field_change': return 'pi-pencil'
-    case 'note': return 'pi-file'
-    case 'task': return 'pi-check-square'
-    case 'call': return 'pi-phone'
-    case 'meeting': return 'pi-users'
-    case 'follow_up': return 'pi-reply'
-    case 'presentation': return 'pi-desktop'
     default: return 'pi-circle'
   }
 })
 
-const CHANGES_INITIAL = 1
-
-const visibleChanges = computed(() => {
-  const changes = props.item.fieldChanges ?? []
-  if (changesExpanded.value) return changes
-  return changes.slice(0, CHANGES_INITIAL)
+/**
+ * data-ka attribute for quick-search scroll (spec §7.1/§11).
+ * Maps activity kind to the corresponding KeyActionType chip type.
+ */
+const itemKeyActionType = computed((): string | null => {
+  if (!isActivity.value) return null
+  const kind = props.item.activity?.kind
+  if (!kind) return null
+  const map: Partial<Record<string, string>> = {
+    presentation: 'last_presentation',
+    call: 'last_touch',
+    follow_up: 'last_touch',
+    meeting: 'last_event',
+  }
+  return map[kind] ?? null
 })
 
-const hiddenChangesCount = computed(() => {
-  const changes = props.item.fieldChanges ?? []
-  if (changesExpanded.value) return 0
-  return Math.max(0, changes.length - CHANGES_INITIAL)
+/** Verb for system event ONE-LINE format */
+const systemVerb = computed((): string => {
+  switch (props.item.type) {
+    case 'deal_created': return t('sales.deal.feed.events.dealCreatedVerb', 'создал сделку')
+    case 'stage_change': return t('sales.deal.feed.events.stageChangedVerb', 'изменил стадию')
+    case 'field_change': return t('sales.deal.feed.events.fieldsChangedVerb', 'изменил')
+    default: return ''
+  }
 })
 
 const menuItems = computed(() => {
@@ -360,6 +360,17 @@ const menuItems = computed(() => {
 function formatTime(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * System date: «18 июн, 15:40» — matches spec §11 format
+ * «{Автор}, {дата}, {время} {действие}»
+ */
+function formatSystemDate(iso: string): string {
+  const d = new Date(iso)
+  const datePart = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  const timePart = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return `${datePart}, ${timePart}`
 }
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
@@ -412,14 +423,15 @@ function onActivityUpdated(activity: ActivityDto) {
   }
 
   &--done {
-    opacity: 0.7;
+    opacity: 0.72;
   }
 }
 
+// ─── Dot ──────────────────────────────────────────────────────────────────────
+// 22px for system events, 26px for activities (spec §7.2)
+
 .feed-item__dot {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
   border-radius: $radius-circle;
   border: 2px solid var(--p-card-background);
   display: flex;
@@ -428,6 +440,25 @@ function onActivityUpdated(activity: ActivityDto) {
   margin-top: 2px;
   position: relative;
   z-index: 1;
+
+  // System events: 22px, --c-hover background
+  &--sm {
+    width: 22px;
+    height: 22px;
+    background: var(--p-surface-100);
+    color: $surface-500;
+
+    .app-dark & {
+      background: var(--p-surface-200);
+      color: var(--p-surface-400);
+    }
+  }
+
+  // Activity cards: 26px
+  &--lg {
+    width: 26px;
+    height: 26px;
+  }
 
   &--primary {
     background: var(--p-primary-400);
@@ -445,14 +476,23 @@ function onActivityUpdated(activity: ActivityDto) {
   }
 
   &--surface {
-    background: var(--p-surface-400);
-    color: $sidebar-text-active;
+    background: var(--p-surface-300);
+    color: var(--p-surface-600);
+  }
+
+  // Kind-colored dot (spec §11: light bg + icon in kind color)
+  &--kind {
+    // color-mix: kind-color 16% over card bg
+    background: color-mix(in srgb, var(--kind-color) 16%, var(--p-card-background));
+    color: var(--kind-color);
   }
 }
 
 .feed-item__dot-icon {
   font-size: $font-size-xs;
 }
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
 
 .feed-item__card {
   flex: 1;
@@ -468,7 +508,100 @@ function onActivityUpdated(activity: ActivityDto) {
   .app-dark & {
     border-color: var(--p-surface-700);
   }
+
+  // System events: no background, no border (spec §7.2)
+  &--no-bg {
+    background: transparent;
+    border: none;
+    padding: $space-1 0;
+    box-shadow: none;
+  }
+
+  // Kind-tinted left border (spec §11)
+  &--kind {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    border-left: 2px solid var(--kind-color);
+  }
 }
+
+// ─── System event: ONE LINE (spec §11) ────────────────────────────────────────
+// «{Автор}, {дата}, {время} {действие} ~~старое~~ → новое» + time right
+
+.feed-item__system-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: $font-size-xs;
+  color: $surface-500;
+  line-height: $line-height-tight;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.feed-item__sys-actor {
+  font-weight: $font-weight-semibold;
+  color: $surface-700;
+  white-space: nowrap;
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+}
+
+.feed-item__sys-date {
+  white-space: nowrap;
+  color: $surface-500;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.feed-item__sys-verb {
+  color: $surface-500;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.feed-item__sys-change {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.feed-item__sys-old {
+  color: $surface-400;
+  text-decoration: line-through;
+}
+
+.feed-item__sys-arrow {
+  font-size: $font-size-3xs;
+  color: $surface-400;
+}
+
+.feed-item__sys-new {
+  color: $surface-700;
+  font-weight: $font-weight-medium;
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+}
+
+.feed-item__sys-time {
+  margin-left: auto;
+  white-space: nowrap;
+  color: $surface-400;
+  font-size: $font-size-2xs;
+}
+
+// ─── Activity card header ─────────────────────────────────────────────────────
 
 .feed-item__header {
   display: flex;
@@ -485,116 +618,10 @@ function onActivityUpdated(activity: ActivityDto) {
   flex-shrink: 0;
 }
 
-.feed-item__event-title {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $surface-800;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
-}
-
 .feed-item__time {
   font-size: $font-size-xs;
   color: $surface-400;
   white-space: nowrap;
-}
-
-.feed-item__stage-change {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  flex-wrap: wrap;
-  font-size: $font-size-sm;
-}
-
-.feed-item__stage-from {
-  color: $surface-500;
-  text-decoration: line-through;
-}
-
-.feed-item__stage-arrow {
-  color: $surface-400;
-  font-size: $font-size-xs;
-}
-
-.feed-item__stage-to {
-  color: var(--p-primary-color);
-  font-weight: $font-weight-medium;
-}
-
-.feed-item__meta {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  flex-wrap: wrap;
-  font-size: $font-size-xs;
-  color: $surface-500;
-}
-
-.feed-item__field-changes {
-  display: flex;
-  flex-direction: column;
-  gap: $space-1;
-  margin-top: $space-1;
-}
-
-.feed-item__field-row {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-  font-size: $font-size-xs;
-  flex-wrap: wrap;
-}
-
-.feed-item__field-name {
-  font-weight: $font-weight-medium;
-  color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
-}
-
-.feed-item__field-old {
-  color: $surface-400;
-  text-decoration: line-through;
-}
-
-.feed-item__field-arrow {
-  font-size: $font-size-3xs;
-  color: $surface-400;
-}
-
-.feed-item__field-new {
-  color: $surface-800;
-  font-weight: $font-weight-medium;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
-}
-
-.feed-item__expand-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-size: $font-size-xs;
-  color: var(--p-primary-color);
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-  margin-top: $space-1;
-
-  &:hover {
-    text-decoration: underline;
-  }
-
-  i {
-    font-size: $font-size-3xs;
-  }
 }
 
 .feed-item__title-wrap {
@@ -613,7 +640,6 @@ function onActivityUpdated(activity: ActivityDto) {
   overflow: hidden;
   text-overflow: ellipsis;
 
-  // Dark mode: use semantic text token to avoid invisible text on dark card bg
   .app-dark & {
     color: var(--p-text-color);
   }
@@ -627,8 +653,26 @@ function onActivityUpdated(activity: ActivityDto) {
   }
 }
 
+// ─── Meta row: date · time · responsible in ONE row (spec §11) ────────────────
+
+.feed-item__meta-row {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  flex-wrap: wrap;
+  font-size: $font-size-xs;
+}
+
+.feed-item__meta-icon {
+  font-size: $font-size-3xs;
+  margin-right: 3px;
+  opacity: 0.7;
+}
+
 .feed-item__due {
   color: $surface-400;
+  display: inline-flex;
+  align-items: center;
 
   &--overdue {
     color: var(--p-red-500);
@@ -638,6 +682,8 @@ function onActivityUpdated(activity: ActivityDto) {
 
 .feed-item__responsible {
   color: $surface-500;
+  display: inline-flex;
+  align-items: center;
 }
 
 .feed-item__body {
@@ -650,6 +696,12 @@ function onActivityUpdated(activity: ActivityDto) {
   .app-dark & {
     color: var(--p-surface-300);
   }
+}
+
+.feed-item__author {
+  font-size: $font-size-2xs;
+  color: $surface-400;
+  margin-top: $space-1;
 }
 
 .feed-item__actions {
@@ -669,35 +721,20 @@ function onActivityUpdated(activity: ActivityDto) {
   opacity: 1;
 }
 
-.feed-item__complete-btn {
-  // always visible — no opacity change
-}
+// ─── Key-actions bar highlight — spec §7.1 ────────────────────────────────────
+// border + ring flash for ~2s
 
-.feed-item__responsible-icon {
-  font-size: $font-size-3xs;
-  margin-right: 2px;
-}
-
-// System events: transparent card
-.feed-item--system {
-  .feed-item__card {
-    background: transparent;
-    border: none;
-    padding: $space-1 $space-2;
-    box-shadow: none;
-  }
-}
-
-// Key-actions bar highlight — flash animation
 @keyframes feed-item-flash {
-  0%   { background-color: rgba(var(--p-primary-color-rgb, 23, 39, 71), 0.18); }
-  60%  { background-color: rgba(var(--p-primary-color-rgb, 23, 39, 71), 0.12); }
-  100% { background-color: transparent; }
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  0%   { border-color: var(--p-primary-color); box-shadow: 0 0 0 $space-1 color-mix(in srgb, var(--p-primary-color) 18%, transparent); }
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  60%  { border-color: var(--p-primary-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-primary-color) 10%, transparent); }
+  100% { border-color: var(--p-surface-200); box-shadow: none; }
 }
 
 .feed-item--highlight {
   .feed-item__card {
-    animation: feed-item-flash 1.6s ease-out forwards;
+    animation: feed-item-flash 1.8s ease-out forwards;
   }
 }
 </style>
