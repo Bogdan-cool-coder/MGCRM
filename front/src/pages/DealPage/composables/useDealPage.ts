@@ -21,6 +21,23 @@ export function useDealPage() {
     await resource.run(() => salesApi.getDeal(dealId.value))
   }
 
+  /**
+   * Silent background reload — fetches fresh deal data WITHOUT setting
+   * loading.value to true, so the skeleton is not shown. Used after
+   * discount changes (and similar mutations) that need server-computed
+   * fields (products_discounted, etc.) without a jarring page-flash.
+   */
+  async function reloadSilent() {
+    try {
+      const fresh = await salesApi.getDeal(dealId.value)
+      if (resource.data.value) {
+        resource.data.value = fresh
+      }
+    } catch {
+      // non-critical: stale data stays visible
+    }
+  }
+
   function updateDealLocal(updates: Partial<DealDto>) {
     if (resource.data.value) {
       resource.data.value = { ...resource.data.value, ...updates }
@@ -33,6 +50,7 @@ export function useDealPage() {
     loading,
     error,
     load,
+    reloadSilent,
     updateDealLocal,
   }
 }

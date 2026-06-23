@@ -34,6 +34,7 @@
           'open-tasks__row--overdue': task.is_overdue && !task.is_closed,
           'open-tasks__row--expanded': expandedId === task.id,
         }"
+        :style="taskRowStyle(task)"
       >
         <!-- ─── Compact card (collapses only on outside click) ────────────────── -->
         <div
@@ -45,8 +46,10 @@
           @keydown.enter="expandTask(task.id)"
           @keydown.space.prevent="expandTask(task.id)"
         >
-          <!-- Title — dbl-click = edit -->
-          <div class="open-tasks__title-row" @click.stop>
+          <!-- Title — dbl-click = edit.
+               Single click on the title area MUST still propagate up to expand the card
+               (spec §11: one click anywhere expands). Stop propagation ONLY when editing. -->
+          <div class="open-tasks__title-row">
             <textarea
               ref="titleInputRefs"
               class="open-tasks__title"
@@ -59,19 +62,20 @@
               @change="(e) => onTitleChange(task.id, e)"
               @keydown.enter.prevent="saveEditTitle(task)"
               @keydown.escape="cancelEditTitle(task.id)"
-              @click.stop="(e) => { if (editingTitleId !== task.id) return; e.stopPropagation(); }"
+              @click="(e) => { if (editingTitleId === task.id) e.stopPropagation(); }"
             />
           </div>
 
-          <!-- Meta row: Тип chip · Дата · Ответственный — all clickable (spec §11) -->
-          <div class="open-tasks__meta" @click.stop>
-            <!-- Type chip — click opens type picker popover -->
+          <!-- Meta row: Тип chip · Дата · Ответственный — all clickable (spec §11).
+               Clicks on picker buttons expand the card first, then the picker opens. -->
+          <div class="open-tasks__meta">
+            <!-- Type chip — click expands card + opens type picker (spec §11) -->
             <div class="open-tasks__picker-wrap">
               <button
                 type="button"
                 class="open-tasks__type-chip"
                 :style="typeChipStyle(task.kind)"
-                @click.stop="toggleTypePicker(task.id)"
+                @click.stop="expandAndToggleTypePicker(task.id)"
               >
                 <i :class="['pi', resolvedKindIcon(task.kind)]" />
                 {{ kindLabel(task.kind) }}
@@ -96,13 +100,13 @@
               </div>
             </div>
 
-            <!-- Due date — click opens calendar popover -->
+            <!-- Due date — click expands card + opens calendar (spec §11) -->
             <div class="open-tasks__picker-wrap">
               <button
                 type="button"
                 class="open-tasks__due"
                 :class="{ 'open-tasks__due--overdue': task.is_overdue }"
-                @click.stop="toggleDatePicker(task.id)"
+                @click.stop="expandAndToggleDatePicker(task.id)"
               >
                 <i class="pi pi-clock open-tasks__meta-icon" />
                 {{ task.due_at ? formatDueDateShort(task.due_at) : t('activity.fields.dueAt') }}
@@ -122,12 +126,12 @@
               </div>
             </div>
 
-            <!-- Responsible — click opens user search popover -->
+            <!-- Responsible — click expands card + opens user search (spec §11) -->
             <div class="open-tasks__picker-wrap">
               <button
                 type="button"
                 class="open-tasks__responsible"
-                @click.stop="toggleResponsiblePicker(task.id)"
+                @click.stop="expandAndToggleResponsiblePicker(task.id)"
               >
                 <i class="pi pi-user open-tasks__meta-icon" />
                 {{ task.responsible?.full_name ?? t('activity.fields.responsible') }}
@@ -163,7 +167,9 @@
             </div>
           </div>
 
-          <!-- Right: «Выполнить» (always visible) + 3-step ✕ -->
+          <!-- Right: «Выполнить» (always visible) + 3-step ✕.
+               @click.stop here so the actions area does NOT re-expand an already
+               expanded card — but in compact mode Выполнить directly expands. -->
           <div class="open-tasks__actions" @click.stop>
             <button
               type="button"
@@ -430,6 +436,31 @@ function formatDueDateShort(dateStr: string): string {
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+// ─── Task row border style (tinted to task type per spec §11) ────────────────
+
+function taskRowStyle(task: ActivityDto): Record<string, string> {
+  const color = KIND_COLORS[task.kind]
+  const isExpanded = expandedId.value === task.id
+  if (!color) {
+    return {
+      border: `1px solid var(--p-surface-200)`,
+      borderRadius: 'var(--p-border-radius-md, 8px)',
+      marginBottom: '6px',
+    }
+  }
+  // In expanded state use full type color; compact = 45% mix (per HTML mockup)
+  const borderColor = isExpanded
+    ? color
+    : `color-mix(in srgb, ${color} 45%, var(--p-surface-200))`
+  return {
+    border: `1px solid ${borderColor}`,
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    borderRadius: '8px',
+    marginBottom: '6px',
+    overflow: 'visible',
+  }
+}
+
 // ─── Expand / collapse ────────────────────────────────────────────────────────
 
 function expandTask(id: number) {
@@ -445,6 +476,33 @@ function collapseAll() {
   typePickerOpenId.value = null
   datePickerOpenId.value = null
   responsiblePickerOpenId.value = null
+}
+
+// ─── Expand-and-open picker helpers (meta row clicks in compact mode) ─────────
+// Spec §11: ONE click on the card expands it. Meta clicks should also expand
+// the card and then open the appropriate picker in the compact→expanded flow.
+// Since pickers are positioned relative to their wrapper, we expand first then
+// open the picker via the existing toggle functions (which work in both views).
+
+function expandAndToggleTypePicker(taskId: number) {
+  if (expandedId.value !== taskId) {
+    expandedId.value = taskId
+  }
+  toggleTypePicker(taskId)
+}
+
+function expandAndToggleDatePicker(taskId: number) {
+  if (expandedId.value !== taskId) {
+    expandedId.value = taskId
+  }
+  toggleDatePicker(taskId)
+}
+
+function expandAndToggleResponsiblePicker(taskId: number) {
+  if (expandedId.value !== taskId) {
+    expandedId.value = taskId
+  }
+  toggleResponsiblePicker(taskId)
 }
 
 // ─── 3-step delete (DealCard §11) ─────────────────────────────────────────────
@@ -487,11 +545,12 @@ function onDelete(id: number) {
 
 <style lang="scss" scoped>
 .open-tasks {
-  background: var(--p-card-background);
+  background: var(--p-surface-50); // --c-feed/--c-sub neutral tone
   border-top: 1px solid var(--p-surface-200);
   flex-shrink: 0;
 
   .app-dark & {
+    background: var(--p-surface-100);
     border-top-color: var(--p-surface-700);
   }
 }
@@ -547,8 +606,10 @@ function onDelete(id: number) {
 .open-tasks__list {
   display: flex;
   flex-direction: column;
-  max-height: 220px;
+  max-height: 260px;
   overflow-y: auto;
+  overflow-x: visible; // allow picker popovers to overflow
+  padding: $space-2 $space-3 $space-1;
   scrollbar-width: none;
   -ms-overflow-style: none;
 
@@ -559,19 +620,12 @@ function onDelete(id: number) {
   }
 }
 
-// ─── Row ─────────────────────────────────────────────────────────────────────
+// ─── Row — styled card with type-colored border (inline style handles color) ──
 
 .open-tasks__row {
-  border-bottom: 1px solid var(--p-surface-100);
+  // Border/radius/margin applied via :style binding (taskRowStyle) — type-color.
+  // We only add positional context here.
   position: relative;
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
-
-  &:last-child {
-    border-bottom: none;
-  }
 
   &--overdue {
     .open-tasks__compact {
@@ -587,16 +641,21 @@ function onDelete(id: number) {
   display: flex;
   flex-direction: column;
   gap: $space-1;
-  padding: $space-2 $space-4;
+  padding: $space-2 $space-3; // matches HTML mockup: 8px 10px
   cursor: pointer;
   transition: background var(--app-transition-fast);
   position: relative;
+  background: var(--p-surface-50); // --c-sub equivalent
+
+  .app-dark & {
+    background: var(--p-surface-100);
+  }
 
   &:hover {
-    background: var(--p-surface-50);
+    background: var(--p-surface-100);
 
     .app-dark & {
-      background: var(--p-surface-100);
+      background: var(--p-surface-200);
     }
   }
 }
@@ -604,7 +663,8 @@ function onDelete(id: number) {
 // ─── Title row (dbl-click = edit) ────────────────────────────────────────────
 
 .open-tasks__title-row {
-  padding-right: 124px; // reserve for action buttons
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding-right: 120px; // reserve for «Выполнить» + ✕ action buttons
 }
 
 .open-tasks__title {
@@ -834,7 +894,7 @@ function onDelete(id: number) {
 .open-tasks__actions {
   position: absolute;
   top: $space-2;
-  right: $space-4;
+  right: $space-3; // matches padding of compact card
   display: flex;
   align-items: center;
   gap: $space-1;
@@ -914,7 +974,7 @@ function onDelete(id: number) {
 // ─── Expanded TQF ────────────────────────────────────────────────────────────
 
 .open-tasks__tqf {
-  margin: $space-2 $space-4;
+  margin: $space-2 $space-3;
 }
 
 // ─── Slide transition ─────────────────────────────────────────────────────────

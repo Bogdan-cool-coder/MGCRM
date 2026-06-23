@@ -106,7 +106,7 @@
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
-          @reload-deal="load"
+          @reload-deal="reloadSilent"
         />
       </div>
 
@@ -148,7 +148,7 @@
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
-          @reload-deal="load"
+          @reload-deal="reloadSilent"
         />
       </Drawer>
 
@@ -186,7 +186,7 @@
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
-          @reload-deal="load"
+          @reload-deal="reloadSilent"
         />
       </div>
 
@@ -323,7 +323,7 @@ function onExpandAll() {
 
 // ── Main deal data ─────────────────────────────────────────────────────────────────
 
-const { dealId, deal, loading, error, load, updateDealLocal } = useDealPage()
+const { dealId, deal, loading, error, load, reloadSilent, updateDealLocal } = useDealPage()
 
 // ── Sub-resources ──────────────────────────────────────────────────────────────────
 

@@ -92,11 +92,8 @@
                   <span v-if="opt.code" class="add-product-dialog__picker-option-code">{{ opt.code }}</span>
                 </div>
               </div>
-              <div v-if="productSuggestions.length === 0 && productQuery.length >= 2" class="add-product-dialog__picker-empty">
+              <div v-if="productSuggestions.length === 0" class="add-product-dialog__picker-empty">
                 {{ t('common.no_results') }}
-              </div>
-              <div v-else-if="productSuggestions.length === 0" class="add-product-dialog__picker-hint">
-                {{ t('common.search_placeholder') }}
               </div>
             </div>
           </div>
@@ -136,7 +133,7 @@ import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
-import { catalogApi } from '@/api/catalog'
+import { catalogApi, type ProductListParams } from '@/api/catalog'
 import { useMutation } from '@/composables/async/useMutation'
 import { formatCurrency } from '@/utils/currency'
 import { getValidationErrors, getApiErrorStatus, getApiErrorMessage } from '@/utils/errors'
@@ -217,29 +214,35 @@ const productPopoverRef = ref<HTMLElement | null>(null)
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
+async function loadProducts(query: string) {
+  try {
+    const params: ProductListParams = { active_only: true, per_page: 30 }
+    if (query.trim().length >= 2) params.q = query.trim()
+    const res = await catalogApi.getProducts(params)
+    productSuggestions.value = res.data
+  } catch {
+    productSuggestions.value = []
+  }
+}
+
 function openProductPicker() {
   productPickerOpen.value = !productPickerOpen.value
   if (productPickerOpen.value) {
     productQuery.value = ''
-    productSuggestions.value = []
+    // Load full list immediately on open (spec §8.2: clicking shows the list)
+    void loadProducts('')
     nextTick(() => productSearchRef.value?.focus())
   }
 }
 
 function onProductSearch() {
   if (searchTimer) clearTimeout(searchTimer)
-  if (productQuery.value.length < 2) {
-    productSuggestions.value = []
+  // Load instantly with no filter when query is short; debounce typed searches
+  if (productQuery.value.trim().length < 2) {
+    searchTimer = setTimeout(() => void loadProducts(''), 150)
     return
   }
-  searchTimer = setTimeout(async () => {
-    try {
-      const res = await catalogApi.getProducts({ q: productQuery.value, active_only: true, per_page: 20 })
-      productSuggestions.value = res.data
-    } catch {
-      productSuggestions.value = []
-    }
-  }, 300)
+  searchTimer = setTimeout(() => void loadProducts(productQuery.value), 300)
 }
 
 function onProductSelect(opt: ProductDto) {

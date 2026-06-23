@@ -317,6 +317,8 @@ export interface DealProductDto {
   plan: PlanRefDto | null
   quantity: number
   unit_price: number
+  /** Currency code for this line item (e.g. 'KZT', 'RUB', 'USD', 'EUR'). */
+  currency: string
   /** Per-line manual discount, kopecks, default 0 */
   discount: number
   /** NET amount = max(0, round(quantity*unit_price) - discount), kopecks */

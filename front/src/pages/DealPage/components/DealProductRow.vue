@@ -5,14 +5,15 @@
       <span class="deal-product-row__name">{{ item.product.name }}</span>
       <span class="deal-product-row__sub">{{ subLine }}</span>
     </div>
-    <!-- Amount right: show discounted net when deal-level discount active -->
+    <!-- Amount right: show discounted net when deal-level discount active.
+         Use item.currency (per-line) so KZT lines show ₸ even on a RUB deal. -->
     <span class="deal-product-row__amount">
       <template v-if="netAmount !== undefined && netAmount !== item.amount">
-        <span class="deal-product-row__amount-original">{{ formatCurrency(item.amount, currency) }}</span>
-        {{ formatCurrency(netAmount, currency) }}
+        <span class="deal-product-row__amount-original">{{ formatCurrency(item.amount, lineCurrency) }}</span>
+        {{ formatCurrency(netAmount, lineCurrency) }}
       </template>
       <template v-else>
-        {{ formatCurrency(item.amount, currency) }}
+        {{ formatCurrency(item.amount, lineCurrency) }}
       </template>
     </span>
     <!-- Remove on hover -->
@@ -36,6 +37,7 @@ import type { DealProductDto } from '@/entities/sales'
 
 const props = defineProps<{
   item: DealProductDto
+  /** Deal-level currency fallback (used only when item.currency is absent). */
   currency: string
   saving?: boolean
   deleting?: boolean
@@ -48,6 +50,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+// ── Per-line currency (falls back to deal-level if not set) ───────────────────
+const lineCurrency = computed(() => props.item.currency || props.currency)
 
 // ── Sub-line: "{период} × {цена}" ────────────────────────────────────────────
 
@@ -66,7 +71,7 @@ function getPeriodLabel(item: DealProductDto): string {
 
 const subLine = computed(() => {
   const period = getPeriodLabel(props.item)
-  const price = formatCurrency(props.item.unit_price, props.currency)
+  const price = formatCurrency(props.item.unit_price, lineCurrency.value)
   return `${period} × ${price}`
 })
 </script>
