@@ -1,21 +1,22 @@
 <template>
   <div class="entity-log-tab">
-    <!-- Compact metrics bar -->
-    <div v-if="visibleMetrics.length > 0" class="entity-log-tab__metrics">
+    <!-- spec §6: 2-column grid with border dividers — label 11px muted, value 15px/700 (A1) -->
+    <div v-if="visibleMetrics.length > 0" class="entity-log-tab__metrics-grid">
       <div
-        v-for="m in visibleMetrics"
+        v-for="(m, idx) in visibleMetrics"
         :key="m.key"
-        class="entity-log-tab__metric"
+        class="entity-log-tab__metric-cell"
+        :class="{
+          'entity-log-tab__metric-cell--right': idx % 2 === 0,
+          'entity-log-tab__metric-cell--bottom': idx < visibleMetrics.length - 2,
+        }"
       >
-        <span class="entity-log-tab__metric-value">{{ m.metricValue }}</span>
         <span class="entity-log-tab__metric-label">{{ m.label }}</span>
+        <span class="entity-log-tab__metric-value">{{ m.metricValue }}</span>
       </div>
     </div>
 
-    <!-- Divider -->
-    <div v-if="visibleMetrics.length > 0" class="entity-log-tab__divider" />
-
-    <!-- Log header -->
+    <!-- Log header: «История действий» (A1) -->
     <div class="entity-log-tab__header">
       <span class="entity-log-tab__header-title">
         {{ t('crm.log.title') }}
@@ -27,10 +28,10 @@
 
     <!-- Loading skeleton -->
     <div v-if="log.loading.value && log.entries.value.length === 0" class="entity-log-tab__skeleton">
-      <Skeleton height="44px" class="mb-2" />
-      <Skeleton height="44px" class="mb-2" />
-      <Skeleton height="44px" class="mb-2" />
-      <Skeleton height="44px" />
+      <Skeleton height="20px" class="mb-2" />
+      <Skeleton height="20px" class="mb-2" />
+      <Skeleton height="20px" class="mb-2" />
+      <Skeleton height="20px" />
     </div>
 
     <!-- Empty state -->
@@ -40,47 +41,38 @@
       <p class="entity-log-tab__empty-hint">{{ t('crm.log.empty.hint') }}</p>
     </div>
 
-    <!-- Log entries list -->
+    <!-- Log entries — plain grey text, no card backing (A1) -->
     <div v-else class="entity-log-tab__list">
       <div
         v-for="entry in log.entries.value"
         :key="entry.id"
-        class="entity-log-tab__entry"
+        class="entity-log-tab__line"
       >
-        <!-- Icon badge -->
-        <div class="entity-log-tab__icon-wrap">
-          <i :class="['pi', eventIcon(entry.action), 'entity-log-tab__icon']" />
-        </div>
-
-        <!-- Content -->
-        <div class="entity-log-tab__content">
-          <div class="entity-log-tab__row">
-            <span class="entity-log-tab__actor">
-              {{ entry.user?.full_name ?? t('crm.log.system') }}
-            </span>
-            <span class="entity-log-tab__event-label">
-              {{ eventLabel(entry.action) }}
-            </span>
-            <!-- Stage change: old → new -->
-            <template v-if="entry.action === 'stage_changed' && entry.old_value && entry.new_value">
-              <span class="entity-log-tab__stage-old">{{ entry.old_value }}</span>
-              <i class="pi pi-arrow-right entity-log-tab__arrow" />
-              <span class="entity-log-tab__stage-new">{{ entry.new_value }}</span>
-            </template>
-            <!-- Field change -->
-            <template v-else-if="(entry.action === 'updated' || entry.action === 'data_changed') && entry.description">
-              <span class="entity-log-tab__description">{{ entry.description }}</span>
-            </template>
-          </div>
-          <!-- Description for non-field events -->
-          <div
-            v-if="entry.description && entry.action !== 'updated' && entry.action !== 'data_changed' && entry.action !== 'stage_changed'"
-            class="entity-log-tab__desc"
-          >
-            {{ entry.description }}
-          </div>
-          <div class="entity-log-tab__time">{{ formatDate(entry.created_at) }}</div>
-        </div>
+        <span class="entity-log-tab__line-body">
+          <!-- actor -->
+          <span class="entity-log-tab__actor">{{ entry.user?.full_name ?? t('crm.log.system') }}</span>
+          <!-- event label -->
+          <span class="entity-log-tab__sep"> — </span>
+          <span class="entity-log-tab__event">{{ eventLabel(entry.action) }}</span>
+          <!-- old → new (strikethrough old) -->
+          <template v-if="entry.action === 'stage_changed' && entry.old_value && entry.new_value">
+            <span class="entity-log-tab__sep"> </span>
+            <span class="entity-log-tab__old">{{ entry.old_value }}</span>
+            <i class="pi pi-arrow-right entity-log-tab__arrow" />
+            <span class="entity-log-tab__new">{{ entry.new_value }}</span>
+          </template>
+          <template v-else-if="entry.old_value && entry.new_value">
+            <span class="entity-log-tab__sep"> </span>
+            <span class="entity-log-tab__old">{{ entry.old_value }}</span>
+            <i class="pi pi-arrow-right entity-log-tab__arrow" />
+            <span class="entity-log-tab__new">{{ entry.new_value }}</span>
+          </template>
+          <template v-else-if="entry.description">
+            <span class="entity-log-tab__sep">: </span>
+            <span class="entity-log-tab__desc-inline">{{ entry.description }}</span>
+          </template>
+        </span>
+        <span class="entity-log-tab__time">{{ formatDate(entry.created_at) }}</span>
       </div>
 
       <!-- Load more -->
@@ -111,13 +103,13 @@ import type { UseEntityLogReturn } from '@/composables/crm/useEntityLog'
 export interface LogMetric {
   key: string
   label: string
-  /** Renamed from `value` to avoid Vue 3 template ref-unwrapping confusion on property named `value` */
+  /** Renamed from `value` to avoid Vue 3 template ref-unwrapping confusion */
   metricValue: string | number
 }
 
 const props = defineProps<{
   log: UseEntityLogReturn
-  /** Optional compact stats row shown above the log */
+  /** Optional metrics shown above the log in a 2-col grid */
   metrics?: LogMetric[]
 }>()
 
@@ -127,9 +119,9 @@ const { t } = useI18n()
 
 const visibleMetrics = computed(() => props.metrics ?? [])
 
-// ── Shared log formatting ────────────────────────────────────────────────────
+// ── Log formatting ────────────────────────────────────────────────────────────
 
-const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
+const { eventLabel, formatDate } = useEntityLogFormat()
 </script>
 
 <style lang="scss" scoped>
@@ -137,242 +129,218 @@ const { eventIcon, eventLabel, formatDate } = useEntityLogFormat()
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
 
-  // ── Metrics bar ────────────────────────────────────────────────────────────
+// ── Metrics grid — spec §6: 2-col, border dividers (A1) ──────────────────────
 
-  &__metrics {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $space-2 $space-4;
-    padding: $space-3 $space-3 $space-2;
+.entity-log-tab__metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--p-surface-200);
+  margin-bottom: $space-2;
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-700);
   }
+}
 
-  &__metric {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 3.5rem;
-  }
+.entity-log-tab__metric-cell {
+  padding: $space-3 $space-3 $space-2;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
 
-  &__metric-value {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: var(--p-text-color);
-    line-height: 1.1;
-  }
-
-  &__metric-label {
-    font-size: $font-size-xs;
-    color: $surface-500;
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  &__divider {
-    height: 1px;
-    background: var(--p-surface-200);
-    margin: 0 $space-3 $space-1;
+  // Left column cells get right border
+  &--right {
+    border-right: 1px solid var(--p-surface-200);
 
     .app-dark & {
-      background: var(--p-surface-700);
+      border-right-color: var(--p-surface-700);
     }
   }
 
-  // ── Header ─────────────────────────────────────────────────────────────────
-
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: $space-2;
-    padding: $space-2 $space-3;
-  }
-
-  &__header-title {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $surface-600;
-    display: flex;
-    align-items: center;
-    gap: $space-1;
+  // All cells except bottom row get bottom border
+  &--bottom {
+    border-bottom: 1px solid var(--p-surface-200);
 
     .app-dark & {
-      color: var(--p-surface-400);
+      border-bottom-color: var(--p-surface-700);
     }
   }
+}
 
-  &__count {
-    background: var(--p-surface-200);
-    border-radius: $radius-pill;
-    padding: 1px 6px;
-    font-size: $font-size-xs;
-    color: $surface-600;
-    font-weight: $font-weight-normal;
+// label: 11px muted (A1)
+.entity-log-tab__metric-label {
+  font-size: $font-size-2xs;
+  color: $surface-500;
+  line-height: $line-height-tight;
+}
 
-    .app-dark & {
-      background: var(--p-surface-700);
-      color: var(--p-surface-300);
-    }
-  }
+// value: 15px bold (A1)
+.entity-log-tab__metric-value {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: var(--p-text-color);
+  line-height: 1.1;
+}
 
-  // ── States ─────────────────────────────────────────────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
-  &__skeleton {
-    padding: $space-3;
-  }
+.entity-log-tab__header {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+}
 
-  &__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: $space-8 $space-4;
-    gap: $space-2;
-    text-align: center;
-  }
+.entity-log-tab__header-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $surface-600;
+  display: flex;
+  align-items: center;
+  gap: $space-1;
 
-  &__empty-icon {
-    font-size: $font-size-icon-lg;
+  .app-dark & {
     color: var(--p-surface-400);
   }
+}
 
-  &__empty-title {
-    font-weight: $font-weight-semibold;
-    color: $surface-700;
-    margin: 0;
+.entity-log-tab__count {
+  background: var(--p-surface-200);
+  border-radius: $radius-pill;
+  padding: 1px 6px;
+  font-size: $font-size-xs;
+  color: $surface-600;
+  font-weight: $font-weight-normal;
 
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
+  .app-dark & {
+    background: var(--p-surface-700);
+    color: var(--p-surface-300);
   }
+}
 
-  &__empty-hint {
-    font-size: $font-size-sm;
-    color: $surface-500;
-    margin: 0;
+// ── States ────────────────────────────────────────────────────────────────────
+
+.entity-log-tab__skeleton {
+  padding: $space-3;
+}
+
+.entity-log-tab__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $space-8 $space-4;
+  gap: $space-2;
+  text-align: center;
+}
+
+.entity-log-tab__empty-icon {
+  font-size: $font-size-icon-lg;
+  color: var(--p-surface-400);
+}
+
+.entity-log-tab__empty-title {
+  font-weight: $font-weight-semibold;
+  color: $surface-700;
+  margin: 0;
+
+  .app-dark & {
+    color: var(--p-surface-200);
   }
+}
 
-  // ── Entries list ───────────────────────────────────────────────────────────
+.entity-log-tab__empty-hint {
+  font-size: $font-size-sm;
+  color: $surface-500;
+  margin: 0;
+}
 
-  &__list {
-    display: flex;
-    flex-direction: column;
-    padding: 0 $space-3 $space-3;
+// ── Log list — plain grey text rows, no card backing (A1) ────────────────────
+
+.entity-log-tab__list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 $space-3 $space-3;
+  gap: $space-1;
+}
+
+// single-line flex row: body (flex:1) + time (right)
+.entity-log-tab__line {
+  display: flex;
+  align-items: baseline;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  color: $surface-600;
+  line-height: $line-height-normal;
+
+  .app-dark & {
+    color: var(--p-surface-400);
   }
+}
 
-  &__entry {
-    display: flex;
-    gap: $space-2;
-    padding: $space-2 0;
-    border-bottom: 1px solid var(--p-surface-100);
-    align-items: flex-start;
+.entity-log-tab__line-body {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  word-break: break-word;
+}
 
-    .app-dark & {
-      border-bottom-color: var(--p-surface-800);
-    }
+.entity-log-tab__actor {
+  font-weight: $font-weight-semibold;
+  color: var(--p-text-color);
+}
 
-    &:last-child {
-      border-bottom: none;
-    }
+.entity-log-tab__sep {
+  color: $surface-400;
+}
+
+.entity-log-tab__event {
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-400);
   }
+}
 
-  // ── Icon badge ─────────────────────────────────────────────────────────────
+// strikethrough old value (A1)
+.entity-log-tab__old {
+  text-decoration: line-through;
+  color: $surface-400;
+}
 
-  &__icon-wrap {
-    flex-shrink: 0;
-    width: 26px;
-    height: 26px;
-    border-radius: $radius-circle;
-    background: var(--p-surface-100);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 2px;
+.entity-log-tab__arrow {
+  font-size: $font-size-3xs;
+  color: $surface-400;
+  margin: 0 2px;
+}
 
-    .app-dark & {
-      background: var(--p-surface-800);
-    }
+// bold new value (A1)
+.entity-log-tab__new {
+  font-weight: $font-weight-semibold;
+  color: var(--p-text-color);
+}
+
+.entity-log-tab__desc-inline {
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-400);
   }
+}
 
-  &__icon {
-    font-size: $font-size-3xs; // snap from 0.7rem (≈11.2px → 10px)
-    color: var(--p-primary-color);
-  }
+.entity-log-tab__time {
+  flex-shrink: 0;
+  font-size: $font-size-xs;
+  color: $surface-400;
+  white-space: nowrap;
+}
 
-  // ── Entry content ──────────────────────────────────────────────────────────
+// ── Load more ─────────────────────────────────────────────────────────────────
 
-  &__content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 3px;
-    font-size: $font-size-sm;
-  }
-
-  &__actor {
-    font-weight: $font-weight-semibold;
-    color: var(--p-text-color);
-    white-space: nowrap;
-  }
-
-  &__event-label {
-    color: $surface-600;
-
-    .app-dark & {
-      color: var(--p-surface-400);
-    }
-  }
-
-  &__stage-old {
-    color: $surface-500;
-    text-decoration: line-through;
-    font-size: $font-size-xs;
-  }
-
-  &__arrow {
-    font-size: $font-size-3xs; // snap from 0.6rem (≈9.6px → 10px)
-    color: $surface-400;
-  }
-
-  &__stage-new {
-    color: var(--p-primary-color);
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__description {
-    color: $surface-600;
-    font-size: $font-size-xs;
-    word-break: break-word;
-
-    .app-dark & {
-      color: var(--p-surface-400);
-    }
-  }
-
-  &__desc {
-    font-size: $font-size-xs;
-    color: $surface-500;
-    margin-top: 2px;
-    word-break: break-word;
-  }
-
-  &__time {
-    font-size: $font-size-xs;
-    color: $surface-400;
-    margin-top: 2px;
-  }
-
-  // ── Load more ──────────────────────────────────────────────────────────────
-
-  &__load-more {
-    display: flex;
-    justify-content: center;
-    padding-top: $space-3;
-  }
+.entity-log-tab__load-more {
+  display: flex;
+  justify-content: center;
+  padding-top: $space-3;
 }
 </style>

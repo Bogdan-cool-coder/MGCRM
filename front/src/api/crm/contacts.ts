@@ -34,11 +34,12 @@ export interface ContactListParams {
   only_active?: boolean
   only_with_deals?: boolean
   only_no_task?: boolean
+  // sorting — backend contract: sort_by + sort_dir
+  sort_by?: 'name' | 'company' | 'phone' | 'last_contact' | 'open_deals' | 'author' | 'created'
+  sort_dir?: 'asc' | 'desc'
   // legacy single params kept for backward compat
   source?: string
   company_id?: number
-  sort?: string
-  direction?: 'asc' | 'desc'
 }
 
 export interface BulkContactPayload {

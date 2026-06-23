@@ -9,6 +9,7 @@ use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\CompanyService;
 use App\Domain\Sales\Services\DealService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Crm\IndexCompanyRequest;
 use App\Http\Requests\Crm\StoreCompanyRequest;
 use App\Http\Requests\Crm\UpdateCompanyRequest;
 use App\Http\Resources\Crm\CompanyResource;
@@ -33,15 +34,13 @@ class CompanyController extends Controller
         private readonly DealService $dealService,
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexCompanyRequest $request): AnonymousResourceCollection
     {
-        $this->authorize('viewAny', Company::class);
-
-        $filters = $request->query();
+        $filters = $request->validated();
         // Inject auth user ID so service can apply `only_mine` without touching Auth.
         $filters['_auth_user_id'] = $request->user()?->id;
 
-        $companies = $this->service->list($filters, (int) $request->query('per_page', 25));
+        $companies = $this->service->list($filters, (int) ($filters['per_page'] ?? 25));
 
         return CompanyResource::collection($companies);
     }

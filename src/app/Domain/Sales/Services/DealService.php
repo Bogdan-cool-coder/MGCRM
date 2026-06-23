@@ -1157,17 +1157,20 @@ class DealService
      * Called by CompanyController::show() via DDD cross-domain public Service method.
      *
      * Returns per-currency subtotals (kopecks) + converted base total.
-     * Only open (non-closed) deals are included.
+     * "Open" is defined SOLELY by stage flags (is_won = false AND is_lost = false).
+     * closed_at is NOT used here — AMO-migrated deals can carry a stale closed_at
+     * while their stage is still non-terminal; filtering on closed_at would wrongly
+     * exclude those deals from the company KPI.
      * float is FORBIDDEN — all arithmetic in integer kopecks.
      */
     public function aggregateForCompany(Company $company): DealTotalsDTO
     {
         $baseCurrency = strtoupper((string) config('crm.currencies.default', 'RUB'));
 
-        // Fetch open (non-closed) deals; "closed" = stage has is_won OR is_lost
+        // Fetch open deals; "open" = stage is_won = false AND is_lost = false.
+        // Do NOT add ->whereNull('closed_at') — stage flags are the single source of truth.
         $deals = Deal::query()
             ->where('company_id', $company->id)
-            ->whereNull('closed_at')
             ->whereHas('stage', static fn (Builder $q) => $q->where('is_won', false)->where('is_lost', false))
             ->with('stage:id,is_won,is_lost')
             ->get(['id', 'amount', 'currency']);

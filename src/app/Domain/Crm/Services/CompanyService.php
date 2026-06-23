@@ -173,13 +173,9 @@ class CompanyService
                         ->where('activities.is_closed', false)
                         ->where('activities.status', '!=', $doneStatus);
                 });
-            })
-            ->when(isset($filters['sort']) && $filters['sort'] === 'last_activity_at', function (Builder $q) use ($filters): void {
-                $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
-                $q->orderBy('last_activity_at', $direction);
-            }, function (Builder $q): void {
-                $q->orderByDesc('created_at');
             });
+
+        $this->applySort($query, $filters['sort_by'] ?? null, $filters['sort_dir'] ?? 'desc');
 
         return $query->paginate($perPage);
     }
@@ -512,6 +508,76 @@ class CompanyService
         }
 
         return $changes;
+    }
+
+    /**
+     * Apply the validated header sort (sort_by + sort_dir) to a list query, or fall
+     * back to the default `created_at DESC` when no sort_by is given.
+     *
+     * sort_by is one of IndexCompanyRequest::SORTABLE_COLUMNS (validated upstream —
+     * an off-list value never reaches here). sort_dir defaults to desc.
+     *
+     * Relation/aggregate columns use LEFT JOINs or correlated subqueries.
+     * The select is pinned to `crm_companies.*` on join paths so the JOIN never
+     * leaks foreign columns into the hydrated Company models. A stable `id`
+     * tiebreaker keeps pagination deterministic when the sort key has ties.
+     *
+     * @param  Builder<Company>  $query
+     */
+    private function applySort(Builder $query, ?string $sortBy, string $sortDir): void
+    {
+        $dir = $sortDir === 'asc' ? 'asc' : 'desc';
+
+        if ($sortBy === null) {
+            $query->orderByDesc('crm_companies.created_at')->orderByDesc('crm_companies.id');
+
+            return;
+        }
+
+        // Pin select to the base table so JOIN columns don't corrupt hydration.
+        $query->select('crm_companies.*');
+
+        match ($sortBy) {
+            'name' => $query->orderBy('crm_companies.name', $dir),
+
+            // category = category_code direct column
+            'category' => $query->orderBy('crm_companies.category_code', $dir),
+
+            // country = country_code direct column
+            'country' => $query->orderBy('crm_companies.country_code', $dir),
+
+            'last_contact' => $query->orderBy('crm_companies.last_activity_at', $dir),
+
+            'created' => $query->orderBy('crm_companies.created_at', $dir),
+
+            // owner = ownerUser full name (LEFT JOIN)
+            'owner' => $query
+                ->leftJoin('users as sort_owner', 'sort_owner.id', '=', 'crm_companies.owner_user_id')
+                ->orderBy('sort_owner.full_name', $dir),
+
+            // engagement = EngagementTier ordering: fresh > cooling > cold.
+            // Achieved by ordering last_activity_at DESC (most recent = freshest = "first"
+            // for asc direction, i.e. reversed for desc). NULLs (Cold) sort last on DESC,
+            // first on ASC — consistent with direct column ordering semantics.
+            'engagement' => $query->orderBy('crm_companies.last_activity_at', $dir === 'asc' ? 'asc' : 'desc'),
+
+            // deals = open-deal count correlated subquery
+            'deals' => $query->orderBy(
+                DB::table('deals')
+                    ->join('pipeline_stages', 'pipeline_stages.id', '=', 'deals.stage_id')
+                    ->whereColumn('deals.company_id', 'crm_companies.id')
+                    ->whereNull('deals.deleted_at')
+                    ->where('pipeline_stages.is_won', false)
+                    ->where('pipeline_stages.is_lost', false)
+                    ->selectRaw('COUNT(*)'),
+                $dir,
+            ),
+
+            default => $query->orderByDesc('crm_companies.created_at'),
+        };
+
+        // Deterministic tiebreaker — same page boundary always returns the same row set.
+        $query->orderBy('crm_companies.id', 'desc');
     }
 
     /**

@@ -30,12 +30,14 @@
             size="small"
             class="entity-header__category-tag"
           />
-          <EngagementChip
-            v-if="engagementTier"
-            :tier="engagementTier"
-            :last-activity-at="lastActivityAt"
-            class="entity-header__engagement"
-          />
+          <!-- E1: spec §1 — engagement shows as "● Вовлечённость: Высокий" inline with title -->
+          <span v-if="engagementTier" class="entity-header__engagement-wrap">
+            <EngagementChip
+              :tier="engagementTier"
+              :last-activity-at="lastActivityAt"
+              class="entity-header__engagement"
+            />
+          </span>
         </div>
 
         <!-- Meta row: subtitle (contact position) first, then meta items -->
@@ -74,24 +76,18 @@
           <slot name="meta" />
         </div>
 
-        <!-- Tags row (max 3 + +N) -->
+        <!-- Tags row (max 3 + +N) — spec §1: rgba(255,255,255,0.12) bg, 11px/600 -->
         <div v-if="tags && tags.length > 0" class="entity-header__tags-row">
           <i class="pi pi-tag entity-header__tags-icon" />
-          <Tag
+          <span
             v-for="tag in visibleTags"
             :key="tag"
-            :value="tag"
-            severity="secondary"
-            size="small"
             class="entity-header__tag"
-          />
-          <Tag
+          >{{ tag }}</span>
+          <span
             v-if="hiddenTagsCount > 0"
-            :value="`+${hiddenTagsCount}`"
-            severity="secondary"
-            size="small"
             class="entity-header__tag"
-          />
+          >+{{ hiddenTagsCount }}</span>
         </div>
       </div>
 
@@ -216,7 +212,9 @@ function formatDate(iso: string): string {
 <style lang="scss" scoped>
 .entity-header {
   background: $brand-header-bg;
-  padding: $space-3 $space-4 $space-4;
+  // E1: spec §1 padding = 16px 20px (uniform, not asymmetric top/bottom)
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 16px 20px; // brand header invariant — 16/20 per mockup
   flex-shrink: 0;
 }
 
@@ -225,7 +223,9 @@ function formatDate(iso: string): string {
 .entity-header__main-row {
   display: flex;
   align-items: flex-start;
-  gap: $space-3;
+  // E1: spec §1 gap = 16px (was $space-3 = 12px)
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  gap: 16px; // brand header invariant — 16px gap per mockup
 }
 
 .entity-header__avatar-col {
@@ -238,7 +238,9 @@ function formatDate(iso: string): string {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  // E1: spec §1 — meta row margin-top 7px, tags margin-top 9px — use gap 7px (close to spec)
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  gap: 7px; // brand header invariant — 7px between info rows per mockup
 }
 
 // ── Title row ──────────────────────────────────────────────────────────────────
@@ -321,7 +323,9 @@ function formatDate(iso: string): string {
   align-items: center;
   gap: $space-1;
   flex-wrap: wrap;
-  margin-top: $space-1;
+  // E1: spec §1 tags marginTop 9px — add 2px extra vs flex-col gap-7px
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  margin-top: 2px; // brand header invariant — extra nudge for tags row
 }
 
 .entity-header__tags-icon {
@@ -332,7 +336,21 @@ function formatDate(iso: string): string {
   flex-shrink: 0;
 }
 
+// E1: tags on navy header — spec §1: 11px/600, rgba(255,255,255,0.12) bg, rgba(255,255,255,0.85) text
 .entity-header__tag {
+  display: inline-flex;
+  align-items: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  font-size: 11px; // brand header invariant — tag label on navy panel
+  font-weight: $font-weight-semibold;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 2px 8px; // brand header invariant — tag padding on navy panel
+  border-radius: $radius-sm;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: rgba(255, 255, 255, 0.12); // brand header invariant — tag bg on navy panel
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.85); // brand header invariant — tag text on navy panel
+  white-space: nowrap;
   flex-shrink: 0;
 }
 

@@ -650,10 +650,11 @@ function formatKopecks(kopecks: number | null | undefined): string {
 const companyKpiItems = computed((): KpiItem[] => {
   const ext = company.value as CompanyExtended | null
   const lastAt = ext?.last_activity_at ?? null
-  const kpi = (ext as (CompanyExtended & { kpi?: { open_deals_count?: number; open_count?: number; base_total?: number; employees_count?: number; documents_count?: number; won_count?: number } | null }) | null)?.kpi ?? null
+  const kpi = (ext as (CompanyExtended & { kpi?: { open_deals_count?: number; open_count?: number; deals_sum?: number; base_total?: number; employees_count?: number; documents_count?: number; won_count?: number } | null }) | null)?.kpi ?? null
   // backend sends open_deals_count; open_count kept as legacy fallback
   const openCount = kpi?.open_deals_count ?? kpi?.open_count ?? openDealsCount.value
-  const dealsSum = kpi?.base_total ?? null
+  // E2: backend now returns deals_sum (was base_total — wrong field caused 0/— display)
+  const dealsSum = kpi?.deals_sum ?? kpi?.base_total ?? null
   const employeesCount = kpi?.employees_count ?? employees.value.length
   const documentsCount = kpi?.documents_count ?? documents.value.length
   const wonCount = kpi?.won_count ?? 0

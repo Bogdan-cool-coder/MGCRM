@@ -25,11 +25,18 @@ function loadDensity(): ContactsDensity {
   return (localStorage.getItem(DENSITY_STORAGE_KEY) as ContactsDensity | null) ?? 'normal'
 }
 
+// Columns removed from spec that must not persist from old localStorage cache
+const COMPANY_REMOVED_COLS = new Set(['id', 'company_type'])
+const CONTACT_REMOVED_COLS = new Set(['id'])
+
 function loadVisibleFields(entityType: EntityType): string[] | null {
   try {
     const raw = localStorage.getItem(`${COLUMNS_STORAGE_KEY}_${entityType}`)
     if (!raw) return null
-    return JSON.parse(raw) as string[]
+    const fields = JSON.parse(raw) as string[]
+    // Purge removed columns from cache
+    const removed = entityType === 'company' ? COMPANY_REMOVED_COLS : CONTACT_REMOVED_COLS
+    return fields.filter((f) => !removed.has(f))
   } catch {
     return null
   }
@@ -37,6 +44,7 @@ function loadVisibleFields(entityType: EntityType): string[] | null {
 
 // Per §5 spec: contacts = ФИО/Компания/Телефон/Посл.контакт/Теги/Автор
 // companies = Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный/Теги
+// NOTE: 'id' (#) and 'company_type' columns are NOT in default company view (D1 fix)
 const DEFAULT_CONTACT_FIELDS = ['full_name', 'company', 'phone', 'last_activity_at', 'tags', 'owner']
 const DEFAULT_COMPANY_FIELDS = ['name', 'category_code', 'country_code', 'open_deals_count', 'last_activity_at', 'engagement_tier', 'owner', 'tags']
 
@@ -46,34 +54,33 @@ export function useContactsView(entityType: { value: EntityType }) {
   const density = ref<ContactsDensity>(loadDensity())
 
   // Translated column defs — §5.2 contacts: ФИО/Компания/Телефон/Посл.контакт/Теги/Автор
+  // 'id' (#) removed — not in §5.2 spec; all sortable cols per CONTACT_SORT_MAP
   const contactColumnDefs = computed<ContactColumnDef[]>(() => [
-    { field: 'id', header: '#', sortable: false, width: 60 },
     { field: 'full_name', header: t('contacts.page.columns.name'), required: true, sortable: true },
-    { field: 'company', header: t('contacts.page.columns.company'), sortable: false },
-    { field: 'phone', header: t('contacts.page.columns.phone'), sortable: false },
+    { field: 'company', header: t('contacts.page.columns.company'), sortable: true },
+    { field: 'phone', header: t('contacts.page.columns.phone'), sortable: true },
     { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
     { field: 'tags', header: t('contacts.page.columns.tags'), sortable: false },
-    { field: 'owner', header: t('contacts.page.columns.author'), sortable: false },
+    { field: 'owner', header: t('contacts.page.columns.author'), sortable: true },
     // Available but hidden by default:
     { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: false, width: 100 },
-    { field: 'position', header: t('contact.page.fields.position', 'Должность'), sortable: true },
+    { field: 'position', header: t('contact.page.fields.position', 'Должность'), sortable: false },
     { field: 'open_deals_count', header: t('crm.contacts_page.columns.openDeals'), sortable: true, width: 120 },
   ])
 
   // §5.1 companies: Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный/Теги
+  // 'id' (#) and 'company_type' (Тип компании) are removed per spec §5.1 (D1 fix)
   const companyColumnDefs = computed<ContactColumnDef[]>(() => [
     { field: 'name', header: t('company.page.fields.name'), required: true, sortable: true },
-    { field: 'category_code', header: t('company.page.fields.category', 'Категория'), sortable: false },
+    { field: 'category_code', header: t('company.page.fields.category', 'Категория'), sortable: true },
     { field: 'country_code', header: t('contacts.page.filters.country'), sortable: true },
     { field: 'open_deals_count', header: t('crm.contacts_page.columns.openDeals'), sortable: true },
     { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
-    { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: false },
-    { field: 'owner', header: t('contacts.page.columns.responsible'), sortable: false },
+    { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: true },
+    { field: 'owner', header: t('contacts.page.columns.responsible'), sortable: true },
     { field: 'tags', header: t('contacts.page.columns.tags'), sortable: false },
-    // Available but hidden by default:
-    { field: 'id', header: '#', sortable: false, width: 60 },
-    { field: 'company_type', header: t('contacts.page.filters.companyType'), sortable: false },
-    { field: 'employees_count', header: t('contacts_company.employees', 'Сотрудников'), sortable: true, width: 110 },
+    // Available but hidden by default (extra columns for column chooser):
+    { field: 'employees_count', header: t('contacts_company.employees', 'Сотрудников'), sortable: false, width: 110 },
   ])
 
   const allColumns = computed(() =>

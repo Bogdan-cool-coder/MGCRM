@@ -1,6 +1,7 @@
 <!-- DateField — auto-format ДД.ММ.ГГГГ + calendar popover. §9 of DealCard spec.
      Click on any part of the field activates input AND opens calendar.
-     Emits 'update:modelValue' with ISO date string (YYYY-MM-DD) or null. -->
+     Emits 'update:modelValue' with ISO date string (YYYY-MM-DD) or null.
+     min: ISO date string; dates before min are rejected on blur (C1). -->
 <template>
   <div
     ref="rootRef"
@@ -34,6 +35,7 @@
         inline
         :show-button-bar="false"
         :show-other-months="true"
+        :min-date="minDateObj ?? undefined"
         date-format="dd.mm.yy"
         @date-select="onDateSelect"
       />
@@ -49,10 +51,13 @@ const props = withDefaults(
   defineProps<{
     modelValue?: string | null
     placeholder?: string
+    /** ISO date string (YYYY-MM-DD); dates before this are rejected (C1) */
+    min?: string | null
   }>(),
   {
     modelValue: null,
     placeholder: 'ДД.ММ.ГГГГ',
+    min: null,
   },
 )
 
@@ -79,14 +84,26 @@ function isoToDisplay(iso: string | null | undefined): string {
   return `${dd}.${mm}.${yyyy}`
 }
 
+// minDateObj — clamped at midnight for comparison (C1)
+const minDateObj = computed((): Date | null => {
+  if (!props.min) return null
+  const d = new Date(props.min)
+  return isNaN(d.getTime()) ? null : d
+})
+
 function displayToIso(display: string): string | null {
   const clean = display.replace(/\D/g, '')
   if (clean.length !== 8) return null
   const dd = clean.slice(0, 2)
   const mm = clean.slice(2, 4)
   const yyyy = clean.slice(4, 8)
+  const year = parseInt(yyyy, 10)
+  // Reject nonsense years like 1011 (C1)
+  if (year < 2000 || year > 2100) return null
   const d = new Date(`${yyyy}-${mm}-${dd}`)
   if (isNaN(d.getTime())) return null
+  // Reject past dates when min is set (C1)
+  if (minDateObj.value && d < minDateObj.value) return null
   return `${yyyy}-${mm}-${dd}`
 }
 
@@ -143,11 +160,16 @@ function onInput(e: Event) {
 }
 
 function onBlur() {
-  const iso = displayToIso(displayValue.value)
   if (displayValue.value === '') {
     emit('update:modelValue', null)
-  } else if (iso) {
+    return
+  }
+  const iso = displayToIso(displayValue.value)
+  if (iso) {
     emit('update:modelValue', iso)
+  } else {
+    // Invalid/rejected value — restore from modelValue (past date or bad year)
+    displayValue.value = isoToDisplay(props.modelValue)
   }
 }
 
@@ -260,6 +282,11 @@ onUnmounted(() => {
 
   .app-dark & {
     border-color: var(--p-surface-700);
+  }
+
+  // B3: hide PrimeVue calendar's own text input row — we use our own (no duplicate)
+  :deep(.p-datepicker-input) {
+    display: none;
   }
 }
 </style>

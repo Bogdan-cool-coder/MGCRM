@@ -67,15 +67,7 @@
         <span class="requisite-card__field-label">{{ field.label }}</span>
         <div class="requisite-card__field-value-wrap">
           <span class="requisite-card__field-value">{{ field.value }}</span>
-          <!-- per-field pi-copy on hover -->
-          <button
-            type="button"
-            class="requisite-card__field-copy"
-            :title="t('common.copy', 'Копировать')"
-            @click.stop="copyToClipboard(field.value)"
-          >
-            <i class="pi pi-copy" />
-          </button>
+          <!-- E4: per-field copy removed — duplicates the header "Копировать реквизиты" button -->
         </div>
       </div>
     </div>
@@ -233,14 +225,12 @@ function formatDate(dateStr: string): string {
     background: var(--p-surface-100); // dark card bg
   }
 
+  // E3: active requisite — border accent only, no green background shading (badge is enough indicator)
   &--current {
     border-color: var(--p-green-300);
-    background: var(--p-green-50);
 
     .app-dark & {
       border-color: var(--p-green-700);
-      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: rgba(21, 48, 31, 0.4); // dark green tint
     }
   }
 
@@ -396,36 +386,8 @@ function formatDate(dateStr: string): string {
   }
 }
 
-// pi-copy per field — visible on hover of the field
-.requisite-card__field-copy {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  width: 20px;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  height: 20px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: $surface-300;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  transition: color var(--app-transition-fast);
-
-  i {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    font-size: 10px;
-  }
-
-  &:hover {
-    color: var(--p-primary-color);
-  }
-}
-
-.requisite-card__field:hover .requisite-card__field-copy {
-  display: flex;
-}
+// E4: .requisite-card__field-copy removed — per-field copy buttons removed to eliminate duplicate
+// The single "Копировать реквизиты" button in the card header is the only copy control.
 
 // ── Note ──────────────────────────────────────────────────────────────────────
 

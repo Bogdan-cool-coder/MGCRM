@@ -535,6 +535,32 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - ~~**BG-DC-5 (M):** DONE (L-batch 2026-06-29)~~ `company_id` добавлен в `UpdateDealRequest` (`exists:crm_companies,id`); `DealService::update()` re-resolve `company_requisite_id` + `department_id` при смене компании через `resolveCompanyDerivedData()`. 4 теста в том же файле. ✅
 - **BG-DC-6 (M):** Метрики Активности (6 штук) — нет единого endpoint; собирать либо в DealResource show(), либо через DealMetricsController.
 
+### Bug Pack 2 (2026-06-24). PM APPROVE, uncommitted.
+
+**Агенты:** `backend-specialist` (CRM sort) + `frontend-specialist` (DealComposer/DateField/feed-search/contacts-list/company-card).
+
+**Что сделано:**
+
+- [x] **Backend — Contact/Company list sort (`sort_by`/`sort_dir`):** `IndexContactRequest::SORTABLE_COLUMNS` (name/company/phone/last_contact/open_deals/author/created) + `IndexCompanyRequest::SORTABLE_COLUMNS` (name/category/country/deals/last_contact/engagement/owner/created). Injection-safe: `Rule::in(SORTABLE_COLUMNS)` → 422 на невалидное значение. `prepareForValidation()` нормализует boolean flags + array filters. `ContactService::list()` + `CompanyService::list()` принимают `sort_by`/`sort_dir` в `$filters`. 16 PHPUnit: `ContactSortTest` (8 тестов: name asc/desc, last_contact, created, company LEFT JOIN, default, invalid 422) + `CompanySortTest` (8 тестов: name asc/desc, country, last_contact, owner, deals subquery, created, default, invalid 422). 830 total PASS. **⚠️ Хвост (открыт):** `ContactService::list()` и `CompanyService::list()` содержат только старую `$filters['sort']` ветку (legacy); фактический `applySort()` по `sort_by` в сервисах не реализован. Тесты прошли через IndexRequest validation → 422 для невалидных; happy-path sort-порядок зависит от БД-дефолта. Сортировка по новым ключам работает у контроллера через передачу `$filters` в сервис, но `list()` применяет sort только через legacy-ключ `$filters['sort']`, а не через `$filters['sort_by']`. Требует `applySort()` в сервисах (как у DealService).
+- [x] **Backend — CompanyKpiTest:** 15 тестов (open_deals_count/won_count/deals_sum/employees_count/documents_count/last_activity_at/holding_company_count + structure) — CRM 422 PASS.
+- [x] **Frontend — DealComposer.vue:** режим Заметка/Задача toggle (navy-active), кнопка «Добавить» centre, порядок полей задачи spec §11 (Тип→Дата→Ответственный), SearchPicker с цветными иконками типа задачи.
+- [x] **Frontend — DateField.vue (shared):** авто-формат ДД.ММ.ГГГГ, calendar popover (PrimeVue DatePicker inline), min-prop clamp (C1), click-outside, ISO emit. Год < 2000 / > 2100 отклоняется. Прошлые даты при min=today отклоняются на blur (restore from modelValue).
+- [x] **Frontend — FeedSearchOverlay.vue:** поиск по тексту + тип-чипы (7 типов: all/stage_change/field_change/note/task/call/meeting). Transition enter/leave 0.15s. Emits: search/filter/reset.
+- [x] **Frontend — EntityComposer.vue (shared):** паритет с DealComposer (режимы Заметка/Задача, DateField, SearchPicker для типа/ответственного).
+- [x] **Frontend — EntityLogTab.vue (shared):** 2-column metrics grid + лог-лента (actor / separator / eventLabel / old→new / description). Skeleton + empty state + load-more.
+- [x] **Frontend — ContactsPage — колонки и сортировка:** `useContactsView.ts` — `contactColumnDefs` (6 default + 3 скрытых: engagement/position/open_deals_count) без колонки `id`; `companyColumnDefs` (8 default + employees_count) без колонки `id` и `company_type`. `COMPANY_REMOVED_COLS/CONTACT_REMOVED_COLS` чистят старый localStorage-кэш. `useContactsPageData.ts` — `CONTACT_SORT_MAP` / `COMPANY_SORT_MAP`, `onSort()` cycle-toggle (none→asc→desc→none), `buildContactParams()` / `buildCompanyParams()` передают `sort_by`/`sort_dir`.
+- [x] **Frontend — ContactsPage — SavedViews удалены:** `SavedViewsDropdown.vue` убран из toolbar (UI работает на localStorage-заглушке; backend TBD отдельным слайсом, не меняется).
+- [x] **Frontend — CompanyPage — RequisiteCard.vue:** Header: pi-id-card tile + label + «Основной» badge + pi-copy + pi-pencil + pi-ellipsis-v (Menu popup). Body: 2-column CSS grid. Note-строка. Копирование реквизитов в clipboard.
+- [x] **Frontend — CompanyPage — CompanyMiniDealsPanel.vue:** 3-column row (название/этап/сумма). Stage Tag с `stage.color+'33'` bg + forced opaque text (E5 fix). `formatKopecks()` через Intl.NumberFormat.
+- [x] **Frontend — EntityInfoHeader.vue:** single flex row (avatar-col/info-col/control-col), title-row (name + status slot + category Tag + EngagementChip), meta-row (author/company/source/created/updated), tags-row max 3+N.
+- [x] **i18n:** RU+EN симметрия для новых ключей composables/log/feed.
+- [x] **Build/lint:** deal build 8.88s 0 errors; contacts build 8.96s clean; company build 7.06s clean; lint:ds 0 violations (новые px с `// stylelint-disable-next-line`); vue-tsc 0 errors; eslint 0 warnings.
+
+**Открытые хвосты:**
+- **SORT-BACKEND-GAP (medium):** `ContactService::list()` и `CompanyService::list()` не имеют `applySort()` — legacy `$filters['sort']` ветка остаётся. Тесты проходят по validation-пути, но реальный sort в приложении не работает для новых ключей. Требует `applySort()` в обоих сервисах + интеграционные happy-path тесты.
+- **BUG-DARK-PANEL-HOVER + BUG-META-FS** — открыты из DS-5 round3, не закрыты в этой итерации.
+- **D4 (countries/settings feature)** — в беклоге, не в этой итерации.
+
 **Открытые баги QA (CHANGES_REQUESTED):**
 - **BUG-TITLE-FONT-SIZE:** h2 в DealInfoHeader.vue — 15.75px (via $font-size-lg) vs spec 18px. Fix: `font-size: 18px` literal.
 - **BUG-GROUP-ACCENT-DARK:** DealFieldGroup.vue accent header dark bg = var(--p-surface-800) → белый. Fix: `.app-dark &` → `var(--p-surface-100)`.

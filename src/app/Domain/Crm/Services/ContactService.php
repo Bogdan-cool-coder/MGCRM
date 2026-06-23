@@ -178,13 +178,9 @@ class ContactService
                         ->where('activities.is_closed', false)
                         ->where('activities.status', '!=', $doneStatus);
                 });
-            })
-            ->when(isset($filters['sort']) && $filters['sort'] === 'last_activity_at', function (Builder $q) use ($filters): void {
-                $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
-                $q->orderBy('last_activity_at', $direction);
-            }, function (Builder $q): void {
-                $q->orderByDesc('created_at');
             });
+
+        $this->applySort($query, $filters['sort_by'] ?? null, $filters['sort_dir'] ?? 'desc');
 
         return $query->paginate($perPage);
     }
@@ -316,6 +312,79 @@ class ContactService
             EngagementTier::Cooling => [$coldCutoff, $warmCutoff],
             EngagementTier::Cold => [null, null],
         };
+    }
+
+    /**
+     * Apply the validated header sort (sort_by + sort_dir) to a list query, or fall
+     * back to the default `created_at DESC` when no sort_by is given.
+     *
+     * sort_by is one of IndexContactRequest::SORTABLE_COLUMNS (validated upstream —
+     * an off-list value never reaches here). sort_dir defaults to desc.
+     *
+     * Relation/aggregate columns use LEFT JOINs or correlated subqueries.
+     * The select is pinned to `crm_contacts.*` on join paths so the JOIN never
+     * leaks foreign columns into the hydrated Contact models. A stable `id`
+     * tiebreaker keeps pagination deterministic when the sort key has ties.
+     *
+     * @param  Builder<Contact>  $query
+     */
+    private function applySort(Builder $query, ?string $sortBy, string $sortDir): void
+    {
+        $dir = $sortDir === 'asc' ? 'asc' : 'desc';
+
+        if ($sortBy === null) {
+            $query->orderByDesc('crm_contacts.created_at')->orderByDesc('crm_contacts.id');
+
+            return;
+        }
+
+        // Pin select to the base table so JOIN columns don't corrupt hydration.
+        $query->select('crm_contacts.*');
+
+        match ($sortBy) {
+            'name' => $query->orderBy('crm_contacts.full_name', $dir),
+
+            'phone' => $query->orderBy('crm_contacts.phone', $dir),
+
+            'last_contact' => $query->orderBy('crm_contacts.last_activity_at', $dir),
+
+            'created' => $query->orderBy('crm_contacts.created_at', $dir),
+
+            // author = creator (created_by_id → users.full_name)
+            'author' => $query
+                ->leftJoin('users as sort_author', 'sort_author.id', '=', 'crm_contacts.created_by_id')
+                ->orderBy('sort_author.full_name', $dir),
+
+            // company = primary company name (LEFT JOIN crm_contact_company_links + crm_companies)
+            'company' => $query
+                ->leftJoin(
+                    'crm_contact_company_links as sort_ccl',
+                    function ($join): void {
+                        $join->on('sort_ccl.contact_id', '=', 'crm_contacts.id')
+                            ->where('sort_ccl.is_primary', true);
+                    }
+                )
+                ->leftJoin('crm_companies as sort_co', 'sort_co.id', '=', 'sort_ccl.company_id')
+                ->orderBy('sort_co.name', $dir),
+
+            // open_deals = correlated subquery counting active (non-won, non-lost) deals
+            'open_deals' => $query->orderBy(
+                DB::table('deal_contacts')
+                    ->join('deals', 'deals.id', '=', 'deal_contacts.deal_id')
+                    ->join('pipeline_stages', 'pipeline_stages.id', '=', 'deals.stage_id')
+                    ->whereColumn('deal_contacts.contact_id', 'crm_contacts.id')
+                    ->whereNull('deals.deleted_at')
+                    ->where('pipeline_stages.is_won', false)
+                    ->where('pipeline_stages.is_lost', false)
+                    ->selectRaw('COUNT(*)'),
+                $dir,
+            ),
+
+            default => $query->orderByDesc('crm_contacts.created_at'),
+        };
+
+        // Deterministic tiebreaker — same page boundary always returns the same row set.
+        $query->orderBy('crm_contacts.id', 'desc');
     }
 
     /**

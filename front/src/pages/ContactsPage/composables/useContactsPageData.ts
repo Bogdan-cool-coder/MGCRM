@@ -12,6 +12,32 @@ import type { ContactListParams } from '@/api/crm/contacts'
 import type { ContactsOverlayFilters } from './useContactsFilters'
 import { DEFAULT_OVERLAY_FILTERS } from './useContactsFilters'
 
+// Sort key types per backend contract
+export type ContactSortBy = 'name' | 'company' | 'phone' | 'last_contact' | 'open_deals' | 'author' | 'created'
+export type CompanySortBy = 'name' | 'category' | 'country' | 'deals' | 'last_contact' | 'engagement' | 'owner' | 'created'
+export type SortDir = 'asc' | 'desc'
+
+// Map from column field → backend sort_by value
+export const CONTACT_SORT_MAP: Partial<Record<string, ContactSortBy>> = {
+  full_name: 'name',
+  company: 'company',
+  phone: 'phone',
+  last_activity_at: 'last_contact',
+  open_deals_count: 'open_deals',
+  owner: 'author',
+  // created_at not in default visible cols
+}
+
+export const COMPANY_SORT_MAP: Partial<Record<string, CompanySortBy>> = {
+  name: 'name',
+  category_code: 'category',
+  country_code: 'country',
+  open_deals_count: 'deals',
+  last_activity_at: 'last_contact',
+  engagement_tier: 'engagement',
+  owner: 'owner',
+}
+
 export type EntityType = 'contact' | 'company'
 
 /** Simple quick-filter (search bar only). Overlay filters handled separately. */
@@ -47,6 +73,11 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
   // Persist perPage in localStorage
   const storedPerPage = Number(localStorage.getItem('mgcrm_contacts_per_page_v1')) || 50
   const perPage = ref(storedPerPage)
+
+  // Sort state — reset when entity type changes
+  const sortByContact = ref<ContactSortBy | null>(null)
+  const sortByCompany = ref<CompanySortBy | null>(null)
+  const sortDir = ref<SortDir>('asc')
   /** Legacy simple filter — kept for backward compat; overlayFilters extends it. */
   const filter = ref<ContactsFilter>({ ...DEFAULT_FILTER })
   /** Full overlay filter state */
@@ -124,6 +155,9 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
       page: page.value,
       per_page: perPage.value,
       search: filter.value.search || undefined,
+      // Sorting
+      sort_by: sortByContact.value ?? undefined,
+      sort_dir: sortByContact.value ? sortDir.value : undefined,
       // Multi-value
       owner_ids: f.owner_ids.length ? f.owner_ids : undefined,
       author_ids: f.author_ids.length ? f.author_ids : undefined,
@@ -156,6 +190,9 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
       page: page.value,
       per_page: perPage.value,
       search: filter.value.search || undefined,
+      // Sorting
+      sort_by: sortByCompany.value ?? undefined,
+      sort_dir: sortByCompany.value ? sortDir.value : undefined,
       // Multi-value
       owner_ids: f.owner_ids.length ? f.owner_ids : undefined,
       company_type_ids: f.company_type_ids.length ? f.company_type_ids : undefined,
@@ -271,7 +308,54 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     }
   }
 
+  /**
+   * Toggle sort on a column field. Cycles: none → asc → desc → none.
+   * Uses the sort maps to convert field → backend sort_by value.
+   */
+  function onSort(field: string) {
+    if (entityType.value === 'contact') {
+      const backendKey = CONTACT_SORT_MAP[field]
+      if (!backendKey) return
+      if (sortByContact.value === backendKey) {
+        if (sortDir.value === 'asc') {
+          sortDir.value = 'desc'
+        } else {
+          sortByContact.value = null
+          sortDir.value = 'asc'
+        }
+      } else {
+        sortByContact.value = backendKey
+        sortDir.value = 'asc'
+      }
+    } else {
+      const backendKey = COMPANY_SORT_MAP[field]
+      if (!backendKey) return
+      if (sortByCompany.value === backendKey) {
+        if (sortDir.value === 'asc') {
+          sortDir.value = 'desc'
+        } else {
+          sortByCompany.value = null
+          sortDir.value = 'asc'
+        }
+      } else {
+        sortByCompany.value = backendKey
+        sortDir.value = 'asc'
+      }
+    }
+    page.value = 1
+    void load()
+  }
+
+  /** Current active sort field (backend key) */
+  const activeSortBy = computed(() =>
+    entityType.value === 'contact' ? sortByContact.value : sortByCompany.value,
+  )
+
   watch(entityType, () => {
+    // Reset sort when switching entity type
+    sortByContact.value = null
+    sortByCompany.value = null
+    sortDir.value = 'asc'
     page.value = 1
     void load()
   })
@@ -288,6 +372,8 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     total,
     isFiltered,
     activeFilterCount,
+    activeSortBy,
+    sortDir,
     load,
     applyFilter,
     applyOverlayFilters,
@@ -295,6 +381,7 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     resetOverlayFilters,
     removeChipFilter,
     onPageChange,
+    onSort,
     ensureDirectories,
   }
 }

@@ -44,17 +44,54 @@ class CompanyKpiTest extends TestCase
         $user = $this->actingAsManager();
         $company = Company::factory()->create(['owner_user_id' => $user->id]);
 
-        // Create an open stage + 2 open deals
-        $stage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
-        Deal::factory()->inStage($stage)->create(['company_id' => $company->id, 'closed_at' => null]);
-        Deal::factory()->inStage($stage)->create(['company_id' => $company->id, 'closed_at' => null]);
+        // Open stage → open deals (regardless of closed_at value)
+        $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+        Deal::factory()->inStage($openStage)->create(['company_id' => $company->id, 'closed_at' => null]);
+        Deal::factory()->inStage($openStage)->create(['company_id' => $company->id, 'closed_at' => null]);
 
-        // One deal with closed_at set — should be excluded from open count
-        Deal::factory()->inStage($stage)->create(['company_id' => $company->id, 'closed_at' => now()]);
+        // Won/lost stage deals — excluded by stage flags (is_won/is_lost), not by closed_at
+        $wonStage  = PipelineStage::factory()->create(['is_won' => true,  'is_lost' => false]);
+        $lostStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => true]);
+        Deal::factory()->inStage($wonStage)->create(['company_id' => $company->id]);
+        Deal::factory()->inStage($lostStage)->create(['company_id' => $company->id]);
 
         $this->getJson("/api/companies/{$company->id}")
             ->assertOk()
             ->assertJsonPath('data.kpi.open_deals_count', 2);
+    }
+
+    /**
+     * Regression: AMO-migrated deals can have a stale closed_at value even when
+     * their stage is still non-terminal (the stage panel correctly shows them as
+     * in-work). aggregateForCompany() MUST key off stage flags only — a deal on
+     * an open stage with closed_at set must still count in the company KPI.
+     */
+    public function test_kpi_open_deals_counts_deal_with_stale_closed_at_on_open_stage(): void
+    {
+        $user    = $this->actingAsManager();
+        $company = Company::factory()->create(['owner_user_id' => $user->id]);
+
+        $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+
+        // AMO edge-case: non-terminal stage but closed_at is populated (stale migration artifact)
+        Deal::factory()->inStage($openStage)->create([
+            'company_id' => $company->id,
+            'amount'     => 300_000, // 3000 RUB in kopecks
+            'currency'   => 'RUB',
+            'closed_at'  => now()->subDay(), // stale — should NOT exclude from KPI
+        ]);
+
+        $response = $this->getJson("/api/companies/{$company->id}")->assertOk();
+
+        // Must appear in the open count — stage is the sole arbiter
+        $response->assertJsonPath('data.kpi.open_deals_count', 1);
+
+        // deals_sum must include the amount (300_000 kopecks), or null if FX unavailable
+        $dealsSumRaw = $response->json('data.kpi.deals_sum');
+        $this->assertTrue(
+            $dealsSumRaw === null || $dealsSumRaw === 300_000,
+            "deals_sum expected 300000 (kopecks) or null (FX unavailable), got: {$dealsSumRaw}"
+        );
     }
 
     public function test_kpi_deals_sum_is_integer_kopecks(): void

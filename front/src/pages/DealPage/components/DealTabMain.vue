@@ -112,6 +112,7 @@
         <div class="deal-tab-main__quick-value">
           <DateField
             :model-value="deal.expected_sign_date"
+            :min="todayIso"
             @update:model-value="saveDateField('expected_sign_date', $event)"
           />
         </div>
@@ -123,6 +124,7 @@
         <div class="deal-tab-main__quick-value">
           <DateField
             :model-value="deal.expected_payment_date"
+            :min="todayIso"
             @update:model-value="saveDateField('expected_payment_date', $event)"
           />
         </div>
@@ -269,6 +271,15 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
+
+// C1: plan dates must not allow past dates
+const todayIso = computed(() => {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+})
 
 // ── Refs for collapse/expand all ───────────────────────────────────────────────
 

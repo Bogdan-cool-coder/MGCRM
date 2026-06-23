@@ -41,6 +41,7 @@ use App\Http\Controllers\Crm\Admin\CountryController;
 use App\Http\Controllers\Crm\Admin\DisconnectReasonController;
 use App\Http\Controllers\Crm\Admin\SourceController;
 use App\Http\Controllers\Crm\CompanyBulkController;
+use App\Http\Controllers\Crm\CompanyChannelController;
 use App\Http\Controllers\Crm\CompanyClientStatusController;
 use App\Http\Controllers\Crm\CompanyController;
 use App\Http\Controllers\Crm\CompanyEmployeeController;
@@ -224,6 +225,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
     Route::apiResource('companies', CompanyController::class);
     Route::prefix('companies/{company}')->name('companies.')->group(function (): void {
+        // Company channels (phone, email, website, tg, wa, etc.)
+        Route::get('channels', [CompanyChannelController::class, 'index'])->name('channels.index');
+        Route::post('channels', [CompanyChannelController::class, 'store'])->name('channels.store');
+        Route::patch('channels/{channel}', [CompanyChannelController::class, 'update'])->name('channels.update');
+        Route::delete('channels/{channel}', [CompanyChannelController::class, 'destroy'])->name('channels.destroy');
+
         Route::get('employees', [CompanyEmployeeController::class, 'index'])->name('employees.index');
         Route::post('employees', [CompanyEmployeeController::class, 'store'])->name('employees.store');
         Route::patch('employees/{contact}', [CompanyEmployeeController::class, 'update'])->name('employees.update');

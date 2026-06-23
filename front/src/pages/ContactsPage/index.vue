@@ -19,20 +19,11 @@
       />
       <ContactsToolbar
         v-else
-        :active-view="activeView"
-        :saved-views="savedViews.views.value"
-        :default-view-id="savedViews.defaultViewId.value"
         :entity-type="entityType"
         :total="total"
         :search="filter.search"
         :active-filter-count="activeFilterCount"
         :density="view.density.value"
-        :saved-views-loading="savedViews.isLoading.value"
-        @set-view="onSetView"
-        @save-view="onSaveView"
-        @delete-view="onDeleteView"
-        @set-default-view="onSetDefaultView"
-        @rename-view="onRenameView"
         @set-entity-type="entityType = $event"
         @search="onSearch"
         @open-filter="filterOverlayOpen = !filterOverlayOpen"
@@ -151,10 +142,20 @@
               <Column
                 v-if="col.field === 'name'"
                 field="name"
-                :header="col.header"
-                :sortable="col.sortable"
                 style="min-width: 200px"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <div class="contacts-page__name-cell">
                     <CrmAvatar
@@ -177,10 +178,20 @@
               <Column
                 v-else-if="col.field === 'full_name'"
                 field="full_name"
-                :header="col.header"
-                :sortable="col.sortable"
                 style="min-width: 200px"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <div class="contacts-page__name-cell">
                     <CrmAvatar
@@ -209,8 +220,19 @@
               <Column
                 v-else-if="col.field === 'engagement_tier'"
                 field="engagement_tier"
-                :header="col.header"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <span
                     v-if="(data as ContactExtended).engagement_tier"
@@ -230,9 +252,10 @@
               <Column
                 v-else-if="col.field === 'position'"
                 field="position"
-                :header="col.header"
-                :sortable="col.sortable"
               >
+                <template #header>
+                  <span class="contacts-page__th">{{ col.header }}</span>
+                </template>
                 <template #body="{ data }">
                   {{ (data as Contact).position || '—' }}
                 </template>
@@ -241,8 +264,19 @@
               <!-- Phone (contact) -->
               <Column
                 v-else-if="col.field === 'phone'"
-                :header="col.header"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <span v-if="(data as Contact).phone" class="contacts-page__na">
                     {{ (data as Contact).phone }}
@@ -254,8 +288,19 @@
               <!-- Company (contact → company link) -->
               <Column
                 v-else-if="col.field === 'company'"
-                :header="col.header"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <span v-if="getPrimaryCompanyLink(data as Contact)">
                     <RouterLink
@@ -274,9 +319,19 @@
               <Column
                 v-else-if="col.field === 'last_activity_at'"
                 field="last_activity_at"
-                :header="col.header"
-                :sortable="col.sortable"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <span
                     v-if="(data as ContactExtended).last_activity_at"
@@ -295,11 +350,21 @@
               <!-- Open deals count — circle badge -->
               <Column
                 v-else-if="col.field === 'open_deals_count'"
-                :header="col.header"
-                :sortable="col.sortable"
                 header-style="text-align: center"
                 body-style="text-align: center"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th contacts-page__th--center"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <span
                     v-if="(data as Record<string, unknown>)['open_deals_count']"
@@ -314,10 +379,21 @@
               <!-- Category code — centered -->
               <Column
                 v-else-if="col.field === 'category_code'"
-                :header="col.header"
                 header-style="text-align: center"
                 body-style="text-align: center"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th contacts-page__th--center"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <Tag
                     v-if="(data as Company).category_code"
@@ -333,9 +409,19 @@
               <Column
                 v-else-if="col.field === 'country_code'"
                 field="country_code"
-                :header="col.header"
-                :sortable="col.sortable"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <span class="contacts-page__na">
                     {{ directoriesStore.getCountryName((data as Company).country_code) || '—' }}
@@ -346,8 +432,19 @@
               <!-- Owner / Author — avatar + name -->
               <Column
                 v-else-if="col.field === 'owner'"
-                :header="col.header"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   <div v-if="getOwner(data)" class="contacts-page__owner-cell">
                     <CrmAvatar
@@ -364,8 +461,10 @@
               <!-- Tags -->
               <Column
                 v-else-if="col.field === 'tags'"
-                :header="col.header"
               >
+                <template #header>
+                  <span class="contacts-page__th">{{ col.header }}</span>
+                </template>
                 <template #body="{ data }">
                   <span class="contacts-page__tags">
                     <Tag
@@ -384,43 +483,36 @@
                 </template>
               </Column>
 
-              <!-- Company type -->
-              <Column
-                v-else-if="col.field === 'company_type'"
-                :header="col.header"
-              >
-                <template #body="{ data }">
-                  {{ (data as Company).company_type?.name ?? '—' }}
-                </template>
-              </Column>
-
               <!-- Employees count (company) -->
               <Column
                 v-else-if="col.field === 'employees_count'"
-                :header="col.header"
-                :sortable="col.sortable"
               >
+                <template #header>
+                  <span
+                    class="contacts-page__th"
+                    :class="{ 'contacts-page__th--sortable': col.sortable }"
+                    @click="col.sortable ? onSort(col.field) : undefined"
+                  >
+                    {{ col.header }}
+                    <span v-if="col.sortable" class="contacts-page__sort-icon">
+                      <i :class="sortIconClass(col.field)" />
+                    </span>
+                  </span>
+                </template>
                 <template #body="{ data }">
                   {{ (data as Record<string, unknown>)['employees_count'] ?? '—' }}
                 </template>
               </Column>
 
-              <!-- ID -->
-              <Column
-                v-else-if="col.field === 'id'"
-                field="id"
-                :header="col.header"
-                :style="{ width: `${col.width ?? 60}px` }"
-                :sortable="col.sortable"
-              />
-
               <!-- Fallback -->
               <Column
                 v-else
                 :field="col.field"
-                :header="col.header"
-                :sortable="col.sortable"
-              />
+              >
+                <template #header>
+                  <span class="contacts-page__th">{{ col.header }}</span>
+                </template>
+              </Column>
             </template>
           </DataTable>
 
@@ -649,7 +741,7 @@ import { useDirectoriesStore } from '@/stores/directories'
 import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
-import { useContactsPageData } from './composables/useContactsPageData'
+import { useContactsPageData, CONTACT_SORT_MAP, COMPANY_SORT_MAP } from './composables/useContactsPageData'
 import { useContactsPageActions } from './composables/useContactsPageActions'
 import { useContactsView } from './composables/useContactsView'
 import { useContactsBulk } from './composables/useContactsBulk'
@@ -670,7 +762,6 @@ import type { ContactsKpiResponse } from '@/api/crm/contacts'
 
 import type { Contact, Company, ContactExtended, CategoryCode } from '@/entities/crm'
 import type { EntityType } from './composables/useContactsPageData'
-import type { SavedViewState } from './composables/useSavedViews'
 
 type TouchFreshness = 'g' | 'a' | 'r' | 'n'
 
@@ -714,6 +805,8 @@ const {
   total,
   isFiltered,
   activeFilterCount,
+  activeSortBy,
+  sortDir,
   load,
   applyFilter,
   applyOverlayFilters,
@@ -721,6 +814,7 @@ const {
   resetOverlayFilters,
   removeChipFilter,
   onPageChange,
+  onSort,
   ensureDirectories,
 } = useContactsPageData({ initialType })
 
@@ -771,51 +865,11 @@ const selectedRows = computed({
 })
 
 // ── Saved views ───────────────────────────────────────────────────────────────
+// The saved-views UI control is not shown in this list (D3 fix: removed from toolbar).
+// The composable is kept so that saved-view state (duplicates view, etc.) still works.
 
 const savedViews = useSavedViews({ entityType })
 const activeView = ref<string>('default')
-
-function onSetView(viewId: string) {
-  activeView.value = viewId
-  const state = savedViews.getViewState(viewId)
-  if (state) {
-    view.setDensity(state.density)
-    view.setVisibleFields(state.visibleFields)
-    Object.assign(overlayFilters.value, state.filters)
-    filter.value.search = state.search
-    applyFilter()
-  } else if (viewId === 'default') {
-    resetFilter()
-  }
-}
-
-function onSaveView(name: string, type: 'personal' | 'team', makeDefault: boolean) {
-  const state: SavedViewState = {
-    visibleFields: [...view.visibleFields.value],
-    sort: null,
-    density: view.density.value,
-    filters: { ...overlayFilters.value },
-    search: filter.value.search,
-  }
-  void savedViews.addView(name, type, state, makeDefault)
-}
-
-function onDeleteView(id: string) {
-  void savedViews.removeView(id).then(() => {
-    if (activeView.value === id) {
-      activeView.value = 'default'
-      resetFilter()
-    }
-  })
-}
-
-function onSetDefaultView(id: string) {
-  void savedViews.setDefault(id)
-}
-
-function onRenameView(id: string, name: string) {
-  void savedViews.updateView(id, { name })
-}
 
 // ── Filter overlay ────────────────────────────────────────────────────────────
 
@@ -921,6 +975,20 @@ function formatDate(iso: string | null): string {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(
     new Date(iso),
   )
+}
+
+/**
+ * Returns the PrimeIcon class for the sort indicator on a given column field.
+ * Shows active direction icon when sorted, neutral arrows-v when sortable but inactive.
+ */
+function sortIconClass(field: string): string {
+  const sortMap = entityType.value === 'contact' ? CONTACT_SORT_MAP : COMPANY_SORT_MAP
+  const backendKey = sortMap[field]
+  if (!backendKey) return ''
+  if (activeSortBy.value === backendKey) {
+    return sortDir.value === 'asc' ? 'pi pi-arrow-up' : 'pi pi-arrow-down'
+  }
+  return 'pi pi-sort-alt'
 }
 
 function categorySeverity(code: CategoryCode | null): 'danger' | 'warn' | 'success' | 'info' | 'secondary' {
@@ -1032,17 +1100,19 @@ onMounted(() => {
   :deep(.p-datatable-thead > tr > th) {
     padding: 10px 14px;
     font-size: $font-size-2xs;
-    font-weight: $font-weight-semibold;
+    font-weight: $font-weight-bold;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: $surface-400;
+    color: var(--p-text-color);
     border-bottom: 1px solid $surface-200;
     white-space: nowrap;
     background: $surface-card;
+    // Remove PrimeVue built-in sort cursor (we handle it ourselves)
+    cursor: default;
 
     .app-dark & {
       border-bottom-color: var(--p-surface-700);
-      color: var(--p-surface-500);
+      color: var(--p-text-color);
       background: var(--p-surface-100);
     }
   }
@@ -1069,6 +1139,64 @@ onMounted(() => {
   // Remove striped rows
   :deep(.p-datatable-tbody > tr.p-row-odd > td) {
     background: transparent;
+  }
+}
+
+// Custom sort header cell — wraps header text + sort icon
+.contacts-page__th {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--p-text-color);
+  white-space: nowrap;
+  user-select: none;
+
+  &--sortable {
+    cursor: pointer;
+
+    &:hover {
+      color: $primary-900;
+
+      .app-dark & {
+        color: var(--p-primary-color);
+      }
+
+      .contacts-page__sort-icon {
+        opacity: 1;
+      }
+    }
+  }
+
+  &--center {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+.contacts-page__sort-icon {
+  font-size: $font-size-xs;
+  color: $surface-400;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+
+  // When sort is active on this column, always show at full opacity
+  .contacts-page__th--sortable:has(.pi-arrow-up) &,
+  .contacts-page__th--sortable:has(.pi-arrow-down) & {
+    opacity: 1;
+    color: $primary-900;
+
+    .app-dark & {
+      color: var(--p-primary-color);
+    }
   }
 }
 

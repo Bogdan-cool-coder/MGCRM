@@ -9,6 +9,7 @@ use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\ContactService;
 use App\Domain\Sales\Services\DealService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Crm\IndexContactRequest;
 use App\Http\Requests\Crm\StoreContactRequest;
 use App\Http\Requests\Crm\UpdateContactRequest;
 use App\Http\Resources\Crm\ContactResource;
@@ -30,16 +31,14 @@ class ContactController extends Controller
         private readonly DealService $dealService,
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexContactRequest $request): AnonymousResourceCollection
     {
-        $this->authorize('viewAny', Contact::class);
-
-        $filters = $request->query();
+        $filters = $request->validated();
         // Inject the auth user ID so the service can apply `only_mine` without
         // knowing about HTTP/Auth; the service never reads Auth directly.
         $filters['_auth_user_id'] = $request->user()?->id;
 
-        $contacts = $this->service->list($filters, (int) $request->query('per_page', 25));
+        $contacts = $this->service->list($filters, (int) ($filters['per_page'] ?? 25));
 
         return ContactResource::collection($contacts);
     }

@@ -1,9 +1,11 @@
 <template>
   <!--
     DealComposer — spec §7.4.
-    Layout: flex row — LEFT: two stacked mode btns (108px each: Заметка / Задача, active=navy).
-    RIGHT: bordered content box (min-height:74), «Добавить» vertically centered.
-    Task mode: top row 3 fields (дата+время · ответственный · тип) + colon + textarea below.
+    Layout: flex row — LEFT: two stacked mode btns (108px each: Примечание / Задача, active=navy).
+    RIGHT: bordered content box (min-height:74), «Добавить» absolutely right-center (B1).
+    Task mode field order (spec §11): Тип задачи → Дата → Ответственный (B2).
+    Ответственный and Тип задачи: SearchPicker with colored task-type icons (B4).
+    Date: DateField with auto-format ДД.ММ.ГГГГ + calendar (B3).
   -->
   <div class="deal-composer">
     <!-- LEFT: stacked mode buttons -->
@@ -14,7 +16,7 @@
         :class="{ 'deal-composer__mode-btn--active': activeTab === 'note' }"
         @click="activeTab = 'note'"
       >
-        <i class="pi pi-file" />
+        <i class="pi pi-comment" />
         {{ t('sales.deal.composer.note') }}
       </button>
       <button
@@ -28,7 +30,7 @@
       </button>
     </div>
 
-    <!-- RIGHT: content box with border -->
+    <!-- RIGHT: content box with border + «Добавить» absolutely right-center (B1) -->
     <div class="deal-composer__box">
       <!-- ─── Note mode ───────────────────────────────────────────── -->
       <template v-if="activeTab === 'note'">
@@ -44,35 +46,61 @@
 
       <!-- ─── Task mode ───────────────────────────────────────────── -->
       <template v-else>
-        <!-- Top row: дата+время · ответственный · тип задачи -->
+        <!-- Top row: spec §11 order: Тип задачи · Дата · Ответственный (B2) -->
         <div class="deal-composer__task-row">
-          <DatePicker
-            v-model="taskForm.dueAt"
-            show-time
-            show-icon
-            :placeholder="t('common.date')"
-            class="deal-composer__task-field"
-            append-to="body"
-          />
-          <Select
-            v-model="taskForm.responsibleId"
-            :options="usersList"
-            option-label="name"
-            option-value="id"
-            :placeholder="t('activity.fields.responsible')"
-            show-clear
-            class="deal-composer__task-field"
-            append-to="body"
-          />
-          <Select
-            v-model="taskForm.subtype"
-            :options="taskSubtypeOptions"
-            option-label="label"
-            option-value="value"
-            :placeholder="t('sales.deal.composer.taskSubtype')"
-            class="deal-composer__task-field"
-            append-to="body"
-          />
+          <!-- Тип задачи — SearchPicker with colored icons (B4) -->
+          <div class="deal-composer__task-field">
+            <SearchPicker
+              v-model="taskForm.subtype"
+              :options="taskSubtypeOptions"
+              option-label="label"
+              option-value="value"
+              :placeholder="t('sales.deal.composer.taskSubtype')"
+              :display-label="currentSubtypeLabel"
+              class="deal-composer__picker"
+            >
+              <template #trigger-content>
+                <span class="deal-composer__picker-trigger">
+                  <i
+                    v-if="currentSubtypeIcon"
+                    :class="['pi', currentSubtypeIcon, 'deal-composer__type-icon']"
+                    :style="{ color: currentSubtypeColor }"
+                  />
+                  <span class="deal-composer__picker-label">{{ currentSubtypeLabel || t('sales.deal.composer.taskSubtype') }}</span>
+                </span>
+              </template>
+              <template #option="{ option }">
+                <span class="deal-composer__type-option">
+                  <i
+                    :class="['pi', String(option.icon ?? ''), 'deal-composer__type-option-icon']"
+                    :style="{ color: String(option.color ?? '') }"
+                  />
+                  <span>{{ String(option.label ?? '') }}</span>
+                </span>
+              </template>
+            </SearchPicker>
+          </div>
+
+          <!-- Дата — DateField with auto-format ДД.ММ.ГГГГ (B3) -->
+          <div class="deal-composer__task-field">
+            <DateField
+              v-model="taskFormDate"
+              :placeholder="t('common.date')"
+            />
+          </div>
+
+          <!-- Ответственный — SearchPicker (B4) -->
+          <div class="deal-composer__task-field">
+            <SearchPicker
+              v-model="taskForm.responsibleId"
+              :options="usersList"
+              option-label="name"
+              option-value="id"
+              :placeholder="t('activity.fields.responsible')"
+              :display-label="currentResponsibleName"
+              class="deal-composer__picker"
+            />
+          </div>
         </div>
         <!-- Colon + textarea -->
         <div class="deal-composer__task-body">
@@ -90,10 +118,11 @@
         <small v-if="errors.title" class="deal-composer__error">{{ errors.title }}</small>
       </template>
 
-      <!-- «Добавить» — vertically centered (Y midpoint between two mode buttons) -->
+      <!-- «Добавить» — absolutely right-center in the box (B1) -->
+      <!-- spec §7.4: button between the two mode buttons, field text wraps and never runs under -->
       <div class="deal-composer__add-wrap">
         <Button
-          :label="t('sales.deal.composer.save')"
+          :label="t('sales.deal.composer.add')"
           :loading="saving"
           size="small"
           @click="activeTab === 'note' ? submitNote() : submitTask()"
@@ -109,10 +138,10 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
-import DatePicker from 'primevue/datepicker'
-import Select from 'primevue/select'
 import { activityApi } from '@/api/activity'
 import { useMutation } from '@/composables/async/useMutation'
+import SearchPicker from '@/components/crm/SearchPicker.vue'
+import DateField from '@/components/crm/DateField.vue'
 import type { ActivityDto, ActivityKind, ActivityPriority, CreateActivityPayload } from '@/entities/activity'
 
 // ─── Task subtype type ────────────────────────────────────────────────────────
@@ -161,14 +190,37 @@ watch(
 
 const errors = ref<{ title?: string }>({})
 
-// ─── Task subtype options ─────────────────────────────────────────────────────
+// ─── Task subtype options with colored icons (B4) ────────────────────────────
+// spec §9 + §11: call=#2A6FDB pi-phone, meeting=#1F8A5B pi-calendar,
+//               follow_up=#E8A317 pi-replay, task=navy pi-check-square
 
-const taskSubtypeOptions = computed(() => [
-  { value: 'task' as TaskSubtype, label: t('sales.deal.composer.subtypes.task') },
-  { value: 'call' as TaskSubtype, label: t('sales.deal.composer.subtypes.call') },
-  { value: 'meeting' as TaskSubtype, label: t('sales.deal.composer.subtypes.meeting') },
-  { value: 'follow_up' as TaskSubtype, label: t('sales.deal.composer.subtypes.follow_up') },
+interface SubtypeOption {
+  value: TaskSubtype
+  label: string
+  icon: string
+  color: string
+  [key: string]: unknown
+}
+
+const taskSubtypeOptions = computed((): SubtypeOption[] => [
+  { value: 'task', label: t('sales.deal.composer.subtypes.task'), icon: 'pi-check-square', color: '#172747' },
+  { value: 'call', label: t('sales.deal.composer.subtypes.call'), icon: 'pi-phone', color: '#2A6FDB' },
+  { value: 'meeting', label: t('sales.deal.composer.subtypes.meeting'), icon: 'pi-calendar', color: '#1F8A5B' },
+  { value: 'follow_up', label: t('sales.deal.composer.subtypes.follow_up'), icon: 'pi-replay', color: '#E8A317' },
 ])
+
+const currentSubtype = computed(() =>
+  taskSubtypeOptions.value.find((o) => o.value === taskForm.value.subtype),
+)
+const currentSubtypeLabel = computed(() => currentSubtype.value?.label ?? '')
+const currentSubtypeIcon = computed(() => currentSubtype.value?.icon ?? '')
+const currentSubtypeColor = computed(() => currentSubtype.value?.color ?? '#172747')
+
+const currentResponsibleName = computed(() => {
+  if (taskForm.value.responsibleId == null) return ''
+  const found = props.usersList.find((u) => u.id === taskForm.value.responsibleId)
+  return found?.name ?? ''
+})
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 
@@ -179,6 +231,21 @@ const taskForm = ref({
   dueAt: null as Date | null,
   responsibleId: null as number | null,
   subtype: 'task' as TaskSubtype,
+})
+
+// DateField uses ISO string; bridge via computed
+const taskFormDate = computed({
+  get(): string | null {
+    if (!taskForm.value.dueAt) return null
+    const d = taskForm.value.dueAt
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  },
+  set(iso: string | null) {
+    taskForm.value.dueAt = iso ? new Date(iso) : null
+  },
 })
 
 function resetNote() {
@@ -272,7 +339,7 @@ defineExpose({ setTab })
 .deal-composer {
   display: flex;
   align-items: stretch;
-  gap: 10px;
+  gap: $space-2;
   padding: $space-3 $space-4;
   background: var(--p-card-background);
   border-top: 1px solid var(--p-surface-200);
@@ -284,12 +351,10 @@ defineExpose({ setTab })
 }
 
 // ─── LEFT: two stacked mode buttons ──────────────────────────────────────────
-// spec §7.4: «Заметка / Задача, active — заливка --mg-primary-900, белая»
-
 .deal-composer__modes {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: $space-1;
   flex-shrink: 0;
 }
 
@@ -298,8 +363,9 @@ defineExpose({ setTab })
   align-items: center;
   justify-content: center;
   gap: $space-1;
-  width: 108px;
-  padding: $space-2 $space-2;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  width: 108px; // spec §7.4 fixed — layout invariant
+  padding: $space-2;
   border-radius: $radius-md;
   border: 1px solid var(--p-surface-200);
   background: var(--p-surface-50);
@@ -326,7 +392,6 @@ defineExpose({ setTab })
     }
   }
 
-  // Active state: navy fill, white text — dedicated BEM modifier (no compound &.active)
   &--active {
     background: $primary-900;
     border-color: $primary-900;
@@ -345,8 +410,8 @@ defineExpose({ setTab })
 }
 
 // ─── RIGHT: bordered content box ──────────────────────────────────────────────
-// spec §7.4: «поле в рамке (min-height 74)»
-
+// spec §7.4: min-height 74, button «Добавить» absolute right-center (B1)
+// padding-right reserves space so text never runs under the button.
 .deal-composer__box {
   flex: 1;
   min-width: 0;
@@ -356,38 +421,101 @@ defineExpose({ setTab })
   border: 1px solid var(--p-surface-200);
   border-radius: $radius-md;
   padding: $space-2 $space-3;
-  min-height: 74px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  min-height: 74px; // spec §7.4 — layout invariant
   position: relative;
+  // Right padding leaves room for «Добавить» button (~90px + gap)
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding-right: 100px;
 
   .app-dark & {
     border-color: var(--p-surface-700);
   }
 }
 
-// Task top row: three fields in one flex row
+// Task top row — order B2: Тип · Дата · Ответственный
 .deal-composer__task-row {
   display: flex;
   align-items: center;
   gap: $space-2;
   flex-wrap: nowrap;
-  overflow: hidden;
 }
 
 .deal-composer__task-field {
   flex: 1;
   min-width: 0;
 
-  // Make PrimeVue DatePicker/Select compact inside this row
-  :deep(.p-datepicker) {
-    width: 100%;
-  }
-
-  :deep(.p-select) {
+  .search-picker,
+  .date-field {
+    display: flex;
     width: 100%;
   }
 }
 
-// «:» + textarea row (task body)
+// SearchPicker full-width in task row
+.deal-composer__picker {
+  display: flex !important;
+  width: 100% !important;
+
+  :deep(.search-picker__trigger) {
+    width: 100%;
+    min-width: 0;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    height: 34px;
+    padding: 0 $space-2;
+  }
+
+  :deep(.search-picker__popover) {
+    top: auto;
+    bottom: calc(100% + $space-1);
+    left: 0;
+  }
+}
+
+.deal-composer__picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.deal-composer__picker-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.deal-composer__type-icon {
+  font-size: $font-size-xs;
+  flex-shrink: 0;
+}
+
+.deal-composer__type-option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.deal-composer__type-option-icon {
+  font-size: $font-size-xs;
+  flex-shrink: 0;
+}
+
+// DateField full-width
+:deep(.date-field) {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  height: 34px;
+  box-sizing: border-box;
+}
+
+// «:» + textarea row
 .deal-composer__task-body {
   display: flex;
   align-items: flex-start;
@@ -413,7 +541,6 @@ defineExpose({ setTab })
   font-family: inherit;
   line-height: $line-height-normal;
 
-  // Override PrimeVue Textarea styling
   :deep(.p-textarea) {
     border: none;
     background: transparent;
@@ -430,14 +557,15 @@ defineExpose({ setTab })
   }
 }
 
-// «Добавить» — vertically centered (aligned to Y midpoint between the two mode buttons)
-// spec §7.4: «кнопка «Добавить» по центру по вертикали»
+// «Добавить» — absolute right-center (B1)
+// spec §7.4: vertically centered between mode buttons = 50% of box height
 .deal-composer__add-wrap {
+  position: absolute;
+  right: $space-3;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
-  flex: 1;
-  margin-top: auto;
+  align-items: center;
 }
 
 .deal-composer__error {

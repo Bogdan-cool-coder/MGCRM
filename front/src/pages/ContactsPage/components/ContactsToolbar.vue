@@ -7,22 +7,6 @@
     />
     <h1 class="contacts-toolbar__title">{{ t('contacts.page.header.title') }}</h1>
 
-    <!-- Saved views dropdown — mounted right after title -->
-    <SavedViewsDropdown
-      :model-value="activeView"
-      :saved-views="savedViews"
-      :default-view-id="defaultViewId"
-      :is-loading="savedViewsLoading"
-      :is-saving="savedViewsSaving"
-      :is-updating="savedViewsUpdating"
-      class="contacts-toolbar__saved-views"
-      @update:model-value="emit('setView', $event)"
-      @save="(name, type, makeDefault) => emit('saveView', name, type, makeDefault)"
-      @delete="(id) => emit('deleteView', id)"
-      @set-default="(id) => emit('setDefaultView', id)"
-      @rename="(id, name) => emit('renameView', id, name)"
-    />
-
     <!-- Entity type switch — custom segmented control (§2.1/§2.3 spec) -->
     <div
       role="tablist"
@@ -100,31 +84,18 @@ import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Menu from 'primevue/menu'
-import SavedViewsDropdown from './SavedViewsDropdown.vue'
-import type { SavedView } from '../composables/useSavedViews'
 import type { EntityType } from '../composables/useContactsPageData'
 import type { ContactsDensity } from '../composables/useContactsView'
 
 const props = defineProps<{
-  activeView: string
-  savedViews: SavedView[]
-  defaultViewId: string | null
   entityType: EntityType
   total: number
   search: string
   activeFilterCount: number
   density: ContactsDensity
-  savedViewsLoading?: boolean
-  savedViewsSaving?: boolean
-  savedViewsUpdating?: boolean
 }>()
 
 const emit = defineEmits<{
-  setView: [value: string]
-  saveView: [name: string, type: 'personal' | 'team', makeDefault: boolean]
-  deleteView: [id: string]
-  setDefaultView: [id: string]
-  renameView: [id: string, name: string]
   setEntityType: [type: EntityType]
   search: [query: string]
   openFilter: []
@@ -216,10 +187,6 @@ const moreMenuItems = computed(() => [
   color: var(--p-text-color);
   margin: 0;
   white-space: nowrap;
-}
-
-.contacts-toolbar__saved-views {
-  flex-shrink: 0;
 }
 
 .contacts-toolbar__type-switch {

@@ -15,13 +15,14 @@
       <RouterLink :to="`/deals/${deal.id}`" class="company-mini-deals__name">
         {{ deal.title || `#${deal.id}` }}
       </RouterLink>
+      <!-- E5: '22' (8%) opacity was too pale — bumped to '33' (20%) and text forced opaque for legibility -->
       <Tag
         v-if="deal.stage?.name"
         :value="deal.stage.name"
         severity="secondary"
         size="small"
         class="company-mini-deals__stage"
-        :style="deal.stage?.color ? { background: deal.stage.color + '22', color: deal.stage.color } : {}"
+        :style="deal.stage?.color ? { background: deal.stage.color + '33', color: deal.stage.color, fontWeight: '600' } : {}"
       />
       <span v-else class="company-mini-deals__stage-empty">—</span>
       <span class="company-mini-deals__amount">{{ formatKopecks(deal.amount, deal.currency) }}</span>
