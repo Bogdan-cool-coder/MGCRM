@@ -33,6 +33,9 @@ class UpdateDealRequest extends FormRequest
             // / payment received. Date, symmetric with the expected_* rules.
             'signed_at' => ['sometimes', 'nullable', 'date'],
             'paid_at' => ['sometimes', 'nullable', 'date'],
+            // Actual paid sum (kopecks) + its currency — distinct from amount/currency.
+            'paid_amount' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'payment_currency' => ['sometimes', 'nullable', 'string', Rule::in($currencies)],
             // Budget lock: freezes amount against line-item recompute.
             'amount_locked' => ['sometimes', 'boolean'],
             // «Вечная лицензия» / «Коробка / on-premise» flag (price effect in N4).

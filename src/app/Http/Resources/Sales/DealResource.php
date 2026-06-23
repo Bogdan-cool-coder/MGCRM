@@ -88,6 +88,10 @@ class DealResource extends JsonResource
             'signed_at' => $this->signed_at?->toDateString(),
             'paid_at' => $this->paid_at?->toDateString(),
 
+            // Actual paid sum (kopecks) + its currency — distinct from amount/currency.
+            'paid_amount' => $this->paid_amount,
+            'payment_currency' => $this->payment_currency,
+
             'kp_sent_at' => $this->kp_sent_at?->toIso8601String(),
             'contract_sent_at' => $this->contract_sent_at?->toIso8601String(),
             'max_stage_id' => $this->max_stage_id,

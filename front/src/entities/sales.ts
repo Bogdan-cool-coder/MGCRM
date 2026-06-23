@@ -116,6 +116,10 @@ export interface DealDto {
   signed_at?: string | null
   /** ISO date: actual payment date (факт). */
   paid_at?: string | null
+  /** Actual paid amount in kopecks (integer). Distinct from amount (budget). */
+  paid_amount?: number | null
+  /** ISO currency code for the paid amount (RUB, USD, EUR, KZT, UZS, AED). */
+  payment_currency?: string | null
   /**
    * ISO-2 lowercase country code (e.g. "kz") from company.
    * Present on list payloads when backend eager-loads company country.
@@ -354,6 +358,10 @@ export interface UpdateDealPayload {
   extra_fields?: Record<string, unknown>
   perpetual_license?: boolean
   amount_locked?: boolean
+  /** Actual paid amount in kopecks (integer, min 0). */
+  paid_amount?: number | null
+  /** ISO currency code for the payment (RUB, USD, EUR, KZT, UZS, AED). */
+  payment_currency?: string | null
 }
 
 export interface MoveDealPayload {

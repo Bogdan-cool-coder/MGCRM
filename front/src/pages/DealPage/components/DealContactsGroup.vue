@@ -270,6 +270,7 @@ import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import DealFieldGroup from './DealFieldGroup.vue'
 import { contactsApi } from '@/api/crm/contacts'
+import { salesApi } from '@/api/sales'
 import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { DealContactDto } from '@/entities/sales'
@@ -277,6 +278,7 @@ import type { ContactChannel, ChannelType } from '@/entities/crm'
 
 
 const props = defineProps<{
+  dealId: number
   contacts: DealContactDto[]
   removingId?: number | null
 }>()
@@ -284,6 +286,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   addContact: []
   removeContact: [contactId: number]
+  contactsUpdated: [contacts: DealContactDto[]]
 }>()
 
 const { t } = useI18n()
@@ -488,6 +491,17 @@ async function submitEdit(contactId: number) {
     channelsMap.value = {
       ...channelsMap.value,
       [contactId]: [...surviving, ...addedChannels],
+    }
+
+    // ── is_primary toggle via PATCH /api/deals/{deal}/contacts/{pivot} ───────
+    const link = props.contacts.find((c) => c.contact.id === contactId)
+    if (link && editForm.value.is_primary !== link.is_primary) {
+      const updatedContacts = await salesApi.updateDealContact(
+        props.dealId,
+        link.id,
+        { is_primary: editForm.value.is_primary },
+      )
+      emit('contactsUpdated', updatedContacts)
     }
 
     toast.add({ severity: 'success', summary: t('common.saved'), life: 2000 })

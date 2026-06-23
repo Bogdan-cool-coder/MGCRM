@@ -80,6 +80,10 @@ class DocumentService
             $query->where('source_deal_id', (int) $filters['deal_id']);
         }
 
+        if (isset($filters['source_company_id'])) {
+            $query->where('source_company_id', (int) $filters['source_company_id']);
+        }
+
         return $query->orderByDesc('created_at')->paginate($perPage);
     }
 

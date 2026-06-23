@@ -244,7 +244,7 @@
                   :loading="employeesLoading"
                   @add-employee="openAddEmployee"
                   @set-primary="setPrimaryEmployee"
-                  @toggle-status="toggleEmployeeStatus"
+                  @set-status="setEmployeeStatus"
                   @unlink="confirmUnlinkEmployee"
                 />
               </div>
@@ -561,7 +561,7 @@ const {
   searchEmployeeContacts,
   onEmployeeSelect,
   setPrimaryEmployee,
-  toggleEmployeeStatus,
+  setEmployeeStatus,
   confirmUnlinkEmployee,
 } = useCompanyPageActions({
   companyId,

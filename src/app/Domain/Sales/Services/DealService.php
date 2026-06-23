@@ -1060,6 +1060,22 @@ class DealService
     }
 
     /**
+     * Count WON deals for a company (cross-domain KPI).
+     * Called by CompanyController::show() to populate the «Выиграно» chip.
+     *
+     * A deal is "won" when its current stage has is_won = true.
+     * Soft-deleted deals are excluded (whereNull deals.deleted_at).
+     */
+    public function countWonForCompany(Company $company): int
+    {
+        return (int) Deal::query()
+            ->where('company_id', $company->id)
+            ->whereNull('deals.deleted_at')
+            ->whereHas('stage', static fn (Builder $q) => $q->where('is_won', true))
+            ->count();
+    }
+
+    /**
      * Aggregate deal financials for a Contact (cross-domain B-2 / DS-5).
      * Called by ContactController::show() to populate the KPI "sum" chip.
      *

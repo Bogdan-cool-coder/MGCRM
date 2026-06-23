@@ -1634,7 +1634,7 @@
         "paymentAmount": "Сумма оплаты",
         "amountPlaceholder": "0",
         "fixPayment": "Зафиксировать оплату",
-        "missingNote": "Поля суммы и валюты появятся после финансового спринта",
+        "savedAmount": "Зафиксировано",
         "scheduleTitle": "График платежей"
       },
       "stats": {

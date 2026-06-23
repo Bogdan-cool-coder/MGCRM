@@ -215,6 +215,7 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::prefix('companies/{company}')->name('companies.')->group(function (): void {
         Route::get('employees', [CompanyEmployeeController::class, 'index'])->name('employees.index');
         Route::post('employees', [CompanyEmployeeController::class, 'store'])->name('employees.store');
+        Route::patch('employees/{contact}', [CompanyEmployeeController::class, 'update'])->name('employees.update');
         Route::delete('employees/{contact}', [CompanyEmployeeController::class, 'destroy'])->name('employees.destroy');
 
         // Deals belonging to a company (real implementation replacing stub — B4)
@@ -488,6 +489,7 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // Contacts (M2M)
         Route::get('contacts', [DealContactController::class, 'index'])->name('contacts.index');
         Route::post('contacts', [DealContactController::class, 'store'])->name('contacts.store');
+        Route::patch('contacts/{dealContact}', [DealContactController::class, 'update'])->name('contacts.update');
         Route::delete('contacts/{dealContact}', [DealContactController::class, 'destroy'])->name('contacts.destroy');
 
         // Stage history

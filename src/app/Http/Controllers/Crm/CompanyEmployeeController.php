@@ -8,6 +8,7 @@ use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\CompanyService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\LinkContactCompanyRequest;
+use App\Http\Requests\Crm\UpdateEmployeeLinkRequest;
 use App\Http\Resources\Crm\ContactCompanyLinkResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,19 @@ class CompanyEmployeeController extends Controller
 
         $contactId = (int) $request->input('contact_id');
         $link = $this->service->addEmployee($company, $contactId, $request->validated(), $request->user());
+
+        return ContactCompanyLinkResource::make($link->load(['contact', 'company']));
+    }
+
+    /**
+     * PATCH /companies/{company}/employees/{contact}
+     * Body: employment_status (required) + optionally position, position_id, is_primary.
+     */
+    public function update(UpdateEmployeeLinkRequest $request, Company $company, int $contact): JsonResource
+    {
+        $this->authorize('manageEmployees', $company);
+
+        $link = $this->service->updateEmployee($company, $contact, $request->validated());
 
         return ContactCompanyLinkResource::make($link->load(['contact', 'company']));
     }

@@ -101,10 +101,12 @@
     <!-- ── Group: Contacts (accent, open by default) ──────────────────────────── -->
     <DealContactsGroup
       ref="contactsGroupRef"
+      :deal-id="deal.id"
       :contacts="contacts"
       :removing-id="removingContactId"
       @add-contact="emit('openAddContact')"
       @remove-contact="onRemoveContact"
+      @contacts-updated="onContactsUpdated"
     />
 
     <!-- ── Group: Company (accent, collapsed by default) ─────────────────────── -->
@@ -207,6 +209,7 @@ const emit = defineEmits<{
   openAddContact: []
   removeProduct: [id: number]
   removeContact: [contactId: number]
+  contactsUpdated: [contacts: DealContactDto[]]
 }>()
 
 const { t } = useI18n()
@@ -323,6 +326,10 @@ function onRemoveProduct(id: number) {
 
 function onRemoveContact(contactId: number) {
   emit('removeContact', contactId)
+}
+
+function onContactsUpdated(contacts: DealContactDto[]) {
+  emit('contactsUpdated', contacts)
 }
 
 // ── Company full data ──────────────────────────────────────────────────────────

@@ -314,6 +314,62 @@ class DocumentCrudTest extends TestCase
         $this->assertCount(0, $response->json('data'));
     }
 
+    // ---- source_company_id filter ----
+
+    public function test_documents_filtered_by_source_company_id(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $companyA = Company::factory()->create();
+        $companyB = Company::factory()->create();
+
+        // Two documents linked to companyA
+        Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'source_company_id' => $companyA->id,
+        ]);
+        Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'source_company_id' => $companyA->id,
+        ]);
+        // One document linked to companyB — must be excluded
+        Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'source_company_id' => $companyB->id,
+        ]);
+        // One document with no company — must be excluded
+        Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'source_company_id' => null,
+        ]);
+
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson("/api/documents?source_company_id={$companyA->id}")
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(2, $data);
+        foreach ($data as $item) {
+            $this->assertSame($companyA->id, $item['source_company_id']);
+        }
+    }
+
+    public function test_source_company_id_filter_returns_empty_when_no_match(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $company = Company::factory()->create();
+        Document::factory()->draft()->create([
+            'author_user_id' => $user->id,
+            'source_company_id' => $company->id,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/documents?source_company_id=999999')
+            ->assertOk();
+
+        $this->assertCount(0, $response->json('data'));
+    }
+
     // ---- pagination / filters ----
 
     public function test_list_documents_paginates(): void

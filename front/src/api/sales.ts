@@ -323,6 +323,19 @@ export const salesApi = {
     await apiClient.delete(`/api/deals/${dealId}/contacts/${cid}`)
   },
 
+  /** PATCH /api/deals/{deal}/contacts/{dealContact} — update pivot (e.g. is_primary) */
+  async updateDealContact(
+    dealId: number,
+    pivotId: number,
+    payload: { is_primary: boolean },
+  ): Promise<DealContactDto[]> {
+    const res = await apiClient.patch<{ data: DealContactDto[] }>(
+      `/api/deals/${dealId}/contacts/${pivotId}`,
+      payload,
+    )
+    return res.data.data
+  },
+
   // ── Deal History ───────────────────────────────────────────────────────────
 
   async getDealHistory(dealId: number): Promise<DealStageHistoryDto[]> {

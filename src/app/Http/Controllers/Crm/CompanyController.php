@@ -59,6 +59,7 @@ class CompanyController extends Controller
 
         // B6: aggregate deal totals (cross-domain via public DealService method).
         $dealTotals = $this->dealService->aggregateForCompany($company);
+        $wonCount = $this->dealService->countWonForCompany($company);
 
         // KPI: employees (current contact links — excludes people who left),
         // direct subsidiaries, documents. All aggregate queries — zero N+1.
@@ -83,6 +84,7 @@ class CompanyController extends Controller
             'deal_totals' => $dealTotals->toArray(),
             'kpi' => [
                 'open_deals_count' => $dealTotals->open_count,
+                'won_count'        => $wonCount,
                 'deals_sum' => $dealTotals->base_total,
                 'deals_sum_currency' => $dealTotals->base_currency,
                 'employees_count' => $employeesCount,

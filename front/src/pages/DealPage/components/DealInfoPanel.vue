@@ -36,6 +36,7 @@
           @open-add-contact="$emit('openAddContact')"
           @remove-product="(id) => $emit('removeProduct', id)"
           @remove-contact="(id) => $emit('removeContact', id)"
+          @contacts-updated="(list) => $emit('contactsUpdated', list)"
         />
       </template>
 
@@ -108,6 +109,7 @@ const emit = defineEmits<{
   openAddContact: []
   removeProduct: [id: number]
   removeContact: [contactId: number]
+  contactsUpdated: [contacts: DealContactDto[]]
   collapseAllGroups: []
   expandAllGroups: []
   scrollToFeedType: [type: KeyActionType]

@@ -9,6 +9,7 @@ use App\Domain\Sales\Models\DealContact;
 use App\Domain\Sales\Services\DealContactService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreDealContactRequest;
+use App\Http\Requests\Sales\UpdateDealContactRequest;
 use App\Http\Resources\Sales\DealContactResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -42,6 +43,19 @@ class DealContactController extends Controller
         );
 
         return DealContactResource::make($dealContact);
+    }
+
+    public function update(UpdateDealContactRequest $request, Deal $deal, DealContact $dealContact): AnonymousResourceCollection
+    {
+        abort_unless((int) $dealContact->deal_id === (int) $deal->id, 404);
+
+        $dealContacts = $this->service->setPrimary(
+            $deal,
+            $dealContact,
+            (bool) $request->validated('is_primary'),
+        );
+
+        return DealContactResource::collection($dealContacts);
     }
 
     public function destroy(Request $request, Deal $deal, DealContact $dealContact): Response

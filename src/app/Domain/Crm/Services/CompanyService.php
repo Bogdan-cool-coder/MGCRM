@@ -322,6 +322,31 @@ class CompanyService
     }
 
     /**
+     * Update an existing employee link (e.g. change employment_status or role/position).
+     * If is_primary is set to true, clears the old primary flag on this contact first.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updateEmployee(Company $company, int $contactId, array $data): ContactCompanyLink
+    {
+        return DB::transaction(function () use ($company, $contactId, $data): ContactCompanyLink {
+            if (! empty($data['is_primary'])) {
+                ContactCompanyLink::where('contact_id', $contactId)
+                    ->where('is_primary', true)
+                    ->update(['is_primary' => false]);
+            }
+
+            $link = ContactCompanyLink::where('company_id', $company->id)
+                ->where('contact_id', $contactId)
+                ->firstOrFail();
+
+            $link->update($data);
+
+            return $link->refresh();
+        });
+    }
+
+    /**
      * Remove an employee link from a company.
      */
     public function removeEmployee(Company $company, int $contactId): void

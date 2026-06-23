@@ -228,6 +228,7 @@ class CompanyKpiTest extends TestCase
                 'data' => [
                     'kpi' => [
                         'open_deals_count',
+                        'won_count',
                         'deals_sum',
                         'deals_sum_currency',
                         'employees_count',
@@ -235,6 +236,83 @@ class CompanyKpiTest extends TestCase
                         'last_activity_at',
                     ],
                     'holding_company_count',
+                ],
+            ]);
+    }
+
+    // ---- won_count ----
+
+    public function test_kpi_won_count_counts_won_deals(): void
+    {
+        $user = $this->actingAsManager();
+        $company = Company::factory()->create(['owner_user_id' => $user->id]);
+
+        $wonStage = PipelineStage::factory()->create(['is_won' => true, 'is_lost' => false]);
+        $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+        $lostStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => true]);
+
+        // 2 won deals
+        Deal::factory()->inStage($wonStage)->create(['company_id' => $company->id]);
+        Deal::factory()->inStage($wonStage)->create(['company_id' => $company->id]);
+
+        // Open and lost deals should not be counted
+        Deal::factory()->inStage($openStage)->create(['company_id' => $company->id]);
+        Deal::factory()->inStage($lostStage)->create(['company_id' => $company->id]);
+
+        $this->getJson("/api/companies/{$company->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kpi.won_count', 2);
+    }
+
+    public function test_kpi_won_count_is_zero_when_no_won_deals(): void
+    {
+        $user = $this->actingAsManager();
+        $company = Company::factory()->create(['owner_user_id' => $user->id]);
+
+        $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+        Deal::factory()->inStage($openStage)->create(['company_id' => $company->id]);
+
+        $this->getJson("/api/companies/{$company->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kpi.won_count', 0);
+    }
+
+    public function test_kpi_won_count_excludes_other_companies_deals(): void
+    {
+        $user = $this->actingAsManager();
+        $company = Company::factory()->create(['owner_user_id' => $user->id]);
+        $other = Company::factory()->create(['owner_user_id' => $user->id]);
+
+        $wonStage = PipelineStage::factory()->create(['is_won' => true, 'is_lost' => false]);
+
+        // Won deal for OTHER company — must not appear in company's won_count
+        Deal::factory()->inStage($wonStage)->create(['company_id' => $other->id]);
+
+        $this->getJson("/api/companies/{$company->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kpi.won_count', 0);
+    }
+
+    // ---- kpi block structure (updated) ----
+
+    public function test_show_response_contains_won_count_in_kpi_block(): void
+    {
+        $user = $this->actingAsManager();
+        $company = Company::factory()->create(['owner_user_id' => $user->id]);
+
+        $this->getJson("/api/companies/{$company->id}")
+            ->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'kpi' => [
+                        'open_deals_count',
+                        'won_count',
+                        'deals_sum',
+                        'deals_sum_currency',
+                        'employees_count',
+                        'documents_count',
+                        'last_activity_at',
+                    ],
                 ],
             ]);
     }

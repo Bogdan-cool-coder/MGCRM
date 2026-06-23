@@ -39,6 +39,11 @@ export function useDealContacts(dealId: () => number) {
     }
   }
 
+  /** Directly replace the contacts list (e.g. after is_primary PATCH returns full list). */
+  function setContacts(list: DealContactDto[]) {
+    resource.data.value = list
+  }
+
   return {
     contacts,
     loading,
@@ -46,5 +51,6 @@ export function useDealContacts(dealId: () => number) {
     load,
     add,
     remove,
+    setContacts,
   }
 }

@@ -479,10 +479,10 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - **BUG-DARK-PANEL-HOVER (medium):** `InfoPanel.vue` — в dark-теме hover на `.info-panel__header` даёт `background: var(--p-surface-200)=#616263`, совпадающий с цветом `.info-panel__title` в dark (`color: var(--p-surface-200)=#616263`) — заголовок панели невидим на hover. Fix: изменить hover bg в dark на `var(--p-surface-300)` или title color на `var(--p-surface-400)`. Файл: `front/src/components/crm/entity/InfoPanel.vue` строки 119-153.
 - **BUG-META-FS (low, перенесён из round 2):** мета-строка `entity-header__meta-row` рендерится на 10.5px (0.75rem × 14px база), spec требует 12px. Root: `$font-size-xs = 0.75rem`, base 14px. Fix: `front/src/theme/tokens/typography.ts` — `xs` с `'0.75rem'` на `'12px'` (literal). Файл: `typography.ts`.
 
-**Беклог backend-gaps (не реализованы, ждут следующего слайса):**
-- **BG-1 (S):** `PATCH /api/companies/{company}/employees/{contact}` — не существует. `CompanyEmployeeController` нужен метод `update()`, маршрут `Route::patch('employees/{contact}', ...)`, `CompanyService::updateEmployee()`. FE уже вызывает `companiesApi.updateEmployeeLink()` → 404/405.
-- **BG-2 (S):** `DocumentService::list()` не фильтрует по `source_company_id`. Фильтр передаётся FE, но сервис его игнорирует → «Документы» компании показывают все документы. Добавить `->where('source_company_id', ...)` в `list()` после существующего `deal_id` блока.
-- **BG-3 (S):** `CompanyController::show()` KPI-поле называется `open_deals_count` (строка 85), а FE читает `kpi?.open_count` (CompanyPage/index.vue:617). FE падает в fallback `openDealsCount.value` (клиентский счётчик) — визуально работает, но не сервер-авторитетно. `won_count` вообще не включён в KPI-ответ → «Выиграно» всегда 0.
+**Беклог backend-gaps:**
+- ~~**BG-1 (S):** DONE (S-batch 2026-06-23)~~ `PATCH /api/companies/{company}/employees/{contact}` реализован: `CompanyEmployeeController::update()` + `CompanyService::updateEmployee()` + `UpdateEmployeeLinkRequest`. 8 тестов green (433 CRM assertions). ✅
+- ~~**BG-2 (S):** DONE (S-batch 2026-06-23)~~ `DocumentService::list()` теперь фильтрует по `source_company_id`. 2 новых теста green (289 Contracts). ✅
+- ~~**BG-3 (S):** DONE (S-batch 2026-06-23)~~ `CompanyController::show()` KPI-блок включает `won_count` (через `DealService::countWonForCompany()`); FE `CompanyPage/index.vue` уже читал оба ключа через `open_deals_count ?? open_count` — алиас совместим. 5 новых тестов green. ✅
 - **BG-4 (L):** Файловое API — `CrmFile`/`CrmFolder` модели есть, роутов нет. Требуется `CrmFileController` + `CrmFolderController` + маршруты `/contacts/{contact}/files`, `/companies/{company}/files` + storage. FE-кнопки disabled с TODO B-4.
 - **BG-5 (S):** `DealCreateDrawer` не смонтирован на `ContactPage` → кнопка «Создать сделку» в `ContactDealsTab` disabled. Только FE-работа — импорт + ref + монтирование (бэкенд `POST /api/deals` уже принимает `contact_id`).
 - **BG-6 (S):** Меню «Добавить заметку» (Contact+Company) только переключает таб — не фокусирует `EntityComposer`. Нужны `defineExpose({ focusNote, focusTask })` в `EntityComposer.vue` + ref + вызов в `nextTick` из menu command. Только FE.
@@ -527,10 +527,10 @@ macroglobalcrm/              ← корень репо (сам проект зд
 - [x] `ru.json` / `en.json` — все ключи `sales.deal.*` для rebuild.
 - [x] Функциональный QA: 4 таба, collapse/expand, MoveDealDialog, DealAddProductDialog, AddContactDialog, Composer Note/Task, ⋮ меню (8 пунктов), DateField авто-формат, feed bottom-up, Активность-метрики, 44 API 200 OK, 0 console errors.
 
-**Backend gaps (задокументированы, UI inert с TODO):**
-- **BG-DC-1 (S):** `paid_amount` + `payment_currency` — нет колонок в deals; PATCH /api/deals/{deal} не принимает. Нужна миграция + fillable + UpdateDealRequest + DealResource.
+**Backend gaps:**
+- ~~**BG-DC-1 (S):** DONE (S-batch 2026-06-23)~~ Миграция `2026_06_28_120010_add_payment_fields_to_deals_table` (additive, nullable); `Deal.$fillable` + casts; `UpdateDealRequest` + `DealResource` включают `paid_amount`/`payment_currency`. 2 новых теста green (310 Sales assertions). FE `DealTabFinances.vue` полностью wired. ✅
 - **BG-DC-2 (L):** Graf платежей — нет модели DealPayment / таблицы / эндпоинтов. Полная разработка в Finance sprint.
-- **BG-DC-3 (S):** `PATCH /api/deals/{deal}/contacts/{dealContact}` — нет метода update для смены is_primary у существующего контакта.
+- ~~**BG-DC-3 (S):** DONE (S-batch 2026-06-23)~~ `DealContactController::update()` + `DealContactService::setPrimary()` + `UpdateDealContactRequest` реализованы. Маршрут `PATCH /api/deals/{deal}/contacts/{dealContact}`. 4 новых теста green. ✅
 - **BG-DC-4 (M):** Скидка% — UI inert; frontend может конвертить % в копейки существующего `discount` поля (рекомендуемый подход A); deal-level percent потребует новой колонки.
 - **BG-DC-5 (M):** `company_id` в UpdateDealRequest отсутствует — Компания иммутабельна после создания (или добавить в UpdateDealRequest с re-resolve department).
 - **BG-DC-6 (M):** Метрики Активности (6 штук) — нет единого endpoint; собирать либо в DealResource show(), либо через DealMetricsController.

@@ -191,6 +191,55 @@ class DealCrudTest extends TestCase
             ->assertJsonPath('data.paid_at', '2026-07-20');
     }
 
+    public function test_update_deal_persists_payment_fields(): void
+    {
+        // paid_amount (kopecks) + payment_currency are settable on update and
+        // round-trip via show(); paid_amount is distinct from amount.
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'currency' => 'KZT',
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", [
+            'paid_amount' => 1500000,
+            'payment_currency' => 'USD',
+        ])->assertOk()
+            ->assertJsonPath('data.paid_amount', 1500000)
+            ->assertJsonPath('data.payment_currency', 'USD');
+
+        $this->assertDatabaseHas('deals', [
+            'id' => $deal->id,
+            'paid_amount' => 1500000,
+            'payment_currency' => 'USD',
+        ]);
+
+        $this->getJson("/api/deals/{$deal->id}")
+            ->assertOk()
+            ->assertJsonPath('data.paid_amount', 1500000)
+            ->assertJsonPath('data.payment_currency', 'USD');
+    }
+
+    public function test_update_deal_rejects_invalid_payment_fields(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", ['paid_amount' => -5])
+            ->assertStatus(422);
+
+        $this->patchJson("/api/deals/{$deal->id}", ['payment_currency' => 'ZZZ'])
+            ->assertStatus(422);
+    }
+
     public function test_update_deal_rejects_invalid_actual_dates(): void
     {
         $pipeline = $this->seedSalesPipeline();

@@ -81,6 +81,10 @@ class Deal extends Model
         // dates above.
         'signed_at',
         'paid_at',
+        // Actual paid sum (kopecks) + its currency. Distinct from amount (the
+        // budget): a payment may differ from the budget and be in another currency.
+        'paid_amount',
+        'payment_currency',
         'kp_sent_at',
         'contract_sent_at',
         'stage_changed_at',
@@ -103,6 +107,7 @@ class Deal extends Model
             // Actual fact dates — date, symmetric with the expected_* casts.
             'signed_at' => 'date',
             'paid_at' => 'date',
+            'paid_amount' => 'integer', // kopecks
             'kp_sent_at' => 'datetime',
             'contract_sent_at' => 'datetime',
             'stage_changed_at' => 'datetime',

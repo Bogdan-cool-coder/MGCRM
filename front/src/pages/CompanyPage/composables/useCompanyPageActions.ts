@@ -140,16 +140,16 @@ export const useCompanyPageActions = (opts: {
     toast.add({ severity: 'success', summary: t('company.page.employees.actions.setPrimary', 'Обновлено'), life: 3000 })
   }
 
-  async function toggleEmployeeStatus(contactId: number, current: EmploymentStatus) {
-    const next: EmploymentStatus = current === 'works' ? 'left' : 'works'
+  /** Set employee status to the given value (called after user picks via status picker dialog). */
+  async function setEmployeeStatus(contactId: number, status: EmploymentStatus) {
     await companiesApi.updateEmployeeLink(opts.companyId.value, contactId, {
-      employment_status: next,
+      employment_status: status,
     })
     // Optimistic update
     const emp = opts.employees.value.find(
       (e) => e.contact_id === contactId,
     )
-    if (emp) emp.employment_status = next
+    if (emp) emp.employment_status = status
     toast.add({ severity: 'success', summary: t('company.page.employees.actions.changeStatus', 'Статус обновлён'), life: 3000 })
   }
 
@@ -183,7 +183,7 @@ export const useCompanyPageActions = (opts: {
     searchEmployeeContacts,
     onEmployeeSelect,
     setPrimaryEmployee,
-    toggleEmployeeStatus,
+    setEmployeeStatus,
     confirmUnlinkEmployee,
   }
 }

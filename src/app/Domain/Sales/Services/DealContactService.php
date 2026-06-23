@@ -98,6 +98,34 @@ class DealContactService
         });
     }
 
+    /**
+     * Toggle the primary flag on a deal-contact link. Setting it primary demotes
+     * any other primary on the same deal first (the partial unique index allows
+     * one is_primary=true per deal, so the old one MUST be cleared before the new
+     * one is set). Returns the deal's current links (primary first).
+     *
+     * @return Collection<int, DealContact>
+     */
+    public function setPrimary(Deal $deal, DealContact $dealContact, bool $isPrimary): Collection
+    {
+        DB::transaction(function () use ($deal, $dealContact, $isPrimary): void {
+            if ($isPrimary) {
+                // Demote any other primary BEFORE promoting this one, so the
+                // partial unique index (one primary per deal) is never violated.
+                DealContact::query()
+                    ->where('deal_id', $deal->id)
+                    ->where('id', '!=', $dealContact->id)
+                    ->where('is_primary', true)
+                    ->update(['is_primary' => false]);
+            }
+
+            $dealContact->is_primary = $isPrimary;
+            $dealContact->save();
+        });
+
+        return $this->list($deal);
+    }
+
     public function removeContact(DealContact $dealContact): void
     {
         $dealContact->delete();

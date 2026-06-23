@@ -102,6 +102,7 @@
           @open-add-contact="addContactDialogOpen = true"
           @remove-product="onRemoveProduct"
           @remove-contact="onRemoveContact"
+          @contacts-updated="onContactsUpdated"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
@@ -142,6 +143,7 @@
           @open-add-contact="addContactDialogOpen = true"
           @remove-product="onRemoveProduct"
           @remove-contact="onRemoveContact"
+          @contacts-updated="onContactsUpdated"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
@@ -178,6 +180,7 @@
           @open-add-contact="addContactDialogOpen = true"
           @remove-product="onRemoveProduct"
           @remove-contact="onRemoveContact"
+          @contacts-updated="onContactsUpdated"
           @collapse-all-groups="onCollapseAll"
           @expand-all-groups="onExpandAll"
           @scroll-to-feed-type="onScrollToFeedType"
@@ -276,7 +279,7 @@ import { useSalesStore } from '@/stores/salesStore'
 import { salesApi } from '@/api/sales'
 import { usersApi } from '@/api/users'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
-import type { DealDto, DealProductDto, PipelineStageDto, KeyActionType } from '@/entities/sales'
+import type { DealDto, DealProductDto, DealContactDto, PipelineStageDto, KeyActionType } from '@/entities/sales'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
 const { t } = useI18n()
@@ -442,6 +445,10 @@ async function onRemoveProduct(id: number) {
 
 async function onRemoveContact(contactId: number) {
   await dealContactsComposable.remove(contactId)
+}
+
+function onContactsUpdated(contacts: DealContactDto[]) {
+  dealContactsComposable.setContacts(contacts)
 }
 
 // ── Proxy fns for dialog :on-add ──────────────────────────────────────────────

@@ -23,30 +23,27 @@
         <label class="deal-tab-finances__label">
           {{ t('sales.deal.finances.paymentAmount') }}
         </label>
-        <!-- TODO MISSING: paid_amount / payment_currency — no backend column yet;
-             left inert until finance sprint adds PATCH /api/deals/{id}{paid_amount,payment_currency} -->
         <div class="deal-tab-finances__amount-row">
           <input
-            v-model="paymentAmount"
+            v-model="paymentAmountDisplay"
             class="deal-tab-finances__amount-input"
             type="text"
             inputmode="numeric"
             :placeholder="t('sales.deal.finances.amountPlaceholder')"
-            :disabled="true"
+            @input="onAmountInput"
           />
-          <!-- Currency selector — inert until paid_amount/payment_currency backend columns exist -->
           <select
             v-model="paymentCurrency"
             class="deal-tab-finances__currency-select"
-            disabled
           >
             <option v-for="opt in currencyOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
           </select>
         </div>
-        <small class="deal-tab-finances__missing-note">
-          {{ t('sales.deal.finances.missingNote') }}
+        <!-- Show saved value as formatted money -->
+        <small v-if="props.deal.paid_amount != null" class="deal-tab-finances__saved-note">
+          {{ t('sales.deal.finances.savedAmount') }}: {{ formatMoney(props.deal.paid_amount, props.deal.payment_currency) }}
         </small>
       </div>
 
@@ -55,8 +52,8 @@
         <Button
           :label="t('sales.deal.finances.fixPayment')"
           size="small"
-          :loading="savingPaidAt"
-          :disabled="!paidAtIso"
+          :loading="savingPayment"
+          :disabled="!canSave"
           @click="handleFixPayment"
         />
       </div>
@@ -83,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -104,16 +101,87 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 
-// ── Payment date (WIRED: PATCH /api/deals/{deal}{paid_at}) ───────────────────
+// ── Currency helpers ──────────────────────────────────────────────────────────
+
+const currencySymbols: Record<string, string> = {
+  KZT: '₸',
+  RUB: '₽',
+  USD: '$',
+  EUR: '€',
+  UZS: 'сум',
+  AED: 'AED',
+}
+
+function formatMoney(kopecks: number, currency: string | null | undefined): string {
+  const sym = currencySymbols[currency ?? ''] ?? (currency ?? '')
+  const units = Math.round(kopecks / 100)
+  const formatted = units.toLocaleString('ru-RU')
+  return `${formatted} ${sym}`.trim()
+}
+
+// ── Payment amount display (user-facing roubles/units, stored as kopecks) ─────
+
+function kopecksToDisplay(kopecks: number | null | undefined): string {
+  if (kopecks == null) return ''
+  return Math.round(kopecks / 100).toLocaleString('ru-RU')
+}
+
+// Initialise from saved value
+const paymentAmountDisplay = ref<string>(kopecksToDisplay(props.deal.paid_amount))
+const paymentAmountKopecks = ref<number | null>(props.deal.paid_amount ?? null)
+const paymentCurrency = ref<string>(props.deal.payment_currency ?? 'RUB')
+
+function onAmountInput(event: Event) {
+  const raw = (event.target as HTMLInputElement).value
+  // Strip non-digits and spaces
+  const digits = raw.replace(/[^\d]/g, '')
+  if (digits === '') {
+    paymentAmountKopecks.value = null
+    paymentAmountDisplay.value = ''
+    return
+  }
+  const units = parseInt(digits, 10)
+  paymentAmountKopecks.value = units * 100 // store as kopecks
+  paymentAmountDisplay.value = units.toLocaleString('ru-RU')
+}
+
+// ── Payment date ─────────────────────────────────────────────────────────────
 
 const paidAtIso = ref<string | null>(props.deal.paid_at ?? null)
-const savingPaidAt = ref(false)
+
+// ── Save state ────────────────────────────────────────────────────────────────
+
+const savingPayment = ref(false)
+
+// Allow save if either date or amount is set
+const canSave = computed(() => !!(paidAtIso.value || paymentAmountKopecks.value != null))
+
+const currencyOptions = [
+  { label: '₸ KZT', value: 'KZT' },
+  { label: '₽ RUB', value: 'RUB' },
+  { label: '$ USD', value: 'USD' },
+  { label: '€ EUR', value: 'EUR' },
+  { label: 'сум UZS', value: 'UZS' },
+  { label: 'AED', value: 'AED' },
+]
+
+// ── Handle save — PATCH /api/deals/{id} with paid_at, paid_amount, payment_currency ──
 
 async function handleFixPayment() {
-  if (!paidAtIso.value) return
-  savingPaidAt.value = true
+  if (!canSave.value) return
+  savingPayment.value = true
   try {
-    const updated = await salesApi.updateDeal(props.deal.id, { paid_at: paidAtIso.value })
+    const payload: {
+      paid_at?: string | null
+      paid_amount?: number | null
+      payment_currency?: string | null
+    } = {}
+    if (paidAtIso.value !== undefined) payload.paid_at = paidAtIso.value
+    if (paymentAmountKopecks.value !== null) {
+      payload.paid_amount = paymentAmountKopecks.value
+      payload.payment_currency = paymentCurrency.value
+    }
+    const updated = await salesApi.updateDeal(props.deal.id, payload)
     emit('dealUpdated', updated)
     toast.add({
       severity: 'success',
@@ -123,24 +191,9 @@ async function handleFixPayment() {
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   } finally {
-    savingPaidAt.value = false
+    savingPayment.value = false
   }
 }
-
-// ── Payment amount + currency (MISSING — inert stub) ─────────────────────────
-// TODO: no paid_amount / payment_currency column on backend yet.
-// Wire once PATCH /api/deals/{id} supports {paid_amount, payment_currency}.
-
-const paymentAmount = ref<string>('')
-const paymentCurrency = ref<string | null>(null)
-
-const currencyOptions = [
-  { label: '₸ KZT', value: 'KZT' },
-  { label: '₽ RUB', value: 'RUB' },
-  { label: '$ USD', value: 'USD' },
-  { label: '€ EUR', value: 'EUR' },
-]
-
 </script>
 
 <style lang="scss" scoped>
@@ -187,6 +240,7 @@ const currencyOptions = [
 
   &__amount-input {
     flex: 1;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
     padding: 4px $space-2;
     border: 1px solid var(--p-surface-300);
     border-radius: $radius-sm;
@@ -196,9 +250,8 @@ const currencyOptions = [
     outline: none;
     min-width: 0;
 
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    &:focus {
+      border-color: var(--p-primary-color);
     }
 
     .app-dark & {
@@ -209,25 +262,29 @@ const currencyOptions = [
   &__currency-select {
     flex-shrink: 0;
     min-width: 90px;
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
     padding: 4px $space-2;
     border: 1px solid var(--p-surface-300);
     border-radius: $radius-sm;
     background: var(--p-card-background);
     font-size: $font-size-sm;
     color: var(--p-text-color);
-    cursor: not-allowed;
-    opacity: 0.5;
+    cursor: pointer;
+    outline: none;
+
+    &:focus {
+      border-color: var(--p-primary-color);
+    }
 
     .app-dark & {
       border-color: var(--p-surface-600);
     }
   }
 
-  &__missing-note {
+  &__saved-note {
     font-size: $font-size-xs;
     color: var(--p-text-muted-color);
     margin-top: $space-1;
-    font-style: italic;
   }
 
   // Schedule stub section

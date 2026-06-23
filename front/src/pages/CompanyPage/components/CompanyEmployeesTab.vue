@@ -91,6 +91,39 @@
         </div>
       </template>
     </DataTable>
+
+    <!-- ── Status picker Dialog ──────────────────────────────────────────────── -->
+    <Dialog
+      v-model:visible="statusPickerOpen"
+      :header="t('company.page.employees.actions.changeStatus')"
+      modal
+      :style="{ width: '320px' }"
+    >
+      <div class="employees-tab__status-options">
+        <button
+          v-for="opt in statusOptions"
+          :key="opt.value"
+          type="button"
+          class="employees-tab__status-option"
+          :class="{ 'employees-tab__status-option--active': pendingStatus === opt.value }"
+          @click="pendingStatus = opt.value"
+        >
+          <Tag
+            :value="opt.label"
+            :severity="opt.value === 'works' ? 'success' : 'secondary'"
+            size="small"
+          />
+        </button>
+      </div>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="statusPickerOpen = false" />
+        <Button
+          :label="t('common.save')"
+          :disabled="pendingStatus === null"
+          @click="confirmStatusChange"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -103,6 +136,7 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
+import Dialog from 'primevue/dialog'
 import { RouterLink } from 'vue-router'
 import type { ContactCompanyLink, EmploymentStatus } from '@/entities/crm'
 
@@ -114,7 +148,7 @@ defineProps<{
 const emit = defineEmits<{
   addEmployee: []
   setPrimary: [contactId: number]
-  toggleStatus: [contactId: number, current: EmploymentStatus]
+  setStatus: [contactId: number, status: EmploymentStatus]
   unlink: [contactId: number]
 }>()
 
@@ -123,6 +157,29 @@ const router = useRouter()
 
 const menuRefs = ref<Map<number, InstanceType<typeof Menu>>>(new Map())
 const expandedRows = ref<Record<string, boolean>>({})
+
+// ── Status picker dialog ────────────────────────────────────────────────────────
+
+const statusPickerOpen = ref(false)
+const statusPickerContactId = ref<number | null>(null)
+const pendingStatus = ref<EmploymentStatus | null>(null)
+
+const statusOptions = [
+  { get label() { return t('company.page.employees.status.works') }, value: 'works' as EmploymentStatus },
+  { get label() { return t('company.page.employees.status.left') }, value: 'left' as EmploymentStatus },
+]
+
+function openStatusPicker(contactId: number, current: EmploymentStatus) {
+  statusPickerContactId.value = contactId
+  pendingStatus.value = current
+  statusPickerOpen.value = true
+}
+
+function confirmStatusChange() {
+  if (statusPickerContactId.value === null || pendingStatus.value === null) return
+  emit('setStatus', statusPickerContactId.value, pendingStatus.value)
+  statusPickerOpen.value = false
+}
 
 function setMenuRef(id: number, el: unknown) {
   if (el) menuRefs.value.set(id, el as InstanceType<typeof Menu>)
@@ -147,8 +204,7 @@ function getMenuItems(data: ContactCompanyLink) {
     {
       label: t('company.page.employees.actions.changeStatus'),
       icon: 'pi pi-sync',
-      command: () =>
-        emit('toggleStatus', data.contact_id, data.employment_status ?? 'works'),
+      command: () => openStatusPicker(data.contact_id, data.employment_status ?? 'works'),
     },
     {
       separator: true,
@@ -268,5 +324,47 @@ function channelIcon(type: string): string {
 .employees-tab__expansion-empty {
   font-size: $font-size-xs;
   color: $surface-400;
+}
+
+// ── Status picker dialog ────────────────────────────────────────────────────────
+
+.employees-tab__status-options {
+  display: flex;
+  gap: $space-3;
+  padding: $space-2 0;
+}
+
+.employees-tab__status-option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border: 1px solid var(--p-surface-300);
+  border-radius: $radius-md;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color var(--app-transition-fast), background var(--app-transition-fast);
+
+  .app-dark & {
+    border-color: var(--p-surface-600);
+  }
+
+  &:hover {
+    border-color: var(--p-primary-color);
+    background: var(--p-surface-50);
+
+    .app-dark & {
+      background: var(--p-surface-800);
+    }
+  }
+
+  &--active {
+    border-color: var(--p-primary-color);
+    background: $primary-50;
+
+    .app-dark & {
+      background: var(--p-primary-900);
+    }
+  }
 }
 </style>

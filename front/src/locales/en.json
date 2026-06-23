@@ -1634,7 +1634,7 @@
         "paymentAmount": "Payment amount",
         "amountPlaceholder": "0",
         "fixPayment": "Fix payment",
-        "missingNote": "Amount and currency fields will appear after the finance sprint",
+        "savedAmount": "Saved",
         "scheduleTitle": "Payment schedule"
       },
       "stats": {
