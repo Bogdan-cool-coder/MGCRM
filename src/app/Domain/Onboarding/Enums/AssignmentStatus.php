@@ -9,7 +9,7 @@ enum AssignmentStatus: string
     case Pending = 'pending';
     case InProgress = 'in_progress';
     case Completed = 'completed';
-    case Failed = 'failed';    // Reserved — not used automatically in S3
+    case Failed = 'failed';    // Set by ProgressService::markFailed (SoftGate + exhausted retries)
     case Overdue = 'overdue';
     case Archived = 'archived';
 }

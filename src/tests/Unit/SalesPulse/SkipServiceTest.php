@@ -125,4 +125,36 @@ class SkipServiceTest extends TestCase
         $this->assertSame(2, $removed);
         $this->assertSame(2, PulseSkipDay::query()->where('manager_id', $manager->id)->count());
     }
+
+    public function test_vacation_upgrades_a_pre_existing_skip_day_to_vacation(): void
+    {
+        $manager = User::factory()->create();
+        $from = $this->date('2026-06-18'); // Thursday
+        $until = $this->date('2026-06-19'); // Friday
+
+        // A plain one-day skip already sits on the first day of the span.
+        $this->assertTrue($this->skips->skipDay($from, '-1001', $manager, 'admin'));
+        $this->assertSame(SkipKind::Skip, PulseSkipDay::query()
+            ->whereDate('on_date', '2026-06-18')->where('manager_id', $manager->id)->value('kind'));
+
+        $days = $this->skips->vacation($from, $until, $manager, 'admin');
+
+        // Both working days are covered (the pre-existing one is upgraded, not skipped).
+        $this->assertSame(2, $days);
+
+        // The previously-plain skip is now a vacation row carrying vacation_until.
+        $upgraded = PulseSkipDay::query()
+            ->whereDate('on_date', '2026-06-18')->where('manager_id', $manager->id)->firstOrFail();
+        $this->assertSame(SkipKind::Vacation, $upgraded->kind);
+        $this->assertNotNull($upgraded->vacation_until);
+        $this->assertSame('2026-06-19', $upgraded->vacation_until->toDateString());
+
+        // No duplicate row was created for the upgraded day.
+        $this->assertSame(2, PulseSkipDay::query()->where('manager_id', $manager->id)->count());
+
+        // /progress now labels it as on-vacation, and /unvacation can clear it.
+        $this->assertNotNull($this->skips->vacationUntil($from, $manager));
+        $this->assertSame(2, $this->skips->unvacation($from, $manager));
+        $this->assertSame(0, PulseSkipDay::query()->where('manager_id', $manager->id)->count());
+    }
 }

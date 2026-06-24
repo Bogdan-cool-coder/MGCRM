@@ -68,15 +68,16 @@ class ClientStatusTest extends TestCase
     // DisconnectReason directory — admin CRUD
     // =========================================================================
 
-    public function test_manager_cannot_list_disconnect_reasons(): void
+    public function test_manager_can_list_disconnect_reasons(): void
     {
-        // NEW-5: disconnect reasons are sensitive BI — the /api/admin/* group is
-        // admin/director only, so a manager must get 403 on read.
+        // CRM-5: directory READS are open to any authenticated user — a manager
+        // needs the reason list to disconnect a company they own (the
+        // DisconnectDialog reason picker). Only writes stay admin-gated.
         DisconnectReason::create(['name' => 'Причина 1', 'sort_order' => 1]);
         $user = $this->manager();
         Sanctum::actingAs($user, ['*']);
 
-        $this->getJson('/api/admin/disconnect-reasons')->assertForbidden();
+        $this->getJson('/api/admin/disconnect-reasons')->assertOk();
     }
 
     public function test_admin_can_list_disconnect_reasons(): void
@@ -95,7 +96,7 @@ class ClientStatusTest extends TestCase
         DisconnectReason::create(['name' => 'Активная', 'sort_order' => 1, 'is_active' => true]);
         DisconnectReason::create(['name' => 'Неактивная', 'sort_order' => 2, 'is_active' => false]);
 
-        // Reads on /api/admin/* require admin/director (NEW-5).
+        // Reads on /api/admin/* are open to any authenticated user (CRM-5).
         $user = $this->admin();
         Sanctum::actingAs($user, ['*']);
 

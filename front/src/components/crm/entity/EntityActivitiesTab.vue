@@ -196,20 +196,15 @@
       </div>
     </div>
 
-    <!-- Open tasks (pending, non-closed) — compact list above composer -->
+    <!-- Open tasks (pending, non-closed) — compact list above composer.
+         Editing is inline (kind/date/responsible pickers + dbl-click title),
+         mirroring DealPage; there is no full edit dialog from this list. -->
     <OpenTasksList
       :tasks="feed.openTasks.value"
       :target-type="entityType"
       :target-id="entityId"
       @completed="onTaskCompleted"
       @deleted="onTaskDeleted"
-      @edit="onEditTask"
-    />
-
-    <!-- Edit task dialog (B4) — mounted here so it's always available -->
-    <ActivityFormDialog
-      v-model="editDialogVisible"
-      :activity-id="editActivityId"
       @updated="onTaskUpdated"
     />
 
@@ -226,12 +221,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import EntityComposer from './EntityComposer.vue'
 import OpenTasksList from './OpenTasksList.vue'
-import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import { useEntityFeed } from './composables/useEntityFeed'
 import { kindIcon, kindColor, statusSeverity } from '@/utils/activity'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
@@ -245,15 +240,11 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const toast = useToast()
 
 const scrollEl = ref<HTMLElement | null>(null)
 const feedFilter = ref<FeedFilter>('all')
 const composerRef = ref<InstanceType<typeof EntityComposer> | null>(null)
-
-// ─── Edit task dialog state (B4) ─────────────────────────────────────────────
-
-const editDialogVisible = ref(false)
-const editActivityId = ref<number | null>(null)
 
 const feed = useEntityFeed(
   () => props.entityType,
@@ -365,16 +356,19 @@ function onTaskCompleted(activity: ActivityDto) {
   feed.updateActivityLocal(activity)
 }
 
-function onTaskDeleted(activityId: number) {
-  feed.removeActivityLocal(activityId)
-}
-
-function onEditTask(activity: ActivityDto) {
-  editActivityId.value = activity.id
-  editDialogVisible.value = true
+async function onTaskDeleted(activityId: number) {
+  try {
+    // API-backed delete (removes the row locally on success). The local-only
+    // sibling removeActivityLocal would resurrect the task on reload.
+    await feed.deleteActivity(activityId)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  }
 }
 
 function onTaskUpdated(activity: ActivityDto) {
+  // Inline picker edits (kind/date/responsible/title) — sync the feed item so the
+  // displayed value reflects the server response without a reload.
   feed.updateActivityLocal(activity)
 }
 

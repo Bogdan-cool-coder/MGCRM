@@ -11,6 +11,7 @@ use App\Domain\Sales\Services\BulkDealService;
 use App\Domain\Sales\Services\DealExportService;
 use App\Domain\Sales\Services\DealMoveService;
 use App\Domain\Sales\Services\DealService;
+use App\Domain\Sales\Services\PipelineService;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolveVisibility;
 use App\Http\Requests\Sales\BulkDealActionRequest;
@@ -42,6 +43,7 @@ class DealController extends Controller
         private readonly BulkDealService $bulk,
         private readonly DealExportService $exporter,
         private readonly ActivityService $activities,
+        private readonly PipelineService $pipelines,
     ) {}
 
     public function index(IndexDealRequest $request): AnonymousResourceCollection|JsonResponse
@@ -50,6 +52,13 @@ class DealController extends Controller
         // only validated keys reach the service (unknown query params are ignored).
         $scope = $this->scope($request);
         $filters = $request->validated();
+
+        // Pipeline-level visibility is enforced HERE, the same way the funnel
+        // menu (PipelineService::list) and PipelinePolicy@view enforce it, so a
+        // manager who knows a restricted funnel's id cannot list/board its
+        // deals by passing pipeline_id explicitly. A request without pipeline_id
+        // spans the user's own-scoped deals across funnels (already row-scoped).
+        $this->assertPipelineVisible($request, $filters);
 
         if (($filters['view'] ?? null) === 'board') {
             return $this->board($request, $scope, $filters);
@@ -314,6 +323,31 @@ class DealController extends Controller
             ->findOrFail($dealId);
 
         return DealResource::make($deal)->response();
+    }
+
+    /**
+     * Enforce pipeline-level visibility when a request explicitly targets a
+     * funnel by id (list or board). Mirrors the funnel-menu rule
+     * (PipelineService::canAccess) so list/board/menu can never drift: a manager
+     * who is not allowed to see a restricted pipeline gets a 403 instead of its
+     * own-scoped deals. A missing/invalid pipeline_id is left to the downstream
+     * board()/list() handling (404 / cross-funnel own scope).
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function assertPipelineVisible(Request $request, array $filters): void
+    {
+        if (! isset($filters['pipeline_id'])) {
+            return;
+        }
+
+        $pipeline = $this->pipelines->find((int) $filters['pipeline_id']);
+
+        abort_unless(
+            $this->pipelines->canAccess($pipeline, $request->user()),
+            403,
+            'You are not allowed to view this pipeline.',
+        );
     }
 
     /**

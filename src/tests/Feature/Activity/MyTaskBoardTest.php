@@ -10,6 +10,7 @@ use App\Domain\Activity\Models\Activity;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -22,6 +23,28 @@ class MyTaskBoardTest extends TestCase
 {
     use ActivityTestHelpers;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Freeze the clock at a deterministic operational mid-day so the urgency
+        // bucketing is independent of the wall-clock the suite runs at. The board
+        // anchors "today" to Asia/Dubai (config('salespulse.timezone')); at a late
+        // UTC hour it is already the next Dubai day, so a UTC-noon due_at would slip
+        // into OVERDUE. 2026-03-16 is a Monday — tomorrow (Tue) and the this_week
+        // tasks all stay inside the Mon–Sun week. 08:00 UTC keeps every
+        // now()->setTime(9..15) due_at safely inside the Dubai "today" UTC window
+        // [2026-03-15 20:00, 2026-03-16 20:00).
+        Carbon::setTestNow(Carbon::parse('2026-03-16 08:00:00', 'UTC'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     public function test_my_board_buckets_tasks_by_urgency(): void
     {
@@ -162,13 +185,13 @@ class MyTaskBoardTest extends TestCase
         // the Dubai team. With a UTC-anchored boundary it would (wrongly) fall into
         // "tomorrow" — this test fails on the old UTC math and passes on the new
         // operational-timezone math.
-        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-03-15 21:00:00', 'UTC')); // 01:00 Dubai, 16th
+        Carbon::setTestNow(Carbon::parse('2026-03-15 21:00:00', 'UTC')); // 01:00 Dubai, 16th
 
         $manager = $this->manager();
 
         // due_at stored as a real UTC instant (as the SPA sends via toISOString):
         // 06:00 UTC on the 16th = 10:00 Dubai on the 16th = the Dubai "today".
-        $dueToday = \Carbon\Carbon::parse('2026-03-16 06:00:00', 'UTC');
+        $dueToday = Carbon::parse('2026-03-16 06:00:00', 'UTC');
         Activity::factory()->responsibleOf($manager)->createdByUser($manager)
             ->create(['due_at' => $dueToday]);
 
@@ -180,6 +203,6 @@ class MyTaskBoardTest extends TestCase
             ->assertJsonCount(0, 'data.tomorrow')
             ->assertJsonCount(0, 'data.overdue');
 
-        \Carbon\Carbon::setTestNow();
+        Carbon::setTestNow();
     }
 }

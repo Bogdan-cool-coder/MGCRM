@@ -112,7 +112,7 @@ async function loadTemplates() {
   templateOptions.value = []
   form.value.template_id = null
   try {
-    const templates = await templatesApi.getTemplates({ kind: form.value.kind })
+    const templates = await templatesApi.getTemplates({ kind: 'docx' })
     templateOptions.value = templates.map((tpl) => ({
       label: `${tpl.title} (v${tpl.current_version ?? 1})`,
       value: tpl.id,

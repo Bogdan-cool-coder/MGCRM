@@ -7,6 +7,7 @@ namespace App\Domain\Contracts\Services;
 use App\Domain\Contracts\Enums\DocumentKind;
 use App\Domain\Contracts\Enums\TemplateVariableType;
 use App\Domain\Contracts\Models\Document;
+use App\Domain\Contracts\Models\LicensorEntity;
 use App\Domain\Contracts\Models\TemplateVariable;
 use App\Domain\Contracts\Services\Helpers\MoneyFormatter;
 use App\Domain\Contracts\Services\Helpers\NumberToWordsHelper;
@@ -42,6 +43,7 @@ class ContractContextBuilder
     public function __construct(
         private readonly YamlTemplateParser $yamlParser,
         private readonly CompanyRequisiteService $requisiteService,
+        private readonly LicensorService $licensorService,
     ) {}
 
     /**
@@ -62,7 +64,34 @@ class ContractContextBuilder
 
         $product = (array) ($yamlCtx['product'] ?? []);
         $country = (array) ($yamlCtx['country'] ?? []);
+        // Start with YAML licensor as base, then override with DB entity.
         $licensor = (array) ($yamlCtx['licensor'] ?? []);
+
+        // Resolve licensor via LicensorService (supports override_id from context).
+        $overrideId = isset($doc->context['licensor_override_id'])
+            ? (int) $doc->context['licensor_override_id']
+            : null;
+        $licensorEntity = $this->licensorService->forCountry($doc->country_code, $overrideId ?: null);
+
+        if ($licensorEntity !== null) {
+            // Merge entity scalar fields into licensor context array.
+            $entityData = $licensorEntity->toArray();
+            // Remove nested relations before flattening.
+            unset($entityData['bank_accounts']);
+            $licensor = array_merge($licensor, $entityData);
+
+            // Per-currency bank account (primary for contract currency).
+            $currency = $doc->currency ?? 'RUB';
+            $bankAccount = $this->licensorService->primaryAccountForCurrency($licensorEntity, $currency);
+            if ($bankAccount !== null) {
+                // Override bank fields with per-currency account data.
+                $licensor['bank']            = $bankAccount->bank ?? ($licensor['bank'] ?? '');
+                $licensor['bank_code_label'] = $bankAccount->bank_code_label ?? ($licensor['bank_code_label'] ?? '');
+                $licensor['bank_code']       = $bankAccount->bank_code ?? ($licensor['bank_code'] ?? '');
+                $licensor['account']         = $bankAccount->account ?? ($licensor['account'] ?? '');
+                $licensor['swift']           = $bankAccount->swift ?? ($licensor['swift'] ?? '');
+            }
+        }
 
         $flat = [];
 

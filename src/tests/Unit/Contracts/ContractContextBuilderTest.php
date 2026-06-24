@@ -6,10 +6,12 @@ namespace Tests\Unit\Contracts;
 
 use App\Domain\Contracts\Enums\TemplateVariableType;
 use App\Domain\Contracts\Models\Document;
+use App\Domain\Contracts\Models\LicensorBankAccount;
 use App\Domain\Contracts\Models\LicensorEntity;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Models\TemplateVariable;
 use App\Domain\Contracts\Services\ContractContextBuilder;
+use App\Domain\Contracts\Services\LicensorService;
 use App\Domain\Contracts\Services\YamlTemplateParser;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\CompanyRequisite;
@@ -37,7 +39,7 @@ class ContractContextBuilderTest extends TestCase
     {
         parent::setUp();
 
-        $this->builder = new ContractContextBuilder(new YamlTemplateParser, new CompanyRequisiteService);
+        $this->builder = new ContractContextBuilder(new YamlTemplateParser, new CompanyRequisiteService, new LicensorService);
         $this->author = User::factory()->create(['role' => Role::Manager]);
 
         // Seed minimal YAML templates needed by YamlTemplateParser.
@@ -95,6 +97,63 @@ class ContractContextBuilderTest extends TestCase
         $ctx = $this->builder->build($doc);
 
         $this->assertSame('YAML Licensor', $ctx['licensor.name']);
+    }
+
+    public function test_per_currency_bank_account_used_when_available(): void
+    {
+        $licensor = LicensorEntity::factory()->forUz()->create([
+            'name' => 'ООО UZ Licensor',
+            'account' => 'UZS-DEFAULT-ACCOUNT',
+        ]);
+
+        // Add a primary USD account — should override the entity's default account.
+        LicensorBankAccount::factory()->create([
+            'licensor_id' => $licensor->id,
+            'currency' => 'USD',
+            'bank' => 'International Bank',
+            'bank_code' => 'INTLUZ22',
+            'account' => 'USD-SPECIFIC-ACCOUNT',
+            'is_primary' => true,
+        ]);
+
+        $doc = Document::factory()->create([
+            'author_user_id' => $this->author->id,
+            'product_code' => 'macrocrm',
+            'country_code' => 'uz',
+            'city' => 'Ташкент',
+            'currency' => 'USD',
+            'total' => 500000,
+        ]);
+
+        $ctx = $this->builder->build($doc);
+
+        // Per-currency bank account should override the entity top-level account.
+        $this->assertSame('USD-SPECIFIC-ACCOUNT', $ctx['licensor.account']);
+        $this->assertSame('International Bank', $ctx['licensor.bank']);
+    }
+
+    public function test_falls_back_to_entity_account_when_no_per_currency_account(): void
+    {
+        LicensorEntity::factory()->forUz()->create([
+            'name' => 'ООО UZ Licensor',
+            'bank' => 'Default Bank UZ',
+            'account' => 'UZS-DEFAULT-ACCOUNT',
+        ]);
+
+        $doc = Document::factory()->create([
+            'author_user_id' => $this->author->id,
+            'product_code' => 'macrocrm',
+            'country_code' => 'uz',
+            'city' => 'Ташкент',
+            'currency' => 'EUR',  // No EUR account seeded
+            'total' => 500000,
+        ]);
+
+        $ctx = $this->builder->build($doc);
+
+        // Should fall back to entity top-level account when no per-currency account.
+        $this->assertSame('UZS-DEFAULT-ACCOUNT', $ctx['licensor.account']);
+        $this->assertSame('Default Bank UZ', $ctx['licensor.bank']);
     }
 
     public function test_sublicensee_from_company(): void

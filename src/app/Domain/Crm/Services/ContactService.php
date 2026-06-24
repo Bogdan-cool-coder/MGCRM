@@ -376,6 +376,14 @@ class ContactService
     public function delete(Contact $contact): void
     {
         DB::transaction(function () use ($contact): void {
+            // Detach sub-resources before soft-delete: the FK cascade fires only on
+            // hard-delete, so a soft-deleted contact would leave contact_channels orphaned
+            // (still queryable, not hidden). We delete channels directly and detach
+            // contact relations (both directions) here so the invariant holds.
+            $contact->channels()->delete();
+            $contact->contactRelations()->delete();
+            $contact->relatedContactRelations()->delete();
+
             $contact->delete();
         });
     }

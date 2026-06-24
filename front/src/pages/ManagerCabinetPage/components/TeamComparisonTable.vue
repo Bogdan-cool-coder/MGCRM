@@ -44,7 +44,7 @@
             style="width: 80px"
           >
             <template #body="{ data: row }">
-              {{ row.score_pct }}%
+              <span :title="`${row.score_pct}%`">{{ formatScorePct(row.score_pct) }}</span>
             </template>
           </Column>
 
@@ -68,7 +68,7 @@
           <i class="pi pi-chart-bar surface-600" />
           <span class="font-size-sm surface-600">
             {{ t('managerCabinet.team.average') }}:
-            <strong>{{ kpi.team.avg_pct }}%</strong>
+            <strong :title="`${kpi.team.avg_pct}%`">{{ formatScorePct(kpi.team.avg_pct) }}</strong>
           </span>
         </div>
       </template>
@@ -84,6 +84,7 @@ import Column from 'primevue/column'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import type { KpiResponse, TeamMember } from '@/entities/managerCabinet'
+import { formatScorePct } from '@/utils/scoreFormat'
 
 defineProps<{
   kpi: KpiResponse | null

@@ -10,6 +10,7 @@ use App\Domain\SalesPulse\Enums\SnapSource;
 use App\Domain\SalesPulse\Models\PulseDailyStatus;
 use App\Domain\SalesPulse\Models\PulseSnapshot;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -52,20 +53,38 @@ class SnapshotRepository
             return $existing;
         }
 
-        return DB::transaction(function () use ($snapshot, $source, $onDate, $capturedAt): PulseSnapshot {
-            $row = PulseSnapshot::create([
+        try {
+            return DB::transaction(function () use ($snapshot, $source, $onDate, $capturedAt): PulseSnapshot {
+                $row = PulseSnapshot::create([
+                    'manager_id' => $snapshot->managerId,
+                    'on_date' => $this->normalizeDate($onDate),
+                    'kind' => SnapKind::Plan->value,
+                    'source' => $source->value,
+                    'captured_at' => $capturedAt,
+                    'data' => $snapshot->toArray(),
+                ]);
+
+                $this->stampDailyStatus($snapshot->managerId, $onDate, SnapKind::Plan, $source, $capturedAt);
+
+                return $row;
+            });
+        } catch (QueryException $e) {
+            // Race: another process (e.g. a manual /startday colliding with the
+            // 10:15 AutoCapturePlanJob) inserted the PLAN between the pre-check and
+            // this insert. The unique constraint (uq_pulse_snapshots_manager_date_kind)
+            // makes that the authoritative write — honour write-once and return it.
+            $row = $this->findSnapshot($snapshot->managerId, $onDate, SnapKind::Plan);
+            if ($row === null) {
+                throw $e; // not a uniqueness collision — surface the real error.
+            }
+
+            Log::warning('SalesPulse: PLAN snapshot lost a write race, returning the committed row (write-once)', [
                 'manager_id' => $snapshot->managerId,
-                'on_date' => $this->normalizeDate($onDate),
-                'kind' => SnapKind::Plan->value,
-                'source' => $source->value,
-                'captured_at' => $capturedAt,
-                'data' => $snapshot->toArray(),
+                'on_date' => $onDate,
             ]);
 
-            $this->stampDailyStatus($snapshot->managerId, $onDate, SnapKind::Plan, $source, $capturedAt);
-
             return $row;
-        });
+        }
     }
 
     /**
@@ -77,21 +96,17 @@ class SnapshotRepository
         $onDate = $snapshot->onDate;
         $capturedAt ??= CarbonImmutable::now();
 
-        return DB::transaction(function () use ($snapshot, $source, $onDate, $capturedAt): PulseSnapshot {
-            $existing = PulseSnapshot::query()
-                ->where('manager_id', $snapshot->managerId)
-                ->whereDate('on_date', $onDate)
-                ->where('kind', SnapKind::Fact->value)
-                ->first();
+        $attributes = [
+            'manager_id' => $snapshot->managerId,
+            'on_date' => $this->normalizeDate($onDate),
+            'kind' => SnapKind::Fact->value,
+            'source' => $source->value,
+            'captured_at' => $capturedAt,
+            'data' => $snapshot->toArray(),
+        ];
 
-            $attributes = [
-                'manager_id' => $snapshot->managerId,
-                'on_date' => $this->normalizeDate($onDate),
-                'kind' => SnapKind::Fact->value,
-                'source' => $source->value,
-                'captured_at' => $capturedAt,
-                'data' => $snapshot->toArray(),
-            ];
+        $persist = function () use ($snapshot, $source, $onDate, $capturedAt, $attributes): PulseSnapshot {
+            $existing = $this->findSnapshot($snapshot->managerId, $onDate, SnapKind::Fact);
 
             if ($existing !== null) {
                 $existing->fill($attributes)->save();
@@ -103,7 +118,35 @@ class SnapshotRepository
             $this->stampDailyStatus($snapshot->managerId, $onDate, SnapKind::Fact, $source, $capturedAt);
 
             return $row;
-        });
+        };
+
+        try {
+            return DB::transaction($persist);
+        } catch (QueryException $e) {
+            // Race: a concurrent saveFact created the row between our existence
+            // check and the INSERT. The unique constraint guarantees only one row,
+            // so re-run as an update of the now-committed row instead of throwing.
+            if ($this->findSnapshot($snapshot->managerId, $onDate, SnapKind::Fact) === null) {
+                throw $e; // not a uniqueness collision — surface the real error.
+            }
+
+            return DB::transaction($persist);
+        }
+    }
+
+    /**
+     * Locate the stored snapshot row for a manager-day-kind, or null.
+     */
+    private function findSnapshot(int $managerId, string $onDate, SnapKind $kind): ?PulseSnapshot
+    {
+        /** @var PulseSnapshot|null $row */
+        $row = PulseSnapshot::query()
+            ->where('manager_id', $managerId)
+            ->whereDate('on_date', $onDate)
+            ->where('kind', $kind->value)
+            ->first();
+
+        return $row;
     }
 
     /**

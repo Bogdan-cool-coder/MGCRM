@@ -129,6 +129,7 @@ const kindOptions = [
   { label: t('documents.kinds.invoice'), value: 'invoice' as DocumentKind },
   { label: t('documents.kinds.act'), value: 'act' as DocumentKind },
   { label: t('documents.kinds.reconciliation'), value: 'reconciliation' as DocumentKind },
+  { label: t('documents.kinds.termination_agreement'), value: 'termination_agreement' as DocumentKind },
 ]
 
 const form = ref<{

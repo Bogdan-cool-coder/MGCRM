@@ -23,11 +23,24 @@ class TemplateVariableService
     /**
      * @return Collection<int, TemplateVariable>
      */
-    public function list(bool $activeOnly = true, ?string $group = null): Collection
-    {
+    public function list(
+        bool $activeOnly = true,
+        ?string $group = null,
+        ?string $varType = null,
+        ?string $search = null,
+    ): Collection {
         return TemplateVariable::query()
             ->when($activeOnly, fn ($q) => $q->active())
             ->when($group !== null, fn ($q) => $q->where('group', $group))
+            ->when($varType !== null, fn ($q) => $q->where('var_type', $varType))
+            ->when(
+                $search !== null && trim($search) !== '',
+                fn ($q) => $q->where(function ($inner) use ($search) {
+                    $pattern = '%'.mb_strtolower(trim($search)).'%';
+                    $inner->whereRaw('LOWER("key") LIKE ?', [$pattern])
+                          ->orWhereRaw('LOWER(label) LIKE ?', [$pattern]);
+                }),
+            )
             ->orderBy('sort_order')
             ->orderBy('key')
             ->get();

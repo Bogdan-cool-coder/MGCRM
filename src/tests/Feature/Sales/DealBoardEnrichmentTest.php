@@ -46,6 +46,28 @@ class DealBoardEnrichmentTest extends TestCase
             ->assertJsonPath("columns.{$newStageId}.deals.0.days_in_stage", 5);
     }
 
+    public function test_board_card_carries_tags(): void
+    {
+        // Tags must ride on the kanban card so the (default) board view's Tags
+        // filter checklist is data-driven — the list view is not loaded in board
+        // mode, so without this the checklist would be empty.
+        $pipeline = $this->seedSalesPipeline();
+        $director = User::factory()->create(['role' => Role::Director]);
+
+        Deal::factory()->forOwner($director)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCodeId($pipeline, 'new'),
+            'tags' => ['vip', 'inbound'],
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+        $newStageId = $this->stageCodeId($pipeline, 'new');
+
+        $this->getJson("/api/deals?view=board&pipeline_id={$pipeline->id}")
+            ->assertOk()
+            ->assertJsonPath("columns.{$newStageId}.deals.0.tags", ['vip', 'inbound']);
+    }
+
     public function test_board_card_exposes_next_open_task_by_soonest_due(): void
     {
         $pipeline = $this->seedSalesPipeline();

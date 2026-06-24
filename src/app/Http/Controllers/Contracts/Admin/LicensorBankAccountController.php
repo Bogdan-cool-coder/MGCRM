@@ -49,7 +49,8 @@ class LicensorBankAccountController extends Controller
 
     public function destroy(Request $request, LicensorBankAccount $bankAccount): JsonResponse
     {
-        $this->authorize('update', $bankAccount->licensor);
+        // Bank-account deletion is admin-only per spec (vault S2.1 §Е).
+        $this->authorize('delete', $bankAccount->licensor);
 
         $this->service->deleteAccount($bankAccount);
 

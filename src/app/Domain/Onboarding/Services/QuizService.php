@@ -175,10 +175,18 @@ class QuizService
         foreach ($questions as $question) {
             $totalPoints += $question->points;
 
-            $correctIds = $question->options
-                ->where('is_correct', true)
+            $correctOptions = $question->options->where('is_correct', true);
+
+            $correctIds = $correctOptions
                 ->pluck('id')
                 ->sort()
+                ->values()
+                ->all();
+
+            // Inline option texts so the review screen can render human-readable
+            // correct answers without a second lookup.
+            $correctOptionTexts = $correctOptions
+                ->pluck('text')
                 ->values()
                 ->all();
 
@@ -196,7 +204,12 @@ class QuizService
 
             $annotated[] = [
                 'question_id' => $question->id,
+                'question_text' => $question->text,
+                'kind' => $question->kind instanceof \BackedEnum ? $question->kind->value : (string) $question->kind,
+                'explanation' => $question->explanation,
                 'selected_option_ids' => $selected,
+                'correct_option_ids' => $correctIds,
+                'correct_option_texts' => $correctOptionTexts,
                 'is_correct' => $isCorrect,
             ];
         }

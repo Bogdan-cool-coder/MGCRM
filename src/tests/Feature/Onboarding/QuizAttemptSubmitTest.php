@@ -226,11 +226,17 @@ class QuizAttemptSubmitTest extends TestCase
             $this->correctAnswers()
         )->assertOk();
 
-        $questionDetails = $response->json('data.question_details');
-        $this->assertIsArray($questionDetails);
-        $this->assertCount(1, $questionDetails);
-        $this->assertSame('The correct answer is A because...', $questionDetails[0]['explanation']);
-        $this->assertContains($this->correctOption->id, $questionDetails[0]['correct_option_ids']);
+        // explanation and correct_option_ids are now inlined in answers[],
+        // not in a separate question_details[] array (audit fix: quiz review blank).
+        $answers = $response->json('data.answers');
+        $this->assertIsArray($answers);
+        $this->assertCount(1, $answers);
+        $this->assertSame('The correct answer is A because...', $answers[0]['explanation'],
+            'explanation must be inlined in answers[] item');
+        $this->assertContains($this->correctOption->id, $answers[0]['correct_option_ids'],
+            'correct_option_ids must be inlined in answers[] item');
+        $this->assertArrayNotHasKey('question_details', $response->json('data'),
+            'question_details key removed — all enrichment is now in answers[]');
     }
 
     public function test_submit_assigns_assignment_id_to_attempt(): void
@@ -287,11 +293,20 @@ class QuizAttemptSubmitTest extends TestCase
 
     public function test_show_attempt_returns_result_with_details_after_submit(): void
     {
-        // Submit first
+        // Submit first — simulate already-submitted attempt (answers inlined at score time)
         $this->attempt->update([
             'score_pct' => 100,
             'passed' => true,
-            'answers' => [['question_id' => $this->question->id, 'selected_option_ids' => [$this->correctOption->id], 'is_correct' => true]],
+            'answers' => [[
+                'question_id' => $this->question->id,
+                'question_text' => $this->question->text,
+                'kind' => 'single_choice',
+                'explanation' => null,
+                'selected_option_ids' => [$this->correctOption->id],
+                'correct_option_ids' => [$this->correctOption->id],
+                'correct_option_texts' => [$this->correctOption->text],
+                'is_correct' => true,
+            ]],
             'finished_at' => now(),
             'assignment_id' => $this->assignment->id,
         ]);
@@ -305,6 +320,11 @@ class QuizAttemptSubmitTest extends TestCase
         $response->assertJsonPath('data.score_pct', 100)
             ->assertJsonPath('data.passed', true);
 
-        $this->assertNotNull($response->json('data.question_details'));
+        // answers[] carries all enriched fields (inlined at score time)
+        $answers = $response->json('data.answers');
+        $this->assertNotNull($answers, 'answers must be present');
+        $this->assertCount(1, $answers);
+        $this->assertArrayHasKey('question_text', $answers[0]);
+        $this->assertArrayHasKey('correct_option_ids', $answers[0]);
     }
 }

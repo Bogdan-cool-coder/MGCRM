@@ -93,6 +93,10 @@ const props = defineProps<{
   search: string
   activeFilterCount: number
   density: ContactsDensity
+  /** Whether the current user may export (defaults true — all roles can export their scoped set) */
+  canExport?: boolean
+  /** Whether the current user may enter bulk mode (destructive ops gated separately) */
+  canEnterBulk?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -128,34 +132,43 @@ const createLabel = computed(() =>
     : t('contacts.page.createContact'),
 )
 
-const moreMenuItems = computed(() => [
-  {
-    label: t('contacts.page.menu.dedup'),
-    icon: 'pi pi-copy',
-    command: () => emit('openDedup'),
-  },
-  {
-    label: `${t('contacts.page.menu.import')} (${t('common.comingSoon', 'скоро')})`,
-    icon: 'pi pi-upload',
-    disabled: true,
-  },
-  {
-    label: t('contacts.page.menu.export'),
-    icon: 'pi pi-download',
-    command: () => emit('export'),
-  },
-  {
+const moreMenuItems = computed(() => {
+  const items: import('primevue/menuitem').MenuItem[] = [
+    {
+      label: t('contacts.page.menu.dedup'),
+      icon: 'pi pi-copy',
+      command: () => emit('openDedup'),
+    },
+    {
+      label: `${t('contacts.page.menu.import')} (${t('common.comingSoon', 'скоро')})`,
+      icon: 'pi pi-upload',
+      disabled: true,
+    },
+  ]
+  if (props.canExport !== false) {
+    items.push({
+      label: t('contacts.page.menu.export'),
+      icon: 'pi pi-download',
+      command: () => emit('export'),
+    })
+  }
+  items.push({
     label: t('contacts.page.menu.columns'),
     icon: 'pi pi-columns',
     command: () => emit('openColumns'),
-  },
-  { separator: true },
-  {
-    label: t('contacts.page.menu.bulk'),
-    icon: 'pi pi-users',
-    command: () => emit('enterBulk'),
-  },
-])
+  })
+  if (props.canEnterBulk !== false) {
+    items.push(
+      { separator: true },
+      {
+        label: t('contacts.page.menu.bulk'),
+        icon: 'pi pi-users',
+        command: () => emit('enterBulk'),
+      },
+    )
+  }
+  return items
+})
 </script>
 
 <style lang="scss" scoped>

@@ -307,6 +307,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   completed: [activity: ActivityDto]
   deleted: [activityId: number]
+  updated: [activity: ActivityDto]
 }>()
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -395,7 +396,8 @@ async function saveEditTitle(task: ActivityDto) {
   editingTitleId.value = null
   if (draft.trim() && draft !== task.title) {
     try {
-      await activityApi.updateActivity(task.id, { title: draft.trim() })
+      const updated = await activityApi.updateActivity(task.id, { title: draft.trim() })
+      emit('updated', updated)
     } catch {
       taskTitleDraft[task.id] = task.title
     }
@@ -428,7 +430,8 @@ function toggleTypePicker(taskId: number) {
 async function patchKind(task: ActivityDto, kind: ActivityKind) {
   typePickerOpenId.value = null
   try {
-    await activityApi.updateActivity(task.id, { kind })
+    const updated = await activityApi.updateActivity(task.id, { kind })
+    emit('updated', updated)
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
   }
@@ -448,7 +451,10 @@ function toggleDatePicker(taskId: number) {
 async function patchDueAt(task: ActivityDto, date: Date | null) {
   datePickerOpenId.value = null
   try {
-    await activityApi.updateActivity(task.id, { due_at: date ? date.toISOString() : null })
+    const updated = await activityApi.updateActivity(task.id, {
+      due_at: date ? date.toISOString() : null,
+    })
+    emit('updated', updated)
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
   }
@@ -476,7 +482,8 @@ function toggleResponsiblePicker(taskId: number) {
 async function patchResponsible(task: ActivityDto, user: { id: number; name: string }) {
   responsiblePickerOpenId.value = null
   try {
-    await activityApi.updateActivity(task.id, { responsible_id: user.id })
+    const updated = await activityApi.updateActivity(task.id, { responsible_id: user.id })
+    emit('updated', updated)
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
   }

@@ -10,6 +10,7 @@ use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Iam\Models\User;
 use App\Domain\Org\Models\Department;
 use Database\Factories\Activity\ActivityFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -77,6 +78,44 @@ class Activity extends Model
             'ftm_presentation_shown' => 'boolean',
             'meeting_report_json' => 'array',
         ];
+    }
+
+    /**
+     * The five FTM (first-time meeting) conditions (plan §Б2) — the SINGLE
+     * SOURCE for the FTM predicate. The KPI count, the feed's ftm_only filter,
+     * the per-item ftm_counted flag and ManagerKpiService all delegate here so a
+     * rule change can never silently desync the surfaces (risk Н from plan).
+     *
+     * Query form: scope the builder to counted FTM meetings.
+     *
+     * @param  Builder<Activity>  $query
+     * @return Builder<Activity>
+     */
+    public function scopeFtmCounted(Builder $query): Builder
+    {
+        return $query
+            ->where('kind', ActivityType::Meeting->value)
+            ->where('is_first_time_meeting', true)
+            ->where('ftm_decision_maker_attended', true)
+            ->where('ftm_presentation_shown', true)
+            ->whereNotNull('ftm_report_url');
+    }
+
+    /**
+     * Object form of the five FTM conditions — true ⇔ this row is a counted FTM.
+     * Accepts any object carrying the FTM attributes (Activity model, stdClass
+     * row, feed item) so the KPI service and the feed resource share one rule.
+     */
+    public static function qualifiesAsFtm(object $row): bool
+    {
+        $kind = $row->kind ?? null;
+        $kindValue = $kind instanceof \BackedEnum ? $kind->value : $kind;
+
+        return $kindValue === ActivityType::Meeting->value
+            && (bool) ($row->is_first_time_meeting ?? false)
+            && (bool) ($row->ftm_decision_maker_attended ?? false)
+            && (bool) ($row->ftm_presentation_shown ?? false)
+            && ! empty($row->ftm_report_url);
     }
 
     /**

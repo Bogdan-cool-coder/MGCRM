@@ -254,11 +254,11 @@ test.describe('Data-visibility leaks — regression lock', () => {
   //    (and sources/countries/etc.) → 200. These index/show routes call no
   //    authorize(). Confirmed path: GET /api/admin/company-types (api.php:380).
   // ---------------------------------------------------------------------------
-  test('AUDIT iam#NEW-5 — GET /api/admin/company-types is admin-gated (manager1 → 403)', async () => {
-    // LOCKED: /api/admin/* directory endpoints are now gated. test.fail() removed.
-
-    // Sanity: confirm the probing user is actually a non-admin/non-director role,
-    // so a 403 here genuinely reflects a gate (and not the user being privileged).
+  test('AUDIT iam#NEW-5 — /api/admin/* directory: READ open to authed, WRITE admin-gated', async () => {
+    // Corrected contract (re-audit Wave 4): the Wave-1 fix over-gated and 403'd READS
+    // that managers legitimately need (filter dropdowns / labels). Reference-directory
+    // index/show are now open to any authenticated user; only store/update/destroy are
+    // admin-gated (can:admin-write). The security property is WRITE-gating.
     const mgr = await me(ctx, mgrToken)
     const role = String(mgr.role ?? '').toLowerCase()
     test.skip(
@@ -266,25 +266,30 @@ test.describe('Data-visibility leaks — regression lock', () => {
       `probe user resolved to "${role}" — not a low-privilege role, cannot assert the gate.`,
     )
 
-    // Baseline: admin/director MUST keep read access to the directory.
+    // Baseline: admin keeps full access.
     const adminRes = await ctx.get(`${API_URL}/api/admin/company-types`, {
       headers: bearer(adminToken),
     })
-    expect(
-      adminRes.ok(),
-      `admin GET /api/admin/company-types → HTTP ${adminRes.status()} (admin must keep access)`,
-    ).toBeTruthy()
-    // Touch the payload so the admin baseline exercises the same read path.
+    expect(adminRes.ok(), `admin GET → HTTP ${adminRes.status()}`).toBeTruthy()
     expect(Array.isArray(rowsOf(await adminRes.json()))).toBeTruthy()
 
-    const mgrRes = await ctx.get(`${API_URL}/api/admin/company-types`, {
+    // READ is open to any authenticated user (managers need reference directories).
+    const mgrRead = await ctx.get(`${API_URL}/api/admin/company-types`, {
       headers: bearer(mgrToken),
     })
-
-    // DESIRED: a non-admin/non-director may NOT read the admin directory.
     expect(
-      mgrRes.status(),
-      `manager1 GET /api/admin/company-types → HTTP ${mgrRes.status()} (must be 403: admin-only directory)`,
+      mgrRead.status(),
+      `manager1 GET /api/admin/company-types → HTTP ${mgrRead.status()} (read must be open: 200)`,
+    ).toBe(200)
+
+    // WRITE remains admin-gated — the gate runs before validation, so a non-admin is 403'd.
+    const mgrWrite = await ctx.post(`${API_URL}/api/admin/company-types`, {
+      headers: bearer(mgrToken),
+      data: { name: '__e2e_lock_probe_should_be_forbidden__' },
+    })
+    expect(
+      mgrWrite.status(),
+      `manager1 POST /api/admin/company-types → HTTP ${mgrWrite.status()} (write must be 403)`,
     ).toBe(403)
   })
 })

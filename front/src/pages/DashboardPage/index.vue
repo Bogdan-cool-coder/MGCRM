@@ -26,6 +26,19 @@
         @update:manager-id="(v) => setFilter('manager_id', v)"
       />
 
+      <!-- No active/selected pipeline: every widget is empty because no funnel
+           resolved. Surface a single explanatory message pointing at the funnel
+           Select instead of five blank widgets. -->
+      <Message
+        v-if="!loading && data?.meta?.no_pipeline"
+        severity="info"
+        :closable="false"
+        icon="pi pi-info-circle"
+        class="mb-4"
+      >
+        {{ t('dashboard.noPipeline') }}
+      </Message>
+
       <!-- Multi-currency warning -->
       <Message
         v-if="data?.meta?.multi_currency_warning"

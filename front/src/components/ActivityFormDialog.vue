@@ -181,6 +181,7 @@
     v-model:visible="meetingReportOpen"
     :activity-id="savedActivityId ?? 0"
     :deal-id="meetingReportDealId"
+    :pipeline-id="meetingReportPipelineId"
     @saved="meetingReportOpen = false"
   />
 </template>
@@ -201,6 +202,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import MeetingReportDialog from './MeetingReportDialog.vue'
 import { activityApi } from '@/api/activity'
 import { usersApi } from '@/api/users'
+import { salesApi } from '@/api/sales'
 import { useMutation } from '@/composables/async/useMutation'
 import { kindIcon } from '@/utils/activity'
 import { getApiErrorStatus, getValidationErrors, getApiErrorMessage } from '@/utils/errors'
@@ -246,6 +248,10 @@ const isDirty = ref(false)
 const savedActivityId = ref<number | null>(null)
 const meetingReportOpen = ref(false)
 const meetingReportDealId = ref<number | null>(null)
+// Pipeline of the target deal, threaded into MeetingReportDialog so per-pipeline
+// questions are reachable from this entry too (mirrors DealFeedItem). Resolved
+// lazily on fill-report because the dialog only has the deal id, not the deal.
+const meetingReportPipelineId = ref<number | null>(null)
 
 interface ActivityForm {
   kind: ActivityKind
@@ -370,6 +376,9 @@ watch(
       savedActivityId.value = props.activityId ?? null
       meetingReportDealId.value =
         props.targetType === 'deal' && props.targetId ? props.targetId : null
+      // Reset the resolved pipeline so a reused dialog never carries a stale
+      // pipeline id from a previously-opened deal.
+      meetingReportPipelineId.value = null
       if (isEditMode.value) {
         form.value = defaultForm()
         await Promise.all([loadUsers(), loadActivity()])
@@ -465,7 +474,18 @@ function onCancel() {
   }
 }
 
-function onFillReport() {
+async function onFillReport() {
+  // Resolve the deal's pipeline so MeetingReportDialog can load per-pipeline
+  // questions (not just the global ones). Best-effort: on failure the dialog
+  // degrades to global questions, same as before.
+  if (meetingReportDealId.value !== null && meetingReportPipelineId.value === null) {
+    try {
+      const deal = await salesApi.getDeal(meetingReportDealId.value)
+      meetingReportPipelineId.value = deal.pipeline?.id ?? null
+    } catch {
+      meetingReportPipelineId.value = null
+    }
+  }
   meetingReportOpen.value = true
 }
 

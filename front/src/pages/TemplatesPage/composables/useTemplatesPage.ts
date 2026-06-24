@@ -3,14 +3,13 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { templatesApi } from '@/api/templates'
-import type { TemplateListItemDto } from '@/entities/template'
-import type { DocumentKind } from '@/entities/document'
+import type { TemplateListItemDto, TemplateKind } from '@/entities/template'
 
 export const useTemplatesPage = () => {
   const { t } = useI18n()
   const router = useRouter()
 
-  const kindFilter = ref<DocumentKind | null>(null)
+  const kindFilter = ref<TemplateKind | null>(null)
   const searchFilter = ref('')
 
   const resource = useAsyncResource<TemplateListItemDto[]>(() => [])
@@ -32,11 +31,11 @@ export const useTemplatesPage = () => {
     void router.push({ name: 'TemplateDetail', params: { id } })
   }
 
+  // Real template kind values matching templates.kind column (docx/yaml/text).
   const kindOptions = computed(() => [
-    { label: t('documents.kinds.contract'), value: 'contract' as DocumentKind },
-    { label: t('documents.kinds.invoice'), value: 'invoice' as DocumentKind },
-    { label: t('documents.kinds.act'), value: 'act' as DocumentKind },
-    { label: t('documents.kinds.reconciliation'), value: 'reconciliation' as DocumentKind },
+    { label: t('documents.kinds.docx', 'DOCX'), value: 'docx' as TemplateKind },
+    { label: t('documents.kinds.yaml', 'YAML'), value: 'yaml' as TemplateKind },
+    { label: 'Text', value: 'text' as TemplateKind },
   ])
 
   return {

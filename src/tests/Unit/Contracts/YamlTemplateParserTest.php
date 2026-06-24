@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Contracts;
 
-use App\Domain\Contracts\Models\LicensorEntity;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Services\YamlTemplateParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -99,11 +98,8 @@ YAML;
             'department_ids' => [],
         ]);
 
-        LicensorEntity::factory()->create([
-            'country_code' => 'kz',
-            'name' => 'DB Licensor',
-        ]);
-
+        // YamlTemplateParser only merges YAML layers; DB-entity resolution moved
+        // to ContractContextBuilder (tested in ContractContextBuilderTest).
         $context = $this->parser->buildContext('macrocrm', 'kz');
 
         $this->assertArrayHasKey('product', $context);
@@ -113,8 +109,8 @@ YAML;
 
         $this->assertEquals('TestProduct', $context['product']['name']);
         $this->assertEquals('kz', $context['country']['code']);
-        // DB entity takes precedence over YAML fallback.
-        $this->assertEquals('DB Licensor', $context['licensor']['name']);
+        // With YAML country having a licensor block, it should be set (fallback).
+        $this->assertEquals('Fallback Licensor', $context['licensor']['name']);
     }
 
     public function test_build_context_with_custom_override(): void
@@ -210,14 +206,14 @@ YAML;
             'department_ids' => [],
         ]);
 
-        $kzEntity = LicensorEntity::factory()->create(['country_code' => 'kz', 'name' => 'KZ Licensor']);
-        $ruEntity = LicensorEntity::factory()->create(['country_code' => 'ru', 'name' => 'Override Licensor']);
-
-        // Parser uses DB forCountry (no override param in buildContext — override is at Contract level).
-        // We verify that the KZ entity is used, not the RU one.
+        // YamlTemplateParser no longer resolves DB licensor entities;
+        // that responsibility was moved to ContractContextBuilder so that
+        // override_id and per-currency bank account selection can use Document.currency.
+        // This test now verifies that the YAML fallback licensor is returned.
         $context = $this->parser->buildContext('macrocrm', 'kz');
 
-        $this->assertEquals('KZ Licensor', $context['licensor']['name']);
-        $this->assertNotEquals($ruEntity->id, $context['licensor']['id']);
+        $this->assertNotNull($context['licensor']);
+        // The YAML country layer's licensor.name should be returned as the base.
+        $this->assertEquals('Fallback Licensor', $context['licensor']['name']);
     }
 }

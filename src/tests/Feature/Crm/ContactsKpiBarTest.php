@@ -466,6 +466,67 @@ class ContactsKpiBarTest extends TestCase
     }
 
     // =========================================================================
+    // Lawyer scope unification — must agree with ContactService::list (All scope)
+    // =========================================================================
+
+    public function test_lawyer_sees_all_contacts_in_kpi_matching_list(): void
+    {
+        // Lawyer scope should be All (same as admin/director) via VisibilityScope::forRole
+        $lawyer = User::factory()->create(['role' => Role::Lawyer]);
+        $lawyer->syncRoles(['lawyer']);
+        Sanctum::actingAs($lawyer, ['*']);
+
+        $mgr = User::factory()->create(['role' => Role::Manager]);
+        Contact::factory()->count(3)->create(['owner_id' => $mgr->id]);
+        Contact::factory()->count(2)->create(['owner_id' => $lawyer->id]);
+
+        // Lawyer KPI must return 5 (all), matching what GET /api/contacts returns
+        $this->getJson('/api/contacts/kpi?entity=contact')
+            ->assertOk()
+            ->assertJsonPath('data.total', 5);
+    }
+
+    public function test_lawyer_sees_all_companies_in_kpi(): void
+    {
+        $lawyer = User::factory()->create(['role' => Role::Lawyer]);
+        $lawyer->syncRoles(['lawyer']);
+        Sanctum::actingAs($lawyer, ['*']);
+
+        $mgr = User::factory()->create(['role' => Role::Manager]);
+        Company::factory()->count(4)->create(['owner_user_id' => $mgr->id]);
+
+        $this->getJson('/api/contacts/kpi?entity=company')
+            ->assertOk()
+            ->assertJsonPath('data.total', 4);
+    }
+
+    public function test_lawyer_can_view_any_contact(): void
+    {
+        // ContactPolicy::canAccess must now grant Lawyer access to non-owned contacts
+        $lawyer = User::factory()->create(['role' => Role::Lawyer]);
+        $lawyer->syncRoles(['lawyer']);
+        Sanctum::actingAs($lawyer, ['*']);
+
+        $mgr = User::factory()->create(['role' => Role::Manager]);
+        $contact = Contact::factory()->create(['owner_id' => $mgr->id]);
+
+        $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+    }
+
+    public function test_manager_cannot_view_others_contact(): void
+    {
+        // Manager (Own scope) must NOT be able to view a contact they don't own
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        $manager->syncRoles(['manager']);
+        Sanctum::actingAs($manager, ['*']);
+
+        $other = User::factory()->create(['role' => Role::Manager]);
+        $contact = Contact::factory()->create(['owner_id' => $other->id]);
+
+        $this->getJson("/api/contacts/{$contact->id}")->assertForbidden();
+    }
+
+    // =========================================================================
     // N5 graceful degradation — client_status column absent (AMO migration not applied)
     // =========================================================================
 

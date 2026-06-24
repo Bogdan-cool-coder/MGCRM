@@ -19,7 +19,7 @@ export function useTemplatesCache() {
     if (loaded.value || loading.value) return
     loading.value = true
     try {
-      const list = await templatesApi.getTemplates({ kind: 'contract' })
+      const list = await templatesApi.getTemplates({ kind: 'docx' })
       templates.value = list.map((t) => ({ code: t.code, title: t.title }))
       loaded.value = true
     } catch {

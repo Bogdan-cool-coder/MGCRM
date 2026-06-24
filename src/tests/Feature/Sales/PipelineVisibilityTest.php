@@ -6,6 +6,7 @@ namespace Tests\Feature\Sales;
 
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\Pipeline;
 use Database\Seeders\PipelineSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,6 +21,7 @@ use Tests\TestCase;
 class PipelineVisibilityTest extends TestCase
 {
     use RefreshDatabase;
+    use SalesTestHelpers;
 
     public function test_manager_does_not_see_role_restricted_pipeline_in_list(): void
     {
@@ -151,5 +153,70 @@ class PipelineVisibilityTest extends TestCase
 
         $this->assertContains($open->id, $stageIds);
         $this->assertNotContains($hidden->id, $stageIds);
+    }
+
+    // -------------------------------------------------------------------------
+    // Board / list deal rendering must honour pipeline visibility too — a
+    // manager who knows a restricted funnel's id cannot board/list its deals.
+    // -------------------------------------------------------------------------
+
+    public function test_manager_gets_403_on_board_of_role_restricted_pipeline(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $pipeline->update(['visible_role' => Role::Director->value]);
+
+        $manager = User::factory()->create(['role' => Role::Manager]);
+
+        // Even a deal the manager OWNS in that funnel must stay hidden.
+        Deal::factory()->forOwner($manager)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson("/api/deals?view=board&pipeline_id={$pipeline->id}")
+            ->assertForbidden();
+    }
+
+    public function test_manager_gets_403_on_list_of_role_restricted_pipeline(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $pipeline->update(['visible_role' => Role::Director->value]);
+
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson("/api/deals?pipeline_id={$pipeline->id}")
+            ->assertForbidden();
+    }
+
+    public function test_admin_can_board_restricted_pipeline(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $pipeline->update(['visible_role' => Role::Director->value]);
+
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Admin]), ['*']);
+
+        $this->getJson("/api/deals?view=board&pipeline_id={$pipeline->id}")
+            ->assertOk();
+    }
+
+    public function test_board_drops_columns_for_stages_hidden_from_manager(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $manager = User::factory()->create(['role' => Role::Manager]);
+
+        // Restrict the 'new' stage away from this manager (foreign department).
+        $newStage = $pipeline->stages->firstWhere('code', 'new');
+        $newStage->update(['visible_department_ids' => [999]]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $columns = $this->getJson("/api/deals?view=board&pipeline_id={$pipeline->id}")
+            ->assertOk()
+            ->json('columns');
+
+        $this->assertArrayNotHasKey((string) $newStage->id, $columns);
     }
 }

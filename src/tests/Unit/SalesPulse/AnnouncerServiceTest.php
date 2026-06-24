@@ -18,10 +18,14 @@ use App\Domain\SalesPulse\Enums\AnnouncedEventType;
 use App\Domain\SalesPulse\Enums\SnapSource;
 use App\Domain\SalesPulse\Models\PulseAnnouncedEvent;
 use App\Domain\SalesPulse\Services\AnnouncerService;
+use App\Domain\SalesPulse\Services\SalesPulseNotifier;
 use App\Domain\SalesPulse\Services\SkipService;
 use App\Domain\SalesPulse\Services\SnapshotRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
+use SergiX44\Nutgram\Testing\FakeNutgram;
 use Tests\TestCase;
 
 /**
@@ -88,6 +92,11 @@ class AnnouncerServiceTest extends TestCase
     private function now(): CarbonImmutable
     {
         return CarbonImmutable::now('Asia/Dubai');
+    }
+
+    private function throwingBot(): Nutgram
+    {
+        return FakeNutgram::instance();
     }
 
     // ---- MeetingDone ----------------------------------------------------------
@@ -328,6 +337,37 @@ class AnnouncerServiceTest extends TestCase
         $this->notifier->assertSent('после встречи сразу в HOT');
     }
 
+    public function test_send_failure_rolls_back_the_ledger_row_so_the_next_tick_retries(): void
+    {
+        $manager = $this->makeManager();
+        $this->configureTeam($manager);
+
+        $deal = $this->makeDeal('won', $manager);
+        DealStageHistory::create([
+            'deal_id' => $deal->id,
+            'from_stage_id' => $this->stage('hot')->id,
+            'to_stage_id' => $this->stage('won')->id,
+            'user_id' => $manager->id,
+            'created_at' => $this->now()->subMinutes(2),
+        ]);
+
+        // First tick: the post throws (Telegram 5xx/429/network). The committed
+        // ledger row must be rolled back so the event is not silently lost.
+        $throwing = new AnnouncerService(
+            new ThrowingPulseNotifier($this->throwingBot()),
+            app(SnapshotRepository::class),
+            new SkipService,
+        );
+
+        $this->assertSame(0, $throwing->run($this->team(), $this->now()));
+        $this->assertSame(0, PulseAnnouncedEvent::query()->count(), 'ledger row must be rolled back on send failure');
+
+        // Next tick with a healthy notifier re-detects and posts the announcement.
+        $this->assertSame(1, $this->service()->run($this->team(), $this->now()));
+        $this->assertSame(1, PulseAnnouncedEvent::query()->count());
+        $this->notifier->assertSent('🎉 <b>Илья Рогов закрыл сделку</b>');
+    }
+
     public function test_message_falls_back_to_no_text_body(): void
     {
         $manager = $this->makeManager();
@@ -393,5 +433,18 @@ class AnnouncerServiceTest extends TestCase
         );
 
         app(SnapshotRepository::class)->savePlan($snapshot, SnapSource::Manual);
+    }
+}
+
+/**
+ * A SalesPulseNotifier whose sendToChat always throws, to exercise the announcer's
+ * send-failure rollback path (the ledger row must be removed so the event is retried
+ * on the next tick rather than silently lost).
+ */
+final class ThrowingPulseNotifier extends SalesPulseNotifier
+{
+    public function sendToChat(string $chatId, string $html, ?InlineKeyboardMarkup $keyboard = null): ?int
+    {
+        throw new \RuntimeException('simulated Telegram send failure');
     }
 }

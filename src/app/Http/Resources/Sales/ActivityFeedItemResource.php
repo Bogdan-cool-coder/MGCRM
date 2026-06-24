@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Sales;
 
+use App\Domain\Activity\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,18 +35,12 @@ class ActivityFeedItemResource extends JsonResource
     }
 
     /**
-     * Compute the ftm_counted flag directly on the model (5 conditions — plan §Б2).
-     * Mirrors ManagerKpiService::ftmCounted() so the flag is never out of sync
+     * Compute the ftm_counted flag (5 conditions — plan §Б2). Delegates to the
+     * single source Activity::qualifiesAsFtm() so the flag is never out of sync
      * with the KPI count.
      */
     private function ftmCounted(): bool
     {
-        $kindValue = $this->kind instanceof \BackedEnum ? $this->kind->value : $this->kind;
-
-        return $kindValue === 'meeting'
-            && (bool) $this->is_first_time_meeting
-            && (bool) $this->ftm_decision_maker_attended
-            && (bool) $this->ftm_presentation_shown
-            && ! empty($this->ftm_report_url);
+        return Activity::qualifiesAsFtm($this->resource);
     }
 }

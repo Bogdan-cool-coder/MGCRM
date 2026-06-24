@@ -170,6 +170,12 @@ class ActivityService
             $data['responsible_id'] = $data['responsible_id'] ?? $creator->id;
         }
 
+        // A scoped actor may only assign to a user inside their visibility (E5b).
+        $this->assertResponsibleAssignable(
+            isset($data['responsible_id']) ? (int) $data['responsible_id'] : null,
+            $creator,
+        );
+
         $data['department_id'] = $this->resolveDepartmentId($data, $targetType, $targetId, $creator);
 
         $activity = Activity::create($data);
@@ -198,9 +204,21 @@ class ActivityService
      *
      * @param  array<string, mixed>  $data
      */
-    public function update(Activity $activity, array $data): Activity
+    public function update(Activity $activity, array $data, ?User $actor = null): Activity
     {
-        unset($data['status'], $data['target_type'], $data['target_id'], $data['created_by_id']);
+        // status, is_closed and the close stamps are derived only by the status
+        // machine (changeStatus()/complete()/reopen()); a generic update must
+        // never set them or the closed flag desyncs from status. target_* are
+        // immutable after create.
+        unset(
+            $data['status'],
+            $data['is_closed'],
+            $data['completed_at'],
+            $data['completed_by_id'],
+            $data['target_type'],
+            $data['target_id'],
+            $data['created_by_id'],
+        );
 
         // Inline kind change: re-apply the deal stage task_types gate (E1).
         if (array_key_exists('kind', $data)
@@ -210,6 +228,19 @@ class ActivityService
         }
 
         $previousResponsible = $activity->responsible_id;
+
+        // A scoped actor may only reassign to a user inside their visibility
+        // (E5b): the receiver must stay bounded by what the actor can see, else a
+        // task could be pushed into a foreign department's scope. Skipped when the
+        // responsible isn't changing, or when no actor is resolvable.
+        if ($actor !== null
+            && array_key_exists('responsible_id', $data)
+            && (int) ($data['responsible_id'] ?? 0) !== (int) $previousResponsible) {
+            $this->assertResponsibleAssignable(
+                $data['responsible_id'] !== null ? (int) $data['responsible_id'] : null,
+                $actor,
+            );
+        }
 
         // Reassignment re-syncs the denormalised department_id from the new
         // responsible (E10): the scope key follows the task's owner so a
@@ -1113,19 +1144,16 @@ class ActivityService
     }
 
     /**
-     * The five FTM (first-time meeting) conditions (plan §Б2), single-sourced so
-     * the countFtmForUser() KPI, the feed's ftm_only filter and the per-item
-     * ftm_counted flag share one predicate and can never drift apart.
+     * The five FTM (first-time meeting) conditions (plan §Б2). Delegates to the
+     * single source Activity::scopeFtmCounted() so the KPI count, the feed's
+     * ftm_only filter, the per-item ftm_counted flag and ManagerKpiService all
+     * share one predicate and can never drift apart.
      *
      * @param  Builder<Activity>  $query
      */
     private function applyFtmConditions(Builder $query): void
     {
-        $query->where('kind', ActivityType::Meeting->value)
-            ->where('is_first_time_meeting', true)
-            ->where('ftm_decision_maker_attended', true)
-            ->where('ftm_presentation_shown', true)
-            ->whereNotNull('ftm_report_url');
+        $query->ftmCounted();
     }
 
     /**
@@ -1259,6 +1287,37 @@ class ActivityService
         if ($model === null || ! Gate::forUser($user)->allows('view', $model)) {
             throw ValidationException::withMessages([
                 'target_id' => 'Target not found or not accessible.',
+            ]);
+        }
+    }
+
+    /**
+     * Guard responsible_id reassignment against the actor's visibility scope.
+     *
+     * The FormRequest only checks exists:users,id, which would let any actor push
+     * a task to ANY user — including one in a department they cannot see, moving
+     * the task out of their own scope at will. An All-scope actor (admin/director)
+     * may assign to anyone; a scoped actor may only assign to themselves or to a
+     * user inside their department subtree. Mirrors the visibility model used by
+     * scopedQuery / VisibilityResolver so the receiver stays bounded by what the
+     * actor can already see.
+     */
+    private function assertResponsibleAssignable(?int $responsibleId, User $actor): void
+    {
+        if ($responsibleId === null || (int) $responsibleId === (int) $actor->id) {
+            return; // clearing, or assigning to self — always allowed.
+        }
+
+        if ($this->visibility->resolve($actor) === VisibilityScope::All) {
+            return; // admin/director/lawyer reassign freely.
+        }
+
+        $allowedDeptIds = $this->visibility->departmentSubtreeIds($actor);
+        $targetDeptId = User::query()->whereKey($responsibleId)->value('department_id');
+
+        if ($targetDeptId === null || ! in_array((int) $targetDeptId, $allowedDeptIds, true)) {
+            throw ValidationException::withMessages([
+                'responsible_id' => 'You cannot assign this task to a user outside your scope.',
             ]);
         }
     }

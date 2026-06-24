@@ -71,6 +71,14 @@
     </template>
 
     <ConfirmDialog />
+
+    <!-- Edit dialog — wired to patchTemplate -->
+    <TemplateEditDialog
+      v-model="editDialogVisible"
+      :template="template ?? null"
+      :saving="editSaving"
+      @save="saveEdit"
+    />
   </div>
 </template>
 
@@ -84,6 +92,7 @@ import TemplateUploadCard from './components/TemplateUploadCard.vue'
 import TemplateAiCheckCard from './components/TemplateAiCheckCard.vue'
 import TemplateVersionsCard from './components/TemplateVersionsCard.vue'
 import TemplateMetaCard from './components/TemplateMetaCard.vue'
+import TemplateEditDialog from './components/TemplateEditDialog.vue'
 import { useTemplatePage } from './composables/useTemplatePage'
 
 const { t } = useI18n()
@@ -102,6 +111,8 @@ const {
   overrideMutation,
   confirmOverride,
   editDialogVisible,
+  editSaving,
+  saveEdit,
 } = useTemplatePage()
 </script>
 

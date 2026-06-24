@@ -20,6 +20,12 @@
           <span class="text-secondary ms-2">{{ formatDate(v.created_at) }}</span>
           <span class="text-secondary ms-2">{{ v.created_by_name ?? '—' }}</span>
           <Tag
+            v-if="v.ai_overridden"
+            severity="warn"
+            :value="t('templates.card.aiCheck.overridden', 'Override')"
+            class="ms-2 template-versions-card__ai-tag"
+          />
+          <Tag
             :severity="aiSeverity(v.ai_check_status)"
             :value="t(`templates.card.aiCheck.statuses.${v.ai_check_status}`, v.ai_check_status)"
             class="ms-auto template-versions-card__ai-tag"

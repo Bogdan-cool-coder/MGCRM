@@ -7,8 +7,10 @@ namespace App\Domain\Onboarding\Services;
 use App\Domain\Iam\Models\User;
 use App\Domain\Onboarding\Data\HrDashboardFilters;
 use App\Domain\Onboarding\Enums\AssignmentStatus;
+use App\Domain\Onboarding\Enums\CompletionPolicy;
 use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Events\CourseCompleted;
+use App\Domain\Onboarding\Models\Course;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\LessonProgress;
@@ -16,6 +18,7 @@ use App\Domain\Onboarding\Models\QuizAttempt;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * ProgressService — dynamic progress calculation and completion logic.
@@ -129,6 +132,10 @@ class ProgressService
      * - kind=quiz lessons are NOT completed through this method — use QuizAttemptService::submit().
      * - Idempotent: if already completed, updates time_spent_seconds only (if larger).
      * - Transitions assignment pending → in_progress on first record.
+     * - SoftGate enforcement (§ completion_policy): when course.completion_policy=soft_gate,
+     *   a student cannot complete lesson N until all preceding published lessons
+     *   (ordered by module.sort_order → lesson.sort_order) are already completed.
+     *   A violation returns HTTP 422; the assignment remains in its current status.
      *
      * @throws \LogicException when lesson kind is quiz
      */
@@ -145,6 +152,9 @@ class ProgressService
         if ($lesson->kind === LessonKind::Quiz) {
             throw new \LogicException('Quiz lessons are completed by submitting a quiz attempt. Use QuizAttemptService::submit().');
         }
+
+        // SoftGate: reject if any prior required lesson is incomplete
+        $this->assertSoftGateAllows($assignment, $lesson);
 
         return DB::transaction(function () use ($assignment, $lessonId, $timeSpentSeconds): LessonProgress {
             $existing = LessonProgress::where('assignment_id', $assignment->id)
@@ -267,6 +277,7 @@ class ProgressService
             $total = $lessonIds->count();
             if ($total === 0) {
                 $result[$assignment->id] = 0;
+
                 continue;
             }
             $completed = (int) ($completedCounts[$assignment->id] ?? 0);
@@ -276,9 +287,77 @@ class ProgressService
         return $result;
     }
 
+    /**
+     * Mark an assignment as Failed (e.g. max attempts exhausted with SoftGate enforced).
+     *
+     * AssignmentStatus::Failed was previously "reserved — not used automatically".
+     * After this fix it is set when a student exhausts all quiz retry attempts on a
+     * SoftGate course (called from QuizAttemptService after the final failed attempt).
+     *
+     * Idempotent: no-op if already failed/completed.
+     */
+    public function markFailed(CourseAssignment $assignment): void
+    {
+        if (in_array($assignment->status, [AssignmentStatus::Failed, AssignmentStatus::Completed], strict: true)) {
+            return;
+        }
+
+        $assignment->update(['status' => AssignmentStatus::Failed]);
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * SoftGate enforcement: for soft_gate courses, a lesson can only be completed
+     * when all prior published lessons (by module.sort_order → lesson.sort_order)
+     * are already completed.
+     *
+     * Non-soft_gate courses → this method is a no-op.
+     *
+     * @throws HttpException (422)
+     *                             when the gate blocks completion due to an incomplete prior lesson.
+     */
+    private function assertSoftGateAllows(CourseAssignment $assignment, Lesson $target): void
+    {
+        $course = Course::find($assignment->course_id);
+
+        if ($course === null || $course->completion_policy !== CompletionPolicy::SoftGate) {
+            return;
+        }
+
+        // Build ordered list of all published lessons in the course
+        // (module.sort_order → lesson.sort_order).
+        $orderedLessons = Lesson::join('course_modules', 'course_modules.id', '=', 'lessons.module_id')
+            ->where('course_modules.course_id', $assignment->course_id)
+            ->where('lessons.is_published', true)
+            ->orderBy('course_modules.sort_order')
+            ->orderBy('lessons.sort_order')
+            ->select(['lessons.id'])
+            ->pluck('lessons.id');
+
+        // Find the position of the target lesson in the ordered list.
+        $targetIndex = $orderedLessons->search($target->id);
+
+        if ($targetIndex === false || $targetIndex === 0) {
+            // Lesson not found (edge case) or is the very first → always allowed.
+            return;
+        }
+
+        // Collect IDs of all lessons that precede the target.
+        $priorIds = $orderedLessons->slice(0, $targetIndex)->values();
+
+        // Check which prior lessons have a completed_at record.
+        $completedPriorCount = LessonProgress::where('assignment_id', $assignment->id)
+            ->whereIn('lesson_id', $priorIds)
+            ->whereNotNull('completed_at')
+            ->count();
+
+        if ($completedPriorCount < $priorIds->count()) {
+            abort(422, 'Complete all prior lessons before advancing to the next one (soft-gate course).');
+        }
+    }
 
     /** @return Collection<int, int> */
     private function getPublishedLessonIds(int $courseId): Collection

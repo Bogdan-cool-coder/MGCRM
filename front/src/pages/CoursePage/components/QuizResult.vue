@@ -86,8 +86,12 @@ defineEmits<{
 const { t } = useI18n()
 
 function correctAnswerText(answer: QuizAnswerResult): string {
-  // We don't have option texts in the result, only IDs
-  // Display IDs as a fallback — in practice backend should return texts
+  // correct_option_texts are inlined by BE at score time (QuizService::computeScore).
+  // Fall back to stringified IDs only for legacy attempts created before this fix.
+  const texts = answer.correct_option_texts
+  if (texts !== null && texts !== undefined && texts.length > 0) {
+    return texts.join(', ')
+  }
   return (answer.correct_option_ids ?? []).join(', ')
 }
 </script>

@@ -72,9 +72,14 @@ class SkipService
 
     /**
      * Mark a manager's vacation: every WORKING day in [from, until] inclusive gets
-     * one personal row carrying vacation_until = until (spec §3 — 2+ consecutive
-     * working days). Returns the number of working days covered (0 if the span has
-     * no working days). Idempotent per day.
+     * one personal row carrying kind=Vacation + vacation_until = until (spec §3 —
+     * 2+ consecutive working days). Returns the number of working days covered (0 if
+     * the span has no working days). Idempotent per day.
+     *
+     * A day already marked by a plain /skipday inside the span is UPGRADED to
+     * kind=Vacation (so /progress renders the vacation label and /unvacation can
+     * clear it) rather than left as a stale skip — every covered day ends up as a
+     * vacation row keyed on (manager_id, on_date).
      */
     public function vacation(
         CarbonImmutable $from,
@@ -88,25 +93,28 @@ class SkipService
         foreach ($this->workingDaysInSpan($from, $until) as $day) {
             $onDate = $day->toDateString();
 
-            $exists = PulseSkipDay::query()
+            $row = PulseSkipDay::query()
                 ->whereDate('on_date', $onDate)
                 ->where('manager_id', $manager->id)
-                ->exists();
+                ->first();
 
-            if ($exists) {
-                $covered++;
-
-                continue;
+            if ($row !== null) {
+                // Upgrade an existing (possibly plain skip) row to a vacation day.
+                $row->fill([
+                    'kind' => SkipKind::Vacation,
+                    'vacation_until' => $vacationUntil,
+                    'team_chat_id' => null,
+                ])->save();
+            } else {
+                PulseSkipDay::create([
+                    'on_date' => $onDate,
+                    'kind' => SkipKind::Vacation,
+                    'vacation_until' => $vacationUntil,
+                    'team_chat_id' => null,
+                    'manager_id' => $manager->id,
+                    'created_by' => $createdBy,
+                ]);
             }
-
-            PulseSkipDay::create([
-                'on_date' => $onDate,
-                'kind' => SkipKind::Vacation,
-                'vacation_until' => $vacationUntil,
-                'team_chat_id' => null,
-                'manager_id' => $manager->id,
-                'created_by' => $createdBy,
-            ]);
 
             $covered++;
         }

@@ -126,4 +126,22 @@ class SnapshotRepositoryTest extends TestCase
         $this->assertNotNull($status->plan_at);
         $this->assertNotNull($status->fact_at);
     }
+
+    /**
+     * The unique constraint (uq_pulse_snapshots_manager_date_kind) plus the
+     * QueryException guard in savePlan/saveFact means a duplicate PLAN/FACT row can
+     * never exist for a manager-day, even when two writers race the pre-check. We
+     * assert the invariant directly: a second write of the same kind never produces
+     * a second row (write-once for PLAN, in-place update for FACT).
+     */
+    public function test_no_duplicate_plan_or_fact_row_per_manager_day(): void
+    {
+        $this->repo->savePlan($this->makeSnapshot('p1'), SnapSource::Manual);
+        $this->repo->savePlan($this->makeSnapshot('p2'), SnapSource::Auto);
+        $this->repo->saveFact($this->makeSnapshot('f1'), SnapSource::Manual);
+        $this->repo->saveFact($this->makeSnapshot('f2'), SnapSource::Auto);
+
+        $this->assertSame(1, PulseSnapshot::where('kind', SnapKind::Plan->value)->count());
+        $this->assertSame(1, PulseSnapshot::where('kind', SnapKind::Fact->value)->count());
+    }
 }

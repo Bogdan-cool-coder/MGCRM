@@ -243,7 +243,7 @@ watch(
     loadingTemplates.value = true
     try {
       const templates = await templatesApi.getTemplates({
-        kind: kind ?? undefined,
+        kind: 'docx',
         product_code: product,
         country_code: country,
       })

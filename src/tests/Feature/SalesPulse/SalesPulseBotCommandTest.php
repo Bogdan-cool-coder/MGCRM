@@ -259,6 +259,25 @@ class SalesPulseBotCommandTest extends TestCase
         $this->assertSentText($bot, '🌴 Отпуск для');
     }
 
+    public function test_vacation_rejects_reversed_date_range(): void
+    {
+        $bot = $this->pulseBot($this->chatId, 1, 'Bogdan_MACRO');
+        // End before start (tokens swapped around the slug) → explicit range error,
+        // NOT the misleading "too short" reply.
+        $this->sendText($bot, '/vacation 2026-06-19 ilya 2026-06-18');
+
+        $this->assertSentText($bot, 'раньше даты начала');
+    }
+
+    public function test_vacation_requires_two_dates(): void
+    {
+        $bot = $this->pulseBot($this->chatId, 1, 'Bogdan_MACRO');
+        // Only a start date → no end date → too short.
+        $this->sendText($bot, '/vacation ilya 2026-06-18');
+
+        $this->assertSentText($bot, 'Уточните период');
+    }
+
     public function test_skipday_rejects_non_admin(): void
     {
         $bot = $this->pulseBot($this->chatId, 999, 'ilya');

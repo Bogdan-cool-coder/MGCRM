@@ -5,17 +5,21 @@ declare(strict_types=1);
 namespace App\Domain\Crm\Policies;
 
 use App\Domain\Crm\Models\Contact;
-use App\Domain\Iam\Enums\Role;
+use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 
 /**
  * ContactPolicy — authorization gates for the Contact resource.
  *
- * Same IDOR rule as CompanyPolicy: return 404 for inaccessible items.
- * All inline role checks are forbidden (ARCHITECTURE.md §3).
+ * All role checks go through VisibilityResolver (spatie-first, role-column fallback)
+ * so the policy agrees with ContactService::list and ContactsKpiService — no 3-way divergence.
+ * ARCHITECTURE.md §3: inline $user->role comparisons are forbidden.
  */
 class ContactPolicy
 {
+    public function __construct(private readonly VisibilityResolver $visibility) {}
+
     public function viewAny(User $user): bool
     {
         return true;
@@ -38,7 +42,8 @@ class ContactPolicy
 
     public function delete(User $user, Contact $contact): bool
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], true)) {
+        // Admin/Director/Lawyer (All scope) may delete any contact.
+        if ($this->visibility->resolve($user) === VisibilityScope::All) {
             return true;
         }
 
@@ -52,9 +57,14 @@ class ContactPolicy
 
     // ---- Private ----
 
+    /**
+     * Unified access check that mirrors VisibilityResolver:
+     *   All scope (admin/director/lawyer) → always true.
+     *   Own scope                         → owner only.
+     */
     private function canAccess(User $user, Contact $contact): bool
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], true)) {
+        if ($this->visibility->resolve($user) === VisibilityScope::All) {
             return true;
         }
 

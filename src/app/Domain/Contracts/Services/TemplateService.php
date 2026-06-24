@@ -32,6 +32,7 @@ class TemplateService
         ?string $category = null,
         ?string $productCode = null,
         ?string $countryCode = null,
+        ?string $search = null,
     ): Collection {
         return Template::query()
             ->when($kind !== null, fn ($q) => $q->where('kind', $kind))
@@ -40,6 +41,14 @@ class TemplateService
             // than scalar WHERE on JSON-array columns product_codes / country_codes.
             ->when($productCode !== null, fn ($q) => $q->forProduct($productCode))
             ->when($countryCode !== null, fn ($q) => $q->forCountry($countryCode))
+            ->when(
+                $search !== null && trim($search) !== '',
+                fn ($q) => $q->where(function ($inner) use ($search) {
+                    $pattern = '%'.mb_strtolower(trim($search)).'%';
+                    $inner->whereRaw('LOWER(code) LIKE ?', [$pattern])
+                          ->orWhereRaw('LOWER(title) LIKE ?', [$pattern]);
+                }),
+            )
             ->with('currentVersion')
             ->orderBy('code')
             ->get();

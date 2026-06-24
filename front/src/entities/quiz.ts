@@ -62,6 +62,8 @@ export interface QuizAnswerResult {
   explanation: string | null
   selected_option_ids: number[]
   correct_option_ids: number[] | null
+  /** Human-readable texts for the correct options — inlined by BE at score time */
+  correct_option_texts: string[] | null
   is_correct: boolean
 }
 

@@ -8,8 +8,9 @@ use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Crm\Models\DismissedDuplicate;
-use App\Domain\Iam\Enums\Role;
+use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection as SupportCollection;
@@ -32,6 +33,8 @@ use InvalidArgumentException;
 class DedupService
 {
     private const ALLOWED_SCOPES = ['contact', 'company'];
+
+    public function __construct(private readonly VisibilityResolver $visibility) {}
 
     /**
      * Scan for potential duplicates of a given entity.
@@ -253,11 +256,9 @@ class DedupService
      */
     private function scanAllContacts(User $user): SupportCollection
     {
-        $isPrivileged = in_array($user->role, [Role::Admin, Role::Director], true);
-
         $base = Contact::query()->whereNull('deleted_at');
 
-        if (! $isPrivileged) {
+        if ($this->visibility->resolve($user) !== VisibilityScope::All) {
             $base->where('owner_id', $user->id);
         }
 
@@ -308,11 +309,9 @@ class DedupService
      */
     private function scanAllCompanies(User $user): SupportCollection
     {
-        $isPrivileged = in_array($user->role, [Role::Admin, Role::Director], true);
-
         $base = Company::query()->whereNull('deleted_at');
 
-        if (! $isPrivileged) {
+        if ($this->visibility->resolve($user) !== VisibilityScope::All) {
             $base->where(function ($q) use ($user): void {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('responsible_user_id', $user->id);

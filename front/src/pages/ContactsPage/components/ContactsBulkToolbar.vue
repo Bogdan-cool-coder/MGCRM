@@ -27,8 +27,9 @@
 
     <div class="contacts-bulk-toolbar__divider" />
 
-    <!-- Assign owner/responsible -->
+    <!-- Assign owner/responsible — elevated roles only -->
     <Button
+      v-if="canAssignOwner !== false"
       icon="pi pi-user-edit"
       :label="t('crm.contacts_page.bulk.assignResponsible')"
       severity="secondary"
@@ -73,8 +74,9 @@
       @click="emit('export')"
     />
 
-    <!-- Delete -->
+    <!-- Delete — elevated roles only -->
     <Button
+      v-if="canDelete !== false"
       icon="pi pi-trash"
       :label="t('sales.deals.page.bulk.delete')"
       severity="danger"
@@ -96,6 +98,10 @@ const props = defineProps<{
   selectedCount: number
   totalVisible: number
   exporting?: boolean
+  /** Whether the current user may bulk-delete (admin/director only) */
+  canDelete?: boolean
+  /** Whether the current user may assign a new owner (admin/director only) */
+  canAssignOwner?: boolean
 }>()
 
 const emit = defineEmits<{

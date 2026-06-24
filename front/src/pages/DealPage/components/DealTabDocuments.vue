@@ -344,7 +344,7 @@ const generateErrors = ref<Record<string, string>>({})
 async function loadTemplates() {
   loadingTemplates.value = true
   try {
-    const templates = await templatesApi.getTemplates({ kind: 'contract' })
+    const templates = await templatesApi.getTemplates({ kind: 'docx' })
     templateOptions.value = templates.map((tpl) => ({
       label: `${tpl.title}${tpl.current_version ? ` (v${tpl.current_version.version_number})` : ''}`,
       value: tpl.id,

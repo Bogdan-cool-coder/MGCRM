@@ -360,7 +360,7 @@ class AnnouncerService
         CarbonImmutable $now,
     ): bool {
         try {
-            PulseAnnouncedEvent::create([
+            $event = PulseAnnouncedEvent::create([
                 'activity_id' => $activityId,
                 'deal_stage_history_id' => $dealStageHistoryId,
                 'event_type' => $eventType,
@@ -381,7 +381,24 @@ class AnnouncerService
             return false;
         }
 
-        $this->notifier->sendToChat($team->chatId, $message);
+        try {
+            $this->notifier->sendToChat($team->chatId, $message);
+        } catch (\Throwable $e) {
+            // The ledger row is committed but the post failed (Telegram 5xx/429/
+            // network). Drop the row so a later tick re-detects + re-announces the
+            // event instead of treating it as already posted and silently losing it.
+            $event->delete();
+
+            Log::warning('SalesPulse announcer: send failed, rolling back ledger row for retry', [
+                'event_type' => $eventType->value,
+                'activity_id' => $activityId,
+                'deal_stage_history_id' => $dealStageHistoryId,
+                'chat_id' => $team->chatId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
 
         return true;
     }

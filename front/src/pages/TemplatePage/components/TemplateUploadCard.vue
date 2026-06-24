@@ -8,7 +8,7 @@
       <FileUpload
         mode="basic"
         accept=".docx"
-        :max-file-size="10 * 1024 * 1024"
+        :max-file-size="20 * 1024 * 1024"
         :choose-label="currentVersion != null ? t('templates.card.upload.replace') : t('templates.card.upload.btn')"
         :auto="false"
         custom-upload

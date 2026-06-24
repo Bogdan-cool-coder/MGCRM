@@ -25,7 +25,7 @@ class DedupServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DedupService;
+        $this->service = $this->app->make(DedupService::class);
         $this->actor = User::factory()->create();
     }
 

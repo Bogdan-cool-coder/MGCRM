@@ -12,15 +12,17 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * NEW-5 / CRM-5: the /api/admin/* directory group is gated to admin/director.
+ * CRM-5 regression fix: the 7 shared reference catalogs under /api/admin/*
+ * (company-types, sources, countries, cities, contact-positions,
+ * acquisition-channels, disconnect-reasons) split READ from WRITE.
  *
- * Previously only write verbs were gated, so a manager could READ the shared
- * reference catalogs (company-types, sources, countries, cities,
- * contact-positions, acquisition-channels, disconnect-reasons) — including
- * sensitive BI (acquisition channels / disconnect reasons). The route-level
- * `can:admin-write` middleware now closes index/show for non-admin/director.
- *
- * Authorization stays Gate-based (admin-write) — no inline role checks.
+ *  - READ (index/show): auth:sanctum only. Every authenticated CRM role needs
+ *    them for filter dropdowns, type/source/country labels, and the
+ *    DisconnectDialog reason picker. A blanket can:admin-write read-gate 403'd
+ *    these and blanked the shared directories store for manager/lawyer/etc.
+ *  - WRITE (store/update/destroy): can:admin-write (admin/director). Gates stay
+ *    at the route layer AND in each controller (defense in depth) — no inline
+ *    role checks.
  */
 class AdminDirectoryGateTest extends TestCase
 {
@@ -41,23 +43,32 @@ class AdminDirectoryGateTest extends TestCase
     }
 
     #[DataProvider('directoryEndpointProvider')]
-    public function test_manager_cannot_read_admin_directory(string $endpoint): void
+    public function test_manager_can_read_admin_directory(string $endpoint): void
     {
+        // Reads are open to any authenticated CRM role — the catalogs feed
+        // filter dropdowns, labels and the disconnect reason picker.
         $manager = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($manager, ['*']);
 
-        $this->getJson($endpoint)->assertForbidden();
+        $this->getJson($endpoint)->assertOk();
     }
 
     #[DataProvider('directoryEndpointProvider')]
-    public function test_lawyer_cannot_read_admin_directory(string $endpoint): void
+    public function test_lawyer_can_read_admin_directory(string $endpoint): void
     {
-        // Lawyer has All record-visibility but is NOT an admin-write principal,
-        // so the admin catalog group must still be 403 for them.
         $lawyer = User::factory()->create(['role' => Role::Lawyer]);
         Sanctum::actingAs($lawyer, ['*']);
 
-        $this->getJson($endpoint)->assertForbidden();
+        $this->getJson($endpoint)->assertOk();
+    }
+
+    #[DataProvider('directoryEndpointProvider')]
+    public function test_accountant_can_read_admin_directory(string $endpoint): void
+    {
+        $accountant = User::factory()->create(['role' => Role::Accountant]);
+        Sanctum::actingAs($accountant, ['*']);
+
+        $this->getJson($endpoint)->assertOk();
     }
 
     #[DataProvider('directoryEndpointProvider')]
@@ -76,6 +87,25 @@ class AdminDirectoryGateTest extends TestCase
         Sanctum::actingAs($director, ['*']);
 
         $this->getJson($endpoint)->assertOk();
+    }
+
+    #[DataProvider('directoryEndpointProvider')]
+    public function test_manager_cannot_write_admin_directory(string $endpoint): void
+    {
+        // Writes stay admin/director-only via the can:admin-write route group.
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->postJson($endpoint, ['name' => 'Forbidden'])->assertForbidden();
+    }
+
+    #[DataProvider('directoryEndpointProvider')]
+    public function test_lawyer_cannot_write_admin_directory(string $endpoint): void
+    {
+        $lawyer = User::factory()->create(['role' => Role::Lawyer]);
+        Sanctum::actingAs($lawyer, ['*']);
+
+        $this->postJson($endpoint, ['name' => 'Forbidden'])->assertForbidden();
     }
 
     public function test_unauthenticated_admin_directory_is_401(): void

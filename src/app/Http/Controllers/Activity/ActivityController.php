@@ -122,7 +122,7 @@ class ActivityController extends Controller
 
     public function update(UpdateActivityRequest $request, Activity $activity): JsonResource
     {
-        $updated = $this->service->update($activity, $request->validated());
+        $updated = $this->service->update($activity, $request->validated(), $request->user());
 
         return ActivityResource::make(
             $updated->load(['responsible:id,full_name', 'createdBy:id,full_name', 'completedBy:id,full_name'])

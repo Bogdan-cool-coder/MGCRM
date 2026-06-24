@@ -249,6 +249,84 @@ class ActivityCrudTest extends TestCase
         $this->assertSame($deptA->id, $updated->department_id);
     }
 
+    public function test_update_activity_rejects_is_closed_field(): void
+    {
+        // is_closed is derived only by complete()/reopen()/changeStatus(). A direct
+        // PATCH {is_closed:true} would desync the closed flag from the status machine
+        // (closed=true while status stays open) — the request must reject it.
+        $manager = $this->manager();
+        $activity = Activity::factory()->responsibleOf($manager)->createdByUser($manager)->create();
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}", ['is_closed' => true])
+            ->assertStatus(422)->assertJsonValidationErrorFor('is_closed');
+
+        $this->assertFalse((bool) $activity->fresh()->is_closed);
+    }
+
+    public function test_service_update_strips_is_closed_for_internal_callers(): void
+    {
+        // Defense in depth: even an internal caller passing is_closed/completed_*
+        // straight to the service must not be able to close an activity out of band.
+        $manager = $this->manager();
+        $activity = Activity::factory()
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create(['is_closed' => false]);
+
+        $service = app(\App\Domain\Activity\Services\ActivityService::class);
+        $updated = $service->update($activity, [
+            'title' => 'Renamed',
+            'is_closed' => true,
+            'completed_at' => now(),
+        ]);
+
+        $this->assertSame('Renamed', $updated->title);
+        $this->assertFalse((bool) $updated->is_closed);
+        $this->assertNull($updated->completed_at);
+    }
+
+    public function test_scoped_actor_cannot_reassign_to_foreign_department_user(): void
+    {
+        // responsible_id reassignment must stay bounded by the actor's visibility:
+        // an Own-scope manager cannot push a task to a user in a department they
+        // cannot see.
+        $deptA = \App\Domain\Org\Models\Department::factory()->create();
+        $deptB = \App\Domain\Org\Models\Department::factory()->create();
+
+        $manager = $this->manager($deptA->id);
+        $foreign = $this->manager($deptB->id);
+
+        $activity = Activity::factory()
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create(['department_id' => $deptA->id]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}", ['responsible_id' => $foreign->id])
+            ->assertStatus(422)->assertJsonValidationErrorFor('responsible_id');
+
+        $this->assertSame($manager->id, $activity->fresh()->responsible_id);
+    }
+
+    public function test_all_scope_actor_can_reassign_to_any_user(): void
+    {
+        // An All-scope actor (director) may reassign freely across departments.
+        $deptB = \App\Domain\Org\Models\Department::factory()->create();
+        $director = $this->director();
+        $foreign = $this->manager($deptB->id);
+
+        $activity = Activity::factory()
+            ->responsibleOf($director)
+            ->createdByUser($director)
+            ->create();
+        Sanctum::actingAs($director, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}", ['responsible_id' => $foreign->id])
+            ->assertOk()
+            ->assertJsonPath('data.responsible_id', $foreign->id);
+    }
+
     public function test_destroy_activity_returns_204(): void
     {
         $manager = $this->manager();

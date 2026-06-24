@@ -81,6 +81,7 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
       days_in_stage: d.days_in_stage ?? null,
       next_task: d.next_task ?? null,
       primary_product: d.primary_product ?? null,
+      tags: d.tags ?? [],
       company: { id: d.company_id, name: d.company_name ?? '' },
       owner: d.owner
         ? { id: d.owner.id, name: d.owner.full_name, avatar_path: null }

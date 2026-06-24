@@ -8,8 +8,9 @@ use App\Domain\Crm\Enums\CategoryCode;
 use App\Domain\Crm\Enums\ClientStatus;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
-use App\Domain\Iam\Enums\Role;
+use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,13 +41,15 @@ use Illuminate\Support\Facades\Schema;
  *   no_touch_30 — last_activity_at < now - 30 days OR last_activity_at IS NULL
  *   new_week    — created_at >= now - 7 days
  *
- * Visibility rule (mirrors list endpoints):
- *   Admin/Director — see all records (no owner filter)
- *   Manager/Others  — see only records where owner_user_id = user->id (companies)
- *                     or owner_id = user->id (contacts)
+ * Visibility rule (mirrors list endpoints via VisibilityResolver):
+ *   Admin/Director/Lawyer — see all records (no owner filter)
+ *   Manager/Accountant/Cfo — see only records where owner_user_id = user->id (companies)
+ *                            or owner_id = user->id (contacts)
  */
 class ContactsKpiService
 {
+    public function __construct(private readonly VisibilityResolver $visibility) {}
+
     /**
      * KPI counters for the Companies tab.
      *
@@ -102,12 +105,14 @@ class ContactsKpiService
     // ---- Private ----
 
     /**
-     * Apply the same visibility scope as CompanyController::index().
-     * Admin / Director — see all. Manager — own records only.
+     * Apply the same visibility scope as CompanyService::list().
+     * Uses VisibilityResolver so Lawyer (All) matches the list endpoint — no more 3-way divergence.
      */
     private function applyCompanyScope(Builder $query, User $user): Builder
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], true)) {
+        $scope = $this->visibility->resolve($user);
+
+        if ($scope === VisibilityScope::All) {
             return $query;
         }
 
@@ -118,12 +123,14 @@ class ContactsKpiService
     }
 
     /**
-     * Apply the same visibility scope as ContactController::index().
-     * Admin / Director — see all. Manager — own records only.
+     * Apply the same visibility scope as ContactService::list().
+     * Uses VisibilityResolver so Lawyer (All) matches the list endpoint — no more 3-way divergence.
      */
     private function applyContactScope(Builder $query, User $user): Builder
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], true)) {
+        $scope = $this->visibility->resolve($user);
+
+        if ($scope === VisibilityScope::All) {
             return $query;
         }
 

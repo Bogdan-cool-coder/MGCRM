@@ -10,8 +10,16 @@ use Illuminate\Foundation\Events\Dispatchable;
 /**
  * Fired when a course is assigned to a learner (bulk-assign).
  *
- * NO listeners ship in S3.3. Downstream consumers:
- * - bot-specialist (M11): Telegram notification subscribes here.
+ * INTENTIONALLY NO LISTENER IN S3.3 — this is an M11 extension point.
+ *
+ * Downstream consumer (registered in AppServiceProvider when implemented):
+ *   bot-specialist (M11): Telegram/email notification on course assignment.
+ *   automation-specialist (M11): triggers onboarding workflow automation.
+ *
+ * How to wire (M11): in AppServiceProvider::boot():
+ *   Event::listen(CourseAssigned::class, SendCourseAssignedNotification::class);
+ *
+ * Until M11 the event is dispatched and silently dropped — no action, no error.
  */
 class CourseAssigned
 {

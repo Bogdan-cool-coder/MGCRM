@@ -30,13 +30,16 @@ class UpdateActivityRequest extends FormRequest
             'progress_pct' => ['sometimes', 'integer', 'between:0,100'],
             'result_text' => ['sometimes', 'nullable', 'string'],
             'is_pinned' => ['sometimes', 'boolean'],
-            'is_closed' => ['sometimes', 'boolean'],
             'is_first_time_meeting' => ['sometimes', 'boolean'],
             'ftm_decision_maker_attended' => ['sometimes', 'boolean'],
             'ftm_presentation_shown' => ['sometimes', 'boolean'],
             'ftm_report_url' => ['sometimes', 'nullable', 'string'],
             // status changes go through /status or complete/reopen.
             'status' => ['prohibited'],
+            // is_closed is derived only by complete()/reopen()/changeStatus();
+            // it must never be set directly or the close path desyncs from the
+            // status machine (is_closed=true while status stays open).
+            'is_closed' => ['prohibited'],
             // the polymorphic target is immutable after create.
             'target_type' => ['prohibited'],
             'target_id' => ['prohibited'],
@@ -47,6 +50,7 @@ class UpdateActivityRequest extends FormRequest
     {
         return [
             'status.prohibited' => 'Status changes must go through /status, /complete or /reopen.',
+            'is_closed.prohibited' => 'is_closed is derived from the status machine — use /complete, /reopen or /status.',
             'target_type.prohibited' => 'The activity target cannot be changed after creation.',
             'target_id.prohibited' => 'The activity target cannot be changed after creation.',
         ];

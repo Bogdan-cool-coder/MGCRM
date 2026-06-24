@@ -213,6 +213,7 @@
           :users-list="usersList"
           @completed="onTaskCompleted"
           @deleted="onTaskDeleted"
+          @updated="onTaskUpdated"
         />
         <DealComposer
           ref="composerRef"
@@ -260,6 +261,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Drawer from 'primevue/drawer'
@@ -288,6 +290,7 @@ import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
 const { t } = useI18n()
 const router = useRouter()
+const toast = useToast()
 const salesStore = useSalesStore()
 
 // ── Breakpoints ────────────────────────────────────────────────────────────────
@@ -362,13 +365,25 @@ function onActivityCreated(activity: ActivityDto) {
   dealFeedRef.value?.scrollToBottom()
 }
 
-// Open-task complete/delete handlers (wired to OpenTasksList)
+// Open-task complete/delete/update handlers (wired to OpenTasksList)
 function onTaskCompleted(activity: ActivityDto) {
   feedComposable.updateActivityLocal(activity)
 }
 
-function onTaskDeleted(activityId: number) {
-  feedComposable.removeActivityLocal(activityId)
+function onTaskUpdated(activity: ActivityDto) {
+  // Inline picker edits (kind/date/responsible/title) — sync the feed item so the
+  // displayed value reflects the server response without a reload.
+  feedComposable.updateActivityLocal(activity)
+}
+
+async function onTaskDeleted(activityId: number) {
+  try {
+    // API-backed delete (removes the row locally on success). The local-only
+    // sibling removeActivityLocal would resurrect the task on reload.
+    await feedComposable.deleteActivity(activityId)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  }
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────────────

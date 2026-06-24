@@ -45,6 +45,8 @@ export interface PipelineDto {
   id: number
   name: string
   kind: PipelineKind
+  is_active: boolean
+  sort_order: number
   stages: PipelineStageDto[]
   graph_layout: GraphLayout | null
   created_at: string | null
@@ -290,6 +292,7 @@ export interface BoardRawColumnDto {
     days_in_stage: number | null
     next_task: NextTaskDto | null
     primary_product: PrimaryProductDto | null
+    tags?: string[]
   }>
 }
 

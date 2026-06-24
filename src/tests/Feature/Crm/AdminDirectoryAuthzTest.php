@@ -20,8 +20,10 @@ use Tests\TestCase;
  *
  * Rules:
  *  - /api/admin/* directory (company-types / contact-positions / sources / ...):
- *    the WHOLE group (index / show / store / update / destroy) is admin or
- *    director only — 403 for manager (NEW-5: route-level `can:admin-write`).
+ *    READS (index / show) are open to any authenticated CRM role (they feed
+ *    filter dropdowns / labels / the disconnect reason picker); WRITES (store /
+ *    update / destroy) are admin/director only via the `can:admin-write` route
+ *    group + the controllers' own authorize() (CRM-5 read/write split).
  *  - /api/crm/custom-fields: writes are admin/director only; index/show stay
  *    open to any authenticated user (separate route group, not under /admin).
  */
@@ -100,13 +102,14 @@ class AdminDirectoryAuthzTest extends TestCase
             ->assertSuccessful();
     }
 
-    public function test_manager_cannot_list_company_types(): void
+    public function test_manager_can_list_company_types(): void
     {
-        // NEW-5: the /api/admin/* directory group is admin/director only.
+        // CRM-5: directory READS are open to any authenticated user (filter
+        // dropdowns / labels). Only writes stay admin/director-gated.
         $manager = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($manager, ['*']);
 
-        $this->getJson('/api/admin/company-types')->assertForbidden();
+        $this->getJson('/api/admin/company-types')->assertOk();
     }
 
     // =========================================================================
@@ -161,13 +164,13 @@ class AdminDirectoryAuthzTest extends TestCase
             ->assertSuccessful();
     }
 
-    public function test_manager_cannot_list_contact_positions(): void
+    public function test_manager_can_list_contact_positions(): void
     {
-        // NEW-5: the /api/admin/* directory group is admin/director only.
+        // CRM-5: directory READS are open to any authenticated user.
         $manager = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($manager, ['*']);
 
-        $this->getJson('/api/admin/contact-positions')->assertForbidden();
+        $this->getJson('/api/admin/contact-positions')->assertOk();
     }
 
     // =========================================================================
@@ -212,13 +215,13 @@ class AdminDirectoryAuthzTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_manager_cannot_list_sources(): void
+    public function test_manager_can_list_sources(): void
     {
-        // NEW-5: the /api/admin/* directory group is admin/director only.
+        // CRM-5: directory READS are open to any authenticated user.
         $manager = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($manager, ['*']);
 
-        $this->getJson('/api/admin/sources')->assertForbidden();
+        $this->getJson('/api/admin/sources')->assertOk();
     }
 
     // =========================================================================

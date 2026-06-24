@@ -66,15 +66,17 @@ class ManagerKpiTeamTest extends TestCase
     // teamAvgPct
     // -------------------------------------------------------------------------
 
-    public function test_team_avg_pct_correct(): void
+    // teamAvgPct uses the MEDIAN (robust to outliers), not the arithmetic mean.
+
+    public function test_team_avg_pct_odd_count_is_middle_value(): void
     {
-        // (91 + 82 + 71) / 3 = 244 / 3 = 81.33... → round → 81
-        $this->assertSame(81, $this->service->teamAvgPct([91, 82, 71]));
+        // sorted [71, 82, 91] → median = 82 (middle element)
+        $this->assertSame(82, $this->service->teamAvgPct([91, 82, 71]));
     }
 
-    public function test_team_avg_pct_rounds_half_up(): void
+    public function test_team_avg_pct_even_count_averages_two_middles(): void
     {
-        // (90 + 91) / 2 = 90.5 → round → 91
+        // sorted [90, 91] → (90 + 91) / 2 = 90.5 → round → 91
         $this->assertSame(91, $this->service->teamAvgPct([90, 91]));
     }
 
@@ -91,5 +93,14 @@ class ManagerKpiTeamTest extends TestCase
     public function test_team_avg_pct_all_zero(): void
     {
         $this->assertSame(0, $this->service->teamAvgPct([0, 0, 0]));
+    }
+
+    public function test_team_avg_pct_is_outlier_resistant(): void
+    {
+        // The whole point of the median: a single 15072% outlier (giant won deal
+        // vs a small plan) must NOT drag the team figure. Mean would be ~3826%;
+        // median stays on the representative middle member.
+        // sorted [80, 90, 100, 165, 15072] → median = 100.
+        $this->assertSame(100, $this->service->teamAvgPct([90, 80, 15072, 165, 100]));
     }
 }

@@ -19,9 +19,9 @@
           <dt>{{ t('templates.card.meta.countries') }}</dt>
           <dd>{{ template.country_codes.join(', ') || '—' }}</dd>
         </div>
-        <div v-if="template.category_codes?.length" class="template-meta-card__item">
+        <div v-if="template.category" class="template-meta-card__item">
           <dt>{{ t('templates.card.meta.categories') }}</dt>
-          <dd>{{ template.category_codes.join(', ') }}</dd>
+          <dd>{{ template.category }}</dd>
         </div>
       </dl>
     </template>

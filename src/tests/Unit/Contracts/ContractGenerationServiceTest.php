@@ -14,6 +14,7 @@ use App\Domain\Contracts\Services\ContractContextBuilder;
 use App\Domain\Contracts\Services\ContractGenerationService;
 use App\Domain\Contracts\Services\ContractNumberingService;
 use App\Domain\Contracts\Services\DocumentService;
+use App\Domain\Contracts\Services\LicensorService;
 use App\Domain\Contracts\Services\TemplateService;
 use App\Domain\Contracts\Services\YamlTemplateParser;
 use App\Domain\Crm\Services\CompanyRequisiteService;
@@ -129,7 +130,7 @@ class ContractGenerationServiceTest extends TestCase
     {
         return new ContractGenerationService(
             new TemplateService,
-            new ContractContextBuilder(new YamlTemplateParser, new CompanyRequisiteService),
+            new ContractContextBuilder(new YamlTemplateParser, new CompanyRequisiteService, new LicensorService),
             new ContractNumberingService,
             app(DocumentService::class),
             new GotenbergClient,

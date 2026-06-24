@@ -34,7 +34,8 @@
     "countries": "Countries",
     "sections": {
       "learning": "Learning"
-    }
+    },
+    "licensors": "Licensors"
   },
   "auth": {
     "brand_panel": {
@@ -210,6 +211,7 @@
       "noData": "No data"
     },
     "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog.",
+    "noPipeline": "No active sales pipeline selected. Pick a pipeline in the filter above.",
     "pipelinesLoadError": "Failed to load pipelines",
     "managersLoadError": "Failed to load managers",
     "empty": {
@@ -276,6 +278,10 @@
       "automationRuns": {
         "title": "Automation log",
         "desc": "Run history and results of automated scenarios"
+      },
+      "meetingReportQuestions": {
+        "title": "Meeting report questions",
+        "desc": "Registry of meeting-report constructor questions"
       },
       "users": {
         "title": "Users",
@@ -379,6 +385,38 @@
         "name": "Name *",
         "sortOrder": "Sort order",
         "isActive": "Active"
+      }
+    },
+    "meetingReportQuestions": {
+      "title": "Meeting report questions",
+      "subtitle": "Registry of meeting-report constructor questions",
+      "add": "Add question",
+      "edit": "Edit question",
+      "empty": "No questions added",
+      "deleteConfirm": "Delete question?",
+      "global": "All pipelines",
+      "addOption": "Add option",
+      "optionsRequired": "Add at least one answer option",
+      "columns": {
+        "text": "Question",
+        "pipeline": "Pipeline",
+        "kind": "Type",
+        "isRequired": "Required",
+        "sortOrder": "Order",
+        "isActive": "Active"
+      },
+      "fields": {
+        "pipeline": "Pipeline",
+        "text": "Question text *",
+        "kind": "Answer type",
+        "isRequired": "Required",
+        "isActive": "Active",
+        "sortOrder": "Sort order",
+        "options": "Answer options"
+      },
+      "kinds": {
+        "text": "Text",
+        "select": "Select"
       }
     },
     "disconnectReasons": {
@@ -2271,7 +2309,8 @@
         "remarkTypes": {
           "error": "Error",
           "warning": "Warning"
-        }
+        },
+        "overridden": "AI Override"
       },
       "versions": {
         "title": "Version history",
@@ -2322,7 +2361,9 @@
       "sortOrder": "Sort order",
       "isActive": "Active",
       "addOption": "Add option"
-    }
+    },
+    "delete": "Delete",
+    "deleteInUse": "Variable is used in documents and cannot be deleted"
   },
   "approvalRoutes": {
     "title": "Approval routes",
@@ -3683,6 +3724,45 @@
       "thankYouBody": "Your application has been received. We will contact you shortly.",
       "notFoundTitle": "Form unavailable",
       "notFoundBody": "This form does not exist or is no longer accepting applications."
+    }
+  },
+  "licensors": {
+    "title": "Licensors",
+    "addAccount": "Add account",
+    "bankAccounts": "Bank accounts by currency",
+    "noAccounts": "No bank accounts",
+    "editDialog": {
+      "title": "Edit licensor"
+    },
+    "bankDialog": {
+      "addTitle": "Add bank account",
+      "editTitle": "Edit bank account",
+      "currency": "Currency",
+      "bank": "Bank",
+      "bankCodeLabel": "Bank code label",
+      "bankCode": "BIC / Bank code",
+      "account": "Account number",
+      "swift": "SWIFT / IBAN",
+      "isPrimary": "Primary for currency",
+      "note": "Note"
+    },
+    "fields": {
+      "name": "Name",
+      "legalForm": "Legal form",
+      "fullLegalForm": "Full legal form",
+      "directorShort": "Director (short)",
+      "directorGenitive": "Director (genitive)",
+      "directorPosition": "Director position",
+      "actsBasis": "Acts basis",
+      "taxIdLabel": "Tax ID label",
+      "taxId": "Tax ID / BIN",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "bank": "Fallback bank",
+      "bankCode": "Fallback bank code",
+      "account": "Fallback account",
+      "defaultBank": "Fallback account (no per-currency)"
     }
   }
 }

@@ -9,20 +9,20 @@ use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
- * LicensorPolicy — write operations restricted to admin and lawyer.
- * director and all other roles are read-only.
+ * LicensorPolicy — bank/tax_id data is sensitive; restrict read to privileged roles.
+ * Write operations restricted to admin and lawyer; director is read-only.
  * ARCHITECTURE.md §3: no inline role checks in controllers.
  */
 class LicensorPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return in_array($user->role, [Role::Admin, Role::Lawyer, Role::Director], strict: true);
     }
 
     public function view(User $user, LicensorEntity $licensor): bool
     {
-        return true;
+        return in_array($user->role, [Role::Admin, Role::Lawyer, Role::Director], strict: true);
     }
 
     public function create(User $user): bool

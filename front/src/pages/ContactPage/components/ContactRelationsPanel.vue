@@ -65,14 +65,16 @@
           <label class="contact-relations__dialog-label">
             {{ t('crm.contact.relations.contactLabel') }} *
           </label>
-          <Select
-            v-model="form.relatedContactId"
-            :options="contactOptions"
+          <AutoComplete
+            v-model="contactSearch"
+            :suggestions="contactSuggestions"
             option-label="label"
-            option-value="value"
             :placeholder="t('crm.contact.relations.selectContact')"
-            filter
+            force-selection
             class="w-full"
+            @complete="searchContacts($event.query)"
+            @option-select="onContactSelect($event.value)"
+            @clear="onContactClear"
           />
         </div>
         <div class="contact-relations__dialog-field">
@@ -115,7 +117,7 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
-import Select from 'primevue/select'
+import AutoComplete from 'primevue/autocomplete'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
@@ -129,8 +131,6 @@ const props = defineProps<{
   contactId: number
   relations: ContactRelation[]
   loading?: boolean
-  /** Flat list of contacts for the autocomplete */
-  contactOptions?: Array<{ value: number; label: string }>
 }>()
 
 const emit = defineEmits<{
@@ -215,6 +215,34 @@ const openDialog = ref(false)
 const saving = ref(false)
 const formError = ref<string | null>(null)
 
+// Contact autocomplete for the related-contact picker
+const contactSearch = ref<string | { label: string; value: number } | null>(null)
+const contactSuggestions = ref<Array<{ value: number; label: string }>>([])
+
+async function searchContacts(query: string) {
+  if (!query || query.trim().length < 1) {
+    contactSuggestions.value = []
+    return
+  }
+  try {
+    const res = await contactsApi.list({ search: query.trim(), per_page: 20 })
+    const existing = new Set(props.relations.flatMap((r) => [r.contact.id, r.related_contact.id]))
+    contactSuggestions.value = (res.data ?? [])
+      .filter((c) => c.id !== props.contactId && !existing.has(c.id))
+      .map((c) => ({ value: c.id, label: c.full_name }))
+  } catch {
+    contactSuggestions.value = []
+  }
+}
+
+function onContactSelect(option: { value: number; label: string }) {
+  form.relatedContactId = option.value
+}
+
+function onContactClear() {
+  form.relatedContactId = null
+}
+
 const form = reactive({
   relatedContactId: null as number | null,
   relationType: null as RelationType | null,
@@ -227,6 +255,8 @@ function closeDialog() {
   form.relationType = null
   form.note = ''
   formError.value = null
+  contactSearch.value = null
+  contactSuggestions.value = []
 }
 
 async function submitAdd() {

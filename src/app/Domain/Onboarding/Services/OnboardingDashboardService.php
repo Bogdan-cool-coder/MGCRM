@@ -8,6 +8,7 @@ use App\Domain\Onboarding\Data\HrDashboardFilters;
 use App\Domain\Onboarding\Enums\AssignmentStatus;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\Lesson;
+use App\Domain\Onboarding\Models\LessonProgress;
 use App\Domain\Onboarding\Models\QuizAttempt;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -47,6 +48,11 @@ class OnboardingDashboardService
     /**
      * Paginated list of assignments with per-row aggregates.
      *
+     * N+1 mitigation (#12 partial → fully closed):
+     * - lesson counts: 2 bulk queries total for the page (one for lesson IDs by course,
+     *   one for completed counts by assignment_id) — same batchCalcProgress pattern.
+     * - avg_quiz_score: 1 bulk AVG query total instead of per-row individual AVGs.
+     *
      * @return LengthAwarePaginator<CourseAssignment>
      */
     public function getHrDashboard(HrDashboardFilters $filters, int $perPage = 25): LengthAwarePaginator
@@ -54,10 +60,19 @@ class OnboardingDashboardService
         $paginator = $this->baseQuery($filters)
             ->paginate($perPage);
 
-        // Transform: enrich each row with computed fields (completion_rate / overdue / avg_score).
-        // lessonIdsCache ensures each unique course is fetched only once.
+        $collection = $paginator->getCollection();
+
+        // Bulk pre-compute progress and avg-score maps to avoid per-row queries.
+        $progressMap = $this->batchCalcProgressForPage($collection);
+        $avgScoreMap = $this->batchCalcAvgQuizScore($collection);
+
+        // Transform: enrich each row with pre-computed fields (no per-row DB hits).
         $paginator->getCollection()->transform(
-            fn (CourseAssignment $assignment): array => $this->enrichRow($assignment)
+            fn (CourseAssignment $assignment): array => $this->enrichRow(
+                $assignment,
+                $progressMap[$assignment->id] ?? 0,
+                $avgScoreMap[$assignment->id] ?? null,
+            )
         );
 
         return $paginator;
@@ -185,17 +200,16 @@ class OnboardingDashboardService
     /**
      * Enrich one CourseAssignment row into the chart-payload array (§В3).
      *
+     * Accepts pre-computed completion_rate and avg_quiz_score from the bulk maps
+     * so that this method performs zero DB queries per row.
+     *
      * @return array<string, mixed>
      */
-    private function enrichRow(CourseAssignment $assignment): array
-    {
-        // completion_rate: delegate to ProgressService (uses lesson_progress COUNT).
-        // lessonIds are cached per course_id to avoid N repeated queries.
-        $lessonIds = $this->getLessonIdsForCourse($assignment->course_id);
-        $completionRate = $lessonIds->isEmpty()
-            ? 0
-            : $this->progressService->calcProgress($assignment);
-
+    private function enrichRow(
+        CourseAssignment $assignment,
+        int $completionRate,
+        ?int $avgQuizScore,
+    ): array {
         return [
             'id' => $assignment->id,
             'user' => $assignment->user ? [
@@ -213,7 +227,7 @@ class OnboardingDashboardService
                 : $assignment->status,
             'due_date' => $assignment->due_date?->toDateString(),
             'is_overdue' => $this->isOverdue($assignment),
-            'avg_quiz_score' => $this->calcAvgQuizScore($assignment),
+            'avg_quiz_score' => $avgQuizScore,
             'assigned_at' => $assignment->created_at?->toIso8601String(),
             'completed_at' => $assignment->completed_at?->toIso8601String(),
         ];
@@ -344,14 +358,106 @@ class OnboardingDashboardService
     }
 
     // -------------------------------------------------------------------------
+    // Private: bulk computations (no per-row queries)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Batch-compute progress percentages for a page of assignments.
+     *
+     * 2 queries total regardless of page size:
+     *   1. Published lesson IDs grouped by course_id (JOIN).
+     *   2. Completed lesson_progress counts per assignment_id.
+     *
+     * Mirrors ProgressService::batchCalcProgress for the HR-dashboard path.
+     *
+     * @param  Collection<int, CourseAssignment>  $assignments
+     * @return array<int, int> assignment_id → 0-100
+     */
+    private function batchCalcProgressForPage(Collection $assignments): array
+    {
+        if ($assignments->isEmpty()) {
+            return [];
+        }
+
+        $courseIds = $assignments->pluck('course_id')->unique()->values()->all();
+
+        /** @var Collection<string, Collection<int, object>> $publishedByCourse */
+        $publishedByCourse = Lesson::join('course_modules', 'course_modules.id', '=', 'lessons.module_id')
+            ->whereIn('course_modules.course_id', $courseIds)
+            ->where('lessons.is_published', true)
+            ->select(['lessons.id', 'course_modules.course_id'])
+            ->get()
+            ->groupBy('course_id');
+
+        $assignmentIds = $assignments->pluck('id')->all();
+
+        $completedCounts = LessonProgress::whereIn('assignment_id', $assignmentIds)
+            ->whereNotNull('completed_at')
+            ->selectRaw('assignment_id, COUNT(*) as cnt')
+            ->groupBy('assignment_id')
+            ->pluck('cnt', 'assignment_id');
+
+        $result = [];
+        foreach ($assignments as $assignment) {
+            $lessons = ($publishedByCourse[(string) $assignment->course_id] ?? collect());
+            $total = $lessons->count();
+            if ($total === 0) {
+                $result[$assignment->id] = 0;
+
+                continue;
+            }
+            $completed = (int) ($completedCounts[$assignment->id] ?? 0);
+            $result[$assignment->id] = (int) floor($completed * 100 / $total);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Batch-compute average quiz scores for a page of assignments.
+     *
+     * 1 query total regardless of page size:
+     *   SELECT assignment_id, AVG(score_pct) WHERE passed=true GROUP BY assignment_id
+     *
+     * Returns null for assignments with no passed attempts (haven't passed any quiz yet).
+     *
+     * @param  Collection<int, CourseAssignment>  $assignments
+     * @return array<int, int|null> assignment_id → rounded avg or null
+     */
+    private function batchCalcAvgQuizScore(Collection $assignments): array
+    {
+        if ($assignments->isEmpty()) {
+            return [];
+        }
+
+        $assignmentIds = $assignments->pluck('id')->all();
+
+        $rows = QuizAttempt::whereIn('assignment_id', $assignmentIds)
+            ->where('passed', true)
+            ->selectRaw('assignment_id, AVG(score_pct) as avg_score')
+            ->groupBy('assignment_id')
+            ->get()
+            ->keyBy('assignment_id');
+
+        $result = [];
+        foreach ($assignments as $assignment) {
+            $row = $rows->get($assignment->id);
+            $result[$assignment->id] = $row !== null
+                ? (int) round((float) $row->avg_score)
+                : null;
+        }
+
+        return $result;
+    }
+
+    // -------------------------------------------------------------------------
     // Private: helpers
     // -------------------------------------------------------------------------
 
     /**
      * Get published lesson IDs for a course, cached per course_id.
      *
-     * HD1 mitigation: one DB hit per unique course on the page (not per row).
-     * Reduces query count from ~50 to ~27 per 25-row page.
+     * Kept for any remaining non-paginated usages (e.g. individual row lookup).
      *
      * @return Collection<int, int>
      */

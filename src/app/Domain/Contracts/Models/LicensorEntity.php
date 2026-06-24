@@ -65,6 +65,6 @@ class LicensorEntity extends Model
     /** @param Builder<LicensorEntity> $query */
     public function scopeForCountry(Builder $query, string $code): Builder
     {
-        return $query->where('country_code', $code);
+        return $query->where('country_code', $code)->orderByDesc('is_default');
     }
 }

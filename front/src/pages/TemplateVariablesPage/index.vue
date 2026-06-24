@@ -104,15 +104,25 @@
           </Column>
 
           <!-- Actions -->
-          <Column v-if="canManage" style="width: 60px">
+          <Column v-if="canManage" style="width: 90px">
             <template #body="{ data }">
-              <Button
-                icon="pi pi-pencil"
-                text
-                severity="secondary"
-                size="small"
-                @click="openEdit(data)"
-              />
+              <div class="d-flex gap-1">
+                <Button
+                  icon="pi pi-pencil"
+                  text
+                  severity="secondary"
+                  size="small"
+                  @click="openEdit(data)"
+                />
+                <Button
+                  icon="pi pi-trash"
+                  text
+                  severity="danger"
+                  size="small"
+                  :title="t('templateVariables.delete', 'Удалить')"
+                  @click="deleteVariable(data)"
+                />
+              </div>
             </template>
           </Column>
 
@@ -168,6 +178,7 @@ const {
   save,
   saveMutation,
   toggleActive,
+  deleteVariable,
   copyKey,
   canManage,
   typeOptions,

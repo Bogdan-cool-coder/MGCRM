@@ -87,6 +87,13 @@ const sections: SettingsSection[] = [
     descKey: 'settings.sections.automationRuns.desc',
   },
   {
+    key: 'meeting-report-questions',
+    route: '/admin/meeting-report-questions',
+    icon: 'pi pi-comments',
+    titleKey: 'settings.sections.meetingReportQuestions.title',
+    descKey: 'settings.sections.meetingReportQuestions.desc',
+  },
+  {
     key: 'acquisition-channels',
     route: '/admin/acquisition-channels',
     icon: 'pi pi-megaphone',

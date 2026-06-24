@@ -380,13 +380,21 @@ import AddContactToDealDialog from './components/AddContactToDealDialog.vue'
 import { useContactPageData } from './composables/useContactPageData'
 import { useContactPageActions } from './composables/useContactPageActions'
 import { useDirectoriesStore } from '@/stores/directories'
+import { useUserStore } from '@/stores/user'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { MenuItem } from 'primevue/menuitem'
 
 const { t } = useI18n()
 const router = useRouter()
 const directoriesStore = useDirectoriesStore()
+const userStore = useUserStore()
 const { isMobile, isTablet } = useBreakpoints()
+
+// Role gate: contact delete allowed for admin/director (BE also checks owner)
+const canDeleteContact = computed(() => {
+  const role = userStore.getUserRole
+  return role === 'admin' || role === 'director' || role === 'manager'
+})
 
 const activeTab = ref('overview')
 const attachCompanyIsPrimary = ref(false)
@@ -563,35 +571,42 @@ async function loadMoreDeals() {
 
 // ── Menu items ────────────────────────────────────────────────────────────────
 
-const menuItems = computed<MenuItem[]>(() => [
-  {
-    label: t('crm.contact.menu.addNote'),
-    icon: 'pi pi-comment',
-    command: () => {
-      activeTab.value = 'activity'
-      void nextTick(() => activitiesTabRef.value?.focusNote())
+const menuItems = computed<MenuItem[]>(() => {
+  const items: MenuItem[] = [
+    {
+      label: t('crm.contact.menu.addNote'),
+      icon: 'pi pi-comment',
+      command: () => {
+        activeTab.value = 'activity'
+        void nextTick(() => activitiesTabRef.value?.focusNote())
+      },
     },
-  },
-  {
-    label: t('crm.contact.menu.addRelation'),
-    icon: 'pi pi-link',
-    command: () => {
-      activeTab.value = 'overview'
-      void nextTick(() => relationsBlockRef.value?.openAdd())
+    {
+      label: t('crm.contact.menu.addRelation'),
+      icon: 'pi pi-link',
+      command: () => {
+        activeTab.value = 'overview'
+        void nextTick(() => relationsBlockRef.value?.openAdd())
+      },
     },
-  },
-  {
-    label: t('crm.contact.menu.copyLink'),
-    icon: 'pi pi-copy',
-    command: copyLink,
-  },
-  { separator: true },
-  {
-    label: t('crm.contact.menu.delete'),
-    icon: 'pi pi-trash',
-    command: confirmDeleteContact,
-  },
-])
+    {
+      label: t('crm.contact.menu.copyLink'),
+      icon: 'pi pi-copy',
+      command: copyLink,
+    },
+  ]
+  if (canDeleteContact.value) {
+    items.push(
+      { separator: true },
+      {
+        label: t('crm.contact.menu.delete'),
+        icon: 'pi pi-trash',
+        command: confirmDeleteContact,
+      },
+    )
+  }
+  return items
+})
 
 // ── Tab options for mobile Select ─────────────────────────────────────────────
 

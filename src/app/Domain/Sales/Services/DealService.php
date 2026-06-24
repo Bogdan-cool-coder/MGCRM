@@ -641,10 +641,20 @@ class DealService
         // Visible columns = always-visible stages + revealed hidden ones, both in
         // the relation's sort_order (system won/lost last) — a revealed hidden stage
         // therefore renders at its real position, not appended at the end.
-        $visibleStages = $pipeline->stages->filter(
-            static fn (PipelineStage $stage): bool => ! $stage->hidden_by_default
-                || in_array((int) $stage->id, $revealedStageIds, true),
-        );
+        //
+        // Stage-level visibility is then intersected so a stage restricted away
+        // from this user (visible_department_ids/visible_user_ids) never renders
+        // its column on the board — mirroring the funnel-listing rule
+        // (PipelineService::list / canAccessStage) so board and menu cannot drift.
+        $pipelineService = app(PipelineService::class);
+        $visibleStages = $pipeline->stages
+            ->filter(
+                static fn (PipelineStage $stage): bool => ! $stage->hidden_by_default
+                    || in_array((int) $stage->id, $revealedStageIds, true),
+            )
+            ->filter(
+                static fn (PipelineStage $stage): bool => $pipelineService->canAccessStage($stage, $user),
+            );
 
         $multiCurrencyWarning = false;
 

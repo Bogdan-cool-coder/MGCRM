@@ -28,6 +28,7 @@ class TemplateController extends Controller
             $request->query('category'),
             $request->query('product_code'),  // BUG-DOC-2: forward JSON-array scope filters
             $request->query('country_code'),
+            $request->query('search'),
         );
 
         return TemplateResource::collection($templates);

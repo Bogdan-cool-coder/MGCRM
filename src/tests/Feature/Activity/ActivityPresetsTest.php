@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Activity;
 
 use App\Domain\Activity\Models\Activity;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -13,6 +14,27 @@ class ActivityPresetsTest extends TestCase
 {
     use ActivityTestHelpers;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Freeze the clock at a deterministic operational mid-day so preset
+        // bucketing (today/this_week) is independent of the wall-clock the suite
+        // runs at. Presets anchor "today" to Asia/Dubai (config('salespulse.timezone'));
+        // at a late UTC hour it is already the next Dubai day, so a UTC-noon due_at
+        // would slip out of "today". 2026-03-16 is a Monday; 08:00 UTC keeps every
+        // now()->setTime(9..15) due_at inside the Dubai "today" UTC window and the
+        // addDays(2) task inside the Mon–Sun week.
+        Carbon::setTestNow(Carbon::parse('2026-03-16 08:00:00', 'UTC'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     public function test_my_tasks_preset(): void
     {

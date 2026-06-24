@@ -67,7 +67,7 @@ class TemplateVersionController extends Controller
             $request->user()->id,
         );
 
-        return TemplateVersionResource::make($version)
+        return TemplateVersionResource::make($version->load('createdBy:id,full_name'))
             ->response()
             ->setStatusCode(201);
     }
@@ -83,6 +83,7 @@ class TemplateVersionController extends Controller
         $this->authorize('viewVersions', $template);
 
         $versions = $template->versions()
+            ->with('createdBy:id,full_name')
             ->orderByDesc('version_number')
             ->get();
 
@@ -102,7 +103,7 @@ class TemplateVersionController extends Controller
         // Ensure the version belongs to this template (no cross-template leaking).
         abort_if($version->template_id !== $template->id, 404);
 
-        return TemplateVersionResource::make($version);
+        return TemplateVersionResource::make($version->load('createdBy:id,full_name'));
     }
 
     /**
@@ -119,11 +120,14 @@ class TemplateVersionController extends Controller
 
         abort_if($version->template_id !== $template->id, 404);
 
+        // Concurrency guard: reject if a check job is already running.
+        abort_if($version->ai_check_status === AiCheckStatus::Checking, 409, 'AI check already in progress.');
+
         $version->update(['ai_check_status' => AiCheckStatus::Pending]);
 
         CheckTemplateJob::dispatch($version->id);
 
-        return TemplateVersionResource::make($version->refresh())
+        return TemplateVersionResource::make($version->refresh()->load('createdBy:id,full_name'))
             ->response()
             ->setStatusCode(202);
     }
@@ -144,6 +148,6 @@ class TemplateVersionController extends Controller
 
         $version->update(['ai_overridden' => true]);
 
-        return TemplateVersionResource::make($version->refresh());
+        return TemplateVersionResource::make($version->refresh()->load('createdBy:id,full_name'));
     }
 }

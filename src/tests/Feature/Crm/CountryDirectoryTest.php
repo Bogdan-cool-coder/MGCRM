@@ -29,18 +29,19 @@ class CountryDirectoryTest extends TestCase
     use RefreshDatabase;
 
     // =========================================================================
-    // READ — list / show (admin/director only; NEW-5)
+    // READ — list / show (open to any authenticated user; CRM-5)
     // =========================================================================
 
-    public function test_manager_cannot_list_countries(): void
+    public function test_manager_can_list_countries(): void
     {
-        // NEW-5: the /api/admin/* directory group is admin/director only.
+        // CRM-5: directory READS are open to any authenticated user (the country
+        // catalog feeds filter dropdowns + the country column label).
         Country::create(['code' => 'fr', 'name' => 'Frantsiya', 'sort_order' => 10, 'is_active' => true]);
 
         $manager = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($manager, ['*']);
 
-        $this->getJson('/api/admin/countries')->assertForbidden();
+        $this->getJson('/api/admin/countries')->assertOk();
     }
 
     public function test_admin_can_list_all_countries_without_filter(): void

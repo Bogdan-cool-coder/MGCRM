@@ -32,9 +32,18 @@ class TemplateVariableController extends Controller
         if ($productCode !== null && $countryCode !== null) {
             $variables = $this->service->forContext($productCode, $countryCode);
         } else {
-            $activeOnly = (bool) $request->query('active_only', true);
-            $group = $request->query('group');
-            $variables = $this->service->list($activeOnly, $group);
+            // FE sends is_active (bool), active_only (legacy), or neither.
+            $isActiveParam = $request->query('is_active');
+            if ($isActiveParam !== null) {
+                // FE bool filter: true = only active, false = all (admin manages inactive)
+                $activeOnly = filter_var($isActiveParam, FILTER_VALIDATE_BOOLEAN);
+            } else {
+                $activeOnly = (bool) $request->query('active_only', true);
+            }
+            $group   = $request->query('group');
+            $varType = $request->query('var_type');
+            $search  = $request->query('search');
+            $variables = $this->service->list($activeOnly, $group, $varType, $search);
         }
 
         return TemplateVariableResource::collection($variables);

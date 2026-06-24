@@ -72,10 +72,14 @@ export const useDashboardPage = () => {
     try {
       const data = await salesApi.getPipelines()
       pipelines.value = data
-      // Pre-select first pipeline
-      const first = data[0]
-      if (first != null && filters.pipeline_id == null) {
-        filters.pipeline_id = first.id
+      // Pre-select the same funnel the backend default resolves to: the first
+      // ACTIVE pipeline (by list order). /api/pipelines is not guaranteed
+      // is_active-first, so data[0] can be an inactive/archived copy with no
+      // data — picking the active one keeps the FE and BE defaults in lockstep
+      // (BUG: dashboard used to open on an empty inactive funnel).
+      const preselect = data.find((p) => p.is_active) ?? data[0]
+      if (preselect != null && filters.pipeline_id == null) {
+        filters.pipeline_id = preselect.id
       }
     } catch {
       // The pipeline Select would be empty with no pre-select, leaving the

@@ -30,11 +30,12 @@ class QuizScoreTest extends TestCase
     /**
      * Build a fake QuizOption object.
      */
-    private function makeOption(int $id, bool $isCorrect): object
+    private function makeOption(int $id, bool $isCorrect, string $text = 'Option text'): object
     {
         $o = new \stdClass;
         $o->id = $id;
         $o->is_correct = $isCorrect;
+        $o->text = $text;
 
         return $o;
     }
@@ -44,11 +45,14 @@ class QuizScoreTest extends TestCase
      *
      * @param  list<object>  $options
      */
-    private function makeQuestion(int $id, int $points, array $options): object
+    private function makeQuestion(int $id, int $points, array $options, string $text = 'Question text', ?string $explanation = null): object
     {
         $q = new \stdClass;
         $q->id = $id;
         $q->points = $points;
+        $q->text = $text;
+        $q->explanation = $explanation;
+        $q->kind = 'single_choice';
         $q->options = new Collection($options);
 
         return $q;
@@ -265,5 +269,64 @@ class QuizScoreTest extends TestCase
         $this->assertFalse($result['passed']);
         $this->assertSame(0, $result['n_correct']);
         $this->assertSame([], $result['annotated_answers']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Quiz review inline fields (audit NEW-MAJOR)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Annotated answers must include question_text, explanation, correct_option_ids,
+     * and correct_option_texts so FE QuizResult can render them without a second lookup.
+     */
+    public function test_annotated_answers_inline_question_text_and_explanation(): void
+    {
+        $question = $this->makeQuestion(
+            id: 1,
+            points: 1,
+            options: [
+                $this->makeOption(10, false, 'Wrong'),
+                $this->makeOption(11, true, 'Correct answer text'),
+            ],
+            text: 'What is 1+1?',
+            explanation: 'Basic arithmetic.',
+        );
+
+        $questions = new Collection([$question]);
+        $answers = [['question_id' => 1, 'selected_option_ids' => [11]]];
+
+        $result = QuizService::computeScore($questions, $answers, 80);
+        $annotated = $result['annotated_answers'][0];
+
+        $this->assertSame('What is 1+1?', $annotated['question_text']);
+        $this->assertSame('Basic arithmetic.', $annotated['explanation']);
+        $this->assertSame([11], $annotated['correct_option_ids']);
+        $this->assertSame(['Correct answer text'], $annotated['correct_option_texts']);
+        $this->assertTrue($annotated['is_correct']);
+    }
+
+    public function test_annotated_answers_correct_option_texts_for_multiple_choice(): void
+    {
+        $question = $this->makeQuestion(
+            id: 2,
+            points: 2,
+            options: [
+                $this->makeOption(20, true, 'Answer A'),
+                $this->makeOption(21, true, 'Answer B'),
+                $this->makeOption(22, false, 'Distractor'),
+            ],
+        );
+
+        $questions = new Collection([$question]);
+        $answers = [['question_id' => 2, 'selected_option_ids' => [22]]]; // wrong
+
+        $result = QuizService::computeScore($questions, $answers, 80);
+        $annotated = $result['annotated_answers'][0];
+
+        $this->assertFalse($annotated['is_correct']);
+        // correct_option_texts allows FE to show "Answer A, Answer B" without ID lookup
+        $this->assertContains('Answer A', $annotated['correct_option_texts']);
+        $this->assertContains('Answer B', $annotated['correct_option_texts']);
+        $this->assertNotContains('Distractor', $annotated['correct_option_texts']);
     }
 }

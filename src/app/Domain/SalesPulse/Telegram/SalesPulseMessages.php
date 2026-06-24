@@ -131,6 +131,8 @@ final class SalesPulseMessages
 
     public const VACATION_TOO_SHORT = '⚠️ Отпуск — это 2+ подряд рабочих дня. Уточните период.';
 
+    public const VACATION_BAD_RANGE = '⚠️ Дата окончания отпуска раньше даты начала. Проверьте порядок дат.';
+
     public static function vacationCleared(string $managerName, int $removed): string
     {
         return "▶️ Отпуск снят для {$managerName} ({$removed} дн.).";

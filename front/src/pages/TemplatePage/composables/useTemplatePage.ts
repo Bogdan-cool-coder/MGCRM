@@ -9,7 +9,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { templatesApi } from '@/api/templates'
-import type { TemplateDto, TemplateVersionDto } from '@/entities/template'
+import type { TemplateDto, TemplateVersionDto, PatchTemplatePayload } from '@/entities/template'
 
 const POLL_INTERVAL_MS = 3000
 
@@ -168,6 +168,21 @@ export const useTemplatePage = () => {
 
   // ─── Edit dialog ──────────────────────────────────────────────────────────
   const editDialogVisible = ref(false)
+  const editSaving = ref(false)
+
+  async function saveEdit(payload: PatchTemplatePayload) {
+    editSaving.value = true
+    try {
+      await templatesApi.patchTemplate(templateId.value, payload)
+      await fetchTemplate()
+      editDialogVisible.value = false
+      toast.add({ severity: 'success', summary: t('common.save'), life: 2000 })
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    } finally {
+      editSaving.value = false
+    }
+  }
 
   return {
     t,
@@ -186,6 +201,8 @@ export const useTemplatePage = () => {
     overrideMutation,
     confirmOverride,
     editDialogVisible,
+    editSaving,
+    saveEdit,
     fetchTemplate,
   }
 }

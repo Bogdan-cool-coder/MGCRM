@@ -148,4 +148,26 @@ class TeamResolverTest extends TestCase
         $this->assertSame('2026-06-19', $this->resolver->parseDateToken('19.06.2026')->toDateString());
         $this->assertNull($this->resolver->parseDateToken('ilyarogov'));
     }
+
+    public function test_parse_dates_and_slug_single_pass_orders_dates_regardless_of_token_position(): void
+    {
+        // The slug may sit BETWEEN the two dates; one pass keeps dates in order and
+        // picks the first non-date as the slug (no independent re-tokenisation).
+        $result = $this->resolver->parseDatesAndSlug(['2026-06-18', 'ilya', '2026-06-19']);
+
+        $this->assertCount(2, $result['dates']);
+        $this->assertSame('2026-06-18', $result['dates'][0]->toDateString());
+        $this->assertSame('2026-06-19', $result['dates'][1]->toDateString());
+        $this->assertSame('ilya', $result['slug']);
+
+        // Reversed dates are returned in token order (the handler validates ordering).
+        $reversed = $this->resolver->parseDatesAndSlug(['2026-06-19', 'ilya', '2026-06-18']);
+        $this->assertSame('2026-06-19', $reversed['dates'][0]->toDateString());
+        $this->assertSame('2026-06-18', $reversed['dates'][1]->toDateString());
+
+        // Only a slug, no dates.
+        $noDates = $this->resolver->parseDatesAndSlug(['ilya']);
+        $this->assertSame([], $noDates['dates']);
+        $this->assertSame('ilya', $noDates['slug']);
+    }
 }

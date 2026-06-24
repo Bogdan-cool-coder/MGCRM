@@ -8,10 +8,8 @@ use App\Domain\Iam\Models\User;
 use App\Domain\SalesPulse\Data\Team;
 use App\Domain\SalesPulse\Services\SkipService;
 use App\Domain\SalesPulse\Services\TeamResolver;
-use App\Domain\SalesPulse\Telegram\CommandContext;
 use App\Domain\SalesPulse\Telegram\CommandContextResolver;
 use App\Domain\SalesPulse\Telegram\SalesPulseMessages;
-use Carbon\CarbonImmutable;
 use SergiX44\Nutgram\Nutgram;
 
 /**
@@ -24,8 +22,9 @@ use SergiX44\Nutgram\Nutgram;
  *                                  end date (2+ working days). Personal only.
  *   /unvacation менеджер [дата]  — clear the manager's vacation from [дата] onward.
  *
- * Date grammar reuses TeamResolver::parseArgs ([date, slug]); /vacation reads a
- * SECOND date token (the vacation end) via parseDateToken.
+ * Date grammar reuses TeamResolver: single-date commands use parseArgs
+ * ([date, slug]); /vacation uses parseDatesAndSlug so the start date, end date and
+ * slug come from ONE consistent tokenisation.
  */
 class SkipHandler
 {
@@ -83,7 +82,10 @@ class SkipHandler
             return;
         }
 
-        [$from, $slug] = $this->teams->parseArgs($ctx->args);
+        // ONE tokenisation: the first date is the start, the second is the end,
+        // the first non-date token is the manager slug (spec §8). Two independent
+        // scans could disagree on which token is the start vs the end.
+        ['dates' => $dates, 'slug' => $slug] = $this->teams->parseDatesAndSlug($ctx->args);
         $manager = $this->slugUser($ctx->team, $slug);
 
         if ($manager === null) {
@@ -92,9 +94,16 @@ class SkipHandler
             return;
         }
 
-        $until = $this->secondDate($ctx);
-        if ($until === null) {
+        $from = $dates[0] ?? null;
+        $until = $dates[1] ?? null;
+        if ($from === null || $until === null) {
             $bot->sendMessage(SalesPulseMessages::VACATION_TOO_SHORT);
+
+            return;
+        }
+
+        if ($until->lessThan($from)) {
+            $bot->sendMessage(SalesPulseMessages::VACATION_BAD_RANGE);
 
             return;
         }
@@ -147,25 +156,5 @@ class SkipHandler
         $entry = $team->managerBySlug($slug);
 
         return $entry !== null ? $this->teams->userFor($entry) : null;
-    }
-
-    /**
-     * The vacation end date: the SECOND date token in the args (the first is the
-     * start date, parsed by parseArgs).
-     */
-    private function secondDate(CommandContext $ctx): ?CarbonImmutable
-    {
-        $seen = 0;
-        foreach ($ctx->args as $token) {
-            $parsed = $this->teams->parseDateToken($token);
-            if ($parsed !== null) {
-                $seen++;
-                if ($seen === 2) {
-                    return $parsed;
-                }
-            }
-        }
-
-        return null;
     }
 }

@@ -107,7 +107,11 @@ export const routes: RouteRecordRaw[] = [
     path: '/manager-cabinet',
     name: 'ManagerCabinet',
     component: () => import('@/pages/ManagerCabinetPage'),
-    meta: { requiresAuth: true, title: 'nav.managerCabinet' },
+    // Sales-only cabinet: all /api/me/* endpoints 403 for non-sales roles, so
+    // fail closed at the router (mirrors PipelineSettings) instead of rendering
+    // a shell that fires error toasts. resolveNavigation (policy.ts) redirects
+    // lawyer/accountant/cfo to their default route.
+    meta: { requiresAuth: true, roles: ['admin', 'director', 'manager'], title: 'nav.managerCabinet' },
   },
 
   // ─── Settings ────────────────────────────────────────────────────────────────
@@ -173,6 +177,13 @@ export const routes: RouteRecordRaw[] = [
     // BE MessageTemplatePolicy.viewAny allows admin/lawyer/director/manager for reading;
     // CRUD actions are separately guarded by the policy (admin/lawyer only).
     meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director', 'manager'], title: 'nav.messageTemplates' },
+  },
+  {
+    path: '/admin/licensor-entities',
+    name: 'LicensorEntities',
+    component: () => import('@/pages/LicensorEntitiesPage'),
+    // BE LicensorPolicy.viewAny restricted to admin|lawyer|director.
+    meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director'], title: 'nav.licensors' },
   },
 
   // ─── Approvals ───────────────────────────────────────────────────────────

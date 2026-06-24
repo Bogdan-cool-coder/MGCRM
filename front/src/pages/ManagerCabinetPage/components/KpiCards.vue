@@ -30,8 +30,9 @@
             <div
               class="kpi-card__value"
               :style="kpi.personal.has_salary_plan ? { color: scoreColor } : undefined"
+              :title="`${kpi.personal.score_pct}%`"
             >
-              {{ kpi.personal.score_pct }}%
+              {{ formatScorePct(kpi.personal.score_pct) }}
             </div>
             <div class="kpi-card__footer">
               <Tag
@@ -120,6 +121,7 @@ import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import type { KpiResponse } from '@/entities/managerCabinet'
 import { formatMoney } from '@/utils/chartFormatters'
+import { formatScorePct } from '@/utils/scoreFormat'
 
 const props = defineProps<{
   kpi: KpiResponse | null

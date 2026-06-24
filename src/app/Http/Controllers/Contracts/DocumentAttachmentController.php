@@ -66,6 +66,9 @@ class DocumentAttachmentController extends Controller
     {
         $this->authorize('view', $document);
 
+        // IDOR guard: attachment must belong to the route-bound document.
+        abort_unless((int) $attachment->document_id === (int) $document->id, 404);
+
         return $this->service->download($attachment);
     }
 
@@ -76,6 +79,9 @@ class DocumentAttachmentController extends Controller
     public function destroy(Document $document, DocumentAttachment $attachment): JsonResponse
     {
         $this->authorize('deleteAttachment', $document);
+
+        // IDOR guard: attachment must belong to the route-bound document.
+        abort_unless((int) $attachment->document_id === (int) $document->id, 404);
 
         $this->service->delete($document, $attachment);
 

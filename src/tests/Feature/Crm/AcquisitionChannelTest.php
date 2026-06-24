@@ -31,15 +31,15 @@ class AcquisitionChannelTest extends TestCase
     // Directory CRUD (admin)
     // =========================================================================
 
-    public function test_manager_cannot_list_acquisition_channels(): void
+    public function test_manager_can_list_acquisition_channels(): void
     {
-        // NEW-5: acquisition channels are sensitive BI — the /api/admin/* group
-        // is admin/director only, so a manager must get 403 on read.
+        // CRM-5: directory READS are open to any authenticated user — acquisition
+        // channels feed filter dropdowns + labels. Only writes stay admin-gated.
         AcquisitionChannel::create(['name' => 'Рекомендации', 'sort_order' => 1]);
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $this->getJson('/api/admin/acquisition-channels')->assertForbidden();
+        $this->getJson('/api/admin/acquisition-channels')->assertOk();
     }
 
     public function test_admin_can_list_acquisition_channels(): void

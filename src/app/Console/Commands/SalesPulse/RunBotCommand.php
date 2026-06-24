@@ -6,6 +6,7 @@ namespace App\Console\Commands\SalesPulse;
 
 use App\Domain\SalesPulse\Telegram\SalesPulseBot;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Testing\FakeNutgram;
 
@@ -23,10 +24,25 @@ use SergiX44\Nutgram\Testing\FakeNutgram;
  * The handler set is already bound on the singleton (AppServiceProvider). An empty
  * token resolves to a FakeNutgram (idle) — the command exits cleanly instead of
  * crash-looping the container.
+ *
+ * The single-process invariant is now ALSO code-enforced: before polling we grab a
+ * cluster-wide Cache lock (Redis in prod). If a second process is already polling,
+ * the lock cannot be obtained and this process exits instead of starting a parallel
+ * getUpdates that would 409 + drop updates. (replicas:1 on the compose service is
+ * still the primary guard; this is defence in depth.)
+ *
+ * The lock is held WITHOUT a TTL for the life of the poll loop and released in the
+ * finally block; a graceful restart releases it so the new poller takes over. If the
+ * process is killed uncleanly the operator force-recreates the single `salespulse-bot`
+ * service, which clears the stale lock (forceRelease via salespulse:run --steal) — see
+ * the --steal flag below for an unattended takeover.
  */
 class RunBotCommand extends Command
 {
-    protected $signature = 'salespulse:run';
+    /** Cluster-wide lock key — one poller per SalesPulse token. */
+    private const POLL_LOCK = 'salespulse:poll-lock';
+
+    protected $signature = 'salespulse:run {--steal : Force-release a stale poll lock before acquiring (use after an unclean crash)}';
 
     protected $description = 'Run the SalesPulse Telegram bot (long-polling, single process per token)';
 
@@ -47,9 +63,28 @@ class RunBotCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->info('SalesPulse bot polling started (single process — do NOT scale).');
+        // No TTL: the lock lives for the whole poll loop and is released in finally,
+        // so the single poller can hand off cleanly on restart.
+        $lock = Cache::lock(self::POLL_LOCK);
 
-        $bot->run();
+        if ($this->option('steal')) {
+            // Clear a lock orphaned by an unclean crash before re-acquiring.
+            $lock->forceRelease();
+        }
+
+        if (! $lock->get()) {
+            $this->warn('Another SalesPulse poller already holds the poll lock — refusing to start a second getUpdates (would 409). Use --steal after an unclean crash.');
+
+            return self::SUCCESS;
+        }
+
+        try {
+            $this->info('SalesPulse bot polling started (single process — do NOT scale).');
+
+            $bot->run();
+        } finally {
+            $lock->release();
+        }
 
         return self::SUCCESS;
     }

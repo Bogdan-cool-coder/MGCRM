@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Contracts\Services;
 
-use App\Domain\Contracts\Models\LicensorEntity;
 use App\Domain\Contracts\Models\Template;
 use RuntimeException;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -45,7 +44,10 @@ class YamlTemplateParser
     }
 
     /**
-     * Build the rendering context by merging all three layers.
+     * Build the rendering context by merging product and country YAML layers.
+     * Licensor resolution (DB entity + per-currency bank account) is done in
+     * ContractContextBuilder::build() via LicensorService so that currency and
+     * override_id from the Document can be applied correctly.
      *
      * @param  array<string, mixed>  $custom  Custom variable overrides (Contract.context['custom'])
      * @return array{product: array<string,mixed>, country: array<string,mixed>, licensor: array<string,mixed>|null, custom: array<string,mixed>}
@@ -55,26 +57,17 @@ class YamlTemplateParser
         $product = $this->getProductLayer($productCode);
         $country = $this->getCountryLayer($countryCode);
 
-        // Resolve licensor: DB entity takes priority over YAML fallback.
-        $licensorEntity = LicensorEntity::query()
-            ->forCountry($countryCode)
-            ->first();
-
-        if ($licensorEntity !== null) {
-            $licensor = $licensorEntity->toArray();
-        } elseif (isset($country['licensor']) && is_array($country['licensor'])) {
-            // Legacy fallback: use the licensor block from country YAML.
-            $licensor = $country['licensor'];
-        } else {
-            $licensor = null;
-        }
+        // Use country YAML licensor block as the base fallback.
+        // ContractContextBuilder will overlay the DB entity + per-currency account on top.
+        $licensor = (isset($country['licensor']) && is_array($country['licensor']))
+            ? $country['licensor']
+            : null;
 
         return [
             'product' => $product,
             'country' => $country,
             'licensor' => $licensor,
             'custom' => $custom,
-            // S2.4 will add: 'sublicensee', 'license', 'contract'
         ];
     }
 

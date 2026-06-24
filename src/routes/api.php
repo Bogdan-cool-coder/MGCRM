@@ -170,8 +170,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);
     Route::post('/2fa/verify-setup', [TwoFactorController::class, 'verifySetup']);
     // 2FA management (full token only): disable + regenerate backup codes. Both
-    // re-confirm the caller (password or a current TOTP/backup code) inside
-    // ConfirmTwoFactorRequest before mutating the secret.
+    // re-confirm the caller with a current TOTP or backup code (totp_code /
+    // backup_code, required_without each other) inside ConfirmTwoFactorRequest
+    // before mutating the secret.
     Route::post('/2fa/disable', [TwoFactorController::class, 'disable'])->name('2fa.disable');
     Route::post('/2fa/regenerate-backup-codes', [TwoFactorController::class, 'regenerateBackupCodes'])->name('2fa.regenerate-backup-codes');
 
@@ -395,13 +396,39 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // Admin — Directories
     // =========================================================================
-    // NEW-5 / CRM-5: the whole admin-directory group (user mgmt, departments, and
-    // the shared reference catalogs) is gated to admin/director via the
-    // `admin-write` Gate. Previously only the *write* verbs on the directory
-    // controllers were gated, so manager could READ company-types / sources /
-    // countries / cities / contact-positions / acquisition-channels /
-    // disconnect-reasons (sensitive BI). The route-level Gate closes index/show
-    // in one place; the controllers keep their own write gates (defense in depth).
+    // CRM-5 regression fix: the 7 shared reference catalogs (company-types /
+    // sources / countries / cities / contact-positions / acquisition-channels /
+    // disconnect-reasons) split into TWO groups.
+    //
+    //  - READ  (index/show): auth:sanctum only — every authenticated CRM role
+    //    (manager/lawyer/accountant/cfo) needs them for filter dropdowns, type/
+    //    source/country labels, and the DisconnectDialog reason picker. A blanket
+    //    can:admin-write read-gate 403'd these and blanked directoriesStore.
+    //  - WRITE (store/update/destroy): can:admin-write (admin/director). The
+    //    controllers also keep their own $this->authorize('admin-write') on each
+    //    write verb (defense in depth).
+    //
+    // User management + the department directory list stay fully admin-gated
+    // (sensitive: they expose/mutate staff accounts), so they remain in the
+    // can:admin-write group below.
+    Route::prefix('admin')->name('admin.')->group(function (): void {
+        // Read-only directory catalogs — any authenticated user.
+        Route::get('company-types', [CompanyTypeController::class, 'index'])->name('company-types.index');
+        Route::get('company-types/{companyType}', [CompanyTypeController::class, 'show'])->name('company-types.show');
+        Route::get('contact-positions', [ContactPositionController::class, 'index'])->name('contact-positions.index');
+        Route::get('contact-positions/{contactPosition}', [ContactPositionController::class, 'show'])->name('contact-positions.show');
+        Route::get('sources', [SourceController::class, 'index'])->name('sources.index');
+        Route::get('sources/{source}', [SourceController::class, 'show'])->name('sources.show');
+        Route::get('countries', [CountryController::class, 'index'])->name('countries.index');
+        Route::get('countries/{country}', [CountryController::class, 'show'])->name('countries.show');
+        Route::get('cities', [CityController::class, 'index'])->name('cities.index');
+        Route::get('cities/{city}', [CityController::class, 'show'])->name('cities.show');
+        Route::get('acquisition-channels', [AcquisitionChannelController::class, 'index'])->name('acquisition-channels.index');
+        Route::get('acquisition-channels/{acquisitionChannel}', [AcquisitionChannelController::class, 'show'])->name('acquisition-channels.show');
+        Route::get('disconnect-reasons', [DisconnectReasonController::class, 'index'])->name('disconnect-reasons.index');
+        Route::get('disconnect-reasons/{disconnectReason}', [DisconnectReasonController::class, 'show'])->name('disconnect-reasons.show');
+    });
+
     Route::prefix('admin')->middleware('can:admin-write')->name('admin.')->group(function (): void {
         // Settings → user management (admin/director). List + create only for
         // now; module-access config (position/department → permissions) lands
@@ -415,16 +442,24 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // Department directory (read-only) — feeds the add-user form Select.
         Route::get('departments', [DepartmentController::class, 'index'])->name('departments.index');
 
+        // Directory write verbs (store/update/destroy) — admin/director only.
         Route::apiResource('company-types', CompanyTypeController::class)
+            ->only(['store', 'update', 'destroy'])
             ->parameter('company-types', 'companyType');
         Route::apiResource('contact-positions', ContactPositionController::class)
+            ->only(['store', 'update', 'destroy'])
             ->parameter('contact-positions', 'contactPosition');
-        Route::apiResource('sources', SourceController::class);
-        Route::apiResource('countries', CountryController::class);
-        Route::apiResource('cities', CityController::class);
+        Route::apiResource('sources', SourceController::class)
+            ->only(['store', 'update', 'destroy']);
+        Route::apiResource('countries', CountryController::class)
+            ->only(['store', 'update', 'destroy']);
+        Route::apiResource('cities', CityController::class)
+            ->only(['store', 'update', 'destroy']);
         Route::apiResource('acquisition-channels', AcquisitionChannelController::class)
+            ->only(['store', 'update', 'destroy'])
             ->parameter('acquisition-channels', 'acquisitionChannel');
         Route::apiResource('disconnect-reasons', DisconnectReasonController::class)
+            ->only(['store', 'update', 'destroy'])
             ->parameter('disconnect-reasons', 'disconnectReason');
     });
 

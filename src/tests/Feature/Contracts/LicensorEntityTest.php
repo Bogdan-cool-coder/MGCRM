@@ -35,7 +35,8 @@ class LicensorEntityTest extends TestCase
 
     public function test_show_licensor_with_bank_accounts(): void
     {
-        $user = User::factory()->create(['role' => Role::Manager]);
+        // Only admin|lawyer|director can read licensor data (bank/tax_id security fix).
+        $user = User::factory()->create(['role' => Role::Director]);
         $entity = LicensorEntity::factory()->create();
         LicensorBankAccount::factory()->create(['licensor_id' => $entity->id]);
         Sanctum::actingAs($user, ['*']);
@@ -45,6 +46,17 @@ class LicensorEntityTest extends TestCase
             ->assertJsonStructure(['data' => ['id', 'country_code', 'accounts']]);
 
         $this->assertNotEmpty($response->json('data.accounts'));
+    }
+
+    public function test_manager_cannot_read_licensor_entities(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $entity = LicensorEntity::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        // Manager must not access bank/tax_id data — 403 expected.
+        $this->getJson('/api/admin/licensor-entities')->assertForbidden();
+        $this->getJson("/api/admin/licensor-entities/{$entity->id}")->assertForbidden();
     }
 
     // ---- store ----

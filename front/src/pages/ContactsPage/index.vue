@@ -8,6 +8,8 @@
         :selected-count="bulk.selectedCount.value"
         :total-visible="items.length"
         :exporting="bulk.exporting.value"
+        :can-delete="canBulkDelete"
+        :can-assign-owner="canAssignOwner"
         @cancel="bulk.exitBulk()"
         @select-all="bulk.selectAll()"
         @clear-selection="bulk.clearSelection()"
@@ -24,6 +26,8 @@
         :search="filter.search"
         :active-filter-count="activeFilterCount"
         :density="view.density.value"
+        :can-export="canExport"
+        :can-enter-bulk="canEnterBulk"
         @set-entity-type="entityType = $event"
         @search="onSearch"
         @open-filter="filterOverlayOpen = !filterOverlayOpen"
@@ -739,6 +743,7 @@ import CrmAvatar from '@/components/ui/CrmAvatar.vue'
 
 import { useDirectoriesStore } from '@/stores/directories'
 import { useUiTriggersStore } from '@/stores/uiTriggers'
+import { useUserStore } from '@/stores/user'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useContactsPageData, CONTACT_SORT_MAP, COMPANY_SORT_MAP } from './composables/useContactsPageData'
@@ -787,9 +792,23 @@ const { t } = useI18n()
 const route = useRoute()
 const directoriesStore = useDirectoriesStore()
 const uiTriggers = useUiTriggersStore()
+const userStore = useUserStore()
 const { users: usersCache, load: loadUsers } = useUsersCache()
 
 const initialType: EntityType = route.name === 'Companies' ? 'company' : 'contact'
+
+// ── Role-based UI gates ───────────────────────────────────────────────────────
+// Mirrors BE policy: admin/director/lawyer = elevated; manager/accountant/cfo = own-only.
+// Destructive and sensitive operations are hidden for non-elevated roles.
+const userRole = computed(() => userStore.getUserRole)
+const isElevatedRole = computed(() =>
+  userRole.value === 'admin' || userRole.value === 'director',
+)
+// Lawyer sees all contacts/companies (BE-scoped to All) but cannot bulk-delete or assign-owner
+const canExport = computed(() => true) // all roles can export their scoped set (BE enforces)
+const canBulkDelete = computed(() => isElevatedRole.value)
+const canAssignOwner = computed(() => isElevatedRole.value)
+const canEnterBulk = computed(() => isElevatedRole.value || userRole.value === 'lawyer')
 
 // ── Data layer ────────────────────────────────────────────────────────────────
 

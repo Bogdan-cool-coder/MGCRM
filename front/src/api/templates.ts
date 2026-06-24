@@ -8,7 +8,11 @@ import type {
   TemplateVersionDto,
   TemplateListParams,
   PatchTemplatePayload,
+  TemplateKind,
 } from '@/entities/template'
+
+// Re-export for convenience
+export type { TemplateKind }
 
 export async function getTemplates(params?: TemplateListParams): Promise<TemplateListItemDto[]> {
   const response = await apiClient.get<{ data: TemplateListItemDto[] }>('/api/templates', { params })

@@ -3,11 +3,12 @@
  * docx template + version + AI check.
  */
 
-import type { DocumentKind } from './document'
-
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type AiCheckStatus = 'pending' | 'checking' | 'checked' | 'failed'
+
+/** Template storage kind — matches templates.kind column in the DB. */
+export type TemplateKind = 'docx' | 'yaml' | 'text'
 
 // ─── Template Version ─────────────────────────────────────────────────────────
 
@@ -25,9 +26,8 @@ export interface TemplateVersionDto {
   pdf_ok: boolean | null
   ai_check_status: AiCheckStatus
   ai_remarks: AiRemarkDto[]
-  override_by: number | null
-  override_at: string | null
-  created_by: number | null
+  ai_overridden: boolean
+  created_by_user_id: number | null
   created_by_name: string | null
   created_at: string
 }
@@ -38,11 +38,11 @@ export interface TemplateDto {
   id: number
   code: string
   title: string
-  kind: DocumentKind
+  kind: TemplateKind
+  category: string | null
   product_codes: string[]
   country_codes: string[]
-  category_codes: string[]
-  is_active: boolean
+  client_category_codes: string[]
   current_version: TemplateVersionDto | null
   created_at: string
   updated_at: string
@@ -52,10 +52,9 @@ export interface TemplateListItemDto {
   id: number
   code: string
   title: string
-  kind: DocumentKind
+  kind: TemplateKind
   product_codes: string[]
   country_codes: string[]
-  is_active: boolean
   current_version: TemplateVersionDto | null
   created_at: string
 }
@@ -63,7 +62,7 @@ export interface TemplateListItemDto {
 // ─── Payloads ────────────────────────────────────────────────────────────────
 
 export interface TemplateListParams {
-  kind?: DocumentKind | null
+  kind?: TemplateKind | null
   search?: string | null
   product_code?: string | null
   country_code?: string | null
@@ -73,5 +72,5 @@ export interface PatchTemplatePayload {
   title?: string
   product_codes?: string[]
   country_codes?: string[]
-  category_codes?: string[]
+  client_category_codes?: string[]
 }

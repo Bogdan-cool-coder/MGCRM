@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Domain\Iam\Enums\Role;
@@ -187,7 +188,13 @@ class ManagerKpiService
     }
 
     /**
-     * Average score_pct across team members, rounded to integer (plan §Б3).
+     * Robust "average" score_pct across team members (plan §Б3).
+     *
+     * The MEDIAN is used instead of the arithmetic mean so a single outlier
+     * (e.g. one member with a 4.5B-kop won deal against a 30M plan → 15072%)
+     * cannot drag the whole-team figure to a meaningless 1500%+. With a typical
+     * spread the median tracks the mean closely; under an outlier it stays on
+     * the representative member. Rounded to an integer percentage.
      *
      * @param  list<int>  $memberPcts
      */
@@ -197,21 +204,27 @@ class ManagerKpiService
             return 0;
         }
 
-        return (int) round(array_sum($memberPcts) / count($memberPcts));
+        $sorted = $memberPcts;
+        sort($sorted);
+
+        $count = count($sorted);
+        $mid = intdiv($count, 2);
+
+        if ($count % 2 === 1) {
+            return $sorted[$mid];
+        }
+
+        return (int) round(($sorted[$mid - 1] + $sorted[$mid]) / 2);
     }
 
     /**
      * Check whether a given activity object qualifies as a counted FTM (plan §Б2).
-     * All 5 conditions must be true — single-source so the count and the per-item
-     * flag in the feed never diverge (risk Н from plan).
+     * Delegates to the single source Activity::qualifiesAsFtm() so the count and
+     * the per-item flag in the feed never diverge (risk Н from plan).
      */
     public function ftmCounted(object $activity): bool
     {
-        return $activity->kind === 'meeting'
-            && (bool) ($activity->is_first_time_meeting ?? false)
-            && (bool) ($activity->ftm_decision_maker_attended ?? false)
-            && (bool) ($activity->ftm_presentation_shown ?? false)
-            && ! empty($activity->ftm_report_url);
+        return Activity::qualifiesAsFtm($activity);
     }
 
     // -------------------------------------------------------------------------

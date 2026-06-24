@@ -27,6 +27,10 @@ class DealCardResource extends JsonResource
             'title' => $this->title,
             'amount' => $this->amount, // kopecks
             'currency' => $this->currency,
+            // PG ARRAY tags — carried on the card so the kanban (default) view's
+            // Tags filter checklist has data-driven options; the list view never
+            // loads in board mode, so without this the checklist would be empty.
+            'tags' => $this->tags ?? [],
             'stage_id' => $this->stage_id,
             'company_id' => $this->company_id,
             'company_name' => $this->whenLoaded('company', fn () => $this->company?->name),

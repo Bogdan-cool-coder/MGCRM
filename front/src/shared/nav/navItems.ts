@@ -84,6 +84,9 @@ export const prototypeNavItems: NavItem[] = [
     route: '/manager-cabinet',
     icon: 'pi pi-id-card',
     labelKey: 'nav.managerCabinet',
+    // Sales-only surface: every /api/me/* call 403s for lawyer/accountant/cfo,
+    // so the menu entry must be hidden from them too (mirrors the route meta).
+    roles: ['admin', 'director', 'manager'],
   },
 ]
 
@@ -167,6 +170,9 @@ export const allNavItems: NavItem[] = [
     route: '/manager-cabinet',
     icon: 'pi pi-id-card',
     labelKey: 'nav.managerCabinet',
+    // Sales-only surface: every /api/me/* call 403s for lawyer/accountant/cfo,
+    // so the menu entry must be hidden from them too (mirrors the route meta).
+    roles: ['admin', 'director', 'manager'],
   },
   {
     key: 'products',
@@ -244,6 +250,13 @@ export const adminNavItems: NavItem[] = [
     route: '/admin/message-templates',
     icon: 'pi pi-envelope',
     labelKey: 'nav.messageTemplates',
+    adminOnly: true,
+  },
+  {
+    key: 'licensor-entities',
+    route: '/admin/licensor-entities',
+    icon: 'pi pi-building',
+    labelKey: 'nav.licensors',
     adminOnly: true,
   },
   {

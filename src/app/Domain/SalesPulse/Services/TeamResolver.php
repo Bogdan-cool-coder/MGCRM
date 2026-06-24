@@ -165,6 +165,44 @@ class TeamResolver
     }
 
     /**
+     * Split command argument tokens into the ordered list of recognised dates and
+     * the manager slug, in a SINGLE pass (spec §8). Multi-date commands (/vacation)
+     * use this so the start/end dates and the slug come from one consistent
+     * tokenisation — never two independent scans that can disagree on token roles.
+     *
+     * @param  list<string>  $tokens
+     * @return array{dates: list<CarbonImmutable>, slug: ?string}
+     */
+    public function parseDatesAndSlug(array $tokens): array
+    {
+        $tz = $this->timezone();
+        $today = CarbonImmutable::now($tz)->startOfDay();
+
+        $dates = [];
+        $slug = null;
+
+        foreach ($tokens as $raw) {
+            $token = trim($raw);
+            if ($token === '') {
+                continue;
+            }
+
+            $parsed = $this->parseDateToken($token, $tz, $today);
+            if ($parsed !== null) {
+                $dates[] = $parsed;
+
+                continue;
+            }
+
+            if ($slug === null) {
+                $slug = $token;
+            }
+        }
+
+        return ['dates' => $dates, 'slug' => $slug];
+    }
+
+    /**
      * Parse a single date token (spec §8) or null when it is not a date.
      */
     public function parseDateToken(string $token, ?string $tz = null, ?CarbonImmutable $today = null): ?CarbonImmutable

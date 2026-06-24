@@ -5,6 +5,7 @@ import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { templateVariablesApi } from '@/api/templateVariables'
 import { useUserStore } from '@/stores/user'
+import { isAxiosError } from 'axios'
 import type {
   TemplateVariableDto,
   TemplateVariableType,
@@ -87,6 +88,25 @@ export const useTemplateVariablesPage = () => {
     }
   }
 
+  // ─── Delete variable ──────────────────────────────────────────────────────
+  async function deleteVariable(v: TemplateVariableDto) {
+    try {
+      await templateVariablesApi.deleteTemplateVariable(v.id)
+      void fetchVariables()
+      toast.add({ severity: 'success', summary: t('common.delete', 'Удалено'), life: 2000 })
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 409) {
+        toast.add({
+          severity: 'warn',
+          summary: t('templateVariables.deleteInUse', 'Переменная используется в документах'),
+          life: 4000,
+        })
+      } else {
+        toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+      }
+    }
+  }
+
   // ─── Copy key ─────────────────────────────────────────────────────────────
   async function copyKey(key: string) {
     try {
@@ -125,6 +145,7 @@ export const useTemplateVariablesPage = () => {
     save,
     saveMutation,
     toggleActive,
+    deleteVariable,
     copyKey,
     canManage,
     typeOptions,

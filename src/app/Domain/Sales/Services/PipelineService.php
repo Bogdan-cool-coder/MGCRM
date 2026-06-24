@@ -85,6 +85,10 @@ class PipelineService
         $pipelines = Pipeline::query()
             ->with('stages')
             ->when($kind !== null, fn ($q) => $q->where('kind', $kind))
+            // Active funnels first so list[0] is the meaningful default the
+            // dashboard/board pre-select latches onto (an archived "копия" must
+            // never sort ahead of the live funnel).
+            ->orderByDesc('is_active')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
