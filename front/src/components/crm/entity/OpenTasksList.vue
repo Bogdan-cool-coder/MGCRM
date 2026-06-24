@@ -4,11 +4,12 @@
     - Row order: Тип chip · Дата · Ответственный (all clickable).
     - ONE click on card = expand; collapse ONLY via click-outside.
     - Double-click title = edit (blur = exit edit).
-    - «Выполнить» always visible top-right; expand → required result textarea; 2nd click → complete.
+    - «Выполнить» always visible top-right; 1st click on collapsed → expand +
+      highlight result field (required); once result entered 2nd click → complete.
     - ✕ = 3-click delete (reddens, shows remaining).
     - Default OPEN (headerCollapsed=false).
   -->
-  <div v-if="tasks.length > 0" class="open-tasks" v-click-outside="collapseAll">
+  <div v-if="tasks.length > 0" ref="rootEl" class="open-tasks">
     <!-- Header: «Открытые задачи: N» — click collapses the list -->
     <button
       type="button"
@@ -29,9 +30,10 @@
       <div
         v-for="task in tasks"
         :key="task.id"
+        :ref="(el) => registerRowRef(task.id, el as HTMLElement | null)"
         class="open-tasks__row"
         :class="{
-          'open-tasks__row--overdue': task.is_overdue && !task.is_closed,
+          'open-tasks__row--overdue': isTaskOverdue(task),
           'open-tasks__row--expanded': expandedId === task.id,
         }"
         :style="taskRowStyle(task)"
@@ -105,7 +107,7 @@
               <button
                 type="button"
                 class="open-tasks__due"
-                :class="{ 'open-tasks__due--overdue': task.is_overdue }"
+                :class="{ 'open-tasks__due--overdue': isTaskOverdue(task) }"
                 @click.stop="expandAndToggleDatePicker(task.id)"
               >
                 <i class="pi pi-clock open-tasks__meta-icon" />
@@ -168,13 +170,14 @@
           </div>
 
           <!-- Right: «Выполнить» (always visible) + 3-step ✕.
-               @click.stop here so the actions area does NOT re-expand an already
-               expanded card — but in compact mode Выполнить directly expands. -->
+               Spec §11: Выполнить in compact mode → expand card + highlight result field.
+               @click.stop here so the actions area does NOT double-trigger the compact card's
+               expandTask listener, but Выполнить uses onCompleteClick which handles expand. -->
           <div class="open-tasks__actions" @click.stop>
             <button
               type="button"
               class="open-tasks__complete-btn"
-              @click="expandTask(task.id)"
+              @click.stop="onCompleteClick(task)"
             >
               <i class="pi pi-check" />
               <span class="open-tasks__complete-label">{{ t('activity.actions.complete') }}</span>
@@ -196,18 +199,86 @@
 
         <!-- ─── Expanded view ────────────────────────────────────────────────── -->
         <Transition name="tqf-slide">
-          <TaskQuickForm
+          <div
             v-if="expandedId === task.id"
-            mode="complete"
-            :activity="task"
-            :closable="true"
-            :target-type="targetType"
-            :target-id="targetId"
-            class="open-tasks__tqf"
-            @completed="onCompleted(task.id, $event)"
-            @delete="onDelete(task.id)"
-            @cancel="expandedId = null"
-          />
+            class="open-tasks__expanded-wrap"
+            @click.stop
+          >
+            <!-- Result textarea + Выполнить in expanded mode -->
+            <div class="open-tasks__expanded-header">
+              <!-- Task title (read-only) -->
+              <p class="open-tasks__expanded-title">{{ task.title }}</p>
+              <!-- Always-visible actions in expanded mode -->
+              <div class="open-tasks__expanded-actions">
+                <button
+                  type="button"
+                  class="open-tasks__complete-btn"
+                  :disabled="completingId === task.id"
+                  @click.stop="onCompleteSubmit(task)"
+                >
+                  <i class="pi pi-check" />
+                  <span class="open-tasks__complete-label">{{ t('activity.actions.complete') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="open-tasks__delete-btn"
+                  :class="{
+                    'open-tasks__delete-btn--warn': (deleteClickCounts[task.id] ?? 0) === 1,
+                    'open-tasks__delete-btn--danger': (deleteClickCounts[task.id] ?? 0) >= 2,
+                  }"
+                  :title="deleteTooltip(task.id)"
+                  @click="handleDeleteClick(task)"
+                >
+                  <i class="pi pi-times" />
+                </button>
+                <!-- Close / collapse back to compact -->
+                <button
+                  type="button"
+                  class="open-tasks__collapse-btn"
+                  :title="t('common.close')"
+                  @click.stop="expandedId = null"
+                >
+                  <i class="pi pi-times" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Meta row also visible in expanded state (overdue date stays red) -->
+            <div class="open-tasks__meta open-tasks__meta--expanded">
+              <span class="open-tasks__type-chip open-tasks__type-chip--static" :style="typeChipStyle(task.kind)">
+                <i :class="['pi', resolvedKindIcon(task.kind)]" />
+                {{ kindLabel(task.kind) }}
+              </span>
+              <span
+                class="open-tasks__due"
+                :class="{ 'open-tasks__due--overdue': isTaskOverdue(task) }"
+              >
+                <i class="pi pi-clock open-tasks__meta-icon" />
+                {{ task.due_at ? formatDueDateShort(task.due_at) : t('activity.fields.dueAt') }}
+              </span>
+              <span v-if="task.responsible" class="open-tasks__responsible open-tasks__responsible--static">
+                <i class="pi pi-user open-tasks__meta-icon" />
+                {{ task.responsible.full_name }}
+              </span>
+            </div>
+
+            <!-- Result textarea (required field — highlighted when Выполнить clicked without value) -->
+            <div class="open-tasks__result-wrap">
+              <textarea
+                :ref="(el) => registerResultRef(task.id, el as HTMLTextAreaElement | null)"
+                v-model="taskResultDrafts[task.id]"
+                class="open-tasks__result-input"
+                :class="{ 'open-tasks__result-input--required': resultRequired === task.id }"
+                :placeholder="t('activity.fields.resultPlaceholder')"
+                rows="2"
+                @click.stop
+                @input="() => { if (resultRequired === task.id && taskResultDrafts[task.id]?.trim()) resultRequired = null }"
+              />
+              <p v-if="resultRequired === task.id" class="open-tasks__result-error">
+                {{ t('activity.fields.resultRequired') }}
+              </p>
+            </div>
+          </div>
         </Transition>
       </div>
     </div>
@@ -215,45 +286,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import DatePicker from 'primevue/datepicker'
-import TaskQuickForm from '@/components/tasks/TaskQuickForm.vue'
 import { kindIcon } from '@/utils/activity'
 import { activityApi } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityTargetType } from '@/entities/activity'
-
-// ─── Click-outside directive ─────────────────────────────────────────────────
-
-const vClickOutside = {
-  mounted(el: HTMLElement, binding: { value: () => void }) {
-    el.__clickOutsideHandler = (event: MouseEvent) => {
-      if (!el.contains(event.target as Node)) {
-        binding.value()
-      }
-    }
-    document.addEventListener('click', el.__clickOutsideHandler)
-  },
-  unmounted(el: HTMLElement) {
-    if (el.__clickOutsideHandler) {
-      document.removeEventListener('click', el.__clickOutsideHandler)
-      delete el.__clickOutsideHandler
-    }
-  },
-}
-
-declare module 'vue' {
-  interface ComponentCustomProperties {
-    vClickOutside: typeof vClickOutside
-  }
-}
-
-declare global {
-  interface HTMLElement {
-    __clickOutsideHandler?: (event: MouseEvent) => void
-  }
-}
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
@@ -275,11 +314,64 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 
+const rootEl = ref<HTMLElement | null>(null)
 const expandedId = ref<number | null>(null)
 const headerCollapsed = ref(false) // default OPEN per spec
 
+// Map task id → row element (for click-outside path check)
+const rowRefs = reactive<Record<number, HTMLElement | null>>({})
+function registerRowRef(id: number, el: HTMLElement | null) {
+  rowRefs[id] = el
+}
+
+// Map task id → result textarea element (for focus-on-required)
+const resultRefs = reactive<Record<number, HTMLTextAreaElement | null>>({})
+function registerResultRef(id: number, el: HTMLTextAreaElement | null) {
+  resultRefs[id] = el
+}
+
 // 3-step delete counter per task id
 const deleteClickCounts = reactive<Record<number, number>>({})
+
+// Result text drafts per task id
+const taskResultDrafts = reactive<Record<number, string>>({})
+
+// Which expanded task has the result field highlighted as required
+const resultRequired = ref<number | null>(null)
+
+// Which task is currently being completed (pending API call)
+const completingId = ref<number | null>(null)
+
+// ─── Click-outside (BUG C fix) ───────────────────────────────────────────────
+// Problem: when the user clicks to expand a task, Vue re-renders synchronously,
+// removing the compact card from the DOM. The document click listener then sees
+// el.contains(target) === false (detached node) and fires collapseAll() — instant
+// collapse on the same click that opened the card.
+//
+// Fix: use event.composedPath() which captures the path BEFORE re-render, so even
+// if the clicked element is removed from DOM, the path still includes the root element.
+// Additionally: NEVER collapse when there's an active picker open.
+
+function onDocumentClick(event: MouseEvent) {
+  if (!rootEl.value) return
+  // composedPath() contains the full event path captured at dispatch time,
+  // even after elements are removed from the DOM by re-renders.
+  const path = event.composedPath()
+  if (path.includes(rootEl.value)) {
+    // Click was inside the open-tasks root — never collapse
+    return
+  }
+  // Click was genuinely outside — collapse expanded task and close pickers
+  collapseAll()
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocumentClick)
+})
 
 // ─── Title inline edit state ──────────────────────────────────────────────────
 
@@ -436,6 +528,20 @@ function formatDueDateShort(dateStr: string): string {
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+// ─── Overdue check (BUG B fix) ───────────────────────────────────────────────
+// Backend `is_overdue` may be stale (computed at fetch time). Re-derive locally
+// using date-only comparison (no time) so the overdue flag is consistent regardless
+// of what time of day the page was loaded and regardless of collapsed/expanded state.
+
+function isTaskOverdue(task: ActivityDto): boolean {
+  if (task.is_closed) return false
+  if (!task.due_at) return false
+  // Compare date parts only (strip time) to avoid timezone edge cases
+  const todayStr = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const dueStr = task.due_at.slice(0, 10) // YYYY-MM-DD
+  return dueStr < todayStr
+}
+
 // ─── Task row border style (tinted to task type per spec §11) ────────────────
 
 function taskRowStyle(task: ActivityDto): Record<string, string> {
@@ -468,6 +574,7 @@ function expandTask(id: number) {
   typePickerOpenId.value = null
   datePickerOpenId.value = null
   responsiblePickerOpenId.value = null
+  resultRequired.value = null
   expandedId.value = id
 }
 
@@ -476,6 +583,7 @@ function collapseAll() {
   typePickerOpenId.value = null
   datePickerOpenId.value = null
   responsiblePickerOpenId.value = null
+  resultRequired.value = null
 }
 
 // ─── Expand-and-open picker helpers (meta row clicks in compact mode) ─────────
@@ -505,6 +613,54 @@ function expandAndToggleResponsiblePicker(taskId: number) {
   toggleResponsiblePicker(taskId)
 }
 
+// ─── «Выполнить» flow (BUG A fix) ────────────────────────────────────────────
+// Spec §11:
+//   • Compact (collapsed) card: Выполнить → expand card + highlight result field as required.
+//   • Expanded card: Выполнить → if result is empty, highlight field (red border) + do NOT complete;
+//     if result is filled, call complete endpoint, remove task from list, refresh feed.
+//   • Clicking Выполнить must NEVER just collapse the card.
+
+function onCompleteClick(task: ActivityDto) {
+  // In compact mode: expand + mark result as required to draw attention
+  expandTask(task.id)
+  // After DOM update, mark result as required and focus the textarea
+  nextTick(() => {
+    resultRequired.value = task.id
+    const el = resultRefs[task.id]
+    if (el) el.focus()
+  })
+}
+
+async function onCompleteSubmit(task: ActivityDto) {
+  const resultText = taskResultDrafts[task.id]?.trim() ?? ''
+  // If result is empty, highlight the field and do NOT complete
+  if (!resultText) {
+    resultRequired.value = task.id
+    await nextTick()
+    const el = resultRefs[task.id]
+    if (el) el.focus()
+    return
+  }
+  // Call complete endpoint
+  if (completingId.value !== null) return
+  completingId.value = task.id
+  try {
+    const updated = await activityApi.completeActivity(task.id, resultText)
+    // Clear local draft
+    delete taskResultDrafts[task.id]
+    resultRequired.value = null
+    expandedId.value = null
+    // Emit so parent (DealPage/index.vue) updates feedComposable → openTasks drops this task
+    // and the feed shows the completed task
+    emit('completed', updated)
+    toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 2000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  } finally {
+    completingId.value = null
+  }
+}
+
 // ─── 3-step delete (DealCard §11) ─────────────────────────────────────────────
 
 function deleteTooltip(taskId: number): string {
@@ -530,12 +686,6 @@ function handleDeleteClick(task: ActivityDto) {
 }
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
-
-function onCompleted(id: number, activity: ActivityDto) {
-  expandedId.value = null
-  emit('completed', activity)
-  toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 2000 })
-}
 
 function onDelete(id: number) {
   expandedId.value = null
@@ -632,6 +782,10 @@ function onDelete(id: number) {
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
       background: rgba(239, 68, 68, 0.04);
     }
+    .open-tasks__expanded-wrap {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: rgba(239, 68, 68, 0.04);
+    }
   }
 }
 
@@ -709,6 +863,10 @@ function onDelete(id: number) {
   gap: $space-2;
   flex-wrap: wrap;
   margin-top: 2px;
+
+  &--expanded {
+    padding: $space-1 $space-3;
+  }
 }
 
 // Wrapper for each picker button + popover
@@ -739,6 +897,11 @@ function onDelete(id: number) {
   i {
     font-size: $font-size-3xs;
   }
+
+  &--static {
+    cursor: default;
+    pointer-events: none;
+  }
 }
 
 // ─── Date / Responsible buttons ───────────────────────────────────────────────
@@ -768,11 +931,33 @@ function onDelete(id: number) {
       color: var(--p-surface-300);
     }
   }
+
+  &--static {
+    cursor: default;
+    pointer-events: none;
+  }
 }
 
 .open-tasks__due--overdue {
   color: var(--p-red-500);
   font-weight: $font-weight-medium;
+
+  // Dark mode: surface-400 from parent .open-tasks__due beats red-500 here
+  // (specificity: .app-dark .open-tasks__due > .open-tasks__due--overdue).
+  // Explicit dark override restores readable red — red-400 has better contrast
+  // on dark surfaces than red-500.
+  .app-dark & {
+    color: var(--p-red-400);
+  }
+
+  // Override hover so it stays red even in expanded/static meta row
+  &:hover {
+    color: var(--p-red-600);
+
+    .app-dark & {
+      color: var(--p-red-300);
+    }
+  }
 }
 
 .open-tasks__meta-icon {
@@ -918,9 +1103,14 @@ function onDelete(id: number) {
   flex-shrink: 0;
   transition: all var(--app-transition-fast);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--p-green-500);
     color: $sidebar-text-active;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .open-tasks__complete-label {
@@ -971,10 +1161,122 @@ function onDelete(id: number) {
   }
 }
 
-// ─── Expanded TQF ────────────────────────────────────────────────────────────
+// ─── Expanded view ─────────────────────────────────────────────────────────────
 
-.open-tasks__tqf {
-  margin: $space-2 $space-3;
+.open-tasks__expanded-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  background: var(--p-surface-50);
+  border-radius: inherit;
+
+  .app-dark & {
+    background: var(--p-surface-100);
+  }
+}
+
+.open-tasks__expanded-header {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding-right: 0; // actions are inline-flex, not absolute in expanded mode
+}
+
+.open-tasks__expanded-title {
+  flex: 1;
+  margin: 0;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $surface-700;
+  line-height: $line-height-normal;
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+}
+
+.open-tasks__expanded-actions {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  flex-shrink: 0;
+}
+
+.open-tasks__collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  width: 20px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  height: 20px;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $surface-400;
+  font-size: $font-size-3xs;
+  cursor: pointer;
+  transition: all var(--app-transition-fast);
+
+  &:hover {
+    color: $surface-600;
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      color: var(--p-surface-200);
+      background: var(--p-surface-200);
+    }
+  }
+}
+
+// ─── Result textarea ──────────────────────────────────────────────────────────
+
+.open-tasks__result-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.open-tasks__result-input {
+  width: 100%;
+  font-size: $font-size-sm;
+  color: $surface-700;
+  font-family: inherit;
+  border: 1px solid var(--p-surface-300);
+  border-radius: $radius-sm;
+  padding: $space-2 $space-3;
+  background: var(--p-surface-0);
+  resize: none;
+  outline: none;
+  line-height: $line-height-normal;
+  transition: border-color var(--app-transition-fast);
+
+  .app-dark & {
+    background: var(--p-surface-200);
+    color: var(--p-surface-100);
+    border-color: var(--p-surface-600);
+  }
+
+  &:focus {
+    border-color: var(--p-primary-color);
+  }
+
+  // BUG A fix: required highlight — red border when Выполнить clicked without result
+  &--required {
+    border-color: var(--p-red-500);
+
+    &:focus {
+      border-color: var(--p-red-500);
+    }
+  }
+}
+
+.open-tasks__result-error {
+  font-size: $font-size-xs;
+  color: var(--p-red-500);
+  margin: 0;
 }
 
 // ─── Slide transition ─────────────────────────────────────────────────────────

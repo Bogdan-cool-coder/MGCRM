@@ -1132,7 +1132,10 @@
       "critical": "Critical"
     },
     "fields": {
-      "responsible": "Responsible"
+      "responsible": "Responsible",
+      "dueAt": "Date",
+      "resultPlaceholder": "Describe the result…",
+      "resultRequired": "Please fill in the result before completing"
     },
     "presets": {
       "myTasks": "My tasks",

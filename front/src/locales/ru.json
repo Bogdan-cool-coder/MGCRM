@@ -1132,7 +1132,10 @@
       "critical": "Критический"
     },
     "fields": {
-      "responsible": "Ответственный"
+      "responsible": "Ответственный",
+      "dueAt": "Дата",
+      "resultPlaceholder": "Опишите результат…",
+      "resultRequired": "Заполните результат перед выполнением"
     },
     "presets": {
       "myTasks": "Мои задачи",
