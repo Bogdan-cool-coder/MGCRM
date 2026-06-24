@@ -37,8 +37,11 @@
 - Деньги: символ ПОСЛЕ суммы через пробел, пробелы в разрядах — `1 200 000 ₽`, `≈ 6,8 млн ₽`. Даты `ДД.ММ.ГГ`.
 
 ## Проверка перед коммитом
-Прогоняй adherence-линт `npm run lint:ds` (для `.vue`/`.scss` это **stylelint** с запретом
-хардкод-значений мимо токенов; настройка — в `handoff/SETUP.md`). Падает на твоём значении —
+Прогоняй adherence-линт `npm run lint:ds` (из `front/`) — это **stylelint** с запретом
+хардкод-значений мимо токенов, по двум раздельным конфигам: `front/.stylelintrc.vue.json`
+для `.vue` и `front/.stylelintrc.scss.json` для `.scss` (общая база — `front/.stylelintrc.json`).
+В репо тот же `lint:ds` запускается как **pre-commit** через `.githooks/pre-commit`
+(`git config core.hooksPath .githooks`; это НЕ husky). Падает на твоём значении —
 заменяй на токен, не глуши правило. Для React/TSX-поверхностей есть отдельный
 `_adherence.oxlintrc.json` (валидирует пропсы компонентов и ловит hex/px).
 

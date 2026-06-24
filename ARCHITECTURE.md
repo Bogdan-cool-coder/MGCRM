@@ -2,7 +2,8 @@
 
 > **Обязательно для main-сессии и ВСЕХ агентов. Ни шаг влево, ни шаг вправо.**
 > Любой код пишется строго по этим паттернам. Отклонение — это баг, а не «стиль». `product-manager` режет код, нарушающий ARCHITECTURE.md, на ревью.
-> Эталон всех паттернов — **`./examples/vizion/`** (копия Vizion). Если паттерн ниже расходится с тем, как сделано у Vizion, — **прав Vizion**, обнови этот файл через product-manager.
+> Эталон паттернов — **`./examples/vizion/`** (копия Vizion). Если паттерн ниже расходится с тем, как сделано у Vizion, — **прав Vizion**, обнови этот файл через product-manager.
+> **Нюанс:** Vizion — оракул для **ещё не построенных** паттернов. Для доменов, уже доведённых до спеки, зрелая реализация в самом репо (например `Sales/DealService`) — тоже легитимный референс паттерна: новый код в этом домене равняется на неё, а не переоткрывает Vizion с нуля.
 
 ---
 
@@ -48,7 +49,10 @@ HTTP → Route (/api, auth:sanctum)
 
 ## 2. Backend — DDD-границы (НЕРУШИМО)
 
-- Весь код домена строго в `app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies}`. Контексты — из PLAN §4.2 (`Iam, Org, Crm, Sales, Inbox, Contracts, Activity, Notification, Automation, CustomerSuccess, Finance, Analytics, Integration, Onboarding, Catalog`).
+- Весь код домена строго в `app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies}`.
+- **Существующие контексты (14, реально в `src/app/Domain/`):** `Activity, Automation, Catalog, Contracts, Crm, Iam, Inbox, Log, Migration, Notification, Onboarding, Org, Sales, SalesPulse`.
+- **Запланированные (greenfield — папки ещё нет, создаются при старте спринта):** `CustomerSuccess` (спринт CS), `Finance` (спринт Финансы).
+- **Analytics / Integration — отдельных контекстов НЕТ.** Сегодня эта работа вшита в `Sales` / `Inbox` / `Notification`; самостоятельные `Domain/Analytics` и `Domain/Integration` не заводим, пока для них не назрел отдельный срез.
 - **Cross-domain — ТОЛЬКО через публичный Service-метод чужого контекста.** НИКОГДА не обращаться к чужим моделям/таблицам напрямую из другого домена. (Sales не делает `FinInvoice::where(...)` — зовёт `InvoiceService` из Finance.)
 - Доменные `Enums` — PHP backed enums. **Статус-машины** — enum + метод-гард перехода в сервисе (`assertCanTransition(from, to)`). Никаких «магических строк» статусов в коде.
 
@@ -56,7 +60,9 @@ HTTP → Route (/api, auth:sanctum)
 
 - **Деньги — целые копейки** (`unsignedBigInteger`) везде: БД, расчёты, DTO. Форматирование (рубли, разделители) — только на фронте. `float`/`decimal` для денег — запрещено.
 - **Миграции:** обратимые (`up`/`down`); FK `->constrained()->cascadeOnDelete()`; translatable-поля → `jsonb`; индексы на горячих `WHERE`/`ORDER BY`; имя `YYYY_MM_DD_HHMMSS_<verb>_<entity>`. Перед коммитом — `migrate` и `migrate:rollback` оба прошли.
-- **Авторизация:** `spatie/permission` (роли) + **Policy на каждую доменную модель**. Проверка — через `$user->can()` / Policy / middleware. **Inline `if ($user->role === 'admin')` в контроллерах/сервисах — запрещено** (только в Policy/гейтах).
+- **Авторизация (цель/канон):** `spatie/laravel-permission` — **6 ролей** (`admin, director, lawyer, manager, accountant, cfo`) + гранулярные permissions, на guard **`sanctum`**, + **Policy на каждую доменную модель**. Проверка — через `$user->can()` / Policy / permission-middleware. Это целевая модель.
+  > **⚠️ Текущее состояние vs цель (долг IAM-1).** СЕГОДНЯ код авторизует через **enum-Gates на колонке `users.role`**: таблицы spatie засеяны, но **не подключены** (permissions висят на guard `web`, а Sanctum их не видит → `$user->can()` по ним не срабатывает). То есть spatie — канон, но в проде **ещё не работает**; это зафиксированный долг **IAM-1**. **План:** подключить spatie на guard `sanctum` и перевести Gate-проверки на permissions; до этого вся новая авторизация идёт через **Gate/Policy** (целясь в permission-модель), `users.role` — переходный двойной источник роли, удаляется после миграции IAM-1.
+  > **Разрешение противоречия §3 ↔ §7:** inline-проверка роли по-прежнему **запрещена**. Логика ролей живёт в **Gates/Policy** сейчас и становится **permissions** после IAM-1. То есть `if ($user->role === 'admin')` в контроллере/сервисе — баг; роль читается только внутри Gate/Policy.
 - **N+1 запрещён:** связи — через eager-load (`with()`). Запросы живут в сервисах, не в контроллерах и не в ресурсах.
 - `env()` — только в `config/`. Проектные значения — `config/crm.php`.
 
@@ -149,4 +155,4 @@ app.use(PrimeVue, { theme: {
 
 ---
 
-> Если ARCHITECTURE.md и реальный паттерн Vizion (`./examples/vizion/`) расходятся — Vizion прав; `product-manager` правит этот файл с аппрувом. Этот документ — закон проекта.
+> Если ARCHITECTURE.md и реальный паттерн Vizion (`./examples/vizion/`) расходятся для **ещё не построенного** паттерна — Vizion прав; `product-manager` правит этот файл с аппрувом. Для уже построенных по спеке доменов эталоном паттерна служит и зрелая реализация в репо (напр. `Sales/DealService`). Этот документ — закон проекта.

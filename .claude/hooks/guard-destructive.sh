@@ -13,6 +13,7 @@
 #   - docker {image|system|builder} prune -a/--all/--volumes
 #   - rm -rf по данным/системным/домашним путям
 #   - SQL DROP DATABASE|SCHEMA|TABLE / TRUNCATE
+#   - php artisan migrate:fresh / db:wipe  (полный снос схемы БД — теряет данные dev/prod)
 
 input="$(cat)"
 
@@ -37,6 +38,9 @@ elif m '\bdocker\b[^|;&]*\b(image|system|builder)\b[^|;&]*\bprune\b[^|;&]*(-a\b|
   reason="docker prune -a/--all/--volumes — массовое удаление образов/кэша/данных"
 elif m '\b(drop[[:space:]]+(database|schema|table)|truncate[[:space:]]+(table|only|"|[a-z]))'; then
   reason="SQL DROP DATABASE/SCHEMA/TABLE или TRUNCATE — удаление БД/таблиц"
+elif m 'artisan[^|;&]*\b(migrate:fresh|db:wipe)\b'; then
+  # php artisan migrate:fresh / db:wipe сносят ВСЮ схему БД (dev и prod) — полная потеря данных
+  reason="php artisan migrate:fresh/db:wipe — снос всей схемы БД (потеря данных)"
 elif m '\brm\b[[:space:]]+(-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|-r[[:space:]]+-f|-f[[:space:]]+-r|--recursive[^|;&]*--force|--force[^|;&]*--recursive)'; then
   # rm -rf обнаружен; блокируем только по чувствительным путям (данные/система/home), /tmp не трогаем
   if m '(backup|volume|postgres|mysql|mariadb|redis|pgdata|_data\b|/var/lib/docker|[[:space:]]/(home|etc|var|usr|root|boot|srv|opt|bin|lib)([[:space:]]|/|$)|[[:space:]]/([[:space:]]|$)|[[:space:]]~|\$home)'; then

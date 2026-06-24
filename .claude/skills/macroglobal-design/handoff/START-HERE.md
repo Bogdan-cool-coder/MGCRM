@@ -60,7 +60,7 @@ Claude Code найдёт дизайн-систему, и **готовый про
 | **ТЗ «Контакты»** | `design-handoff/redesign/Contacts-spec.md` |
 | **Макет карточки** (эталон) | `design-handoff/redesign/entity-card.html` |
 | **ТЗ карточки** | `design-handoff/redesign/EntityCard-spec.md` |
-| Целевой код раздела | `front/src/pages/crm/ContactsPage.vue` + `useContactsView` |
+| Целевой код раздела | `front/src/pages/ContactsPage/` + `useContactsView` |
 
 Подробная настройка skill / линта / pre-commit — в `handoff/SETUP.md`.
 
@@ -77,12 +77,12 @@ Claude Code найдёт дизайн-систему, и **готовый про
 > **Задача:** реализуй раздел «Контакты» строго по `design-handoff/redesign/Contacts-spec.md`,
 > визуальный эталон — `design-handoff/redesign/contacts.html`. Используй **только токены**
 > дизайн-системы (никакого хардкода цветов/радиусов/размеров). Сверься с текущим кодом
-> `front/src/pages/crm/ContactsPage.vue` и `useContactsView`, переиспользуй существующие
+> `front/src/pages/ContactsPage/` и `useContactsView`, переиспользуй существующие
 > компоненты PrimeVue. Поддержи **обе темы** (светлая/тёмная). По завершении прогони
 > `npm run lint:ds` и визуально проверь оба режима.
 
 Для карточки сущности — то же, с `EntityCard-spec.md` / `entity-card.html` и
-`front/src/pages/crm/` (`ContactPage`/`CompanyPage` + `components/crm/entity/`).
+`front/src/pages/ContactPage/` · `front/src/pages/CompanyPage/` (+ `front/src/components/crm/entity/`).
 
 ---
 

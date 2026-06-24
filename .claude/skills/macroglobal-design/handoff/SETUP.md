@@ -48,28 +48,19 @@ main-сессия Claude Code («примени патчи из handoff/agents-p
 ```
 npm i -D stylelint stylelint-config-standard-scss stylelint-declaration-strict-value
 ```
-**.stylelintrc.json**
-```jsonc
-{
-  "extends": "stylelint-config-standard-scss",
-  "plugins": ["stylelint-declaration-strict-value"],
-  "rules": {
-    "scale-unit/declaration-strict-value": null,
-    "declaration-strict-value": [
-      ["/color$/", "background", "background-color", "border-color", "fill", "stroke",
-       "box-shadow", "border-radius", "font-size", "font-family"],
-      { "ignoreValues": ["transparent", "inherit", "currentColor", "none", "unset", "0"],
-        "disableFix": true }
-    ]
-  },
-  "ignoreFiles": ["**/theme/**"]  // файлы-определения токенов не проверяем
-}
-```
-**package.json**
+
+В репо это уже подключено как **раздельный конфиг** (запускается из `front/`):
+- `front/.stylelintrc.vue.json` — для `.vue` (стили внутри SFC);
+- `front/.stylelintrc.scss.json` — для `.scss`;
+- общая база-настройка вынесена в `front/.stylelintrc.json`.
+
+Файлы-определения токенов (`**/theme/**`) исключены, чтобы не было ложных срабатываний.
+
+**package.json** (фактический скрипт в `front/package.json`)
 ```jsonc
 {
   "scripts": {
-    "lint:ds": "stylelint \"front/src/**/*.{vue,scss}\""
+    "lint:ds": "stylelint --config .stylelintrc.vue.json \"src/**/*.vue\" && stylelint --config .stylelintrc.scss.json \"src/**/*.scss\""
   }
 }
 ```
@@ -85,13 +76,11 @@ npm i -D stylelint stylelint-config-standard-scss stylelint-declaration-strict-v
 ```
 
 ### 4c. Pre-commit + CI
-**.husky/pre-commit**
-```sh
-#!/bin/sh
-npm run lint:ds || { echo "❌ Нарушение дизайн-системы. Используй токены, не хардкод."; exit 1; }
+В репо pre-commit гейт **уже работает** через `.githooks/` (НЕ husky). Рабочий хук —
+`.githooks/pre-commit`: он делает `cd front && npm run lint:ds` и валит коммит при
+хардкод-нарушении. Подключение (один раз):
 ```
-```
-npx husky init && echo 'npm run lint:ds' > .husky/pre-commit
+git config core.hooksPath .githooks
 ```
 **CI**
 ```yaml
@@ -106,4 +95,5 @@ npx husky init && echo 'npm run lint:ds' > .husky/pre-commit
 
 ---
 **TL;DR:** skill в `.claude/skills/`, `CLAUDE.md` в корень, агенты в `.claude/agents/`,
-`npm run lint:ds` в pre-commit + CI.
+`npm run lint:ds` (раздельные конфиги `.stylelintrc.vue.json` + `.stylelintrc.scss.json`)
+в pre-commit (`.githooks/pre-commit`, не husky) + CI.

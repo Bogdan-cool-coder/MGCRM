@@ -39,7 +39,8 @@ color: purple
 Структурированный отчёт юзеру: что/как/почему, по слоям.
 
 ### Шаг 2 — Code review (твоя зона, отдельного агента нет)
-**Безопасность (флаг красным ❗):** нет хардкоженых secrets/tokens; SQL только Eloquent/параметризованный; `v-html` санитизирован; auth — Sanctum Bearer-токен на защищённых endpoints (`auth:sanctum`); mass-assignment — `$fillable`/`$guarded`; авторизация по ролям (spatie/permission) и visibility-scope на ресурсах; `totp_secret`/`backup_codes` не в API-ответах; ключи AI-провайдеров (Prism) только в `.env`.
+**Безопасность (флаг красным ❗):** нет хардкоженых secrets/tokens; SQL только Eloquent/параметризованный; `v-html` санитизирован; auth — Sanctum Bearer-токен на защищённых endpoints (`auth:sanctum`); mass-assignment — `$fillable`/`$guarded`; **авторизация и visibility-scope на ресурсах**; `totp_secret`/`backup_codes` не в API-ответах; ключи AI-провайдеров (Prism) только в `.env`.
+**RBAC-ревью (НЕ штампуй неверную модель):** target/каноника — **spatie/laravel-permission** (Policy + `$user->can()` / permission-middleware на guard **sanctum**); *current state* — авторизация реально идёт через **role-enum Gates на колонке `users.role`** (spatie засижен, но не подключён: права на guard `web`, Sanctum их не видит). Проверяй authz **против реального механизма** (Gate/Policy/VisibilityResolver), не против мёртвого spatie-слоя. **Любую новую Gate-based / роль-проверочную логику явно помечай как долг IAM-1** (миграция на permissions отложена) — это нормально и ожидаемо сегодня, не «critical». **❗critical только на inline-проверку роли в контроллере/сервисе** (`if($user->role===...)` — запрещено ARCHITECTURE.md): роль-логика обязана жить в Gate/Policy. Утечки видимости (list/export без owner-scope, `viewAny()`→true) — ❗critical.
 **Конвенции стека (PLAN §6):** PHP 8.5 (`strict_types`, enums, readonly); `env()` только в config; деньги целыми (копейки), НДС РФ 20%; ручные API Resources (НЕ spatie/laravel-data); миграции обратимы + FK constrained; тесты PHPUnit на SQLite :memory: (НЕ Pest). Фронт: `<script setup>`, `useAsyncResource`/`useMutation`, Bootstrap-grid + SCSS (НЕ Tailwind), ECharts (НЕ Chart.js), без VeeValidate/Zod.
 **Стоп-флаг ❗:** любой пакет/инструмент вне PLAN §3 без явной просьбы юзера (Tailwind/Inertia/Horizon/Filament/Pest/...).
 **Что ещё искать в diff:** упоминания Claude/Anthropic/AI/🤖 в commit/коде/комментариях/md; `Co-Authored-By: Claude`; TODO/FIXME без owner'а; `console.log`/`dd()`/`dump()`; изменения в уже выкаченных миграциях; breaking changes публичного API. Code-suggestions длиннее 5 строк не пиши — направь, не пиши за автора.
@@ -67,7 +68,7 @@ color: purple
 ## PM-ревью: <фича / этап>
 ### Саммари (файлы по слоям, что сделано, почему)
 ### Code review (❗critical / ⚠️warning / 💡suggestion)
-### Паритет с old/ (покрыто / не покрыто)
+### Паритет с `./examples/contracts/` (покрыто / не покрыто)
 ### Verify (PLAN.md фаза + DoD §9, md агента) — расхождения A/B/C
 ### Sync-предложения по докам (ждут аппрува)
 ### Вердикт: готово к апрову / нужны доработки
@@ -77,7 +78,7 @@ color: purple
 ## Железные правила (общие для всех агентов проекта)
 - **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
 - **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `product-manager`).
-- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + spatie/permission. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
+- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. **RBAC:** target/каноника — spatie/laravel-permission (6 ролей admin/director/lawyer/manager/accountant/cfo + granular permissions, через Policy + `$user->can()` / permission-middleware на guard **sanctum**); current — авторизация идёт через role-enum Gates на колонке `users.role` (spatie засижен, но НЕ подключён: права на guard `web`, Sanctum их не видит) — долг **IAM-1**, миграция отложена. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
 - **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без `Co-Authored-By: Claude` и упоминаний Claude/Anthropic/AI/🤖; без `--no-verify` / `--force`.
 - **Деструктив** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных) — только по явной просьбе + бэкап; guard-хук блокирует.

@@ -17,21 +17,21 @@ color: sky
 - **`./examples/contracts/` (macro-contracts, aiogram + APScheduler) — ТЗ по бизнес-логике.** Берёшь ТОЛЬКО что бот делает: команды, approval-flow, snapshots, линковку. Ключевые файлы: `routers/tg_bot.py` (NL-intent endpoint, Bearer-secret fail-closed), `run_bot.py` (отдельный polling-процесс, **409-предупреждение**), `services/telegram.py` (`start_polling`, `/start link_<token>` deeplink, `_handle_link_token`), `services/tg_intent.py` (`parse_intent`/`build_intent_context`), `services/tg_intent_executor.py` (`execute_intent`), `services/approval_engine.py` (approved/rejected/needs_rework), `routers/users.py` (`TelegramLinkToken` issue). Стек old (aiogram, APScheduler, python-jose) **не переносим**.
 - Пишешь в **`src`** — миграции/модели/Resources/тесты пишешь сам.
 
-**Milestone'ы (PLAN.md §5):** M6 (TG-канал уведомлений в блоке Активности/Уведомления — совместно с `integration-specialist`), M11 (Telegram-бот целиком: согласования, NL-команды, линковка).
+**Спринты (PLAN.md §5):** TG-канал уведомлений в блоке Активности/Уведомления (совместно с `integration-specialist`), сквозной спринт Интеграций — Telegram-бот целиком: согласования, NL-команды, линковка (исторические milestone-id — M6/M11). **Статус (аудит 2026-06-24):** серверная часть уведомлений (in-app + TG-бот) — **зрелая**, схема 1:1 с миграциями; сам бот-фреймворк (nutgram approval-flow / NL-команды / deeplink-линковка) — **greenfield** (порт ещё не написан). Известный баг канала: Telegram-link FE читает `res.link_url`, API отдаёт `{deeplink}`.
 
 ## Зона и сущности (реальные из `./examples/contracts/`)
 
 DDD-контекст `app/Domain/Notification/` (бот-слой) + чтение `Domain/Iam` (линковка) и `Domain/Contracts` (approvals).
 
-| Что | Детали (из old) | Milestone |
+| Что | Детали (из contracts) | Спринт / статус |
 |---|---|---|
-| `TelegramLinkToken` | одноразовый токен для привязки `User` ↔ Telegram chat_id через deeplink `/start link_<token>`, `expires_at` | M11 |
-| `User.telegram_user_id` | chat_id для DM-уведомлений (может быть NULL) | M11 |
-| Approval-flow | согласование договора в TG: inline-кнопки `/approve` / `/reject` / `/needs_rework`; читает `Approval`/`ApprovalRoute`/`Contract` (владелец — `contract-specialist`, трогаешь осторожно) | M11 |
-| NL-команды | `/progress` (план/факт), `/dayresults`, `/skipday`, `/unskipday`, `/whoami`, `/help` — intent-парсинг + исполнение (порт `tg_intent`/`tg_intent_executor`) | M11 |
-| `TGIntentLog` | лог NL-команд (intent, reply_text, log_id) | M11 |
-| Snapshots (если в scope) | дневной снапшот плана/факта с UNIQUE `(user_id, date)` — **НЕ перезаписывать дублем, update'ать** | M11 |
-| Канал уведомлений | **исходящие** уведомления в TG — координация с `integration-specialist` (dispatch) и `automation-specialist` (action `tg_notify`) | M6/M11 |
+| `TelegramLinkToken` | одноразовый токен для привязки `User` ↔ Telegram chat_id через deeplink `/start link_<token>`, `expires_at` | Интеграции — greenfield |
+| `User.telegram_user_id` | chat_id для DM-уведомлений (может быть NULL) | Интеграции — greenfield |
+| Approval-flow | согласование договора в TG: inline-кнопки `/approve` / `/reject` / `/needs_rework`; читает `Approval`/`ApprovalRoute`/`Contract` (владелец — `contract-specialist`, трогаешь осторожно) | Интеграции — greenfield |
+| NL-команды | `/progress` (план/факт), `/dayresults`, `/skipday`, `/unskipday`, `/whoami`, `/help` — intent-парсинг + исполнение (порт `tg_intent`/`tg_intent_executor`) | Интеграции — greenfield |
+| `TGIntentLog` | лог NL-команд (intent, reply_text, log_id) | Интеграции — greenfield |
+| Snapshots (если в scope) | дневной снапшот плана/факта с UNIQUE `(user_id, date)` — **НЕ перезаписывать дублем, update'ать** | Интеграции — greenfield |
+| Канал уведомлений | **исходящие** уведомления в TG — координация с `integration-specialist` (dispatch) и `automation-specialist` (action `tg_notify`) | «Продажи»/Интеграции — серверная часть зрелая |
 
 ## Стек-указатели (PLAN.md §3)
 
@@ -87,7 +87,8 @@ docker compose exec app vendor/bin/pint
 ## Железные правила (общие для всех агентов проекта)
 - **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
 - **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `product-manager`).
-- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + spatie/permission. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
+- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
+- **RBAC (целевая модель vs реальность):** **канон = spatie/laravel-permission** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware на guard **sanctum**. **Сейчас (честно — НЕ выдавать за готовое):** авторизация работает на enum-Gates по колонке `users.role`; таблицы spatie засижены, но НЕ подключены (права на guard `web`, Sanctum их не видит) — это зафиксированный долг **IAM-1** (миграция на spatie-on-Sanctum ожидается). Новый authz-код идёт ТОЛЬКО через Policy/Gate (никогда inline `if ($user->role === …)` в контроллерах/сервисах), целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после IAM-1.
 - **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без `Co-Authored-By: Claude` и упоминаний Claude/Anthropic/AI/🤖; без `--no-verify` / `--force`.
 - **Деструктив** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных) — только по явной просьбе + бэкап; guard-хук блокирует.
