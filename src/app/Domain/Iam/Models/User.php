@@ -109,4 +109,39 @@ class User extends Authenticatable
     {
         return UserFactory::new();
     }
+
+    /**
+     * Keep the authoritative spatie role assignment in lockstep with the `role`
+     * mirror column (IAM-1).
+     *
+     * Authorization decisions resolve through spatie permissions
+     * ($user->can(...) / can:/permission: middleware / Policy hasPermissionTo),
+     * but the convenience `role` column remains the single ASSIGNMENT field that
+     * the UI / factory / seeders write. This `saved` hook mirrors that single
+     * column into a single spatie role on every create/update so the two sources
+     * can never drift — setting users.role auto-syncs the spatie grant, which is
+     * what makes the existing factory/tests (which only set the column) Just Work
+     * under permission-based authz. The follow-up to drop the column entirely is
+     * deferred (it is still the assignment surface).
+     */
+    protected static function booted(): void
+    {
+        static::saved(static function (self $user): void {
+            $role = $user->role;
+
+            if (! $role instanceof Role) {
+                return;
+            }
+
+            // Avoid a redundant write (and an extra pivot query) when the spatie
+            // role already matches the column — only sync on a real change.
+            $current = $user->getRoleNames()->all();
+
+            if ($current === [$role->value]) {
+                return;
+            }
+
+            $user->syncRoles([$role->value]);
+        });
+    }
 }

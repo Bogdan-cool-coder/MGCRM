@@ -44,6 +44,32 @@ class RolePermissionSeeder extends Seeder
     ];
 
     /**
+     * Operational ability permissions (IAM-1) — these are the four global
+     * abilities that authz actually enforces at call sites today. Previously they
+     * were `Gate::define()` closures over the `users.role` column; they are now
+     * spatie permissions so the grant matrix below is the SINGLE authoritative
+     * source. spatie's PermissionRegistrar auto-registers each as a Gate ability,
+     * so the existing `can:admin-write` middleware, `$this->authorize('admin-write')`
+     * and `$user->can('system-reset')` call sites resolve through spatie unchanged.
+     *
+     *   admin-write          — write to shared directories (company-types, sources,
+     *                          countries, cities, contact-positions, acquisition-
+     *                          channels, disconnect-reasons), CustomFieldDef, price
+     *                          import, user/department management.  admin, director
+     *   dedup-scan-all       — trigger a full-database duplicate scan.            admin, director
+     *   view-manager-cabinet — /me/kpi, /me/activity-feed manager cabinet.        admin, director, manager
+     *   system-reset         — "Сброс настроек" — wipe + re-seed baseline.        admin ONLY
+     *
+     * @var list<string>
+     */
+    private const ABILITY_PERMISSIONS = [
+        'admin-write',
+        'dedup-scan-all',
+        'view-manager-cabinet',
+        'system-reset',
+    ];
+
+    /**
      * Finance permissions — split so accountant does entry/posting and cfo adds
      * period close + finance settings + management reports.
      *
@@ -64,9 +90,14 @@ class RolePermissionSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $guard = 'web';
+        // IAM-1: seed on the `sanctum` guard — the guard the API authenticates
+        // with and the default guard (config/auth.php). spatie resolves authz
+        // against the active request guard, so roles/permissions MUST live on
+        // `sanctum` for $user->can(...) / can: middleware / Policy hasPermissionTo
+        // to match the Bearer-authenticated principal.
+        $guard = config('auth.defaults.guard', 'sanctum');
 
-        $allPermissions = [...self::BASE_PERMISSIONS, ...self::FINANCE_PERMISSIONS];
+        $allPermissions = [...self::BASE_PERMISSIONS, ...self::ABILITY_PERMISSIONS, ...self::FINANCE_PERMISSIONS];
 
         DB::transaction(function () use ($allPermissions, $guard): void {
             foreach ($allPermissions as $name) {
@@ -90,10 +121,13 @@ class RolePermissionSeeder extends Seeder
     private function permissionsForRole(string $role): array
     {
         return match ($role) {
-            // Full system access.
-            Role::Admin->value => [...self::BASE_PERMISSIONS, ...self::FINANCE_PERMISSIONS],
+            // Full system access — every permission including all four abilities
+            // (admin is the only role with system-reset).
+            Role::Admin->value => [...self::BASE_PERMISSIONS, ...self::ABILITY_PERMISSIONS, ...self::FINANCE_PERMISSIONS],
 
-            // Broad operational access without system administration.
+            // Broad operational access without system administration. Carries the
+            // shared-directory write, global dedup scan and manager cabinet
+            // abilities, but NOT system-reset (admin-only).
             Role::Director->value => [
                 'users.view',
                 'crm.view', 'crm.manage',
@@ -102,9 +136,12 @@ class RolePermissionSeeder extends Seeder
                 'automation.manage',
                 'analytics.view',
                 'finance.view', 'finance.reports.management',
+                'admin-write', 'dedup-scan-all', 'view-manager-cabinet',
             ],
 
-            // Contracts / legal, elevated read across operations.
+            // Contracts / legal, elevated read across operations. No operational
+            // abilities (cannot write directories, scan dedup or see the manager
+            // cabinet) — preserves today's behavior.
             Role::Lawyer->value => [
                 'crm.view',
                 'sales.view',
@@ -112,11 +149,13 @@ class RolePermissionSeeder extends Seeder
                 'analytics.view',
             ],
 
-            // Sales operator (own-scope).
+            // Sales operator (own-scope). Sees their own manager cabinet but has
+            // no directory-write / dedup / system abilities.
             Role::Manager->value => [
                 'crm.view', 'crm.manage',
                 'sales.view', 'sales.manage',
                 'contracts.view',
+                'view-manager-cabinet',
             ],
 
             // Finance: data entry / posting / manual journals.

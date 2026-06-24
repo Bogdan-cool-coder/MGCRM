@@ -15,8 +15,16 @@ return [
     |
     */
 
+    // IAM-1: the default guard is `sanctum`. MGCRM is a Bearer-token API — every
+    // route authenticates via `auth:sanctum`, so the active request guard is
+    // `sanctum`. spatie/laravel-permission resolves roles/permissions against the
+    // active guard; with the default (and the model's default guard) set to
+    // `sanctum`, the authoritative authz layer (roles/permissions seeded on the
+    // `sanctum` guard) matches the principal that `auth:sanctum` authenticates.
+    // Previously the default was `web` while requests ran on `sanctum`, so spatie
+    // permission checks silently missed (the audit's IAM-1 guard mismatch).
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => env('AUTH_GUARD', 'sanctum'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -40,6 +48,19 @@ return [
     'guards' => [
         'web' => [
             'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        // Sanctum Bearer-token guard for the API (IAM-1). The whole API runs
+        // behind `auth:sanctum`; declaring it here means spatie's role/permission
+        // middleware (which resolve the guard from the active auth guard) match
+        // the same `User` principal that `auth:sanctum` authenticates. spatie
+        // roles/permissions are seeded on the `web` guard, which is the User
+        // model's default guard name (only one provider model exists), so
+        // $user->can(...) and the spatie-registered Gate abilities resolve for
+        // Bearer requests regardless of which named guard authenticated them.
+        'sanctum' => [
+            'driver' => 'sanctum',
             'provider' => 'users',
         ],
     ],

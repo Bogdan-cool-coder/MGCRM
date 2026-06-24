@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 abstract class TestCase extends BaseTestCase
@@ -89,6 +91,33 @@ abstract class TestCase extends BaseTestCase
                 .'Refusing to proceed.'
             );
         }
+
+        $this->seedRolesAndPermissions();
+    }
+
+    /**
+     * Seed the spatie roles + permission matrix into the test DB (IAM-1).
+     *
+     * Authorization is permission-based: $user->can(...) / can: middleware /
+     * Policy hasPermissionTo all resolve against the spatie grant matrix on the
+     * `sanctum` guard. The User model's `saved` hook mirrors the `role` column
+     * into a spatie role on every create — so the roles MUST exist before any
+     * factory user is built, or syncRoles() throws RoleDoesNotExist.
+     *
+     * Runs only when the schema is present (RefreshDatabase migrated it) — pure
+     * Unit tests without a DB are skipped. Idempotent: the seeder firstOrCreates.
+     */
+    private function seedRolesAndPermissions(): void
+    {
+        if (config('database.default') !== 'sqlite') {
+            return;
+        }
+
+        if (! Schema::hasTable('roles') || ! Schema::hasTable('permissions')) {
+            return;
+        }
+
+        $this->seed(RolePermissionSeeder::class);
     }
 
     /**

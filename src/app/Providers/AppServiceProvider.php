@@ -56,8 +56,6 @@ use App\Domain\Crm\Policies\CompanyPolicy;
 use App\Domain\Crm\Policies\ContactPolicy;
 use App\Domain\Crm\Policies\ContactRelationPolicy;
 use App\Domain\Crm\Policies\SavedViewPolicy;
-use App\Domain\Iam\Enums\Role;
-use App\Domain\Iam\Models\User;
 use App\Domain\Inbox\Models\Channel;
 use App\Domain\Inbox\Models\Form;
 use App\Domain\Inbox\Models\InboundMessage;
@@ -242,37 +240,15 @@ class AppServiceProvider extends ServiceProvider
         // Onboarding Policies (S3.6)
         Gate::policy(Certificate::class, CertificatePolicy::class);
 
-        // Admin-write gate: write operations on shared directories (company-types,
-        // contact-positions, sources, countries, cities) and CustomFieldDef are
-        // restricted to admin and director roles only.
-        Gate::define('admin-write', static fn (User $user): bool => in_array(
-            $user->role,
-            [Role::Admin, Role::Director],
-            strict: true,
-        ));
-
-        // Dedup global scan gate: scanning the full database for duplicates is a
-        // privileged operation — only admin/director may trigger it.
-        Gate::define('dedup-scan-all', static fn (User $user): bool => in_array(
-            $user->role,
-            [Role::Admin, Role::Director],
-            strict: true,
-        ));
-
-        // System clean-reset gate: "Сброс настроек" wipes all business data and
-        // re-seeds baseline config. Strictly admin-only (NOT director) — it is
-        // the most destructive operation in the app.
-        Gate::define('system-reset', static fn (User $user): bool => $user->role === Role::Admin);
-
-        // Manager-cabinet view gate (S1.8 defense-in-depth): route-level guard on the
-        // /me cabinet GET routes (profile/kpi/activity-feed), mirroring
-        // ManagerKpiService::assertCanViewCabinet so the route and the service share
-        // one role set (admin/director/manager). lawyer/accountant/cfo are excluded.
-        Gate::define('view-manager-cabinet', static fn (User $user): bool => in_array(
-            $user->role,
-            [Role::Admin, Role::Director, Role::Manager],
-            strict: true,
-        ));
+        // Global ability gates (IAM-1) — `admin-write`, `dedup-scan-all`,
+        // `system-reset` and `view-manager-cabinet` are NO LONGER defined here as
+        // role-enum closures over $user->role. They are now spatie permissions
+        // (RolePermissionSeeder::ABILITY_PERMISSIONS) granted per role, and
+        // spatie's PermissionRegistrar auto-registers each one as a Gate ability.
+        // So `can:admin-write` middleware, `$this->authorize('system-reset')` and
+        // `$user->can('dedup-scan-all')` now resolve through the spatie grant
+        // matrix — the SINGLE authoritative authz source. Toggling a row in
+        // role_has_permissions now changes behavior (previously it was dead).
 
         // Named limiters for the public inbound endpoints. Throttled BEFORE any DB
         // work so a token leak / spam burst can't create a flood of Company/Deal
