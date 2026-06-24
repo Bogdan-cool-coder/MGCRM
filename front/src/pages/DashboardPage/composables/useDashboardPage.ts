@@ -114,8 +114,27 @@ export const useDashboardPage = () => {
   )
 
   // ─── Export ─────────────────────────────────────────────────────────────────
-  const exportXlsx = (): void => {
-    exportDashboardXlsx({ ...filters })
+  // Download via the authenticated axios client as a Blob, then build a
+  // temporary object-URL <a download> (the app is Bearer-only — window.open
+  // would 500). Mirrors DealsPage onExport().
+  const exportXlsx = async (): Promise<void> => {
+    try {
+      const blob = await exportDashboardXlsx({ ...filters })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.add({
+        severity: 'error',
+        summary: t('errors.server_error'),
+        detail: msg,
+        life: 5000,
+      })
+    }
   }
 
   // ─── Mount ──────────────────────────────────────────────────────────────────

@@ -286,10 +286,12 @@ import { documentsApi } from '@/api/documents'
 import { templatesApi } from '@/api/templates'
 import type {
   DocumentListItemDto,
+  DocumentDto,
   DocumentAttachmentDto,
   ApprovalSummaryDto,
   ApprovalDecision,
 } from '@/entities/document'
+import type { GenerateFromContextResponse } from '@/api/documents'
 
 const props = defineProps<{
   dealId: number
@@ -356,7 +358,7 @@ async function loadTemplates() {
 
 // ── Generate ───────────────────────────────────────────────────────────────────
 
-const generateMutation = useMutation<DocumentListItemDto>()
+const generateMutation = useMutation<GenerateFromContextResponse>()
 const generating = computed(() => generateMutation.isPending.value)
 
 async function generateDoc() {
@@ -366,14 +368,17 @@ async function generateDoc() {
     return
   }
   try {
-    const doc = await generateMutation.run(() =>
+    const result = await generateMutation.run(() =>
       documentsApi.generateFromDeal(props.dealId, {
         kind: 'contract',
         template_id: generateForm.value.template_id!,
       }),
     )
-    documents.value = [doc, ...documents.value.filter((d) => d.id !== doc.id)]
-    activeDocId.value = doc.id
+    // Reload the documents list to get the full DocumentListItemDto (generation
+    // returns a GenerateResultResource with document_id, not a full DocumentDto).
+    const resp = await documentsApi.getDocuments({ deal_id: props.dealId, per_page: 50 })
+    documents.value = resp.data
+    activeDocId.value = result.document_id
     emit('docsCountChanged', documents.value.length)
     toast.add({ severity: 'success', summary: t('documents.create.title'), life: 3000 })
   } catch {

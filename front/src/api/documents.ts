@@ -214,11 +214,19 @@ export async function getApprovalSummary(docId: number): Promise<ApprovalSummary
 
 // ─── Generate from deal / company ────────────────────────────────────────────
 
+export interface GenerateFromContextResponse {
+  document_id: number
+  number: string | null
+  docx_url: string | null
+  pdf_url: string | null
+  warnings: string[]
+}
+
 export async function generateFromDeal(
   dealId: number,
-  payload: { kind: string; template_id: number; context?: Record<string, unknown> },
-): Promise<DocumentDto> {
-  const response = await apiClient.post<{ data: DocumentDto }>(
+  payload: { kind: string; template_id?: number; product_code?: string; country_code?: string; city?: string; currency?: string; context?: Record<string, unknown> },
+): Promise<GenerateFromContextResponse> {
+  const response = await apiClient.post<{ data: GenerateFromContextResponse }>(
     `/api/deals/${dealId}/documents/generate`,
     payload,
   )
@@ -227,9 +235,9 @@ export async function generateFromDeal(
 
 export async function generateFromCompany(
   companyId: number,
-  payload: { kind: string; template_id: number; context?: Record<string, unknown> },
-): Promise<DocumentDto> {
-  const response = await apiClient.post<{ data: DocumentDto }>(
+  payload: { kind: string; template_id?: number; product_code?: string; country_code?: string; city?: string; currency?: string; context?: Record<string, unknown> },
+): Promise<GenerateFromContextResponse> {
+  const response = await apiClient.post<{ data: GenerateFromContextResponse }>(
     `/api/companies/${companyId}/documents/generate`,
     payload,
   )

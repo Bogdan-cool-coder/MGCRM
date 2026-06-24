@@ -68,6 +68,7 @@ import { useToast } from 'primevue/usetoast'
 import { templatesApi } from '@/api/templates'
 import { documentsApi } from '@/api/documents'
 import type { DocumentKind } from '@/entities/document'
+import type { GenerateFromContextResponse } from '@/api/documents'
 
 const props = defineProps<{
   modelValue: boolean
@@ -140,14 +141,14 @@ async function submit() {
   }
   creating.value = true
   try {
-    let doc
+    let result: GenerateFromContextResponse
     if (props.dealId) {
-      doc = await documentsApi.generateFromDeal(props.dealId, {
+      result = await documentsApi.generateFromDeal(props.dealId, {
         kind: form.value.kind,
         template_id: form.value.template_id,
       })
     } else if (props.companyId) {
-      doc = await documentsApi.generateFromCompany(props.companyId, {
+      result = await documentsApi.generateFromCompany(props.companyId, {
         kind: form.value.kind,
         template_id: form.value.template_id,
       })
@@ -155,7 +156,7 @@ async function submit() {
       return
     }
     visible.value = false
-    emit('created', doc.id)
+    emit('created', result.document_id)
   } catch {
     toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
   } finally {

@@ -300,12 +300,13 @@ export const catalogApi = {
   },
 
   // Price Import
+  // NOTE: preview hits the dedicated /preview route (true dry-run, never writes to DB).
+  // importConfirm hits /price-import (real write).
   async importPreview(file: File): Promise<ImportResultDto> {
     const form = new FormData()
     form.append('file', file)
-    form.append('dry_run', '1')
     const res = await apiClient.post<{ data: ImportResultDto }>(
-      '/api/catalog/price-import',
+      '/api/catalog/price-import/preview',
       form,
       { headers: { 'Content-Type': 'multipart/form-data' } },
     )
@@ -315,7 +316,6 @@ export const catalogApi = {
   async importConfirm(file: File): Promise<ImportResultDto> {
     const form = new FormData()
     form.append('file', file)
-    form.append('dry_run', '0')
     const res = await apiClient.post<{ data: ImportResultDto }>(
       '/api/catalog/price-import',
       form,

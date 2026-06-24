@@ -5,6 +5,7 @@
 import { ref, computed } from 'vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { salesApi } from '@/api/sales'
+import { toKopecks } from '@/utils/currency'
 import type { DealDto, SalesPaginatedResponse } from '@/entities/sales'
 import type { DealsFilters } from './useDealsFilters'
 import type { Ref } from 'vue'
@@ -63,8 +64,10 @@ export function useDealsList(
         product_q: f.product_q || undefined,
         country: f.country || undefined,
         city: f.city || undefined,
-        budget_from: f.budget_from ?? undefined,
-        budget_to: f.budget_to ?? undefined,
+        // Budget inputs are in rubles (UI suffix " ₽"); the API compares against
+        // deals.amount in kopecks → convert before sending (×100).
+        budget_from: f.budget_from != null ? toKopecks(f.budget_from) : undefined,
+        budget_to: f.budget_to != null ? toKopecks(f.budget_to) : undefined,
         tags: f.tags.length ? f.tags : undefined,
         created_from: dateRange?.[0] ? dateRange[0].toISOString().slice(0, 10) : undefined,
         created_to: dateRange?.[1] ? dateRange[1].toISOString().slice(0, 10) : undefined,

@@ -167,6 +167,7 @@ import { salesApi } from '@/api/sales'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage } from '@/utils/errors'
+import { formatCurrency } from '@/utils/currency'
 import type { PipelineDto, DealDto, DealCardDto, PipelineStageDto } from '@/entities/sales'
 import type { OverlayFilters } from './components/DealsFilterOverlay.vue'
 import type { DealsView } from '@/stores/salesStore'
@@ -309,13 +310,50 @@ const totalDealsCount = computed(() => {
   return visibleColumns.value.reduce((s, col) => s + col.total, 0)
 })
 
+/**
+ * Toolbar funnel total. Money is shown via formatCurrency (kopecks → "1 200 000 ₽"
+ * with the real currency symbol), never with hardcoded ₽/млн/тыс. literals.
+ *
+ * Aggregate the NATIVE per-currency buckets (amounts_by_currency) across the
+ * visible columns rather than summing the base-converted sum_amount blindly:
+ *   - single currency  → one formatted figure in that currency;
+ *   - multiple currencies, all rates available → the base-currency converted
+ *     total (sum_amount already in base currency, all columns converted cleanly);
+ *   - multiple currencies with a missing rate → a per-currency breakdown joined
+ *     by " + " (no fabricated single-currency sum).
+ */
 const totalSumFormatted = computed(() => {
-  const totalKopecks = visibleColumns.value.reduce((s, col) => s + col.sum_amount, 0)
-  const rub = totalKopecks / 100
-  const sign = '₽'
-  if (rub >= 1_000_000) return `${(rub / 1_000_000).toFixed(1)} млн ${sign}`
-  if (rub >= 1_000) return `${Math.round(rub / 1_000)} тыс. ${sign}`
-  return `${Math.round(rub)} ${sign}`
+  const cols = visibleColumns.value
+  if (cols.length === 0) return formatCurrency(0, 'RUB')
+
+  // Native per-currency totals across all visible columns.
+  const byCurrency: Record<string, number> = {}
+  for (const col of cols) {
+    for (const [cur, kop] of Object.entries(col.amounts_by_currency ?? {})) {
+      byCurrency[cur] = (byCurrency[cur] ?? 0) + kop
+    }
+  }
+  const currencies = Object.keys(byCurrency)
+  const baseCurrency = cols[0]?.base_currency ?? 'RUB'
+
+  // Single currency: format that bucket directly (exact, no FX involved).
+  if (currencies.length <= 1) {
+    const cur = currencies[0] ?? baseCurrency
+    return formatCurrency(byCurrency[cur] ?? 0, cur)
+  }
+
+  // Multiple currencies. If every column converted cleanly, the base-currency
+  // sum_amount total is exact → show it in the base currency with a "≈" prefix.
+  const allRatesAvailable = cols.every((col) => col.fx_rate_available !== false)
+  if (allRatesAvailable) {
+    const baseKopecks = cols.reduce((s, col) => s + col.sum_amount, 0)
+    return `≈ ${formatCurrency(baseKopecks, baseCurrency)}`
+  }
+
+  // A rate is missing → do not fabricate a single sum; list native subtotals.
+  return currencies
+    .map((cur) => formatCurrency(byCurrency[cur] ?? 0, cur))
+    .join(' + ')
 })
 
 // ── List composable ─────────────────────────────────────────────────────────────

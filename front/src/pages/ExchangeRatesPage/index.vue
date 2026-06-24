@@ -7,6 +7,7 @@
     >
       <template #actions>
         <Button
+          v-if="canWrite"
           icon="pi pi-refresh"
           :label="t('catalog.exchangeRates.page.refresh')"
           severity="secondary"
@@ -24,8 +25,9 @@
     </PageHeader>
 
     <div class="rates-page__content">
-      <!-- Age warning -->
+      <!-- Age warning — only shown to admin/director who can actually trigger refresh -->
       <ExchangeRateAgeWarning
+        v-if="canWrite"
         :is-stale="isStale"
         :refreshing="refreshing"
         @refresh="refreshRates"
