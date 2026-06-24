@@ -163,6 +163,35 @@ class ChangeOwnerActionTest extends TestCase
         $this->assertSame(ActionStatus::Skipped, $result->status);
     }
 
+    public function test_skips_and_keeps_cursor_when_picked_user_is_already_owner(): void
+    {
+        // No-op guard: the cursor points at the deal's current owner. The action
+        // must NOT re-stamp department_id nor advance the cursor — it skips so a
+        // re-fire never churns ownership state for nothing.
+        $dept = Department::factory()->create();
+        $owner = User::factory()->role(Role::Manager)->create(['department_id' => $dept->id]);
+        $otherDept = Department::factory()->create();
+
+        $automation = PipelineAutomation::factory()->create(['round_robin_cursor' => 0]);
+        // Deal already owned by the only pool member; its department deliberately
+        // differs so a re-stamp would be observable.
+        $deal = Deal::factory()->create([
+            'owner_user_id' => $owner->id,
+            'department_id' => $otherDept->id,
+        ]);
+
+        $result = $this->action->execute($automation, $deal, [
+            'rule' => 'round_robin',
+            'pool' => [$owner->id],
+        ]);
+
+        $this->assertSame(ActionStatus::Skipped, $result->status);
+        // Department untouched (no re-stamp), cursor unchanged (no churn).
+        $this->assertSame($otherDept->id, (int) $deal->fresh()->department_id);
+        $this->assertSame($owner->id, (int) $deal->fresh()->owner_user_id);
+        $this->assertSame(0, $automation->fresh()->round_robin_cursor);
+    }
+
     public function test_dry_run_does_not_advance_cursor(): void
     {
         $a = User::factory()->role(Role::Manager)->create();

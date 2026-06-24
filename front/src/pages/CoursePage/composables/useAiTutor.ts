@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import { onboardingStudentApi } from '@/api/onboardingStudent'
 import type { AiTutorMessage } from '@/api/onboardingStudent'
 import { useConfirm } from 'primevue/useconfirm'
@@ -13,6 +14,7 @@ export interface ChatMessage {
 
 export function useAiTutor(lessonId: number) {
   const toast = useToast()
+  const { t } = useI18n()
   const confirm = useConfirm()
 
   const messages = ref<ChatMessage[]>([])
@@ -68,12 +70,12 @@ export function useAiTutor(lessonId: number) {
       if (status === 503) {
         toast.add({
           severity: 'warn',
-          summary: 'AI временно недоступен',
-          detail: 'Попробуйте через несколько секунд.',
+          summary: t('onboarding.coursePage.aiTutor.unavailable'),
+          detail: t('onboarding.coursePage.aiTutor.unavailableDetail'),
           life: 5000,
         })
       } else {
-        toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось получить ответ', life: 4000 })
+        toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
       }
     } finally {
       isSending.value = false
@@ -82,11 +84,11 @@ export function useAiTutor(lessonId: number) {
 
   function requestClearHistory() {
     confirm.require({
-      message: 'Очистить историю чата?',
-      header: 'Подтверждение',
+      message: t('onboarding.coursePage.aiTutor.clearConfirm'),
+      header: t('common.confirm'),
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Очистить',
-      rejectLabel: 'Отмена',
+      acceptLabel: t('onboarding.coursePage.aiTutor.clearHistory'),
+      rejectLabel: t('common.cancel'),
       accept: () => void clearHistory(),
     })
   }
@@ -96,9 +98,9 @@ export function useAiTutor(lessonId: number) {
       await onboardingStudentApi.clearAiTutorHistory(lessonId)
       messages.value = []
       sessionId.value = undefined
-      toast.add({ severity: 'info', summary: 'История очищена', life: 3000 })
+      toast.add({ severity: 'info', summary: t('onboarding.coursePage.aiTutor.historyCleared'), life: 3000 })
     } catch {
-      toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось очистить историю', life: 3000 })
+      toast.add({ severity: 'error', summary: t('common.error'), life: 3000 })
     }
   }
 

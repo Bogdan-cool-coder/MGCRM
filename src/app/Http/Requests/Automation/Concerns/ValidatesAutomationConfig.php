@@ -222,8 +222,30 @@ trait ValidatesAutomationConfig
                 'action_config.field',
                 "set_field cannot write the protected field '{$field}' — use a dedicated action.",
             );
+
+            return;
+        }
+
+        // Array-cast columns (e.g. tags) must receive an array value: writing a
+        // bare scalar into deals.tags (cast: array) would corrupt the column. The
+        // FE already shapes tags as a chips list; this guards hand-crafted / API
+        // configs from pushing a scalar into a list column.
+        if (in_array($field, self::SET_FIELD_ARRAY_COLUMNS, true)
+            && array_key_exists('value', $config)
+            && ! is_array($config['value'])
+        ) {
+            $validator->errors()->add(
+                'action_config.value',
+                "set_field '{$field}' expects a list of values.",
+            );
         }
     }
+
+    /**
+     * Whitelisted deal columns that are array-cast — their set_field value must be
+     * an array, not a scalar. Mirrors the Deal model casts() (tags => array).
+     */
+    private const array SET_FIELD_ARRAY_COLUMNS = ['tags'];
 
     /**
      * @param  array<string, mixed>  $config

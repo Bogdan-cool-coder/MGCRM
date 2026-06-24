@@ -132,6 +132,40 @@ class ActivityCompleteTest extends TestCase
         $this->assertNotNull($fresh->completed_at);
     }
 
+    public function test_status_rejected_closes_the_task(): void
+    {
+        // A rejected task is a terminal outcome — it must leave the open-work
+        // surfaces (my-board / my-open badge / presets all key on is_closed=false).
+        $manager = $this->manager();
+        $activity = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['status' => ActivityStatus::InProgress->value, 'is_closed' => false]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}/status", ['status' => 'rejected'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('data.is_closed', true);
+
+        $this->assertTrue($activity->fresh()->is_closed);
+    }
+
+    public function test_status_reopen_from_rejected_clears_is_closed(): void
+    {
+        // Re-opening a rejected task (rejected → in_progress) must clear is_closed
+        // so it returns to the open-work surfaces.
+        $manager = $this->manager();
+        $activity = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['status' => ActivityStatus::Rejected->value, 'is_closed' => true]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}/status", ['status' => 'in_progress'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'in_progress')
+            ->assertJsonPath('data.is_closed', false);
+
+        $this->assertFalse($activity->fresh()->is_closed);
+    }
+
     public function test_inline_status_done_records_completion_log_on_target(): void
     {
         // MAJOR-3: the done-branch must also write the completion entity-log, like

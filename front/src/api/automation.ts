@@ -4,7 +4,6 @@
  * Endpoints (from routes/api.php):
  *   GET    /api/automations           → index (pipeline_id, stage_id, trigger_kind, is_active)
  *   POST   /api/automations           → store
- *   GET    /api/automations/{id}      → show
  *   PATCH  /api/automations/{id}      → update (incl. is_active toggle)
  *   DELETE /api/automations/{id}      → destroy
  *   POST   /api/automations/{id}/test    → dry-run (trigger preview)
@@ -47,14 +46,6 @@ export const automationsApi = {
     const response = await apiClient.get<{ data: AutomationDto[] }>('/api/automations', {
       params: buildParams(params as Record<string, unknown>),
     })
-    return response.data.data
-  },
-
-  /**
-   * GET /api/automations/{id}
-   */
-  async get(id: number): Promise<AutomationDto> {
-    const response = await apiClient.get<{ data: AutomationDto }>(`/api/automations/${id}`)
     return response.data.data
   },
 

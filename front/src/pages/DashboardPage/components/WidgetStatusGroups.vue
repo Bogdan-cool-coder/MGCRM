@@ -34,7 +34,7 @@
             <div class="kpi-card__amount">
               {{ group.key === 'lost' && group.amount_kopecks === 0
                 ? '—'
-                : formatMoney(group.amount_kopecks) }}
+                : formatMoney(group.amount_kopecks, locale, props.baseCurrency) }}
             </div>
             <div class="kpi-card__trend">
               <template v-if="trend(group).positive !== null">
@@ -61,10 +61,11 @@ import Tag from 'primevue/tag'
 import type { StatusGroup } from '@/entities/salesDashboard'
 import { formatMoney, formatTrendPct } from '@/utils/chartFormatters'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   groups: StatusGroup[]
+  baseCurrency: string
   loading: boolean
 }>()
 

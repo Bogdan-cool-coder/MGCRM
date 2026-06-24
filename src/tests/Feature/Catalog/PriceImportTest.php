@@ -163,4 +163,30 @@ class PriceImportTest extends TestCase
         $data = $response->json('data');
         $this->assertNotEmpty($data['errors']);
     }
+
+    // ---- template download ----
+
+    public function test_admin_can_download_import_template(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+
+        $response = $this->get('/api/catalog/price-import/template', ['Accept' => '*/*']);
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type') ?? '',
+        );
+        // The body must be non-empty (xlsx PK zip signature).
+        $this->assertNotEmpty($response->getContent());
+    }
+
+    public function test_manager_cannot_download_import_template(): void
+    {
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->get('/api/catalog/price-import/template', ['Accept' => 'application/json'])
+            ->assertForbidden();
+    }
 }

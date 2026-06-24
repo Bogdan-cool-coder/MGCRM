@@ -123,12 +123,18 @@ Route::middleware(['locale'])->post('/login', [AuthController::class, 'login']);
 | Form render/submit + generic channel webhook. These live OUTSIDE the
 | auth:sanctum group on purpose (anonymous traffic). The webhook additionally
 | verifies the X-Channel-Token header (hash_equals) in its controller.
+|
+| Two limiters per spec E5 (M-3): form meta/submit are keyed per-IP
+| (throttle:inbound); the webhook is keyed channel_id:ip
+| (throttle:inbound-webhook) so a noisy channel cannot drain a legitimate
+| form's per-IP budget behind a shared NAT.
 */
 Route::middleware('throttle:inbound')->group(function (): void {
     Route::get('forms/public/{slug}', [PublicFormController::class, 'meta'])->name('forms.public.meta');
     Route::post('forms/public/{slug}/submit', [PublicFormController::class, 'submit'])->name('forms.public.submit');
-    Route::post('inbox/webhook/{channel}', [InboxWebhookController::class, 'webhook'])->name('inbox.webhook');
 });
+Route::middleware('throttle:inbound-webhook')
+    ->post('inbox/webhook/{channel}', [InboxWebhookController::class, 'webhook'])->name('inbox.webhook');
 
 /*
 |--------------------------------------------------------------------------
@@ -163,6 +169,11 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // 2FA enrolment (requires a fully authenticated session).
     Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);
     Route::post('/2fa/verify-setup', [TwoFactorController::class, 'verifySetup']);
+    // 2FA management (full token only): disable + regenerate backup codes. Both
+    // re-confirm the caller (password or a current TOTP/backup code) inside
+    // ConfirmTwoFactorRequest before mutating the secret.
+    Route::post('/2fa/disable', [TwoFactorController::class, 'disable'])->name('2fa.disable');
+    Route::post('/2fa/regenerate-backup-codes', [TwoFactorController::class, 'regenerateBackupCodes'])->name('2fa.regenerate-backup-codes');
 
     // =========================================================================
     // Iam — Colleague directory (assign / responsible dropdowns)
@@ -376,6 +387,7 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
             ]);
 
         // Price Import
+        Route::get('price-import/template', [PriceImportController::class, 'template'])->name('price-import.template');
         Route::post('price-import', [PriceImportController::class, 'store'])->name('price-import.store');
         Route::post('price-import/preview', [PriceImportController::class, 'preview'])->name('price-import.preview');
     });

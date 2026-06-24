@@ -9,6 +9,7 @@ use App\Domain\Onboarding\Events\CourseAssigned;
 use App\Domain\Onboarding\Models\Course;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\LessonProgress;
+use App\Domain\Onboarding\Models\QuizAttempt;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -33,6 +34,9 @@ class AssignmentService
      * Idempotent: existing assignments are skipped (not updated).
      * Fires CourseAssigned for each new assignment.
      *
+     * Business rule (#7): when no explicit due_date is provided and the course
+     * has deadline_days set, default due_date = today + deadline_days.
+     *
      * @param  list<int>  $userIds
      * @return array{created: int, skipped: int, assignments: Collection<int, CourseAssignment>}
      */
@@ -48,6 +52,11 @@ class AssignmentService
             throw ValidationException::withMessages([
                 'course_id' => 'The course does not exist or is not published.',
             ])->status(422);
+        }
+
+        // #7 fix: apply course deadline_days as fallback when no explicit due_date
+        if ($dueDate === null && $course->deadline_days !== null && $course->deadline_days > 0) {
+            $dueDate = now()->addDays($course->deadline_days)->endOfDay();
         }
 
         $created = 0;
@@ -148,12 +157,19 @@ class AssignmentService
 
     /**
      * Physically delete an assignment.
-     * Guard: cannot delete if LessonProgress records exist → 409 (use archive instead).
+     * Guard: cannot delete if LessonProgress OR QuizAttempt records exist → 409 (use archive instead).
+     *
+     * #13 fix: quiz_attempts.assignment_id is ON DELETE SET NULL, so orphaned attempts
+     * would silently lose their assignment link if we only guarded lesson_progress.
      */
     public function delete(CourseAssignment $assignment): void
     {
         if (LessonProgress::where('assignment_id', $assignment->id)->exists()) {
             abort(409, 'Cannot delete assignment with existing progress. Use archive instead.');
+        }
+
+        if (QuizAttempt::where('assignment_id', $assignment->id)->exists()) {
+            abort(409, 'Cannot delete assignment with existing quiz attempts. Use archive instead.');
         }
 
         $assignment->delete();

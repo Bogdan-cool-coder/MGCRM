@@ -232,4 +232,32 @@ class ContactRelationTest extends TestCase
 
         $this->assertDatabaseHas('crm_contact_relations', ['id' => $relation->id]);
     }
+
+    // ---- withTrashed counterpart ----
+
+    public function test_list_relations_includes_soft_deleted_counterpart(): void
+    {
+        // Soft-deleted contact should still appear as counterpart (with deleted_at),
+        // not resolve to null and hide the relation from the list.
+        $director = User::factory()->create(['role' => Role::Director]);
+        $a = Contact::factory()->create(['owner_id' => $director->id]);
+        $b = Contact::factory()->create(['owner_id' => $director->id]);
+
+        ContactRelation::create([
+            'contact_id' => min($a->id, $b->id),
+            'related_contact_id' => max($a->id, $b->id),
+            'relation_type' => RelationType::Partner->value,
+            'created_by_id' => $director->id,
+        ]);
+
+        // Soft-delete the counterpart.
+        $b->delete();
+
+        Sanctum::actingAs($director, ['*']);
+
+        // The relation must still appear in A's list (counterpart just has deleted_at set).
+        $this->getJson("/api/contacts/{$a->id}/relations")
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
 }

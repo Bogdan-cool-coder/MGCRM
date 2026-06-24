@@ -141,15 +141,18 @@ class SalesDashboardService
                 continue;
             }
 
-            $grouped[$grp]['count'] += (int) $row->cnt;
             $converted = $this->safeConvert((int) $row->total_amount, $row->currency, $baseCurrency);
 
             if ($converted === null) {
+                // Rate unavailable: skip BOTH count and amount so the card's count
+                // and amount stay consistent (a deal whose money cannot be converted
+                // must not be half-counted). The warning flag signals the omission.
                 $multiCurrencyWarning = true;
 
                 continue;
             }
 
+            $grouped[$grp]['count'] += (int) $row->cnt;
             $grouped[$grp]['amount'] += $converted;
         }
 
@@ -396,15 +399,20 @@ class SalesDashboardService
     {
         $baseCurrency = config('crm.currencies.default', 'RUB');
 
+        // Group by users.id (the stable identity) — full_name is not UNIQUE, so
+        // grouping on the name would collapse homonymous managers and merge their
+        // revenue into one bar. Service accounts (e.g. the AMO import fallback)
+        // are excluded; the display name is carried alongside the id.
         $rows = $this->baseQuery($pipelineId, $scope, $user, $filters)
             ->join('users as u', 'deals.owner_user_id', '=', 'u.id')
-            ->selectRaw('u.full_name as manager_name, SUM(deals.amount) as total_amount, COUNT(deals.id) as deal_count, deals.currency')
-            ->groupBy('u.full_name', 'deals.currency')
+            ->where('u.is_service', false)
+            ->selectRaw('u.id as manager_id, u.full_name as manager_name, SUM(deals.amount) as total_amount, COUNT(deals.id) as deal_count, deals.currency')
+            ->groupBy('u.id', 'u.full_name', 'deals.currency')
             ->orderByRaw('SUM(deals.amount) DESC')
             ->limit(11)
             ->get();
 
-        return $this->buildTopNChartPayload($rows, 'manager_name', 10, $baseCurrency, $multiCurrencyWarning);
+        return $this->buildTopNChartPayload($rows, 'manager_name', 10, $baseCurrency, $multiCurrencyWarning, 'manager_id');
     }
 
     // -------------------------------------------------------------------------
@@ -610,6 +618,10 @@ class SalesDashboardService
         $query = Deal::query()
             ->join('pipeline_stages as dps', 'deals.stage_id', '=', 'dps.id')
             ->where('deals.pipeline_id', $pipelineId)
+            // Archived deals are hidden by default everywhere (DealService::applyFilters
+            // convention); without this they would leak into every aggregate and the
+            // previous-period trend.
+            ->whereNull('deals.archived_at')
             ->whereRaw($effectiveDate.' >= ?', [$filters->dateFrom])
             ->whereRaw($effectiveDate.' <= ?', [$filters->dateTo]);
 
@@ -660,6 +672,10 @@ class SalesDashboardService
      * Build chart-payload with optional «Другие» tail element.
      * Q5 pattern: rows already LIMIT 11; if count > limit → last element = «Другие».
      *
+     * When $keyField is given, rows are aggregated by that stable identity
+     * (e.g. users.id) instead of by the display name, so homonymous entities are
+     * not merged. The display name from $nameKey is preserved for the label.
+     *
      * @param  Collection<int, object>  $rows
      * @return array<string, mixed>
      */
@@ -669,12 +685,14 @@ class SalesDashboardService
         int $limit,
         string $baseCurrency,
         bool &$multiCurrencyWarning,
+        ?string $keyField = null,
     ): array {
-        /** @var array<string, int> $aggregated keyed by name */
+        /** @var array<string|int, array{name: string, amount: int}> $aggregated keyed by identity */
         $aggregated = [];
 
         foreach ($rows as $row) {
-            $name = $row->{$nameKey};
+            $name = (string) $row->{$nameKey};
+            $key = $keyField !== null ? $row->{$keyField} : $name;
             $rawAmount = (int) $row->total_amount;
             $currency = $row->currency ?? $baseCurrency;
 
@@ -686,25 +704,29 @@ class SalesDashboardService
                 continue;
             }
 
-            $aggregated[$name] = ($aggregated[$name] ?? 0) + $converted;
+            if (isset($aggregated[$key])) {
+                $aggregated[$key]['amount'] += $converted;
+            } else {
+                $aggregated[$key] = ['name' => $name, 'amount' => $converted];
+            }
         }
 
-        // Sort DESC.
-        arsort($aggregated);
+        // Sort DESC by amount.
+        uasort($aggregated, static fn (array $a, array $b): int => $b['amount'] <=> $a['amount']);
 
         $labels = [];
         $data = [];
         $count = 0;
         $othersSum = 0;
 
-        foreach ($aggregated as $name => $amount) {
+        foreach ($aggregated as $entry) {
             $count++;
 
             if ($count <= $limit) {
-                $labels[] = $name;
-                $data[] = $amount;
+                $labels[] = $entry['name'];
+                $data[] = $entry['amount'];
             } else {
-                $othersSum += $amount;
+                $othersSum += $entry['amount'];
             }
         }
 

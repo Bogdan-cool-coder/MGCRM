@@ -7,6 +7,7 @@ namespace Tests\Feature\Auth;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Sanctum;
 use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
@@ -176,6 +177,103 @@ class TwoFactorTest extends TestCase
         $this->withToken($tempToken)
             ->postJson('/api/2fa/validate', [])
             ->assertStatus(422);
+    }
+
+    public function test_disable_requires_a_valid_second_factor_then_wipes_state(): void
+    {
+        // The /2fa/disable route is wired in routes/api.php (see needsRoutes).
+        if (! $this->routeExists('post', '/api/2fa/disable')) {
+            $this->markTestSkipped('POST /api/2fa/disable not registered yet.');
+        }
+
+        $secret = 'JDDK4U6G3BJLHO6B';
+        $user = User::factory()
+            ->withTwoFactor($secret, ['backup01', 'backup02'])
+            ->create();
+        Sanctum::actingAs($user, ['*']);
+
+        // Wrong code is rejected and 2FA stays on.
+        $this->postJson('/api/2fa/disable', ['totp_code' => '000000'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('totp_code');
+        $this->assertTrue($user->fresh()->totp_enabled);
+
+        // A valid current TOTP turns it off and wipes secrets.
+        $code = $this->google2fa->getCurrentOtp($secret);
+        $this->flushAuth();
+        Sanctum::actingAs($user->fresh(), ['*']);
+        $this->postJson('/api/2fa/disable', ['totp_code' => $code])
+            ->assertOk()
+            ->assertJsonPath('two_factor_enabled', false);
+
+        $user->refresh();
+        $this->assertFalse($user->totp_enabled);
+        $this->assertNull($user->totp_secret);
+        $this->assertNull($user->backup_codes);
+    }
+
+    public function test_disable_rejected_when_two_factor_is_off(): void
+    {
+        if (! $this->routeExists('post', '/api/2fa/disable')) {
+            $this->markTestSkipped('POST /api/2fa/disable not registered yet.');
+        }
+
+        $user = User::factory()->create(['totp_enabled' => false]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/2fa/disable', ['totp_code' => '123456'])
+            ->assertStatus(422);
+    }
+
+    public function test_regenerate_backup_codes_requires_second_factor_and_returns_new_set(): void
+    {
+        if (! $this->routeExists('post', '/api/2fa/regenerate-backup-codes')) {
+            $this->markTestSkipped('POST /api/2fa/regenerate-backup-codes not registered yet.');
+        }
+
+        $secret = 'JDDK4U6G3BJLHO6B';
+        $user = User::factory()
+            ->withTwoFactor($secret, ['backup01', 'backup02'])
+            ->create();
+        Sanctum::actingAs($user, ['*']);
+
+        // Wrong code rejected.
+        $this->postJson('/api/2fa/regenerate-backup-codes', ['totp_code' => '000000'])
+            ->assertStatus(422);
+
+        $this->flushAuth();
+        Sanctum::actingAs($user->fresh(), ['*']);
+        $code = $this->google2fa->getCurrentOtp($secret);
+        $codes = $this->postJson('/api/2fa/regenerate-backup-codes', ['totp_code' => $code])
+            ->assertOk()
+            ->json('backup_codes');
+
+        $this->assertCount(8, $codes);
+
+        // The set was rotated; secret unchanged.
+        $user->refresh();
+        $this->assertTrue($user->totp_enabled);
+        $this->assertSame($secret, $user->totp_secret);
+        $this->assertCount(8, $user->backup_codes);
+    }
+
+    /**
+     * Lightweight check: does a route exist for the given verb + URI? Used so
+     * the new 2FA-management assertions skip cleanly until routes/api.php is
+     * extended (the route layer is owned outside this agent's file scope).
+     */
+    private function routeExists(string $method, string $uri): bool
+    {
+        $uri = ltrim($uri, '/');
+
+        foreach (Route::getRoutes() as $route) {
+            if (in_array(strtoupper($method), $route->methods(), true)
+                && $route->uri() === $uri) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

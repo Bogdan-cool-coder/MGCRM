@@ -9,6 +9,7 @@ use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Models\EntityLog;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * EntityLogService — single entry point for the polymorphic entity-action log.
@@ -80,5 +81,26 @@ class EntityLogService
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($perPage);
+    }
+
+    /**
+     * Newest-first field-change rows (action = data_changed) for a single subject.
+     * Cross-domain read used by the CRM/Sales feed services to surface the
+     * "Изменения" timeline track from the action log (no separate audit trail for
+     * CRM entities). Capped to keep the in-memory feed merge bounded.
+     *
+     * @return Collection<int, EntityLog>
+     */
+    public function fieldChangesForSubject(LogSubjectType $subjectType, int $subjectId, int $limit = 500): Collection
+    {
+        return EntityLog::query()
+            ->where('subject_type', $subjectType->value)
+            ->where('subject_id', $subjectId)
+            ->where('action', LogAction::DataChanged->value)
+            ->with('actor:id,full_name')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
     }
 }

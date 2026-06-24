@@ -70,16 +70,32 @@ class CompanyRequisiteService
     // ---- Mutations ----
 
     /**
-     * Create a new requisite set (not automatically set as current).
+     * Create a new requisite set.
+     *
+     * If this is the first (and only) requisite for the company it is
+     * automatically promoted to current and the denorm mirror is applied.
+     * Otherwise `is_current` starts as false; the caller must call
+     * setCurrent() separately to switch.
      *
      * @param  array<string, mixed>  $data
      */
     public function create(Company $company, array $data): CompanyRequisite
     {
         $data['company_id'] = $company->id;
-        $data['is_current'] = false; // explicit: caller must call setCurrent separately
 
-        return CompanyRequisite::create($data);
+        $isFirst = ! CompanyRequisite::query()
+            ->where('company_id', $company->id)
+            ->exists();
+
+        $data['is_current'] = $isFirst;
+
+        $requisite = CompanyRequisite::create($data);
+
+        if ($isFirst) {
+            $this->mirrorToCompany($requisite);
+        }
+
+        return $requisite;
     }
 
     /**

@@ -9,8 +9,8 @@ use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Services\ActivityService;
-use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Catalog\Services\ExchangeRateService;
+use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\CompanyRequisiteService;
@@ -215,7 +215,40 @@ class DealService
 
         $this->stampLastContact($deals->getCollection());
 
+        // Kanban "load more" requests a single column (stage_id set) and expects the
+        // SAME card health signals the board's first page carries (next_task,
+        // primary_product). Stamp them — batched, two queries — only on this path so
+        // the plain list view does not pay for signals its table never renders
+        // (audit m10: dozen+ cards beyond the first page were stamped null).
+        if (isset($filters['stage_id'])) {
+            $this->stampBoardSignals($deals->getCollection());
+        }
+
         return $deals;
+    }
+
+    /**
+     * Stamp the board-card health signals (next_task, primary_product) onto a page
+     * of deals — the same batched enrichment board() applies, reused for the kanban
+     * column "load more". Two queries total (no N+1), mirroring stampLastContact.
+     * days_in_stage is already always present on DealResource (pure compute).
+     *
+     * @param  Collection<int, Deal>  $deals
+     */
+    private function stampBoardSignals(Collection $deals): void
+    {
+        if ($deals->isEmpty()) {
+            return;
+        }
+
+        $dealIds = $deals->map(static fn (Deal $deal): int => (int) $deal->id)->all();
+        $nextTasks = $this->activityService->nextTasksForDeals($dealIds);
+        $primaryProducts = $this->primaryProductsForDeals($dealIds);
+
+        foreach ($deals as $deal) {
+            $deal->setAttribute('next_task_payload', $nextTasks[(int) $deal->id] ?? null);
+            $deal->setAttribute('primary_product_payload', $primaryProducts[(int) $deal->id] ?? null);
+        }
     }
 
     /**
@@ -835,31 +868,38 @@ class DealService
                 : null;
         }
 
-        $deal = Deal::create($data);
+        // Atomic creation: the deal row, its creation history row and the action
+        // log row commit together (mirrors createInbound). A failure between the
+        // inserts no longer leaves a deal without its history/log (CONVENTION).
+        $deal = DB::transaction(function () use ($data, $firstStage, $creator): Deal {
+            $deal = Deal::create($data);
 
-        // Record creation event in stage history (from_stage_id = null → creation).
-        DealStageHistory::create([
-            'deal_id' => $deal->id,
-            'from_stage_id' => null,
-            'to_stage_id' => $firstStage->id,
-            'user_id' => $creator->id,
-            'created_at' => $deal->created_at,
-        ]);
+            // Record creation event in stage history (from_stage_id = null → creation).
+            DealStageHistory::create([
+                'deal_id' => $deal->id,
+                'from_stage_id' => null,
+                'to_stage_id' => $firstStage->id,
+                'user_id' => $creator->id,
+                'created_at' => $deal->created_at,
+            ]);
 
-        // Polymorphic action log: deal created (who/when + entry point).
-        $this->entityLog->record(
-            LogSubjectType::Deal,
-            (int) $deal->id,
-            $creator,
-            LogAction::Created,
-            [
-                'title' => $deal->title,
-                'pipeline_id' => (int) $deal->pipeline_id,
-                'stage_id' => (int) $firstStage->id,
-                'company_id' => $deal->company_id !== null ? (int) $deal->company_id : null,
-            ],
-            $deal->created_at,
-        );
+            // Polymorphic action log: deal created (who/when + entry point).
+            $this->entityLog->record(
+                LogSubjectType::Deal,
+                (int) $deal->id,
+                $creator,
+                LogAction::Created,
+                [
+                    'title' => $deal->title,
+                    'pipeline_id' => (int) $deal->pipeline_id,
+                    'stage_id' => (int) $firstStage->id,
+                    'company_id' => $deal->company_id !== null ? (int) $deal->company_id : null,
+                ],
+                $deal->created_at,
+            );
+
+            return $deal;
+        });
 
         // Creating a deal is engagement on its company (contacts are linked later).
         $this->touchEngagement($deal);
@@ -1052,19 +1092,26 @@ class DealService
 
         $diff = $this->buildAuditDiff($original, $data, $extraChanged, $extraBefore, $deal->extra_fields ?? []);
 
-        $this->auditService->record($deal, $actor, $diff);
+        // The audit + action-log writes run AFTER the update committed. A failure
+        // here must not 500 a successful edit (DATA-INCONSISTENCY): the deal is
+        // already saved, so swallow + report rather than rolling the caller back.
+        try {
+            $this->auditService->record($deal, $actor, $diff);
 
-        // Polymorphic action log: a key-field data change (only when something
-        // actually changed — empty diffs never pollute the log). The per-field
-        // detail lives in meta.changes so the card can render the diff.
-        if ($diff !== []) {
-            $this->entityLog->record(
-                LogSubjectType::Deal,
-                (int) $deal->id,
-                $actor,
-                LogAction::DataChanged,
-                ['changes' => $this->summariseDiff($diff)],
-            );
+            // Polymorphic action log: a key-field data change (only when something
+            // actually changed — empty diffs never pollute the log). The per-field
+            // detail lives in meta.changes so the card can render the diff.
+            if ($diff !== []) {
+                $this->entityLog->record(
+                    LogSubjectType::Deal,
+                    (int) $deal->id,
+                    $actor,
+                    LogAction::DataChanged,
+                    ['changes' => $this->summariseDiff($diff)],
+                );
+            }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         // A meaningful deal edit is engagement on its company + contacts.
@@ -1520,7 +1567,16 @@ class DealService
 
         return match ($scope) {
             VisibilityScope::All => $query,
-            VisibilityScope::Department => $query->whereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
+            // Mirror DealPolicy::inDepartmentSubtree exactly: own deals are always
+            // visible under department scope (even when their department_id is null
+            // or outside the subtree), in addition to the department subtree. Without
+            // the owner-OR branch the list/board would hide a manager's own deal that
+            // GET-by-id (the policy) still returns 200 for — a latent list/detail drift.
+            VisibilityScope::Department => $query->where(
+                fn (Builder $q) => $q
+                    ->where('owner_user_id', $user->id)
+                    ->orWhereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
+            ),
             VisibilityScope::Own => $query->where('owner_user_id', $user->id),
         };
     }

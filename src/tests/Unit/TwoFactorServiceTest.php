@@ -86,4 +86,52 @@ class TwoFactorServiceTest extends TestCase
         // Same code cannot be reused.
         $this->assertFalse($this->service->consumeBackupCode($user->fresh(), $plain[0]));
     }
+
+    public function test_confirm_second_factor_accepts_totp_and_backup_and_rejects_garbage(): void
+    {
+        $user = User::factory()->create();
+        $secret = $this->service->generateSecret();
+        $plain = $this->service->enable($user, $secret);
+
+        $this->assertTrue($this->service->confirmSecondFactor(
+            $user->fresh(),
+            $this->google2fa->getCurrentOtp($secret),
+            null,
+        ));
+        $this->assertTrue($this->service->confirmSecondFactor($user->fresh(), null, $plain[0]));
+        $this->assertFalse($this->service->confirmSecondFactor($user->fresh(), '000000', 'nope-code'));
+        $this->assertFalse($this->service->confirmSecondFactor($user->fresh(), null, null));
+
+        // confirmSecondFactor must NOT spend a backup code (verification only).
+        $this->assertCount(8, $user->fresh()->backup_codes);
+    }
+
+    public function test_disable_wipes_all_two_factor_state(): void
+    {
+        $user = User::factory()->create();
+        $this->service->enable($user, $this->service->generateSecret());
+
+        $this->service->disable($user);
+
+        $user->refresh();
+        $this->assertFalse($user->totp_enabled);
+        $this->assertNull($user->totp_secret);
+        $this->assertNull($user->backup_codes);
+        $this->assertNull($user->totp_enabled_at);
+    }
+
+    public function test_regenerate_backup_codes_replaces_the_set(): void
+    {
+        $user = User::factory()->create();
+        $old = $this->service->enable($user, $this->service->generateSecret());
+
+        $new = $this->service->regenerateBackupCodes($user);
+
+        $this->assertCount(8, $new);
+        $this->assertNotEquals($old, $new);
+
+        // Old codes no longer match; new ones do.
+        $this->assertFalse($this->service->confirmSecondFactor($user->fresh(), null, $old[0]));
+        $this->assertTrue($this->service->confirmSecondFactor($user->fresh(), null, $new[0]));
+    }
 }

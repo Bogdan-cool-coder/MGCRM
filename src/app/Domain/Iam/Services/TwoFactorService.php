@@ -115,6 +115,69 @@ class TwoFactorService
     }
 
     /**
+     * Confirm an identity proof (TOTP code OR an unused backup code) before a
+     * sensitive 2FA mutation (disable / regenerate). This is the anti-hijack
+     * guard: a stolen full session cannot turn 2FA off or mint new backup codes
+     * without the second factor. A consumed backup code is NOT spent here — the
+     * caller decides what to do next (disable wipes everything; regenerate
+     * replaces the whole set), so spending it would be redundant.
+     */
+    public function confirmSecondFactor(User $user, ?string $totpCode, ?string $backupCode): bool
+    {
+        if ($totpCode !== null && $totpCode !== '' && $user->totp_secret !== null
+            && $this->verifyCode($user->totp_secret, $totpCode)) {
+            return true;
+        }
+
+        if ($backupCode !== null && $backupCode !== '') {
+            foreach ($user->backup_codes ?? [] as $hash) {
+                if (Hash::check($backupCode, $hash)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Disable 2FA and wipe all related secrets/codes. The next setup starts
+     * from a clean slate. The caller MUST have confirmed the second factor first
+     * (see confirmSecondFactor).
+     */
+    public function disable(User $user): void
+    {
+        DB::transaction(function () use ($user): void {
+            $user->forceFill([
+                'totp_secret' => null,
+                'totp_enabled' => false,
+                'totp_enabled_at' => null,
+                'backup_codes' => null,
+            ])->save();
+        });
+    }
+
+    /**
+     * Replace the full backup-code set with a freshly generated one, invalidating
+     * the old codes. Returns the new plaintext codes (shown to the user once).
+     * The caller MUST have confirmed the second factor first.
+     *
+     * @return list<string>
+     */
+    public function regenerateBackupCodes(User $user): array
+    {
+        $plain = $this->generateBackupCodes();
+
+        DB::transaction(function () use ($user, $plain): void {
+            $user->forceFill([
+                'backup_codes' => $this->hashBackupCodes($plain),
+            ])->save();
+        });
+
+        return $plain;
+    }
+
+    /**
      * Consume a single-use backup code: returns true and removes the matching
      * hash if found, false otherwise. Persisted within the call.
      */

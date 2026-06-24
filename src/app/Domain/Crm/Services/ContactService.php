@@ -7,6 +7,7 @@ namespace App\Domain\Crm\Services;
 use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
+use App\Domain\Crm\Enums\CustomFieldScope;
 use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
@@ -19,6 +20,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 /**
  * ContactService — all Contact business logic lives here.
@@ -47,6 +50,7 @@ class ContactService
         private readonly AcquisitionChannelHistoryService $channelHistory,
         private readonly VisibilityResolver $visibility,
         private readonly EntityLogService $entityLog,
+        private readonly CustomFieldService $customFields,
     ) {}
 
     /**
@@ -225,13 +229,22 @@ class ContactService
         // Track creator so author-filter and author-sort work correctly.
         $data['created_by_id'] ??= $creator->id;
 
+        // Separate extra_fields so we can validate/coerce via CustomFieldService.
+        $extraFields = $data['extra_fields'] ?? null;
+        unset($data['extra_fields']);
+
         // Keep phone_normalized in sync with phone (indexed column for dedup scan).
         if (array_key_exists('phone', $data)) {
             $data['phone_normalized'] = $this->normalizePhone($data['phone']);
         }
 
-        $contact = DB::transaction(function () use ($data, $creator): Contact {
+        $contact = DB::transaction(function () use ($data, $extraFields, $creator): Contact {
             $contact = Contact::create($data);
+
+            // Apply validated/coerced custom-field values atomically.
+            if (is_array($extraFields) && $extraFields !== []) {
+                $this->applyExtraFields($contact, $extraFields);
+            }
 
             // Polymorphic action log: contact created (created_at kept in lockstep
             // with the row so the timeline orders correctly). Atomic with insert.
@@ -258,6 +271,12 @@ class ContactService
         // Capture old acquisition_channel_id before update for history tracking.
         $oldChannelId = $contact->acquisition_channel_id;
 
+        // Separate extra_fields before the main update so we validate/coerce them
+        // via CustomFieldService (same pattern as CompanyService::update).
+        // false = not present in payload (don't touch), null/array = clear or write.
+        $extraFields = array_key_exists('extra_fields', $data) ? $data['extra_fields'] : false;
+        unset($data['extra_fields']);
+
         // Keep phone_normalized in sync with phone (indexed column for dedup scan).
         if (array_key_exists('phone', $data)) {
             $data['phone_normalized'] = $this->normalizePhone($data['phone']);
@@ -267,9 +286,19 @@ class ContactService
         // current DB values), so the entity-log diff is computed before save.
         $original = array_intersect_key($contact->getOriginal(), array_flip(self::LOGGED_FIELDS));
 
-        DB::transaction(function () use ($contact, $data, $actor, $oldChannelId, $original): void {
+        DB::transaction(function () use ($contact, $data, $extraFields, $actor, $oldChannelId, $original): void {
             $contact->update($data);
             $contact->refresh();
+
+            // Apply validated/coerced custom-field values after main update.
+            if ($extraFields !== false) {
+                if (is_array($extraFields) && $extraFields !== []) {
+                    $this->applyExtraFields($contact, $extraFields);
+                } elseif ($extraFields === null || $extraFields === []) {
+                    // Explicit null/empty → clear extra_fields
+                    $contact->update(['extra_fields' => []]);
+                }
+            }
 
             // Record acquisition channel history if the field was included and changed.
             if (array_key_exists('acquisition_channel_id', $data)) {
@@ -349,6 +378,40 @@ class ContactService
         DB::transaction(function () use ($contact): void {
             $contact->delete();
         });
+    }
+
+    /**
+     * Apply custom-field values to a Contact with validation/coercion.
+     *
+     * Mirrors CompanyService::applyExtraFields:
+     * - If active CustomFieldDef records exist for the contact scope, each key in
+     *   $values is validated against the defined codes via CustomFieldService::writeFields
+     *   (throws InvalidArgumentException for unknown/inactive keys → 422).
+     * - If no defs are defined yet (table empty / all inactive), values are stored
+     *   as-is for backward compatibility.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    private function applyExtraFields(Contact $contact, array $values): void
+    {
+        $activeDefs = $this->customFields->defsForScope(CustomFieldScope::Contact);
+
+        if ($activeDefs->isEmpty()) {
+            // No defs defined yet: store free-form (backward compat).
+            $contact->update(['extra_fields' => $values]);
+
+            return;
+        }
+
+        // Defs exist: delegate to CustomFieldService which validates each key and coerces values.
+        // Convert InvalidArgumentException (unknown/inactive field code) to a 422 response.
+        try {
+            $this->customFields->writeFields($contact, $values);
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'extra_fields' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

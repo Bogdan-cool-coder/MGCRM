@@ -64,6 +64,74 @@ class DealNextTaskTest extends TestCase
             ->assertJsonPath('data.next_task', null);
     }
 
+    /**
+     * Kanban "load more" (audit m10): a single-column list request (stage_id set)
+     * stamps the same board health signals as the board's first page — next_task,
+     * primary_product, days_in_stage — so cards beyond the first board page keep
+     * their rotting clock + task/product chips.
+     */
+    public function test_list_with_stage_id_stamps_board_signals(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $owner = User::factory()->create(['role' => Role::Director]);
+        $stage = $this->stage($pipeline, 'new');
+
+        $deal = Deal::factory()->forOwner($owner)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'stage_changed_at' => now()->subDays(4),
+        ]);
+        $task = Activity::factory()->call()->forDeal($deal)
+            ->create(['due_at' => now()->addDay(), 'title' => 'Перезвонить ЛПР']);
+
+        $product = \App\Domain\Catalog\Models\Product::factory()->create(['name' => 'Enterprise Plus']);
+        \App\Domain\Sales\Models\DealProduct::factory()->create([
+            'deal_id' => $deal->id,
+            'product_id' => $product->id,
+            'sort_order' => 1,
+        ]);
+
+        Sanctum::actingAs($owner, ['*']);
+
+        $this->getJson("/api/deals?view=list&pipeline_id={$pipeline->id}&stage_id={$stage->id}")
+            ->assertOk()
+            ->assertJsonPath('data.0.days_in_stage', 4)
+            ->assertJsonPath('data.0.next_task.id', $task->id)
+            ->assertJsonPath('data.0.next_task.is_overdue', false)
+            ->assertJsonPath('data.0.primary_product.id', $product->id)
+            ->assertJsonPath('data.0.primary_product.name', 'Enterprise Plus');
+    }
+
+    /**
+     * The plain list view (no stage_id) must NOT pay for the board signals it never
+     * renders: primary_product is omitted and next_task stays null (audit m10 keeps
+     * the normal list payload unchanged).
+     */
+    public function test_plain_list_omits_primary_product(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $owner = User::factory()->create(['role' => Role::Director]);
+
+        $deal = Deal::factory()->forOwner($owner)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stage($pipeline, 'new')->id,
+        ]);
+        $product = \App\Domain\Catalog\Models\Product::factory()->create(['name' => 'Enterprise Plus']);
+        \App\Domain\Sales\Models\DealProduct::factory()->create([
+            'deal_id' => $deal->id,
+            'product_id' => $product->id,
+            'sort_order' => 1,
+        ]);
+
+        Sanctum::actingAs($owner, ['*']);
+
+        $response = $this->getJson("/api/deals?view=list&pipeline_id={$pipeline->id}")
+            ->assertOk()
+            ->assertJsonPath('data.0.next_task', null);
+
+        $this->assertArrayNotHasKey('primary_product', $response->json('data.0'));
+    }
+
     public function test_stage_editor_persists_and_exposes_rotting_thresholds(): void
     {
         $admin = User::factory()->create(['role' => Role::Admin]);

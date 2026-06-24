@@ -170,7 +170,9 @@ export const routes: RouteRecordRaw[] = [
     path: '/admin/message-templates',
     name: 'MessageTemplates',
     component: () => import('@/pages/MessageTemplatesPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'lawyer'], title: 'nav.messageTemplates' },
+    // BE MessageTemplatePolicy.viewAny allows admin/lawyer/director/manager for reading;
+    // CRUD actions are separately guarded by the policy (admin/lawyer only).
+    meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director', 'manager'], title: 'nav.messageTemplates' },
   },
 
   // ─── Approvals ───────────────────────────────────────────────────────────

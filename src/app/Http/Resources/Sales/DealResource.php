@@ -121,8 +121,22 @@ class DealResource extends JsonResource
             'days_in_stage' => $this->daysInStage(),
 
             // Soonest open task on this deal — the header health chip (DealPage
-            // 2.0 v2 §8 v2-B1). Same shape as the Kanban card's next_task.
-            'next_task' => $this->whenLoaded('nextTask', fn () => $this->nextTaskPayload()),
+            // 2.0 v2 §8 v2-B1). Same shape as the Kanban card's next_task. Read from
+            // the eager-loaded nextTask relation (single-deal card) OR the batched
+            // next_task_payload attribute stamped by DealService::list() on the
+            // kanban "load more" path (audit m10) — whichever is present.
+            'next_task' => $this->resolveNextTask(),
+
+            // Board-card primary product {id, name} | null — stamped (possibly null)
+            // by DealService on the kanban "load more" list path (audit m10).
+            // offsetExists is true only when the attribute was actually stamped, so
+            // the key is OMITTED on every other render (plain list/show) and present
+            // (value or null) only for load-more cards — the FE then shows it or the
+            // "no product" placeholder.
+            $this->mergeWhen(
+                $this->resource->offsetExists('primary_product_payload'),
+                fn (): array => ['primary_product' => $this->resource->getAttribute('primary_product_payload')],
+            ),
 
             'products' => DealProductResource::collection($this->whenLoaded('products')),
             // Sum of per-line discounts (kopecks). Computed from the already
@@ -279,6 +293,26 @@ class DealResource extends JsonResource
             'name' => $stage->name,
             'color' => $stage->color,
         ];
+    }
+
+    /**
+     * Resolve the next_task chip payload from whichever source is present: the
+     * eager-loaded nextTask relation (single-deal card) or the batched
+     * next_task_payload attribute stamped by DealService::list() on the kanban
+     * "load more" path (audit m10). Returns null when neither is set so the list
+     * view (which loads neither) keeps emitting `next_task: null` unchanged.
+     *
+     * @return array{id: int, type: string, title: string, due_at: ?string, is_overdue: bool}|null
+     */
+    private function resolveNextTask(): ?array
+    {
+        if ($this->resource->relationLoaded('nextTask')) {
+            return $this->nextTaskPayload();
+        }
+
+        $stamped = $this->resource->getAttribute('next_task_payload');
+
+        return is_array($stamped) ? $stamped : null;
     }
 
     /**

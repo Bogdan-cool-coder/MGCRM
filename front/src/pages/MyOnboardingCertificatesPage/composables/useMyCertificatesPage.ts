@@ -3,11 +3,13 @@ import { useMutation } from '@/composables/async/useMutation'
 import { onboardingStudentApi } from '@/api/onboardingStudent'
 import type { Certificate } from '@/entities/certificate'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 
 export function useMyCertificatesPage() {
   const certificates = useAsyncResource<Certificate[]>([])
   const downloadMutation = useMutation<void>()
   const toast = useToast()
+  const { t } = useI18n()
 
   async function load(): Promise<void> {
     await certificates.run(() => onboardingStudentApi.getMyCertificates())
@@ -26,7 +28,7 @@ export function useMyCertificatesPage() {
       },
       {
         onError: () => {
-          toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось скачать сертификат', life: 4000 })
+          toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
         },
       },
     )

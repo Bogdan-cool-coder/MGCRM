@@ -33,12 +33,14 @@ use App\Domain\Catalog\Policies\ProductPolicy;
 use App\Domain\Contracts\Events\ApprovalDecisionMade;
 use App\Domain\Contracts\Events\DocumentSubmittedForApproval;
 use App\Domain\Contracts\Events\TerminationAgreementSigned;
+use App\Domain\Contracts\Models\Approval;
 use App\Domain\Contracts\Models\ApprovalRoute;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\LicensorEntity;
 use App\Domain\Contracts\Models\MessageTemplate;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Models\TemplateVariable;
+use App\Domain\Contracts\Policies\ApprovalPolicy;
 use App\Domain\Contracts\Policies\ApprovalRoutePolicy;
 use App\Domain\Contracts\Policies\DocumentPolicy;
 use App\Domain\Contracts\Policies\LicensorPolicy;
@@ -212,6 +214,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Contracts Policies (S2.6)
         Gate::policy(ApprovalRoute::class, ApprovalRoutePolicy::class);
+        // Explicit registration for parity with every other domain policy
+        // (auto-discovery already resolves it; this keeps the section exhaustive).
+        Gate::policy(Approval::class, ApprovalPolicy::class);
 
         // Contracts Policies (S2.7)
         Gate::policy(MessageTemplate::class, MessageTemplatePolicy::class);
@@ -269,20 +274,25 @@ class AppServiceProvider extends ServiceProvider
             strict: true,
         ));
 
-        // Named limiter for the public inbound endpoints (form submit + webhook).
-        // Throttled BEFORE any DB work so a token leak / spam burst can't create a
-        // flood of Company/Deal records (S1.9 E5). The webhook is keyed by
-        // channel_id:ip — one noisy channel cannot exhaust another channel's budget,
-        // and a shared NAT IP cannot lock out a legitimate webhook. The {channel} is
-        // bound ONLY on the webhook route, so form meta/submit fall back to per-IP.
-        RateLimiter::for('inbound', static function (Request $request): Limit {
-            $perMinute = (int) config('inbox.rate_limit_per_minute', 30);
+        // Named limiters for the public inbound endpoints. Throttled BEFORE any DB
+        // work so a token leak / spam burst can't create a flood of Company/Deal
+        // records (S1.9 E5). Split per spec E5 into two distinct keys (M-3):
+        //   - `inbound`         → form meta/submit, keyed per-IP.
+        //   - `inbound-webhook` → generic webhook, keyed channel_id:ip so one noisy
+        //     channel cannot exhaust another channel's budget and a shared NAT IP
+        //     cannot lock out a legitimate webhook. The {channel} is route-bound on
+        //     the webhook route; should it be missing it falls back to per-IP.
+        $inboundPerMinute = static fn (): int => (int) config('inbox.rate_limit_per_minute', 30);
+
+        RateLimiter::for('inbound', static fn (Request $request): Limit => Limit::perMinute($inboundPerMinute())->by((string) $request->ip()));
+
+        RateLimiter::for('inbound-webhook', static function (Request $request) use ($inboundPerMinute): Limit {
             $channel = $request->route('channel');
             $key = $channel instanceof Channel
                 ? $channel->id.':'.$request->ip()
                 : (string) $request->ip();
 
-            return Limit::perMinute($perMinute)->by($key);
+            return Limit::perMinute($inboundPerMinute())->by($key);
         });
 
         // Login / 2FA brute-force lockout (IAM-2) is NOT a named route-level

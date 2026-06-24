@@ -36,7 +36,7 @@
                 class="forecast-kpi__amount"
                 :class="item.amountClass"
               >
-                {{ formatMoney(item.kopecks) }}
+                {{ formatMoney(item.kopecks, locale, props.baseCurrency) }}
               </div>
             </div>
           </div>
@@ -54,10 +54,11 @@ import Skeleton from 'primevue/skeleton'
 import type { ForecastData } from '@/entities/salesDashboard'
 import { formatMoney } from '@/utils/chartFormatters'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   forecast: ForecastData | null
+  baseCurrency: string
   loading: boolean
 }>()
 

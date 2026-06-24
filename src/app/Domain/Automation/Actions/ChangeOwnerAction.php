@@ -69,11 +69,24 @@ final class ChangeOwnerAction implements ActionHandler
             $cursor = (int) ($locked->round_robin_cursor ?? 0);
 
             $picked = $pool[$cursor % count($pool)];
-            $nextCursor = ($cursor + 1) % count($pool);
+            $old = $target->owner_user_id;
 
+            // No-op guard: the cursor already points at the current owner. Skip the
+            // write entirely — re-stamping department_id and advancing the cursor on
+            // a no-op churns state for nothing (and would shuffle the rotation for a
+            // single-user pool). The cursor is left in place so the next *real*
+            // re-assignment still lands on this position.
+            if ((int) $old === (int) $picked) {
+                return ActionResult::skipped("Owner is already user {$picked}; nothing to reassign.", [
+                    'rule' => 'round_robin',
+                    'owner' => $picked,
+                    'pool_size' => count($pool),
+                ]);
+            }
+
+            $nextCursor = ($cursor + 1) % count($pool);
             $locked->update(['round_robin_cursor' => $nextCursor]);
 
-            $old = $target->owner_user_id;
             $departmentId = User::query()->whereKey($picked)->value('department_id');
             $target->update([
                 'owner_user_id' => $picked,

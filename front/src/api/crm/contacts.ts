@@ -5,7 +5,6 @@ import type {
   ContactCompanyLink,
   ContactRelation,
   PaginatedResponse,
-  ChannelHistoryEntry,
 } from '@/entities/crm'
 
 export interface ContactListParams {
@@ -191,18 +190,6 @@ export const contactsApi = {
     return res.data.data
   },
 
-  async updateChannel(
-    contactId: number,
-    channelId: number,
-    payload: { channel_type?: string; value?: string },
-  ): Promise<ContactChannel> {
-    const res = await apiClient.patch<{ data: ContactChannel }>(
-      `/api/contacts/${contactId}/channels/${channelId}`,
-      payload,
-    )
-    return res.data.data
-  },
-
   async deleteChannel(contactId: number, channelId: number): Promise<void> {
     await apiClient.delete(`/api/contacts/${contactId}/channels/${channelId}`)
   },
@@ -279,12 +266,4 @@ export const contactsApi = {
     return res.data
   },
 
-  // ── Channel History (N1) ──────────────────────────────────────────────────
-
-  async getChannelHistory(contactId: number): Promise<ChannelHistoryEntry[]> {
-    const res = await apiClient.get<{ data: ChannelHistoryEntry[] }>(
-      `/api/contacts/${contactId}/channel-history`,
-    )
-    return res.data.data ?? []
-  },
 }

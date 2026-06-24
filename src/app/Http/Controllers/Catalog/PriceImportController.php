@@ -5,16 +5,35 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Catalog;
 
 use App\Domain\Catalog\Services\PriceImportService;
+use App\Domain\Catalog\Services\PriceTemplateService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\ImportPriceRequest;
 use App\Http\Resources\Catalog\ImportResultResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class PriceImportController extends Controller
 {
     public function __construct(
         private readonly PriceImportService $service,
+        private readonly PriceTemplateService $templateService,
     ) {}
+
+    /**
+     * GET /api/catalog/price-import/template
+     * Download a blank .xlsx template for the price import flow (admin only).
+     */
+    public function template(): Response
+    {
+        Gate::authorize('admin-write');
+
+        return response($this->templateService->buildBytes(), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="price_import_template.xlsx"',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
 
     /**
      * POST /api/catalog/price-import

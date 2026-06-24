@@ -11,9 +11,12 @@ use Illuminate\Foundation\Http\FormRequest;
  * Authorization is handled by the controller (viewAny + per-row user scoping in
  * NotificationService); the request only bounds and shapes the id list.
  *
- * `exists` is intentionally NOT user-scoped here: ownership is enforced in the
- * service WHERE so foreign ids are silently ignored (no 403, no leak) rather
- * than failing validation — that keeps the endpoint idempotent and non-probing.
+ * Existence is intentionally NOT validated here. Ownership + existence are both
+ * enforced by the service WHERE (forUser + whereIn), so any id that is foreign,
+ * non-existent or already-read is silently skipped — no 403, no 422, no leak.
+ * Dropping the `exists` rule closes a minor ID oracle: previously a *foreign but
+ * real* id passed validation while a *non-existent* id 422'd, letting a caller
+ * probe which ids exist globally. Now both behave identically (non-probing).
  */
 class ReadBatchNotificationsRequest extends FormRequest
 {
@@ -35,7 +38,10 @@ class ReadBatchNotificationsRequest extends FormRequest
     {
         return [
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_IDS],
-            'ids.*' => ['integer', 'distinct', 'exists:notifications,id'],
+            // No `exists` rule: ownership/existence is enforced by the service's
+            // user-scoped WHERE, so non-existent and foreign ids are silently
+            // skipped rather than 422'd — see the class docblock (ID-oracle fix).
+            'ids.*' => ['integer', 'distinct'],
         ];
     }
 

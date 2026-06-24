@@ -85,6 +85,23 @@ export interface TwoFactorVerifySetupResponse {
 }
 
 /**
+ * POST /api/2fa/disable and /api/2fa/regenerate-backup-codes
+ * Exactly one of {totp_code, backup_code} confirms the second factor.
+ */
+export interface TwoFactorConfirmRequest {
+  totp_code?: string
+  backup_code?: string
+}
+
+export interface TwoFactorDisableResponse {
+  two_factor_enabled: boolean
+}
+
+export interface TwoFactorRegenerateResponse {
+  backup_codes: string[]
+}
+
+/**
  * GET /api/me
  */
 export interface MeResponse {

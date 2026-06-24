@@ -53,6 +53,23 @@
           <Skeleton height="60px" />
         </div>
 
+        <!-- Error state -->
+        <div
+          v-else-if="!loading && hasError && groups.length === 0"
+          class="entity-activities__empty"
+        >
+          <i class="pi pi-exclamation-triangle entity-activities__empty-icon" />
+          <p class="entity-activities__empty-title">{{ t('errors.server_error') }}</p>
+          <Button
+            icon="pi pi-refresh"
+            :label="t('common.retry')"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="feed.load()"
+          />
+        </div>
+
         <!-- Empty state -->
         <div v-else-if="!loading && filteredGroups.length === 0" class="entity-activities__empty">
           <i class="pi pi-clock entity-activities__empty-icon" />
@@ -245,6 +262,7 @@ const feed = useEntityFeed(
 
 const groups = computed(() => feed.groups.value)
 const loading = computed(() => feed.loading.value)
+const hasError = computed(() => feed.error.value !== null)
 
 // Client-side filter: events = activity only, changes = fieldChanges only
 const filteredGroups = computed(() => {

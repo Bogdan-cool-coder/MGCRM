@@ -483,7 +483,16 @@ onMounted(async () => {
     }
   }
 
-  await load()
+  // The deal load rethrows on 403/404 (foreign or missing deal). The resource
+  // already records error.value (the "Сделка не найдена / Нет доступа" screen
+  // renders from it), so swallow the rejection here — otherwise it surfaces as an
+  // "Unhandled error during execution of mounted hook" and trips error monitoring
+  // with false positives (audit N2).
+  try {
+    await load()
+  } catch {
+    // error state handled by the resource → error template
+  }
 
   if (deal.value) {
     const pipelineId = deal.value.pipeline.id

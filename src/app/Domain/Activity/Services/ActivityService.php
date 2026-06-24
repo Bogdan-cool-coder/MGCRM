@@ -211,6 +211,23 @@ class ActivityService
 
         $previousResponsible = $activity->responsible_id;
 
+        // Reassignment re-syncs the denormalised department_id from the new
+        // responsible (E10): the scope key follows the task's owner so a
+        // department-scoped manager keeps seeing a task handed to their report —
+        // and stops seeing one handed away. Mirrors DealService::update() owner
+        // re-stamp. Skipped when the caller sets department_id explicitly in the
+        // same request, and when a clear (null) responsible leaves no owner to
+        // derive a department from.
+        if (! array_key_exists('department_id', $data)
+            && array_key_exists('responsible_id', $data)
+            && $data['responsible_id'] !== null
+            && (int) $data['responsible_id'] !== (int) $previousResponsible) {
+            $newResponsible = User::find($data['responsible_id']);
+            if ($newResponsible?->department_id !== null) {
+                $data['department_id'] = (int) $newResponsible->department_id;
+            }
+        }
+
         $activity->update($data);
         $activity->refresh();
 
@@ -319,7 +336,7 @@ class ActivityService
     {
         $this->assertCompletable($activity);
 
-        $todayStart = now()->startOfDay();
+        $todayStart = $this->operationalTodayStart();
 
         $due = match ($preset) {
             'tomorrow' => $todayStart->copy()->addDay(),
@@ -370,6 +387,18 @@ class ActivityService
         }
 
         $payload = ['status' => $to->value];
+
+        // Rejected is a terminal work outcome: it must drop the task out of the
+        // open-work surfaces (my-board buckets, the my-open badge, the preset
+        // lists — all of which key on is_closed = false). Without closing it, a
+        // rejected task lingers as "open" and the inline dropdown's optimistic
+        // is_closed = true gets reverted by the server response. Re-opening the
+        // task (rejected → new/in_progress) clears the flag again.
+        if ($to === ActivityStatus::Rejected) {
+            $payload['is_closed'] = true;
+        } elseif ($from === ActivityStatus::Rejected) {
+            $payload['is_closed'] = false;
+        }
 
         if (array_key_exists('result_text', $extra)) {
             $payload['result_text'] = $extra['result_text'];
@@ -849,12 +878,18 @@ class ActivityService
      */
     public function myBoard(User $user, ?string $search = null): array
     {
-        $now = now();
-        $todayStart = $now->copy()->startOfDay();
+        // Day/week boundaries are anchored to the OPERATIONAL timezone (Дубай-окно)
+        // so a task due early in the Dubai morning lands in "today", not the
+        // previous UTC day (MINOR-8). due_at is a real UTC instant, so every
+        // boundary is normalised to UTC for accurate absolute-instant comparison.
+        // The calendar-week edges are computed on the Dubai-zoned day start first
+        // (so Mon–Sun aligns to the Dubai calendar) and only then converted to UTC.
+        $todayStart = $this->operationalTodayStart();
         $tomorrowStart = $todayStart->copy()->addDay();
         $dayAfterTomorrow = $tomorrowStart->copy()->addDay();
-        // Calendar week boundaries (Mon–Sun) in the app timezone.
-        $thisWeekEnd = $todayStart->copy()->endOfWeek()->addSecond(); // exclusive next-week start
+
+        $localDayStart = $this->operationalLocalDayStart();
+        $thisWeekEnd = $localDayStart->copy()->endOfWeek()->addSecond()->utc(); // exclusive next-week start
         $nextWeekEnd = $thisWeekEnd->copy()->addWeek();
 
         $activities = Activity::query()
@@ -1095,14 +1130,16 @@ class ActivityService
 
     /**
      * Apply a named preset predicate to a query (E4). Shared by presets() and
-     * countsByPreset(). Day/week boundaries use the app timezone consistently.
+     * countsByPreset(). Day/week boundaries use the OPERATIONAL timezone (Дубай-
+     * окно) consistently so "today"/"this week" mean the same calendar day for the
+     * team regardless of the UTC server clock.
      *
      * @param  Builder<Activity>  $query
      */
     private function applyPreset(Builder $query, string $preset, User $user): void
     {
         $now = now();
-        $todayStart = $now->copy()->startOfDay();
+        $todayStart = $this->operationalTodayStart();
         $todayEnd = $todayStart->copy()->addDay();
         $weekEnd = $todayStart->copy()->addWeek();
 
@@ -1140,6 +1177,40 @@ class ActivityService
                 ->where($mineClause),
             default => null,
         };
+    }
+
+    /**
+     * The true instant of "today" 00:00 in the OPERATIONAL timezone, normalised to
+     * UTC. The team works in Asia/Dubai (UTC+4): computing the day boundary from
+     * the UTC server clock would mis-bucket early-Dubai-morning tasks into the
+     * previous day (MINOR-8). The operational timezone is the single source already
+     * used by the SalesPulse day-window math (config('salespulse.timezone')), so
+     * the two never drift.
+     *
+     * Returned in UTC so it stays an accurate ABSOLUTE instant for both uses:
+     *  - board/preset comparisons against the UTC-stored due_at column compare
+     *    real instants (no 4h skew);
+     *  - when persisted via the Eloquent datetime cast (reschedule) the cast keeps
+     *    the UTC wall-clock, so the saved due_at is exactly Dubai-midnight.
+     */
+    private function operationalTodayStart(): Carbon
+    {
+        return $this->operationalLocalDayStart()->utc();
+    }
+
+    /**
+     * "Today" 00:00 as a Carbon STILL in the operational timezone (Дубай-окно).
+     * Used where calendar-aware arithmetic must align to the local week (e.g.
+     * endOfWeek for the Mon–Sun board buckets); convert to UTC before comparing
+     * against the UTC-stored due_at column. operationalTodayStart() is the
+     * UTC-normalised form of this.
+     */
+    private function operationalLocalDayStart(): Carbon
+    {
+        /** @var string $tz */
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+
+        return Carbon::now($tz)->startOfDay();
     }
 
     /**

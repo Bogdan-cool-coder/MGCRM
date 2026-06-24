@@ -24,7 +24,7 @@
       size="small"
       row-hover
     >
-      <Column header="Тип" style="width: 160px">
+      <Column :header="t('documents.attachments.columns.type')" style="width: 160px">
         <template #body="{ data }">
           <Tag
             :severity="kindSeverity(data.kind)"
@@ -32,10 +32,10 @@
           />
         </template>
       </Column>
-      <Column header="Файл">
+      <Column :header="t('documents.attachments.columns.file')">
         <template #body="{ data }">{{ data.original_name }}</template>
       </Column>
-      <Column header="Загружен" style="width: 160px">
+      <Column :header="t('documents.attachments.columns.uploader')" style="width: 160px">
         <template #body="{ data }">
           {{ data.uploaded_by_name ?? '—' }}
           <span class="text-secondary ms-1">{{ formatDate(data.created_at) }}</span>

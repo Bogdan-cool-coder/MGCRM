@@ -248,48 +248,55 @@ class CompanyService
         // the current DB values), so the entity-log diff is computed before save.
         $original = array_intersect_key($company->getOriginal(), array_flip(self::LOGGED_FIELDS));
 
-        $company->update($data);
-        $company->refresh();
+        // Atomic: the company mutation, channel-history and action-log rows commit
+        // together (mirrors ContactService::update). Previously these wrote outside
+        // any transaction, so a failure between the mutation and the log left the
+        // company saved but the timeline/history without a row, and 500'd a
+        // successful edit (DATA-INCONSISTENCY).
+        return DB::transaction(function () use ($company, $data, $extraFields, $oldChannelId, $original, $actor): Company {
+            $company->update($data);
+            $company->refresh();
 
-        // Apply validated/coerced custom-field values after main update.
-        if ($extraFields !== false) {
-            if (is_array($extraFields) && $extraFields !== []) {
-                $this->applyExtraFields($company, $extraFields);
-            } elseif ($extraFields === null || $extraFields === []) {
-                // Explicit null/empty → clear extra_fields
-                $company->update(['extra_fields' => []]);
+            // Apply validated/coerced custom-field values after main update.
+            if ($extraFields !== false) {
+                if (is_array($extraFields) && $extraFields !== []) {
+                    $this->applyExtraFields($company, $extraFields);
+                } elseif ($extraFields === null || $extraFields === []) {
+                    // Explicit null/empty → clear extra_fields
+                    $company->update(['extra_fields' => []]);
+                }
             }
-        }
 
-        // Record acquisition channel history if it changed.
-        if (array_key_exists('acquisition_channel_id', $data)) {
-            $newChannelId = $data['acquisition_channel_id'] !== null
-                ? (int) $data['acquisition_channel_id']
-                : null;
+            // Record acquisition channel history if it changed.
+            if (array_key_exists('acquisition_channel_id', $data)) {
+                $newChannelId = $data['acquisition_channel_id'] !== null
+                    ? (int) $data['acquisition_channel_id']
+                    : null;
 
-            $this->channelHistory->record(
-                'company',
-                (int) $company->id,
-                $oldChannelId,
-                $newChannelId,
-                $actor?->id,
-            );
-        }
+                $this->channelHistory->record(
+                    'company',
+                    (int) $company->id,
+                    $oldChannelId,
+                    $newChannelId,
+                    $actor?->id,
+                );
+            }
 
-        $changes = $this->diffLoggedFields($original, $data);
+            $changes = $this->diffLoggedFields($original, $data);
 
-        // Polymorphic action log: a key-field data change (skip empty diffs).
-        if ($changes !== []) {
-            $this->entityLog->record(
-                LogSubjectType::Company,
-                (int) $company->id,
-                $actor,
-                LogAction::DataChanged,
-                ['changes' => $changes],
-            );
-        }
+            // Polymorphic action log: a key-field data change (skip empty diffs).
+            if ($changes !== []) {
+                $this->entityLog->record(
+                    LogSubjectType::Company,
+                    (int) $company->id,
+                    $actor,
+                    LogAction::DataChanged,
+                    ['changes' => $changes],
+                );
+            }
 
-        return $company;
+            return $company;
+        });
     }
 
     public function delete(Company $company): void
@@ -486,6 +493,9 @@ class CompanyService
      * it returns to `active`; otherwise it returns to `prospect`.
      * Clears disconnect metadata. Writes a status-log entry.
      *
+     * Idempotent: if the company is already in the target state the method
+     * returns without writing a duplicate log entry or touching disconnect metadata.
+     *
      * @param  int|null  $userId  Actor who triggered the reconnect.
      */
     public function reconnect(Company $company, ?int $userId): void
@@ -495,6 +505,11 @@ class CompanyService
         $newStatus = $company->unique_client_since !== null
             ? ClientStatus::Active
             : ClientStatus::Prospect;
+
+        // Idempotency guard: nothing to do if company is already in target state.
+        if ($oldStatus === $newStatus) {
+            return;
+        }
 
         DB::transaction(function () use ($company, $oldStatus, $newStatus, $userId): void {
             $company->update([

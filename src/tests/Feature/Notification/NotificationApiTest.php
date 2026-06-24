@@ -195,14 +195,27 @@ class NotificationApiTest extends TestCase
 
     public function test_cannot_mark_another_users_notification_read(): void
     {
+        // Owner-scoped route binding: a foreign id resolves to null → 404 (not
+        // 403). This collapses "foreign-but-real" and "non-existent" into one
+        // response so a caller cannot probe which notification ids exist.
         $this->actingUser();
         $other = User::factory()->create();
         $notification = Notification::factory()->for($other)->create();
 
         $this->postJson("/api/notifications/{$notification->id}/read")
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertNull($notification->fresh()->read_at);
+    }
+
+    public function test_marking_a_nonexistent_notification_returns_the_same_404(): void
+    {
+        // The non-enumeration guarantee: an id that does not exist returns the
+        // exact same 404 as a foreign id (test above) — no observable split.
+        $this->actingUser();
+
+        $this->postJson('/api/notifications/999999/read')
+            ->assertNotFound();
     }
 
     public function test_mark_all_read(): void
@@ -352,13 +365,18 @@ class NotificationApiTest extends TestCase
             ->assertJsonValidationErrors('ids.0');
     }
 
-    public function test_read_batch_rejects_unknown_ids(): void
+    public function test_read_batch_silently_skips_unknown_ids(): void
     {
+        // Unknown ids are no longer 422'd (ID-oracle fix): the service WHERE
+        // simply matches nothing, so the request succeeds with marked=0. This
+        // makes non-existent and foreign-existing ids behave identically — a
+        // caller can no longer probe which notification ids exist globally.
         $this->actingUser();
 
         $this->postJson('/api/notifications/read-batch', ['ids' => [999999]])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('ids.0');
+            ->assertOk()
+            ->assertJsonPath('marked', 0)
+            ->assertJsonPath('unread_count', 0);
     }
 
     public function test_read_batch_rejects_batches_over_the_cap(): void

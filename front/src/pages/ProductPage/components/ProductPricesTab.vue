@@ -73,16 +73,28 @@
         v-for="currency in CURRENCY_WHITELIST"
         :key="currency"
         :header="currency"
-        style="min-width: 130px"
+        style="min-width: 150px"
       >
         <template #body="{ data }">
-          <PriceCellEdit
-            :value-kopecks="getCellPrice(data, currency)"
-            :currency="currency"
-            :saving="saving"
-            :disabled="!canWrite"
-            @save="(v) => $emit('save-price', data.planId, currency, v)"
-          />
+          <div class="prices-tab__price-cell-wrap">
+            <PriceCellEdit
+              :value-kopecks="getCellPrice(data, currency)"
+              :currency="currency"
+              :saving="saving"
+              :disabled="!canWrite"
+              @save="(v) => $emit('save-price', data.planId, currency, v)"
+            />
+            <Button
+              v-if="canWrite && getCellPriceId(data, currency) !== null"
+              icon="pi pi-times"
+              size="small"
+              text
+              severity="danger"
+              class="prices-tab__price-delete"
+              :title="t('catalog.product.page.prices.deleteHint')"
+              @click="onDeletePrice(data, currency)"
+            />
+          </div>
         </template>
       </Column>
     </DataTable>
@@ -197,6 +209,7 @@ const emit = defineEmits<{
   'edit-plan': [plan: ProductPlanDto]
   'delete-plan': [plan: ProductPlanDto]
   'save-price': [planId: number | null, currency: string, valueInUnits: number]
+  'delete-price': [priceId: number, planId: number | null, currency: string]
 }>()
 
 function onEditPlan(planId: number) {
@@ -207,6 +220,17 @@ function onEditPlan(planId: number) {
 function onDeletePlan(planId: number) {
   const plan = getPlanById(planId)
   if (plan) emit('delete-plan', plan)
+}
+
+function getCellPriceId(row: PriceRow, currency: string): number | null {
+  const cell = row.priceMap[currency]
+  return cell?.id ?? null
+}
+
+function onDeletePrice(row: PriceRow, currency: string) {
+  const id = getCellPriceId(row, currency)
+  if (id === null) return
+  emit('delete-price', id, row.planId, currency)
 }
 </script>
 
@@ -256,5 +280,22 @@ function onDeletePlan(planId: number) {
     gap: $space-1;
     margin-left: auto;
   }
+
+  &__price-cell-wrap {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+  }
+
+  &__price-delete {
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity var(--app-transition-fast);
+  }
+}
+
+// Show delete button on row hover.
+:deep(.p-datatable-tbody > tr:hover) .prices-tab__price-delete {
+  opacity: 1;
 }
 </style>

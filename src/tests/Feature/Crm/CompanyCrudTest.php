@@ -109,6 +109,18 @@ class CompanyCrudTest extends TestCase
             ->assertJsonPath('data.name', 'Updated Name');
     }
 
+    public function test_foreign_manager_cannot_update_company(): void
+    {
+        $owner = User::factory()->create(['role' => Role::Manager]);
+        $other = User::factory()->create(['role' => Role::Manager]);
+        $company = Company::factory()->create(['owner_user_id' => $owner->id]);
+        Sanctum::actingAs($other, ['*']);
+
+        // in-controller authorize now enforces this explicitly (CONVENTION fix)
+        $this->patchJson("/api/companies/{$company->id}", ['name' => 'Hijacked'])
+            ->assertForbidden();
+    }
+
     // ---- destroy ----
 
     public function test_owner_can_delete_own_company(): void

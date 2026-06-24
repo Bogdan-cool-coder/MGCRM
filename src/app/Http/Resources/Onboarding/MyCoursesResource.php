@@ -12,10 +12,25 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /** @mixin CourseAssignment */
 class MyCoursesResource extends JsonResource
 {
+    /**
+     * Pre-computed progress map: assignment_id → progress_pct (0-100).
+     * When set (batch mode), avoids N+1 per-row ProgressService queries.
+     *
+     * @var array<int, int>|null
+     */
+    public static ?array $progressMap = null;
+
     public function toArray(Request $request): array
     {
-        /** @var ProgressService $progressService */
-        $progressService = app(ProgressService::class);
+        // #12 fix: use pre-computed map when available (batch mode, set by controller).
+        // Fall back to per-row query for single-resource usage (e.g. tests).
+        if (static::$progressMap !== null) {
+            $progressPct = static::$progressMap[$this->id] ?? 0;
+        } else {
+            /** @var ProgressService $progressService */
+            $progressService = app(ProgressService::class);
+            $progressPct = $progressService->calcProgress($this->resource);
+        }
 
         $course = $this->whenLoaded('course');
 
@@ -24,7 +39,7 @@ class MyCoursesResource extends JsonResource
             'status' => $this->status?->value,
             'due_date' => $this->due_date?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
-            'progress_pct' => $progressService->calcProgress($this->resource),
+            'progress_pct' => $progressPct,
             'course' => $this->when($course !== null, static function () use ($course): array {
                 return [
                     'id' => $course->id,

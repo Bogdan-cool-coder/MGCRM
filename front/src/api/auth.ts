@@ -7,6 +7,9 @@ import type {
   TwoFactorSetupResponse,
   TwoFactorVerifySetupRequest,
   TwoFactorVerifySetupResponse,
+  TwoFactorConfirmRequest,
+  TwoFactorDisableResponse,
+  TwoFactorRegenerateResponse,
   MeResponse,
 } from '@/api/types/auth'
 
@@ -58,6 +61,28 @@ export const authApi = {
   async verifySetup(data: TwoFactorVerifySetupRequest): Promise<TwoFactorVerifySetupResponse> {
     const response = await apiClient.post<TwoFactorVerifySetupResponse>(
       '/api/2fa/verify-setup',
+      data,
+    )
+    return response.data
+  },
+
+  /**
+   * POST /api/2fa/disable — выключить 2FA (требует TOTP или backup-код)
+   */
+  async disableTwoFactor(data: TwoFactorConfirmRequest): Promise<TwoFactorDisableResponse> {
+    const response = await apiClient.post<TwoFactorDisableResponse>('/api/2fa/disable', data)
+    return response.data
+  },
+
+  /**
+   * POST /api/2fa/regenerate-backup-codes — перевыпустить backup-коды
+   * (требует TOTP или один из ещё валидных backup-кодов)
+   */
+  async regenerateBackupCodes(
+    data: TwoFactorConfirmRequest,
+  ): Promise<TwoFactorRegenerateResponse> {
+    const response = await apiClient.post<TwoFactorRegenerateResponse>(
+      '/api/2fa/regenerate-backup-codes',
       data,
     )
     return response.data

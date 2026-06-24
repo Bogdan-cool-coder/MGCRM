@@ -1,10 +1,12 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import { onboardingStudentApi } from '@/api/onboardingStudent'
 import type { Quiz, QuizAttempt, QuizAttemptResult } from '@/entities/quiz'
 
 export function useQuizAttempt(lessonId: number, onPassed?: () => void) {
   const toast = useToast()
+  const { t } = useI18n()
 
   const quiz = ref<Quiz | null>(null)
   const attempt = ref<QuizAttempt | null>(null)
@@ -50,8 +52,8 @@ export function useQuizAttempt(lessonId: number, onPassed?: () => void) {
     stopTimer()
     toast.add({
       severity: 'warn',
-      summary: 'Время вышло',
-      detail: 'Ответы отправляются...',
+      summary: t('onboarding.coursePage.quiz.timer'),
+      detail: t('onboarding.coursePage.quiz.submit'),
       life: 2500,
     })
     setTimeout(() => {
@@ -100,7 +102,7 @@ export function useQuizAttempt(lessonId: number, onPassed?: () => void) {
         onPassed?.()
       }
     } catch {
-      toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось отправить ответы', life: 4000 })
+      toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
     } finally {
       isSubmitting.value = false
     }

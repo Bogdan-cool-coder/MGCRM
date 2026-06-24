@@ -153,4 +153,33 @@ class MyTaskBoardTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['data' => ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']]);
     }
+
+    public function test_my_board_day_buckets_use_operational_timezone(): void
+    {
+        // MINOR-8: at 21:00 UTC it is already 01:00 of the NEXT day in Asia/Dubai,
+        // so the Dubai "today" is the 16th while the UTC clock still reads the 15th.
+        // A task due 10:00 Dubai on the 16th (= 06:00 UTC) must land in "today" for
+        // the Dubai team. With a UTC-anchored boundary it would (wrongly) fall into
+        // "tomorrow" — this test fails on the old UTC math and passes on the new
+        // operational-timezone math.
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-03-15 21:00:00', 'UTC')); // 01:00 Dubai, 16th
+
+        $manager = $this->manager();
+
+        // due_at stored as a real UTC instant (as the SPA sends via toISOString):
+        // 06:00 UTC on the 16th = 10:00 Dubai on the 16th = the Dubai "today".
+        $dueToday = \Carbon\Carbon::parse('2026-03-16 06:00:00', 'UTC');
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['due_at' => $dueToday]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities/my-board')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.today')
+            ->assertJsonCount(0, 'data.tomorrow')
+            ->assertJsonCount(0, 'data.overdue');
+
+        \Carbon\Carbon::setTestNow();
+    }
 }

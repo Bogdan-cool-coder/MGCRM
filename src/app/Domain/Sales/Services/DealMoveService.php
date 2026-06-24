@@ -54,8 +54,12 @@ class DealMoveService
         // (automation on_enter_stage, M7) observe the persisted stage. Stays null
         // on a no-op / rolled-back move, so no event is emitted in those cases.
         $fromStageId = null;
+        // The from-stage name is captured inside the transaction (where $locked
+        // still references the source stage) so the post-commit log row needs no
+        // extra PipelineStage SELECT just to label the transition (trivial PERF).
+        $fromStageName = null;
 
-        $result = DB::transaction(function () use ($deal, $toStageId, $userId, $lostReason, $lostReasonId, &$fromStageId): Deal {
+        $result = DB::transaction(function () use ($deal, $toStageId, $userId, $lostReason, $lostReasonId, &$fromStageId, &$fromStageName): Deal {
             // 1. Row-lock the deal (anti double-drag race).
             $locked = Deal::query()->lockForUpdate()->findOrFail($deal->id);
 
@@ -100,7 +104,16 @@ class DealMoveService
 
             // 6. Apply the transition. Record the source stage in the outer
             //    variable so the post-commit dispatch knows the move happened.
+            //    Capture the source-stage NAME now (before the id is overwritten)
+            //    so the post-commit log row labels the transition without an
+            //    extra SELECT.
             $fromStageId = (int) $locked->stage_id;
+            // Prefer the name off the caller's already-loaded stage relation
+            // (same stage the locked row is leaving); fall back to a single
+            // lookup only if it was not eager-loaded.
+            $fromStageName = ($deal->relationLoaded('stage') && (int) ($deal->stage?->id ?? 0) === $fromStageId)
+                ? $deal->stage?->name
+                : PipelineStage::query()->whereKey($fromStageId)->value('name');
             $locked->stage_id = $toStage->id;
             $locked->stage_changed_at = now();
 
@@ -159,19 +172,28 @@ class DealMoveService
             $this->engagement->touchForDeal($result->engagementTargets());
 
             // Polymorphic action log: stage moved from→to (ids + names so the
-            // card renders the transition without an extra lookup).
-            $this->entityLog->record(
-                LogSubjectType::Deal,
-                (int) $result->id,
-                User::find($userId),
-                LogAction::StageChanged,
-                [
-                    'from_stage_id' => $fromStageId,
-                    'to_stage_id' => (int) $result->stage_id,
-                    'from_stage_name' => PipelineStage::query()->whereKey($fromStageId)->value('name'),
-                    'to_stage_name' => $result->stage?->name,
-                ],
-            );
+            // card renders the transition without an extra lookup). The from-stage
+            // name was captured in-transaction; the actor is resolved once.
+            //
+            // This runs AFTER the move committed, so a failure here must not 500 a
+            // successful stage change — swallow + report instead of bubbling
+            // (DATA-INCONSISTENCY: a missing log row beats a phantom 500).
+            try {
+                $this->entityLog->record(
+                    LogSubjectType::Deal,
+                    (int) $result->id,
+                    User::find($userId),
+                    LogAction::StageChanged,
+                    [
+                        'from_stage_id' => $fromStageId,
+                        'to_stage_id' => (int) $result->stage_id,
+                        'from_stage_name' => $fromStageName,
+                        'to_stage_name' => $result->stage?->name,
+                    ],
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             DealStageChanged::dispatch(
                 $result,

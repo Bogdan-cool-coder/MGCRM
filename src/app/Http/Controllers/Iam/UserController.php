@@ -28,6 +28,10 @@ class UserController extends Controller
 
         $users = User::query()
             ->where('is_active', true)
+            // Exclude system/service accounts (e.g. the AMO import principal):
+            // they must never surface in owner/assignee dropdowns even when left
+            // active. is_active alone is not a reliable filter for this.
+            ->where('is_service', false)
             ->when(
                 $search !== null && $search !== '',
                 function ($query) use ($search): void {

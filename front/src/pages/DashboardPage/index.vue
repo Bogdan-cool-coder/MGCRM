@@ -42,6 +42,7 @@
         <div class="col-12">
           <WidgetStatusGroups
             :groups="data?.status_groups ?? []"
+            :base-currency="data?.meta?.base_currency ?? 'RUB'"
             :loading="loading"
           />
         </div>
@@ -58,6 +59,7 @@
         <div class="col-12 col-lg-5">
           <WidgetForecast
             :forecast="data?.forecast ?? null"
+            :base-currency="data?.meta?.base_currency ?? 'RUB'"
             :loading="loading"
           />
         </div>
@@ -69,6 +71,7 @@
           <WidgetTopBar
             :top-products="data?.top_products ?? null"
             :top-managers="data?.top_managers ?? null"
+            :base-currency="data?.meta?.base_currency ?? 'RUB'"
             :loading="loading"
           />
         </div>

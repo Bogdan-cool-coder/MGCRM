@@ -137,7 +137,11 @@ export function useDealsBoard(
       page: nextPage,
       per_page: 30,
     })
-    // Map DealDto to DealCardDto shape
+    // Map DealDto to DealCardDto shape. The list endpoint stamps the SAME health
+    // signals as the board's first page when a single stage_id is requested
+    // (next_task, primary_product; days_in_stage is always present) — so loaded
+    // cards carry the rotting clock + task/product chips exactly like page 1
+    // (audit m10).
     const newCards: DealCardDto[] = res.data.map((d) => ({
       id: d.id,
       title: d.title,
@@ -147,9 +151,9 @@ export function useDealsBoard(
       amount: d.amount,
       currency: d.currency,
       stage_changed_at: d.stage_changed_at,
-      days_in_stage: null,
-      next_task: null,
-      primary_product: null,
+      days_in_stage: d.days_in_stage ?? null,
+      next_task: d.next_task ?? null,
+      primary_product: d.primary_product ?? null,
     }))
     col.deals = [...col.deals, ...newCards]
   }

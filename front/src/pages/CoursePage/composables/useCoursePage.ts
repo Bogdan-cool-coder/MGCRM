@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import { onboardingStudentApi } from '@/api/onboardingStudent'
 import { useUserStore } from '@/stores/user'
 import type { CourseAssignment } from '@/entities/assignment'
@@ -10,6 +11,7 @@ import type { Certificate } from '@/entities/certificate'
 
 export function useCoursePage(assignmentId: number) {
   const toast = useToast()
+  const { t } = useI18n()
   const userStore = useUserStore()
 
   const assignment = useAsyncResource<CourseAssignment | null>(null)
@@ -108,7 +110,7 @@ export function useCoursePage(assignmentId: number) {
         }
         completedLessonIds.value = new Set([...completedLessonIds.value, lessonId])
         if (!isQuiz) {
-          toast.add({ severity: 'success', summary: 'Урок пройден!', life: 3000 })
+          toast.add({ severity: 'success', summary: t('onboarding.coursePage.lessonDone'), life: 3000 })
         }
         // Refresh assignment to check if course completed
         const updated = await onboardingStudentApi.getAssignment(assignmentId)
@@ -120,7 +122,7 @@ export function useCoursePage(assignmentId: number) {
       },
       {
         onError: () => {
-          toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось отметить урок', life: 4000 })
+          toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
         },
       },
     )
@@ -164,7 +166,7 @@ export function useCoursePage(assignmentId: number) {
       link.click()
       URL.revokeObjectURL(url)
     } catch {
-      toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось скачать сертификат', life: 4000 })
+      toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
     }
   }
 

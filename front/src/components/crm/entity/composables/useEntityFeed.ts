@@ -114,22 +114,47 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
 
   if (raw.type === 'field_change') {
     const p = raw.payload
+
+    // CRM action-log rows carry an array of deltas in payload.changes
+    // ([{field, old, new}]); the deal feed (deal_audits) carries a single
+    // flat {field, old_value, new_value}. Support both shapes.
+    const rawChanges = Array.isArray(p['changes']) ? (p['changes'] as unknown[]) : null
+
+    const fieldChanges = rawChanges
+      ? rawChanges.map((c) => {
+          const ch = (c ?? {}) as Record<string, unknown>
+          return {
+            field: (ch['field'] as string) ?? '',
+            old_value: toStringOrNull(ch['old']),
+            new_value: toStringOrNull(ch['new']),
+          }
+        })
+      : [
+          {
+            field: (p['field'] as string) ?? '',
+            old_value: (p['old_value'] as string | null) ?? null,
+            new_value: (p['new_value'] as string | null) ?? null,
+          },
+        ]
+
     return {
       id: raw.id,
       type: 'field_change',
       timestamp,
       date,
       actor,
-      fieldChanges: [
-        {
-          field: (p['field'] as string) ?? '',
-          old_value: (p['old_value'] as string | null) ?? null,
-          new_value: (p['new_value'] as string | null) ?? null,
-        },
-      ],
+      fieldChanges,
     }
   }
 
+  return null
+}
+
+/** Coerce a log delta value (may be string/number/bool/null) to a display string. */
+function toStringOrNull(v: unknown): string | null {
+  if (v === null || v === undefined) return null
+  if (typeof v === 'string') return v
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
   return null
 }
 
@@ -160,6 +185,7 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
 
   const allItems = ref<FeedItem[]>([])
   const loading = ref(false)
+  const error = ref<unknown | null>(null)
   const currentPage = ref(1)
   const total = ref(0)
   const groups = ref<FeedGroup[]>([])
@@ -246,6 +272,7 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
 
   async function fetchPage(page: number): Promise<void> {
     loading.value = true
+    if (page === 1) error.value = null
     try {
       const res = await apiClient.get<FeedApiResponse>(feedUrl(), {
         params: { page, per_page: PER_PAGE },
@@ -266,18 +293,33 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
         allItems.value = [...allItems.value, ...normalised]
       }
       recomputeGroups()
+    } catch (e) {
+      // Surface a real error so the tab can show retry instead of an empty state
+      // indistinguishable from a genuinely empty feed (only on first page).
+      if (page === 1) error.value = e
+      throw e
     } finally {
       loading.value = false
     }
   }
 
   async function load(): Promise<void> {
-    await fetchPage(1)
+    // Error is captured into `error` by fetchPage; swallow the rejection here so
+    // callers (onMounted void-call, retry button) don't need their own catch.
+    try {
+      await fetchPage(1)
+    } catch {
+      // handled via error ref
+    }
   }
 
   async function loadMore(): Promise<void> {
     if (!hasMore.value || loading.value) return
-    await fetchPage(currentPage.value + 1)
+    try {
+      await fetchPage(currentPage.value + 1)
+    } catch {
+      // non-critical: keep already-loaded pages, no error state for pagination
+    }
   }
 
   // ─── Client filter/search ─────────────────────────────────────────────────────
@@ -383,6 +425,7 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
     groups,
     openTasks,
     loading,
+    error,
     hasMore,
     searchQuery,
     filterType,

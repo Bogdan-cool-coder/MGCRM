@@ -20,6 +20,7 @@ class ApprovalRouteResource extends JsonResource
             'title' => $this->title,
             'document_kind' => $this->document_kind,
             'template_id' => $this->template_id,
+            'template_code' => $this->whenLoaded('template', fn () => $this->template?->code),
             'is_default' => $this->is_default,
             'stages' => $this->stages,
             'is_active' => $this->is_active,

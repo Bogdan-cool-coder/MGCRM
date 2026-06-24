@@ -255,6 +255,10 @@ export const catalogApi = {
     return res.data.data
   },
 
+  async deleteProductPrice(productId: number, priceId: number): Promise<void> {
+    await apiClient.delete(`/api/catalog/products/${productId}/prices/${priceId}`)
+  },
+
   // Exchange Rates
   async getExchangeRates(
     params: ExchangeRateListParams = {},

@@ -79,6 +79,7 @@
                       @edit-plan="openEditPlanDialog"
                       @delete-plan="confirmDeletePlan"
                       @save-price="savePrice"
+                      @delete-price="confirmDeletePrice"
                     />
                   </TabPanel>
                   <TabPanel value="deals">
@@ -175,6 +176,7 @@ const {
   openEditPlanDialog,
   toggleActive,
   savePrice,
+  confirmDeletePrice,
   createPlan,
   updatePlan,
   confirmDeletePlan,

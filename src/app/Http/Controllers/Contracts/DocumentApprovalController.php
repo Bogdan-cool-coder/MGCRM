@@ -118,14 +118,7 @@ class DocumentApprovalController extends Controller
      */
     public function showApproval(Request $request, Approval $approval): ApprovalResource
     {
-        // Allow: the approver, admin, lawyer
-        $user = $request->user();
-        if (
-            $user->id !== (int) $approval->user_id
-            && ! in_array($user->role->value, ['admin', 'lawyer'], strict: true)
-        ) {
-            abort(403, 'Доступ запрещён.');
-        }
+        $this->authorize('view', $approval);
 
         return ApprovalResource::make($approval->load('user:id,full_name'));
     }

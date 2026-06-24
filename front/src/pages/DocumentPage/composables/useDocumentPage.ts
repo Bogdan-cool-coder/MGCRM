@@ -240,6 +240,12 @@ export const useDocumentPage = () => {
     return user?.id === document.value?.author_user_id
   })
 
+  /** Unsign is restricted to admin/lawyer only (BE DocumentPolicy.unsign). */
+  const canUnsign = computed<boolean>(() => {
+    const role = userStore.getUserRole
+    return role === 'admin' || role === 'lawyer'
+  })
+
   const canEdit = computed(() => isEditable.value && isAuthorOrPrivileged.value)
 
   const hasSignedScan = ref(false)
@@ -274,6 +280,7 @@ export const useDocumentPage = () => {
     downloadPdf,
     isEditable,
     isAuthorOrPrivileged,
+    canUnsign,
     canEdit,
     hasSignedScan,
     setHasSignedScan,

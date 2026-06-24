@@ -83,6 +83,7 @@ class AttachmentService
             'path' => $path,
             'original_name' => $file->getClientOriginalName(),
             'content_type' => $mime,
+            'size_bytes' => $file->getSize() ?: null,
             'uploaded_by_user_id' => $user->id,
             'created_at' => now(),
         ]);

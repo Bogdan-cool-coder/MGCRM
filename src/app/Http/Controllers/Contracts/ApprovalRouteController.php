@@ -28,6 +28,7 @@ class ApprovalRouteController extends Controller
         $this->authorize('viewAny', ApprovalRoute::class);
 
         $routes = ApprovalRoute::query()
+            ->with('template:id,code')
             ->orderBy('document_kind')
             ->orderBy('title')
             ->get();

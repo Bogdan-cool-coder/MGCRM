@@ -42,6 +42,7 @@ class DocumentAttachment extends Model
         'path',
         'original_name',
         'content_type',
+        'size_bytes',
         'uploaded_by_user_id',
         'created_at',
     ];

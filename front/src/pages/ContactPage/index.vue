@@ -21,8 +21,13 @@
     <!-- ── Error ─────────────────────────────────────────────────────────────── -->
     <template v-else-if="contactError || !contact">
       <div class="contact-page-v2__error">
-        <i class="pi pi-exclamation-triangle contact-page-v2__error-icon" />
-        <p class="contact-page-v2__error-title">{{ t('contact.page.errors.load') }}</p>
+        <i
+          class="contact-page-v2__error-icon"
+          :class="isForbiddenError ? 'pi pi-lock' : 'pi pi-exclamation-triangle'"
+        />
+        <p class="contact-page-v2__error-title">
+          {{ isForbiddenError ? t('contact.page.errors.forbidden') : t('contact.page.errors.load') }}
+        </p>
         <Button
           icon="pi pi-arrow-left"
           :label="t('contact.page.back')"
@@ -341,6 +346,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { getApiErrorStatus } from '@/utils/errors'
 import Button from 'primevue/button'
 import Badge from 'primevue/badge'
 import Tabs from 'primevue/tabs'
@@ -404,6 +410,9 @@ const {
   loadDeals,
   contactId,
 } = useContactPageData()
+
+// Distinguish 403 forbidden from other load errors so we can show the right panel.
+const isForbiddenError = computed(() => getApiErrorStatus(contactError.value) === 403)
 
 const {
   patchField,

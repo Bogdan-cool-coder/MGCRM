@@ -94,4 +94,48 @@ class PriceImportServiceTest extends TestCase
         $this->assertCount(1, $result->errors);
         $this->assertStringContainsString('code', $result->errors[0]['message']);
     }
+
+    /**
+     * Regression: amount must be read as a raw numeric value (getCalculatedValue),
+     * not as a formatted string (getFormattedValue), to avoid locale-dependent
+     * parsing where "1 200,50" or "$1,200.50" would cast to 1.0 or 0.0.
+     */
+    public function test_amount_numeric_cell_converts_correctly_to_kopecks(): void
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $sheet->fromArray([['code', 'name', 'currency_code', 'amount']], null, 'A1');
+        $sheet->setCellValue('A2', 'numeric_test_prod');
+        $sheet->setCellValue('B2', 'Numeric Cell Product');
+        $sheet->setCellValue('C2', 'KZT');
+        // Explicitly set as a numeric type — simulates what Excel does for number columns.
+        $sheet->setCellValueExplicit(
+            'D2',
+            1200.5,
+            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC,
+        );
+
+        $path = sys_get_temp_dir().'/unit_numeric_'.uniqid().'.xlsx';
+        (new Xlsx($spreadsheet))->save($path);
+
+        $file = new UploadedFile(
+            $path,
+            'import.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
+
+        $result = $this->service->importFromExcel($file);
+
+        $this->assertSame(1, $result->inserted);
+        $this->assertSame(0, count($result->errors));
+
+        // 1200.5 × 100 = 120050 kopecks — must not parse as 1.0 or 0.0.
+        $this->assertDatabaseHas('catalog_product_prices', [
+            'currency_code' => 'KZT',
+            'amount' => 120050,
+        ]);
+    }
 }

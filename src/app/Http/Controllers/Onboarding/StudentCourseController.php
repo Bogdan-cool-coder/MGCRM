@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Onboarding;
 
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Services\AssignmentService;
+use App\Domain\Onboarding\Services\ProgressService;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Onboarding\AssignmentDetailResource;
 use App\Http\Resources\Onboarding\MyCoursesResource;
@@ -24,17 +25,28 @@ class StudentCourseController extends Controller
 {
     public function __construct(
         private readonly AssignmentService $service,
+        private readonly ProgressService $progressService,
     ) {}
 
     /**
      * GET /api/onboarding/my-courses
      * Returns the authenticated user's own course assignments with progress.
+     *
+     * #12 fix: batch-precompute progress_pct to avoid N+1 (2 queries per assignment → 2 total).
      */
     public function index(Request $request): AnonymousResourceCollection
     {
         $assignments = $this->service->listForUser($request->user()->id);
 
-        return MyCoursesResource::collection($assignments);
+        // Batch-compute progress for all assignments in 2 queries instead of 2N.
+        MyCoursesResource::$progressMap = $this->progressService->batchCalcProgress($assignments);
+
+        $collection = MyCoursesResource::collection($assignments);
+
+        // Reset static map after collection is built so it does not leak into other requests.
+        MyCoursesResource::$progressMap = null;
+
+        return $collection;
     }
 
     /**

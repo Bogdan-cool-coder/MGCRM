@@ -38,13 +38,13 @@
                 <Tag
                   v-if="row.is_won"
                   severity="success"
-                  value="WON"
+                  :value="t('dashboard.funnel.won')"
                   class="funnel-stage-tag"
                 />
                 <Tag
                   v-else-if="row.is_lost"
                   severity="danger"
-                  value="LOST"
+                  :value="t('dashboard.funnel.lost')"
                   class="funnel-stage-tag"
                 />
               </div>

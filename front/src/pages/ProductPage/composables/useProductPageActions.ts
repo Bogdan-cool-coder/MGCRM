@@ -26,6 +26,7 @@ export const useProductPageActions = ({ product, reload }: UseProductPageActions
   const planMutation = useMutation<ProductPlanDto>()
   const deletePlanMutation = useMutation<void>()
   const priceMutation = useMutation<ProductPriceDto[]>()
+  const deletePriceMutation = useMutation<void>()
 
   function openEditDrawer() {
     editDrawerOpen.value = true
@@ -93,6 +94,39 @@ export const useProductPageActions = ({ product, reload }: UseProductPageActions
         life: 4000,
       })
       throw err
+    }
+  }
+
+  function confirmDeletePrice(priceId: number, planId: number | null, currency: string) {
+    confirm.require({
+      message: t('catalog.product.page.prices.deleteConfirm', { currency }),
+      header: t('catalog.product.page.prices.deleteConfirm', { currency }),
+      icon: 'pi pi-trash',
+      acceptLabel: t('catalog.products.page.actions.deleteAccept'),
+      rejectLabel: t('catalog.products.page.actions.deleteReject'),
+      acceptClass: 'p-button-danger',
+      accept: () => void deletePrice(priceId, currency),
+    })
+  }
+
+  async function deletePrice(priceId: number, currency: string) {
+    if (!product.value) return
+    try {
+      await deletePriceMutation.run(() =>
+        catalogApi.deleteProductPrice(product.value!.id, priceId),
+      )
+      toast.add({
+        severity: 'success',
+        summary: t('catalog.product.page.prices.deleteSuccess', { currency }),
+        life: 2000,
+      })
+      await reload()
+    } catch {
+      toast.add({
+        severity: 'error',
+        summary: t('errors.server_error'),
+        life: 4000,
+      })
     }
   }
 
@@ -209,11 +243,13 @@ export const useProductPageActions = ({ product, reload }: UseProductPageActions
     patchMutation,
     planMutation,
     priceMutation,
+    deletePriceMutation,
     openEditDrawer,
     openCreatePlanDialog,
     openEditPlanDialog,
     toggleActive,
     savePrice,
+    confirmDeletePrice,
     createPlan,
     updatePlan,
     confirmDeletePlan,

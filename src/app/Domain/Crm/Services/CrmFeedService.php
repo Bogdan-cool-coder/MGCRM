@@ -9,6 +9,9 @@ use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Models\User;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Models\EntityLog;
+use App\Domain\Log\Services\EntityLogService;
 use Illuminate\Support\Collection;
 
 /**
@@ -17,9 +20,10 @@ use Illuminate\Support\Collection;
  * Mirrors DealFeedService (Sales domain) but scopes activities by target_type
  * (ActivityTargetType::Company / ActivityTargetType::Contact) and target_id.
  *
- * MVP: only activities are included (no audit trail for CRM entities yet).
- * Shape is identical to the deal feed so the frontend can reuse the same
- * normalisation logic in useEntityFeed.ts.
+ * Two sources are merged: activities and the action log's field-change rows
+ * (entity_logs action=data_changed → "field_change") so the "Изменения" feed
+ * filter has real content for CRM entities. Shape is identical to the deal feed
+ * so the frontend reuses the same normalisation logic in useEntityFeed.ts.
  *
  * @see DealFeedService
  */
@@ -27,11 +31,17 @@ class CrmFeedService
 {
     public const TYPE_ACTIVITY = 'activity';
 
+    public const TYPE_FIELD_CHANGE = 'field_change';
+
     /**
      * Hard upper bound on rows pulled from each source before the in-memory
      * merge. Bounds memory/latency for hot entities (newest rows kept).
      */
     private const MAX_SOURCE_ROWS = 500;
+
+    public function __construct(
+        private readonly EntityLogService $entityLog,
+    ) {}
 
     /**
      * @param  array{types?: array<int, string>}  $filters
@@ -45,6 +55,10 @@ class CrmFeedService
 
         if ($types === null || in_array(self::TYPE_ACTIVITY, $types, true)) {
             $events = $events->merge($this->activityEvents($entity));
+        }
+
+        if ($types === null || in_array(self::TYPE_FIELD_CHANGE, $types, true)) {
+            $events = $events->merge($this->fieldChangeEvents($entity));
         }
 
         $sorted = $events
@@ -76,7 +90,7 @@ class CrmFeedService
             return null;
         }
 
-        $allowed = [self::TYPE_ACTIVITY];
+        $allowed = [self::TYPE_ACTIVITY, self::TYPE_FIELD_CHANGE];
         $types = array_values(array_intersect($allowed, $raw));
 
         return $types === [] ? null : $types;
@@ -114,6 +128,34 @@ class CrmFeedService
                     'is_closed' => (bool) $row->is_closed,
                     'target_type' => $targetType,
                     'responsible' => $this->actor($row->responsible),
+                ],
+            ]);
+    }
+
+    /**
+     * Field-change track for the "Изменения" feed filter — the action log's
+     * data_changed rows for this subject. Each row carries one-or-more field
+     * deltas in meta.changes ([{field, old, new}]); the whole list is forwarded so
+     * the frontend renders every changed field of a single edit on one row.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function fieldChangeEvents(Company|Contact $entity): Collection
+    {
+        $subjectType = $entity instanceof Company
+            ? LogSubjectType::Company
+            : LogSubjectType::Contact;
+
+        return $this->entityLog
+            ->fieldChangesForSubject($subjectType, (int) $entity->id, self::MAX_SOURCE_ROWS)
+            ->map(fn (EntityLog $row): array => [
+                'id' => "log_{$row->id}",
+                'type' => self::TYPE_FIELD_CHANGE,
+                'occurred_at' => $row->created_at?->toIso8601String(),
+                'actor' => $this->actor($row->actor),
+                'payload' => [
+                    // meta.changes = [{field, old, new}] — normalised on the FE.
+                    'changes' => is_array($row->meta['changes'] ?? null) ? $row->meta['changes'] : [],
                 ],
             ]);
     }

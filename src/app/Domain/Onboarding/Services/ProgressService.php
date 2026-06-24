@@ -224,6 +224,58 @@ class ProgressService
         return app(OnboardingDashboardService::class)->getSummary($f);
     }
 
+    /**
+     * Batch-calculate progress percentages for a collection of assignments.
+     *
+     * #12 fix: replaces the per-row N+1 pattern in MyCoursesResource (2 queries per
+     * assignment) with 2 bulk queries total regardless of collection size.
+     *
+     * Returns a map of assignment_id → progress_pct (0-100).
+     *
+     * @param  Collection<int, CourseAssignment>  $assignments
+     * @return array<int, int>
+     */
+    public function batchCalcProgress(Collection $assignments): array
+    {
+        if ($assignments->isEmpty()) {
+            return [];
+        }
+
+        // Step 1: load all published lesson IDs grouped by course_id (one query via JOIN).
+        $courseIds = $assignments->pluck('course_id')->unique()->values()->all();
+
+        $publishedLessonsByCourse = Lesson::join('course_modules', 'course_modules.id', '=', 'lessons.module_id')
+            ->whereIn('course_modules.course_id', $courseIds)
+            ->where('lessons.is_published', true)
+            ->select(['lessons.id', 'course_modules.course_id'])
+            ->get()
+            ->groupBy('course_id');
+
+        // Step 2: count completed lesson_progress records per assignment_id (one query).
+        $assignmentIds = $assignments->pluck('id')->all();
+
+        $completedCounts = LessonProgress::whereIn('assignment_id', $assignmentIds)
+            ->whereNotNull('completed_at')
+            ->selectRaw('assignment_id, COUNT(*) as cnt')
+            ->groupBy('assignment_id')
+            ->pluck('cnt', 'assignment_id');
+
+        // Step 3: combine.
+        $result = [];
+        foreach ($assignments as $assignment) {
+            $lessonIds = ($publishedLessonsByCourse[$assignment->course_id] ?? collect());
+            $total = $lessonIds->count();
+            if ($total === 0) {
+                $result[$assignment->id] = 0;
+                continue;
+            }
+            $completed = (int) ($completedCounts[$assignment->id] ?? 0);
+            $result[$assignment->id] = (int) floor($completed * 100 / $total);
+        }
+
+        return $result;
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------

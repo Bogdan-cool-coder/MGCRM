@@ -95,6 +95,11 @@ export interface DealDto {
   // v2 additions — populated when backend eager-loads nextTask + computes days_in_stage
   next_task?: NextTaskDto | null
   days_in_stage?: number | null
+  /**
+   * Board-card primary product {id, name}. Only present on the kanban "load more"
+   * list path (single stage_id requested); omitted on the plain list/show payload.
+   */
+  primary_product?: PrimaryProductDto | null
   products?: DealProductDto[]
   contacts?: DealContactDto[]
   /** Sum of all per-line discounts (kopecks). Present when products relation is loaded. */

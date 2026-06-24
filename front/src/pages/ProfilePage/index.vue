@@ -184,7 +184,67 @@
               <!-- 2FA enabled -->
               <div v-if="user?.totp_enabled && !isTotpSetupStarted && !showBackupCodes">
                 <Tag severity="success" :value="t('profile.security.totp_enabled')" class="mb-3" />
-                <p class="text-muted">{{ t('profile.security.totp_enabled') }}</p>
+                <p class="text-muted mb-3">{{ t('profile.security.totp_enabled') }}</p>
+
+                <!-- Manage actions (no action in progress) -->
+                <div v-if="!totpManageAction" class="d-flex gap-2 flex-wrap">
+                  <Button
+                    :label="t('profile.security.regenerate_codes')"
+                    icon="pi pi-refresh"
+                    severity="secondary"
+                    outlined
+                    size="small"
+                    @click="startTotpManage('regenerate')"
+                  />
+                  <Button
+                    :label="t('profile.security.disable_totp')"
+                    icon="pi pi-shield"
+                    severity="danger"
+                    outlined
+                    size="small"
+                    @click="startTotpManage('disable')"
+                  />
+                </div>
+
+                <!-- Confirm with a TOTP code before disable / regenerate -->
+                <div v-else class="totp-manage-confirm">
+                  <p class="mb-2">
+                    {{
+                      totpManageAction === 'disable'
+                        ? t('profile.security.disable_confirm_hint')
+                        : t('profile.security.regenerate_confirm_hint')
+                    }}
+                  </p>
+                  <div class="d-flex gap-3 align-items-start">
+                    <div class="profile-field" style="max-width: 200px">
+                      <InputText
+                        v-model="totpManageCode"
+                        placeholder="000000"
+                        inputmode="numeric"
+                        maxlength="6"
+                        :invalid="!!totpManageError"
+                        class="w-100"
+                      />
+                      <small v-if="totpManageError" class="login-field__error">{{
+                        totpManageError
+                      }}</small>
+                    </div>
+                    <Button
+                      :label="t('common.confirm')"
+                      :severity="totpManageAction === 'disable' ? 'danger' : undefined"
+                      :loading="isManagingTotp"
+                      @click="
+                        totpManageAction === 'disable' ? confirmDisableTotp() : confirmRegenerateCodes()
+                      "
+                    />
+                    <Button
+                      :label="t('common.cancel')"
+                      severity="secondary"
+                      outlined
+                      @click="cancelTotpManage"
+                    />
+                  </div>
+                </div>
               </div>
 
               <!-- 2FA not enabled — offer setup -->
@@ -365,7 +425,7 @@
           </template>
 
           <!-- System tab (admin only) -->
-          <template v-if="activeTab === 'system'">
+          <template v-if="activeTab === 'system' && isAdmin">
             <div class="profile-section">
               <h3 class="profile-section__title">{{ t('system.reset.section_title') }}</h3>
               <p class="text-muted mb-3">{{ t('system.reset.section_hint') }}</p>
@@ -533,6 +593,14 @@ const {
   startTotpSetup,
   verifyTotpSetup,
   cancelTotpSetup,
+  totpManageAction,
+  totpManageCode,
+  totpManageError,
+  isManagingTotp,
+  startTotpManage,
+  cancelTotpManage,
+  confirmDisableTotp,
+  confirmRegenerateCodes,
   telegramLinked,
   telegramUsername,
   telegramLinking,

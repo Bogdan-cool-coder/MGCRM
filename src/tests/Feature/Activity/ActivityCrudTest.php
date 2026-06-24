@@ -179,6 +179,76 @@ class ActivityCrudTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrorFor('target_type');
     }
 
+    public function test_reassigning_responsible_resyncs_department_id(): void
+    {
+        // Audit MINOR-10 (data-integrity half): handing a task to a user in a
+        // different department must re-stamp the denormalised department_id from
+        // the new responsible so department-scoped visibility follows the owner.
+        $deptA = \App\Domain\Org\Models\Department::factory()->create();
+        $deptB = \App\Domain\Org\Models\Department::factory()->create();
+
+        $director = $this->director(); // All-scope → may reassign freely
+        $newResponsible = $this->manager($deptB->id);
+
+        $activity = Activity::factory()
+            ->responsibleOf($director)
+            ->createdByUser($director)
+            ->create(['department_id' => $deptA->id]);
+        Sanctum::actingAs($director, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}", ['responsible_id' => $newResponsible->id])
+            ->assertOk()
+            ->assertJsonPath('data.responsible_id', $newResponsible->id)
+            ->assertJsonPath('data.department_id', $deptB->id);
+
+        $this->assertSame($deptB->id, $activity->fresh()->department_id);
+    }
+
+    public function test_explicit_department_id_wins_over_reassign_resync(): void
+    {
+        // An explicit department_id passed to the service is authoritative — the
+        // responsible re-sync never overrides a caller-set department. (department_id
+        // is not part of the public PATCH contract, so this exercises the service
+        // directly to cover the guard for internal callers.)
+        $deptB = \App\Domain\Org\Models\Department::factory()->create();
+        $deptC = \App\Domain\Org\Models\Department::factory()->create();
+
+        $director = $this->director();
+        $newResponsible = $this->manager($deptB->id);
+
+        $activity = Activity::factory()
+            ->responsibleOf($director)
+            ->createdByUser($director)
+            ->create(['department_id' => null]);
+
+        $service = app(\App\Domain\Activity\Services\ActivityService::class);
+        $updated = $service->update($activity, [
+            'responsible_id' => $newResponsible->id,
+            'department_id' => $deptC->id,
+        ]);
+
+        $this->assertSame($deptC->id, $updated->department_id);
+    }
+
+    public function test_reassign_without_department_falls_back_when_responsible_has_none(): void
+    {
+        // Reassigning to a user with no department leaves the existing department_id
+        // untouched (no owner department to derive from).
+        $deptA = \App\Domain\Org\Models\Department::factory()->create();
+        $director = $this->director();
+        $deptlessResponsible = $this->manager(null);
+
+        $activity = Activity::factory()
+            ->responsibleOf($director)
+            ->createdByUser($director)
+            ->create(['department_id' => $deptA->id]);
+
+        $service = app(\App\Domain\Activity\Services\ActivityService::class);
+        $updated = $service->update($activity, ['responsible_id' => $deptlessResponsible->id]);
+
+        $this->assertSame($deptA->id, $updated->department_id);
+    }
+
     public function test_destroy_activity_returns_204(): void
     {
         $manager = $this->manager();

@@ -146,6 +146,31 @@ class AutomationValidationTest extends TestCase
         ]))->assertCreated();
     }
 
+    public function test_set_field_rejects_scalar_value_for_array_column(): void
+    {
+        // deals.tags is array-cast — a bare scalar value would corrupt the column.
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'set_field',
+            'action_config' => ['field' => 'tags', 'value' => 'urgent'],
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('action_config.value');
+    }
+
+    public function test_set_field_accepts_array_value_for_tags(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'set_field',
+            'action_config' => ['field' => 'tags', 'value' => ['urgent', 'vip']],
+        ]))->assertCreated();
+    }
+
     public function test_change_stage_requires_stage_in_same_pipeline(): void
     {
         $this->admin();

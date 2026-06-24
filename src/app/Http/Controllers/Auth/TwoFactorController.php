@@ -9,6 +9,7 @@ use App\Domain\Iam\Services\AuthService;
 use App\Domain\Iam\Services\LoginThrottle;
 use App\Domain\Iam\Services\TwoFactorService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ConfirmTwoFactorRequest;
 use App\Http\Requests\Auth\ValidateTwoFactorRequest;
 use App\Http\Requests\Auth\VerifyTwoFactorSetupRequest;
 use App\Http\Resources\TwoFactorSetupResource;
@@ -81,6 +82,75 @@ class TwoFactorController extends Controller
 
         return response()->json([
             'two_factor_enabled' => true,
+            'backup_codes' => $backupCodes,
+        ]);
+    }
+
+    /**
+     * POST /api/2fa/disable — turn 2FA off for the authenticated user.
+     *
+     * Requires a valid TOTP or backup code (anti session-hijack): a stolen full
+     * token cannot disable 2FA without the second factor. All secrets/backup
+     * codes are wiped so the next setup starts clean.
+     */
+    public function disable(ConfirmTwoFactorRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->totp_enabled) {
+            throw ValidationException::withMessages([
+                'totp' => [__('auth.two_factor_disabled')],
+            ]);
+        }
+
+        if (! $this->twoFactor->confirmSecondFactor(
+            $user,
+            $request->validated('totp_code'),
+            $request->validated('backup_code'),
+        )) {
+            throw ValidationException::withMessages([
+                'totp_code' => [__('auth.two_factor_invalid')],
+            ]);
+        }
+
+        $this->twoFactor->disable($user);
+
+        return response()->json([
+            'two_factor_enabled' => false,
+        ]);
+    }
+
+    /**
+     * POST /api/2fa/regenerate-backup-codes — issue a fresh backup-code set,
+     * invalidating the old one. Requires a valid TOTP or backup code so a
+     * hijacked session cannot mint a new set. The plaintext codes are returned
+     * exactly once.
+     */
+    public function regenerateBackupCodes(ConfirmTwoFactorRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->totp_enabled) {
+            throw ValidationException::withMessages([
+                'totp' => [__('auth.two_factor_disabled')],
+            ]);
+        }
+
+        if (! $this->twoFactor->confirmSecondFactor(
+            $user,
+            $request->validated('totp_code'),
+            $request->validated('backup_code'),
+        )) {
+            throw ValidationException::withMessages([
+                'totp_code' => [__('auth.two_factor_invalid')],
+            ]);
+        }
+
+        $backupCodes = $this->twoFactor->regenerateBackupCodes($user);
+
+        return response()->json([
             'backup_codes' => $backupCodes,
         ]);
     }

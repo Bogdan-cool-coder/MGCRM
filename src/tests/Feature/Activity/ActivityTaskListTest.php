@@ -166,6 +166,11 @@ class ActivityTaskListTest extends TestCase
 
     public function test_reschedule_tomorrow_moves_due_to_start_of_tomorrow(): void
     {
+        // Freeze the clock so the service and the test resolve the operational day
+        // start from the same instant (the boundary math is otherwise racy at a
+        // Dubai-midnight crossing). 10:00 UTC = 14:00 Dubai — mid-day in both.
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+
         $manager = $this->manager();
         $activity = Activity::factory()
             ->state(['kind' => ActivityType::Task->value, 'due_at' => now()->subDays(3)])
@@ -175,15 +180,27 @@ class ActivityTaskListTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        $expected = now()->startOfDay()->addDay();
+        // Day boundaries are computed as the true instant of the operational
+        // timezone midnight (Дубай-окно), not the UTC server clock (MINOR-8).
+        // Compare absolute instants (both normalised to UTC).
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+        $expected = \Carbon\Carbon::now($tz)->startOfDay()->addDay()->utc();
 
-        $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
-            ->assertOk()
-            ->assertJsonPath('data.due_at', $expected->toIso8601String());
+        $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
+            ->assertOk();
+
+        $this->assertTrue(
+            \Carbon\Carbon::parse($res->json('data.due_at'))->equalTo($expected),
+            'reschedule tomorrow should land on the operational start of tomorrow',
+        );
+
+        \Carbon\Carbon::setTestNow();
     }
 
     public function test_reschedule_next_week_and_next_month(): void
     {
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+
         $manager = $this->manager();
         $activity = Activity::factory()
             ->state(['kind' => ActivityType::Task->value])
@@ -193,13 +210,22 @@ class ActivityTaskListTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_week'])
-            ->assertOk()
-            ->assertJsonPath('data.due_at', now()->startOfDay()->addWeek()->toIso8601String());
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+        $dayStart = \Carbon\Carbon::now($tz)->startOfDay()->utc();
 
-        $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_month'])
-            ->assertOk()
-            ->assertJsonPath('data.due_at', now()->startOfDay()->addMonthNoOverflow()->toIso8601String());
+        $week = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_week'])
+            ->assertOk();
+        $this->assertTrue(
+            \Carbon\Carbon::parse($week->json('data.due_at'))->equalTo($dayStart->copy()->addWeek()),
+        );
+
+        $month = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_month'])
+            ->assertOk();
+        $this->assertTrue(
+            \Carbon\Carbon::parse($month->json('data.due_at'))->equalTo($dayStart->copy()->addMonthNoOverflow()),
+        );
+
+        \Carbon\Carbon::setTestNow();
     }
 
     public function test_reschedule_rejects_unknown_preset(): void

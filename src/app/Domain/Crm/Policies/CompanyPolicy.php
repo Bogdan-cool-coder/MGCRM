@@ -13,9 +13,13 @@ use App\Domain\Iam\Models\User;
  *
  * IDOR rule: any request reaching an item/sub-resource endpoint that the
  * requesting user cannot access returns 404 (not 403) to avoid leaking
- * existence of records. Enforcement: controller uses $this->authorize()
- * which triggers 403 by default, but we gate visibility through
- * ensure_object_visible scope (ResolveVisibility middleware) before policy.
+ * existence of records. Enforcement: controller calls $this->authorize()
+ * which triggers 403.
+ *
+ * List visibility: row-level scoping (admin=all, manager=owner OR responsible)
+ * is enforced in CompanyService::list() via VisibilityResolver::applyScope(),
+ * NOT through middleware (ResolveVisibility is an M0 scaffold that stamps a
+ * request attribute but does no query filtering).
  *
  * All inline role checks are forbidden (ARCHITECTURE.md §3).
  */

@@ -24,6 +24,7 @@ import Card from 'primevue/card'
 import Skeleton from 'primevue/skeleton'
 import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts'
+import { useThemeStore } from '@/stores/theme'
 import type { HrProgressSummary } from '@/api/onboardingAdmin'
 
 const props = defineProps<{
@@ -32,6 +33,17 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.theme === 'dark')
+
+/**
+ * Resolve a CSS custom property value from the document root.
+ * #14 fix: replaces hardcoded hex literals with design-system tokens.
+ */
+function cssVar(name: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
 
 const barOption = computed<EChartsOption>(() => {
   const chart = props.summary?.top_courses_chart
@@ -41,6 +53,13 @@ const barOption = computed<EChartsOption>(() => {
   // Reverse so highest value is at top
   const reversedLabels = [...labels].reverse()
   const reversedValues = [...values].reverse()
+
+  // #14 fix: resolve bar fill and label colour from design-system tokens.
+  // Primary brand colour (dark navy) for bar; muted text for value labels.
+  const barColor = cssVar('--p-primary-color', '#172747')
+  const labelColor = isDark.value
+    ? cssVar('--p-text-muted-color', '#9E9E9E')
+    : cssVar('--p-text-muted-color', '#7E7F82')
 
   return {
     tooltip: {
@@ -66,14 +85,14 @@ const barOption = computed<EChartsOption>(() => {
       {
         type: 'bar',
         data: reversedValues,
-        itemStyle: { borderRadius: [0, 6, 6, 0], color: '#2B4987' },
+        itemStyle: { borderRadius: [0, 6, 6, 0], color: barColor },
         barMaxWidth: 28,
         label: {
           show: true,
           position: 'right',
           formatter: '{c}',
           fontSize: 11,
-          color: '#7E7F82',
+          color: labelColor,
         },
       },
     ],

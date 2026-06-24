@@ -44,10 +44,16 @@ export const useProfilePage = () => {
   const userStore = useUserStore()
   const toast = useToast()
 
+  // 'system' is admin-only — non-admins requesting ?tab=system fall back to the
+  // hub so the danger card never renders for them (the BE Gate already blocks
+  // the reset request; this also hides the trigger UI).
+  const isAdmin = computed(() => userStore.getUserRole === 'admin')
+
   // Active tab — from ?tab= query param; no ?tab → 'hub' (card grid)
   const activeTab = computed<ProfileTab | 'hub'>(() => {
     const tab = route.query['tab'] as string
     if (!tab) return 'hub'
+    if (tab === 'system' && !isAdmin.value) return 'hub'
     return VALID_TABS.includes(tab as ProfileTab) ? (tab as ProfileTab) : 'hub'
   })
 
@@ -128,6 +134,85 @@ export const useProfilePage = () => {
     totpSetupUri.value = ''
     totpSetupCode.value = ''
     totpSetupError.value = ''
+  }
+
+  // 2FA management (disable / regenerate backup codes) — both require a fresh
+  // TOTP code to confirm the second factor (anti session-hijack).
+  type TotpManageAction = 'disable' | 'regenerate'
+  const totpManageAction = ref<TotpManageAction | null>(null)
+  const totpManageCode = ref('')
+  const totpManageError = ref('')
+  const disableMutation = useMutation<void>()
+  const regenerateMutation = useMutation<void>()
+
+  const startTotpManage = (action: TotpManageAction) => {
+    totpManageAction.value = action
+    totpManageCode.value = ''
+    totpManageError.value = ''
+  }
+
+  const cancelTotpManage = () => {
+    totpManageAction.value = null
+    totpManageCode.value = ''
+    totpManageError.value = ''
+  }
+
+  const confirmDisableTotp = async () => {
+    const code = totpManageCode.value.trim()
+    if (!code) {
+      totpManageError.value = t('auth.two_factor.required_code')
+      return
+    }
+    totpManageError.value = ''
+
+    await disableMutation.run(
+      async () => {
+        await authApi.disableTwoFactor({ totp_code: code })
+        if (userStore.currentUser) {
+          userStore.setCurrentUser({ ...userStore.currentUser, totp_enabled: false })
+        }
+        cancelTotpManage()
+        toast.add({
+          severity: 'success',
+          summary: t('profile.security.totp_disabled_done'),
+          life: 3000,
+        })
+      },
+      {
+        onError: (error) => {
+          const validationErrs = getValidationErrors(error)
+          totpManageError.value =
+            validationErrs?.['totp_code'] ?? getApiErrorMessage(error, t('auth.two_factor.error'))
+          totpManageCode.value = ''
+        },
+      },
+    )
+  }
+
+  const confirmRegenerateCodes = async () => {
+    const code = totpManageCode.value.trim()
+    if (!code) {
+      totpManageError.value = t('auth.two_factor.required_code')
+      return
+    }
+    totpManageError.value = ''
+
+    await regenerateMutation.run(
+      async () => {
+        const response = await authApi.regenerateBackupCodes({ totp_code: code })
+        backupCodes.value = response.backup_codes
+        showBackupCodes.value = true
+        cancelTotpManage()
+      },
+      {
+        onError: (error) => {
+          const validationErrs = getValidationErrors(error)
+          totpManageError.value =
+            validationErrs?.['totp_code'] ?? getApiErrorMessage(error, t('auth.two_factor.error'))
+          totpManageCode.value = ''
+        },
+      },
+    )
   }
 
   // ─── Telegram binding ────────────────────────────────────────────────────────
@@ -306,6 +391,18 @@ export const useProfilePage = () => {
     startTotpSetup,
     verifyTotpSetup,
     cancelTotpSetup,
+
+    // 2FA management (disable / regenerate backup codes)
+    totpManageAction,
+    totpManageCode,
+    totpManageError,
+    isManagingTotp: computed(
+      () => disableMutation.isPending.value || regenerateMutation.isPending.value,
+    ),
+    startTotpManage,
+    cancelTotpManage,
+    confirmDisableTotp,
+    confirmRegenerateCodes,
 
     // Telegram
     telegramLinked,

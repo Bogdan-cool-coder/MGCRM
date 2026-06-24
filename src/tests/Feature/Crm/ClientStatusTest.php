@@ -509,6 +509,28 @@ class ClientStatusTest extends TestCase
             ->assertJsonPath('data.client_status', ClientStatus::Active->value);
     }
 
+    public function test_reconnect_is_idempotent_does_not_write_duplicate_log(): void
+    {
+        $company = $this->company();
+        $reason = $this->reason();
+        $service = app(CompanyService::class);
+
+        $company->update([
+            'client_status' => ClientStatus::Active,
+            'unique_client_since' => '2025-01-01',
+        ]);
+        $service->disconnect($company, $reason->id, null, null);
+        $service->reconnect($company, null);
+        $company->refresh();
+
+        // Calling reconnect again on an already-active company must be a no-op.
+        $logCountBefore = CompanyClientStatusLog::where('company_id', $company->id)->count();
+        $service->reconnect($company, null);
+
+        $this->assertSame($logCountBefore, CompanyClientStatusLog::where('company_id', $company->id)->count());
+        $this->assertEquals(ClientStatus::Active, $company->fresh()->client_status);
+    }
+
     // =========================================================================
     // CompanyResource includes client_status fields
     // =========================================================================

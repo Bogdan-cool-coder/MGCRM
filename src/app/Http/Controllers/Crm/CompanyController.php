@@ -96,6 +96,8 @@ class CompanyController extends Controller
 
     public function update(UpdateCompanyRequest $request, Company $company): JsonResource
     {
+        $this->authorize('update', $company);
+
         $updated = $this->service->update($company, $request->validated(), $request->user());
 
         return CompanyResource::make($updated->load(['companyType', 'responsibleUser', 'ownerUser']));

@@ -54,6 +54,24 @@ class UserDirectoryTest extends TestCase
             ->assertJsonPath('data.0.full_name', 'Active One');
     }
 
+    public function test_index_excludes_active_service_accounts(): void
+    {
+        $me = User::factory()->create(['full_name' => 'Human One']);
+        // An active service/system principal (e.g. the AMO import user) must
+        // never surface in owner/assignee dropdowns.
+        User::factory()->create([
+            'full_name' => 'Import Bot',
+            'is_active' => true,
+            'is_service' => true,
+        ]);
+        Sanctum::actingAs($me, ['*']);
+
+        $this->getJson('/api/users')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.full_name', 'Human One');
+    }
+
     public function test_search_matches_name_case_insensitively(): void
     {
         $me = User::factory()->create(['full_name' => 'Charlie Brown']);

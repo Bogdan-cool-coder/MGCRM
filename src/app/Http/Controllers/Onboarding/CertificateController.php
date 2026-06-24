@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Onboarding;
 
+use App\Domain\Onboarding\Enums\AssignmentStatus;
 use App\Domain\Onboarding\Models\Certificate;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Http\Controllers\Controller;
@@ -99,9 +100,19 @@ class CertificateController extends Controller
      *
      * Delete existing certificate (if any) and dispatch a new generation Job.
      * Returns 202 Accepted immediately.
+     *
+     * #8 fix: guard against regeneration for incomplete assignments — prevents burning
+     * a sequence number (CERT-YYYY-NNNN) on an assignment that was never completed.
      */
     public function regenerate(CourseAssignment $assignment): JsonResponse
     {
+        // Completion guard (#8): only completed assignments may have a certificate regenerated.
+        if ($assignment->status !== AssignmentStatus::Completed) {
+            return response()->json([
+                'message' => 'Certificate can only be regenerated for completed assignments.',
+            ], 422);
+        }
+
         // The policy check is against Certificate model — create a dummy for the
         // gate check. Admin/director only can regenerate.
         // We check directly via role since the certificate may not exist yet.

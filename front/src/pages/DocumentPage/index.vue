@@ -51,7 +51,7 @@
           :signing="signing"
           :is-context-valid="isContextValid"
           :has-signed-scan="hasSignedScan"
-          :can-unsign="isAuthorOrPrivileged"
+          :can-unsign="canUnsign"
           @back="router.back()"
           @generate="generateDoc"
           @download-docx="downloadDocx"
@@ -234,6 +234,7 @@ const {
   downloadDocx,
   downloadPdf,
   isAuthorOrPrivileged,
+  canUnsign,
   canEdit,
   hasSignedScan,
 } = useDocumentPage()
@@ -257,15 +258,8 @@ const documentTitle = computed(() => {
 })
 
 // ─── Dot menu items ────────────────────────────────────────────────────────
-const docMenuItems = computed(() => [
-  {
-    label: t('documents.card.actions.duplicate'),
-    icon: 'pi pi-copy',
-    command: () => {
-      /* duplicate handled in backend/future */
-    },
-  },
-])
+// Duplicate is not yet implemented — menu is empty until a real action is added.
+const docMenuItems = computed(() => [])
 </script>
 
 <style lang="scss" scoped>

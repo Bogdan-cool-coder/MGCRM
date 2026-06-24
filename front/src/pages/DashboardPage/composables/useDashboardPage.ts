@@ -78,7 +78,13 @@ export const useDashboardPage = () => {
         filters.pipeline_id = first.id
       }
     } catch {
-      // non-critical: silently ignore pipeline load errors
+      // The pipeline Select would be empty with no pre-select, leaving the
+      // dashboard on the backend default with no explanation — surface a warning.
+      toast.add({
+        severity: 'warn',
+        summary: t('dashboard.pipelinesLoadError'),
+        life: 4000,
+      })
     } finally {
       pipelinesLoading.value = false
     }
@@ -90,7 +96,11 @@ export const useDashboardPage = () => {
       const data = await usersApi.getUsers()
       managers.value = data.filter((u) => ['admin', 'director', 'manager'].includes(u.role))
     } catch {
-      // non-critical
+      toast.add({
+        severity: 'warn',
+        summary: t('dashboard.managersLoadError'),
+        life: 4000,
+      })
     }
   }
 

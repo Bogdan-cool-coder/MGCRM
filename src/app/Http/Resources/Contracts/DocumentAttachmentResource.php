@@ -22,7 +22,9 @@ class DocumentAttachmentResource extends JsonResource
             'path' => $this->path,
             'original_name' => $this->original_name,
             'content_type' => $this->content_type,
-            'uploaded_by_user_id' => $this->uploaded_by_user_id,
+            'size' => $this->size_bytes,
+            'uploaded_by' => $this->uploaded_by_user_id,
+            'uploaded_by_name' => $this->whenLoaded('uploadedBy', fn () => $this->uploadedBy?->full_name),
             'created_at' => $this->created_at?->toISOString(),
             'download_url' => route('documents.attachments.download', [
                 $this->document_id,

@@ -28,7 +28,8 @@ class DocumentAttachmentController extends Controller
     {
         $this->authorize('view', $document);
 
-        $attachments = $this->service->listForDocument($document);
+        $attachments = $this->service->listForDocument($document)
+            ->load('uploadedBy:id,full_name');
 
         return DocumentAttachmentResource::collection($attachments);
     }
@@ -49,6 +50,8 @@ class DocumentAttachmentController extends Controller
             $kind,
             $request->user(),
         );
+
+        $attachment->setRelation('uploadedBy', $request->user());
 
         return DocumentAttachmentResource::make($attachment)
             ->response()

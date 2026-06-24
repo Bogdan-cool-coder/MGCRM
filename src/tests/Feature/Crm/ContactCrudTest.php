@@ -7,6 +7,7 @@ namespace Tests\Feature\Crm;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
+use App\Domain\Crm\Models\CustomFieldDef;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -209,5 +210,60 @@ class ContactCrudTest extends TestCase
             'contact_id' => $contact->id,
             'company_id' => $company->id,
         ]);
+    }
+
+    // ---- Custom Fields (extra_fields validation) ----
+
+    public function test_extra_fields_stored_free_form_when_no_defs(): void
+    {
+        // No CustomFieldDef rows → free-form storage (backward compat).
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/contacts', [
+            'full_name' => 'Extra Fields Test',
+            'extra_fields' => ['my_key' => 'my_value'],
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('crm_contacts', ['full_name' => 'Extra Fields Test']);
+        $contact = Contact::where('full_name', 'Extra Fields Test')->firstOrFail();
+        $this->assertSame('my_value', ($contact->extra_fields)['my_key']);
+    }
+
+    public function test_extra_fields_rejects_unknown_key_when_defs_exist(): void
+    {
+        // A def is defined for the contact scope → unknown keys must be rejected.
+        CustomFieldDef::create([
+            'entity_scope' => 'contact',
+            'code' => 'industry_note',
+            'label' => 'Note',
+            'field_type' => 'text',
+        ]);
+
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/contacts', [
+            'full_name' => 'Bad Field Test',
+            'extra_fields' => ['unknown_code' => 'value'],
+        ])->assertStatus(422)
+            ->assertJsonValidationErrorFor('extra_fields');
+    }
+
+    public function test_update_contact_clears_extra_fields_on_null(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $contact = Contact::factory()->create([
+            'owner_id' => $user->id,
+            'extra_fields' => ['k' => 'v'],
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/contacts/{$contact->id}", [
+            'extra_fields' => null,
+        ])->assertOk();
+
+        $contact->refresh();
+        $this->assertSame([], $contact->extra_fields);
     }
 }

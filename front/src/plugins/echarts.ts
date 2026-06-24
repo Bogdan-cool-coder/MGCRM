@@ -202,6 +202,18 @@ export const buildMacroCrmTheme = (isDark: boolean) => {
 }
 
 // ---------------------------------------------------------------------------
+// Theme-aware token getters — widgets must read series-level colours from here
+// instead of hard-coding hex so charts adapt to light/dark and stay on-palette.
+// ---------------------------------------------------------------------------
+
+/** Primary brand bar colour (palette[0]) — used for single-series bar charts. */
+export const macroCrmBarColor = (): string => MACRO_ECHARTS_PALETTE[0] as string
+
+/** Muted text colour for series data-labels, adapts to dark mode. */
+export const macroCrmMutedText = (isDark: boolean): string =>
+  isDark ? TEXT_MUTED_DARK : TEXT_MUTED_LIGHT
+
+// ---------------------------------------------------------------------------
 // Re-register helper — called by useMacroCrmEchartsTheme when dark mode changes
 // ---------------------------------------------------------------------------
 export const rebuildMacroCrmTheme = (isDark: boolean): void => {

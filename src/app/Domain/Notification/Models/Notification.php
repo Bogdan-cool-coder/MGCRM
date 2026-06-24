@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Notification — one in-app notification for one recipient (task #9). Source of
@@ -55,6 +56,32 @@ class Notification extends Model
             'data' => 'array',
             'read_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope implicit route-model binding to the authenticated recipient.
+     *
+     * A notification is private to its receiver, so a `{notification}` bound to
+     * someone else's row must look the same as one that does not exist: both
+     * resolve to null → 404. Without this, a foreign-but-real id would bind and
+     * the policy would 403, while a non-existent id would 404 — that 403/404
+     * split is a minor ID oracle (a caller could tell which ids exist). Scoping
+     * the binding to user_id collapses both cases to a uniform 404.
+     *
+     * @param  mixed  $value
+     */
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        $userId = Auth::id();
+
+        if ($userId === null) {
+            return null;
+        }
+
+        return $this->newQuery()
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->where('user_id', $userId)
+            ->first();
     }
 
     /** Recipient. */

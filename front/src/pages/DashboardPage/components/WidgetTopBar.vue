@@ -49,12 +49,16 @@ import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts'
 import type { TopChartData } from '@/entities/salesDashboard'
 import { formatAxisValue, formatFullNumber } from '@/utils/chartFormatters'
+import { macroCrmBarColor, macroCrmMutedText } from '@/plugins/echarts'
+import { useThemeStore } from '@/stores/theme'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const themeStore = useThemeStore()
 
 const props = defineProps<{
   topProducts: TopChartData | null
   topManagers: TopChartData | null
+  baseCurrency: string
   loading: boolean
 }>()
 
@@ -96,13 +100,13 @@ const barOption = computed<EChartsOption>(() => {
       axisPointer: { type: 'shadow' },
       confine: true,
       valueFormatter: (v: unknown) =>
-        formatFullNumber((v as number) / 100, 'ru', 'RUB'),
+        formatFullNumber((v as number) / 100, locale.value, props.baseCurrency),
     },
     grid: { left: 16, right: 24, top: 8, bottom: 8, containLabel: true },
     xAxis: {
       type: 'value',
       axisLabel: {
-        formatter: (v: number) => formatAxisValue(v / 100, 'ru', 'RUB'),
+        formatter: (v: number) => formatAxisValue(v / 100, locale.value, props.baseCurrency),
       },
     },
     yAxis: {
@@ -118,15 +122,15 @@ const barOption = computed<EChartsOption>(() => {
       {
         type: 'bar',
         data: reversedValues,
-        itemStyle: { borderRadius: [0, 6, 6, 0], color: '#2B4987' },
+        itemStyle: { borderRadius: [0, 6, 6, 0], color: macroCrmBarColor() },
         barMaxWidth: 32,
         label: {
           show: true,
           position: 'right',
           formatter: (p: { value: unknown }) =>
-            formatAxisValue((p.value as number) / 100, 'ru', 'RUB'),
+            formatAxisValue((p.value as number) / 100, locale.value, props.baseCurrency),
           fontSize: 11,
-          color: '#7E7F82',
+          color: macroCrmMutedText(themeStore.theme === 'dark'),
         },
       },
     ],

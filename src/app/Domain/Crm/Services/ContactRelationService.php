@@ -28,6 +28,9 @@ class ContactRelationService
     /**
      * Return all relations that involve the given contact (both sides).
      * Eager-loads contact, relatedContact and createdBy to avoid N+1.
+     * Uses withTrashed on both sides so a soft-deleted counterpart still appears
+     * in the list (with deleted_at set) rather than resolving to null and hiding
+     * the relation from the UI.
      *
      * @return Collection<int, ContactRelation>
      */
@@ -38,7 +41,11 @@ class ContactRelationService
                 $q->where('contact_id', $contact->id)
                     ->orWhere('related_contact_id', $contact->id);
             })
-            ->with(['contact', 'relatedContact', 'createdBy'])
+            ->with([
+                'contact' => fn ($q) => $q->withTrashed(),
+                'relatedContact' => fn ($q) => $q->withTrashed(),
+                'createdBy',
+            ])
             ->orderByDesc('created_at')
             ->get();
     }

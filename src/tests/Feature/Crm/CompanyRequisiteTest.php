@@ -84,10 +84,43 @@ class CompanyRequisiteTest extends TestCase
 
     // ---------------------------------------------------------------- store
 
-    public function test_store_creates_new_requisite_not_current_by_default(): void
+    public function test_store_auto_promotes_first_requisite_to_current(): void
     {
         $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
+
+        Sanctum::actingAs($owner, ['*']);
+
+        // First requisite for this company — must be auto-set as current.
+        $this->postJson("/api/companies/{$company->id}/requisites", [
+            'legal_name' => 'Первые реквизиты',
+            'tax_id' => '111111111111',
+            'label' => 'Основные',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.legal_name', 'Первые реквизиты')
+            ->assertJsonPath('data.is_current', true);
+
+        $this->assertDatabaseHas('company_requisites', [
+            'company_id' => $company->id,
+            'tax_id' => '111111111111',
+            'is_current' => true,
+        ]);
+
+        // Verify mirror: company's tax_id and legal_name should be updated.
+        $this->assertDatabaseHas('crm_companies', [
+            'id' => $company->id,
+            'tax_id' => '111111111111',
+            'legal_name' => 'Первые реквизиты',
+        ]);
+    }
+
+    public function test_store_second_requisite_is_not_current_by_default(): void
+    {
+        $owner = $this->makeOwner();
+        $company = $this->makeCompany($owner);
+        // Pre-seed an existing current requisite so the next one is NOT first.
+        $this->makeRequisite($company, ['is_current' => true]);
 
         Sanctum::actingAs($owner, ['*']);
 

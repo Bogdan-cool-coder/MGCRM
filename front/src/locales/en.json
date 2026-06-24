@@ -123,7 +123,11 @@
       "totp_verify": "Verify",
       "totp_backup_codes": "Backup codes",
       "totp_backup_hint": "Save these codes in a safe place. Each code can only be used once.",
-      "totp_setup_success": "Two-factor authentication successfully configured"
+      "totp_setup_success": "Two-factor authentication successfully configured",
+      "regenerate_codes": "Regenerate backup codes",
+      "disable_confirm_hint": "Enter a code from your authenticator app to disable 2FA.",
+      "regenerate_confirm_hint": "Enter a code from your authenticator app to regenerate your backup codes. The old codes will stop working.",
+      "totp_disabled_done": "Two-factor authentication disabled"
     },
     "locale": {
       "title": "Interface language",
@@ -182,7 +186,9 @@
       "stage": "Stage",
       "count": "Deals",
       "avgDays": "Days avg.",
-      "transition": "Conversion to next"
+      "transition": "Conversion to next",
+      "won": "Won",
+      "lost": "Lost"
     },
     "topBar": {
       "title": "Top 10",
@@ -204,6 +210,8 @@
       "noData": "No data"
     },
     "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog.",
+    "pipelinesLoadError": "Failed to load pipelines",
+    "managersLoadError": "Failed to load managers",
     "empty": {
       "noDeals": "No deals for the selected period",
       "noFunnel": "No funnel data",
@@ -2194,7 +2202,12 @@
         "other": "Other"
       },
       "empty": "No attachments",
-      "noScan": "Signed scan required for signing"
+      "noScan": "Signed scan required for signing",
+      "columns": {
+        "type": "Type",
+        "file": "File",
+        "uploader": "Uploaded by"
+      }
     },
     "remarks": {
       "resolve": "Mark as resolved",
