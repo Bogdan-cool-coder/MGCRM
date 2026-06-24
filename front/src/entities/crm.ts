@@ -64,6 +64,7 @@ export interface Contact {
   extra_fields: Record<string, unknown>
   owner_id: number | null
   owner?: { id: number; full_name: string } | null
+  created_by_id?: number | null
   company_links?: ContactCompanyLink[]
   // Acquisition channel (N1)
   acquisition_channel_id: number | null
@@ -358,12 +359,17 @@ export interface DisconnectReason {
 
 // ─── Channel History ──────────────────────────────────────────────────────────
 
+/**
+ * Wire shape of one AcquisitionChannelHistoryResource row.
+ * Mirrors src/app/Http/Resources/Crm/AcquisitionChannelHistoryResource.php:
+ * old/new channels are objects (eager-loaded relations), changed_by is the user.
+ */
 export interface ChannelHistoryEntry {
   id: number
-  from_channel: string | null
-  to_channel: string | null
-  changed_by_name: string | null
-  changed_at: string
+  old_channel: { id: number; name: string } | null
+  new_channel: { id: number; name: string } | null
+  changed_by: { id: number; full_name: string } | null
+  changed_at: string | null
 }
 
 // ─── Client status ────────────────────────────────────────────────────────────
@@ -460,22 +466,52 @@ export type EntityLogEventType =
   | 'contract_event'
   | 'finance_event'
 
+/**
+ * A single key-field change recorded inside `meta.changes` for `data_changed`
+ * (and stage / channel) actions. `old`/`new` are free-form scalar values.
+ */
+export interface EntityLogChange {
+  field: string
+  old: string | number | boolean | null
+  new: string | number | boolean | null
+}
+
+/**
+ * `meta` JSON payload from the backend EntityLog. The shape is per-action
+ * (see LogAction docblock): only a subset of keys is present on any given row.
+ * Treated as optional so renderers must guard each key.
+ */
+export interface EntityLogMeta {
+  /** `created` — title/name of the created subject */
+  title?: string | null
+  /** `stage_changed` — human-readable from/to stage names (writer keys) */
+  from_stage_name?: string | null
+  to_stage_name?: string | null
+  from_stage_id?: number | null
+  to_stage_id?: number | null
+  /** `contact_added` — the linked contact's name */
+  contact_name?: string | null
+  /** `data_changed` — per-field diff */
+  changes?: EntityLogChange[]
+  [key: string]: unknown
+}
+
+/**
+ * Wire shape of one EntityLogResource row.
+ * Mirrors src/app/Http/Resources/Log/EntityLogResource.php exactly:
+ * `{ id, subject_type, subject_id, action, meta, actor, actor_id, created_at }`.
+ */
 export interface EntityLogEntry {
   id: number
-  /**
-   * Backend EntityLogResource returns this field as `action` (LogAction enum value).
-   * Frontend type alias kept as `action` to match the wire format exactly.
-   */
+  subject_type?: 'deal' | 'company' | 'contact'
+  subject_id?: number
+  /** LogAction enum value (e.g. 'data_changed', 'stage_changed'). */
   action: EntityLogEventType
-  /** Human-readable description from backend */
-  description: string | null
-  /** Old value (for field changes / stage changes) */
-  old_value: string | null
-  /** New value (for field changes / stage changes) */
-  new_value: string | null
-  /** Extra metadata (arbitrary key-value pairs from backend) */
-  meta: Record<string, unknown> | null
-  user: { id: number; full_name: string } | null
+  /** Per-action detail (see EntityLogMeta). */
+  meta: EntityLogMeta | null
+  /** The user who performed the action; null for system/inbound events. */
+  actor: { id: number; full_name: string } | null
+  actor_id: number | null
   created_at: string
 }
 

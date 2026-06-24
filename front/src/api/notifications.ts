@@ -11,6 +11,7 @@ import type {
   NotificationsResponse,
   NotificationsCountResponse,
   ReadBatchResponse,
+  ReadAllResponse,
 } from '@/entities/notification'
 
 export const notificationsApi = {
@@ -54,8 +55,10 @@ export const notificationsApi = {
 
   /**
    * Mark all notifications as read.
+   * Returns the authoritative server count ({ marked, unread_count }).
    */
-  async markAllRead(): Promise<void> {
-    await apiClient.post('/api/notifications/read-all')
+  async markAllRead(): Promise<ReadAllResponse> {
+    const res = await apiClient.post<ReadAllResponse>('/api/notifications/read-all')
+    return res.data
   },
 }

@@ -16,4 +16,6 @@ enum LinkRedeemResult: string
     case AlreadyUsed = 'already_used';
     case Expired = 'expired';
     case LinkedToOther = 'linked_to_other';
+    /** The redeeming user already has a *different* Telegram account bound. */
+    case AlreadyLinkedOther = 'already_linked_other';
 }

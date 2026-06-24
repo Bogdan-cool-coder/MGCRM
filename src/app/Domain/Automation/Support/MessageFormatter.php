@@ -13,7 +13,7 @@ use App\Domain\Sales\Models\Deal;
  * str_replace pass (NO Blade/Twig) so a config string can never inject template
  * logic or run arbitrary code.
  *
- * Supported tokens: {target_id} {target_title} {owner_name}.
+ * Supported tokens: {target_id} {target_type} {target_title} {owner_name}.
  */
 final class MessageFormatter
 {
@@ -25,6 +25,9 @@ final class MessageFormatter
 
         return strtr($template, [
             '{target_id}' => (string) $target->id,
+            // MVP automations target deals only; the builder still offers the
+            // {target_type} chip, so substitute it instead of leaking the literal.
+            '{target_type}' => 'deal',
             '{target_title}' => (string) ($target->title ?? ''),
             '{owner_name}' => $owner?->full_name ?? '—',
         ]);

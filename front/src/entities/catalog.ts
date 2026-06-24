@@ -7,7 +7,7 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type PricingType = 'fixed' | 'tiered' | 'per_minute' | 'package' | 'custom'
-export type BillingUnit = 'year' | 'one_time' | 'minute' | 'package'
+export type BillingUnit = 'year' | 'one_time' | 'minute' | 'package' | 'perpetual'
 export type RateSource = 'exchangerate-api' | 'manual'
 
 // ─── Product Group ────────────────────────────────────────────────────────────

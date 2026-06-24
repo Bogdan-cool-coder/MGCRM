@@ -198,6 +198,56 @@ class AutomationScannerTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_date_field_scan_catches_up_recently_overdue_date(): void
+    {
+        // MINOR-4: a date that already slipped into the past (scheduler downtime,
+        // or rule created after the date) must still fire once via catch-up.
+        Queue::fake();
+
+        $pipeline = Pipeline::factory()->create();
+        $stage = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id]);
+        $automation = PipelineAutomation::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => null,
+            'trigger_kind' => 'date_field_approaching',
+            'trigger_config' => ['field' => 'expected_close_date', 'days' => 7],
+        ]);
+
+        // 5 days OVERDUE — inside the default 30-day catch-up window.
+        $deal = Deal::factory()->inStage($stage)->create(['expected_close_date' => now()->subDays(5)]);
+
+        $claimed = $this->scanner()->scanDateFieldApproaching();
+
+        $this->assertSame(1, $claimed);
+        $this->assertDatabaseHas('automation_runs', [
+            'automation_id' => $automation->id,
+            'target_id' => $deal->id,
+        ]);
+    }
+
+    public function test_date_field_scan_ignores_date_beyond_catch_up_window(): void
+    {
+        // A long-overdue date (older than the catch-up bound) is NOT resurrected.
+        Queue::fake();
+
+        $pipeline = Pipeline::factory()->create();
+        $stage = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id]);
+        PipelineAutomation::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => null,
+            'trigger_kind' => 'date_field_approaching',
+            'trigger_config' => ['field' => 'expected_close_date', 'days' => 7, 'catch_up_days' => 14],
+        ]);
+
+        // 40 days overdue, catch_up_days = 14 → outside the window.
+        Deal::factory()->inStage($stage)->create(['expected_close_date' => now()->subDays(40)]);
+
+        $claimed = $this->scanner()->scanDateFieldApproaching();
+
+        $this->assertSame(0, $claimed);
+        Queue::assertNothingPushed();
+    }
+
     public function test_date_field_scan_is_idempotent(): void
     {
         Queue::fake();

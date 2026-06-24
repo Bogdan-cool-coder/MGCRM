@@ -48,6 +48,9 @@ class NotificationFeedResource extends JsonResource
         /** @var LengthAwarePaginator<int, Notification> $feed */
         $feed = $this->resource['feed'];
 
+        /** @var array{unread_total: int, by_category: array<string, int>} $digest */
+        $digest = $this->resource['digest'];
+
         return [
             'actionable' => NotificationResource::collection($actionable)->resolve($request),
             'feed' => [
@@ -59,7 +62,13 @@ class NotificationFeedResource extends JsonResource
                     'total' => $feed->total(),
                 ],
             ],
-            'digest' => $this->resource['digest'],
+            'digest' => [
+                'unread_total' => $digest['unread_total'],
+                // Cast to object so an empty breakdown serializes as {} (a JSON
+                // object) rather than [] — keeps the `Record<string, number>`
+                // contract honest for the FE digest chips.
+                'by_category' => (object) $digest['by_category'],
+            ],
             'unread_count' => $this->resource['unread_count'],
         ];
     }

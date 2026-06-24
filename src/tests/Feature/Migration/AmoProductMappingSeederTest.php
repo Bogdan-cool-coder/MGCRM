@@ -123,7 +123,7 @@ class AmoProductMappingSeederTest extends TestCase
 
         $this->assertSame(
             'skip',
-            $row->action,
+            $row->action->value,
             "Row '{$label}' (enum {$enumId}) should be skip after user decision",
         );
         $this->assertNull(
@@ -153,7 +153,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1125732)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -165,7 +165,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1198158)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -177,7 +177,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1125734)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -189,7 +189,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1203740)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -201,7 +201,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1125736)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -213,7 +213,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1125756)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -225,7 +225,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1125754)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -237,7 +237,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1197702)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -249,7 +249,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seedAll();
 
         $row = AmoProductMapping::where('amo_enum_id', 1189000)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
 
         $product = Product::find($row->catalog_product_id);
         $this->assertNotNull($product);
@@ -266,7 +266,7 @@ class AmoProductMappingSeederTest extends TestCase
             $row = AmoProductMapping::where('amo_enum_id', $enumId)->firstOrFail();
             $product = Product::find($row->catalog_product_id);
 
-            $this->assertSame('map', $row->action, "PPI row {$enumId} should be map");
+            $this->assertSame('map', $row->action->value, "PPI row {$enumId} should be map");
             $this->assertNotNull($product);
             $this->assertSame('ppi', $product->code, "PPI row {$enumId} should map to ppi");
         }
@@ -282,7 +282,7 @@ class AmoProductMappingSeederTest extends TestCase
         $row = AmoProductMapping::where('amo_enum_id', $enumId)->firstOrFail();
         $this->assertSame(
             'skip',
-            $row->action,
+            $row->action->value,
             "Expected {$label} (enum {$enumId}) to be skip",
         );
         $this->assertNull($row->catalog_product_id);
@@ -337,7 +337,7 @@ class AmoProductMappingSeederTest extends TestCase
         $this->seed(AmoProductMappingSeeder::class);
 
         $row = AmoProductMapping::where('amo_enum_id', 1125732)->firstOrFail();
-        $this->assertSame('map', $row->action);
+        $this->assertSame('map', $row->action->value);
         $this->assertNotNull($row->catalog_product_id);
     }
 }

@@ -428,6 +428,7 @@ class DocumentService
                 ContractStatus::Signed->value,
                 ContractStatus::Uploaded->value,
             ])
+            ->whereNotNull('docx_path')  // Guard: only real generated+approved docs satisfy the gate
             ->exists();
     }
 

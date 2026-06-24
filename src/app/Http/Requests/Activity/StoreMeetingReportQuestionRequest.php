@@ -21,6 +21,7 @@ class StoreMeetingReportQuestionRequest extends FormRequest
             'pipeline_id' => ['nullable', 'integer', 'exists:pipelines,id'],
             'text' => ['required', 'string'],
             'kind' => ['required', 'string', Rule::in(['text', 'select'])],
+            'is_required' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer'],
             'is_active' => ['nullable', 'boolean'],
             'options' => ['nullable', 'array'],

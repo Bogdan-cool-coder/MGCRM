@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sales;
 
-use App\Domain\Contracts\Models\Document;
 use App\Domain\Crm\Enums\ClientStatus;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
@@ -40,21 +39,12 @@ class DealUniqueClientTest extends TestCase
         ], $attrs));
     }
 
-    /** A live contract so the won-gate (S2.8) never blocks the lifecycle assertions. */
-    private function approvedContractFor(Deal $deal): void
-    {
-        Document::factory()->approved()->create([
-            'source_deal_id' => $deal->id,
-            'author_user_id' => $deal->owner_user_id,
-        ]);
-    }
-
     public function test_first_won_marks_company_unique_client_and_flags_primary(): void
     {
         $user = User::factory()->create(['role' => Role::Manager]);
         $company = Company::factory()->create();
         $deal = $this->dealAtHot($user, $company, ['signed_at' => '2026-05-10']);
-        $this->approvedContractFor($deal);
+        $this->activeContractFor($deal);
 
         $won = $this->wonStageId($deal->pipeline);
         app(DealMoveService::class)->move($deal, $won, $user->id);
@@ -74,7 +64,7 @@ class DealUniqueClientTest extends TestCase
 
         // First won deal converts the company (signed 2026-03-01).
         $first = $this->dealAtHot($user, $company, ['signed_at' => '2026-03-01']);
-        $this->approvedContractFor($first);
+        $this->activeContractFor($first);
         app(DealMoveService::class)->move($first, $this->wonStageId($first->pipeline), $user->id);
 
         $company->refresh();
@@ -82,7 +72,7 @@ class DealUniqueClientTest extends TestCase
 
         // Second won deal on the SAME company, later date → upsell, not primary.
         $second = $this->dealAtHot($user, $company, ['signed_at' => '2026-09-09']);
-        $this->approvedContractFor($second);
+        $this->activeContractFor($second);
         app(DealMoveService::class)->move($second, $this->wonStageId($second->pipeline), $user->id);
 
         $second->refresh();
@@ -99,7 +89,7 @@ class DealUniqueClientTest extends TestCase
         $company = Company::factory()->create();
         // No signed_at → the detect falls back to closed_at (stamped by move()).
         $deal = $this->dealAtHot($user, $company, ['signed_at' => null]);
-        $this->approvedContractFor($deal);
+        $this->activeContractFor($deal);
 
         app(DealMoveService::class)->move($deal, $this->wonStageId($deal->pipeline), $user->id);
 

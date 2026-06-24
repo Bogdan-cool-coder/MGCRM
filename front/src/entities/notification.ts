@@ -60,3 +60,10 @@ export interface ReadBatchResponse {
   marked: number
   unread_count: number
 }
+
+/** Response from POST /api/notifications/read-all */
+export interface ReadAllResponse {
+  /** Number of items actually flipped to read */
+  marked: number
+  unread_count: number
+}

@@ -78,6 +78,23 @@ class NotificationApiTest extends TestCase
             ->assertJsonPath('digest.by_category.approval', 1);
     }
 
+    public function test_digest_by_category_is_a_json_object_when_empty(): void
+    {
+        // No unread notifications → by_category must serialize as a JSON object {}
+        // (not an empty array []) so the FE Record<string, number> contract holds.
+        $user = $this->actingUser();
+        Notification::factory()->for($user)->read()->count(2)->create();
+
+        $raw = $this->getJson('/api/notifications')->assertOk()->getContent();
+        $decoded = json_decode((string) $raw, true);
+
+        $this->assertSame(0, $decoded['digest']['unread_total']);
+        // An associative-empty value decodes to [] in PHP either way, so assert on
+        // the raw JSON: it must contain "by_category":{} and never "by_category":[].
+        $this->assertStringContainsString('"by_category":{}', (string) $raw);
+        $this->assertStringNotContainsString('"by_category":[]', (string) $raw);
+    }
+
     public function test_feed_is_paginated(): void
     {
         $user = $this->actingUser();

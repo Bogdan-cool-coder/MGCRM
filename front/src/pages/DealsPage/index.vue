@@ -42,8 +42,8 @@
     <DealsFilterOverlay
       v-if="filterOverlayVisible"
       :stages="currentStages"
-      :users="[]"
-      :tags="[]"
+      :users="ownerOptions"
+      :tags="tagOptions"
       :filters="toOverlayFilters()"
       :hidden-stages="hiddenStages"
       @close="filterOverlayVisible = false"
@@ -164,11 +164,12 @@ import { useSalesStore } from '@/stores/salesStore'
 import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { useDirectoriesStore } from '@/stores/directories'
 import { salesApi } from '@/api/sales'
+import { usersApi } from '@/api/users'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage } from '@/utils/errors'
 import { formatCurrency } from '@/utils/currency'
-import type { PipelineDto, DealDto, DealCardDto, PipelineStageDto } from '@/entities/sales'
+import type { PipelineDto, DealDto, DealCardDto, PipelineStageDto, UserRefDto } from '@/entities/sales'
 import type { OverlayFilters } from './components/DealsFilterOverlay.vue'
 import type { DealsView } from '@/stores/salesStore'
 
@@ -190,6 +191,29 @@ const pipelineMenuOpen = ref(false)
 
 const pipelinesResource = useAsyncResource<PipelineDto[]>(() => [])
 const pipelines = computed(() => pipelinesResource.data.value)
+
+// ── Filter option sources (owners + tags) ────────────────────────────────────────
+
+// Owner MultiSelect options — visible users mapped to the {id, name} shape the
+// overlay binds (option-label="name"). Mirrors DealPage's usersApi mapping.
+const ownersResource = useAsyncResource<UserRefDto[]>(() => [])
+const ownerOptions = computed(() => ownersResource.data.value)
+
+// Tag checklist options — distinct tags drawn from the currently-loaded deals
+// (board cards + list rows). There is no tags endpoint; the set is data-driven
+// so it always reflects tags that actually exist on visible deals.
+const tagOptions = computed<string[]>(() => {
+  const set = new Set<string>()
+  for (const col of boardComposable.localColumns.value) {
+    for (const card of col.deals) {
+      for (const tag of card.tags ?? []) set.add(tag)
+    }
+  }
+  for (const deal of deals.value) {
+    for (const tag of deal.tags ?? []) set.add(tag)
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
+})
 
 const currentPipelineId = computed(() => {
   if (salesStore.activePipelineId) return salesStore.activePipelineId
@@ -271,6 +295,35 @@ onMounted(() => {
     salesStore.setActiveView(urlView as DealsView)
   }
 })
+
+/**
+ * Apply deep-link query params (e.g. from the dashboard "сделки без задач" widget:
+ * /deals?pipeline_id=X&only_no_task=1). Must run AFTER pipelines load so the
+ * target pipeline's stages are cached; the subsequent reload() then fetches the
+ * pre-filtered list. Overrides the default pipeline selection when a valid
+ * pipeline_id is supplied.
+ */
+function applyDeepLinkQuery(): void {
+  const rawPipelineId = route.query.pipeline_id
+  const pipelineId = Array.isArray(rawPipelineId) ? rawPipelineId[0] : rawPipelineId
+  if (pipelineId != null && pipelineId !== '') {
+    const pid = Number(pipelineId)
+    if (Number.isFinite(pid) && pipelines.value.some((p) => p.id === pid)) {
+      salesStore.setActivePipeline(pid)
+      salesStore.resetRevealedStages()
+      const pipeline = pipelines.value.find((p) => p.id === pid)
+      if (pipeline?.stages) {
+        salesStore.cacheStages(pid, pipeline.stages)
+      }
+    }
+  }
+
+  const rawNoTask = route.query.only_no_task
+  const noTask = Array.isArray(rawNoTask) ? rawNoTask[0] : rawNoTask
+  if (noTask === '1' || noTask === 'true') {
+    filters.value.only_no_task = true
+  }
+}
 
 watch(
   () => salesStore.activeView,
@@ -641,6 +694,13 @@ onMounted(async () => {
     void directoriesStore.fetchAll()
   }
 
+  // Owner filter options — load once; maps full_name → name for the MultiSelect.
+  void ownersResource.run(() =>
+    usersApi.getUsers().then((users) =>
+      users.map((u) => ({ id: u.id, name: u.full_name, avatar_path: u.avatar_path })),
+    ),
+  )
+
   // Load pipelines
   await pipelinesResource.run(() => salesApi.getPipelines('sales'), {
     commit: (result) => {
@@ -654,6 +714,11 @@ onMounted(async () => {
       }
     },
   })
+
+  // Apply deep-link query params (pipeline_id + only_no_task) — must run after
+  // pipelines load so the target pipeline + its stages resolve. Overrides the
+  // default pipeline selection above when a valid pipeline_id is supplied.
+  applyDeepLinkQuery()
 
   // Load lost reasons into store cache
   try {

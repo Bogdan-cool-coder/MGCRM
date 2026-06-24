@@ -18,6 +18,7 @@ class MeetingReportQuestionResource extends JsonResource
             'pipeline_id' => $this->pipeline_id,
             'text' => $this->text,
             'kind' => $this->kind,
+            'is_required' => $this->is_required,
             'sort_order' => $this->sort_order,
             'is_active' => $this->is_active,
             'options' => $this->whenLoaded('options', fn () => $this->options->map(static fn ($o): array => [

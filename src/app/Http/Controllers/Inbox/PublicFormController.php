@@ -17,6 +17,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Public (unauthenticated) form endpoints. Lives in the throttle:inbound group.
@@ -90,13 +92,26 @@ class PublicFormController extends Controller
             return $this->dedupReplay($form, $channel->id, $externalId);
         }
 
-        $deal = $this->router->route($channel, $message->fresh());
+        // route() never throws on routing failure (it self-stamps `failed`), but
+        // wrap defensively so the anonymous sender is NEVER shown a 500 (E8): an
+        // unexpected throwable still resolves to an idempotent accepted ack.
+        try {
+            $deal = $this->router->route($channel, $message->fresh());
 
-        return $this->ok(
-            $form,
-            dealCreated: (bool) ($deal !== null && $message->fresh()->target_deal_created),
-            dealId: $deal?->id,
-        );
+            return $this->ok(
+                $form,
+                dealCreated: (bool) ($deal !== null && $message->fresh()->target_deal_created),
+                dealId: $deal?->id,
+            );
+        } catch (Throwable $e) {
+            Log::error('inbox form submit routing threw', [
+                'channel_id' => $channel->id,
+                'message_id' => $message->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return $this->ok($form, dealCreated: false, dealId: null);
+        }
     }
 
     /**

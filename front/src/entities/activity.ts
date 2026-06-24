@@ -66,6 +66,7 @@ export interface ActivityDto {
   // Deal context (batch-stamped by ActivityService on list responses; absent on timeline/show)
   deal?: ActivityDealContextDto | null
   // Meeting fields
+  is_first_time_meeting: boolean
   ftm_decision_maker_attended: boolean
   ftm_presentation_shown: boolean
   ftm_report_url: string | null
@@ -107,11 +108,24 @@ export interface MeetingReportOptionDto {
 
 export interface MeetingReportQuestionDto {
   id: number
+  pipeline_id?: number | null
   text: string
   kind: 'text' | 'select'
   is_required: boolean
+  is_active?: boolean
   sort_order: number
   options: MeetingReportOptionDto[]
+}
+
+// Admin CRUD payload for the question registry (Settings «Справочники»).
+export interface SaveMeetingReportQuestionPayload {
+  pipeline_id?: number | null
+  text: string
+  kind: 'text' | 'select'
+  is_required?: boolean
+  is_active?: boolean
+  sort_order?: number
+  options?: Array<{ text: string; sort_order?: number }>
 }
 
 // ─── Counts ───────────────────────────────────────────────────────────────────
@@ -189,6 +203,12 @@ export interface SaveMeetingReportPayload {
   answers: Array<{ question_id: number; answer: string }>
   comment?: string | null
   activity_id?: number | null
+  // FTM (first-time meeting) — captured through the report constructor; feeds the
+  // manager KPI cabinet. All four must be satisfied for a counted FTM.
+  is_first_time_meeting?: boolean
+  ftm_decision_maker_attended?: boolean
+  ftm_presentation_shown?: boolean
+  ftm_report_url?: string | null
 }
 
 // ─── My Board (task board view, view 3) ──────────────────────────────────────

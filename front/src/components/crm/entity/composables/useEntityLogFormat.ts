@@ -3,7 +3,7 @@
  * Extracted so both components stay in sync without duplication.
  */
 import { useI18n } from 'vue-i18n'
-import type { EntityLogEventType } from '@/entities/crm'
+import type { EntityLogEntry, EntityLogEventType, EntityLogMeta } from '@/entities/crm'
 
 export const EVENT_ICONS: Partial<Record<EntityLogEventType, string>> & Record<string, string> = {
   created: 'pi-plus-circle',
@@ -47,6 +47,54 @@ export function useEntityLogFormat() {
     return label === key ? t('crm.log.events.unknown') : label
   }
 
+  /** Translate a raw column name (data_changed diff) to a human label, or echo it. */
+  function fieldLabel(field: string): string {
+    const key = `crm.log.fields.${field}`
+    const label = t(key)
+    return label === key ? field : label
+  }
+
+  /** Render a scalar diff value, with an em-dash placeholder for null/empty. */
+  function diffValue(v: string | number | boolean | null | undefined): string {
+    if (v === null || v === undefined || v === '') return '—'
+    if (typeof v === 'boolean') return v ? t('common.yes', 'да') : t('common.no', 'нет')
+    return String(v)
+  }
+
+  /**
+   * Build a human-readable detail string from the row's `meta`, per action.
+   * Renderers append this after the event label. Returns '' when there is no
+   * meaningful detail (the row then shows just "actor — event").
+   */
+  function detailText(entry: Pick<EntityLogEntry, 'action' | 'meta'>): string {
+    const meta: EntityLogMeta = entry.meta ?? {}
+
+    switch (entry.action) {
+      case 'stage_changed': {
+        const from = meta.from_stage_name ?? null
+        const to = meta.to_stage_name ?? null
+        if (from && to) return `${from} → ${to}`
+        if (to) return to
+        return ''
+      }
+      case 'created':
+        return meta.title ? `«${meta.title}»` : ''
+      case 'contact_added':
+        return meta.contact_name ? `«${meta.contact_name}»` : ''
+      case 'data_changed': {
+        const changes = Array.isArray(meta.changes) ? meta.changes : []
+        if (changes.length === 0) return ''
+        return changes
+          .map((c) => `${fieldLabel(c.field)}: ${diffValue(c.old)} → ${diffValue(c.new)}`)
+          .join('; ')
+      }
+      default: {
+        // Fall back to a title if the action carries one.
+        return typeof meta.title === 'string' && meta.title ? `«${meta.title}»` : ''
+      }
+    }
+  }
+
   function formatDate(iso: string): string {
     try {
       return new Intl.DateTimeFormat(undefined, {
@@ -74,5 +122,5 @@ export function useEntityLogFormat() {
     }
   }
 
-  return { eventIcon, eventLabel, formatDate, relativeDate }
+  return { eventIcon, eventLabel, fieldLabel, diffValue, detailText, formatDate, relativeDate }
 }

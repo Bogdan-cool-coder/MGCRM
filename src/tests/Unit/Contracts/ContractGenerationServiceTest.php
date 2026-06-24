@@ -219,7 +219,8 @@ class ContractGenerationServiceTest extends TestCase
         $this->assertNotNull($revision);
         $this->assertNotNull($revision->context_snapshot);
         $this->assertSame(1, $revision->version_number);
-        $this->assertSame(1, $revision->attempt);
+        // Generation snapshot carries attempt=0; submit will bump it to 1.
+        $this->assertSame(0, $revision->attempt);
     }
 
     public function test_regeneration_increments_revision_version(): void
@@ -246,7 +247,10 @@ class ContractGenerationServiceTest extends TestCase
         $this->assertCount(2, $revisions);
         $this->assertSame(1, $revisions[0]->version_number);
         $this->assertSame(2, $revisions[1]->version_number);
-        $this->assertSame(2, $revisions[1]->attempt);
+        // Generation does NOT increment attempt — only submit/resubmit does.
+        // Both generation-revisions carry attempt=0 (no approval round yet).
+        $this->assertSame(0, $revisions[0]->attempt);
+        $this->assertSame(0, $revisions[1]->attempt);
     }
 
     public function test_422_when_template_has_no_docx(): void

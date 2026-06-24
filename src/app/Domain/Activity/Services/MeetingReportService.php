@@ -22,6 +22,10 @@ use Illuminate\Validation\ValidationException;
  */
 class MeetingReportService
 {
+    public function __construct(
+        private readonly ActivityService $activityService,
+    ) {}
+
     /**
      * Active questions for a pipeline form: global (pipeline_id NULL) plus the
      * pipeline's own questions, ordered.
@@ -51,7 +55,14 @@ class MeetingReportService
      * report (no answers and no comment). Creates a new meeting activity or
      * updates the existing one when activity_id is supplied.
      *
-     * @param  array{answers?: list<array<string, mixed>>, comment?: string|null, activity_id?: int|null}  $data
+     * The four FTM flags (is_first_time_meeting, ftm_decision_maker_attended,
+     * ftm_presentation_shown, ftm_report_url) optionally accompany the report and
+     * are persisted onto the meeting activity — the constructor is the canonical
+     * FTM-capture surface, so all five FTM conditions can actually be satisfied
+     * here (KPI cabinet feeds off them). Booleans default to false; the url is
+     * trimmed to null when blank.
+     *
+     * @param  array{answers?: list<array<string, mixed>>, comment?: string|null, activity_id?: int|null, is_first_time_meeting?: bool|null, ftm_decision_maker_attended?: bool|null, ftm_presentation_shown?: bool|null, ftm_report_url?: string|null}  $data
      */
     public function saveReport(Deal $deal, array $data, User $user): Activity
     {
@@ -101,16 +112,20 @@ class MeetingReportService
                 ]);
             }
 
-            $activity->update([
+            // Update: only overwrite FTM flags when the request carries an FTM
+            // block, so a plain report re-save never wipes prior FTM data.
+            $activity->update(array_merge([
                 'meeting_report_json' => $reportJson,
                 'body' => $body,
-            ]);
+            ], $this->ftmFields($data, forCreate: false)));
             $activity->refresh();
 
             return $activity;
         }
 
-        $activity = Activity::create([
+        // Create: a fresh meeting is explicitly "not FTM" unless the block says
+        // otherwise, so the four flags get concrete false/null defaults.
+        $activity = Activity::create(array_merge([
             'kind' => ActivityType::Meeting->value,
             'target_type' => ActivityTargetType::Deal->value,
             'target_id' => $deal->id,
@@ -122,13 +137,55 @@ class MeetingReportService
             'completed_at' => now(),
             'completed_by_id' => $user->id,
             'progress_pct' => 100,
+            'is_closed' => true,
             'meeting_report_json' => $reportJson,
             'department_id' => $deal->department_id,
-        ]);
+        ], $this->ftmFields($data, forCreate: true)));
+
+        // A report logged through the constructor is a completed meeting: stamp
+        // engagement on the deal's company/contacts (last_activity_at) and write
+        // the meeting_held entity-log, exactly as POST /complete would (E8). The
+        // Activity domain owns both side-effects, so we delegate to it rather
+        // than duplicate the engagement/entity-log plumbing here.
+        $this->activityService->recordCompletedActivitySideEffects($activity, $user);
 
         ActivityCreated::dispatch($activity);
 
         return $activity;
+    }
+
+    /**
+     * Normalise the four optional FTM fields off the request payload into a
+     * persistable shape: booleans default to false, the report url is trimmed to
+     * null when blank.
+     *
+     * On create ($forCreate=true) the flags are always returned (a fresh meeting
+     * is concretely "not FTM" unless the block opts in). On update they are only
+     * returned when the request actually carries an FTM key, so a plain report
+     * re-save never overwrites previously captured FTM data.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function ftmFields(array $data, bool $forCreate): array
+    {
+        $hasFtm = array_key_exists('is_first_time_meeting', $data)
+            || array_key_exists('ftm_decision_maker_attended', $data)
+            || array_key_exists('ftm_presentation_shown', $data)
+            || array_key_exists('ftm_report_url', $data);
+
+        if (! $forCreate && ! $hasFtm) {
+            return [];
+        }
+
+        $url = isset($data['ftm_report_url']) ? trim((string) $data['ftm_report_url']) : '';
+
+        return [
+            'is_first_time_meeting' => (bool) ($data['is_first_time_meeting'] ?? false),
+            'ftm_decision_maker_attended' => (bool) ($data['ftm_decision_maker_attended'] ?? false),
+            'ftm_presentation_shown' => (bool) ($data['ftm_presentation_shown'] ?? false),
+            'ftm_report_url' => $url !== '' ? $url : null,
+        ];
     }
 
     /**

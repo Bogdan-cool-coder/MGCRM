@@ -139,4 +139,31 @@ class MeetingReportTest extends TestCase
             ->assertJsonPath('data.kind', 'select')
             ->assertJsonCount(2, 'data.options');
     }
+
+    public function test_director_can_create_required_question_and_resource_exposes_flag(): void
+    {
+        // Audit MINOR-6: is_required is now a real backing column, not phantom FE.
+        $this->seedSalesPipeline();
+        $director = $this->director();
+        Sanctum::actingAs($director, ['*']);
+
+        $this->postJson('/api/meeting-report-questions', [
+            'text' => 'Mandatory?',
+            'kind' => 'text',
+            'is_required' => true,
+        ])->assertCreated()
+            ->assertJsonPath('data.is_required', true);
+    }
+
+    public function test_questions_endpoint_exposes_is_required(): void
+    {
+        $this->seedSalesPipeline();
+        $manager = $this->manager();
+        MeetingReportQuestion::factory()->global()->create(['is_required' => true]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/meeting-report/questions')
+            ->assertOk()
+            ->assertJsonPath('data.0.is_required', true);
+    }
 }

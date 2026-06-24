@@ -37,7 +37,7 @@
               severity="secondary"
               size="small"
               :title="t('documents.card.actions.downloadDocx')"
-              @click="download(data.docx_path)"
+              @click="downloadDocx(data.document_id)"
             />
             <Button
               v-if="data.pdf_path"
@@ -46,7 +46,7 @@
               severity="secondary"
               size="small"
               :title="t('documents.card.actions.downloadPdf')"
-              @click="download(data.pdf_path)"
+              @click="downloadPdf(data.document_id)"
             />
           </span>
         </template>
@@ -88,8 +88,15 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
 }
 
-function download(path: string) {
-  window.open(path, '_blank')
+/** Download via the served API endpoint (not raw storage path). */
+function downloadDocx(documentId: number | undefined) {
+  if (!documentId) return
+  window.open(`/api/documents/${documentId}/download/docx`, '_blank')
+}
+
+function downloadPdf(documentId: number | undefined) {
+  if (!documentId) return
+  window.open(`/api/documents/${documentId}/download/pdf`, '_blank')
 }
 </script>
 

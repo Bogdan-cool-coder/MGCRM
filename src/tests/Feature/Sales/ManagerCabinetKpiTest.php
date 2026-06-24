@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sales;
 
+use App\Domain\Catalog\Models\ExchangeRate;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Org\Models\Department;
@@ -66,6 +67,16 @@ class ManagerCabinetKpiTest extends TestCase
         return PipelineStage::factory()->won()->create([
             'pipeline_id' => $pipeline->id,
             'sort_order' => 99,
+        ]);
+    }
+
+    private function seedRate(string $from, string $to, float $rate): void
+    {
+        ExchangeRate::create([
+            'from_code' => strtoupper($from),
+            'to_code' => strtoupper($to),
+            'rate' => $rate,
+            'date' => now()->toDateString(),
         ]);
     }
 
@@ -495,5 +506,174 @@ class ManagerCabinetKpiTest extends TestCase
         // No activities seeded → FTM = 0
         $response = $this->getJson('/api/me/kpi')->assertOk();
         $response->assertJsonPath('personal.ftm_count_fact', 0);
+    }
+
+    // -------------------------------------------------------------------------
+    // Role gate — only sales roles reach the cabinet (lawyer/accountant/cfo → 403)
+    // -------------------------------------------------------------------------
+
+    public function test_lawyer_cannot_access_cabinet_kpi(): void
+    {
+        $lawyer = User::factory()->create(['role' => Role::Lawyer, 'is_active' => true]);
+        Sanctum::actingAs($lawyer, ['*']);
+
+        $this->getJson('/api/me/kpi')->assertForbidden();
+    }
+
+    public function test_accountant_cannot_access_cabinet_kpi(): void
+    {
+        $accountant = User::factory()->create(['role' => Role::Accountant, 'is_active' => true]);
+        Sanctum::actingAs($accountant, ['*']);
+
+        $this->getJson('/api/me/kpi')->assertForbidden();
+    }
+
+    public function test_manager_director_admin_reach_cabinet_kpi(): void
+    {
+        foreach ([$this->makeManager(), $this->makeDirector(), $this->makeAdmin()] as $user) {
+            Sanctum::actingAs($user, ['*']);
+            $this->getJson('/api/me/kpi')->assertOk();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Coherent team derivation — shared line-manager even with NULL department
+    // -------------------------------------------------------------------------
+
+    public function test_team_derived_from_shared_manager_when_department_null(): void
+    {
+        $director = $this->makeDirector();
+
+        // Three managers with NO department but the same line-manager (the real
+        // seeded data shape). They must form one team via manager_id.
+        $manager = User::factory()->create([
+            'role' => Role::Manager,
+            'department_id' => null,
+            'manager_id' => $director->id,
+            'is_active' => true,
+        ]);
+        $peerA = User::factory()->create([
+            'role' => Role::Manager,
+            'department_id' => null,
+            'manager_id' => $director->id,
+            'is_active' => true,
+        ]);
+        $peerB = User::factory()->create([
+            'role' => Role::Manager,
+            'department_id' => null,
+            'manager_id' => $director->id,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        // Team must include all three siblings — not a solo table.
+        $response->assertJsonPath('team.size', 3);
+        $this->assertCount(3, $response->json('team.members'));
+
+        $names = array_column($response->json('team.members'), 'full_name');
+        $this->assertContains($peerA->full_name, $names);
+        $this->assertContains($peerB->full_name, $names);
+    }
+
+    public function test_team_derived_from_shared_department(): void
+    {
+        $dept = $this->makeDept();
+        $manager = $this->makeManager($dept->id);
+        $colleague = User::factory()->create([
+            'role' => Role::Manager,
+            'department_id' => $dept->id,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        $response->assertJsonPath('team.size', 2);
+        $names = array_column($response->json('team.members'), 'full_name');
+        $this->assertContains($colleague->full_name, $names);
+    }
+
+    public function test_director_self_team_includes_director(): void
+    {
+        $dept = $this->makeDept();
+        $director = $this->makeDirector($dept->id);
+        $manager = User::factory()->create([
+            'role' => Role::Manager,
+            'department_id' => $dept->id,
+            'manager_id' => $director->id,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        // Director viewing their OWN KPI must appear in their own team comparison.
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        $viewer = collect($response->json('team.members'))->firstWhere('is_viewer', true);
+        $this->assertNotNull($viewer);
+        $this->assertSame($director->full_name, $viewer['full_name']);
+        $this->assertGreaterThanOrEqual(2, $response->json('team.size'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Each team member carries a server-computed score_badge (single source)
+    // -------------------------------------------------------------------------
+
+    public function test_team_members_carry_score_badge(): void
+    {
+        $dept = $this->makeDept();
+        $manager = $this->makeManager($dept->id);
+        User::factory()->create([
+            'role' => Role::Manager,
+            'department_id' => $dept->id,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        foreach ($response->json('team.members') as $member) {
+            $this->assertArrayHasKey('score_badge', $member);
+            $this->assertContains($member['score_badge'], ['success', 'warning', 'danger']);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // score_pct uses the plan converted to base currency (BUG fix)
+    // -------------------------------------------------------------------------
+
+    public function test_score_pct_uses_plan_converted_to_base_currency(): void
+    {
+        $manager = $this->makeManager();
+        $wonStage = $this->wonStage();
+
+        // Fact: 9 000 000 kopecks in RUB (base).
+        $this->wonDeal($manager, $wonStage, 9_000_000);
+
+        // Plan stored as 100 USD-cents-equivalent (1_000_000 in a non-base ccy).
+        // With a USD→RUB rate of 9x the converted plan is 9_000_000 → 100% score.
+        SalaryPlan::factory()->create([
+            'user_id' => $manager->id,
+            'period_year' => now()->year,
+            'period_month' => now()->month,
+            'personal_income_plan_kopecks' => 1_000_000,
+            'personal_income_plan_currency' => 'USD',
+        ]);
+
+        $this->seedRate('USD', 'RUB', 9.0);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        // Converted plan 1_000_000 USD-kopecks * 9 = 9_000_000 RUB-kopecks.
+        // fact 9_000_000 / plan 9_000_000 = 100%.
+        $response->assertJsonPath('personal.income_plan_kopecks', 9_000_000);
+        $response->assertJsonPath('personal.score_pct', 100);
     }
 }

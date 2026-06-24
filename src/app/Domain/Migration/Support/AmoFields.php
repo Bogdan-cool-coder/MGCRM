@@ -30,6 +30,9 @@ final class AmoFields
     /** Country (select, ~113 options) — normalised to ISO via country_map. */
     public const LEAD_COUNTRY = 711078;
 
+    /** Product (multiselect, 94 options) — mapped to catalog products via amo_product_mappings. */
+    public const LEAD_PRODUCT = 590196;
+
     /** Tax id (text, noisy). */
     public const LEAD_TAX_ID = 709194;
 

@@ -20,6 +20,7 @@ class UpdateMeetingReportQuestionRequest extends FormRequest
             'pipeline_id' => ['sometimes', 'nullable', 'integer', 'exists:pipelines,id'],
             'text' => ['sometimes', 'string'],
             'kind' => ['sometimes', 'string', Rule::in(['text', 'select'])],
+            'is_required' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer'],
             'is_active' => ['sometimes', 'boolean'],
             'options' => ['sometimes', 'nullable', 'array'],

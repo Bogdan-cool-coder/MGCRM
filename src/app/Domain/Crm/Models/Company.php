@@ -54,6 +54,7 @@ class Company extends Model
         'bank_code',
         'account',
         'phone',
+        'phone_normalized',
         'email',
         'website',
         'notes',

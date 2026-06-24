@@ -91,9 +91,15 @@ class QuizController extends Controller
      * GET /api/onboarding/lessons/{lesson}/quiz
      * Student-facing: no is_correct, no explanation.
      * S3.4: ownership check — 403 if user has no active assignment for this course.
+     * Publish-gate (#4): 404 if the lesson itself is not published.
      */
     public function showForStudent(Request $request, Lesson $lesson): JsonResource
     {
+        // Publish-gate: unpublished quiz-lessons are invisible to students.
+        if (! $lesson->is_published) {
+            abort(404, 'Lesson not found.');
+        }
+
         // Ownership: resolve assignment (403 if not assigned)
         $lesson->load('module');
         $this->progressService->resolveAssignment($request->user(), $lesson->module->course_id);

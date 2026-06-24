@@ -110,4 +110,47 @@ class ActivityCompleteTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', 'in_progress');
     }
+
+    public function test_inline_status_done_closes_like_complete(): void
+    {
+        // Audit MAJOR-3: PATCH /status done must converge with POST /complete —
+        // close the task (is_closed) + stamp completion, not just set status.
+        $manager = $this->manager();
+        $activity = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['status' => ActivityStatus::InProgress->value, 'is_closed' => false]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}/status", ['status' => 'done'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'done')
+            ->assertJsonPath('data.is_closed', true)
+            ->assertJsonPath('data.progress_pct', 100)
+            ->assertJsonPath('data.completed_by_id', $manager->id);
+
+        $fresh = $activity->fresh();
+        $this->assertTrue($fresh->is_closed);
+        $this->assertNotNull($fresh->completed_at);
+    }
+
+    public function test_inline_status_done_records_completion_log_on_target(): void
+    {
+        // MAJOR-3: the done-branch must also write the completion entity-log, like
+        // /complete — otherwise inline-done meetings/tasks never reach the feed.
+        $pipeline = $this->seedSalesPipeline();
+        $manager = $this->manager();
+        $deal = $this->dealFor($manager, $pipeline);
+        $activity = Activity::factory()->task()->forDeal($deal)
+            ->responsibleOf($manager)->createdByUser($manager)
+            ->create(['status' => ActivityStatus::InProgress->value, 'is_closed' => false]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->patchJson("/api/activities/{$activity->id}/status", ['status' => 'done'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('entity_logs', [
+            'subject_type' => 'deal',
+            'subject_id' => $deal->id,
+            'action' => 'task_completed',
+        ]);
+    }
 }

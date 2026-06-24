@@ -199,6 +199,7 @@
         <DealFeed
           ref="dealFeedRef"
           :deal-id="deal.id"
+          :pipeline-id="deal.pipeline?.id ?? null"
           :feed="feedComposable"
           :key-actions="deal.key_actions"
           class="deal-page-v2__feed"

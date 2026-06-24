@@ -395,6 +395,97 @@ class AuditBlockerFixesTest extends TestCase
         $this->assertNotNull($draftQuestion, 'Admin resource must expose is_draft flag.');
     }
 
+    // =========================================================================
+    // onboarding#5 — ai_generation_status surfaced in QuizAdminResource
+    // =========================================================================
+
+    public function test_quiz_admin_resource_exposes_ai_generation_status_idle_when_no_generation(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $course = Course::factory()->create();
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->quiz()->create([
+            'module_id' => $module->id,
+            'content' => [], // no ai_generation_status
+        ]);
+        $quiz = Quiz::factory()->create(['lesson_id' => $lesson->id]);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $response = $this->getJson("/api/admin/onboarding/quizzes/{$quiz->id}");
+        $response->assertOk()
+            ->assertJsonStructure(['data' => ['ai_generation_status']]);
+
+        $this->assertSame('idle', $response->json('data.ai_generation_status'));
+    }
+
+    public function test_quiz_admin_resource_normalises_done_to_completed(): void
+    {
+        // BE writes 'done'; FE polls for 'completed'. Resource must normalise.
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $course = Course::factory()->create();
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->quiz()->create([
+            'module_id' => $module->id,
+            'content' => ['ai_generation_status' => 'done'],
+        ]);
+        $quiz = Quiz::factory()->create(['lesson_id' => $lesson->id]);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $response = $this->getJson("/api/admin/onboarding/quizzes/{$quiz->id}");
+        $response->assertOk();
+
+        $this->assertSame(
+            'completed',
+            $response->json('data.ai_generation_status'),
+            "Resource must map 'done' → 'completed' so FE useAiQuizGeneration poll resolves."
+        );
+    }
+
+    public function test_quiz_admin_resource_exposes_pending_status(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $course = Course::factory()->create();
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->quiz()->create([
+            'module_id' => $module->id,
+            'content' => ['ai_generation_status' => 'pending'],
+        ]);
+        $quiz = Quiz::factory()->create(['lesson_id' => $lesson->id]);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $response = $this->getJson("/api/admin/onboarding/quizzes/{$quiz->id}");
+        $response->assertOk();
+
+        $this->assertSame('pending', $response->json('data.ai_generation_status'));
+    }
+
+    // =========================================================================
+    // NEW-8 — MyCourses resource emits 'id' (not 'assignment_id')
+    // =========================================================================
+
+    public function test_my_courses_resource_emits_id_field(): void
+    {
+        $learner = User::factory()->create(['role' => Role::Manager]);
+        $course = Course::factory()->create(['is_published' => true]);
+        $assignment = CourseAssignment::factory()->create([
+            'course_id' => $course->id,
+            'user_id' => $learner->id,
+        ]);
+
+        Sanctum::actingAs($learner, ['*']);
+
+        $response = $this->getJson('/api/onboarding/my-courses');
+        $response->assertOk();
+
+        $first = $response->json('data.0');
+        $this->assertArrayHasKey('id', $first, 'MyCourses payload must include `id` for router.push navigation.');
+        $this->assertArrayNotHasKey('assignment_id', $first, '`assignment_id` was renamed to `id` — old key must not appear.');
+        $this->assertSame($assignment->id, $first['id']);
+    }
+
     public function test_hr_can_approve_draft_question_via_patch(): void
     {
         $admin = User::factory()->create(['role' => Role::Admin]);

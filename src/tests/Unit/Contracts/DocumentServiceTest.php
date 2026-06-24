@@ -119,35 +119,39 @@ class DocumentServiceTest extends TestCase
         ]);
     }
 
-    private function dealWithContract(ContractStatus $status): Deal
+    /**
+     * @param array<string,mixed> $overrides
+     */
+    private function dealWithContract(ContractStatus $status, array $overrides = []): Deal
     {
         $deal = Deal::factory()->create();
 
-        Document::factory()->create([
+        Document::factory()->create(array_merge([
             'source_deal_id' => $deal->id,
             'status' => $status->value,
-        ]);
+        ], $overrides));
 
         return $deal;
     }
 
     public function test_has_active_contract_true_for_approved(): void
     {
-        $deal = $this->dealWithContract(ContractStatus::Approved);
+        // Gate requires docx_path IS NOT NULL — simulates a real generated doc.
+        $deal = $this->dealWithContract(ContractStatus::Approved, ['docx_path' => 'contracts/1/contract.docx']);
 
         $this->assertTrue($this->service->hasActiveContractForDeal($deal->id));
     }
 
     public function test_has_active_contract_true_for_signed(): void
     {
-        $deal = $this->dealWithContract(ContractStatus::Signed);
+        $deal = $this->dealWithContract(ContractStatus::Signed, ['docx_path' => 'contracts/1/contract.docx']);
 
         $this->assertTrue($this->service->hasActiveContractForDeal($deal->id));
     }
 
     public function test_has_active_contract_true_for_uploaded(): void
     {
-        $deal = $this->dealWithContract(ContractStatus::Uploaded);
+        $deal = $this->dealWithContract(ContractStatus::Uploaded, ['docx_path' => 'contracts/1/contract.docx']);
 
         $this->assertTrue($this->service->hasActiveContractForDeal($deal->id));
     }
@@ -167,6 +171,17 @@ class DocumentServiceTest extends TestCase
                 "Status {$status->value} must NOT count as a live contract.",
             );
         }
+    }
+
+    public function test_has_active_contract_false_when_approved_but_no_docx(): void
+    {
+        // Approved without docx_path = fake/seed doc, must NOT satisfy the gate.
+        $deal = $this->dealWithContract(ContractStatus::Approved, ['docx_path' => null]);
+
+        $this->assertFalse(
+            $this->service->hasActiveContractForDeal($deal->id),
+            'Approved doc without docx_path must not satisfy the won-gate.',
+        );
     }
 
     public function test_has_active_contract_false_for_rejected_archived(): void

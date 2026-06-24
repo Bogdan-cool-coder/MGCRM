@@ -52,6 +52,22 @@ class TgNotifyActionTest extends TestCase
         $this->assertInstanceOf(SendAutomationTelegramJob::class, $job);
     }
 
+    public function test_message_substitutes_target_type_placeholder(): void
+    {
+        // The builder offers a {target_type} chip — it must resolve (to "deal"),
+        // not leak the literal token into the message.
+        $owner = User::factory()->create(['telegram_user_id' => '555']);
+        $deal = Deal::factory()->create(['owner_user_id' => $owner->id, 'title' => 'ACME']);
+        $automation = PipelineAutomation::factory()->create();
+
+        $result = $this->action->execute($automation, $deal, [
+            'recipient' => 'owner',
+            'message' => '{target_type} #{target_id}: {target_title}',
+        ]);
+
+        $this->assertSame("deal #{$deal->id}: ACME", $result->data['message']);
+    }
+
     public function test_execute_resolves_explicit_chat_id(): void
     {
         $deal = Deal::factory()->create();

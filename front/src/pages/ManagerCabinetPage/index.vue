@@ -3,6 +3,26 @@
     <PageHeader :title="t('managerCabinet.title')" icon="pi pi-id-card" />
 
     <div class="manager-cabinet-page__content">
+      <!-- Cross-user picker (admin / director only) -->
+      <div v-if="canViewOthers" class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="manager-cabinet-page__picker-label">
+            {{ t('managerCabinet.viewing.label') }}
+          </label>
+          <Select
+            :model-value="viewedUserId"
+            :options="memberSelectOptions"
+            option-label="label"
+            option-value="value"
+            :placeholder="t('managerCabinet.viewing.self')"
+            show-clear
+            filter
+            class="w-100"
+            @update:model-value="(v) => setViewedUser(v as number | null)"
+          />
+        </div>
+      </div>
+
       <!-- Row 1: CabinetHeader -->
       <div class="row g-4 mb-4">
         <div class="col-12">
@@ -88,9 +108,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
+import Select from 'primevue/select'
 import Toast from 'primevue/toast'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import CabinetHeader from './components/CabinetHeader.vue'
@@ -113,12 +135,20 @@ const {
   period,
   feedKind,
   feedFtmOnly,
+  viewedUserId,
+  canViewOthers,
+  memberOptions,
   setPeriod,
   setFeedKind,
   setFeedFtmOnly,
   setFeedPage,
   resetFeedFilters,
+  setViewedUser,
 } = useManagerCabinetPage()
+
+const memberSelectOptions = computed(() =>
+  memberOptions.value.map((u) => ({ label: u.full_name, value: u.id })),
+)
 </script>
 
 <style lang="scss" scoped>
@@ -134,6 +164,14 @@ const {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+.manager-cabinet-page__picker-label {
+  display: block;
+  margin-bottom: $space-2;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $surface-600;
 }
 
 .widget-placeholder {

@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { useMutation } from '@/composables/async/useMutation'
 import { authApi } from '@/api/auth'
+import { profileApi } from '@/api/profile'
+import { localeManager } from '@/application/locale'
+import type { AvailableLocales } from '@/plugins/i18n'
 import { getApiErrorMessage, getValidationErrors } from '@/utils/errors'
 import { useToast } from 'primevue/usetoast'
 
@@ -177,7 +180,7 @@ export const useProfilePage = () => {
     telegramLinking.value = true
     try {
       const res = await authApi.telegramLink()
-      window.open(res.link_url, '_blank')
+      window.open(res.deeplink, '_blank')
       toast.add({
         severity: 'info',
         summary: t('profile.telegram.linkHint'),
@@ -201,6 +204,82 @@ export const useProfilePage = () => {
       toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
     } finally {
       telegramUnlinking.value = false
+    }
+  }
+
+  // ─── Profile edit (full_name) ─────────────────────────────────────────────────
+  const savingProfile = ref(false)
+
+  async function saveFullName(fullName: string) {
+    const trimmed = fullName.trim()
+    if (!trimmed) {
+      toast.add({ severity: 'warn', summary: t('common.required'), life: 2500 })
+      return
+    }
+    savingProfile.value = true
+    try {
+      const res = await profileApi.updateProfile({ full_name: trimmed })
+      userStore.setCurrentUser(res.data)
+      toast.add({ severity: 'success', summary: t('common.saved', 'Сохранено'), life: 2000 })
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: getApiErrorMessage(error, t('errors.unknown', 'Ошибка')),
+        life: 3000,
+      })
+    } finally {
+      savingProfile.value = false
+    }
+  }
+
+  // ─── Locale (account-level persisted + device i18n) ────────────────────────────
+  const savingLocale = ref(false)
+
+  async function changeLocale(locale: AvailableLocales) {
+    // Apply locally first so the UI flips instantly.
+    localeManager.changeLocale(locale)
+    savingLocale.value = true
+    try {
+      const res = await profileApi.updateProfile({ locale })
+      userStore.setCurrentUser(res.data)
+    } catch {
+      // Device locale already applied; account persistence is best-effort.
+    } finally {
+      savingLocale.value = false
+    }
+  }
+
+  // ─── Avatar ───────────────────────────────────────────────────────────────────
+  const avatarUploading = ref(false)
+  const avatarPath = computed(() => userStore.getUser?.avatar_path ?? null)
+
+  async function uploadAvatar(file: File) {
+    avatarUploading.value = true
+    try {
+      const res = await profileApi.uploadAvatar(file)
+      userStore.setCurrentUser(res.data)
+      toast.add({ severity: 'success', summary: t('common.saved', 'Сохранено'), life: 2000 })
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: getApiErrorMessage(error, t('profile.avatar.uploadError')),
+        life: 3000,
+      })
+    } finally {
+      avatarUploading.value = false
+    }
+  }
+
+  async function removeAvatar() {
+    avatarUploading.value = true
+    try {
+      const res = await profileApi.removeAvatar()
+      userStore.setCurrentUser(res.data)
+      toast.add({ severity: 'info', summary: t('common.saved', 'Сохранено'), life: 2000 })
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    } finally {
+      avatarUploading.value = false
     }
   }
 
@@ -235,5 +314,19 @@ export const useProfilePage = () => {
     telegramUnlinking,
     linkTelegram,
     unlinkTelegram,
+
+    // Profile edit
+    savingProfile,
+    saveFullName,
+
+    // Locale (account-level persisted)
+    savingLocale,
+    changeLocale,
+
+    // Avatar
+    avatarPath,
+    avatarUploading,
+    uploadAvatar,
+    removeAvatar,
   }
 }

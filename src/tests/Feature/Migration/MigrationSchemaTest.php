@@ -148,7 +148,7 @@ class MigrationSchemaTest extends TestCase
             'amo_value' => 'Loose',
         ]);
 
-        $this->assertSame('skip', $mapping->fresh()->action);
+        $this->assertSame('skip', $mapping->fresh()->action->value);
     }
 
     public function test_created_by_id_relation_on_deal(): void

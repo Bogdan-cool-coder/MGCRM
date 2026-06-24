@@ -123,4 +123,91 @@ class AmoVerifyTest extends TestCase
         $this->assertSame(0, $report['parity']['deals']['loaded']);
         $this->assertSame(1, $report['parity']['deals']['diff']);
     }
+
+    /**
+     * Events parity regression (BUG #5): a deal whose timeline event (genesis)
+     * loads cleanly must show events loaded == staged. The OLD code compared
+     * staging to itself (always diff 0); this proves the loaded side is now the
+     * real timeline entity_logs count.
+     */
+    public function test_events_parity_compares_staging_to_loaded_timeline(): void
+    {
+        // Two events on the deal: a genesis (lead_added) + a valid stage change.
+        $files = [
+            'leads' => [[
+                'id' => 2000, 'name' => 'Timeline', 'price' => 100,
+                'status_id' => 53233417, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 5500, 'is_main' => true]], 'contacts' => []],
+            ]],
+            'companies' => [['id' => 5500, 'name' => 'Co Timeline']],
+            'contacts' => [],
+            'tasks' => [],
+            'events' => [
+                ['id' => 'g1', 'type' => 'lead_added', '_lead_id' => 2000, 'created_at' => 1577836800, 'created_by' => 2435437],
+            ],
+            'notes' => [],
+        ];
+
+        foreach (['leads', 'contacts', 'companies', 'tasks', 'events', 'notes'] as $entity) {
+            $rows = $files[$entity] ?? [];
+            $lines = array_map(static fn (array $r): string => (string) json_encode($r), $rows);
+            file_put_contents($this->stagingDir.'/'.$entity.'.jsonl', $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
+        $this->loader()->load();
+
+        $report = (new MigrationVerifier(new StagingReader($this->stagingDir)))->verify(spotCheckCount: 0);
+
+        // 1 staging event → 1 loaded timeline log (genesis 'created'); diff 0.
+        $this->assertSame(1, $report['parity']['events']['staging']);
+        $this->assertSame(1, $report['parity']['events']['loaded']);
+        $this->assertSame(0, $report['parity']['events']['diff']);
+    }
+
+    /**
+     * Events parity surfaces a SILENTLY-DROPPED timeline row (the old staging-vs-
+     * staging row could never do this): a status-change event whose target status
+     * is unmapped is skipped by the loader, so loaded < staging — a real DIFF.
+     */
+    public function test_events_parity_flags_dropped_timeline_row(): void
+    {
+        $files = [
+            'leads' => [[
+                'id' => 2100, 'name' => 'Dropped', 'price' => 100,
+                'status_id' => 53233417, 'pipeline_id' => 6149857, 'responsible_user_id' => 2435437,
+                'created_at' => 1577836800,
+                '_embedded' => ['companies' => [['id' => 5600, 'is_main' => true]], 'contacts' => []],
+            ]],
+            'companies' => [['id' => 5600, 'name' => 'Co Dropped']],
+            'contacts' => [],
+            'tasks' => [],
+            'events' => [
+                ['id' => 'g2', 'type' => 'lead_added', '_lead_id' => 2100, 'created_at' => 1577836800, 'created_by' => 2435437],
+                [
+                    // value_after points at an UNMAPPED status → loader skips this row.
+                    'id' => 'bad', 'type' => 'lead_status_changed', '_lead_id' => 2100,
+                    'created_at' => 1577923200, 'created_by' => 2435437,
+                    'value_before' => [['lead_status' => ['id' => 53233417, 'pipeline_id' => 6149857]]],
+                    'value_after' => [['lead_status' => ['id' => 999999, 'pipeline_id' => 6149857]]],
+                ],
+            ],
+            'notes' => [],
+        ];
+
+        foreach (['leads', 'contacts', 'companies', 'tasks', 'events', 'notes'] as $entity) {
+            $rows = $files[$entity] ?? [];
+            $lines = array_map(static fn (array $r): string => (string) json_encode($r), $rows);
+            file_put_contents($this->stagingDir.'/'.$entity.'.jsonl', $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
+        $this->loader()->load();
+
+        $report = (new MigrationVerifier(new StagingReader($this->stagingDir)))->verify(spotCheckCount: 0);
+
+        // 2 staging events, but only the genesis 'created' log loaded → diff 1.
+        $this->assertSame(2, $report['parity']['events']['staging']);
+        $this->assertSame(1, $report['parity']['events']['loaded']);
+        $this->assertSame(1, $report['parity']['events']['diff']);
+    }
 }

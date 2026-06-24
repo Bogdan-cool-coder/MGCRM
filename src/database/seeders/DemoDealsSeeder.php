@@ -117,9 +117,14 @@ class DemoDealsSeeder extends Seeder
     }
 
     /**
-     * Attach an approved demo Document to a deal that lives in a contract-gated
-     * won stage (won_gate + won_gate_contract_required). Idempotent: keyed by
-     * source_deal_id. Stages without the gate (e.g. await_payment) are skipped.
+     * Seed a draft demo Document for a deal in a contract-gated won stage.
+     * Idempotent: keyed by source_deal_id. Stages without the gate are skipped.
+     *
+     * NOTE: We intentionally seed as draft (not approved), because the won-gate
+     * now requires docx_path IS NOT NULL in addition to status=approved. Seeding
+     * a fake-approved doc without a real docx_path would falsely satisfy the gate
+     * and bypass the state-machine invariant. Demo deals in gated-won stages have
+     * a draft contract; they need a real generate→submit→approve flow to be won.
      */
     private function ensureContractForGatedWonDeal(Deal $deal, PipelineStage $stage, User $owner): void
     {
@@ -136,7 +141,7 @@ class DemoDealsSeeder extends Seeder
             'title' => "[DEMO] Договор — {$deal->title}",
             'product_code' => 'macrocrm',
             'country_code' => 'kz',
-            'status' => ContractStatus::Approved->value,
+            'status' => ContractStatus::Draft->value,
             'source_deal_id' => $deal->id,
             'source_company_id' => $deal->company_id,
             'author_user_id' => $owner->id,

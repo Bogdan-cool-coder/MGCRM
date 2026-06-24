@@ -240,6 +240,60 @@ class AutomationValidationTest extends TestCase
             ->assertJsonValidationErrorFor('stage_id');
     }
 
+    // ---- change_owner: only round_robin, pool + filter shapes (MAJOR-2 / MINOR-5) ----
+
+    public function test_change_owner_accepts_round_robin_with_explicit_pool(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+        $u1 = User::factory()->create();
+        $u2 = User::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'change_owner',
+            'action_config' => ['rule' => 'round_robin', 'pool' => [$u1->id, $u2->id]],
+        ]))->assertCreated();
+    }
+
+    public function test_change_owner_rejects_unimplemented_rule(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'change_owner',
+            'action_config' => ['rule' => 'by_department'],
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('action_config.rule');
+    }
+
+    public function test_change_owner_rejects_non_list_pool(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'change_owner',
+            'action_config' => ['rule' => 'round_robin', 'pool' => ['not-an-id']],
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('action_config.pool');
+    }
+
+    public function test_change_owner_rejects_invalid_filter_role(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'change_owner',
+            'action_config' => ['rule' => 'round_robin', 'user_pool_filter' => ['role' => 'Manager']],
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('action_config.user_pool_filter.role');
+    }
+
     // ---- update keeps the persisted kind/pipeline as the validation context ----
 
     public function test_update_validates_action_config_against_persisted_kind(): void

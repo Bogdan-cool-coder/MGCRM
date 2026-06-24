@@ -128,8 +128,11 @@
       </ul>
     </nav>
 
-    <!-- Footer: user card → opens AccountMenu -->
+    <!-- Footer: notifications bell + user card → opens AccountMenu -->
     <div class="app-sidebar__footer">
+      <!-- Notifications bell — available in sidebar nav mode (parity with Orbita) -->
+      <SidebarNotifications :collapsed="collapsed" class="app-sidebar__notif" />
+
       <!-- Expanded footer -->
       <button
         v-if="!collapsed"
@@ -178,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { useActivityStore } from '@/stores/activityStore'
@@ -191,6 +194,8 @@ import {
 } from '@/shared/nav/navItems'
 import type { NavItemBadge } from '@/shared/nav/navItems'
 import AccountMenu from './AccountMenu.vue'
+import SidebarNotifications from './SidebarNotifications.vue'
+import { useNotificationsStore } from '@/stores/notificationsStore'
 import { useNavPrefetch } from '@/components/Orbita/composables/useNavPrefetch'
 
 defineProps<{
@@ -206,6 +211,7 @@ const userStore = useUserStore()
 const activityStore = useActivityStore()
 const approvalsStore = useApprovalsStore()
 const onboardingStore = useOnboardingStore()
+const notificationsStore = useNotificationsStore()
 
 const accountMenuRef = ref<InstanceType<typeof AccountMenu> | null>(null)
 
@@ -273,6 +279,12 @@ onMounted(() => {
     void approvalsStore.fetchPendingCount()
     void onboardingStore.fetchOverdueCount()
   }
+  // Keep the notifications badge fresh in sidebar mode (parity with Orbita).
+  notificationsStore.startPolling()
+})
+
+onUnmounted(() => {
+  notificationsStore.stopPolling()
 })
 </script>
 

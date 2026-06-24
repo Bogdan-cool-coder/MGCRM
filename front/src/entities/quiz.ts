@@ -24,6 +24,8 @@ export interface QuizQuestion {
   explanation: string | null
   points: number
   sort_order: number
+  /** Present on admin-facing resources; true = AI draft awaiting HR review */
+  is_draft?: boolean
   options: QuizOption[]
 }
 

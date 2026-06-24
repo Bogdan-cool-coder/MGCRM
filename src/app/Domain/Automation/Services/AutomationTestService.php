@@ -280,13 +280,17 @@ class AutomationTestService
             return [];
         }
 
+        $catchUpDays = $this->positiveInt($automation->trigger_config['catch_up_days'] ?? null)
+            ?? AutomationScanner::DEFAULT_CATCH_UP_DAYS;
+
         $now = CarbonImmutable::now();
+        $windowStart = $now->subDays($catchUpDays);
         $windowEnd = $now->addDays($days);
 
         $query = Deal::query()
             ->where('pipeline_id', $automation->pipeline_id)
             ->whereNotNull($field)
-            ->where($field, '>=', $now)
+            ->where($field, '>=', $windowStart)
             ->where($field, '<=', $windowEnd)
             ->whereNull('archived_at');
 

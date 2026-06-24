@@ -9,9 +9,11 @@ use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Services\DocumentService;
+use App\Domain\Crm\Enums\ContactStatus;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\CompanyService;
+use App\Domain\Crm\Services\ContactService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Models\EntityLog;
@@ -262,6 +264,95 @@ class EntityLogRecordingTest extends TestCase
             ->get();
         $this->assertCount(1, $events);
         $this->assertSame('Bob Worker', $events->first()->meta['contact_name']);
+    }
+
+    // ---- Contact: created / data_changed ----
+
+    private function contactLogs(int $contactId): Collection
+    {
+        return EntityLog::query()
+            ->where('subject_type', 'contact')
+            ->where('subject_id', $contactId)
+            ->get();
+    }
+
+    public function test_contact_create_records_created_event(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+
+        $contact = app(ContactService::class)->create([
+            'full_name' => 'New Contact',
+            'email' => 'new@example.test',
+        ], $user);
+
+        $logs = $this->contactLogs((int) $contact->id);
+        $this->assertCount(1, $logs);
+        $log = $logs->first();
+        $this->assertSame('created', $log->action->value);
+        $this->assertSame($user->id, $log->actor_id);
+        $this->assertSame('New Contact', $log->meta['title']);
+    }
+
+    public function test_contact_update_records_data_changed(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $contact = Contact::factory()->create(['full_name' => 'Old Name']);
+        EntityLog::query()->delete();
+
+        app(ContactService::class)->update($contact, ['full_name' => 'New Name'], $user);
+
+        $events = $this->contactLogs((int) $contact->id)
+            ->filter(fn (EntityLog $l) => $l->action->value === 'data_changed');
+        $this->assertCount(1, $events);
+        $changes = $events->first()->meta['changes'];
+        $this->assertSame('full_name', $changes[0]['field']);
+        $this->assertSame('Old Name', $changes[0]['old']);
+        $this->assertSame('New Name', $changes[0]['new']);
+    }
+
+    public function test_contact_update_with_no_changes_records_nothing(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $contact = Contact::factory()->create(['full_name' => 'Same Name']);
+        EntityLog::query()->delete();
+
+        app(ContactService::class)->update($contact, ['full_name' => 'Same Name'], $user);
+
+        $this->assertCount(0, $this->contactLogs((int) $contact->id)->filter(
+            fn (EntityLog $l) => $l->action->value === 'data_changed',
+        ));
+    }
+
+    public function test_contact_update_unchanged_enum_status_records_nothing(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $contact = Contact::factory()->create(['status' => ContactStatus::Active->value]);
+        EntityLog::query()->delete();
+
+        // Submitting the same status as a string must not be seen as a change
+        // (enum-cast original vs string incoming is normalized before compare).
+        app(ContactService::class)->update($contact, ['status' => ContactStatus::Active->value], $user);
+
+        $this->assertCount(0, $this->contactLogs((int) $contact->id)->filter(
+            fn (EntityLog $l) => $l->action->value === 'data_changed',
+        ));
+    }
+
+    public function test_contact_update_changed_enum_status_records_data_changed(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $contact = Contact::factory()->create(['status' => ContactStatus::Active->value]);
+        EntityLog::query()->delete();
+
+        app(ContactService::class)->update($contact, ['status' => ContactStatus::Archived->value], $user);
+
+        $events = $this->contactLogs((int) $contact->id)
+            ->filter(fn (EntityLog $l) => $l->action->value === 'data_changed');
+        $this->assertCount(1, $events);
+        $changes = $events->first()->meta['changes'];
+        $this->assertSame('status', $changes[0]['field']);
+        $this->assertSame('active', $changes[0]['old']);
+        $this->assertSame('archived', $changes[0]['new']);
     }
 
     // ---- Contracts extension point: contract_event ----

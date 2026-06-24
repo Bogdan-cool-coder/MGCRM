@@ -119,7 +119,10 @@ export function useNotificationsFlyout() {
     notificationsStore.clearCount()
 
     await markAllReadMutation.run(async () => {
-      await notificationsApi.markAllRead()
+      // Use the authoritative server count instead of the optimistic 0 — the
+      // server may have flipped a different number of rows than we assumed.
+      const res = await notificationsApi.markAllRead()
+      notificationsStore.syncCount(res.unread_count)
     }, {
       onError: async () => {
         // Revert optimistic on failure

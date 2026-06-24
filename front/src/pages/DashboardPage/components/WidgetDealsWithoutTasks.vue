@@ -40,8 +40,6 @@
           </p>
 
           <Button
-            tag="a"
-            :href="data.filter_url"
             icon="pi pi-arrow-right"
             icon-pos="right"
             :label="t('dashboard.dealsWithoutTasks.openList')"
@@ -49,6 +47,7 @@
             :outlined="data.count > 0"
             :text="data.count === 0"
             class="mt-3"
+            @click="openList()"
           />
         </div>
       </template>
@@ -59,17 +58,41 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import Skeleton from 'primevue/skeleton'
 import Button from 'primevue/button'
 import type { DealsWithoutTasksData } from '@/entities/salesDashboard'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const props = defineProps<{
   data: DealsWithoutTasksData | null
   loading: boolean
 }>()
+
+/**
+ * SPA-navigate to the deals list using the backend deep-link (filter_url), parsed
+ * into a typed router location so the DealsPage can read pipeline_id + only_no_task
+ * from route.query. A full-page <a href> would lose the Bearer/SPA state and the
+ * DealsPage reads its filters from route.query, not from a reload.
+ */
+function openList(): void {
+  const filterUrl = props.data?.filter_url
+  if (!filterUrl) return
+
+  const [path = '/deals', queryString = ''] = filterUrl.split('?')
+  const query: Record<string, string> = {}
+  for (const pair of queryString.split('&')) {
+    if (!pair) continue
+    const [rawKey = '', rawValue = ''] = pair.split('=')
+    const key = decodeURIComponent(rawKey)
+    if (key) query[key] = decodeURIComponent(rawValue)
+  }
+
+  void router.push({ path, query })
+}
 
 const iconClass = computed(() =>
   (props.data?.count ?? 0) > 0 ? 'pi-exclamation-triangle' : 'pi-check-circle',

@@ -56,7 +56,11 @@ class ManagerKpiService
 
         // Personal income fact from won deals in period (HD1: income_source = won_deals)
         $incomeFact = $this->personalIncomeFact($target->id, $filters, $multiCurrencyWarning);
-        $incomePlan = $salaryPlan?->personal_income_plan_kopecks ?? 0;
+
+        // Income plan is normalised to the base currency. A plan denominated in a
+        // foreign currency (e.g. USD/EUR) must be converted before scoring, otherwise
+        // a base-currency fact would be divided by a foreign-currency plan (BUG).
+        $incomePlan = $this->normalisedPlanKopecks($salaryPlan, $multiCurrencyWarning);
 
         $scorePct = $this->scorePct($incomeFact, $incomePlan);
         $scoreBadge = $this->scoreBadge($scorePct);
@@ -158,7 +162,6 @@ class ManagerKpiService
     public function scoreBadge(int $pct): string
     {
         $warningThreshold = (int) config('crm.kpi.score_warning_threshold', 80);
-        $dangerThreshold = (int) config('crm.kpi.score_danger_threshold', 80);
 
         if ($pct >= 100) {
             return 'success';
@@ -322,7 +325,7 @@ class ManagerKpiService
 
         foreach ($userIds as $uid) {
             $fact = $totals[$uid] ?? 0;
-            $plan = $plans->get($uid)?->personal_income_plan_kopecks ?? 0;
+            $plan = $this->normalisedPlanKopecks($plans->get($uid), $multiCurrencyWarning);
 
             $result[$uid] = [
                 'user_id' => $uid,
@@ -335,6 +338,28 @@ class ManagerKpiService
     }
 
     /**
+     * Roles that are allowed to reach the manager cabinet at all.
+     * lawyer / accountant / cfo are NOT a sales audience and get 403.
+     */
+    private const CABINET_ROLES = [Role::Admin, Role::Director, Role::Manager];
+
+    /**
+     * Role gate for the whole cabinet surface (defense-in-depth alongside the
+     * route-level role middleware). Non-sales roles (lawyer/accountant/cfo) are
+     * rejected with 403 even when they hold a valid Sanctum token + 2FA.
+     *
+     * @throws HttpResponseException 403 if the viewer's role is not a cabinet role
+     */
+    public function assertCanViewCabinet(User $viewer): void
+    {
+        if (! in_array($viewer->role, self::CABINET_ROLES, strict: true)) {
+            throw new HttpResponseException(
+                response()->json(['message' => 'Forbidden.'], 403)
+            );
+        }
+    }
+
+    /**
      * Resolve target user with visibility check (HD5).
      * - manager: can only view themselves — others get 403.
      * - director/admin: can view any active user.
@@ -343,6 +368,8 @@ class ManagerKpiService
      */
     public function resolveTargetUser(User $viewer, ?int $requestedUserId): User
     {
+        $this->assertCanViewCabinet($viewer);
+
         if ($requestedUserId === null || $requestedUserId === $viewer->id) {
             return $viewer;
         }
@@ -372,8 +399,99 @@ class ManagerKpiService
     // -------------------------------------------------------------------------
 
     /**
+     * Normalise a salary plan's income target to the base currency.
+     *
+     * The plan is stored in `personal_income_plan_currency`; when it differs from
+     * the base currency the target is FX-converted so it can be compared with the
+     * base-converted income fact (BUG: previously the raw foreign amount was used).
+     *
+     * @param  bool  $multiCurrencyWarning  OR'd in-place when a rate is unavailable
+     */
+    private function normalisedPlanKopecks(?SalaryPlan $plan, bool &$multiCurrencyWarning): int
+    {
+        if ($plan === null) {
+            return 0;
+        }
+
+        $amount = (int) ($plan->personal_income_plan_kopecks ?? 0);
+
+        if ($amount === 0) {
+            return 0;
+        }
+
+        $baseCurrency = config('crm.currencies.default', 'RUB');
+        $planCurrency = (string) ($plan->personal_income_plan_currency ?? $baseCurrency);
+
+        if (strtoupper($planCurrency) === strtoupper($baseCurrency)) {
+            return $amount;
+        }
+
+        $converted = $this->exchangeRateService->convertAmount($amount, $planCurrency, $baseCurrency);
+
+        if ($converted === null) {
+            $multiCurrencyWarning = true;
+
+            // Fall back to the raw amount so score_pct stays defined rather than
+            // collapsing to 0 (the warning flag signals the approximation to the UI).
+            return $amount;
+        }
+
+        return $converted;
+    }
+
+    /**
+     * Resolve the coherent team cohort for a target user.
+     *
+     * A "team" is the union of:
+     *  - the target themselves (always included), AND
+     *  - users sharing the target's `department_id` (when set), AND
+     *  - users sharing the target's `manager_id` (siblings under the same lead).
+     *
+     * This handles the real data shape where salary-plan managers are linked to a
+     * lead via `manager_id` but have a NULL `department_id` (and vice-versa). Only
+     * active sales-side users (manager/director) are considered colleagues.
+     *
+     * @return list<int>  distinct user ids, always containing the target id
+     */
+    private function resolveTeamMemberIds(User $target): array
+    {
+        $hasDepartment = $target->department_id !== null;
+        $hasManager = $target->manager_id !== null;
+
+        if (! $hasDepartment && ! $hasManager) {
+            return [$target->id];
+        }
+
+        $salesRoles = [Role::Manager->value, Role::Director->value];
+
+        $ids = User::query()
+            ->where('is_active', true)
+            ->whereIn('role', $salesRoles)
+            ->where(function ($query) use ($target, $hasDepartment, $hasManager): void {
+                if ($hasDepartment) {
+                    $query->orWhere('department_id', $target->department_id);
+                }
+
+                if ($hasManager) {
+                    $query->orWhere('manager_id', $target->manager_id);
+                }
+            })
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
+
+        // Guarantee the target is always part of their own team (e.g. a director
+        // viewing their own KPI, whose role/links may not match the cohort filter).
+        if (! in_array($target->id, $ids, strict: true)) {
+            $ids[] = $target->id;
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
      * Build the team comparison block (plan §Б3).
-     * HD4: if department_id is null, team = only the viewer themselves.
+     * Team membership: shared department OR shared line-manager, target always in.
      * Анонимизация (M decision Q1): income_fact_kopecks of colleagues is
      * excluded for role=manager; director/admin see full data.
      *
@@ -387,8 +505,11 @@ class ManagerKpiService
         User $viewer,
         bool &$multiCurrencyWarning,
     ): array {
-        // HD4: no department → team = solo
-        if ($target->department_id === null) {
+        $memberIds = $this->resolveTeamMemberIds($target);
+
+        // HD4: solo team — no department and no shared line-manager (or cohort
+        // resolves to the target alone). Returns size 1 with just the viewer.
+        if (count($memberIds) <= 1) {
             return [
                 'avg_pct' => $targetScorePct,
                 'rank' => 1,
@@ -397,30 +518,7 @@ class ManagerKpiService
                     [
                         'full_name' => $target->full_name,
                         'score_pct' => $targetScorePct,
-                        'is_viewer' => true,
-                    ],
-                ],
-            ];
-        }
-
-        $memberIds = User::query()
-            ->where('department_id', $target->department_id)
-            ->where('role', Role::Manager->value)
-            ->where('is_active', true)
-            ->pluck('id')
-            ->map(static fn ($id) => (int) $id)
-            ->all();
-
-        if ($memberIds === []) {
-            // HD4 edge case: department exists but has no active managers
-            return [
-                'avg_pct' => $targetScorePct,
-                'rank' => 1,
-                'size' => 1,
-                'members' => [
-                    [
-                        'full_name' => $target->full_name,
-                        'score_pct' => $targetScorePct,
+                        'score_badge' => $this->scoreBadge($targetScorePct),
                         'is_viewer' => true,
                     ],
                 ],
@@ -450,6 +548,7 @@ class ManagerKpiService
             $member = [
                 'full_name' => $user?->full_name ?? 'Unknown',
                 'score_pct' => $row['score_pct'],
+                'score_badge' => $this->scoreBadge($row['score_pct']),
                 'is_viewer' => $uid === $target->id,
             ];
 

@@ -134,10 +134,62 @@ trait ValidatesAutomationConfig
             ),
             ActionKind::ChangeStage => $this->validateChangeStage($validator, $config),
             ActionKind::Webhook => $this->validateWebhook($validator, $config),
-            // change_owner defaults to round_robin with an optional pool filter;
-            // email is a forward-compatible no-op — neither has a hard required field.
-            ActionKind::ChangeOwner, ActionKind::Email => null,
+            ActionKind::ChangeOwner => $this->validateChangeOwner($validator, $config),
+            // email is a forward-compatible no-op — no hard required field.
+            ActionKind::Email => null,
         };
+    }
+
+    /**
+     * change_owner — only round_robin is implemented; the optional candidate
+     * pool is either an explicit list of user ids or a role/department filter.
+     * Validating it here means a misconfigured rule 422s at save instead of
+     * silently `skipped` at runtime (and stops the FE offering unimplemented
+     * routing rules).
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function validateChangeOwner(Validator $validator, array $config): void
+    {
+        $rule = isset($config['rule']) ? (string) $config['rule'] : 'round_robin';
+
+        if ($rule !== 'round_robin') {
+            $validator->errors()->add(
+                'action_config.rule',
+                "change_owner only supports the 'round_robin' rule for now.",
+            );
+
+            return;
+        }
+
+        // Explicit hand-picked pool: must be a non-associative list of positive
+        // integer user ids (matches the builder MultiSelect).
+        if (array_key_exists('pool', $config)) {
+            $pool = $config['pool'];
+
+            $valid = is_array($pool) && array_is_list($pool) && array_reduce(
+                $pool,
+                static fn (bool $carry, mixed $id): bool => $carry && is_numeric($id) && (int) $id > 0,
+                true,
+            );
+
+            if (! $valid) {
+                $validator->errors()->add(
+                    'action_config.pool',
+                    'change_owner "pool" must be a list of user ids.',
+                );
+            }
+        }
+
+        // Legacy/API dynamic filter: role (if given) must be a real Role.
+        $filter = is_array($config['user_pool_filter'] ?? null) ? $config['user_pool_filter'] : [];
+
+        if (! empty($filter['role']) && Role::tryFrom((string) $filter['role']) === null) {
+            $validator->errors()->add(
+                'action_config.user_pool_filter.role',
+                'change_owner "user_pool_filter.role" must be a valid role.',
+            );
+        }
     }
 
     /**

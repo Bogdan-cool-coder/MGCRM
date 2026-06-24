@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sales;
 
-use App\Domain\Contracts\Models\Document;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
@@ -25,14 +24,6 @@ class DealMoveTest extends TestCase
         return Deal::factory()->forOwner($user)->create([
             'pipeline_id' => $pipeline->id,
             'stage_id' => $this->stageCode($pipeline, $stageCode),
-        ]);
-    }
-
-    private function approvedContractFor(Deal $deal): Document
-    {
-        return Document::factory()->approved()->create([
-            'source_deal_id' => $deal->id,
-            'author_user_id' => $deal->owner_user_id,
         ]);
     }
 
@@ -102,7 +93,7 @@ class DealMoveTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         $deal = $this->dealFor($user, 'hot');
         $won = $deal->pipeline->stages->firstWhere('code', 'won');
-        $this->approvedContractFor($deal);
+        $this->activeContractFor($deal);
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $won->id])

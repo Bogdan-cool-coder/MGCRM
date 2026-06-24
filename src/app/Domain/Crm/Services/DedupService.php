@@ -141,78 +141,50 @@ class DedupService
     {
         $contact = Contact::findOrFail($contactId);
 
-        // Collect dismissed IDs for this contact
+        // Collect dismissed IDs for this contact.
         $dismissed = $this->dismissedIds('contact', $contactId);
 
-        // Normalize values in PHP — avoids DB::raw string-literal quoting
-        // issues across PostgreSQL (double-quote = identifier) and SQLite.
-        $orConditions = [];
+        // Build OR conditions using indexed columns for SQL-level equality:
+        //   - phone_normalized: indexed column (digits-only), maintained by ContactService
+        //   - LOWER(TRIM(email)): email index is on the raw column; functional index not required
+        //     because the email cardinality is sufficient and the candidate set is small
+        //   - LOWER(TRIM(full_name)): same rationale as email
+        //
+        // No PHP post-filter required — SQL equality is exact.
 
-        if ($contact->phone) {
-            $orConditions['phone_normalized'] = $this->normalizePhone($contact->phone);
-        }
-
-        if ($contact->email) {
-            $orConditions['email_lower'] = mb_strtolower(trim($contact->email));
-        }
-
-        $orConditions['name_lower'] = $this->normalizeName($contact->full_name ?? '');
-
-        $candidates = Contact::query()
+        return Contact::query()
             ->where('id', '!=', $contactId)
             ->whereNotIn('id', $dismissed)
             ->whereNull('deleted_at')
-            ->where(function ($q) use ($orConditions, $contact): void {
-                if (isset($orConditions['phone_normalized']) && $contact->phone) {
-                    // Fetch by the raw stored value — we compare normalized
-                    // values from PHP against all candidates after retrieval
-                    // to avoid non-portable REPLACE chains in SQL.
-                    // For phone: use a LIKE with the raw value as fallback,
-                    // then post-filter. But simpler: store & compare normalized.
-                    // Since we can't alter schema, we use a broad OR and filter in PHP.
-                    // We do: phone IS NOT NULL (broad) OR email=lower OR name=lower,
-                    // then the PHP normalizePhone post-filter handles phone strictly.
-                    $q->orWhereNotNull('phone');
+            ->where(function ($q) use ($contact): void {
+                $hasCondition = false;
+
+                if ($contact->phone) {
+                    $phoneNorm = $this->normalizePhone($contact->phone);
+                    if ($phoneNorm !== '') {
+                        $q->orWhere('phone_normalized', $phoneNorm);
+                        $hasCondition = true;
+                    }
                 }
 
-                if (isset($orConditions['email_lower'])) {
-                    $q->orWhereRaw('LOWER(TRIM(email)) = ?', [$orConditions['email_lower']]);
+                if ($contact->email) {
+                    $emailLower = mb_strtolower(trim($contact->email));
+                    $q->orWhereRaw('LOWER(TRIM(email)) = ?', [$emailLower]);
+                    $hasCondition = true;
                 }
 
-                if (isset($orConditions['name_lower'])) {
-                    $q->orWhereRaw('LOWER(TRIM(full_name)) = ?', [$orConditions['name_lower']]);
+                $nameLower = $this->normalizeName($contact->full_name ?? '');
+                if ($nameLower !== '') {
+                    $q->orWhereRaw('LOWER(TRIM(full_name)) = ?', [$nameLower]);
+                    $hasCondition = true;
+                }
+
+                // If no OR conditions apply (no phone, no email, empty name), return nothing.
+                if (! $hasCondition) {
+                    $q->whereRaw('1 = 0');
                 }
             })
             ->get();
-
-        // Post-filter: for phone, compare normalized values in PHP (avoids
-        // SQL REPLACE chains that differ between PG and SQLite).
-        if (isset($orConditions['phone_normalized']) && $contact->phone) {
-            $myPhone = $orConditions['phone_normalized'];
-
-            return $candidates->filter(function (Contact $c) use ($myPhone, $orConditions): bool {
-                // Keep if phone matches (normalized) …
-                if ($c->phone && $this->normalizePhone($c->phone) === $myPhone) {
-                    return true;
-                }
-
-                // … or if email matches
-                if (isset($orConditions['email_lower']) && $c->email
-                    && mb_strtolower(trim($c->email)) === $orConditions['email_lower']) {
-                    return true;
-                }
-
-                // … or if name matches
-                if (isset($orConditions['name_lower']) && $c->full_name
-                    && $this->normalizeName($c->full_name) === $orConditions['name_lower']) {
-                    return true;
-                }
-
-                return false;
-            })->values();
-        }
-
-        return $candidates;
     }
 
     /** @return Collection<int, Company> */
@@ -222,74 +194,51 @@ class DedupService
 
         $dismissed = $this->dismissedIds('company', $companyId);
 
-        $orConditions = [];
+        // Use indexed columns for SQL-level equality — no PHP post-filter needed:
+        //   - phone_normalized: indexed column (digits-only), maintained by CompanyService
+        //   - LOWER(TRIM(email)): functional pass-through (email indexed on raw column)
+        //   - TRIM(tax_id): tax_id indexed on raw column; TRIM is safe for small result sets
+        //   - LOWER(TRIM(name)): name indexed on raw column; functional pass-through
 
-        if ($company->phone) {
-            $orConditions['phone_normalized'] = $this->normalizePhone($company->phone);
-        }
-
-        if ($company->email) {
-            $orConditions['email_lower'] = mb_strtolower(trim($company->email));
-        }
-
-        if ($company->tax_id) {
-            $orConditions['tax_id_trimmed'] = trim($company->tax_id);
-        }
-
-        $orConditions['name_lower'] = $this->normalizeName($company->name ?? '');
-
-        $candidates = Company::query()
+        return Company::query()
             ->where('id', '!=', $companyId)
             ->whereNotIn('id', $dismissed)
             ->whereNull('deleted_at')
-            ->where(function ($q) use ($orConditions, $company): void {
-                if (isset($orConditions['phone_normalized']) && $company->phone) {
-                    $q->orWhereNotNull('phone');
+            ->where(function ($q) use ($company): void {
+                $hasCondition = false;
+
+                if ($company->phone) {
+                    $phoneNorm = $this->normalizePhone($company->phone);
+                    if ($phoneNorm !== '') {
+                        $q->orWhere('phone_normalized', $phoneNorm);
+                        $hasCondition = true;
+                    }
                 }
 
-                if (isset($orConditions['email_lower'])) {
-                    $q->orWhereRaw('LOWER(TRIM(email)) = ?', [$orConditions['email_lower']]);
+                if ($company->email) {
+                    $emailLower = mb_strtolower(trim($company->email));
+                    $q->orWhereRaw('LOWER(TRIM(email)) = ?', [$emailLower]);
+                    $hasCondition = true;
                 }
 
-                if (isset($orConditions['tax_id_trimmed'])) {
-                    $q->orWhereRaw('TRIM(tax_id) = ?', [$orConditions['tax_id_trimmed']]);
+                if ($company->tax_id) {
+                    $taxIdTrimmed = trim($company->tax_id);
+                    $q->orWhereRaw('TRIM(tax_id) = ?', [$taxIdTrimmed]);
+                    $hasCondition = true;
                 }
 
-                if (isset($orConditions['name_lower'])) {
-                    $q->orWhereRaw('LOWER(TRIM(name)) = ?', [$orConditions['name_lower']]);
+                $nameLower = $this->normalizeName($company->name ?? '');
+                if ($nameLower !== '') {
+                    $q->orWhereRaw('LOWER(TRIM(name)) = ?', [$nameLower]);
+                    $hasCondition = true;
+                }
+
+                // No match criteria → return nothing.
+                if (! $hasCondition) {
+                    $q->whereRaw('1 = 0');
                 }
             })
             ->get();
-
-        // PHP post-filter for phone (same reason as contacts)
-        if (isset($orConditions['phone_normalized']) && $company->phone) {
-            $myPhone = $orConditions['phone_normalized'];
-
-            return $candidates->filter(function (Company $c) use ($myPhone, $orConditions): bool {
-                if ($c->phone && $this->normalizePhone($c->phone) === $myPhone) {
-                    return true;
-                }
-
-                if (isset($orConditions['email_lower']) && $c->email
-                    && mb_strtolower(trim($c->email)) === $orConditions['email_lower']) {
-                    return true;
-                }
-
-                if (isset($orConditions['tax_id_trimmed']) && $c->tax_id
-                    && trim($c->tax_id) === $orConditions['tax_id_trimmed']) {
-                    return true;
-                }
-
-                if (isset($orConditions['name_lower']) && $c->name
-                    && $this->normalizeName($c->name) === $orConditions['name_lower']) {
-                    return true;
-                }
-
-                return false;
-            })->values();
-        }
-
-        return $candidates;
     }
 
     /**
@@ -329,9 +278,13 @@ class DedupService
                 $raw[] = ['key' => 'email:'.$key, 'ids' => $g->pluck('id')->all()];
             });
 
-        // Group by normalized phone
-        $all->filter(fn (Contact $c): bool => (bool) $c->phone)
-            ->groupBy(fn (Contact $c): string => $this->normalizePhone($c->phone))
+        // Group by normalized phone. Use pre-computed phone_normalized when available
+        // (maintained by ContactService); fall back to on-the-fly PHP normalization
+        // of raw phone for legacy rows that predate the phone_normalized column.
+        $all->filter(fn (Contact $c): bool => (bool) ($c->phone_normalized ?? $c->phone))
+            ->groupBy(function (Contact $c): string {
+                return $c->phone_normalized ?? $this->normalizePhone($c->phone ?? '');
+            })
             ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
             ->each(function ($g, string $key) use (&$raw): void {
                 $raw[] = ['key' => 'phone:'.$key, 'ids' => $g->pluck('id')->all()];
@@ -381,9 +334,13 @@ class DedupService
                 $raw[] = ['key' => 'email:'.$key, 'ids' => $g->pluck('id')->all()];
             });
 
-        // Group by normalized phone
-        $all->filter(fn (Company $c): bool => (bool) $c->phone)
-            ->groupBy(fn (Company $c): string => $this->normalizePhone($c->phone))
+        // Group by normalized phone. Use pre-computed phone_normalized when available
+        // (maintained by CompanyService); fall back to on-the-fly PHP normalization
+        // of raw phone for legacy rows that predate the phone_normalized column.
+        $all->filter(fn (Company $c): bool => (bool) ($c->phone_normalized ?? $c->phone))
+            ->groupBy(function (Company $c): string {
+                return $c->phone_normalized ?? $this->normalizePhone($c->phone ?? '');
+            })
             ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
             ->each(function ($g, string $key) use (&$raw): void {
                 $raw[] = ['key' => 'phone:'.$key, 'ids' => $g->pluck('id')->all()];

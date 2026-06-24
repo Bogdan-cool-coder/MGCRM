@@ -31,7 +31,7 @@
           <div class="d-flex align-items-start justify-content-between gap-3">
             <div class="flex-1">
               <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="fw-medium">{{ remark.approver_name }}</span>
+                <span class="fw-medium">{{ remark.author?.full_name ?? '—' }}</span>
                 <span class="text-secondary remarks-tab__meta">
                   {{ t('documents.approval.stage') }} {{ remark.stage_order }}
                   · {{ formatDate(remark.created_at) }}
@@ -51,9 +51,9 @@
                   class="remarks-tab__status-tag"
                 />
               </div>
-              <p class="mb-1 remarks-tab__body">{{ remark.body }}</p>
-              <p v-if="remark.is_resolved && remark.resolved_by_name" class="text-secondary mb-0 remarks-tab__meta">
-                {{ t('documents.remarks.resolved') }}: {{ remark.resolved_by_name }}
+              <p class="mb-1 remarks-tab__body">{{ remark.text }}</p>
+              <p v-if="remark.is_resolved && remark.resolved_by?.full_name" class="text-secondary mb-0 remarks-tab__meta">
+                {{ t('documents.remarks.resolved') }}: {{ remark.resolved_by?.full_name }}
                 · {{ remark.resolved_at ? formatDate(remark.resolved_at) : '' }}
               </p>
             </div>

@@ -6,6 +6,7 @@ namespace App\Domain\Migration\Models;
 
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Catalog\Models\ProductPlan;
+use App\Domain\Migration\Enums\AmoProductMappingAction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -37,6 +38,7 @@ class AmoProductMapping extends Model
             'amo_enum_id' => 'integer',
             'catalog_product_id' => 'integer',
             'catalog_plan_id' => 'integer',
+            'action' => AmoProductMappingAction::class,
         ];
     }
 

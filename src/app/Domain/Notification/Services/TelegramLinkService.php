@@ -88,6 +88,14 @@ class TelegramLinkService
                 return LinkRedeemResult::Invalid;
             }
 
+            // Overwrite guard: the user already has a *different* Telegram account
+            // bound. Re-linking the same account is fine (idempotent), but switching
+            // to a new account must go through an explicit unlink first so the previous
+            // binding is not silently orphaned.
+            if ($user->telegram_user_id !== null && $user->telegram_user_id !== $telegramUserId) {
+                return LinkRedeemResult::AlreadyLinkedOther;
+            }
+
             $user->telegram_user_id = $telegramUserId;
             $user->save();
 

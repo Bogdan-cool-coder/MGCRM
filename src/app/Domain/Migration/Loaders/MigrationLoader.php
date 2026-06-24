@@ -14,6 +14,7 @@ use App\Domain\Crm\Services\CompanyService;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Migration\Support\AmoReferenceResolver;
+use App\Domain\Migration\Support\ProductLineResolver;
 use App\Domain\Migration\Transformers\CompanyTransformer;
 use App\Domain\Migration\Transformers\ContactTransformer;
 use App\Domain\Migration\Transformers\DealTransformer;
@@ -21,6 +22,7 @@ use App\Domain\Migration\Transformers\EventTransformer;
 use App\Domain\Migration\Transformers\NoteTransformer;
 use App\Domain\Migration\Transformers\TaskTransformer;
 use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\DealStageHistory;
 use App\Domain\Sales\Models\PipelineStage;
 use Carbon\CarbonImmutable;
@@ -73,6 +75,7 @@ final class MigrationLoader
         private readonly StagingReader $reader,
         private readonly ExternalRefRegistry $refs,
         private readonly AmoReferenceResolver $resolver,
+        private readonly ProductLineResolver $productResolver,
         private readonly CompanyTransformer $companyTransformer,
         private readonly ContactTransformer $contactTransformer,
         private readonly DealTransformer $dealTransformer,
@@ -96,6 +99,7 @@ final class MigrationLoader
             reader: $reader,
             refs: new ExternalRefRegistry,
             resolver: $resolver,
+            productResolver: new ProductLineResolver,
             companyTransformer: new CompanyTransformer($resolver),
             contactTransformer: new ContactTransformer($resolver),
             dealTransformer: new DealTransformer($resolver),
@@ -572,6 +576,10 @@ final class MigrationLoader
             // corrected by hand. is_primary_deal is reconciled separately by
             // maybeMarkUniqueClient (which runs after this) so it self-heals too.
             $this->resyncDeal($existing, $dealData, $companyId);
+            // Deal product lines are reconciled too: a deal first loaded before
+            // amo_product_mappings was wired carries no lines; a re-load backfills
+            // them. Idempotent — existing lines are not duplicated.
+            $this->loadDealProducts($existing, $dealData);
             $this->bump('deals_updated');
 
             return $existing;
@@ -603,8 +611,86 @@ final class MigrationLoader
         $this->bump('deals_created');
 
         $this->loadDealContacts($deal->id, $contactIds, $createdAt);
+        $this->loadDealProducts($deal->id, $dealData);
 
         return $deal->id;
+    }
+
+    /**
+     * Resolve the AMO «Продукт» multiselect enum ids on the lead to MGCRM catalog
+     * deal_products lines via amo_product_mappings (DEC Feature 5).
+     *
+     * Each enum id resolves to one of:
+     *   - UNMAPPED (no curation row): a NEW AMO option — tallied for the report so
+     *     the operator can add it; never silently mapped.
+     *   - SKIP (action=skip / other-without-catch-all): dropped, tallied.
+     *   - MAP (action=map): a deal_products line is created, unit_price snapshotted
+     *     from the catalog price book in the deal currency. The imported budget is
+     *     locked on the deal (amount_locked=true) so these lines are "for reference"
+     *     and do NOT re-drive Deal.amount.
+     *
+     * Idempotent: a (deal_id, product_id, plan_id) line is created at most once, so
+     * a re-load backfills missing lines without duplicating existing ones.
+     *
+     * @param  array{deal: array<string, mixed>, product_enum_ids: list<int>}  $dealData
+     */
+    private function loadDealProducts(int $dealId, array $dealData): void
+    {
+        $enumIds = $dealData['product_enum_ids'] ?? [];
+
+        if ($enumIds === []) {
+            return;
+        }
+
+        $currency = (string) ($dealData['deal']['currency'] ?? 'RUB');
+        $existingLines = DealProduct::query()->where('deal_id', $dealId)->count();
+        $sortOrder = $existingLines;
+
+        foreach ($enumIds as $enumId) {
+            $resolution = $this->productResolver->resolve((int) $enumId);
+
+            // A NEW AMO option with no curation row — tally for the report, never guess.
+            if ($resolution === null) {
+                $this->bump('products_unmapped');
+                $this->tallyUnmapped('product', (string) $enumId);
+                $this->conflicts[] = [
+                    'kind' => 'unmapped_product_option',
+                    'deal_id' => $dealId,
+                    'amo_enum_id' => (int) $enumId,
+                ];
+
+                continue;
+            }
+
+            $line = $this->productResolver->dealLineAttributes($resolution, $currency, $sortOrder);
+
+            // Curated skip / other-without-catch-all → no line.
+            if ($line === null) {
+                $this->bump('products_skipped');
+
+                continue;
+            }
+
+            // Idempotent: do not duplicate an already-imported (deal, product, plan).
+            $alreadyLinked = DealProduct::query()
+                ->where('deal_id', $dealId)
+                ->where('product_id', $line['product_id'])
+                ->when(
+                    $line['plan_id'] === null,
+                    static fn ($q) => $q->whereNull('plan_id'),
+                    static fn ($q) => $q->where('plan_id', $line['plan_id']),
+                )
+                ->exists();
+
+            if ($alreadyLinked) {
+                continue;
+            }
+
+            $line['deal_id'] = $dealId;
+            DealProduct::query()->create($line);
+            $sortOrder++;
+            $this->bump('deal_products');
+        }
     }
 
     /**
@@ -1170,6 +1256,7 @@ final class MigrationLoader
             'primary_deals', 'deal_contacts', 'stage_history', 'history_skipped',
             'audits', 'entity_logs', 'tasks_created', 'notes_created',
             'notes_skipped', 'activities_updated', 'activities_skipped',
+            'deal_products', 'products_skipped', 'products_unmapped',
         ], 0);
     }
 }

@@ -79,6 +79,67 @@ class ChangeOwnerActionTest extends TestCase
         $this->assertSame($dept->id, (int) $deal->fresh()->department_id);
     }
 
+    public function test_round_robin_rotates_through_explicit_pool(): void
+    {
+        // MAJOR-2: the builder UI sends an explicit `pool` of user ids; the action
+        // must rotate over exactly those, not every active user.
+        $a = User::factory()->role(Role::Manager)->create();
+        $b = User::factory()->role(Role::Manager)->create();
+        // A third active user NOT in the pool — must never be picked.
+        User::factory()->role(Role::Manager)->create();
+
+        $automation = PipelineAutomation::factory()->create(['round_robin_cursor' => 0]);
+        $deal = Deal::factory()->create(['owner_user_id' => User::factory()->role(Role::Admin)->create()->id]);
+        $config = ['rule' => 'round_robin', 'pool' => [$a->id, $b->id]];
+
+        $picks = [];
+        for ($i = 0; $i < 3; $i++) {
+            $picks[] = $this->action->execute($automation->fresh(), $deal->fresh(), $config)->data['new'];
+        }
+
+        // Rotates a, b, a — bounded to the two picked users.
+        $this->assertSame([$a->id, $b->id, $a->id], $picks);
+    }
+
+    public function test_explicit_pool_excludes_inactive_users(): void
+    {
+        // A hand-picked id that has since been deactivated drops out of the pool.
+        $active = User::factory()->role(Role::Manager)->create(['is_active' => true]);
+        $inactive = User::factory()->role(Role::Manager)->create(['is_active' => false]);
+
+        $automation = PipelineAutomation::factory()->create(['round_robin_cursor' => 0]);
+        $deal = Deal::factory()->create(['owner_user_id' => User::factory()->role(Role::Admin)->create()->id]);
+
+        $result = $this->action->execute($automation, $deal, [
+            'rule' => 'round_robin',
+            'pool' => [$active->id, $inactive->id],
+        ]);
+
+        $this->assertSame(ActionStatus::Success, $result->status);
+        $this->assertSame($active->id, $result->data['new']);
+        $this->assertSame(1, $result->data['pool_size']);
+    }
+
+    public function test_explicit_pool_takes_precedence_over_filter(): void
+    {
+        $picked = User::factory()->role(Role::Manager)->create();
+        // Another manager that would match a role filter but is NOT in the pool.
+        User::factory()->role(Role::Manager)->create();
+
+        $automation = PipelineAutomation::factory()->create(['round_robin_cursor' => 0]);
+        $deal = Deal::factory()->create(['owner_user_id' => User::factory()->role(Role::Admin)->create()->id]);
+
+        $result = $this->action->execute($automation, $deal, [
+            'rule' => 'round_robin',
+            'pool' => [$picked->id],
+            'user_pool_filter' => ['role' => Role::Manager->value],
+        ]);
+
+        $this->assertSame(ActionStatus::Success, $result->status);
+        $this->assertSame($picked->id, $result->data['new']);
+        $this->assertSame(1, $result->data['pool_size']);
+    }
+
     public function test_skips_when_pool_empty(): void
     {
         $automation = PipelineAutomation::factory()->create();

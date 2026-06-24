@@ -19,7 +19,7 @@ class StoreApprovalRouteRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'document_kind' => ['required', 'string', Rule::in(['contract', 'invoice', 'act', 'reconciliation'])],
+            'document_kind' => ['required', 'string', Rule::in(['contract', 'invoice', 'act', 'reconciliation', 'termination_agreement'])],
             'template_id' => ['nullable', 'integer', 'exists:templates,id'],
             'is_default' => ['boolean'],
             'is_active' => ['boolean'],

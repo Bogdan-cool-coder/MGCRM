@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Automation;
 
+use App\Domain\Automation\Enums\RunStatus;
 use App\Domain\Automation\Models\AutomationRun;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -58,5 +59,65 @@ class PruneRunsCommandTest extends TestCase
         $this->artisan('automation:prune-runs')->assertSuccessful();
 
         $this->assertSame(3, AutomationRun::query()->count());
+    }
+
+    /**
+     * MAJOR-1 regression: an old success/queued/skipped run that still carries a
+     * deterministic trigger_event_ts is the ONLY thing stopping the cron scanner
+     * from re-deriving the same key and re-firing. The prune must spare it.
+     */
+    public function test_prune_keeps_old_slot_holding_runs(): void
+    {
+        config(['automation.retention_days' => 90]);
+
+        $oldSlotTs = now()->subDays(60);
+
+        $oldSuccessWithSlot = AutomationRun::factory()->create([
+            'created_at' => now()->subDays(200),
+            'status' => RunStatus::Success->value,
+            'trigger_event_ts' => $oldSlotTs,
+        ]);
+        $oldQueuedWithSlot = AutomationRun::factory()->create([
+            'created_at' => now()->subDays(200),
+            'status' => RunStatus::Queued->value,
+            'trigger_event_ts' => $oldSlotTs,
+        ]);
+        $oldSkippedWithSlot = AutomationRun::factory()->create([
+            'created_at' => now()->subDays(200),
+            'status' => RunStatus::Skipped->value,
+            'trigger_event_ts' => $oldSlotTs,
+        ]);
+
+        $this->artisan('automation:prune-runs')->assertSuccessful();
+
+        $this->assertDatabaseHas('automation_runs', ['id' => $oldSuccessWithSlot->id]);
+        $this->assertDatabaseHas('automation_runs', ['id' => $oldQueuedWithSlot->id]);
+        $this->assertDatabaseHas('automation_runs', ['id' => $oldSkippedWithSlot->id]);
+    }
+
+    /**
+     * MAJOR-1: rows that do NOT hold a slot are still pruned by age — failed runs
+     * (slot already released) and slot-less manual/inline rows (trigger_event_ts
+     * null). Otherwise the table would never shrink.
+     */
+    public function test_prune_removes_old_failed_and_slotless_runs(): void
+    {
+        config(['automation.retention_days' => 90]);
+
+        $oldFailedWithTs = AutomationRun::factory()->create([
+            'created_at' => now()->subDays(200),
+            'status' => RunStatus::Failed->value,
+            'trigger_event_ts' => now()->subDays(60),
+        ]);
+        $oldSuccessNoSlot = AutomationRun::factory()->create([
+            'created_at' => now()->subDays(200),
+            'status' => RunStatus::Success->value,
+            'trigger_event_ts' => null,
+        ]);
+
+        $this->artisan('automation:prune-runs')->assertSuccessful();
+
+        $this->assertDatabaseMissing('automation_runs', ['id' => $oldFailedWithTs->id]);
+        $this->assertDatabaseMissing('automation_runs', ['id' => $oldSuccessNoSlot->id]);
     }
 }

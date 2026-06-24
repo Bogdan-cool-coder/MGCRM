@@ -12,6 +12,7 @@ export interface AdminUserDto {
   job_title: string | null
   department_id: number | null
   department_name: string | null
+  manager_id: number | null
   role: UserRole | null
   is_active: boolean
   created_at: string
@@ -23,7 +24,21 @@ export interface CreateAdminUserPayload {
   phone?: string | null
   job_title?: string | null
   department_id?: number | null
+  manager_id?: number | null
   role?: UserRole | null
+  password?: string | null
+}
+
+/** PATCH /api/admin/users/{id} — partial; only sent keys are touched. */
+export interface UpdateAdminUserPayload {
+  full_name?: string
+  email?: string
+  phone?: string | null
+  job_title?: string | null
+  department_id?: number | null
+  manager_id?: number | null
+  role?: UserRole | null
+  is_active?: boolean
   password?: string | null
 }
 

@@ -15,7 +15,9 @@ use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
 use App\Domain\Sales\Services\DealService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * InboundRoutingService — the S1.9 core: an InboundMessage → Company (dedup or
@@ -84,26 +86,56 @@ class InboundRoutingService
         $ownerId = $this->resolveOwnerId($channel);
         $source = $this->resolveSource($channel);
 
-        // ---- Company: dedup (E2) or create ----
-        $company = $this->resolveCompany($channel, $message, $source, $ownerId);
+        // ---- Company + Deal: created atomically (E3/E8) ----
+        // A DB error inside Company/Deal creation must never bubble a 500 to the
+        // anonymous sender, and must never leave a half-built Company-without-Deal
+        // or a NULL-status inbound row. The whole create sequence runs in one
+        // transaction; on any failure we roll it back, then stamp the (already
+        // committed) message as `failed` so the lead is preserved for manual
+        // triage — exactly mirroring the resolvePipelineStage==null failure path.
+        try {
+            $deal = DB::transaction(function () use ($channel, $message, $source, $ownerId, $pipelineId, $stageId): Deal {
+                // Company: dedup (E2) or create.
+                $company = $this->resolveCompany($channel, $message, $source, $ownerId);
 
-        // ---- Deal: created on the company in the resolved stage ----
-        $deal = $this->deals->createInbound(
-            $company,
-            [
-                'title' => $this->dealTitle($message, $channel),
-                'source' => $source,
-            ],
-            $ownerId,
-            $pipelineId,
-            $stageId,
-        );
+                // Deal: created on the company in the resolved stage.
+                $deal = $this->deals->createInbound(
+                    $company,
+                    [
+                        'title' => $this->dealTitle($message, $channel),
+                        'source' => $source,
+                    ],
+                    $ownerId,
+                    $pipelineId,
+                    $stageId,
+                );
 
-        $message->forceFill([
-            'target_deal_id' => $deal->id,
-            'target_deal_created' => true,
-            'routing_status' => RoutingStatus::Routed,
-        ])->save();
+                $message->forceFill([
+                    'target_deal_id' => $deal->id,
+                    'target_deal_created' => true,
+                    'routing_status' => RoutingStatus::Routed,
+                ])->save();
+
+                return $deal;
+            });
+        } catch (Throwable $e) {
+            // The transaction rolled back the partial Company/Deal/stamp. The
+            // message row itself was committed before route() ran, so stamp it as
+            // `failed` outside the rolled-back transaction and swallow the error.
+            $message->forceFill([
+                'target_deal_id' => null,
+                'target_deal_created' => false,
+                'routing_status' => RoutingStatus::Failed,
+            ])->save();
+            Log::error('inbox routing failed: company/deal creation threw', [
+                'channel_id' => $channel->id,
+                'channel_kind' => $channel->kind->value,
+                'message_id' => $message->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
 
         return $deal;
     }

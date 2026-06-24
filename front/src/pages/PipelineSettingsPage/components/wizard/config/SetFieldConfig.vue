@@ -16,16 +16,20 @@
 
     <div class="mb-3">
       <label class="field-label">{{ t('automation.fields.value') }} <span class="required">*</span></label>
-      <Textarea
-        v-if="field === 'notes'"
-        v-model="value"
-        rows="4"
+      <!-- tags is an array column → chips input (AutoComplete in multiple mode) -->
+      <AutoComplete
+        v-if="field === 'tags'"
+        v-model="tagsValue"
+        :suggestions="[]"
+        multiple
         fluid
+        :placeholder="t('automation.fields.tagsPlaceholder')"
         :invalid="!!errors['action_config.value'] || !!localErrors.value"
+        @complete="() => {}"
       />
       <InputText
         v-else
-        v-model="value"
+        v-model="textValue"
         fluid
         :invalid="!!errors['action_config.value'] || !!localErrors.value"
       />
@@ -44,7 +48,7 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
-import Textarea from 'primevue/textarea'
+import AutoComplete from 'primevue/autocomplete'
 import Message from 'primevue/message'
 
 const props = defineProps<{
@@ -58,8 +62,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-// Whitelisted fields (from automationConfig / backend comments)
-const FIELD_WHITELIST = ['notes', 'title']
+// Whitelisted deal columns — must match backend config('automation.set_field.deal').
+const FIELD_WHITELIST = ['title', 'tags']
 
 const fieldOptions = computed(() =>
   FIELD_WHITELIST.map((f) => ({
@@ -68,21 +72,36 @@ const fieldOptions = computed(() =>
   })),
 )
 
+function readTags(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.map((v) => String(v)) : []
+}
+
 const field = ref<string>((props.config.field as string) ?? '')
-const value = ref<string>((props.config.value as string) ?? '')
+const textValue = ref<string>(field.value === 'tags' ? '' : ((props.config.value as string) ?? ''))
+const tagsValue = ref<string[]>(field.value === 'tags' ? readTags(props.config.value) : [])
 const localErrors = ref<Record<string, string>>({})
 
-watch([field, value], () => {
-  emit('update:config', { field: field.value, value: value.value })
+// The emitted value depends on the field: tags → string[], everything else → string.
+const emittedValue = computed<unknown>(() => (field.value === 'tags' ? tagsValue.value : textValue.value))
+
+watch([field, textValue, tagsValue], () => {
+  emit('update:config', { field: field.value, value: emittedValue.value })
 })
 
 watch(
   () => props.config,
   (v) => {
+    const nextValue = v.field === 'tags' ? readTags(v.value) : ((v.value as string) ?? '')
     // Identity guard: skip re-hydration if incoming config equals our own last emit.
-    if (JSON.stringify(v) === JSON.stringify({ field: field.value, value: value.value })) return
+    if (JSON.stringify(v) === JSON.stringify({ field: field.value, value: emittedValue.value })) return
     field.value = (v.field as string) ?? ''
-    value.value = (v.value as string) ?? ''
+    if (field.value === 'tags') {
+      tagsValue.value = nextValue as string[]
+      textValue.value = ''
+    } else {
+      textValue.value = nextValue as string
+      tagsValue.value = []
+    }
   },
   { deep: true },
 )
@@ -94,7 +113,8 @@ function validate(): boolean {
     localErrors.value.field = t('automation.errors.fieldRequired')
     ok = false
   }
-  if (!value.value.trim()) {
+  const hasValue = field.value === 'tags' ? tagsValue.value.length > 0 : textValue.value.trim() !== ''
+  if (!hasValue) {
     localErrors.value.value = t('automation.errors.fieldValueRequired')
     ok = false
   }

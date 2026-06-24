@@ -35,6 +35,15 @@ class DealFeedService
     public const TYPE_FIELD_CHANGE = 'field_change';
 
     /**
+     * Hard upper bound on rows pulled from EACH source before the in-memory
+     * merge. Keeps memory/latency bounded for hot entities while the MVP merge
+     * stands; a full SQL-UNION + DB-pagination refactor is deferred. The newest
+     * rows are kept (each source query orders by created_at desc), so the first
+     * pages of the timeline are always complete.
+     */
+    private const MAX_SOURCE_ROWS = 500;
+
+    /**
      * @param  array{types?: array<int, string>}  $filters
      * @return array{data: array<int, array<string, mixed>>, meta: array{total: int, per_page: int, current_page: int}}
      */
@@ -104,6 +113,7 @@ class DealFeedService
             ->with(['fromStage:id,name', 'toStage:id,name', 'user:id,full_name'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
+            ->limit(self::MAX_SOURCE_ROWS)
             ->get()
             ->map(fn (DealStageHistory $row): array => [
                 'id' => "stage_{$row->id}",
@@ -139,6 +149,7 @@ class DealFeedService
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
+            ->limit(self::MAX_SOURCE_ROWS)
             ->get()
             ->map(fn (Activity $row): array => [
                 'id' => "activity_{$row->id}",
@@ -168,6 +179,7 @@ class DealFeedService
             ->with('user:id,full_name')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
+            ->limit(self::MAX_SOURCE_ROWS)
             ->get()
             ->map(fn (DealAudit $row): array => [
                 'id' => "audit_{$row->id}",

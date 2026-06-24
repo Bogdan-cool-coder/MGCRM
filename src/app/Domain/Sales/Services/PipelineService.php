@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Sales\Services;
 
 use App\Domain\Automation\Models\PipelineAutomation;
+use App\Domain\Iam\Enums\Role;
+use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Enums\PipelineKind;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
@@ -69,16 +71,100 @@ class PipelineService
     /**
      * List pipelines (optionally filtered by kind) with ordered stages eager-loaded.
      *
+     * When $user is given, pipeline-level visibility is ENFORCED: a manager/etc.
+     * only sees pipelines they are allowed to (canAccess). Admins/directors —
+     * who configure visibility — always see every pipeline. Stages carrying a
+     * stage-level restriction are filtered per-pipeline by the same rule so a
+     * manager never bords/lists a stage hidden from them. Passing null keeps the
+     * unscoped behaviour for internal/system callers (seeders, automations).
+     *
      * @return Collection<int, Pipeline>
      */
-    public function list(?string $kind = null): Collection
+    public function list(?string $kind = null, ?User $user = null): Collection
     {
-        return Pipeline::query()
+        $pipelines = Pipeline::query()
             ->with('stages')
             ->when($kind !== null, fn ($q) => $q->where('kind', $kind))
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
+
+        if ($user === null || $this->managesPipelines($user)) {
+            return $pipelines;
+        }
+
+        return $pipelines
+            ->filter(fn (Pipeline $pipeline): bool => $this->canAccess($pipeline, $user))
+            ->each(fn (Pipeline $pipeline) => $pipeline->setRelation(
+                'stages',
+                $pipeline->stages->filter(
+                    fn (PipelineStage $stage): bool => $this->canAccessStage($stage, $user),
+                )->values(),
+            ))
+            ->values();
+    }
+
+    /**
+     * Whether a user may see/list a pipeline (visibility enforcement, M1).
+     *
+     * Admins/directors manage the funnels and always pass. For everyone else a
+     * pipeline is visible when it carries NO restriction (visible_role null AND
+     * visible_user_ids empty) OR the user's role matches visible_role OR the
+     * user's id is in visible_user_ids. Fail-OPEN on an unrestricted pipeline so
+     * the default (no config) stays "visible to all", matching today's behaviour.
+     */
+    public function canAccess(Pipeline $pipeline, User $user): bool
+    {
+        if ($this->managesPipelines($user)) {
+            return true;
+        }
+
+        $role = $pipeline->visible_role;
+        $userIds = $pipeline->visible_user_ids ?? [];
+
+        // No restriction configured → visible to everyone.
+        if (($role === null || $role === '') && $userIds === []) {
+            return true;
+        }
+
+        if ($role !== null && $role !== '' && $user->role?->value === $role) {
+            return true;
+        }
+
+        return in_array((int) $user->id, array_map('intval', $userIds), true);
+    }
+
+    /**
+     * Whether a user may see a stage within a pipeline (stage-level visibility).
+     * Same fail-open default: no visible_department_ids/visible_user_ids → visible.
+     */
+    public function canAccessStage(PipelineStage $stage, User $user): bool
+    {
+        if ($this->managesPipelines($user)) {
+            return true;
+        }
+
+        $departmentIds = $stage->visible_department_ids ?? [];
+        $userIds = $stage->visible_user_ids ?? [];
+
+        if ($departmentIds === [] && $userIds === []) {
+            return true;
+        }
+
+        if ($user->department_id !== null
+            && in_array((int) $user->department_id, array_map('intval', $departmentIds), true)) {
+            return true;
+        }
+
+        return in_array((int) $user->id, array_map('intval', $userIds), true);
+    }
+
+    /**
+     * Admins and directors configure and therefore always see every pipeline.
+     */
+    private function managesPipelines(User $user): bool
+    {
+        return in_array($user->role, [Role::Admin, Role::Director], true);
     }
 
     public function find(int $id): Pipeline
@@ -138,6 +224,9 @@ class PipelineService
                 'settings' => $this->safeSettings($data['settings'] ?? []),
                 'is_active' => $data['is_active'] ?? true,
                 'sort_order' => $data['sort_order'] ?? 0,
+                // Pipeline-level visibility (M1). Absent keys → null/[] (visible to all).
+                'visible_role' => $data['visible_role'] ?? null,
+                'visible_user_ids' => $data['visible_user_ids'] ?? null,
             ]);
 
             foreach (self::SYSTEM_STAGES as $index => $def) {

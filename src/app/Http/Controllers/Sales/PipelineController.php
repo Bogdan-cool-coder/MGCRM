@@ -30,7 +30,9 @@ class PipelineController extends Controller
     {
         $this->authorize('viewAny', Pipeline::class);
 
-        $pipelines = $this->service->list($request->query('kind'));
+        // Pass the user so pipeline/stage visibility (visible_role / visible_user_ids
+        // / visible_department_ids) is enforced — managers only see funnels they may.
+        $pipelines = $this->service->list($request->query('kind'), $request->user());
 
         return PipelineResource::collection($pipelines);
     }

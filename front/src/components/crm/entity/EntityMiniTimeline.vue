@@ -37,11 +37,11 @@
         <span class="entity-mini-timeline__dot" aria-hidden="true" />
         <div class="entity-mini-timeline__content">
           <span class="entity-mini-timeline__actor">
-            {{ entry.user?.full_name ?? t('crm.log.system') }}
+            {{ entry.actor?.full_name ?? t('crm.log.system') }}
           </span>
           <span class="entity-mini-timeline__event">{{ eventLabel(entry.action) }}</span>
-          <span v-if="entry.description" class="entity-mini-timeline__desc">
-            {{ truncateDesc(entry.description) }}
+          <span v-if="detailText(entry)" class="entity-mini-timeline__desc">
+            {{ truncateDesc(detailText(entry)) }}
           </span>
         </div>
         <span class="entity-mini-timeline__time">{{ relativeDate(entry.created_at) }}</span>
@@ -70,7 +70,7 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
-const { eventLabel, relativeDate } = useEntityLogFormat()
+const { eventLabel, detailText, relativeDate } = useEntityLogFormat()
 
 const visibleEntries = computed(() => props.log.entries.value.slice(0, props.maxItems))
 

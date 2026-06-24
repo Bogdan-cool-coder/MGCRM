@@ -220,6 +220,7 @@ export interface DealCardDto {
   days_in_stage: number | null
   next_task: NextTaskDto | null
   primary_product: PrimaryProductDto | null
+  tags?: string[]
 }
 
 // ─── Board response ───────────────────────────────────────────────────────────

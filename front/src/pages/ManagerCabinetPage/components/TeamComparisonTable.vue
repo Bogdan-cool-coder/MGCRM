@@ -9,6 +9,14 @@
         <Skeleton height="200px" />
       </template>
 
+      <!-- Empty state: alone (no team / only the viewer) -->
+      <template v-else-if="kpi && kpi.team.size <= 1">
+        <div class="team-table__empty">
+          <i class="pi pi-users team-table__empty-icon" />
+          <p class="team-table__empty-text">{{ t('managerCabinet.team.alone') }}</p>
+        </div>
+      </template>
+
       <!-- Content -->
       <template v-else-if="kpi">
         <DataTable
@@ -44,7 +52,7 @@
           <Column :header="t('managerCabinet.team.status')" style="width: 130px">
             <template #body="{ data: row }">
               <Tag
-                :severity="badgeFor(row.score_pct)"
+                :severity="row.score_badge"
                 :value="labelFor(row.score_pct)"
                 size="small"
               />
@@ -62,14 +70,6 @@
             {{ t('managerCabinet.team.average') }}:
             <strong>{{ kpi.team.avg_pct }}%</strong>
           </span>
-        </div>
-      </template>
-
-      <!-- Empty state: alone -->
-      <template v-else>
-        <div class="team-table__empty">
-          <i class="pi pi-users team-table__empty-icon" />
-          <p class="team-table__empty-text">{{ t('managerCabinet.team.alone') }}</p>
         </div>
       </template>
     </template>
@@ -95,12 +95,6 @@ const { t } = useI18n()
 const rowClass = (row: TeamMember): Record<string, boolean> => ({
   'team-table__row--viewer': row.is_viewer,
 })
-
-const badgeFor = (pct: number): 'success' | 'warning' | 'danger' => {
-  if (pct >= 100) return 'success'
-  if (pct >= 80) return 'warning'
-  return 'danger'
-}
 
 const labelFor = (pct: number): string => {
   if (pct >= 100) return t('managerCabinet.kpi.excellent')

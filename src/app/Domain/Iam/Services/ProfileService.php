@@ -18,14 +18,22 @@ class ProfileService
     /**
      * Apply a validated profile update and return the saved user.
      *
-     * Only keys present in $data are touched, so a request that omits
-     * nav_quick_actions leaves the existing value untouched. An explicit null
-     * clears the list back to the default.
+     * Only keys present in $data are touched, so a request that omits a field
+     * leaves the existing value untouched. For nav_quick_actions an explicit
+     * null clears the list back to the default.
      *
      * @param  array<string, mixed>  $data
      */
     public function update(User $user, array $data): User
     {
+        if (array_key_exists('full_name', $data)) {
+            $user->full_name = $data['full_name'];
+        }
+
+        if (array_key_exists('locale', $data)) {
+            $user->locale = $data['locale'];
+        }
+
         if (array_key_exists('nav_quick_actions', $data)) {
             // Re-index so the stored JSON is always a clean ordered list.
             $actions = $data['nav_quick_actions'];

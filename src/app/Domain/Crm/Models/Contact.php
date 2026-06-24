@@ -34,6 +34,7 @@ class Contact extends Model
         'full_name',
         'position',
         'phone',
+        'phone_normalized',
         'email',
         'tg_username',
         'notes',

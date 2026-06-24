@@ -12,6 +12,8 @@ use App\Http\Requests\Inbox\WebhookMessageRequest;
 use App\Http\Resources\Inbox\WebhookAckResource;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Generic inbound webhook (unauthenticated). Lives in the throttle:inbound
@@ -62,14 +64,31 @@ class InboxWebhookController extends Controller
             return $this->dedupReplay($channel->id, $externalId);
         }
 
-        $this->router->route($channel, $message->fresh());
-        $fresh = $message->fresh();
+        // route() self-stamps `failed` and never throws on routing failure, but
+        // wrap defensively so an unexpected throwable still returns an idempotent
+        // ack rather than a 500 to the external connector (E8).
+        try {
+            $this->router->route($channel, $message->fresh());
+            $fresh = $message->fresh();
 
-        return WebhookAckResource::make([
-            'message_id' => $message->id,
-            'deal_id' => $fresh->target_deal_id,
-            'deal_created' => (bool) $fresh->target_deal_created,
-        ])->response()->setStatusCode(201);
+            return WebhookAckResource::make([
+                'message_id' => $message->id,
+                'deal_id' => $fresh->target_deal_id,
+                'deal_created' => (bool) $fresh->target_deal_created,
+            ])->response()->setStatusCode(201);
+        } catch (Throwable $e) {
+            Log::error('inbox webhook routing threw', [
+                'channel_id' => $channel->id,
+                'message_id' => $message->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return WebhookAckResource::make([
+                'message_id' => $message->id,
+                'deal_id' => null,
+                'deal_created' => false,
+            ])->response()->setStatusCode(201);
+        }
     }
 
     /**

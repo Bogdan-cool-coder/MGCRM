@@ -259,12 +259,31 @@ class AppServiceProvider extends ServiceProvider
         // the most destructive operation in the app.
         Gate::define('system-reset', static fn (User $user): bool => $user->role === Role::Admin);
 
+        // Manager-cabinet view gate (S1.8 defense-in-depth): route-level guard on the
+        // /me cabinet GET routes (profile/kpi/activity-feed), mirroring
+        // ManagerKpiService::assertCanViewCabinet so the route and the service share
+        // one role set (admin/director/manager). lawyer/accountant/cfo are excluded.
+        Gate::define('view-manager-cabinet', static fn (User $user): bool => in_array(
+            $user->role,
+            [Role::Admin, Role::Director, Role::Manager],
+            strict: true,
+        ));
+
         // Named limiter for the public inbound endpoints (form submit + webhook).
-        // Per-IP, throttled BEFORE any DB work so a token leak / spam burst can't
-        // create a flood of Company/Deal records (S1.9 E5).
-        RateLimiter::for('inbound', static fn (Request $request): Limit => Limit::perMinute(
-            (int) config('inbox.rate_limit_per_minute', 30),
-        )->by($request->ip()));
+        // Throttled BEFORE any DB work so a token leak / spam burst can't create a
+        // flood of Company/Deal records (S1.9 E5). The webhook is keyed by
+        // channel_id:ip — one noisy channel cannot exhaust another channel's budget,
+        // and a shared NAT IP cannot lock out a legitimate webhook. The {channel} is
+        // bound ONLY on the webhook route, so form meta/submit fall back to per-IP.
+        RateLimiter::for('inbound', static function (Request $request): Limit {
+            $perMinute = (int) config('inbox.rate_limit_per_minute', 30);
+            $channel = $request->route('channel');
+            $key = $channel instanceof Channel
+                ? $channel->id.':'.$request->ip()
+                : (string) $request->ip();
+
+            return Limit::perMinute($perMinute)->by($key);
+        });
 
         // Login / 2FA brute-force lockout (IAM-2) is NOT a named route-level
         // limiter: a route throttle counts EVERY request (including successful

@@ -166,6 +166,7 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
       creator: actor
         ? { id: actor.id, full_name: actor.full_name ?? '', avatar_path: null }
         : null,
+      is_first_time_meeting: false,
       ftm_decision_maker_attended: false,
       ftm_presentation_shown: false,
       ftm_report_url: null,

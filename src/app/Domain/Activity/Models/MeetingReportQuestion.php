@@ -33,6 +33,7 @@ class MeetingReportQuestion extends Model
         'pipeline_id',
         'text',
         'kind',
+        'is_required',
         'sort_order',
         'is_active',
     ];
@@ -42,6 +43,7 @@ class MeetingReportQuestion extends Model
         return [
             'sort_order' => 'integer',
             'is_active' => 'boolean',
+            'is_required' => 'boolean',
         ];
     }
 

@@ -451,13 +451,16 @@ class ApprovalService
     }
 
     /**
-     * Current attempt = max attempt in document_revisions for this document.
-     * Returns 1 if no revisions exist yet (pre-submit).
+     * Current approval round = max attempt value in document_revisions where
+     * attempt > 0 (submit-created revisions only; generation snapshots carry
+     * attempt=0 and must not shift the approval round counter).
+     * Returns 1 if no submit-revisions exist yet (first submit in progress).
      */
     private function currentAttempt(int $documentId): int
     {
         $last = DocumentRevision::query()
             ->where('document_id', $documentId)
+            ->where('attempt', '>', 0)
             ->orderByDesc('attempt')
             ->value('attempt');
 

@@ -219,6 +219,67 @@ class DashboardEndpointTest extends TestCase
         $this->assertSame(100_000, $activeGroup['amount_kopecks']);
     }
 
+    public function test_won_deal_counted_by_fact_date_not_stage_changed_at(): void
+    {
+        // A deal whose stage last changed LAST month but was actually closed THIS
+        // month must count in the current-month won group (period keys on the
+        // effective fact date, not stage_changed_at).
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $won = $this->wonStage($pipeline);
+
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $won->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 250_000,
+            'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(3),
+            'closed_at' => now()->startOfMonth()->addDays(2),
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?period=current_month&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $wonGroup = collect($response->json('status_groups'))->firstWhere('key', 'won');
+        $this->assertSame(1, $wonGroup['count']);
+        $this->assertSame(250_000, $wonGroup['amount_kopecks']);
+    }
+
+    public function test_won_deal_without_fact_date_falls_back_to_stage_changed_at(): void
+    {
+        // No fact date captured (closed_at/signed_at/paid_at NULL) → the deal must
+        // still be counted via the stage_changed_at fallback, not dropped.
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $won = $this->wonStage($pipeline);
+
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $won->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 90_000,
+            'stage_changed_at' => now(),
+            'closed_at' => null,
+            'signed_at' => null,
+            'paid_at' => null,
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?period=current_month&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $wonGroup = collect($response->json('status_groups'))->firstWhere('key', 'won');
+        $this->assertSame(1, $wonGroup['count']);
+        $this->assertSame(90_000, $wonGroup['amount_kopecks']);
+    }
+
     public function test_period_filter_last_month_shifts_window(): void
     {
         $director = User::factory()->create(['role' => Role::Director]);
@@ -244,6 +305,116 @@ class DashboardEndpointTest extends TestCase
         $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
         $this->assertSame(1, $activeGroup['count']);
         $this->assertSame(77_000, $activeGroup['amount_kopecks']);
+    }
+
+    // =========================================================================
+    // Trend (previous period) scoping
+    // =========================================================================
+
+    public function test_trend_prev_period_ignores_soft_deleted_deals(): void
+    {
+        // 1 active deal this month; previous month has 1 live + 1 soft-deleted
+        // deal. The scoped trend must compare 1 (current) vs 1 (prev, live only),
+        // i.e. trend_pct = 0.0 — NOT 1 vs 2 (-50%) that the raw query produced.
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $stage = $this->openStage($pipeline);
+
+        // Current period — 1 active deal.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 100_000,
+            'stage_changed_at' => now(),
+        ]);
+
+        // Previous period — 1 live deal.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 100_000,
+            'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(3),
+        ]);
+
+        // Previous period — 1 soft-deleted deal (must NOT count in prev).
+        $deleted = Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 100_000,
+            'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(4),
+        ]);
+        $deleted->delete();
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?period=current_month&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
+        $this->assertSame(1, $activeGroup['count']);
+        // 1 (current) vs 1 (prev live) → 0%. Raw-query bug would yield -50.
+        // JSON serializes 0.0 as 0 (no fractional part) → compare loosely.
+        $this->assertEquals(0.0, $activeGroup['trend_pct']);
+    }
+
+    public function test_trend_prev_period_respects_manager_id_filter(): void
+    {
+        // Director filters by a single manager. The previous-period denominator
+        // must be scoped to that manager too — not all owners.
+        $director = User::factory()->create(['role' => Role::Director]);
+        $mgr = User::factory()->create(['role' => Role::Manager]);
+        $other = User::factory()->create(['role' => Role::Manager]);
+        $pipeline = $this->salesPipeline();
+        $stage = $this->openStage($pipeline);
+
+        // Current period: mgr has 2 deals.
+        $this->deal($mgr, $pipeline, $stage);
+        $this->deal($mgr, $pipeline, $stage);
+
+        // Previous period: mgr has 1 deal, other has 3 (must be excluded).
+        foreach ([$mgr] as $owner) {
+            Deal::factory()->create([
+                'pipeline_id' => $pipeline->id,
+                'stage_id' => $stage->id,
+                'owner_user_id' => $owner->id,
+                'company_id' => Company::factory()->create()->id,
+                'currency' => 'RUB',
+                'amount' => 100_000,
+                'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(2),
+            ]);
+        }
+        for ($i = 0; $i < 3; $i++) {
+            Deal::factory()->create([
+                'pipeline_id' => $pipeline->id,
+                'stage_id' => $stage->id,
+                'owner_user_id' => $other->id,
+                'company_id' => Company::factory()->create()->id,
+                'currency' => 'RUB',
+                'amount' => 100_000,
+                'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(2),
+            ]);
+        }
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson(
+            '/api/sales/dashboard?period=current_month&pipeline_id='.$pipeline->id.'&manager_id='.$mgr->id
+        )->assertOk();
+
+        $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
+        $this->assertSame(2, $activeGroup['count']);
+        // 2 (current, mgr) vs 1 (prev, mgr only) → +100%. Unscoped prev (4) → -50.
+        // JSON serializes 100.0 as 100 (no fractional part) → compare loosely.
+        $this->assertEquals(100.0, $activeGroup['trend_pct']);
     }
 
     // =========================================================================
@@ -290,7 +461,7 @@ class DashboardEndpointTest extends TestCase
             ->assertOk();
 
         $this->assertSame(2, $response->json('deals_without_tasks.count'));
-        $this->assertStringContainsString('no_tasks=1', $response->json('deals_without_tasks.filter_url'));
+        $this->assertStringContainsString('only_no_task=1', $response->json('deals_without_tasks.filter_url'));
     }
 
     // =========================================================================

@@ -43,7 +43,8 @@ final class DealTransformer
      *     is_won: bool,
      *     stage_code: ?string,
      *     unmapped_status: bool,
-     *     created_at: ?int
+     *     created_at: ?int,
+     *     product_enum_ids: list<int>
      * }
      */
     public function transform(array $amoLead): array
@@ -112,6 +113,9 @@ final class DealTransformer
             'stage_code' => $stage['stage_code'],
             'unmapped_status' => $stage['stage_id'] === null,
             'created_at' => isset($amoLead['created_at']) ? (int) $amoLead['created_at'] : null,
+            // AMO "Продукт" multiselect enum ids — resolved to catalog deal_products
+            // by the loader via amo_product_mappings (DEC Feature 5).
+            'product_enum_ids' => $fields->enumIds(AmoFields::LEAD_PRODUCT),
         ];
     }
 

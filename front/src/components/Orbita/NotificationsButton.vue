@@ -161,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, toRefs } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRefs } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Popover from 'primevue/popover'
 import Button from 'primevue/button'
@@ -245,9 +245,13 @@ const popoverPt = {
   content: { style: 'padding: 0;' },
 }
 
-// ─── Bootstrap: fetch unread count on mount ────────────────────────────────
+// ─── Bootstrap: poll unread count while mounted ────────────────────────────
 onMounted(() => {
-  void notificationsStore.fetchUnreadCount()
+  notificationsStore.startPolling()
+})
+
+onUnmounted(() => {
+  notificationsStore.stopPolling()
 })
 
 // ─── Handlers ─────────────────────────────────────────────────────────────

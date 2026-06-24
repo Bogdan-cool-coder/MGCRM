@@ -61,6 +61,7 @@ use App\Http\Controllers\Crm\HoldingController;
 use App\Http\Controllers\Crm\SavedViewController;
 use App\Http\Controllers\Iam\Admin\DepartmentController;
 use App\Http\Controllers\Iam\Admin\UserManagementController;
+use App\Http\Controllers\Iam\AvatarController;
 use App\Http\Controllers\Iam\ProfileController;
 use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Inbox\ChannelController;
@@ -154,6 +155,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::patch('/me/profile', [ProfileController::class, 'update'])->name('me.profile.update');
+
+    // Avatar upload / removal (MAJOR-4). Stored under config('crm.storage.avatars').
+    Route::post('/profile/avatar', [AvatarController::class, 'store'])->name('profile.avatar.store');
+    Route::delete('/profile/avatar', [AvatarController::class, 'destroy'])->name('profile.avatar.destroy');
 
     // 2FA enrolment (requires a fully authenticated session).
     Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);
@@ -391,6 +396,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // on a later milestone.
         Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
         Route::post('users', [UserManagementController::class, 'store'])->name('users.store');
+        // MAJOR-2: edit user + soft-deactivate (destroy blocks self-deactivation 422).
+        Route::patch('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
 
         // Department directory (read-only) — feeds the add-user form Select.
         Route::get('departments', [DepartmentController::class, 'index'])->name('departments.index');
@@ -418,11 +426,17 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // user_id? query-param: manager → own only (403 if other); director/admin → any.
     Route::prefix('me')->name('me.')->group(function (): void {
-        Route::get('profile', [ManagerCabinetController::class, 'profile'])->name('profile');
-        Route::get('kpi', [ManagerCabinetController::class, 'kpi'])->name('kpi');
-        Route::get('activity-feed', [ManagerCabinetController::class, 'activityFeed'])->name('activity-feed');
+        // Cabinet GET routes — defense-in-depth role guard at the route layer
+        // mirroring ManagerKpiService::assertCanViewCabinet (admin/director/manager).
+        // The `view-manager-cabinet` Gate shares its definition with the service.
+        Route::middleware('can:view-manager-cabinet')->group(function (): void {
+            Route::get('profile', [ManagerCabinetController::class, 'profile'])->name('profile');
+            Route::get('kpi', [ManagerCabinetController::class, 'kpi'])->name('kpi');
+            Route::get('activity-feed', [ManagerCabinetController::class, 'activityFeed'])->name('activity-feed');
+        });
 
         // S2.9 — Telegram link management (owner-only deeplink issue / unlink).
+        // Any authenticated user may link their own Telegram account.
         Route::post('telegram-link', [TelegramLinkController::class, 'issue'])->name('telegram-link');
         Route::delete('telegram', [TelegramLinkController::class, 'unlink'])->name('telegram.unlink');
     });

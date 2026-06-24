@@ -57,7 +57,7 @@ class StudentCourseViewTest extends TestCase
 
         $response = $this->getJson('/api/onboarding/my-courses');
         $response->assertOk()
-            ->assertJsonStructure(['data' => [['assignment_id', 'status', 'progress_pct']]]);
+            ->assertJsonStructure(['data' => [['id', 'status', 'progress_pct']]]);
 
         $this->assertIsInt($response->json('data.0.progress_pct'));
     }

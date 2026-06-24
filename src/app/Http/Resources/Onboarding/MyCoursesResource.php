@@ -20,7 +20,7 @@ class MyCoursesResource extends JsonResource
         $course = $this->whenLoaded('course');
 
         return [
-            'assignment_id' => $this->id,
+            'id' => $this->id,
             'status' => $this->status?->value,
             'due_date' => $this->due_date?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),

@@ -28,6 +28,12 @@ class CrmFeedService
     public const TYPE_ACTIVITY = 'activity';
 
     /**
+     * Hard upper bound on rows pulled from each source before the in-memory
+     * merge. Bounds memory/latency for hot entities (newest rows kept).
+     */
+    private const MAX_SOURCE_ROWS = 500;
+
+    /**
      * @param  array{types?: array<int, string>}  $filters
      * @return array{data: array<int, array<string, mixed>>, meta: array{total: int, per_page: int, current_page: int}}
      */
@@ -91,6 +97,7 @@ class CrmFeedService
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
+            ->limit(self::MAX_SOURCE_ROWS)
             ->get()
             ->map(fn (Activity $row): array => [
                 'id' => "activity_{$row->id}",

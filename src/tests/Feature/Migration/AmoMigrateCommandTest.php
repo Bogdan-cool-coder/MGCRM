@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Migration;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -13,6 +14,8 @@ use Tests\TestCase;
  */
 class AmoMigrateCommandTest extends TestCase
 {
+    use RefreshDatabase;
+
     private string $relative;
 
     protected function setUp(): void
@@ -64,6 +67,22 @@ class AmoMigrateCommandTest extends TestCase
 
         $this->artisan('amo:migrate', ['phase' => 'extract'])
             ->expectsOutputToContain('AMO_MIGRATION_TOKEN is not set')
+            ->assertFailed();
+    }
+
+    public function test_rollback_phase_is_recognised_and_dry_run_writes_nothing(): void
+    {
+        // rollback --dry-run runs against an empty DB: it is a known phase (no
+        // "Unknown phase" error) and reports zero deletions without prompting.
+        $this->artisan('amo:migrate', ['phase' => 'rollback', '--dry-run' => true])
+            ->expectsOutputToContain('Rollback (dry-run)')
+            ->assertSuccessful();
+    }
+
+    public function test_unknown_phase_message_lists_rollback(): void
+    {
+        $this->artisan('amo:migrate', ['phase' => 'frobnicate'])
+            ->expectsOutputToContain('extract|transform|load|verify|rollback')
             ->assertFailed();
     }
 

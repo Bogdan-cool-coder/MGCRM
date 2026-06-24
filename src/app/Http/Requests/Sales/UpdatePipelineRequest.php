@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Sales;
 
+use App\Domain\Iam\Enums\Role;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdatePipelineRequest extends FormRequest
 {
@@ -29,6 +31,11 @@ class UpdatePipelineRequest extends FormRequest
             'graph_layout.nodes.*' => ['array'],
             'graph_layout.nodes.*.x' => ['numeric'],
             'graph_layout.nodes.*.y' => ['numeric'],
+            // Pipeline-level visibility (M1, enforced in PipelineService::canAccess).
+            // Null/empty clears the restriction (back to visible-to-everyone).
+            'visible_role' => ['sometimes', 'nullable', 'string', Rule::in(Role::values())],
+            'visible_user_ids' => ['sometimes', 'nullable', 'array'],
+            'visible_user_ids.*' => ['integer', 'exists:users,id'],
             // kind is immutable after creation — changing it breaks funnel semantics.
             'kind' => ['prohibited'],
         ];

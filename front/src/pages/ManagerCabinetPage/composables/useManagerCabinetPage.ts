@@ -5,12 +5,13 @@
  * Pattern: useAsyncResource (Vizion) — no raw fetch/axios in components.
  */
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useUserStore } from '@/stores/user'
 import { getProfile, getKpiData, getActivityFeed } from '@/api/managerCabinet'
+import { usersApi, type UserOptionDto } from '@/api/users'
 import type {
   MeProfile,
   KpiResponse,
@@ -23,6 +24,7 @@ export const useManagerCabinetPage = () => {
   const { t } = useI18n()
   const toast = useToast()
   const route = useRoute()
+  const router = useRouter()
   const userStore = useUserStore()
 
   // ─── Viewed user ─────────────────────────────────────────────────────────
@@ -37,6 +39,32 @@ export const useManagerCabinetPage = () => {
     const parsed = parseInt(String(qid), 10)
     return Number.isFinite(parsed) ? parsed : null
   })
+
+  // Selectable members for the cross-user picker (privileged viewers only):
+  // active managers/directors. Empty for non-privileged roles.
+  const memberOptions = ref<UserOptionDto[]>([])
+
+  const loadMemberOptions = async (): Promise<void> => {
+    if (!canViewOthers.value) return
+    try {
+      const all = await usersApi.getUsers()
+      memberOptions.value = all.filter((u) => u.role === 'manager' || u.role === 'director')
+    } catch {
+      memberOptions.value = []
+    }
+  }
+
+  // Sets / clears ?user_id= in the URL; the viewedUserId computed reacts and the
+  // watcher re-fetches profile/KPI/feed for the selected member.
+  const setViewedUser = (id: number | null): void => {
+    const query = { ...route.query }
+    if (id == null) {
+      delete query.user_id
+    } else {
+      query.user_id = String(id)
+    }
+    void router.replace({ query })
+  }
 
   // ─── Period ───────────────────────────────────────────────────────────────
   const period = ref<KpiPeriod>('current_month')
@@ -149,9 +177,17 @@ export const useManagerCabinetPage = () => {
     void loadFeed()
   })
 
+  // Re-load everything when a privileged viewer switches the inspected member.
+  watch(viewedUserId, () => {
+    feedPage.value = 1
+    void loadProfile()
+    void loadKpi()
+    void loadFeed()
+  })
+
   // ─── Mount ────────────────────────────────────────────────────────────────
   onMounted(async () => {
-    await Promise.all([loadProfile(), loadKpi(), loadFeed()])
+    await Promise.all([loadProfile(), loadKpi(), loadFeed(), loadMemberOptions()])
   })
 
   return {
@@ -170,11 +206,13 @@ export const useManagerCabinetPage = () => {
     feedPage,
     viewedUserId,
     canViewOthers,
+    memberOptions,
     // Actions
     setPeriod,
     setFeedKind,
     setFeedFtmOnly,
     setFeedPage,
     resetFeedFilters,
+    setViewedUser,
   }
 }

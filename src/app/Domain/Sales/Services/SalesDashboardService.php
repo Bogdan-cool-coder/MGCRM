@@ -91,7 +91,10 @@ class SalesDashboardService
             'top_managers' => $topManagers,
             'deals_without_tasks' => [
                 'count' => $dealsWithoutTasks,
-                'filter_url' => "/deals?pipeline_id={$pipeline->id}&no_tasks=1",
+                // Deep-link into the deals list pre-filtered to «без задач». The
+                // param name MUST match the deals-list filter key (only_no_task);
+                // the deals page reads pipeline_id + only_no_task from route.query.
+                'filter_url' => "/deals?pipeline_id={$pipeline->id}&only_no_task=1",
             ],
         ];
     }
@@ -110,16 +113,17 @@ class SalesDashboardService
     {
         $baseCurrency = config('crm.currencies.default', 'RUB');
 
+        // baseQuery already joins pipeline_stages as «dps» (for the effective-date
+        // period filter), so reuse that alias here instead of a second join.
         $rows = $this->baseQuery($pipelineId, $scope, $user, $filters)
-            ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
             ->selectRaw(
-                'CASE WHEN ps.is_won = true THEN \'won\' WHEN ps.is_lost = true THEN \'lost\' ELSE \'active\' END as grp,'.
+                'CASE WHEN dps.is_won = true THEN \'won\' WHEN dps.is_lost = true THEN \'lost\' ELSE \'active\' END as grp,'.
                 'COUNT(deals.id) as cnt,'.
                 'SUM(deals.amount) as total_amount,'.
                 'deals.currency as currency'
             )
             ->groupByRaw(
-                'CASE WHEN ps.is_won = true THEN \'won\' WHEN ps.is_lost = true THEN \'lost\' ELSE \'active\' END, deals.currency'
+                'CASE WHEN dps.is_won = true THEN \'won\' WHEN dps.is_lost = true THEN \'lost\' ELSE \'active\' END, deals.currency'
             )
             ->get();
 
@@ -149,9 +153,11 @@ class SalesDashboardService
             $grouped[$grp]['amount'] += $converted;
         }
 
-        // Previous period for trend.
+        // Previous period for trend — built through the SAME scoped query as the
+        // current period (SoftDeletes + visibility + manager_id) so numerator and
+        // denominator measure the same population.
         $prevFilters = $filters->prevPeriod();
-        $prevTrends = $this->computeTrendsFromPrev($pipelineId, $prevFilters, $grouped);
+        $prevTrends = $this->computeTrendsFromPrev($pipelineId, $scope, $user, $prevFilters, $grouped);
 
         $total = [
             'count' => $grouped['active']['count'] + $grouped['won']['count'] + $grouped['lost']['count'],
@@ -583,14 +589,29 @@ class SalesDashboardService
     /**
      * Base Deal query: visibility + pipeline + period scoped.
      *
+     * The period filter keys on the deal's EFFECTIVE recognition date, not on
+     * stage_changed_at blindly: a won/lost deal counts in the period it was
+     * actually closed (closed_at, then the signed/paid fact dates), falling back
+     * to stage_changed_at when no fact date was captured (legacy / not-yet-filled
+     * rows). Active deals always key on stage_changed_at. The pipeline_stages
+     * join (alias «dps») provides the is_won/is_lost flags for the CASE and is
+     * reused by statusGroups so no second join is needed.
+     *
+     * Eloquent's SoftDeletes global scope keeps deleted_at IS NULL applied
+     * (Deal::query()), and the visibility match below scopes the population — both
+     * are inherited by every aggregator and by the previous-period trend builder.
+     *
      * @return Builder<Deal>
      */
     private function baseQuery(int $pipelineId, VisibilityScope $scope, User $user, DashboardFilters $filters): Builder
     {
+        $effectiveDate = $this->effectiveDateExpr();
+
         $query = Deal::query()
+            ->join('pipeline_stages as dps', 'deals.stage_id', '=', 'dps.id')
             ->where('deals.pipeline_id', $pipelineId)
-            ->where('deals.stage_changed_at', '>=', $filters->dateFrom)
-            ->where('deals.stage_changed_at', '<=', $filters->dateTo);
+            ->whereRaw($effectiveDate.' >= ?', [$filters->dateFrom])
+            ->whereRaw($effectiveDate.' <= ?', [$filters->dateTo]);
 
         if ($filters->managerId !== null) {
             $query->where('deals.owner_user_id', $filters->managerId);
@@ -604,6 +625,23 @@ class SalesDashboardService
             ),
             VisibilityScope::Own => $query->where('deals.owner_user_id', $user->id),
         };
+    }
+
+    /**
+     * SQL expression for a deal's effective period-recognition date.
+     *
+     * - won/lost stage → COALESCE(closed_at, signed_at, paid_at, stage_changed_at)
+     * - active stage   → stage_changed_at
+     *
+     * COALESCE keeps deals whose fact dates were never captured (the columns are
+     * NULL on legacy rows) anchored to stage_changed_at instead of dropping them.
+     * Uses the «dps» pipeline_stages join alias added by baseQuery.
+     */
+    private function effectiveDateExpr(): string
+    {
+        return 'CASE WHEN dps.is_won = true OR dps.is_lost = true '.
+            'THEN COALESCE(deals.closed_at, deals.signed_at, deals.paid_at, deals.stage_changed_at) '.
+            'ELSE deals.stage_changed_at END';
     }
 
     /**
@@ -683,24 +721,26 @@ class SalesDashboardService
     }
 
     /**
-     * Compute trend_pct per group by running the previous-period raw count.
+     * Compute trend_pct per group by running the previous-period scoped count.
+     *
+     * Routed through baseQuery() — identical SoftDeletes (deleted_at IS NULL),
+     * visibility scope, manager_id filter and effective-date period boundaries as
+     * the current period — so trend_pct compares like with like. The previous raw
+     * DB::table('deals') bypassed every Eloquent scope and inflated the prior
+     * period with soft-deleted / out-of-scope deals.
      *
      * @param  array<string, array{count: int, amount: int}>  $currentGrouped
      * @return array<string, ?float>
      */
-    private function computeTrendsFromPrev(int $pipelineId, DashboardFilters $prevFilters, array $currentGrouped): array
+    private function computeTrendsFromPrev(int $pipelineId, VisibilityScope $scope, User $user, DashboardFilters $prevFilters, array $currentGrouped): array
     {
-        $prevRows = DB::table('deals')
-            ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
-            ->where('deals.pipeline_id', $pipelineId)
-            ->where('deals.stage_changed_at', '>=', $prevFilters->dateFrom)
-            ->where('deals.stage_changed_at', '<=', $prevFilters->dateTo)
+        $prevRows = $this->baseQuery($pipelineId, $scope, $user, $prevFilters)
             ->selectRaw(
-                'CASE WHEN ps.is_won = true THEN \'won\' WHEN ps.is_lost = true THEN \'lost\' ELSE \'active\' END as grp,'.
+                'CASE WHEN dps.is_won = true THEN \'won\' WHEN dps.is_lost = true THEN \'lost\' ELSE \'active\' END as grp,'.
                 'COUNT(deals.id) as cnt'
             )
             ->groupByRaw(
-                'CASE WHEN ps.is_won = true THEN \'won\' WHEN ps.is_lost = true THEN \'lost\' ELSE \'active\' END'
+                'CASE WHEN dps.is_won = true THEN \'won\' WHEN dps.is_lost = true THEN \'lost\' ELSE \'active\' END'
             )
             ->get()
             ->keyBy('grp');
@@ -744,7 +784,7 @@ class SalesDashboardService
             'forecast' => ['total_weighted_kopecks' => 0, 'hot_kopecks' => 0, 'warm_kopecks' => 0, 'trial_kopecks' => 0, 'by_stage' => []],
             'top_products' => ['labels' => [], 'datasets' => [], 'meta' => ['type' => 'bar', 'unit' => 'kopecks']],
             'top_managers' => ['labels' => [], 'datasets' => [], 'meta' => ['type' => 'bar', 'unit' => 'kopecks']],
-            'deals_without_tasks' => ['count' => 0, 'filter_url' => '/deals?no_tasks=1'],
+            'deals_without_tasks' => ['count' => 0, 'filter_url' => '/deals?only_no_task=1'],
         ];
     }
 }

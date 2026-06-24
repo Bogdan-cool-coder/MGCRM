@@ -48,6 +48,14 @@ class ContactRelationController extends Controller
 
     public function update(UpdateContactRelationRequest $request, Contact $contact, ContactRelation $relation): JsonResource
     {
+        // Ensure the relation involves the route-bound contact (prevent IDOR).
+        // Relations are bidirectional: contact_id or related_contact_id must match.
+        abort_unless(
+            (int) $relation->contact_id === (int) $contact->id
+            || (int) $relation->related_contact_id === (int) $contact->id,
+            404,
+        );
+
         $updated = $this->service->update($relation, $request->validated());
         $updated->load(['contact', 'relatedContact', 'createdBy']);
 
@@ -56,6 +64,13 @@ class ContactRelationController extends Controller
 
     public function destroy(Request $request, Contact $contact, ContactRelation $relation): JsonResponse
     {
+        // Ensure the relation involves the route-bound contact (prevent IDOR).
+        abort_unless(
+            (int) $relation->contact_id === (int) $contact->id
+            || (int) $relation->related_contact_id === (int) $contact->id,
+            404,
+        );
+
         $this->authorize('delete', $relation);
 
         $this->service->detach($relation);

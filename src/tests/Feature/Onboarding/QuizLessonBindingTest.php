@@ -94,7 +94,8 @@ class QuizLessonBindingTest extends TestCase
     public function test_student_resource_hides_is_correct_and_explanation(): void
     {
         $quiz = Quiz::factory()->create(['lesson_id' => $this->quizLesson->id]);
-        $this->quizLesson->update(['content' => ['quiz_id' => $quiz->id]]);
+        // Publish-gate (#4): lesson must be published for students to access the quiz.
+        $this->quizLesson->update(['content' => ['quiz_id' => $quiz->id], 'is_published' => true]);
 
         $question = QuizQuestion::factory()->create([
             'quiz_id' => $quiz->id,
@@ -127,6 +128,24 @@ class QuizLessonBindingTest extends TestCase
         // is_correct must NOT be present on options
         $firstOption = $response->json('data.questions.0.options.0');
         $this->assertArrayNotHasKey('is_correct', $firstOption);
+    }
+
+    public function test_student_gets_404_for_unpublished_quiz_lesson(): void
+    {
+        // Publish-gate (#4): unpublished quiz-lesson returns 404 to students.
+        $quiz = Quiz::factory()->create(['lesson_id' => $this->quizLesson->id]);
+        $this->quizLesson->update(['content' => ['quiz_id' => $quiz->id]]);
+        // is_published remains false (factory default)
+
+        $student = User::factory()->create(['role' => Role::Manager]);
+        CourseAssignment::factory()->create([
+            'course_id' => $this->course->id,
+            'user_id' => $student->id,
+        ]);
+        Sanctum::actingAs($student, ['*']);
+
+        $this->getJson("/api/onboarding/lessons/{$this->quizLesson->id}/quiz")
+            ->assertNotFound();
     }
 
     public function test_admin_resource_shows_is_correct_and_explanation(): void

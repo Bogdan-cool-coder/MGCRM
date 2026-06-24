@@ -11,6 +11,7 @@ import type {
   UpdateActivityPayload,
   ActivityListParams,
   SaveMeetingReportPayload,
+  SaveMeetingReportQuestionPayload,
   MyBoardResponse,
 } from '@/entities/activity'
 import type { BulkCreateActivityPayload } from '@/entities/sales'
@@ -97,6 +98,22 @@ export const activityApi = {
     return res.data.data
   },
 
+  // ── Quick reschedule (POST /api/activities/{id}/reschedule) ──────────────────
+  // The new due_at is computed server-side in the app timezone (start of the
+  // target day), so the preset means the same thing regardless of the client
+  // clock — prefer this over a client-side PATCH of due_at.
+
+  async rescheduleActivity(
+    id: number,
+    preset: 'tomorrow' | 'next_week' | 'next_month',
+  ): Promise<ActivityDto> {
+    const res = await apiClient.post<{ data: ActivityDto }>(
+      `/api/activities/${id}/reschedule`,
+      { preset },
+    )
+    return res.data.data
+  },
+
   // ── Meeting Report ─────────────────────────────────────────────────────────
 
   async getMeetingReportQuestions(pipelineId?: number | null): Promise<MeetingReportQuestionDto[]> {
@@ -111,6 +128,44 @@ export const activityApi = {
 
   async saveMeetingReport(dealId: number, data: SaveMeetingReportPayload): Promise<void> {
     await apiClient.post(`/api/deals/${dealId}/meeting-report`, data)
+  },
+
+  // ── Meeting-report question registry — admin CRUD (admin/director) ───────────
+  // Backs the Settings «Справочники» editor for the meeting-report constructor.
+
+  async listMeetingReportQuestions(pipelineId?: number | null): Promise<MeetingReportQuestionDto[]> {
+    const params: Record<string, unknown> = {}
+    if (pipelineId != null) params.pipeline_id = pipelineId
+    const res = await apiClient.get<{ data: MeetingReportQuestionDto[] }>(
+      '/api/meeting-report-questions',
+      { params },
+    )
+    return res.data.data
+  },
+
+  async createMeetingReportQuestion(
+    data: SaveMeetingReportQuestionPayload,
+  ): Promise<MeetingReportQuestionDto> {
+    const res = await apiClient.post<{ data: MeetingReportQuestionDto }>(
+      '/api/meeting-report-questions',
+      data,
+    )
+    return res.data.data
+  },
+
+  async updateMeetingReportQuestion(
+    id: number,
+    data: SaveMeetingReportQuestionPayload,
+  ): Promise<MeetingReportQuestionDto> {
+    const res = await apiClient.patch<{ data: MeetingReportQuestionDto }>(
+      `/api/meeting-report-questions/${id}`,
+      data,
+    )
+    return res.data.data
+  },
+
+  async deleteMeetingReportQuestion(id: number): Promise<void> {
+    await apiClient.delete(`/api/meeting-report-questions/${id}`)
   },
 
   // ── My Board (view 3 — personal task kanban) ───────────────────────────────

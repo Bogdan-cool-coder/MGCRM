@@ -179,6 +179,7 @@
     v-model:visible="meetingReportOpen"
     :activity-id="item.activity.id"
     :deal-id="dealId"
+    :pipeline-id="pipelineId ?? null"
     @saved="meetingReportOpen = false"
   />
 </template>
@@ -214,6 +215,8 @@ const KIND_META: Record<string, { color: string; icon: string }> = {
 const props = defineProps<{
   item: FeedItem
   dealId: number
+  /** Deal's pipeline id — forwarded to the meeting-report dialog for per-pipeline questions */
+  pipelineId?: number | null
   completingId: number | null
   reopeningId: number | null
   /** True when the key-actions bar triggered a scroll-to on this item */

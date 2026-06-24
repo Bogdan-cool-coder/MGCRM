@@ -102,6 +102,7 @@
                 :key="item.id"
                 :item="item"
                 :deal-id="dealId"
+                :pipeline-id="pipelineId ?? null"
                 :completing-id="completingId"
                 :reopening-id="reopeningId"
                 :is-highlighted="highlightedItemId === item.id"
@@ -137,6 +138,8 @@ const vTooltip = Tooltip
 
 const props = defineProps<{
   dealId: number
+  /** Deal's pipeline id — forwarded to the meeting-report dialog for per-pipeline questions */
+  pipelineId?: number | null
   feed: ReturnType<typeof useDealFeed>
   /** Key actions from deal DTO for topbar chips */
   keyActions?: DealKeyAction[]

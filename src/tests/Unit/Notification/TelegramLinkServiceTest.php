@@ -109,6 +109,21 @@ class TelegramLinkServiceTest extends TestCase
         $this->assertSame(LinkRedeemResult::Linked, $result);
     }
 
+    public function test_redeem_when_user_already_has_different_tg_is_blocked(): void
+    {
+        // The user already owns a Telegram account; redeeming a fresh token from a
+        // *different* TG account must not silently overwrite the existing binding.
+        $user = User::factory()->create(['telegram_user_id' => '111000111']);
+        $token = TelegramLinkToken::factory()->create(['user_id' => $user->id]);
+
+        $result = $this->service->redeem($token->token, '999000999');
+
+        $this->assertSame(LinkRedeemResult::AlreadyLinkedOther, $result);
+        // Existing binding untouched, token not consumed.
+        $this->assertSame('111000111', $user->fresh()->telegram_user_id);
+        $this->assertNull($token->fresh()->used_at);
+    }
+
     public function test_unlink_clears_telegram_user_id(): void
     {
         $user = User::factory()->create(['telegram_user_id' => '555000111']);

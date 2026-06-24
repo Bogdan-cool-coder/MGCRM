@@ -12,7 +12,9 @@ namespace App\Domain\Log\Enums;
  * Polymorphism is implemented WITHOUT FK (subject_type string + subject_id int),
  * mirroring Activity (target_type/target_id) and CrmFile (owner_entity_*).
  * Extending the whitelist (e.g. contract, fin_invoice) needs no migration —
- * just a new case + a visibility branch in EntityLogPolicy.
+ * just a new case + a `view` branch on the subject's own policy (read access to
+ * a subject's log is delegated to that subject's policy in EntityLogController;
+ * there is no separate Log policy).
  */
 enum LogSubjectType: string
 {

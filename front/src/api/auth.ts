@@ -64,10 +64,13 @@ export const authApi = {
   },
 
   /**
-   * POST /api/me/telegram-link — получить deeplink для привязки Telegram
+   * POST /api/me/telegram-link — получить deeplink для привязки Telegram.
+   * BE (TelegramLinkResource) отдаёт плоский объект { deeplink, expires_in_minutes }.
    */
-  async telegramLink(): Promise<{ link_url: string }> {
-    const response = await apiClient.post<{ link_url: string }>('/api/me/telegram-link')
+  async telegramLink(): Promise<{ deeplink: string; expires_in_minutes: number }> {
+    const response = await apiClient.post<{ deeplink: string; expires_in_minutes: number }>(
+      '/api/me/telegram-link',
+    )
     return response.data
   },
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Iam;
 
+use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -129,6 +130,71 @@ class ProfileUpdateTest extends TestCase
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrors('nav_quick_actions.0');
+    }
+
+    public function test_update_saves_full_name(): void
+    {
+        $user = User::factory()->create(['full_name' => 'Old Name']);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson('/api/me/profile', ['full_name' => 'New Name'])
+            ->assertOk()
+            ->assertJsonPath('data.full_name', 'New Name');
+
+        $this->assertSame('New Name', $user->fresh()->full_name);
+    }
+
+    public function test_update_persists_locale(): void
+    {
+        $user = User::factory()->create(['locale' => 'ru']);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson('/api/me/profile', ['locale' => 'en'])
+            ->assertOk()
+            ->assertJsonPath('data.locale', 'en');
+
+        $this->assertSame('en', $user->fresh()->locale);
+    }
+
+    public function test_update_rejects_unknown_locale(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson('/api/me/profile', ['locale' => 'de'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('locale');
+    }
+
+    public function test_update_rejects_blank_full_name(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson('/api/me/profile', ['full_name' => ''])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('full_name');
+    }
+
+    public function test_update_cannot_change_role_or_email_or_active(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'real@mgcrm.test',
+            'role' => Role::Manager,
+            'is_active' => true,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson('/api/me/profile', [
+            'email' => 'hacker@mgcrm.test',
+            'role' => 'admin',
+            'is_active' => false,
+        ])->assertOk();
+
+        $fresh = $user->fresh();
+        $this->assertSame('real@mgcrm.test', $fresh->email);
+        $this->assertSame(Role::Manager, $fresh->role);
+        $this->assertTrue($fresh->is_active);
     }
 
     public function test_requires_authentication(): void

@@ -61,18 +61,18 @@
           <div class="channel-history-drawer__row">
             <span class="channel-history-drawer__label">{{ t('crm.company.marketing.historyFrom') }}:</span>
             <span class="channel-history-drawer__value channel-history-drawer__value--from">
-              {{ entry.from_channel || t('crm.company.marketing.noChannel') }}
+              {{ entry.old_channel?.name || t('crm.company.marketing.noChannel') }}
             </span>
             <i class="pi pi-arrow-right channel-history-drawer__arrow" />
             <span class="channel-history-drawer__label">{{ t('crm.company.marketing.historyTo') }}:</span>
             <span class="channel-history-drawer__value channel-history-drawer__value--to">
-              {{ entry.to_channel || t('crm.company.marketing.noChannel') }}
+              {{ entry.new_channel?.name || t('crm.company.marketing.noChannel') }}
             </span>
           </div>
           <div class="channel-history-drawer__meta">
             <span class="channel-history-drawer__by">
               <i class="pi pi-user channel-history-drawer__meta-icon" />
-              {{ entry.changed_by_name || '—' }}
+              {{ entry.changed_by?.full_name || '—' }}
             </span>
             <span class="channel-history-drawer__date">
               <i class="pi pi-calendar channel-history-drawer__meta-icon" />
@@ -128,7 +128,8 @@ watch(visible, (val) => {
   if (val) void load()
 })
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | null): string {
+  if (!iso) return '—'
   try {
     const d = new Date(iso)
     return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })

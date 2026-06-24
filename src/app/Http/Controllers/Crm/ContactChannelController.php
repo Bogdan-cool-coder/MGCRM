@@ -45,6 +45,9 @@ class ContactChannelController extends Controller
 
     public function update(UpdateContactChannelRequest $request, Contact $contact, ContactChannel $channel): JsonResource
     {
+        // Ensure the channel belongs to the route-bound contact (prevent IDOR).
+        abort_if((int) $channel->contact_id !== (int) $contact->id, 404);
+
         $updated = $this->service->update($channel, $request->validated());
 
         return ContactChannelResource::make($updated);
@@ -53,6 +56,9 @@ class ContactChannelController extends Controller
     public function destroy(Request $request, Contact $contact, ContactChannel $channel): JsonResponse
     {
         $this->authorize('update', $contact);
+
+        // Ensure the channel belongs to the route-bound contact (prevent IDOR).
+        abort_if((int) $channel->contact_id !== (int) $contact->id, 404);
 
         $this->service->delete($channel);
 

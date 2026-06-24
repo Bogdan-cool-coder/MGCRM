@@ -34,7 +34,9 @@ export interface PersonalKpi {
 export interface TeamMember {
   full_name: string
   score_pct: number
+  score_badge: 'success' | 'warning' | 'danger'
   is_viewer: boolean
+  income_fact_kopecks?: number
 }
 
 export interface TeamKpi {

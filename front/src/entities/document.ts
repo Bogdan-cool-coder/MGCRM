@@ -16,7 +16,7 @@ export type ContractStatus =
   | 'uploaded'
   | 'archived'
 
-export type DocumentKind = 'contract' | 'invoice' | 'act' | 'reconciliation'
+export type DocumentKind = 'contract' | 'invoice' | 'act' | 'reconciliation' | 'termination_agreement'
 
 export type AttachmentKind = 'signed_scan' | 'payment' | 'other'
 
@@ -62,7 +62,10 @@ export interface DocumentItemDto {
   id: number
   document_id: number
   product_id: number
-  product_name: string
+  plan_id: number | null
+  /** Product name snapshot taken at creation time (BE field: name_snapshot). */
+  name_snapshot: string
+  currency: string | null
   qty: number
   unit_price: number
   line_total: number
@@ -74,12 +77,14 @@ export interface DocumentItemDto {
 export interface DocumentRevisionDto {
   id: number
   document_id: number
+  version_number: number
+  /** Alias for version_number — both are present in the API response. */
   version: number
   attempt: number
   docx_path: string | null
   pdf_path: string | null
   note: string | null
-  created_by: number | null
+  created_by_user_id: number | null
   created_by_name: string | null
   created_at: string
 }
@@ -91,12 +96,14 @@ export interface DocumentRemarkDto {
   document_id: number
   attempt: number
   stage_order: number
-  approver_id: number
-  approver_name: string
-  body: string
+  author_user_id: number | null
+  /** Nested author object from BE resource. */
+  author: { id: number; full_name: string } | null
+  /** Remark text (BE field name: text). */
+  text: string
   is_resolved: boolean
-  resolved_by: number | null
-  resolved_by_name: string | null
+  resolved_by_user_id: number | null
+  resolved_by: { id: number; full_name: string } | null
   resolved_at: string | null
   created_at: string
 }

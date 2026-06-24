@@ -162,4 +162,48 @@ class ContactChannelTest extends TestCase
             'value' => 'hack@example.com',
         ])->assertForbidden();
     }
+
+    // ---- IDOR guard: channel of another contact ----
+
+    public function test_cannot_update_channel_belonging_to_different_contact(): void
+    {
+        // Attacker owns contactA; victim owns contactB with a channel.
+        $attacker = User::factory()->create(['role' => Role::Manager]);
+        $victim = User::factory()->create(['role' => Role::Manager]);
+        $contactA = Contact::factory()->create(['owner_id' => $attacker->id]);
+        $contactB = Contact::factory()->create(['owner_id' => $victim->id]);
+        $channelOfB = ContactChannel::create([
+            'contact_id' => $contactB->id,
+            'channel_type' => ChannelType::Phone->value,
+            'value' => '+77000000001',
+            'is_primary_for_channel' => false,
+        ]);
+        Sanctum::actingAs($attacker, ['*']);
+
+        // Passing contactA's ID in the route but channelOfB's ID — must be 404.
+        $this->patchJson("/api/contacts/{$contactA->id}/channels/{$channelOfB->id}", [
+            'value' => '+77999999999',
+        ])->assertNotFound();
+    }
+
+    public function test_cannot_delete_channel_belonging_to_different_contact(): void
+    {
+        $attacker = User::factory()->create(['role' => Role::Manager]);
+        $victim = User::factory()->create(['role' => Role::Manager]);
+        $contactA = Contact::factory()->create(['owner_id' => $attacker->id]);
+        $contactB = Contact::factory()->create(['owner_id' => $victim->id]);
+        $channelOfB = ContactChannel::create([
+            'contact_id' => $contactB->id,
+            'channel_type' => ChannelType::Email->value,
+            'value' => 'victim@example.com',
+            'is_primary_for_channel' => false,
+        ]);
+        Sanctum::actingAs($attacker, ['*']);
+
+        // Must return 404 — not delete channel belonging to another contact.
+        $this->deleteJson("/api/contacts/{$contactA->id}/channels/{$channelOfB->id}")
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('contact_channels', ['id' => $channelOfB->id]);
+    }
 }

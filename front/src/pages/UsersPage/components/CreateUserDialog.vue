@@ -1,7 +1,7 @@
 <template>
   <Dialog
     v-model:visible="visible"
-    :header="t('admin.users.addUser')"
+    :header="isEdit ? t('admin.users.editUser') : t('admin.users.addUser')"
     modal
     :style="{ width: '34rem' }"
     :draggable="false"
@@ -82,8 +82,39 @@
         />
       </div>
 
-      <!-- Password hint -->
+      <!-- Manager -->
       <div class="col-12">
+        <label class="user-dialog__label">{{ t('admin.users.fields.manager') }}</label>
+        <Select
+          v-model="form.manager_id"
+          :options="managerOptions"
+          option-label="full_name"
+          option-value="id"
+          show-clear
+          filter
+          :placeholder="t('admin.users.fields.manager_ph')"
+          :loading="managersLoading"
+          class="w-100 mt-1"
+        />
+      </div>
+
+      <!-- Password (optional) -->
+      <div class="col-12">
+        <label class="user-dialog__label">{{ t('admin.users.fields.password') }}</label>
+        <Password
+          v-model="form.password"
+          toggle-mask
+          :feedback="false"
+          input-class="w-100"
+          class="w-100 mt-1"
+          :class="{ 'p-invalid': errors.password }"
+          :placeholder="isEdit ? t('admin.users.fields.password_edit_ph') : t('admin.users.fields.password_ph')"
+        />
+        <small v-if="errors.password" class="p-error">{{ errors.password }}</small>
+      </div>
+
+      <!-- Hint (create only) -->
+      <div v-if="!isEdit" class="col-12">
         <Message severity="secondary" :closable="false" class="user-dialog__hint">
           <i class="pi pi-info-circle me-1" />
           {{ t('admin.users.passwordHint') }}
@@ -94,7 +125,7 @@
     <template #footer>
       <Button :label="t('common.cancel')" severity="secondary" text @click="cancel" />
       <Button
-        :label="t('common.create')"
+        :label="isEdit ? t('common.save') : t('common.create')"
         :loading="loading"
         @click="submit"
       />
@@ -108,31 +139,49 @@ import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
 import Select from 'primevue/select'
 import Message from 'primevue/message'
 import type { DepartmentOption } from '@/entities/adminUser'
 import type { UserRole } from '@/entities/user'
-import type { CreateAdminUserPayload } from '@/entities/adminUser'
+import type {
+  AdminUserDto,
+  CreateAdminUserPayload,
+  UpdateAdminUserPayload,
+} from '@/entities/adminUser'
+import type { UserOptionDto } from '@/api/users'
 
 const props = defineProps<{
   modelValue: boolean
   loading: boolean
   departments: DepartmentOption[]
   departmentsLoading: boolean
+  managers: UserOptionDto[]
+  managersLoading: boolean
   roleOptions: Array<{ label: string; value: UserRole }>
+  /** When set, the dialog edits this user; when null, it creates a new one. */
+  editing: AdminUserDto | null
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   create: [payload: CreateAdminUserPayload]
+  update: [payload: UpdateAdminUserPayload]
 }>()
 
 const { t } = useI18n()
+
+const isEdit = computed(() => props.editing !== null)
 
 const visible = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })
+
+// A manager cannot be themselves; filter the edited user out of candidates.
+const managerOptions = computed(() =>
+  props.managers.filter((m) => m.id !== props.editing?.id),
+)
 
 interface FormState {
   full_name: string
@@ -140,7 +189,9 @@ interface FormState {
   phone: string
   job_title: string
   department_id: number | null
+  manager_id: number | null
   role: UserRole | null
+  password: string
 }
 
 const defaultForm = (): FormState => ({
@@ -149,7 +200,20 @@ const defaultForm = (): FormState => ({
   phone: '',
   job_title: '',
   department_id: null,
+  manager_id: null,
   role: null,
+  password: '',
+})
+
+const fromUser = (u: AdminUserDto): FormState => ({
+  full_name: u.full_name,
+  email: u.email,
+  phone: u.phone ?? '',
+  job_title: u.job_title ?? '',
+  department_id: u.department_id,
+  manager_id: u.manager_id,
+  role: u.role,
+  password: '',
 })
 
 const form = ref<FormState>(defaultForm())
@@ -159,7 +223,7 @@ watch(
   () => props.modelValue,
   (open) => {
     if (open) {
-      form.value = defaultForm()
+      form.value = props.editing ? fromUser(props.editing) : defaultForm()
       errors.value = {}
     }
   },
@@ -175,6 +239,9 @@ function validate(): boolean {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email.trim())) {
     errors.value.email = t('admin.users.errors.invalidEmail')
   }
+  if (form.value.password && form.value.password.length < 8) {
+    errors.value.password = t('admin.users.errors.passwordTooShort')
+  }
   return Object.keys(errors.value).length === 0
 }
 
@@ -185,15 +252,33 @@ function cancel() {
 function submit() {
   if (!validate()) return
 
-  const payload: CreateAdminUserPayload = {
-    full_name: form.value.full_name.trim(),
-    email: form.value.email.trim(),
-    phone: form.value.phone.trim() || null,
-    job_title: form.value.job_title.trim() || null,
-    department_id: form.value.department_id,
-    role: form.value.role,
+  const password = form.value.password.trim() || null
+
+  if (isEdit.value) {
+    const payload: UpdateAdminUserPayload = {
+      full_name: form.value.full_name.trim(),
+      email: form.value.email.trim(),
+      phone: form.value.phone.trim() || null,
+      job_title: form.value.job_title.trim() || null,
+      department_id: form.value.department_id,
+      manager_id: form.value.manager_id,
+      role: form.value.role,
+    }
+    if (password) payload.password = password
+    emit('update', payload)
+  } else {
+    const payload: CreateAdminUserPayload = {
+      full_name: form.value.full_name.trim(),
+      email: form.value.email.trim(),
+      phone: form.value.phone.trim() || null,
+      job_title: form.value.job_title.trim() || null,
+      department_id: form.value.department_id,
+      manager_id: form.value.manager_id,
+      role: form.value.role,
+      password,
+    }
+    emit('create', payload)
   }
-  emit('create', payload)
   // Dialog is closed by parent composable's onSuccess. Do NOT close here.
 }
 </script>

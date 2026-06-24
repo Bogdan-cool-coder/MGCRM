@@ -16,7 +16,7 @@
           <template #body="{ index }">{{ index + 1 }}</template>
         </Column>
         <Column :header="t('documents.items.product')">
-          <template #body="{ data }">{{ data.product_name }}</template>
+          <template #body="{ data }">{{ data.name_snapshot }}</template>
         </Column>
         <Column :header="t('documents.items.qty')" style="width: 120px">
           <template #body="{ data }">
@@ -204,9 +204,13 @@ const currency = ref(props.initialCurrency ?? 'KZT')
 
 const currencyOptions = ['KZT', 'USD', 'EUR', 'RUB', 'UZS']
 
-function saveCurrency(val: string) {
+async function saveCurrency(val: string) {
   currency.value = val
-  // emit for autosave
+  try {
+    await documentsApi.patchDocument(props.docId, { currency: val })
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+  }
 }
 
 // ─── Update item qty ───────────────────────────────────────────────────────

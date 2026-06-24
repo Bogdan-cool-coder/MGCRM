@@ -21,7 +21,7 @@ class DocumentRevisionController extends Controller
         $this->authorize('view', $document);
 
         return DocumentRevisionResource::collection(
-            $document->revisions()->get()
+            $document->revisions()->with('createdBy:id,full_name')->get()
         );
     }
 
@@ -32,6 +32,9 @@ class DocumentRevisionController extends Controller
     {
         $this->authorize('view', $document);
 
-        return DocumentRevisionResource::make($revision);
+        // Scope guard: revision must belong to this document.
+        abort_unless((int) $revision->document_id === $document->id, 404);
+
+        return DocumentRevisionResource::make($revision->load('createdBy:id,full_name'));
     }
 }

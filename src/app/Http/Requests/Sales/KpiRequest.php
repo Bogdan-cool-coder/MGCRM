@@ -24,13 +24,19 @@ class KpiRequest extends FormRequest
     /**
      * Normalize ftm_only so the boolean rule accepts axios' string "true"/"false".
      * Laravel's `boolean` rule allows true|false|1|0|"1"|"0" but not "true"/"false".
+     *
+     * Only well-formed boolean-ish values are coerced; genuine garbage (e.g.
+     * "banana") is left untouched so the `boolean` rule rejects it with a 422
+     * instead of being silently swallowed into false.
      */
     protected function prepareForValidation(): void
     {
         if ($this->has('ftm_only')) {
-            $this->merge([
-                'ftm_only' => filter_var($this->input('ftm_only'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
-            ]);
+            $coerced = filter_var($this->input('ftm_only'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+            if ($coerced !== null) {
+                $this->merge(['ftm_only' => $coerced]);
+            }
         }
     }
 

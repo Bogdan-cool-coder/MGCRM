@@ -78,8 +78,18 @@
           <!-- Объект -->
           <Column :header="t('managerCabinet.feed.target')" style="width: 130px">
             <template #body="{ data: row }">
-              <span v-if="row.target_type && row.target_id" class="activity-feed__target">
-                {{ row.target_type }} #{{ row.target_id }}
+              <router-link
+                v-if="targetRoute(row)"
+                :to="targetRoute(row)!"
+                class="activity-feed__target activity-feed__target--link"
+              >
+                {{ targetLabel(row) }}
+              </router-link>
+              <span
+                v-else-if="row.target_type && row.target_id"
+                class="activity-feed__target"
+              >
+                {{ targetLabel(row) }}
               </span>
               <span v-else class="activity-feed__target-none">&mdash;</span>
             </template>
@@ -104,7 +114,6 @@
           :rows="feedMeta.per_page"
           :total-records="feedMeta.total"
           :first="(feedMeta.current_page - 1) * feedMeta.per_page"
-          :rows-per-page-options="[]"
           class="mt-2"
           @page="(e) => emit('update:feedPage', e.page + 1)"
         />
@@ -115,6 +124,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import type { RouteLocationRaw } from 'vue-router'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import ToggleButton from 'primevue/togglebutton'
@@ -140,7 +150,7 @@ const emit = defineEmits<{
   'reset-filters': []
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const kindOptions: { value: 'all' | 'call' | 'meeting' | 'task' | 'note'; labelKey: string }[] = [
   { value: 'all', labelKey: 'managerCabinet.feed.filterAll' },
@@ -170,11 +180,34 @@ const kindColor = (kind: ActivityFeedItem['kind']): string => {
   return map[kind] ?? ''
 }
 
+const targetLabel = (row: ActivityFeedItem): string => {
+  if (!row.target_type || row.target_id == null) return '—'
+  const map: Record<string, string> = {
+    deal: t('managerCabinet.feed.targetDeal'),
+    contact: t('managerCabinet.feed.targetContact'),
+    company: t('managerCabinet.feed.targetCompany'),
+  }
+  const label = map[row.target_type] ?? row.target_type
+  return `${label} #${row.target_id}`
+}
+
+const targetRoute = (row: ActivityFeedItem): RouteLocationRaw | null => {
+  if (!row.target_type || row.target_id == null) return null
+  const map: Record<string, string> = {
+    deal: 'DealDetail',
+    contact: 'ContactDetail',
+    company: 'CompanyDetail',
+  }
+  const name = map[row.target_type]
+  if (!name) return null
+  return { name, params: { id: row.target_id } }
+}
+
 const formatDate = (dateStr: string | null): string => {
   if (!dateStr) return '—'
   try {
     const d = new Date(dateStr)
-    return d.toLocaleString('ru', {
+    return d.toLocaleString(locale.value, {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
@@ -218,6 +251,15 @@ const formatDate = (dateStr: string | null): string => {
 .activity-feed__target {
   font-size: $font-size-sm;
   color: $surface-600;
+}
+
+.activity-feed__target--link {
+  color: var(--p-primary-color);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .activity-feed__target-none {

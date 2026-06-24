@@ -125,6 +125,46 @@
             </template>
           </Column>
 
+          <!-- Actions -->
+          <Column v-if="canManage" :header="t('admin.users.columns.actions')" style="width: 120px">
+            <template #body="{ data }">
+              <div class="d-flex gap-1 justify-content-end">
+                <Button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  text
+                  rounded
+                  size="small"
+                  :aria-label="t('common.edit')"
+                  v-tooltip.top="t('common.edit')"
+                  @click="openEdit(data)"
+                />
+                <Button
+                  v-if="data.is_active"
+                  icon="pi pi-ban"
+                  severity="danger"
+                  text
+                  rounded
+                  size="small"
+                  :aria-label="t('admin.users.deactivate')"
+                  v-tooltip.top="t('admin.users.deactivate')"
+                  @click="confirmDeactivate(data)"
+                />
+                <Button
+                  v-else
+                  icon="pi pi-check-circle"
+                  severity="success"
+                  text
+                  rounded
+                  size="small"
+                  :aria-label="t('admin.users.activate')"
+                  v-tooltip.top="t('admin.users.activate')"
+                  @click="reactivate(data)"
+                />
+              </div>
+            </template>
+          </Column>
+
           <!-- Empty state -->
           <template #empty>
             <div class="users-page__empty">
@@ -157,14 +197,18 @@
       </template>
     </Card>
 
-    <!-- Create dialog -->
+    <!-- Create / edit dialog -->
     <CreateUserDialog
       v-model="dialogVisible"
       :loading="createMutation.isPending.value"
       :departments="departments"
       :departments-loading="departmentsLoading"
+      :managers="managerCandidates"
+      :managers-loading="managersLoading"
       :role-options="roleOptions"
+      :editing="editingUser"
       @create="createUser"
+      @update="updateUser"
     />
   </div>
 </template>
@@ -202,10 +246,17 @@ const {
   isActiveFilter,
   departments,
   departmentsLoading,
+  managerCandidates,
+  managersLoading,
   dialogVisible,
+  editingUser,
   openCreate,
+  openEdit,
   createUser,
+  updateUser,
   createMutation,
+  confirmDeactivate,
+  reactivate,
   roleOptions,
   isActiveOptions,
 } = useUsersPage()

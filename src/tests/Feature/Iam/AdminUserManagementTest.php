@@ -298,4 +298,195 @@ class AdminUserManagementTest extends TestCase
 
         $this->assertDatabaseMissing('users', ['email' => 'forbidden@mgcrm.test']);
     }
+
+    public function test_create_sets_manager_id(): void
+    {
+        $boss = User::factory()->create(['full_name' => 'The Boss', 'role' => Role::Director]);
+        $this->actingAsAdmin();
+
+        $this->postJson('/api/admin/users', [
+            'full_name' => 'Reports To Boss',
+            'email' => 'reports@mgcrm.test',
+            'manager_id' => $boss->id,
+        ])->assertCreated()->assertJsonPath('data.manager_id', $boss->id);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'reports@mgcrm.test',
+            'manager_id' => $boss->id,
+        ]);
+    }
+
+    // =========================================================================
+    // Update
+    // =========================================================================
+
+    public function test_admin_updates_user_fields(): void
+    {
+        $department = Department::factory()->create(['name' => 'Finance']);
+        $user = User::factory()->create([
+            'full_name' => 'Old Name',
+            'phone' => null,
+            'role' => Role::Manager,
+        ]);
+        $this->actingAsAdmin();
+
+        $this->patchJson("/api/admin/users/{$user->id}", [
+            'full_name' => 'New Name',
+            'phone' => '+7 900 111-22-33',
+            'job_title' => 'CFO Assistant',
+            'department_id' => $department->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.full_name', 'New Name')
+            ->assertJsonPath('data.phone', '+7 900 111-22-33')
+            ->assertJsonPath('data.department_id', $department->id)
+            ->assertJsonPath('data.department_name', 'Finance');
+
+        $fresh = $user->fresh();
+        $this->assertSame('New Name', $fresh->full_name);
+        $this->assertSame('CFO Assistant', $fresh->job_title);
+    }
+
+    public function test_admin_changes_role_and_resyncs_spatie_grant(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $user->syncRoles([Role::Manager->value]);
+        $this->actingAsAdmin();
+
+        $this->patchJson("/api/admin/users/{$user->id}", ['role' => 'lawyer'])
+            ->assertOk()
+            ->assertJsonPath('data.role', 'lawyer');
+
+        $fresh = $user->fresh();
+        $this->assertSame(Role::Lawyer, $fresh->role);
+        $this->assertTrue($fresh->hasRole('lawyer'));
+        $this->assertFalse($fresh->hasRole('manager'));
+    }
+
+    public function test_admin_sets_manager_via_update(): void
+    {
+        $boss = User::factory()->create(['role' => Role::Director]);
+        $user = User::factory()->create(['manager_id' => null]);
+        $this->actingAsAdmin();
+
+        $this->patchJson("/api/admin/users/{$user->id}", ['manager_id' => $boss->id])
+            ->assertOk()
+            ->assertJsonPath('data.manager_id', $boss->id);
+
+        $this->assertSame($boss->id, $user->fresh()->manager_id);
+    }
+
+    public function test_update_rejects_user_as_own_manager(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAsAdmin();
+
+        $this->patchJson("/api/admin/users/{$user->id}", ['manager_id' => $user->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('manager_id');
+    }
+
+    public function test_update_rejects_duplicate_email_but_allows_same_email(): void
+    {
+        User::factory()->create(['email' => 'occupied@mgcrm.test']);
+        $user = User::factory()->create(['email' => 'mine@mgcrm.test']);
+        $this->actingAsAdmin();
+
+        $this->patchJson("/api/admin/users/{$user->id}", ['email' => 'occupied@mgcrm.test'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+
+        // Re-submitting the row's own email must pass (ignore self).
+        $this->patchJson("/api/admin/users/{$user->id}", ['email' => 'mine@mgcrm.test'])
+            ->assertOk();
+    }
+
+    public function test_update_changes_password_when_supplied(): void
+    {
+        $user = User::factory()->create();
+        $original = $user->password;
+        $this->actingAsAdmin();
+
+        $this->patchJson("/api/admin/users/{$user->id}", ['password' => 'brand-new-pass'])
+            ->assertOk();
+
+        $this->assertNotSame($original, $user->fresh()->password);
+    }
+
+    public function test_update_response_never_leaks_secrets(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAsAdmin();
+
+        $response = $this->patchJson("/api/admin/users/{$user->id}", ['full_name' => 'Clean'])
+            ->assertOk();
+
+        $this->assertArrayNotHasKey('password', $response->json('data'));
+        $this->assertArrayNotHasKey('totp_secret', $response->json('data'));
+        $this->assertArrayNotHasKey('backup_codes', $response->json('data'));
+    }
+
+    public function test_manager_cannot_update_user(): void
+    {
+        $target = User::factory()->create(['full_name' => 'Untouchable']);
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->patchJson("/api/admin/users/{$target->id}", ['full_name' => 'Hacked'])
+            ->assertForbidden();
+
+        $this->assertSame('Untouchable', $target->fresh()->full_name);
+    }
+
+    // =========================================================================
+    // Deactivate (soft delete)
+    // =========================================================================
+
+    public function test_admin_deactivates_user(): void
+    {
+        $user = User::factory()->create(['is_active' => true]);
+        $this->actingAsAdmin();
+
+        $this->deleteJson("/api/admin/users/{$user->id}")
+            ->assertOk()
+            ->assertJsonPath('data.is_active', false);
+
+        $this->assertFalse($user->fresh()->is_active);
+        // Soft-deactivation preserves the row (historical ownership).
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
+    public function test_admin_can_reactivate_via_update(): void
+    {
+        $user = User::factory()->inactive()->create();
+        $this->actingAsAdmin();
+
+        $this->patchJson("/api/admin/users/{$user->id}", ['is_active' => true])
+            ->assertOk()
+            ->assertJsonPath('data.is_active', true);
+
+        $this->assertTrue($user->fresh()->is_active);
+    }
+
+    public function test_admin_cannot_deactivate_self(): void
+    {
+        $admin = $this->actingAsAdmin();
+
+        $this->deleteJson("/api/admin/users/{$admin->id}")
+            ->assertStatus(422);
+
+        $this->assertTrue($admin->fresh()->is_active);
+    }
+
+    public function test_manager_cannot_deactivate_user(): void
+    {
+        $target = User::factory()->create(['is_active' => true]);
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->deleteJson("/api/admin/users/{$target->id}")
+            ->assertForbidden();
+
+        $this->assertTrue($target->fresh()->is_active);
+    }
 }

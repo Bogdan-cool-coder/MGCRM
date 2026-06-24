@@ -38,7 +38,7 @@ class CrmFeedController extends Controller
             $company,
             ['types' => is_array($types) ? $types : []],
             (int) $request->query('page', '1'),
-            (int) $request->query('per_page', '30'),
+            $this->perPage($request),
         );
 
         return response()->json($result);
@@ -54,9 +54,19 @@ class CrmFeedController extends Controller
             $contact,
             ['types' => is_array($types) ? $types : []],
             (int) $request->query('page', '1'),
-            (int) $request->query('per_page', '30'),
+            $this->perPage($request),
         );
 
         return response()->json($result);
+    }
+
+    /**
+     * Clamp per_page to a sane window (1..100), mirroring EntityLogController.
+     */
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->query('per_page', '30');
+
+        return max(1, min($perPage, 100));
     }
 }

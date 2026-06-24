@@ -12,6 +12,9 @@ use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Services\EntityLogService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -23,9 +26,27 @@ use Illuminate\Support\Facades\DB;
  */
 class ContactService
 {
+    /**
+     * Key fields whose changes are written to the contact's entity-log
+     * (`data_changed`). Mirrors CompanyService::LOGGED_FIELDS — only
+     * business-meaningful columns, never derived/normalized ones.
+     *
+     * @var list<string>
+     */
+    private const LOGGED_FIELDS = [
+        'full_name',
+        'email',
+        'phone',
+        'position',
+        'status',
+        'source',
+        'owner_id',
+    ];
+
     public function __construct(
         private readonly AcquisitionChannelHistoryService $channelHistory,
         private readonly VisibilityResolver $visibility,
+        private readonly EntityLogService $entityLog,
     ) {}
 
     /**
@@ -201,8 +222,32 @@ class ContactService
     public function create(array $data, User $creator): Contact
     {
         $data['owner_id'] ??= $creator->id;
+        // Track creator so author-filter and author-sort work correctly.
+        $data['created_by_id'] ??= $creator->id;
 
-        return Contact::create($data);
+        // Keep phone_normalized in sync with phone (indexed column for dedup scan).
+        if (array_key_exists('phone', $data)) {
+            $data['phone_normalized'] = $this->normalizePhone($data['phone']);
+        }
+
+        $contact = DB::transaction(function () use ($data, $creator): Contact {
+            $contact = Contact::create($data);
+
+            // Polymorphic action log: contact created (created_at kept in lockstep
+            // with the row so the timeline orders correctly). Atomic with insert.
+            $this->entityLog->record(
+                LogSubjectType::Contact,
+                (int) $contact->id,
+                $creator,
+                LogAction::Created,
+                ['title' => $contact->full_name],
+                $contact->created_at,
+            );
+
+            return $contact;
+        });
+
+        return $contact;
     }
 
     /**
@@ -213,25 +258,90 @@ class ContactService
         // Capture old acquisition_channel_id before update for history tracking.
         $oldChannelId = $contact->acquisition_channel_id;
 
-        $contact->update($data);
-        $contact->refresh();
-
-        // Record acquisition channel history if the field was included and changed.
-        if (array_key_exists('acquisition_channel_id', $data)) {
-            $newChannelId = $data['acquisition_channel_id'] !== null
-                ? (int) $data['acquisition_channel_id']
-                : null;
-
-            $this->channelHistory->record(
-                'contact',
-                (int) $contact->id,
-                $oldChannelId,
-                $newChannelId,
-                $actor?->id,
-            );
+        // Keep phone_normalized in sync with phone (indexed column for dedup scan).
+        if (array_key_exists('phone', $data)) {
+            $data['phone_normalized'] = $this->normalizePhone($data['phone']);
         }
 
+        // Snapshot only the logged fields about to change (getOriginal reflects the
+        // current DB values), so the entity-log diff is computed before save.
+        $original = array_intersect_key($contact->getOriginal(), array_flip(self::LOGGED_FIELDS));
+
+        DB::transaction(function () use ($contact, $data, $actor, $oldChannelId, $original): void {
+            $contact->update($data);
+            $contact->refresh();
+
+            // Record acquisition channel history if the field was included and changed.
+            if (array_key_exists('acquisition_channel_id', $data)) {
+                $newChannelId = $data['acquisition_channel_id'] !== null
+                    ? (int) $data['acquisition_channel_id']
+                    : null;
+
+                $this->channelHistory->record(
+                    'contact',
+                    (int) $contact->id,
+                    $oldChannelId,
+                    $newChannelId,
+                    $actor?->id,
+                );
+            }
+
+            // Polymorphic action log: a key-field data change (skip empty diffs).
+            $changes = $this->diffLoggedFields($original, $data);
+            if ($changes !== []) {
+                $this->entityLog->record(
+                    LogSubjectType::Contact,
+                    (int) $contact->id,
+                    $actor,
+                    LogAction::DataChanged,
+                    ['changes' => $changes],
+                );
+            }
+        });
+
         return $contact;
+    }
+
+    /**
+     * Compute the per-field diff for the logged fields. Returns one entry per
+     * changed field as [field, old, new]; unchanged or absent fields are skipped.
+     * Mirrors CompanyService::diffLoggedFields.
+     *
+     * @param  array<string, mixed>  $original  pre-update DB values, keyed by field
+     * @param  array<string, mixed>  $data  applied update values
+     * @return list<array{field: string, old: mixed, new: mixed}>
+     */
+    private function diffLoggedFields(array $original, array $data): array
+    {
+        $changes = [];
+
+        foreach (self::LOGGED_FIELDS as $field) {
+            if (! array_key_exists($field, $data)) {
+                continue;
+            }
+
+            // Normalize enum-cast values (e.g. status) to scalars so an unchanged
+            // field compares equal regardless of cast representation.
+            $old = $this->scalarize($original[$field] ?? null);
+            $new = $this->scalarize($data[$field]);
+
+            if ($old === $new) {
+                continue;
+            }
+
+            $changes[] = ['field' => $field, 'old' => $old, 'new' => $new];
+        }
+
+        return $changes;
+    }
+
+    /**
+     * Reduce a value to its scalar form for stable diff comparison + JSON storage:
+     * a BackedEnum becomes its backing value, everything else is returned as-is.
+     */
+    private function scalarize(mixed $value): mixed
+    {
+        return $value instanceof \BackedEnum ? $value->value : $value;
     }
 
     public function delete(Contact $contact): void
@@ -433,6 +543,21 @@ class ContactService
         ContactCompanyLink::where('contact_id', $contact->id)
             ->where('company_id', $companyId)
             ->delete();
+    }
+
+    /**
+     * Normalize a phone string to digits-only for the phone_normalized index column.
+     * Returns null for empty/null input so the column remains NULL.
+     */
+    private function normalizePhone(?string $phone): ?string
+    {
+        if ($phone === null || $phone === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', $phone) ?? '';
+
+        return $digits !== '' ? $digits : null;
     }
 
     /**

@@ -280,6 +280,17 @@ export const routes: RouteRecordRaw[] = [
     },
   },
 
+  // ─── Public (anonymous) lead form ────────────────────────────────────────
+  // Inbox S1.9: anonymous intake surface for GET/POST /api/forms/public/{slug}.
+  // No requiresAuth/roles → the navigation guard passes it through for visitors
+  // without a token (resolveNavigation returns true for public routes).
+  {
+    path: '/f/:slug',
+    name: 'PublicLeadForm',
+    component: () => import('@/pages/PublicLeadFormPage'),
+    meta: { title: 'inbox.publicForm.title' },
+  },
+
   // Catchall — редирект на дашборд
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

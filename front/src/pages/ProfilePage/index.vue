@@ -103,23 +103,73 @@
         <div class="profile-content">
           <!-- Profile tab -->
           <template v-if="activeTab === 'profile'">
+            <div v-if="user" class="profile-section">
+              <!-- Avatar row -->
+              <div class="profile-avatar-row mb-4">
+                <img
+                  v-if="avatarPath"
+                  :src="avatarPath"
+                  :alt="user.full_name"
+                  class="profile-avatar-row__img"
+                />
+                <CrmAvatar v-else :name="user.full_name" :size="72" />
+                <div class="profile-avatar-row__actions">
+                  <input
+                    ref="avatarInput"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    class="d-none"
+                    @change="onAvatarSelected"
+                  />
+                  <Button
+                    icon="pi pi-upload"
+                    :label="t('profile.avatar.upload')"
+                    severity="secondary"
+                    outlined
+                    size="small"
+                    :loading="avatarUploading"
+                    @click="avatarInput?.click()"
+                  />
+                  <Button
+                    v-if="avatarPath"
+                    icon="pi pi-trash"
+                    :label="t('profile.avatar.remove')"
+                    severity="danger"
+                    text
+                    size="small"
+                    :disabled="avatarUploading"
+                    @click="removeAvatar"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div v-if="user" class="row g-4">
               <div class="col-md-6">
                 <div class="profile-field">
                   <label class="profile-field__label">{{ t('profile.fields.full_name') }}</label>
-                  <InputText :model-value="user.full_name" disabled class="w-100" />
+                  <div class="d-flex gap-2 mt-1">
+                    <InputText v-model="fullNameDraft" class="w-100" />
+                    <Button
+                      icon="pi pi-check"
+                      :label="t('common.save')"
+                      :loading="savingProfile"
+                      :disabled="!fullNameDirty"
+                      @click="saveFullName(fullNameDraft)"
+                    />
+                  </div>
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="profile-field">
                   <label class="profile-field__label">{{ t('profile.fields.email') }}</label>
-                  <InputText :model-value="user.email" disabled class="w-100" />
+                  <InputText :model-value="user.email" disabled class="w-100 mt-1" />
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="profile-field">
                   <label class="profile-field__label">{{ t('profile.fields.role') }}</label>
-                  <InputText :model-value="t(`roles.${user.role}`, user.role)" disabled class="w-100" />
+                  <InputText :model-value="t(`roles.${user.role}`, user.role)" disabled class="w-100 mt-1" />
                 </div>
               </div>
             </div>
@@ -230,7 +280,7 @@
                     <p class="telegram-block__status telegram-block__status--success">
                       {{ t('profile.telegram.linked') }}
                       <span v-if="telegramUsername" class="telegram-block__username">
-                        @{{ telegramUsername }}
+                        {{ t('profile.telegram.accountId', { id: telegramUsername }) }}
                       </span>
                     </p>
                   </div>
@@ -348,13 +398,15 @@
                   :label="t('profile.locale.ru')"
                   :severity="currentLocale === 'ru' ? 'primary' : 'secondary'"
                   outlined
-                  @click="setLocale('ru')"
+                  :disabled="savingLocale"
+                  @click="changeLocale('ru')"
                 />
                 <Button
                   :label="t('profile.locale.en')"
                   :severity="currentLocale === 'en' ? 'primary' : 'secondary'"
                   outlined
-                  @click="setLocale('en')"
+                  :disabled="savingLocale"
+                  @click="changeLocale('en')"
                 />
               </div>
             </div>
@@ -391,7 +443,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
@@ -399,10 +451,10 @@ import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 import SelectButton from 'primevue/selectbutton'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
+import CrmAvatar from '@/components/ui/CrmAvatar.vue'
 import { useLayoutStore } from '@/stores/layout'
 import { useThemeStore } from '@/stores/theme'
-import { localeManager } from '@/application/locale'
-import { getI18nLocale, type AvailableLocales } from '@/plugins/i18n'
+import { getI18nLocale } from '@/plugins/i18n'
 import type { NavMode } from '@/stores/layout'
 import { useProfilePage, type ProfileTab } from './composables/useProfilePage'
 import QuickActionsPickerDialog from './components/QuickActionsPickerDialog.vue'
@@ -466,10 +518,6 @@ function setNavMode(mode: NavMode) {
 
 const currentLocale = computed(() => getI18nLocale())
 
-function setLocale(locale: AvailableLocales) {
-  localeManager.changeLocale(locale)
-}
-
 const {
   activeTab,
   setTab,
@@ -491,9 +539,42 @@ const {
   telegramUnlinking,
   linkTelegram,
   unlinkTelegram,
+  savingProfile,
+  saveFullName,
+  savingLocale,
+  changeLocale,
+  avatarPath,
+  avatarUploading,
+  uploadAvatar,
+  removeAvatar,
 } = useProfilePage()
 
 const pickerVisible = ref(false)
+
+// ─── Profile: editable full name ────────────────────────────────────────────────
+const fullNameDraft = ref(user.value?.full_name ?? '')
+watch(
+  () => user.value?.full_name,
+  (name) => {
+    fullNameDraft.value = name ?? ''
+  },
+)
+const fullNameDirty = computed(
+  () => fullNameDraft.value.trim() !== (user.value?.full_name ?? '').trim() && !!fullNameDraft.value.trim(),
+)
+
+// ─── Profile: avatar upload ─────────────────────────────────────────────────────
+const avatarInput = ref<HTMLInputElement | null>(null)
+
+function onAvatarSelected(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    void uploadAvatar(file)
+  }
+  // Reset so selecting the same file again re-triggers change.
+  target.value = ''
+}
 
 // ─── Hub: account sections ────────────────────────────────────────────────────
 interface AccountSection {
@@ -823,6 +904,33 @@ const sectionIcon = computed(() => TAB_ICONS[activeTab.value as ProfileTab | 'hu
   display: flex;
   flex-direction: column;
   gap: $space-1;
+}
+
+// Avatar row (profile tab)
+.profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: $space-4;
+
+  &__img {
+    width: 72px;
+    height: 72px;
+    border-radius: $radius-circle;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid $surface-200;
+
+    :global(.app-dark) & {
+      border-color: var(--p-surface-700);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    flex-wrap: wrap;
+  }
 }
 
 .profile-field__label {

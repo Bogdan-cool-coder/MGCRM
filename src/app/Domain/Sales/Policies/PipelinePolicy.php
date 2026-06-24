@@ -7,14 +7,19 @@ namespace App\Domain\Sales\Policies;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Pipeline;
+use App\Domain\Sales\Services\PipelineService;
 
 /**
- * PipelinePolicy — everyone may read pipelines; only admin/director may mutate.
- * Pipeline/stage CRUD itself lands in S1.5; the write gates exist now so the
- * routes are protected from day one.
+ * PipelinePolicy — reads honour pipeline visibility; only admin/director mutate.
+ * Visibility (visible_role / visible_user_ids) is enforced through
+ * PipelineService::canAccess so the list and the by-id read can never drift.
  */
 class PipelinePolicy
 {
+    public function __construct(
+        private readonly PipelineService $pipelines,
+    ) {}
+
     public function viewAny(User $user): bool
     {
         return true;
@@ -22,7 +27,7 @@ class PipelinePolicy
 
     public function view(User $user, Pipeline $pipeline): bool
     {
-        return true;
+        return $this->pipelines->canAccess($pipeline, $user);
     }
 
     public function create(User $user): bool

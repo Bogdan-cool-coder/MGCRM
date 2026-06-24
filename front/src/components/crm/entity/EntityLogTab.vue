@@ -34,6 +34,23 @@
       <Skeleton height="20px" />
     </div>
 
+    <!-- Error state -->
+    <div
+      v-else-if="!log.loading.value && log.error.value && log.entries.value.length === 0"
+      class="entity-log-tab__empty"
+    >
+      <i class="pi pi-exclamation-triangle entity-log-tab__empty-icon" />
+      <p class="entity-log-tab__empty-title">{{ t('errors.server_error') }}</p>
+      <Button
+        icon="pi pi-refresh"
+        :label="t('common.retry')"
+        severity="secondary"
+        outlined
+        size="small"
+        @click="log.load()"
+      />
+    </div>
+
     <!-- Empty state -->
     <div v-else-if="!log.loading.value && log.entries.value.length === 0" class="entity-log-tab__empty">
       <i class="pi pi-history entity-log-tab__empty-icon" />
@@ -50,26 +67,14 @@
       >
         <span class="entity-log-tab__line-body">
           <!-- actor -->
-          <span class="entity-log-tab__actor">{{ entry.user?.full_name ?? t('crm.log.system') }}</span>
+          <span class="entity-log-tab__actor">{{ entry.actor?.full_name ?? t('crm.log.system') }}</span>
           <!-- event label -->
           <span class="entity-log-tab__sep"> — </span>
           <span class="entity-log-tab__event">{{ eventLabel(entry.action) }}</span>
-          <!-- old → new (strikethrough old) -->
-          <template v-if="entry.action === 'stage_changed' && entry.old_value && entry.new_value">
+          <!-- meta-derived detail (stage from→to, changed fields, created title, …) -->
+          <template v-if="detailText(entry)">
             <span class="entity-log-tab__sep"> </span>
-            <span class="entity-log-tab__old">{{ entry.old_value }}</span>
-            <i class="pi pi-arrow-right entity-log-tab__arrow" />
-            <span class="entity-log-tab__new">{{ entry.new_value }}</span>
-          </template>
-          <template v-else-if="entry.old_value && entry.new_value">
-            <span class="entity-log-tab__sep"> </span>
-            <span class="entity-log-tab__old">{{ entry.old_value }}</span>
-            <i class="pi pi-arrow-right entity-log-tab__arrow" />
-            <span class="entity-log-tab__new">{{ entry.new_value }}</span>
-          </template>
-          <template v-else-if="entry.description">
-            <span class="entity-log-tab__sep">: </span>
-            <span class="entity-log-tab__desc-inline">{{ entry.description }}</span>
+            <span class="entity-log-tab__desc-inline">{{ detailText(entry) }}</span>
           </template>
         </span>
         <span class="entity-log-tab__time">{{ formatDate(entry.created_at) }}</span>
@@ -121,7 +126,7 @@ const visibleMetrics = computed(() => props.metrics ?? [])
 
 // ── Log formatting ────────────────────────────────────────────────────────────
 
-const { eventLabel, formatDate } = useEntityLogFormat()
+const { eventLabel, detailText, formatDate } = useEntityLogFormat()
 </script>
 
 <style lang="scss" scoped>

@@ -102,7 +102,8 @@
       "upload": "Upload photo",
       "change": "Change photo",
       "remove": "Remove photo",
-      "hint": "JPG, PNG up to 5 MB"
+      "hint": "JPG, PNG up to 5 MB",
+      "uploadError": "Failed to upload photo"
     },
     "security": {
       "title": "Security",
@@ -143,7 +144,8 @@
       "linked": "Telegram linked",
       "unlinkBtn": "Unlink",
       "linkHint": "Open the bot and press Start to complete linking",
-      "linkSuccess": "Telegram successfully linked!"
+      "linkSuccess": "Telegram successfully linked!",
+      "accountId": "ID: {id}"
     },
     "coming_soon": "Coming soon",
     "save": "Save",
@@ -298,11 +300,20 @@
       "title": "Users",
       "subtitle": "Manage employee accounts",
       "addUser": "Add user",
+      "editUser": "Edit user",
       "created": "User created",
+      "updated": "Changes saved",
+      "deactivate": "Deactivate",
+      "deactivateTitle": "Deactivate user",
+      "deactivateConfirm": "Deactivate user \"{name}\"? They will be unable to sign in but remain in history.",
+      "deactivated": "User deactivated",
+      "activate": "Activate",
+      "activated": "User activated",
+      "cannotDeactivateSelf": "You cannot deactivate your own account",
       "empty": "No users found",
       "active": "Active",
       "inactive": "Inactive",
-      "passwordHint": "A password will be generated automatically and sent to the user's email.",
+      "passwordHint": "If no password is set, one will be generated automatically. Share the credentials with the employee.",
       "columns": {
         "full_name": "Full name",
         "email": "Email",
@@ -310,7 +321,8 @@
         "job_title": "Job title",
         "department": "Department",
         "role": "Role",
-        "is_active": "Active"
+        "is_active": "Active",
+        "actions": "Actions"
       },
       "fields": {
         "full_name": "Full name",
@@ -323,8 +335,13 @@
         "job_title_ph": "Sales Manager",
         "department": "Department",
         "department_ph": "Select department",
+        "manager": "Line manager",
+        "manager_ph": "Select manager",
         "role": "Role",
-        "role_ph": "Select role (default: Manager)"
+        "role_ph": "Select role (default: Manager)",
+        "password": "Password",
+        "password_ph": "Leave empty to auto-generate",
+        "password_edit_ph": "Leave empty to keep unchanged"
       },
       "filters": {
         "search": "Search by name, email...",
@@ -335,7 +352,8 @@
         "inactive": "Inactive"
       },
       "errors": {
-        "invalidEmail": "Invalid email"
+        "invalidEmail": "Invalid email",
+        "passwordTooShort": "Minimum 8 characters"
       }
     },
     "acquisitionChannels": {
@@ -896,7 +914,8 @@
         "year": "Per year",
         "one_time": "One-time",
         "minute": "Per minute",
-        "package": "Package"
+        "package": "Package",
+        "perpetual": "Perpetual license"
       }
     },
     "product": {
@@ -1209,7 +1228,14 @@
       "saveSuccess": "Meeting report saved",
       "emptyQuestions": "No questions configured. Fill in the free comment.",
       "errorEmpty": "Fill in at least one answer or comment.",
-      "errorStaleQuestion": "Question is outdated. Refresh the page."
+      "errorRequired": "Fill in the required questions.",
+      "errorStaleQuestion": "Question is outdated. Refresh the page.",
+      "ftmSection": "First-time meeting (FTM)",
+      "ftmFirstTime": "First meeting with the client",
+      "ftmDecisionMakerAttended": "Decision maker attended",
+      "ftmPresentationShown": "Presentation shown",
+      "ftmReportUrl": "Report link",
+      "ftmReportUrlPlaceholder": "https://..."
     },
     "myTasksPage": {
       "title": "My tasks",
@@ -1726,6 +1752,7 @@
         "events": {
           "stageChanged": "Stage changed",
           "dealCreated": "Deal created",
+          "dealCreatedVerb": "created the deal",
           "fieldsChanged": "Fields changed",
           "moreChanges": "{n} more"
         }
@@ -2026,9 +2053,18 @@
       "date": "Date",
       "target": "Target",
       "noActivity": "No activities for the selected period",
-      "resetFilters": "Reset filters"
+      "resetFilters": "Reset filters",
+      "targetDeal": "Deal",
+      "targetContact": "Contact",
+      "targetCompany": "Company"
     },
-    "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog."
+    "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog.",
+    "viewing": {
+      "label": "Member",
+      "placeholder": "Select a member",
+      "self": "My cabinet",
+      "hint": "Viewing member KPI"
+    }
   },
   "documents": {
     "list": {
@@ -2690,7 +2726,7 @@
       "generateDocNote": "MVP: records a timeline event. Full PDF generation after Documents integration.",
       "rule": "Assignment rule",
       "pool": "User pool",
-      "poolHint": "If pool is empty — entire sales department is used",
+      "poolHint": "Round-robin rotates through the selected users; if left empty, all active users are used.",
       "targetStage": "Target stage",
       "noStages": "No available stages",
       "changeStageNote": "Current stage excluded. System stages Won/Lost are marked.",
@@ -2711,9 +2747,10 @@
       "emailBody": "Body",
       "emailMvpNote": "MVP: email is queued. Actual sending requires SMTP setup in Integrations.",
       "dealField": {
-        "notes": "Notes",
-        "title": "Title"
-      }
+        "title": "Title",
+        "tags": "Tags"
+      },
+      "tagsPlaceholder": "Add a tag and press Enter"
     },
     "trigger": {
       "label": "Trigger — when does it fire?",
@@ -2747,7 +2784,7 @@
       "create_task": "Creates an Activity of type 'task' with a deadline",
       "set_field": "Update a whitelisted deal field",
       "generate_document": "Generate a document from a template and attach it to the deal",
-      "change_owner": "Reassign deal by rule (round-robin, product, country)",
+      "change_owner": "Round-robin reassignment across the selected user pool",
       "change_stage": "Move the deal to another pipeline stage",
       "webhook": "Send an HTTP request to an external URL",
       "email": "Send an email"
@@ -3501,6 +3538,25 @@
         "documents": "Documents",
         "deals": "Deals",
         "companies": "Companies"
+      },
+      "fields": {
+        "name": "Name",
+        "full_name": "Full name",
+        "legal_name": "Legal name",
+        "tax_id": "Tax ID",
+        "email": "Email",
+        "phone": "Phone",
+        "website": "Website",
+        "source": "Source",
+        "status": "Status",
+        "position": "Position",
+        "country_code": "Country",
+        "category_code": "Category",
+        "company_type_id": "Company type",
+        "responsible_user_id": "Responsible",
+        "owner_user_id": "Owner",
+        "owner_id": "Owner",
+        "acquisition_channel_id": "Acquisition channel"
       }
     },
     "termination": {
@@ -3600,5 +3656,20 @@
   },
   "contacts_company": {
     "employees": "Employees"
+  },
+  "inbox": {
+    "publicForm": {
+      "title": "Application form",
+      "submit": "Submit",
+      "submitting": "Submitting…",
+      "required": "This field is required",
+      "invalidEmail": "Enter a valid email",
+      "invalidPhone": "Enter a valid phone",
+      "submitFailed": "Could not submit the form. Please try again.",
+      "thankYouTitle": "Thank you!",
+      "thankYouBody": "Your application has been received. We will contact you shortly.",
+      "notFoundTitle": "Form unavailable",
+      "notFoundBody": "This form does not exist or is no longer accepting applications."
+    }
   }
 }

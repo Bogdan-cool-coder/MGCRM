@@ -338,9 +338,17 @@ class ActivityService
 
     /**
      * Status-machine transition (E3). Illegal transitions are rejected (422).
-     * Same-status is a no-op. complete/reopen are the dedicated paths for done.
+     * Same-status is a no-op. reopen is the dedicated path back out of done.
      *
-     * @param  array<string, mixed>  $extra  optional result_text/is_closed
+     * A transition INTO done converges with complete(): it must close the
+     * activity (is_closed), stamp engagement on the target and write the
+     * completion entity-log — otherwise an inline status→done (MyTasksTable
+     * dropdown) would leave the task technically open and invisible to the
+     * engagement tiers + feed, diverging from POST /complete. So we route the
+     * done branch straight through complete() (idempotent, already done = no-op)
+     * and keep this method only for the open-state transitions.
+     *
+     * @param  array<string, mixed>  $extra  optional result_text
      */
     public function changeStatus(Activity $activity, ActivityStatus $to, User $user, array $extra = []): Activity
     {
@@ -354,16 +362,17 @@ class ActivityService
             ]);
         }
 
+        $resultText = array_key_exists('result_text', $extra) ? $extra['result_text'] : null;
+
+        // Done converges with complete() — same close + engagement + entity-log.
+        if ($to === ActivityStatus::Done) {
+            return $this->complete($activity, $user, $resultText);
+        }
+
         $payload = ['status' => $to->value];
 
         if (array_key_exists('result_text', $extra)) {
             $payload['result_text'] = $extra['result_text'];
-        }
-
-        if ($to === ActivityStatus::Done) {
-            $payload['completed_at'] = now();
-            $payload['completed_by_id'] = $user->id;
-            $payload['progress_pct'] = 100;
         }
 
         $activity->update($payload);
@@ -374,6 +383,25 @@ class ActivityService
         }
 
         return $activity;
+    }
+
+    /**
+     * Apply the "freshly created and already-completed" side-effects of a
+     * meeting/task that was logged in a done state outside the complete() path
+     * (e.g. the meeting-report constructor, which writes a done meeting Activity
+     * directly). Stamps engagement on the target (last_activity_at) and records
+     * the completion entity-log (meeting_held / task_completed) so a report
+     * logged through the constructor is visible to the engagement tiers and the
+     * activity feed, exactly like a meeting completed via POST /complete (E8).
+     *
+     * The Activity domain owns both side-effects, so the constructor service
+     * delegates here instead of duplicating the EngagementService /
+     * EntityLogService plumbing.
+     */
+    public function recordCompletedActivitySideEffects(Activity $activity, User $actor): void
+    {
+        $this->touchTargetEngagement($activity);
+        $this->recordCompletionOnTarget($activity, $actor);
     }
 
     public function delete(Activity $activity): void

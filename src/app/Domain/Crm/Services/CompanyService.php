@@ -8,6 +8,7 @@ use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Crm\Enums\ClientStatus;
+use App\Domain\Crm\Enums\CustomFieldScope;
 use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\CompanyClientStatusLog;
@@ -23,6 +24,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 /**
  * CompanyService — all Company business logic lives here.
@@ -50,6 +53,7 @@ class CompanyService
         private readonly EntityLogService $entityLog,
         private readonly AcquisitionChannelHistoryService $channelHistory,
         private readonly VisibilityResolver $visibility,
+        private readonly CustomFieldService $customFields,
     ) {}
 
     /**
@@ -198,7 +202,29 @@ class CompanyService
         $data['owner_user_id'] ??= $creator->id;
         $data['department_id'] ??= $creator->department_id;
 
-        return Company::create($data);
+        // Separate extra_fields from core data so we can validate/coerce via CustomFieldService.
+        $extraFields = $data['extra_fields'] ?? null;
+        unset($data['extra_fields']);
+
+        // Keep phone_normalized in sync with phone (indexed column for dedup scan).
+        if (array_key_exists('phone', $data)) {
+            $data['phone_normalized'] = $this->normalizePhone($data['phone']);
+        }
+
+        // Wrap create + custom-field validation in a transaction so that an invalid
+        // extra_fields key does not leave a bare (no extra_fields) company record behind.
+        return DB::transaction(function () use ($data, $extraFields): Company {
+            $company = Company::create($data);
+
+            // Apply validated/coerced custom-field values. If no active defs exist for the
+            // company scope (table currently empty), we store the values as-is for backward
+            // compatibility. When defs are defined, writeFields validates each key against them.
+            if (is_array($extraFields) && $extraFields !== []) {
+                $this->applyExtraFields($company, $extraFields);
+            }
+
+            return $company;
+        });
     }
 
     /**
@@ -209,12 +235,31 @@ class CompanyService
         // Capture old acquisition_channel_id before update for history tracking.
         $oldChannelId = $company->acquisition_channel_id;
 
+        // Separate extra_fields before the main update — validate/coerce via CustomFieldService.
+        $extraFields = array_key_exists('extra_fields', $data) ? $data['extra_fields'] : false;
+        unset($data['extra_fields']);
+
+        // Keep phone_normalized in sync with phone (indexed column for dedup scan).
+        if (array_key_exists('phone', $data)) {
+            $data['phone_normalized'] = $this->normalizePhone($data['phone']);
+        }
+
         // Snapshot only the logged fields about to change (getOriginal reflects
         // the current DB values), so the entity-log diff is computed before save.
         $original = array_intersect_key($company->getOriginal(), array_flip(self::LOGGED_FIELDS));
 
         $company->update($data);
         $company->refresh();
+
+        // Apply validated/coerced custom-field values after main update.
+        if ($extraFields !== false) {
+            if (is_array($extraFields) && $extraFields !== []) {
+                $this->applyExtraFields($company, $extraFields);
+            } elseif ($extraFields === null || $extraFields === []) {
+                // Explicit null/empty → clear extra_fields
+                $company->update(['extra_fields' => []]);
+            }
+        }
 
         // Record acquisition channel history if it changed.
         if (array_key_exists('acquisition_channel_id', $data)) {
@@ -644,6 +689,42 @@ class CompanyService
     }
 
     /**
+     * Apply custom-field values to a Company with validation/coercion.
+     *
+     * Behaviour:
+     * - If active CustomFieldDef records exist for the company scope, each key in
+     *   $values is validated against the defined codes via CustomFieldService.writeFields
+     *   (throws InvalidArgumentException for unknown/inactive keys).
+     * - If no defs are defined yet (table empty / all inactive), the values are stored
+     *   as-is for backward compatibility — this avoids a hard-break during initial
+     *   rollout before any defs have been created.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    private function applyExtraFields(Company $company, array $values): void
+    {
+        $activeDefs = $this->customFields->defsForScope(CustomFieldScope::Company);
+
+        if ($activeDefs->isEmpty()) {
+            // No defs defined yet: store free-form (backward compat).
+            $company->update(['extra_fields' => $values]);
+
+            return;
+        }
+
+        // Defs exist: delegate to CustomFieldService which validates each key and coerces values.
+        // Convert InvalidArgumentException (unknown/inactive field code) to a 422 response so
+        // the HTTP layer communicates the validation failure cleanly to the client.
+        try {
+            $this->customFields->writeFields($company, $values);
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'extra_fields' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * @return array{0: Carbon|null, 1: Carbon|null}
      */
     private function engagementTierDateRange(EngagementTier $tier, string $entityType): array
@@ -660,6 +741,21 @@ class CompanyService
             EngagementTier::Cooling => [$coldCutoff, $warmCutoff],
             EngagementTier::Cold => [null, null],
         };
+    }
+
+    /**
+     * Normalize a phone string to digits-only for the phone_normalized index column.
+     * Returns null for empty/null input so the column remains NULL.
+     */
+    private function normalizePhone(?string $phone): ?string
+    {
+        if ($phone === null || $phone === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', $phone) ?? '';
+
+        return $digits !== '' ? $digits : null;
     }
 
     /**

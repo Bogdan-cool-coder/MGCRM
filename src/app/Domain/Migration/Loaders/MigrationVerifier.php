@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Migration\Loaders;
 
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Migration\Models\ExternalRef;
 use App\Domain\Sales\Models\Deal;
+use Illuminate\Support\Facades\DB;
 
 /**
  * MigrationVerifier — parity check between the EXTRACT staging and what the LOAD
@@ -14,6 +17,14 @@ use App\Domain\Sales\Models\Deal;
  * Parity = staging row count (the AMO source of truth on disk) vs the number of
  * external_refs for that entity type (what we loaded). A gap means a deal /
  * contact / company silently failed to load (e.g. an unmapped status hard-gate).
+ *
+ * Events have NO external_refs provenance (they fan out into stage_history /
+ * deal_audits / entity_logs, not a 1:1 entity). Their parity is therefore the
+ * staging event count vs the number of timeline entity_logs the import wrote for
+ * deals (genesis → created, stage_change → stage_changed, data_change →
+ * data_changed). A gap there means the timeline reconstruction silently dropped
+ * rows (an unmapped target status / a malformed audit field) — which the old
+ * staging-vs-itself comparison could never surface.
  *
  * spot-check returns a handful of loaded deals with their resolved stage / owner
  * / amount / timeline counts so the operator can eyeball a few cards in the UI.
@@ -59,7 +70,11 @@ final class MigrationVerifier
             'companies' => $this->row($stagingCompanies, $this->loadedCount('company') + $this->loadedCount('lead-company')),
             // Activities (tasks+notes) are one ref type; staging is tasks+notes.
             'activities' => $this->row($stagingTasks + $stagingNotes, $this->loadedCount('activity')),
-            'events_staged' => $this->row($stagingEvents, $stagingEvents),
+            // Events have no external_refs — compare staging events to the timeline
+            // entity_logs the import actually wrote (created / stage_changed /
+            // data_changed on deal subjects). loaded < staging surfaces a silently
+            // dropped timeline row (unmapped target status / malformed audit).
+            'events' => $this->row($stagingEvents, $this->loadedTimelineLogs()),
         ];
     }
 
@@ -93,6 +108,24 @@ final class MigrationVerifier
         return (int) ExternalRef::query()
             ->where('source', 'amocrm')
             ->where('entity_type', $entityType)
+            ->count();
+    }
+
+    /**
+     * Count the timeline entity_logs the import reconstructs from AMO events:
+     * genesis → created, stage_change → stage_changed, data_change → data_changed,
+     * all on deal subjects. This is the "loaded" side of the events parity (events
+     * have no external_refs of their own).
+     */
+    private function loadedTimelineLogs(): int
+    {
+        return (int) DB::table('entity_logs')
+            ->where('subject_type', LogSubjectType::Deal->value)
+            ->whereIn('action', [
+                LogAction::Created->value,
+                LogAction::StageChanged->value,
+                LogAction::DataChanged->value,
+            ])
             ->count();
     }
 

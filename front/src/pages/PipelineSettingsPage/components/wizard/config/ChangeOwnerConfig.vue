@@ -56,11 +56,10 @@ onMounted(() => {
 const rule = ref<string>((props.config.rule as string) ?? 'round_robin')
 const pool = ref<number[]>((props.config.pool as number[]) ?? [])
 
+// Only round_robin is implemented on the backend; the other routing rules are
+// post-MVP and would 422 on save, so they are not offered here.
 const ruleOptions = computed(() => [
   { label: t('automation.ownerRule.round_robin'), value: 'round_robin' },
-  { label: t('automation.ownerRule.by_product'), value: 'by_product' },
-  { label: t('automation.ownerRule.by_country'), value: 'by_country' },
-  { label: t('automation.ownerRule.by_department'), value: 'by_department' },
 ])
 
 watch([rule, pool], () => {

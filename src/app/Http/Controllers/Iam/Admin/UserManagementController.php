@@ -9,9 +9,11 @@ use App\Domain\Iam\Services\UserService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Iam\AdminUserIndexRequest;
 use App\Http\Requests\Iam\StoreUserRequest;
+use App\Http\Requests\Iam\UpdateUserRequest;
 use App\Http\Resources\Iam\AdminUserResource;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Settings → user management (admin/director, `admin-write` gate).
@@ -63,6 +65,37 @@ class UserManagementController extends Controller
         $this->authorize('admin-write');
 
         $user = $service->create($request->validated());
+
+        return AdminUserResource::make($user->load('department'));
+    }
+
+    public function update(UpdateUserRequest $request, User $user, UserService $service): JsonResource
+    {
+        $this->authorize('admin-write');
+
+        $user = $service->update($user, $request->validated());
+
+        return AdminUserResource::make($user->load('department'));
+    }
+
+    /**
+     * Soft-deactivate a user (no hard delete — preserves historical ownership).
+     *
+     * Admins may not deactivate their own account (would lock themselves out of
+     * the very screen they are on). Service accounts are not exposed by index,
+     * so this only reaches real users.
+     */
+    public function destroy(User $user, UserService $service): JsonResource
+    {
+        $this->authorize('admin-write');
+
+        abort_if(
+            $user->id === request()->user()?->id,
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            __('admin.users.cannot_deactivate_self'),
+        );
+
+        $user = $service->deactivate($user);
 
         return AdminUserResource::make($user->load('department'));
     }

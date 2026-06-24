@@ -49,6 +49,21 @@ class AutomationScanner
         'closed_at',
     ];
 
+    /**
+     * Default catch-up window (days) for already-overdue dates.
+     *
+     * A date_field_approaching rule conceptually fires "{days} before the date".
+     * Without a lower bound a date that slipped into the past — because the
+     * scheduler/worker was down, or the rule was created after the date passed —
+     * would NEVER fire (the [now, now+days] window excludes it forever). We
+     * extend the window backwards by this many days so a recently-overdue date is
+     * still caught up exactly once (idempotency holds: trigger_event_ts is the
+     * date value, so a re-scan re-derives the same key and is deduped). The bound
+     * stops the scanner from resurrecting ancient dates. Overridable per-rule via
+     * trigger_config.catch_up_days.
+     */
+    public const DEFAULT_CATCH_UP_DAYS = 30;
+
     public function __construct(
         private readonly ActionDispatcher $dispatcher,
     ) {}
@@ -93,8 +108,13 @@ class AutomationScanner
     }
 
     /**
-     * Scan for deals whose whitelisted date field falls within [now, now+{days}]
-     * and queue the action.
+     * Scan for deals whose whitelisted date field falls within
+     * [now-{catch_up}, now+{days}] and queue the action.
+     *
+     * The upper bound is the "approaching" window ({days} ahead). The lower bound
+     * reaches a bounded distance into the PAST so a date that already slipped by
+     * (scheduler downtime, or a rule created after the date) is still caught up
+     * exactly once — see DEFAULT_CATCH_UP_DAYS.
      *
      * @return int number of slots claimed
      */
@@ -118,9 +138,13 @@ class AutomationScanner
                     continue; // misconfigured / non-whitelisted field — skip
                 }
 
+                $catchUpDays = $this->positiveInt($automation->trigger_config['catch_up_days'] ?? null)
+                    ?? self::DEFAULT_CATCH_UP_DAYS;
+
+                $windowStart = $now->subDays($catchUpDays);
                 $windowEnd = $now->addDays($days);
 
-                $claimed += $this->fireDateFieldAutomation($automation, $field, $now, $windowEnd);
+                $claimed += $this->fireDateFieldAutomation($automation, $field, $windowStart, $windowEnd);
             } catch (Throwable $e) {
                 Log::warning('AutomationScanner: date-field automation scan failed', [
                     'automation_id' => $automation->id,
@@ -175,12 +199,14 @@ class AutomationScanner
     }
 
     /**
-     * Claim+queue every deal whose $field value falls inside [$now, $windowEnd].
+     * Claim+queue every deal whose $field value falls inside
+     * [$windowStart, $windowEnd]. $windowStart reaches into the past by the
+     * catch-up window so overdue dates are not silently skipped.
      */
     private function fireDateFieldAutomation(
         PipelineAutomation $automation,
         string $field,
-        CarbonImmutable $now,
+        CarbonImmutable $windowStart,
         CarbonImmutable $windowEnd,
     ): int {
         $claimed = 0;
@@ -188,7 +214,7 @@ class AutomationScanner
         $query = Deal::query()
             ->where('pipeline_id', $automation->pipeline_id)
             ->whereNotNull($field)
-            ->where($field, '>=', $now)
+            ->where($field, '>=', $windowStart)
             ->where($field, '<=', $windowEnd)
             ->whereNull('archived_at')
             ->orderBy('id');

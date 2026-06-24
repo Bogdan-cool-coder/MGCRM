@@ -125,6 +125,113 @@ class DealAuditTest extends TestCase
         ]);
     }
 
+    public function test_business_fields_audited_on_update(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'discount_percent' => 0,
+            'signed_at' => null,
+        ]);
+
+        Sanctum::actingAs($user, ['*']);
+
+        // discount_percent (drives the derived amount) and a fact date — both were
+        // previously OUTSIDE the audit whitelist (M4) and produced no feed event.
+        $this->patchJson("/api/deals/{$deal->id}", [
+            'discount_percent' => 20,
+            'signed_at' => '2026-01-01',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('deal_audits', [
+            'deal_id' => $deal->id,
+            'field' => 'discount_percent',
+            'old_value' => '0',
+            'new_value' => '20',
+        ]);
+        $this->assertDatabaseHas('deal_audits', [
+            'deal_id' => $deal->id,
+            'field' => 'signed_at',
+            'old_value' => null,
+            'new_value' => '2026-01-01',
+        ]);
+
+        // The widened audit must surface in the field_change feed.
+        $feed = $this->getJson("/api/deals/{$deal->id}/feed?types[]=field_change")->assertOk();
+        $fields = collect($feed->json('data'))->pluck('payload.field');
+        $this->assertTrue($fields->contains('discount_percent'));
+        $this->assertTrue($fields->contains('signed_at'));
+    }
+
+    public function test_date_field_unchanged_when_iso_matches_stored_day_is_not_audited(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'expected_sign_date' => '2026-03-01',
+        ]);
+
+        Sanctum::actingAs($user, ['*']);
+
+        // Same day expressed as an ISO datetime — the cast boundary must NOT log a
+        // phantom change (Carbon old vs string new normalised to Y-m-d).
+        $this->patchJson("/api/deals/{$deal->id}", [
+            'expected_sign_date' => '2026-03-01T00:00:00.000Z',
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('deal_audits', [
+            'deal_id' => $deal->id,
+            'field' => 'expected_sign_date',
+        ]);
+    }
+
+    public function test_boolean_flag_audited_when_toggled(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'amount_locked' => false,
+        ]);
+
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", ['amount_locked' => true])->assertOk();
+
+        $this->assertDatabaseHas('deal_audits', [
+            'deal_id' => $deal->id,
+            'field' => 'amount_locked',
+        ]);
+    }
+
+    public function test_amount_is_not_an_audited_field(): void
+    {
+        // amount is derived (never accepted via PATCH); the dead whitelist key was
+        // removed (M4). A title-only change must produce exactly one audit row.
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'title' => 'A',
+        ]);
+
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", ['title' => 'B'])->assertOk();
+
+        $this->assertDatabaseMissing('deal_audits', [
+            'deal_id' => $deal->id,
+            'field' => 'amount',
+        ]);
+        $this->assertSame(1, DealAudit::query()->where('deal_id', $deal->id)->count());
+    }
+
     public function test_stage_change_not_duplicated_in_audit(): void
     {
         $pipeline = $this->seedSalesPipeline();

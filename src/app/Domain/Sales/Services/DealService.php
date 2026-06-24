@@ -46,13 +46,48 @@ class DealService
     /** Number of cards returned per Kanban column (first page). */
     private const BOARD_COLUMN_LIMIT = 30;
 
-    /** Deal fields whose direct changes are written to the audit log. */
+    /**
+     * Deal fields whose direct changes are written to the audit log.
+     *
+     * Limited to the user-editable business fields actually reachable through
+     * PATCH /api/deals/{id} (UpdateDealRequest). `amount` is deliberately NOT
+     * here: it is derived from line items / discount and never accepted as direct
+     * input, so an `amount` entry could never fire (a dead whitelist key). The
+     * derived amount's drivers (discount_percent, perpetual_license, amount_locked)
+     * ARE audited so the timeline explains why the figure moved. company_id /
+     * department_id / owner change the deal's home & scope; the expected_* and
+     * fact dates plus paid_* drive the «План / Факт» panel.
+     */
     private const AUDITED_FIELDS = [
         'title',
-        'amount',
         'currency',
         'owner_user_id',
         'tags',
+        'discount_percent',
+        'company_id',
+        'department_id',
+        'expected_close_date',
+        'expected_sign_date',
+        'expected_payment_date',
+        'signed_at',
+        'paid_at',
+        'paid_amount',
+        'payment_currency',
+        'amount_locked',
+        'perpetual_license',
+    ];
+
+    /**
+     * Subset of AUDITED_FIELDS that are date-cast columns. Their values are
+     * normalised to Y-m-d on both sides of the diff so the cast boundary (Carbon
+     * old vs string new) never produces a phantom change.
+     */
+    private const AUDITED_DATE_FIELDS = [
+        'expected_close_date',
+        'expected_sign_date',
+        'expected_payment_date',
+        'signed_at',
+        'paid_at',
     ];
 
     public function __construct(
@@ -1096,8 +1131,17 @@ class DealService
                 continue;
             }
 
-            $old = $original[$field] ?? null;
-            $new = $data[$field];
+            // Normalise both sides to comparable, JSON-storable scalars. $original
+            // carries CAST values (Carbon for date fields, bool for booleans) while
+            // $data carries the validated request input (strings / raw bools), so a
+            // raw === would mis-compare a Carbon against its own ISO string and log
+            // phantom changes. normaliseAuditValue() collapses both to a string/
+            // scalar that is stable across the cast boundary. Date fields parse
+            // any incoming string (FE may send an ISO datetime, the column is a date)
+            // down to Y-m-d so "2026-01-01" and "2026-01-01T00:00:00Z" don't differ.
+            $isDate = in_array($field, self::AUDITED_DATE_FIELDS, true);
+            $old = $this->normaliseAuditValue($original[$field] ?? null, $isDate);
+            $new = $this->normaliseAuditValue($data[$field], $isDate);
 
             if ($old === $new) {
                 continue;
@@ -1111,6 +1155,30 @@ class DealService
         }
 
         return $diff;
+    }
+
+    /**
+     * Normalise an audited value for change detection AND storage. Carbon dates
+     * become Y-m-d strings (date-cast columns), booleans become real bools, other
+     * scalars/arrays pass through unchanged. This keeps the strict === comparison
+     * honest across the cast boundary (pre-update getOriginal() vs request input)
+     * and gives DealAuditService a clean value to encode.
+     */
+    private function normaliseAuditValue(mixed $value, bool $isDate = false): mixed
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if ($isDate && is_string($value) && $value !== '') {
+            return Carbon::parse($value)->format('Y-m-d');
+        }
+
+        return $value;
     }
 
     /**

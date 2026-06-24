@@ -43,6 +43,25 @@ class ContactCrudTest extends TestCase
         $this->assertDatabaseHas('crm_contacts', ['full_name' => 'Иван Иванов']);
     }
 
+    public function test_create_contact_sets_created_by_id(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->postJson('/api/contacts', [
+            'full_name' => 'Author Test',
+        ])->assertCreated();
+
+        // created_by_id must equal the auth user
+        $this->assertDatabaseHas('crm_contacts', [
+            'full_name' => 'Author Test',
+            'created_by_id' => $user->id,
+        ]);
+
+        // Resource should expose created_by_id
+        $response->assertJsonPath('data.created_by_id', $user->id);
+    }
+
     public function test_contact_full_name_is_required(): void
     {
         $user = User::factory()->create();

@@ -19,7 +19,7 @@ class UpdateApprovalRouteRequest extends FormRequest
     {
         return [
             'title' => ['sometimes', 'string', 'max:255'],
-            'document_kind' => ['sometimes', 'string', Rule::in(['contract', 'invoice', 'act', 'reconciliation'])],
+            'document_kind' => ['sometimes', 'string', Rule::in(['contract', 'invoice', 'act', 'reconciliation', 'termination_agreement'])],
             'template_id' => ['nullable', 'integer', 'exists:templates,id'],
             'is_default' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],

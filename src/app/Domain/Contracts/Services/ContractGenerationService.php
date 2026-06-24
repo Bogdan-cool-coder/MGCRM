@@ -291,6 +291,11 @@ class ContractGenerationService
 
     /**
      * Create a DocumentRevision snapshot for this generation attempt.
+     *
+     * Generation increments version_number only — NOT attempt.
+     * attempt is incremented exclusively by DocumentService::createRevisionSnapshot()
+     * (called on submit). This keeps attempt aligned with submission rounds (1, 2, 3…)
+     * regardless of how many times the doc is regenerated per round.
      */
     private function createRevision(Document $doc, int $userId, array $flatContext): void
     {
@@ -300,7 +305,9 @@ class ContractGenerationService
             ->first();
 
         $versionNumber = $lastRevision ? $lastRevision->version_number + 1 : 1;
-        $attempt = $lastRevision ? $lastRevision->attempt + 1 : 1;
+        // Re-use the current attempt value from the last revision (or 0 for the
+        // first generation before any submit). Submit will bump it to 1 at send time.
+        $attempt = $lastRevision ? (int) $lastRevision->attempt : 0;
 
         DocumentRevision::create([
             'document_id' => $doc->id,

@@ -147,6 +147,7 @@ const unitOptions = computed(() => [
   { value: 'one_time', label: t('catalog.products.unit.one_time') },
   { value: 'minute', label: t('catalog.products.unit.minute') },
   { value: 'package', label: t('catalog.products.unit.package') },
+  { value: 'perpetual', label: t('catalog.products.unit.perpetual') },
 ])
 
 watch(

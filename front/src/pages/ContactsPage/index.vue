@@ -789,7 +789,7 @@ const directoriesStore = useDirectoriesStore()
 const uiTriggers = useUiTriggersStore()
 const { users: usersCache, load: loadUsers } = useUsersCache()
 
-const initialType: EntityType = route.name === 'Companies' ? 'company' : 'company'
+const initialType: EntityType = route.name === 'Companies' ? 'company' : 'contact'
 
 // ── Data layer ────────────────────────────────────────────────────────────────
 

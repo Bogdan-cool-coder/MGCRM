@@ -14,6 +14,7 @@ use App\Http\Requests\Contracts\SubmitDocumentRequest;
 use App\Http\Resources\Contracts\ApprovalResource;
 use App\Http\Resources\Contracts\ApprovalSummaryResource;
 use App\Http\Resources\Contracts\DocumentResource;
+use App\Http\Resources\Contracts\MyApprovalResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -82,20 +83,32 @@ class DocumentApprovalController extends Controller
     /**
      * GET /api/approvals/my
      *
-     * Authenticated user's own approvals, optionally filtered by ?status=pending.
+     * Authenticated user's own approvals, optionally filtered by ?status=pending|decided.
+     * 'decided' maps to all non-pending decisions (approved / rejected / needs_rework).
      */
     public function myApprovals(Request $request): AnonymousResourceCollection
     {
         $query = Approval::query()
             ->where('user_id', $request->user()->id)
-            ->with(['user:id,full_name', 'document:id,title,status,kind,number'])
+            ->with([
+                'user:id,full_name',
+                'document:id,title,status,kind,number,source_company_id',
+                'document.sourceCompany:id,name',
+            ])
             ->orderByDesc('created_at');
 
-        if ($request->query('status')) {
-            $query->where('decision', $request->query('status'));
+        $status = $request->query('status');
+        if ($status === 'pending') {
+            $query->where('decision', ApprovalDecision::Pending->value);
+        } elseif ($status === 'decided') {
+            $query->whereIn('decision', [
+                ApprovalDecision::Approved->value,
+                ApprovalDecision::Rejected->value,
+                ApprovalDecision::NeedsRework->value,
+            ]);
         }
 
-        return ApprovalResource::collection($query->paginate(25));
+        return MyApprovalResource::collection($query->paginate(25));
     }
 
     /**

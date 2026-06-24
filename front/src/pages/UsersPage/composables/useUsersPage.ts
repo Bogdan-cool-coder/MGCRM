@@ -1,15 +1,24 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import { useMutation } from '@/composables/async/useMutation'
 import { adminUsersApi } from '@/api/adminUsers'
+import { usersApi, type UserOptionDto } from '@/api/users'
 import { useUserStore } from '@/stores/user'
-import type { AdminUserDto, CreateAdminUserPayload, DepartmentOption, GetAdminUsersParams } from '@/entities/adminUser'
+import type {
+  AdminUserDto,
+  CreateAdminUserPayload,
+  DepartmentOption,
+  GetAdminUsersParams,
+  UpdateAdminUserPayload,
+} from '@/entities/adminUser'
 import type { UserRole } from '@/entities/user'
 
 export const useUsersPage = () => {
   const { t } = useI18n()
   const toast = useToast()
+  const confirm = useConfirm()
   const userStore = useUserStore()
 
   // ─── Gate ────────────────────────────────────────────────────────────────────
@@ -50,6 +59,24 @@ export const useUsersPage = () => {
 
   void fetchDepartments()
 
+  // ─── Manager options (for the line-manager dropdown) ──────────────────────────
+  const managerCandidates = ref<UserOptionDto[]>([])
+  const managersLoading = ref(false)
+
+  async function fetchManagers() {
+    if (managerCandidates.value.length > 0) return
+    managersLoading.value = true
+    try {
+      managerCandidates.value = await usersApi.getUsers()
+    } catch {
+      // non-critical
+    } finally {
+      managersLoading.value = false
+    }
+  }
+
+  void fetchManagers()
+
   // ─── Fetch users ──────────────────────────────────────────────────────────────
   async function fetchUsers() {
     loading.value = true
@@ -82,10 +109,17 @@ export const useUsersPage = () => {
 
   void fetchUsers()
 
-  // ─── Dialog ───────────────────────────────────────────────────────────────────
+  // ─── Dialog (create + edit share one dialog) ──────────────────────────────────
   const dialogVisible = ref(false)
+  const editingUser = ref<AdminUserDto | null>(null)
 
   function openCreate() {
+    editingUser.value = null
+    dialogVisible.value = true
+  }
+
+  function openEdit(user: AdminUserDto) {
+    editingUser.value = user
     dialogVisible.value = true
   }
 
@@ -109,6 +143,60 @@ export const useUsersPage = () => {
         },
       },
     )
+  }
+
+  async function updateUser(payload: UpdateAdminUserPayload) {
+    const id = editingUser.value?.id
+    if (id === undefined) return
+    await createMutation.run(
+      () => adminUsersApi.updateUser(id, payload),
+      {
+        onSuccess: () => {
+          dialogVisible.value = false
+          editingUser.value = null
+          void fetchUsers()
+          toast.add({ severity: 'success', summary: t('admin.users.updated'), life: 2500 })
+        },
+        onError: (err) => {
+          const status = (err as { response?: { status?: number } })?.response?.status
+          if (status !== 422) {
+            toast.add({ severity: 'error', summary: t('errors.unknown'), life: 3000 })
+          }
+        },
+      },
+    )
+  }
+
+  // ─── Deactivate / reactivate ───────────────────────────────────────────────────
+  function confirmDeactivate(user: AdminUserDto) {
+    confirm.require({
+      message: t('admin.users.deactivateConfirm', { name: user.full_name }),
+      header: t('admin.users.deactivateTitle'),
+      icon: 'pi pi-exclamation-triangle',
+      acceptProps: { severity: 'danger', label: t('admin.users.deactivate') },
+      rejectProps: { severity: 'secondary', outlined: true, label: t('common.cancel') },
+      accept: async () => {
+        try {
+          await adminUsersApi.deactivateUser(user.id)
+          void fetchUsers()
+          toast.add({ severity: 'success', summary: t('admin.users.deactivated'), life: 2500 })
+        } catch (err) {
+          const status = (err as { response?: { status?: number } })?.response?.status
+          const summary = status === 422 ? t('admin.users.cannotDeactivateSelf') : t('errors.unknown')
+          toast.add({ severity: 'error', summary, life: 3000 })
+        }
+      },
+    })
+  }
+
+  async function reactivate(user: AdminUserDto) {
+    try {
+      await adminUsersApi.updateUser(user.id, { is_active: true })
+      void fetchUsers()
+      toast.add({ severity: 'success', summary: t('admin.users.activated'), life: 2500 })
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown'), life: 3000 })
+    }
   }
 
   // ─── Options ──────────────────────────────────────────────────────────────────
@@ -143,11 +231,20 @@ export const useUsersPage = () => {
     // Departments
     departments,
     departmentsLoading,
+    // Managers
+    managerCandidates,
+    managersLoading,
     // Dialog
     dialogVisible,
+    editingUser,
     openCreate,
+    openEdit,
     createUser,
+    updateUser,
     createMutation,
+    // Row actions
+    confirmDeactivate,
+    reactivate,
     // Options
     roleOptions,
     isActiveOptions,

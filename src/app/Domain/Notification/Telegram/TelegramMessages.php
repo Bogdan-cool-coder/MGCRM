@@ -32,6 +32,9 @@ final class TelegramMessages
 
     public const LINK_TAKEN = '❌ Этот Telegram уже привязан к другой учётной записи.';
 
+    public const LINK_ALREADY_OWN = '❌ К вашей учётной записи уже привязан другой Telegram. '
+        .'Сначала отвяжите его в профиле, затем повторите привязку.';
+
     public static function forRedeem(LinkRedeemResult $result, string $fullName): string
     {
         return match ($result) {
@@ -40,6 +43,7 @@ final class TelegramMessages
             LinkRedeemResult::AlreadyUsed => self::LINK_USED,
             LinkRedeemResult::Expired => self::LINK_EXPIRED,
             LinkRedeemResult::LinkedToOther => self::LINK_TAKEN,
+            LinkRedeemResult::AlreadyLinkedOther => self::LINK_ALREADY_OWN,
         };
     }
 

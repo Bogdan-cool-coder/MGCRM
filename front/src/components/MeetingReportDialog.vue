@@ -75,6 +75,47 @@
           :placeholder="t('activity.meetingReport.commentPlaceholder')"
         />
       </div>
+
+      <!-- FTM (first-time meeting) — capture point for the KPI cabinet -->
+      <div class="meeting-report-dialog__ftm">
+        <div class="meeting-report-dialog__ftm-title">
+          {{ t('activity.meetingReport.ftmSection') }}
+        </div>
+
+        <div class="meeting-report-dialog__ftm-row">
+          <ToggleSwitch v-model="ftm.is_first_time_meeting" input-id="mr-ftm-first" />
+          <label for="mr-ftm-first" class="meeting-report-dialog__ftm-label">
+            {{ t('activity.meetingReport.ftmFirstTime') }}
+          </label>
+        </div>
+
+        <template v-if="ftm.is_first_time_meeting">
+          <div class="meeting-report-dialog__ftm-row">
+            <ToggleSwitch v-model="ftm.ftm_decision_maker_attended" input-id="mr-ftm-dm" />
+            <label for="mr-ftm-dm" class="meeting-report-dialog__ftm-label">
+              {{ t('activity.meetingReport.ftmDecisionMakerAttended') }}
+            </label>
+          </div>
+
+          <div class="meeting-report-dialog__ftm-row">
+            <ToggleSwitch v-model="ftm.ftm_presentation_shown" input-id="mr-ftm-pres" />
+            <label for="mr-ftm-pres" class="meeting-report-dialog__ftm-label">
+              {{ t('activity.meetingReport.ftmPresentationShown') }}
+            </label>
+          </div>
+
+          <div class="meeting-report-dialog__question">
+            <label class="meeting-report-dialog__label">
+              {{ t('activity.meetingReport.ftmReportUrl') }}
+            </label>
+            <InputText
+              v-model="ftm.ftm_report_url"
+              class="w-full"
+              :placeholder="t('activity.meetingReport.ftmReportUrlPlaceholder')"
+            />
+          </div>
+        </template>
+      </div>
     </div>
 
     <template #footer>
@@ -105,6 +146,8 @@ import { useToast } from 'primevue/usetoast'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
+import InputText from 'primevue/inputtext'
+import ToggleSwitch from 'primevue/toggleswitch'
 import ProgressSpinner from 'primevue/progressspinner'
 import Skeleton from 'primevue/skeleton'
 import Message from 'primevue/message'
@@ -139,6 +182,20 @@ const questions = ref<MeetingReportQuestionDto[]>([])
 const answers = reactive<Record<number, string>>({})
 const comment = ref('')
 
+// FTM (first-time meeting) — captured here so all five FTM conditions can be
+// satisfied through the report constructor (feeds the manager KPI cabinet).
+const ftm = reactive<{
+  is_first_time_meeting: boolean
+  ftm_decision_maker_attended: boolean
+  ftm_presentation_shown: boolean
+  ftm_report_url: string
+}>({
+  is_first_time_meeting: false,
+  ftm_decision_maker_attended: false,
+  ftm_presentation_shown: false,
+  ftm_report_url: '',
+})
+
 const mutation = useMutation()
 
 async function loadQuestions() {
@@ -166,6 +223,11 @@ async function loadExistingReport() {
       }
       comment.value = activity.meeting_report_json.comment ?? ''
     }
+    // Pre-fill the FTM block from the existing meeting activity.
+    ftm.is_first_time_meeting = activity.is_first_time_meeting ?? false
+    ftm.ftm_decision_maker_attended = activity.ftm_decision_maker_attended ?? false
+    ftm.ftm_presentation_shown = activity.ftm_presentation_shown ?? false
+    ftm.ftm_report_url = activity.ftm_report_url ?? ''
   } catch {
     // Silently ignore — dialog still works, just starts empty
   }
@@ -180,6 +242,11 @@ watch(
       for (const key of Object.keys(answers)) {
         delete (answers as Record<string, string>)[key]
       }
+      // Reset FTM block
+      ftm.is_first_time_meeting = false
+      ftm.ftm_decision_maker_attended = false
+      ftm.ftm_presentation_shown = false
+      ftm.ftm_report_url = ''
       await loadQuestions()
     }
   },
@@ -202,6 +269,22 @@ async function onSubmit() {
     .filter(([, v]) => v && v.trim() !== '')
     .map(([id, answer]) => ({ question_id: Number(id), answer }))
 
+  // Per-question required enforcement: every is_required question must have a
+  // non-blank answer before the report can be saved.
+  const missingRequired = questions.value.some((q) => {
+    if (!q.is_required) return false
+    const v = answers[q.id]
+    return !v || v.trim() === ''
+  })
+  if (missingRequired) {
+    toast.add({
+      severity: 'warn',
+      summary: t('activity.meetingReport.errorRequired'),
+      life: 3000,
+    })
+    return
+  }
+
   if (answersArray.length === 0 && !comment.value.trim()) {
     toast.add({
       severity: 'warn',
@@ -218,6 +301,16 @@ async function onSubmit() {
         answers: answersArray,
         comment: comment.value.trim() || null,
         activity_id: props.activityId,
+        is_first_time_meeting: ftm.is_first_time_meeting,
+        ftm_decision_maker_attended: ftm.is_first_time_meeting
+          ? ftm.ftm_decision_maker_attended
+          : false,
+        ftm_presentation_shown: ftm.is_first_time_meeting
+          ? ftm.ftm_presentation_shown
+          : false,
+        ftm_report_url: ftm.is_first_time_meeting
+          ? ftm.ftm_report_url.trim() || null
+          : null,
       }),
     )
     toast.add({
@@ -270,6 +363,44 @@ async function onSubmit() {
 
   &__req {
     color: var(--p-red-500);
+  }
+
+  &__ftm {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    padding-top: $space-3;
+    border-top: 1px solid $surface-200;
+
+    :global(.app-dark) & {
+      border-color: var(--p-surface-700);
+    }
+  }
+
+  &__ftm-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $surface-700;
+
+    :global(.app-dark) & {
+      color: var(--p-surface-200);
+    }
+  }
+
+  &__ftm-row {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+
+  &__ftm-label {
+    font-size: $font-size-sm;
+    color: $surface-700;
+    cursor: pointer;
+
+    :global(.app-dark) & {
+      color: var(--p-surface-300);
+    }
   }
 
   &__options {

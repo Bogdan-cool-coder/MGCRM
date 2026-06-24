@@ -183,4 +183,53 @@ class ContactRelationTest extends TestCase
             'relation_type' => 'NOT_A_VALID_TYPE',
         ])->assertStatus(422);
     }
+
+    // ---- IDOR guard: relation not involving the route contact ----
+
+    public function test_cannot_update_relation_not_involving_route_contact(): void
+    {
+        // director owns all four contacts; creates a relation between C and D.
+        // Then tries to update it via contact A's route (unrelated) — must be 404.
+        $director = User::factory()->create(['role' => Role::Director]);
+        $a = Contact::factory()->create(['owner_id' => $director->id]);
+        $c = Contact::factory()->create(['owner_id' => $director->id]);
+        $d = Contact::factory()->create(['owner_id' => $director->id]);
+
+        $relation = ContactRelation::create([
+            'contact_id' => min($c->id, $d->id),
+            'related_contact_id' => max($c->id, $d->id),
+            'relation_type' => RelationType::Partner->value,
+            'created_by_id' => $director->id,
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        // Route uses contact A but relation is between C and D.
+        $this->patchJson("/api/contacts/{$a->id}/relations/{$relation->id}", [
+            'relation_type' => RelationType::Colleague->value,
+        ])->assertNotFound();
+    }
+
+    public function test_cannot_delete_relation_not_involving_route_contact(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $a = Contact::factory()->create(['owner_id' => $director->id]);
+        $c = Contact::factory()->create(['owner_id' => $director->id]);
+        $d = Contact::factory()->create(['owner_id' => $director->id]);
+
+        $relation = ContactRelation::create([
+            'contact_id' => min($c->id, $d->id),
+            'related_contact_id' => max($c->id, $d->id),
+            'relation_type' => RelationType::Partner->value,
+            'created_by_id' => $director->id,
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        // Must return 404 — relation does not involve contact A.
+        $this->deleteJson("/api/contacts/{$a->id}/relations/{$relation->id}")
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('crm_contact_relations', ['id' => $relation->id]);
+    }
 }

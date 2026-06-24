@@ -13,6 +13,7 @@ use App\Domain\Migration\Extractors\NoteExtractor;
 use App\Domain\Migration\Extractors\TaskExtractor;
 use App\Domain\Migration\Loaders\MigrationLoader;
 use App\Domain\Migration\Loaders\MigrationVerifier;
+use App\Domain\Migration\Loaders\RollbackLoader;
 use App\Domain\Migration\Loaders\StagingReader;
 use App\Domain\Migration\Services\AmoClient;
 use Illuminate\Console\Command;
@@ -21,12 +22,13 @@ use Throwable;
 /**
  * php artisan amo:migrate {phase=extract} {--only=} {--limit=N} {--resume} {--dry-run}
  *
- * One-off AMO → MGCRM migration runner (Domain/Migration, dropped at M12). Four
+ * One-off AMO → MGCRM migration runner (Domain/Migration, dropped at M12). Five
  * decoupled phases:
  *   extract    pull AMO API v4 → JSONL staging (Slice A)
  *   transform  dry-run the load off staging → coverage report, writes nothing
  *   load       idempotent upsert of staging into MGCRM (Slice B)
  *   verify     parity (staging vs external_refs) + a few deal spot-checks
+ *   rollback   undo the load via external_refs (reverse FK order) — --dry-run previews
  *
  * Run as a one-off container so the import never competes with the live prod
  * queue worker:
@@ -34,6 +36,7 @@ use Throwable;
  *   docker compose run --rm app php artisan amo:migrate transform
  *   docker compose run --rm app php artisan amo:migrate load --limit=50
  *   docker compose run --rm app php artisan amo:migrate verify
+ *   docker compose run --rm app php artisan amo:migrate rollback --dry-run
  *
  * Flags:
  *   --only=leads,contacts   (extract) run a subset of extractors, in order
@@ -41,7 +44,8 @@ use Throwable;
  *                           (CSV; 142 = won), expanded across both pipelines
  *   --limit=50              cap records (smoke / sample runs)
  *   --resume                (extract) reuse checkpoints + append
- *   --dry-run               (load) transform + count without writing
+ *   --dry-run               (load) transform + count without writing;
+ *                           (rollback) preview the delete counts without writing
  *
  * Extraction order respects dependencies: leads first (collects contact/company/
  * lead id sidecars), then contacts/companies (id batches), then tasks/events/
@@ -50,14 +54,14 @@ use Throwable;
 class AmoMigrateCommand extends Command
 {
     protected $signature = 'amo:migrate
-        {phase=extract : Migration phase (extract|transform|load|verify)}
+        {phase=extract : Migration phase (extract|transform|load|verify|rollback)}
         {--only= : CSV subset of extractors (leads,contacts,companies,tasks,events,notes)}
         {--status= : (extract) CSV of AMO status ids to restrict the lead pull to (e.g. 142 = won)}
         {--limit= : Cap records (smoke/sample runs)}
         {--resume : (extract) Reuse checkpoints and append instead of truncating}
-        {--dry-run : (load) Transform + count without writing}';
+        {--dry-run : (load) Transform + count without writing; (rollback) preview delete counts}';
 
-    protected $description = 'AMO → MGCRM migration runner (extract|transform|load|verify)';
+    protected $description = 'AMO → MGCRM migration runner (extract|transform|load|verify|rollback)';
 
     /** Canonical extraction order (dependency-driven). */
     private const ORDER = ['leads', 'contacts', 'companies', 'tasks', 'events', 'notes'];
@@ -71,13 +75,14 @@ class AmoMigrateCommand extends Command
             'transform' => $this->runLoad(dryRun: true),
             'load' => $this->runLoad(dryRun: (bool) $this->option('dry-run')),
             'verify' => $this->runVerify(),
+            'rollback' => $this->runRollback(dryRun: (bool) $this->option('dry-run')),
             default => $this->failUnknownPhase($phase),
         };
     }
 
     private function failUnknownPhase(string $phase): int
     {
-        $this->error("Unknown phase '{$phase}' (expected: extract|transform|load|verify).");
+        $this->error("Unknown phase '{$phase}' (expected: extract|transform|load|verify|rollback).");
 
         return self::FAILURE;
     }
@@ -263,6 +268,7 @@ class AmoMigrateCommand extends Command
             'audits' => 'audit rows',
             'activities' => 'activities (tasks+notes)',
             'entity_logs' => 'entity-log rows',
+            'deal_products' => 'deal product lines',
             'primary_deals' => 'primary/unique-client deals',
         ] as $key => $label) {
             $count = $key === 'activities'
@@ -277,8 +283,10 @@ class AmoMigrateCommand extends Command
         $skippedHistory = $stats['history_skipped'] ?? 0;
         $skippedNotes = $stats['notes_skipped'] ?? 0;
         $skippedActs = $stats['activities_skipped'] ?? 0;
+        $skippedProducts = $stats['products_skipped'] ?? 0;
+        $unmappedProducts = $stats['products_unmapped'] ?? 0;
 
-        if ($skippedDeals + $failedDeals + $skippedHistory + $skippedNotes + $skippedActs > 0) {
+        if ($skippedDeals + $failedDeals + $skippedHistory + $skippedNotes + $skippedActs + $skippedProducts + $unmappedProducts > 0) {
             $this->newLine();
             $this->warn('SKIPPED:');
             if ($skippedDeals > 0) {
@@ -295,6 +303,12 @@ class AmoMigrateCommand extends Command
             }
             if ($skippedNotes > 0) {
                 $this->line(sprintf('  %-30s %d', 'notes (mapped to skip)', $skippedNotes));
+            }
+            if ($skippedProducts > 0) {
+                $this->line(sprintf('  %-30s %d', 'products (mapped to skip)', $skippedProducts));
+            }
+            if ($unmappedProducts > 0) {
+                $this->line(sprintf('  %-30s %d', 'products (no curation row)', $unmappedProducts));
             }
         }
 
@@ -382,5 +396,61 @@ class AmoMigrateCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * ROLLBACK — undo the load via external_refs (reverse FK order). --dry-run
+     * previews the delete counts without writing. The real delete is all-or-nothing
+     * (one transaction): it either removes every imported deal/contact/company or
+     * leaves the database untouched.
+     */
+    private function runRollback(bool $dryRun): int
+    {
+        if (! $dryRun && ! $this->confirmRollback()) {
+            $this->warn('Rollback aborted.');
+
+            return self::SUCCESS;
+        }
+
+        $this->info($dryRun ? 'AMO rollback (dry-run) — writing nothing' : 'AMO rollback — deleting imported entities');
+
+        $startedAt = microtime(true);
+
+        $counts = (new RollbackLoader)->rollback([
+            'dry_run' => $dryRun,
+            'progress' => fn (string $msg) => $this->line('  '.$msg),
+        ]);
+
+        $verb = $dryRun ? 'WOULD delete' : 'Deleted';
+
+        $this->newLine();
+        $this->info(($dryRun ? 'Rollback (dry-run)' : 'Rollback').' complete in '.round(microtime(true) - $startedAt, 1).'s'.($dryRun ? ' — nothing written' : '').'.');
+        $this->newLine();
+        $this->line("<options=bold>{$verb}:</>");
+        foreach ([
+            'deals' => 'deals (+ contacts/history/audits/products cascade)',
+            'contacts' => 'contacts (+ channels/links cascade)',
+            'companies' => 'companies (+ requisites/channels cascade)',
+            'activities' => 'activities (tasks+notes)',
+            'entity_logs' => 'entity-log rows',
+            'external_refs' => 'external_refs (provenance)',
+        ] as $key => $label) {
+            $this->line(sprintf('  %-50s %d', $label, $counts[$key] ?? 0));
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function confirmRollback(): bool
+    {
+        // Non-interactive runs (CI / scripted) must pass --dry-run first; a real
+        // destructive rollback requires an interactive confirmation.
+        if (! $this->input->isInteractive()) {
+            $this->error('Refusing a non-interactive destructive rollback — run with --dry-run to preview, or run interactively to confirm.');
+
+            return false;
+        }
+
+        return $this->confirm('This permanently deletes every AMO-imported deal/contact/company. Continue?', false);
     }
 }

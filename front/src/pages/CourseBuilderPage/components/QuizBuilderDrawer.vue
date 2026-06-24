@@ -451,17 +451,27 @@ async function submit(): Promise<void> {
       })
     }
     // Sync questions
-    // For simplicity: delete all existing questions and re-create
-    // In a production app you'd diff; here we just CRUD each local question
     for (const lq of localQuiz.value.questions) {
       if (lq.id) {
+        // Patch question meta
         await onboardingAdminApi.patchQuestion(quiz.id, lq.id, {
           kind: lq.kind,
           text: lq.text,
           explanation: lq.explanation || null,
           points: lq.points,
         })
-        // Sync options: not implemented in detail (backend handles full option sync)
+        // Replace-all option sync: delete server options then recreate.
+        // This handles add/edit/delete/reorder in one pass without a complex diff.
+        const serverOptionIds = lq.options.filter((o) => o.id !== undefined).map((o) => o.id!)
+        await Promise.all(
+          serverOptionIds.map((oid) => onboardingAdminApi.deleteOption(quiz.id, lq.id!, oid)),
+        )
+        for (const opt of lq.options) {
+          await onboardingAdminApi.createOption(quiz.id, lq.id, {
+            text: opt.text,
+            is_correct: opt.is_correct,
+          })
+        }
       } else {
         await onboardingAdminApi.createQuestion(quiz.id, {
           kind: lq.kind,
