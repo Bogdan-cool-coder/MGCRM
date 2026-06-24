@@ -31,11 +31,22 @@ class AcquisitionChannelTest extends TestCase
     // Directory CRUD (admin)
     // =========================================================================
 
-    public function test_manager_can_list_acquisition_channels(): void
+    public function test_manager_cannot_list_acquisition_channels(): void
     {
+        // NEW-5: acquisition channels are sensitive BI — the /api/admin/* group
+        // is admin/director only, so a manager must get 403 on read.
         AcquisitionChannel::create(['name' => 'Рекомендации', 'sort_order' => 1]);
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
+
+        $this->getJson('/api/admin/acquisition-channels')->assertForbidden();
+    }
+
+    public function test_admin_can_list_acquisition_channels(): void
+    {
+        AcquisitionChannel::create(['name' => 'Рекомендации', 'sort_order' => 1]);
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($admin, ['*']);
 
         $this->getJson('/api/admin/acquisition-channels')
             ->assertOk()
@@ -107,7 +118,8 @@ class AcquisitionChannelTest extends TestCase
         AcquisitionChannel::create(['name' => 'Активный', 'sort_order' => 1, 'is_active' => true]);
         AcquisitionChannel::create(['name' => 'Неактивный', 'sort_order' => 2, 'is_active' => false]);
 
-        $user = User::factory()->create(['role' => Role::Manager]);
+        // Reads on /api/admin/* require admin/director (NEW-5).
+        $user = User::factory()->create(['role' => Role::Admin]);
         Sanctum::actingAs($user, ['*']);
 
         $response = $this->getJson('/api/admin/acquisition-channels?active_only=1')

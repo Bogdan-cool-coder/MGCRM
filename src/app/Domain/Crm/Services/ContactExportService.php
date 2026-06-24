@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Crm\Services;
 
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -21,6 +23,10 @@ class ContactExportService
 {
     private const CHUNK = 500;
 
+    public function __construct(
+        private readonly VisibilityResolver $visibility,
+    ) {}
+
     private const HEADERS = [
         'ID',
         'Full Name',
@@ -36,13 +42,16 @@ class ContactExportService
     ];
 
     /**
-     * Build XLSX bytes for the given contact IDs.
-     * If $contactIds is empty, exports all (visibility NOT enforced here — caller
-     * pre-filters by authorized IDs from BulkContactService).
+     * Build XLSX bytes for the given contact IDs, scoped to what $actor may see.
+     *
+     * When $contactIds is non-empty, the export is restricted to that subset
+     * intersected with the actor's visibility scope (selected-rows export).
+     * When $contactIds is empty, exports the actor's entire visible set — never
+     * the full table regardless of who calls this method.
      *
      * @param  list<int>  $contactIds
      */
-    public function buildXlsx(array $contactIds): string
+    public function buildXlsx(array $contactIds, User $actor): string
     {
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -54,7 +63,13 @@ class ContactExportService
 
         $row = 2;
 
-        Contact::query()
+        // Apply row-level visibility scope first — the actor can never export
+        // contacts they cannot list. Then narrow to the requested id subset.
+        $this->visibility->applyScope(
+            Contact::query(),
+            $actor,
+            ['owner_id'],
+        )
             ->when($contactIds !== [], static fn ($q) => $q->whereIn('id', $contactIds))
             ->with(['owner', 'companyLinks' => static fn ($q) => $q->where('is_primary', true)->with('company')])
             ->orderBy('id')

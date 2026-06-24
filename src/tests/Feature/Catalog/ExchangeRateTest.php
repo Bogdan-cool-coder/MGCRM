@@ -9,8 +9,10 @@ use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
+use App\Domain\Catalog\Jobs\UpdateExchangeRatesJob;
 
 class ExchangeRateTest extends TestCase
 {
@@ -139,5 +141,47 @@ class ExchangeRateTest extends TestCase
 
         $this->getJson('/api/catalog/exchange-rates/convert?from=USD&to=KZT&amount=10000')
             ->assertStatus(422);
+    }
+
+    // ---- on-demand refresh endpoint ----
+
+    public function test_admin_can_trigger_refresh(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/catalog/exchange-rates/refresh')
+            ->assertStatus(202)
+            ->assertJsonPath('message', 'Exchange rate refresh queued.');
+
+        Queue::assertPushed(UpdateExchangeRatesJob::class);
+    }
+
+    public function test_director_can_trigger_refresh(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['role' => Role::Director]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/catalog/exchange-rates/refresh')
+            ->assertStatus(202);
+
+        Queue::assertPushed(UpdateExchangeRatesJob::class);
+    }
+
+    public function test_manager_cannot_trigger_refresh(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/catalog/exchange-rates/refresh')
+            ->assertForbidden();
+
+        Queue::assertNothingPushed();
     }
 }

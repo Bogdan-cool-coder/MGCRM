@@ -28,13 +28,15 @@ class DocumentController extends Controller
     /**
      * GET /api/documents
      * Query: status, kind, product_code, country_code, author_id, archived, per_page
+     *
+     * Visibility: admin/lawyer/director see all; others see own only (service layer).
      */
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Document::class);
 
         $perPage = min((int) ($request->query('per_page', 25)), 100);
-        $documents = $this->service->list($request->query(), $perPage);
+        $documents = $this->service->list($request->query(), $perPage, $request->user());
 
         return DocumentResource::collection($documents);
     }

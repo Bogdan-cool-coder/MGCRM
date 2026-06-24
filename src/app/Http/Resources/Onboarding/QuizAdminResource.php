@@ -26,8 +26,11 @@ class QuizAdminResource extends JsonResource
             'created_by_user_id' => $this->created_by_user_id,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            // Admin path uses allQuestions (includes drafts); fall back to questions if loaded.
             'questions' => QuizQuestionAdminResource::collection(
-                $this->whenLoaded('questions')
+                $this->resource->relationLoaded('allQuestions')
+                    ? $this->resource->allQuestions
+                    : $this->whenLoaded('questions')
             ),
         ];
     }

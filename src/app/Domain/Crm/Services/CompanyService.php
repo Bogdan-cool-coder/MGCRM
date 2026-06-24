@@ -14,6 +14,7 @@ use App\Domain\Crm\Models\CompanyClientStatusLog;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Services\EntityLogService;
@@ -48,14 +49,17 @@ class CompanyService
     public function __construct(
         private readonly EntityLogService $entityLog,
         private readonly AcquisitionChannelHistoryService $channelHistory,
+        private readonly VisibilityResolver $visibility,
     ) {}
 
     /**
      * Paginated list of companies with eager-loaded relations.
+     * Applies row-level visibility scope: admin/director/lawyer see all;
+     * manager/accountant/cfo see only companies they own OR are responsible for.
      *
      * @param  array<string, mixed>  $filters
      */
-    public function list(array $filters, int $perPage = 25): LengthAwarePaginator
+    public function list(array $filters, User $actor, int $perPage = 25): LengthAwarePaginator
     {
         // Resolve multi-value filters (array or scalar alias).
         $ownerIds = $this->resolveIds($filters, 'owner_ids', 'owner_user_id');
@@ -64,8 +68,13 @@ class CompanyService
         $tags = $this->resolveStrings($filters, 'tags');
         $sources = $this->resolveStrings($filters, 'sources', 'source');
 
-        $query = Company::query()
-            ->with(['companyType', 'responsibleUser', 'ownerUser'])
+        // Apply mandatory row-level visibility scope. Admin/Director/Lawyer see all;
+        // Manager/Accountant/CFO see only companies they own OR are responsible for.
+        $query = $this->visibility->applyScope(
+            Company::query()->with(['companyType', 'responsibleUser', 'ownerUser']),
+            $actor,
+            ['owner_user_id', 'responsible_user_id'],
+        )
             ->when(isset($filters['search']), function (Builder $q) use ($filters): void {
                 $term = (string) $filters['search'];
                 $q->where(function (Builder $inner) use ($term): void {

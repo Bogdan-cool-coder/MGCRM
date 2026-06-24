@@ -38,7 +38,7 @@ class ContactController extends Controller
         // knowing about HTTP/Auth; the service never reads Auth directly.
         $filters['_auth_user_id'] = $request->user()?->id;
 
-        $contacts = $this->service->list($filters, (int) ($filters['per_page'] ?? 25));
+        $contacts = $this->service->list($filters, $request->user(), (int) ($filters['per_page'] ?? 25));
 
         return ContactResource::collection($contacts);
     }

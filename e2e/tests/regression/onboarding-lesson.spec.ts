@@ -151,11 +151,8 @@ async function findTextLesson(ctx: APIRequestContext): Promise<{
 
 test.describe('Onboarding — student learning loop (audit blocker #1 / onboarding#0)', () => {
   test('AUDIT onboarding#0 — student text-lesson payload must include a non-empty content body', async () => {
-    test.fail(
-      true,
-      'AUDIT onboarding#0: AssignmentDetailResource omits lesson `content` → text/video/pdf lessons render an empty player (live + DB confirmed). RED until fixed — when this starts PASSING, remove the test.fail() line to lock the fix.',
-    )
-
+    // test.fail() removed — fix applied 2026-06-24: AssignmentDetailResource now serializes
+    // lesson `content` + `duration_minutes`; draft/unpublished lessons filtered on student path.
     const ctx = await apiContext()
     try {
       const found = await findTextLesson(ctx)

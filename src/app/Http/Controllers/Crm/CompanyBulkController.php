@@ -65,6 +65,10 @@ class CompanyBulkController extends Controller
 
     public function export(Request $request): Response
     {
+        // Require viewAny authorization — without this any authenticated user
+        // could dump the full companies table regardless of role (CRM-B1).
+        $this->authorize('viewAny', \App\Domain\Crm\Models\Company::class);
+
         $request->validate([
             'company_ids' => ['sometimes', 'array'],
             'company_ids.*' => ['integer', 'min:1'],
@@ -72,7 +76,9 @@ class CompanyBulkController extends Controller
 
         $companyIds = $request->input('company_ids', []);
 
-        $xlsx = $this->exportService->buildXlsx($companyIds);
+        // Pass the actor so the export service applies the same visibility scope
+        // as the list endpoint — a manager can only export their own companies.
+        $xlsx = $this->exportService->buildXlsx($companyIds, $request->user());
 
         return response($xlsx, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

@@ -22,6 +22,8 @@ class QuizQuestionAdminResource extends JsonResource
             'sort_order' => $this->sort_order,
             'points' => $this->points,
             'explanation' => $this->explanation,
+            // Exposed for HR-review: AI-generated drafts have is_draft=true until approved.
+            'is_draft' => (bool) $this->is_draft,
             'options' => QuizOptionAdminResource::collection(
                 $this->whenLoaded('options')
             ),

@@ -74,6 +74,11 @@ class QuizQuestionService
             $updates['points'] = (int) $data['points'];
         }
 
+        // HR-review gate: HR sets is_draft=false to approve AI-generated draft questions.
+        if (array_key_exists('is_draft', $data)) {
+            $updates['is_draft'] = (bool) $data['is_draft'];
+        }
+
         $question->update($updates);
         $question->refresh();
 

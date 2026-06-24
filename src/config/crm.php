@@ -8,6 +8,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Authentication hardening (IAM-2)
+    |--------------------------------------------------------------------------
+    |
+    | Brute-force lockout for the credential + 2FA login surface. The
+    | App\Domain\Iam\Services\LoginThrottle service keys FAILED attempts by
+    | email+IP (credential) / user+IP (2FA) and returns HTTP 429 with a localized
+    | auth.throttle message + Retry-After once the cap of consecutive failures is
+    | hit within the rolling decay window. This is failures-only: a SUCCESSFUL
+    | login clears the budget, so legitimate repeat logins are never locked out.
+    | Applies to POST /api/login and POST /api/2fa/validate.
+    |
+    |   login_max_attempts  — consecutive failures before lockout (default 5)
+    |   login_decay_seconds — rolling lockout window in seconds (default 60)
+    |
+    */
+    'auth' => [
+        'login_max_attempts' => (int) env('LOGIN_MAX_ATTEMPTS', 5),
+        'login_decay_seconds' => (int) env('LOGIN_DECAY_SECONDS', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Engagement Tiers (Contacts 2.0 — B2)
     |--------------------------------------------------------------------------
     |

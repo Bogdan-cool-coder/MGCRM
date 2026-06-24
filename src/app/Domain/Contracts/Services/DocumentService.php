@@ -12,6 +12,7 @@ use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
+use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
@@ -43,12 +44,23 @@ class DocumentService
     /**
      * Paginated list with optional filters.
      *
+     * Visibility scoping (ARCHITECTURE.md §3):
+     *   - admin / lawyer  → all documents (full visibility)
+     *   - director        → all documents (oversight role)
+     *   - others          → own documents only (author_user_id = caller)
+     *
      * @param  array<string, mixed>  $filters
      */
-    public function list(array $filters, int $perPage = 25): LengthAwarePaginator
+    public function list(array $filters, int $perPage = 25, ?User $caller = null): LengthAwarePaginator
     {
         $query = Document::query()
             ->with(['author:id,full_name', 'sourceCompany:id,name', 'templateVersion.template:id,code']);
+
+        // Author-scoping: non-privileged roles see only their own documents.
+        // admin / lawyer / director see all (full oversight).
+        if ($caller !== null && ! in_array($caller->role, [Role::Admin, Role::Lawyer, Role::Director], strict: true)) {
+            $query->where('author_user_id', $caller->id);
+        }
 
         // By default hide archived records (archived=0 or absent).
         $showArchived = filter_var($filters['archived'] ?? false, FILTER_VALIDATE_BOOLEAN);

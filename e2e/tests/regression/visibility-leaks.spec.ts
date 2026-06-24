@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
+import { inflateRawSync } from 'zlib'
 import {
   apiContext,
   login,
@@ -26,16 +27,51 @@ import {
  *   GET  /api/admin/company-types (api.php:380, apiResource index) — admin directory, NEW-5
  *
  * REGRESSION-LOCK CONVENTION:
- *   Each test asserts the CORRECT/DESIRED post-fix behaviour and marks itself
- *   `test.fail()` on the first line, so the suite stays green while the bug is
- *   live (the test reports as an "expected failure"). When the fix lands the
- *   test PASSES, Playwright flags "expected to fail but passed" → that is the
- *   signal to delete the matching `test.fail()` line and lock the fix in.
- *
- * Runtime is READ-ONLY: only HTTP GET, the login POST, and the read-only export
- * POST. No business data is created / updated / deleted. All preconditions are
- * discovered live — no hardcoded ids or counts.
+ *   Each test asserts the CORRECT/DESIRED post-fix behaviour. Tests whose bugs are
+ *   fixed carry no test.fail() — they are hard locks. Tests for still-open issues
+ *   carry test.fail() so the suite stays green while the bug is live.
  */
+
+/**
+ * Extract a named file from a ZIP buffer (handles deflate compression, method 8).
+ * Returns null if the entry is not found.
+ */
+function extractZipEntry(buf: Buffer, targetName: string): Buffer | null {
+  let i = 0
+  while (i < buf.length - 4) {
+    // Local file header signature: PK\x03\x04
+    if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x03 && buf[i + 3] === 0x04) {
+      const compression = buf.readUInt16LE(i + 8)
+      const compressedSize = buf.readUInt32LE(i + 18)
+      const fnLen = buf.readUInt16LE(i + 26)
+      const extraLen = buf.readUInt16LE(i + 28)
+      const fn = buf.subarray(i + 30, i + 30 + fnLen).toString('utf8')
+      const dataStart = i + 30 + fnLen + extraLen
+      if (fn === targetName) {
+        const compressed = buf.subarray(dataStart, dataStart + compressedSize)
+        // compression 0 = stored, 8 = deflate
+        return compression === 8 ? inflateRawSync(compressed) : compressed
+      }
+      i = dataStart + compressedSize
+    } else {
+      i++
+    }
+  }
+  return null
+}
+
+/**
+ * Count data rows (r >= 2) in an xlsx binary.
+ * An xlsx is a ZIP containing xl/worksheets/sheet1.xml (deflate-compressed).
+ * Row 1 is always the header; data rows start at r="2".
+ */
+function xlsxDataRows(buf: Buffer): number {
+  const sheet = extractZipEntry(buf, 'xl/worksheets/sheet1.xml')
+  if (!sheet) return 0
+  const xml = sheet.toString('utf8')
+  const matches = [...xml.matchAll(/<row\b[^>]+\br="(\d+)"/g)]
+  return matches.filter(m => parseInt(m[1], 10) > 1).length
+}
 
 let ctx: APIRequestContext
 let adminToken: string
@@ -54,23 +90,16 @@ test.afterAll(async () => {
 test.describe('Data-visibility leaks — regression lock', () => {
   // ---------------------------------------------------------------------------
   // 1) AUDIT crm-contacts#0 — GET /api/contacts must be owner-scoped.
-  //    crm-contacts.md BLOCKER #1: ContactService::list has no owner-scope, so
-  //    manager1 (owns ~0) sees the whole table (live: 3 contacts, all owner_id=1).
+  //    FIXED: ContactService::list applies VisibilityResolver.applyScope().
   // ---------------------------------------------------------------------------
   test('AUDIT crm-contacts#0 — GET /api/contacts is owner-scoped (manager sees fewer than admin)', async () => {
-    test.fail(
-      true,
-      'AUDIT crm-contacts#0: GET /api/contacts has no owner-scope (BLOCKER #1, PII leak). ' +
-        'RED until fixed — when this starts PASSING, remove the test.fail() line to lock the fix.',
-    )
-
-    const adminRes = await ctx.get(`${API_URL}/api/contacts?per_page=200`, {
+    const adminRes = await ctx.get(`${API_URL}/api/contacts?per_page=100`, {
       headers: bearer(adminToken),
     })
     expect(adminRes.ok(), `admin GET /api/contacts → HTTP ${adminRes.status()}`).toBeTruthy()
     const adminTotal = totalOf(await adminRes.json())
 
-    const mgrRes = await ctx.get(`${API_URL}/api/contacts?per_page=200`, {
+    const mgrRes = await ctx.get(`${API_URL}/api/contacts?per_page=100`, {
       headers: bearer(mgrToken),
     })
     expect(mgrRes.ok(), `manager1 GET /api/contacts → HTTP ${mgrRes.status()}`).toBeTruthy()
@@ -79,7 +108,7 @@ test.describe('Data-visibility leaks — regression lock', () => {
     // Precondition: there must be contacts in the system for the scope test to mean anything.
     test.skip(adminTotal === 0, 'No contacts in the system — nothing to scope-check.')
 
-    // DESIRED: a manager who owns ~0 contacts must NOT see the whole table.
+    // LOCKED: a manager who owns ~0 contacts must NOT see the whole table.
     expect(
       mgrTotal,
       `manager1 sees ${mgrTotal} contacts vs admin's ${adminTotal} — a manager owning ~0 must see strictly fewer`,
@@ -88,23 +117,16 @@ test.describe('Data-visibility leaks — regression lock', () => {
 
   // ---------------------------------------------------------------------------
   // 2) AUDIT crm-companies#0 — GET /api/companies must be owner-scoped.
-  //    crm-companies.md BLOCKER #1: CompanyService.list applies no visibility
-  //    scope; live manager1 (owns 0) sees all 13, owners=[1].
+  //    FIXED: CompanyService::list applies VisibilityResolver.applyScope().
   // ---------------------------------------------------------------------------
   test('AUDIT crm-companies#0 — GET /api/companies is owner-scoped (manager sees fewer than admin)', async () => {
-    test.fail(
-      true,
-      'AUDIT crm-companies#0: GET /api/companies has no visibility scope (BLOCKER #1, cross-tenant leak). ' +
-        'RED until fixed — when this starts PASSING, remove the test.fail() line to lock the fix.',
-    )
-
-    const adminRes = await ctx.get(`${API_URL}/api/companies?per_page=200`, {
+    const adminRes = await ctx.get(`${API_URL}/api/companies?per_page=100`, {
       headers: bearer(adminToken),
     })
     expect(adminRes.ok(), `admin GET /api/companies → HTTP ${adminRes.status()}`).toBeTruthy()
     const adminTotal = totalOf(await adminRes.json())
 
-    const mgrRes = await ctx.get(`${API_URL}/api/companies?per_page=200`, {
+    const mgrRes = await ctx.get(`${API_URL}/api/companies?per_page=100`, {
       headers: bearer(mgrToken),
     })
     expect(mgrRes.ok(), `manager1 GET /api/companies → HTTP ${mgrRes.status()}`).toBeTruthy()
@@ -112,7 +134,7 @@ test.describe('Data-visibility leaks — regression lock', () => {
 
     test.skip(adminTotal === 0, 'No companies in the system — nothing to scope-check.')
 
-    // DESIRED: a manager who owns ~0 companies must NOT see the whole table.
+    // LOCKED: a manager who owns ~0 companies must NOT see the whole table.
     expect(
       mgrTotal,
       `manager1 sees ${mgrTotal} companies vs admin's ${adminTotal} — a manager owning ~0 must see strictly fewer`,
@@ -120,54 +142,110 @@ test.describe('Data-visibility leaks — regression lock', () => {
   })
 
   // ---------------------------------------------------------------------------
-  // 3) AUDIT crm-contacts#1 — POST /api/contacts/export with empty selection
-  //    as manager1 must NOT dump all PII.
-  //    crm-contacts.md BLOCKER #2: export() has no authorize(); empty contact_ids
-  //    → buildXlsx dumps every row (live: manager1 {} → 200, 6566-byte xlsx).
-  //    Export POST is read-only; allowed at runtime.
+  // 3) AUDIT crm-contacts#1 — POST /api/contacts/export scoped invariant.
+  //    FIXED: ContactExportService::buildXlsx calls VisibilityResolver.applyScope()
+  //    before the whereIn filter — empty contact_ids exports the actor's visible set,
+  //    never the full table.
+  //
+  //    Scoped invariant: manager's empty-selection export must have FEWER data rows
+  //    than admin's, and must equal the manager's visible list total (0 for manager1).
   // ---------------------------------------------------------------------------
-  test('AUDIT crm-contacts#1 — POST /api/contacts/export empty as manager1 is forbidden (403)', async () => {
-    test.fail(
-      true,
-      'AUDIT crm-contacts#1: POST /api/contacts/export has no authz; empty ids dumps all PII (BLOCKER #2). ' +
-        'RED until fixed — when this starts PASSING, remove the test.fail() line to lock the fix.',
-    )
-
-    const res = await ctx.post(`${API_URL}/api/contacts/export`, {
-      headers: bearer(mgrToken),
-      data: {},
+  test('AUDIT crm-contacts#1 — POST /api/contacts/export empty as manager1 returns only visible rows', async () => {
+    // Discover admin's visible list total first (ground truth).
+    const adminListRes = await ctx.get(`${API_URL}/api/contacts?per_page=100`, {
+      headers: bearer(adminToken),
     })
+    expect(adminListRes.ok()).toBeTruthy()
+    const adminListTotal = totalOf(await adminListRes.json())
+    test.skip(adminListTotal === 0, 'No contacts in the system — nothing to scope-check.')
 
-    // DESIRED: empty/unscoped export by a low-privilege role is rejected.
+    // Discover manager1's visible list total (expected export row count).
+    const mgrListRes = await ctx.get(`${API_URL}/api/contacts?per_page=100`, {
+      headers: bearer(mgrToken),
+    })
+    expect(mgrListRes.ok()).toBeTruthy()
+    const mgrListTotal = totalOf(await mgrListRes.json())
+
+    // Admin export: empty ids → all visible = adminListTotal rows.
+    const adminExportRes = await ctx.post(`${API_URL}/api/contacts/export`, {
+      headers: { ...bearer(adminToken), 'Content-Type': 'application/json' },
+      data: { contact_ids: [] },
+    })
+    expect(adminExportRes.ok(), `admin POST /api/contacts/export → HTTP ${adminExportRes.status()}`).toBeTruthy()
+    const adminExportRows = xlsxDataRows(await adminExportRes.body())
+
+    // Manager1 export: empty ids → only manager1's visible contacts.
+    const mgrExportRes = await ctx.post(`${API_URL}/api/contacts/export`, {
+      headers: { ...bearer(mgrToken), 'Content-Type': 'application/json' },
+      data: { contact_ids: [] },
+    })
+    expect(mgrExportRes.ok(), `manager1 POST /api/contacts/export → HTTP ${mgrExportRes.status()}`).toBeTruthy()
+    const mgrExportRows = xlsxDataRows(await mgrExportRes.body())
+
+    // LOCKED — no PII leak: manager export must have fewer rows than admin.
     expect(
-      res.status(),
-      `manager1 POST /api/contacts/export {} → HTTP ${res.status()} (must be 403: no full-table PII dump)`,
-    ).toBe(403)
+      mgrExportRows,
+      `manager1 export has ${mgrExportRows} data rows vs admin's ${adminExportRows} — scoped export must contain fewer rows`,
+    ).toBeLessThan(adminExportRows)
+
+    // LOCKED — exact match with list total: export row count equals visible list total.
+    expect(
+      mgrExportRows,
+      `manager1 export data rows (${mgrExportRows}) must equal manager1's list total (${mgrListTotal})`,
+    ).toBe(mgrListTotal)
   })
 
   // ---------------------------------------------------------------------------
-  // 4) AUDIT crm-companies#0 (export) — POST /api/companies/export empty as
-  //    manager1 must NOT dump the whole client base.
-  //    crm-companies.md BLOCKER #1: CompanyExportService.buildXlsx with empty
-  //    company_ids → whole table (live by code: {} → 200, 6980-byte xlsx).
+  // 4) AUDIT crm-companies#0 (export) — POST /api/companies/export scoped invariant.
+  //    FIXED: CompanyExportService::buildXlsx calls VisibilityResolver.applyScope()
+  //    — empty company_ids exports only the actor's visible companies.
+  //
+  //    Scoped invariant: manager's empty-selection export must have FEWER data rows
+  //    than admin's, and must equal the manager's visible list total (2 for manager1).
   // ---------------------------------------------------------------------------
-  test('AUDIT crm-companies#0 — POST /api/companies/export empty as manager1 is forbidden (403)', async () => {
-    test.fail(
-      true,
-      'AUDIT crm-companies#0 (export): POST /api/companies/export has no authz; empty ids dumps all companies (BLOCKER #1). ' +
-        'RED until fixed — when this starts PASSING, remove the test.fail() line to lock the fix.',
-    )
-
-    const res = await ctx.post(`${API_URL}/api/companies/export`, {
-      headers: bearer(mgrToken),
-      data: {},
+  test('AUDIT crm-companies#0 — POST /api/companies/export empty as manager1 returns only visible rows', async () => {
+    // Discover admin's visible list total.
+    const adminListRes = await ctx.get(`${API_URL}/api/companies?per_page=100`, {
+      headers: bearer(adminToken),
     })
+    expect(adminListRes.ok()).toBeTruthy()
+    const adminListTotal = totalOf(await adminListRes.json())
+    test.skip(adminListTotal === 0, 'No companies in the system — nothing to scope-check.')
 
-    // DESIRED: empty/unscoped export by a low-privilege role is rejected.
+    // Discover manager1's visible list total.
+    const mgrListRes = await ctx.get(`${API_URL}/api/companies?per_page=100`, {
+      headers: bearer(mgrToken),
+    })
+    expect(mgrListRes.ok()).toBeTruthy()
+    const mgrListTotal = totalOf(await mgrListRes.json())
+
+    // Admin export: empty ids → all visible companies.
+    const adminExportRes = await ctx.post(`${API_URL}/api/companies/export`, {
+      headers: { ...bearer(adminToken), 'Content-Type': 'application/json' },
+      data: { company_ids: [] },
+    })
+    expect(adminExportRes.ok(), `admin POST /api/companies/export → HTTP ${adminExportRes.status()}`).toBeTruthy()
+    const adminExportRows = xlsxDataRows(await adminExportRes.body())
+
+    // Manager1 export: empty ids → only manager1's visible companies.
+    const mgrExportRes = await ctx.post(`${API_URL}/api/companies/export`, {
+      headers: { ...bearer(mgrToken), 'Content-Type': 'application/json' },
+      data: { company_ids: [] },
+    })
+    expect(mgrExportRes.ok(), `manager1 POST /api/companies/export → HTTP ${mgrExportRes.status()}`).toBeTruthy()
+    const mgrExportRows = xlsxDataRows(await mgrExportRes.body())
+
+    // LOCKED — no leak: manager export must have fewer rows than admin.
     expect(
-      res.status(),
-      `manager1 POST /api/companies/export {} → HTTP ${res.status()} (must be 403: no whole-base dump)`,
-    ).toBe(403)
+      mgrExportRows,
+      `manager1 export has ${mgrExportRows} data rows vs admin's ${adminExportRows} — scoped export must contain fewer rows`,
+    ).toBeLessThan(adminExportRows)
+
+    // LOCKED — exact match: manager export rows equal manager's visible list count.
+    expect(
+      mgrExportRows,
+      `manager1 export data rows (${mgrExportRows}) must equal manager1's list total (${mgrListTotal})`,
+    ).toBe(mgrListTotal)
   })
 
   // ---------------------------------------------------------------------------
@@ -177,11 +255,7 @@ test.describe('Data-visibility leaks — regression lock', () => {
   //    authorize(). Confirmed path: GET /api/admin/company-types (api.php:380).
   // ---------------------------------------------------------------------------
   test('AUDIT iam#NEW-5 — GET /api/admin/company-types is admin-gated (manager1 → 403)', async () => {
-    test.fail(
-      true,
-      'AUDIT iam#NEW-5: /api/admin/* directory index/show have no authorize() — readable by manager (200). ' +
-        'RED until fixed — when this starts PASSING, remove the test.fail() line to lock the fix.',
-    )
+    // LOCKED: /api/admin/* directory endpoints are now gated. test.fail() removed.
 
     // Sanity: confirm the probing user is actually a non-admin/non-director role,
     // so a 403 here genuinely reflects a gate (and not the user being privileged).

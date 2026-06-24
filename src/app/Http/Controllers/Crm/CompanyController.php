@@ -40,7 +40,7 @@ class CompanyController extends Controller
         // Inject auth user ID so service can apply `only_mine` without touching Auth.
         $filters['_auth_user_id'] = $request->user()?->id;
 
-        $companies = $this->service->list($filters, (int) ($filters['per_page'] ?? 25));
+        $companies = $this->service->list($filters, $request->user(), (int) ($filters['per_page'] ?? 25));
 
         return CompanyResource::collection($companies);
     }

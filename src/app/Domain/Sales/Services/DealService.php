@@ -64,6 +64,7 @@ class DealService
         private readonly EngagementService $engagementService,
         private readonly EntityLogService $entityLog,
         private readonly CompanyRequisiteService $requisites,
+        private readonly DealAmountCalculator $amountCalculator,
     ) {}
 
     /**
@@ -941,8 +942,13 @@ class DealService
         // FormRequest only floors it (min:0); the 50 ceiling is enforced here so a
         // larger value (e.g. 51) is SAVED as 50 instead of 422. A null clears it to
         // 0 (the column's default / "no discount").
+        $discountChanged = false;
         if (array_key_exists('discount_percent', $data)) {
             $data['discount_percent'] = $this->clampDiscountPercent($data['discount_percent']);
+            // Detect a real change so the NET deals.amount is re-derived below
+            // (recalcAmount folds discount_percent into the line-item sum). A
+            // no-op write (same value) skips the recalc.
+            $discountChanged = (int) $data['discount_percent'] !== (int) ($deal->discount_percent ?? 0);
         }
 
         // Company change (task 14): re-resolve the company-derived data the way
@@ -991,11 +997,19 @@ class DealService
         // already unset). getOriginal() reflects the values currently in the DB.
         $original = array_intersect_key($deal->getOriginal(), $data);
 
-        DB::transaction(function () use ($deal, $data, $perpetualChanged, $newPerpetual): void {
+        DB::transaction(function () use ($deal, $data, $perpetualChanged, $newPerpetual, $discountChanged): void {
             $deal->update($data);
 
             if ($perpetualChanged) {
+                // applyLicenseMode re-prices the lines AND calls recalcAmount at
+                // the end (which now folds in the just-saved discount_percent), so
+                // an extra recalc here would be redundant.
                 app(DealProductService::class)->applyLicenseMode($deal, $newPerpetual);
+            } elseif ($discountChanged && $deal->amount_locked !== true) {
+                // Discount changed without a license-mode toggle: re-derive the NET
+                // deals.amount so every aggregate reflects the new discount. Skipped
+                // when the budget is locked (amount is a fixed figure by design).
+                $this->recalcAmount($deal);
             }
         });
 
@@ -1276,14 +1290,22 @@ class DealService
     }
 
     /**
-     * Recompute Deal.amount as the sum of its line items (kopecks). The single
-     * point of amount denormalisation — called exclusively from
-     * DealProductService on every line-item mutation.
+     * Recompute Deal.amount as the NET sum of its line items (kopecks). The
+     * single point of amount denormalisation — called from DealProductService on
+     * every line-item mutation AND from update() on any discount_percent change.
+     *
+     * NET means: each line's amount (already net of its per-line discount) has the
+     * deal-level discount_percent applied uniformly, then the lines are summed
+     * (per-line rounding then sum, via DealAmountCalculator). deals.amount is
+     * therefore the authoritative NET revenue figure — every aggregate
+     * (board/list/KPI/company/contact/export) reads it directly and reflects the
+     * discount with no further work. This matches DealResource::discountedTotals'
+     * products_net_total exactly (one shared calculator).
      *
      * When the deal's budget is LOCKED (amount_locked = true) the amount is a
      * fixed figure (negotiated/imported budget) and must NOT be overwritten by
      * the line-item sum — return early, leaving amount untouched. amount may then
-     * differ from sum(deal_products) by design; analytics/finance/KPI treat
+     * differ from the line items by design; analytics/finance/KPI treat
      * Deal.amount as the authoritative budget (see migration cross-domain note).
      */
     public function recalcAmount(Deal $deal): Deal
@@ -1292,11 +1314,19 @@ class DealService
             return $deal;
         }
 
-        $sum = (int) DealProduct::query()
+        // Per-line amounts (kopecks, already net of each line's own discount).
+        $lineAmounts = DealProduct::query()
             ->where('deal_id', $deal->id)
-            ->sum('amount');
+            ->pluck('amount')
+            ->map(static fn ($v): int => (int) $v)
+            ->all();
 
-        $deal->update(['amount' => $sum]);
+        $net = $this->amountCalculator->netFromLines(
+            $lineAmounts,
+            (int) ($deal->discount_percent ?? 0),
+        );
+
+        $deal->update(['amount' => $net]);
         $deal->refresh();
 
         return $deal;
@@ -1362,23 +1392,15 @@ class DealService
         ];
     }
 
-    /** The deal-level discount percent ceiling (business rule: max 50%). */
-    private const MAX_DISCOUNT_PERCENT = 50;
-
     /**
      * Clamp an incoming deal-level discount percent into [0, MAX_DISCOUNT_PERCENT].
      * A value above the ceiling is SAVED as the ceiling (50), never rejected
      * (business rule). null → 0 (no discount). Non-numeric input coerces to int 0.
+     * Delegates to DealAmountCalculator so the clamp rule lives in one place.
      */
     private function clampDiscountPercent(mixed $value): int
     {
-        if ($value === null) {
-            return 0;
-        }
-
-        $percent = (int) $value;
-
-        return max(0, min(self::MAX_DISCOUNT_PERCENT, $percent));
+        return $this->amountCalculator->clampPercent($value);
     }
 
     /**

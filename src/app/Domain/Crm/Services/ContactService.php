@@ -11,6 +11,7 @@ use App\Domain\Crm\Enums\EngagementTier;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -24,14 +25,17 @@ class ContactService
 {
     public function __construct(
         private readonly AcquisitionChannelHistoryService $channelHistory,
+        private readonly VisibilityResolver $visibility,
     ) {}
 
     /**
      * Paginated list of contacts with eager-loaded relations.
+     * Applies row-level visibility scope: admin/director/lawyer see all;
+     * manager/accountant/cfo see only contacts they own (owner_id = user).
      *
      * @param  array<string, mixed>  $filters
      */
-    public function list(array $filters, int $perPage = 25): LengthAwarePaginator
+    public function list(array $filters, User $actor, int $perPage = 25): LengthAwarePaginator
     {
         // Resolve owner_ids[]: canonical multi-owner filter.
         // Also accept legacy `owner_id` (scalar) as an alias.
@@ -46,8 +50,14 @@ class ContactService
         // tags[]: any-match — contact must have at least one of the supplied tags.
         $tags = $this->resolveStrings($filters, 'tags');
 
-        $query = Contact::query()
-            ->with(['owner', 'companyLinks.company'])
+        // Apply mandatory row-level visibility scope. Admin/Director/Lawyer see all
+        // contacts; Manager/Accountant/CFO see only contacts they own (owner_id).
+        // This is the canonical scope — only_mine is an additive opt-in on top.
+        $query = $this->visibility->applyScope(
+            Contact::query()->with(['owner', 'companyLinks.company']),
+            $actor,
+            ['owner_id'],
+        )
             ->when(isset($filters['search']), function (Builder $q) use ($filters): void {
                 $term = (string) $filters['search'];
                 $q->where(function (Builder $inner) use ($term): void {

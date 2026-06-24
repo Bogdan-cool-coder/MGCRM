@@ -178,4 +178,114 @@ class ProductTest extends TestCase
             'name' => 'Forbidden',
         ])->assertForbidden();
     }
+
+    // ---- scope bindings: plan must belong to product ----
+
+    public function test_plan_from_another_product_returns_404(): void
+    {
+        // Major #1 fix: scopeBindings() ensures {plan} is scoped to {product}.
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $product1 = Product::factory()->create();
+        $product2 = Product::factory()->create();
+        $planForProduct2 = $product2->plans()->create([
+            'code' => 'plan_p2',
+            'name' => 'Plan P2',
+            'unit' => 'year',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        // Accessing a plan that belongs to product2 via product1 must return 404.
+        $this->getJson("/api/catalog/products/{$product1->id}/plans/{$planForProduct2->id}")
+            ->assertNotFound();
+
+        // Same plan accessed via the correct product must return 200.
+        $this->getJson("/api/catalog/products/{$product2->id}/plans/{$planForProduct2->id}")
+            ->assertOk();
+    }
+
+    public function test_cannot_patch_plan_of_another_product(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $product1 = Product::factory()->create();
+        $product2 = Product::factory()->create();
+        $planForProduct2 = $product2->plans()->create([
+            'code' => 'plan_other',
+            'name' => 'Other Plan',
+            'unit' => 'year',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        // PATCH via wrong product → 404 (not 200 with mismatch).
+        $this->patchJson("/api/catalog/products/{$product1->id}/plans/{$planForProduct2->id}", [
+            'name' => 'Hacked Name',
+        ])->assertNotFound();
+
+        // Plan name must not be changed.
+        $this->assertDatabaseHas('catalog_product_plans', [
+            'id' => $planForProduct2->id,
+            'name' => 'Other Plan',
+        ]);
+    }
+
+    // ---- plan_id cross-product validation on price upsert ----
+
+    public function test_upsert_price_with_foreign_plan_id_returns_422(): void
+    {
+        // Major #2 fix: plan_id must belong to the product being priced.
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $product1 = Product::factory()->create();
+        $product2 = Product::factory()->create();
+        $planForProduct2 = $product2->plans()->create([
+            'code' => 'alien_plan',
+            'name' => 'Alien Plan',
+            'unit' => 'year',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        // Submitting plan_id belonging to product2 while pricing product1 → 422.
+        $this->postJson("/api/catalog/products/{$product1->id}/prices", [
+            'prices' => [
+                ['plan_id' => $planForProduct2->id, 'currency_code' => 'KZT', 'amount' => 100000],
+            ],
+        ])->assertStatus(422);
+
+        // No cross-product price row created.
+        $this->assertDatabaseMissing('catalog_product_prices', [
+            'product_id' => $product1->id,
+            'plan_id' => $planForProduct2->id,
+        ]);
+    }
+
+    public function test_upsert_price_with_own_plan_id_succeeds(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $product = Product::factory()->create();
+        $plan = $product->plans()->create([
+            'code' => 'own_plan',
+            'name' => 'Own Plan',
+            'unit' => 'year',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/catalog/products/{$product->id}/prices", [
+            'prices' => [
+                ['plan_id' => $plan->id, 'currency_code' => 'KZT', 'amount' => 100000],
+            ],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('catalog_product_prices', [
+            'product_id' => $product->id,
+            'plan_id' => $plan->id,
+            'currency_code' => 'KZT',
+            'amount' => 100000,
+        ]);
+    }
 }

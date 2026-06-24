@@ -65,6 +65,8 @@ class DocumentRemarkController extends Controller
     {
         $this->authorize('resolveRemark', $document);
 
+        abort_unless((int) $remark->document_id === $document->id, 404);
+
         $updated = $this->service->toggleResolve($remark, $request->user());
 
         return DocumentRemarkResource::make($updated->load(['author:id,full_name', 'resolvedBy:id,full_name']));

@@ -95,8 +95,13 @@ class ExchangeRateService
             return null;
         }
 
-        // Use bcmath-style arithmetic to keep precision; round to nearest kopeck.
-        return (int) round($amountKopecks * (float) $rate);
+        // Use bcmath to avoid float precision loss on large amounts.
+        // bcmul with scale=0 truncates; we want round-half-up → add 0.5 then bcfloor.
+        $scaled = bcmul((string) $amountKopecks, $rate, 6);
+
+        return (int) (bccomp($scaled, '0', 6) >= 0
+            ? bcadd($scaled, '0.5', 0)
+            : bcsub($scaled, '0.5', 0));
     }
 
     /**
@@ -118,9 +123,17 @@ class ExchangeRateService
 
     /**
      * Fetch rates from external API and upsert all supported pairs.
-     * Source: exchangerate.host (config crm.exchange_rate.api_url).
      *
-     * Called by UpdateExchangeRatesJob daily.
+     * Supports two provider shapes:
+     *  - exchangerate.host: response contains 'rates' key (requires access_key).
+     *  - exchangerate-api.com v6: response contains 'conversion_rates' key.
+     *
+     * Both providers return HTTP 200 even on auth-error (body has 'success':false or
+     * 'result':'error'). We check the body, not just the HTTP status.
+     *
+     * Called by UpdateExchangeRatesJob daily and by the on-demand refresh endpoint.
+     *
+     * @throws \RuntimeException when the API response is unusable (job retries on throw).
      */
     public function fetchAndUpsertFromApi(): void
     {
@@ -129,7 +142,7 @@ class ExchangeRateService
         $supported = config('crm.currencies.supported', ['RUB', 'USD', 'EUR', 'KZT', 'UZS', 'AED']);
         $date = Carbon::today()->toDateString();
 
-        $url = rtrim($apiUrl, '/').'/latest';
+        $url = rtrim((string) $apiUrl, '/').'/latest';
         $params = [
             'base' => 'USD',
             'symbols' => implode(',', $supported),
@@ -142,25 +155,56 @@ class ExchangeRateService
         $response = Http::timeout(15)->get($url, $params);
 
         if (! $response->successful()) {
-            Log::warning('ExchangeRateService: API call failed', [
+            Log::error('ExchangeRateService: API HTTP error', [
                 'status' => $response->status(),
                 'url' => $url,
             ]);
 
-            return;
+            throw new \RuntimeException(
+                "ExchangeRateService: HTTP {$response->status()} from {$url}"
+            );
         }
 
-        $data = $response->json();
-        $rates = $data['rates'] ?? [];
+        $data = $response->json() ?? [];
+
+        // exchangerate.host returns {success:false} with no 'rates' on auth failure.
+        if (isset($data['success']) && $data['success'] === false) {
+            $errorType = $data['error']['type'] ?? $data['error']['code'] ?? 'unknown';
+            Log::error('ExchangeRateService: API returned success=false', [
+                'error' => $errorType,
+                'url' => $url,
+            ]);
+
+            throw new \RuntimeException(
+                "ExchangeRateService: API returned success=false (error: {$errorType}). Check EXCHANGE_RATE_API_KEY."
+            );
+        }
+
+        // exchangerate-api.com v6 returns {result:'error'} on auth failure.
+        if (isset($data['result']) && $data['result'] === 'error') {
+            $errorType = $data['error-type'] ?? 'unknown';
+            Log::error('ExchangeRateService: API returned result=error', [
+                'error' => $errorType,
+                'url' => $url,
+            ]);
+
+            throw new \RuntimeException(
+                "ExchangeRateService: API returned result=error (type: {$errorType}). Check EXCHANGE_RATE_API_KEY."
+            );
+        }
+
+        // Accept either 'rates' (exchangerate.host) or 'conversion_rates' (exchangerate-api.com v6).
+        $rates = $data['rates'] ?? $data['conversion_rates'] ?? [];
 
         if (empty($rates)) {
-            Log::warning('ExchangeRateService: No rates in API response', ['data' => $data]);
+            Log::error('ExchangeRateService: No rates in API response', ['data' => $data]);
 
-            return;
+            throw new \RuntimeException('ExchangeRateService: API response contains no rates.');
         }
 
         // Generate all pairs: for each supported currency pair (a→b and b→a).
         // USD is the base; derive cross-rates via USD.
+        $written = 0;
         foreach ($supported as $fromCurrency) {
             foreach ($supported as $toCurrency) {
                 if ($fromCurrency === $toCurrency) {
@@ -176,8 +220,14 @@ class ExchangeRateService
 
                 $crossRate = number_format($toRate / $fromRate, 6, '.', '');
 
-                $this->upsertRate($fromCurrency, $toCurrency, $crossRate, $date, 'exchangerate-api');
+                $this->upsertRate($fromCurrency, $toCurrency, $crossRate, $date, 'api');
+                $written++;
             }
         }
+
+        Log::info('ExchangeRateService: upserted exchange rates', [
+            'pairs_written' => $written,
+            'date' => $date,
+        ]);
     }
 }

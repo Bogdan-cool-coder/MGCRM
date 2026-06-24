@@ -14,8 +14,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * DealProduct — line item on a deal. unit_price/currency are a price snapshot
  * taken at add time (kopecks). discount is a manual per-line reduction (kopecks).
- * amount = max(0, round(quantity * unit_price) - discount) — net of discount.
- * Deal.amount is denormalised from the sum of these rows (DealService::recalcAmount).
+ * amount = max(0, round(quantity * unit_price) - discount) — net of the per-line
+ * discount. Deal.amount is denormalised from these rows with the deal-level
+ * discount_percent folded in on top (DealService::recalcAmount → NET).
  */
 class DealProduct extends Model
 {

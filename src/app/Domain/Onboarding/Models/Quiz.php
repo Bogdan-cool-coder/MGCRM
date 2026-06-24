@@ -48,8 +48,25 @@ class Quiz extends Model
         return $this->belongsTo(Lesson::class, 'lesson_id');
     }
 
-    /** @return HasMany<QuizQuestion> */
+    /**
+     * Published (non-draft) questions — used on student paths and in scoring.
+     * AI-generated drafts (is_draft=true) are excluded until HR approves them.
+     *
+     * @return HasMany<QuizQuestion>
+     */
     public function questions(): HasMany
+    {
+        return $this->hasMany(QuizQuestion::class, 'quiz_id')
+            ->where('is_draft', false)
+            ->orderBy('sort_order');
+    }
+
+    /**
+     * All questions including AI drafts — used on HR/admin paths.
+     *
+     * @return HasMany<QuizQuestion>
+     */
+    public function allQuestions(): HasMany
     {
         return $this->hasMany(QuizQuestion::class, 'quiz_id')->orderBy('sort_order');
     }

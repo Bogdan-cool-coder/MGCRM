@@ -75,17 +75,28 @@ class TemplateSeeder extends Seeder
         ];
 
         foreach ($templates as $data) {
-            Template::updateOrCreate(
-                ['code' => $data['code']],
-                array_merge($data, [
+            $existing = Template::where('code', $data['code'])->first();
+
+            if ($existing === null) {
+                // First run: create with null current_version_id (docx uploaded via upload endpoint).
+                Template::create(array_merge($data, [
                     'version' => 1,
                     'current_version_id' => null,
                     'product_codes' => [],
                     'country_codes' => [],
                     'client_category_codes' => [],
                     'department_ids' => [],
-                ]),
-            );
+                ]));
+            } else {
+                // Subsequent runs: update metadata but NEVER overwrite current_version_id
+                // (would orphan any uploaded docx version and break generation).
+                $existing->update(array_merge($data, [
+                    'product_codes' => $existing->product_codes ?? [],
+                    'country_codes' => $existing->country_codes ?? [],
+                    'client_category_codes' => $existing->client_category_codes ?? [],
+                    'department_ids' => $existing->department_ids ?? [],
+                ]));
+            }
         }
     }
 }

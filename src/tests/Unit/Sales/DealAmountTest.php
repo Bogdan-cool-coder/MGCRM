@@ -119,6 +119,59 @@ class DealAmountTest extends TestCase
         $this->assertSame(200_00, $recalced->amount);
     }
 
+    public function test_recalc_amount_folds_deal_level_discount_percent(): void
+    {
+        // B0 fix: deals.amount must be NET — the deal-level discount_percent is
+        // applied per line then summed (matches DealResource::products_net_total).
+        $deal = $this->makeDeal();
+        $deal->update(['discount_percent' => 50]);
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 100_00, 'discount' => 0, 'amount' => 100_00,
+        ]);
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 50_00, 'discount' => 0, 'amount' => 50_00,
+        ]);
+
+        $recalced = app(DealService::class)->recalcAmount($deal);
+
+        // 50% off each line: 50_00 + 25_00 = 75_00 (gross would be 150_00).
+        $this->assertSame(75_00, $recalced->amount);
+    }
+
+    public function test_recalc_amount_discount_rounds_per_line_then_sums(): void
+    {
+        // Per-line rounding then sum (the resource's documented convention): a 30%
+        // discount on two odd-kopeck lines rounds each line, not the grand total.
+        $deal = $this->makeDeal();
+        $deal->update(['discount_percent' => 30]);
+        // round(101 * 0.7) = round(70.7) = 71; round(103 * 0.7) = round(72.1) = 72.
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 101, 'discount' => 0, 'amount' => 101,
+        ]);
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 103, 'discount' => 0, 'amount' => 103,
+        ]);
+
+        $recalced = app(DealService::class)->recalcAmount($deal);
+
+        $this->assertSame(71 + 72, $recalced->amount);
+    }
+
+    public function test_locked_budget_ignores_discount_percent(): void
+    {
+        // A locked budget is a fixed figure — the deal-level discount does not
+        // re-derive it (recalcAmount short-circuits before the calculator).
+        $deal = $this->makeDeal();
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 100_00, 'discount' => 0, 'amount' => 100_00,
+        ]);
+        $deal->update(['amount' => 500_00, 'amount_locked' => true, 'discount_percent' => 40]);
+
+        $recalced = app(DealService::class)->recalcAmount($deal);
+
+        $this->assertSame(500_00, (int) $recalced->amount);
+    }
+
     public function test_locked_budget_recalc_does_not_overwrite_amount(): void
     {
         // N3: a locked budget is a fixed figure — adding a line item (which

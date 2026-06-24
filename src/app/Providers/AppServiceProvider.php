@@ -266,6 +266,13 @@ class AppServiceProvider extends ServiceProvider
             (int) config('inbox.rate_limit_per_minute', 30),
         )->by($request->ip()));
 
+        // Login / 2FA brute-force lockout (IAM-2) is NOT a named route-level
+        // limiter: a route throttle counts EVERY request (including successful
+        // logins), locking out legitimate repeat logins. App\Domain\Iam\Services\
+        // LoginThrottle implements the correct FAILURES-ONLY design (hit on
+        // failure, clear on success) and is applied inside AuthController /
+        // TwoFactorController.
+
         // Telegram approval channel (S2.9 — bot-specialist). Listeners are created
         // here (S2.6 dispatches these events without any listeners). They only
         // dispatch queued Jobs, so the web request is not blocked by Telegram I/O.

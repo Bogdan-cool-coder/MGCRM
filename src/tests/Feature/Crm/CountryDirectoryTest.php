@@ -29,16 +29,27 @@ class CountryDirectoryTest extends TestCase
     use RefreshDatabase;
 
     // =========================================================================
-    // READ — list / show (any authenticated user)
+    // READ — list / show (admin/director only; NEW-5)
     // =========================================================================
 
-    public function test_manager_can_list_all_countries_without_filter(): void
+    public function test_manager_cannot_list_countries(): void
+    {
+        // NEW-5: the /api/admin/* directory group is admin/director only.
+        Country::create(['code' => 'fr', 'name' => 'Frantsiya', 'sort_order' => 10, 'is_active' => true]);
+
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/admin/countries')->assertForbidden();
+    }
+
+    public function test_admin_can_list_all_countries_without_filter(): void
     {
         Country::create(['code' => 'fr', 'name' => 'Frantsiya', 'sort_order' => 10, 'is_active' => true]);
         Country::create(['code' => 'de', 'name' => 'Germaniya', 'sort_order' => 11, 'is_active' => false]);
 
-        $manager = User::factory()->create(['role' => Role::Manager]);
-        Sanctum::actingAs($manager, ['*']);
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($admin, ['*']);
 
         $response = $this->getJson('/api/admin/countries')->assertOk();
 
@@ -52,8 +63,8 @@ class CountryDirectoryTest extends TestCase
         Country::create(['code' => 'fr', 'name' => 'Frantsiya', 'sort_order' => 10, 'is_active' => true]);
         Country::create(['code' => 'de', 'name' => 'Germaniya', 'sort_order' => 11, 'is_active' => false]);
 
-        $manager = User::factory()->create(['role' => Role::Manager]);
-        Sanctum::actingAs($manager, ['*']);
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($admin, ['*']);
 
         $response = $this->getJson('/api/admin/countries?active_only=1')->assertOk();
 
@@ -65,15 +76,15 @@ class CountryDirectoryTest extends TestCase
     public function test_show_returns_country_resource(): void
     {
         $country = Country::create([
-            'code'         => 'gb',
-            'name'         => 'Velikobritaniya',
-            'name_en'      => 'United Kingdom',
+            'code' => 'gb',
+            'name' => 'Velikobritaniya',
+            'name_en' => 'United Kingdom',
             'phone_prefix' => '+44',
-            'sort_order'   => 20,
+            'sort_order' => 20,
         ]);
 
-        $manager = User::factory()->create(['role' => Role::Manager]);
-        Sanctum::actingAs($manager, ['*']);
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($admin, ['*']);
 
         $this->getJson("/api/admin/countries/{$country->id}")
             ->assertOk()
@@ -92,12 +103,12 @@ class CountryDirectoryTest extends TestCase
         Sanctum::actingAs($admin, ['*']);
 
         $response = $this->postJson('/api/admin/countries', [
-            'code'         => 'tr',
-            'name'         => 'Turtsiya',
-            'name_en'      => 'Turkey',
+            'code' => 'tr',
+            'name' => 'Turtsiya',
+            'name_en' => 'Turkey',
             'phone_prefix' => '+90',
-            'sort_order'   => 5,
-            'is_active'    => true,
+            'sort_order' => 5,
+            'is_active' => true,
         ]);
 
         $response->assertSuccessful()
@@ -177,15 +188,15 @@ class CountryDirectoryTest extends TestCase
         Sanctum::actingAs($admin, ['*']);
 
         $this->patchJson("/api/admin/countries/{$country->id}", [
-            'name'      => 'Belarus Updated',
+            'name' => 'Belarus Updated',
             'is_active' => false,
         ])->assertSuccessful()
             ->assertJsonPath('data.name', 'Belarus Updated')
             ->assertJsonPath('data.is_active', false);
 
         $this->assertDatabaseHas('crm_countries', [
-            'id'        => $country->id,
-            'name'      => 'Belarus Updated',
+            'id' => $country->id,
+            'name' => 'Belarus Updated',
             'is_active' => 0,
         ]);
     }
@@ -255,7 +266,7 @@ class CountryDirectoryTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Company::factory()->create([
             'owner_user_id' => $user->id,
-            'country_code'  => 'sg',
+            'country_code' => 'sg',
         ]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
@@ -278,11 +289,11 @@ class CountryDirectoryTest extends TestCase
 
         DB::table('crm_cities')->insert([
             'country_code' => 'hr',
-            'name'         => 'Zagreb',
-            'sort_order'   => 1,
-            'is_active'    => 1,
-            'created_at'   => now(),
-            'updated_at'   => now(),
+            'name' => 'Zagreb',
+            'sort_order' => 1,
+            'is_active' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
@@ -331,7 +342,7 @@ class CountryDirectoryTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Company::factory()->create([
             'owner_user_id' => $user->id,
-            'country_code'  => 'nz',
+            'country_code' => 'nz',
         ]);
 
         $service = app(CountryService::class);
@@ -375,16 +386,16 @@ class CountryDirectoryTest extends TestCase
     public function test_country_resource_shape(): void
     {
         $country = Country::create([
-            'code'         => 'jp',
-            'name'         => 'Japan',
-            'name_en'      => 'Japan',
+            'code' => 'jp',
+            'name' => 'Japan',
+            'name_en' => 'Japan',
             'phone_prefix' => '+81',
-            'sort_order'   => 25,
-            'is_active'    => true,
+            'sort_order' => 25,
+            'is_active' => true,
         ]);
 
-        $manager = User::factory()->create(['role' => Role::Manager]);
-        Sanctum::actingAs($manager, ['*']);
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($admin, ['*']);
 
         $this->getJson("/api/admin/countries/{$country->id}")
             ->assertOk()

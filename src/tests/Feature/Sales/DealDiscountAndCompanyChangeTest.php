@@ -81,6 +81,66 @@ class DealDiscountAndCompanyChangeTest extends TestCase
             ->assertJsonCount(2, 'data.products_discounted');
     }
 
+    public function test_patch_discount_percent_re_derives_net_deals_amount(): void
+    {
+        // B0 fix: changing discount_percent through PATCH must re-run recalcAmount
+        // so the canonical deals.amount becomes NET (every aggregate reads it).
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'discount_percent' => 0,
+            'amount' => 150_000,
+            'amount_locked' => false,
+        ]);
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 100_000, 'discount' => 0, 'amount' => 100_000,
+        ]);
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 50_000, 'discount' => 0, 'amount' => 50_000,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        // 10% off each line: 90_000 + 45_000 = 135_000 net.
+        $this->patchJson("/api/deals/{$deal->id}", ['discount_percent' => 10])
+            ->assertOk()
+            ->assertJsonPath('data.discount_percent', 10)
+            ->assertJsonPath('data.amount', 135_000);
+
+        $this->assertDatabaseHas('deals', [
+            'id' => $deal->id,
+            'amount' => 135_000,
+        ]);
+    }
+
+    public function test_patch_discount_percent_does_not_touch_locked_budget_amount(): void
+    {
+        // A locked budget is a fixed figure — a discount change leaves amount as-is.
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'discount_percent' => 0,
+            'amount' => 500_000,
+            'amount_locked' => true,
+        ]);
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id, 'quantity' => 1, 'unit_price' => 100_000, 'discount' => 0, 'amount' => 100_000,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", ['discount_percent' => 25])
+            ->assertOk()
+            ->assertJsonPath('data.amount', 500_000);
+
+        $this->assertDatabaseHas('deals', [
+            'id' => $deal->id,
+            'amount' => 500_000,
+        ]);
+    }
+
     public function test_discount_percent_zero_leaves_net_equal_to_gross(): void
     {
         $pipeline = $this->seedSalesPipeline();

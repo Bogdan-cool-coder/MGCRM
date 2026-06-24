@@ -23,6 +23,8 @@ class UpdateQuizQuestionRequest extends FormRequest
             'kind' => ['sometimes', Rule::enum(QuestionKind::class)],
             'explanation' => ['sometimes', 'nullable', 'string'],
             'points' => ['sometimes', 'integer', 'min:1'],
+            // HR uses is_draft=false to approve AI-generated draft questions.
+            'is_draft' => ['sometimes', 'boolean'],
         ];
     }
 }

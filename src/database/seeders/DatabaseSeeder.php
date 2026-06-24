@@ -27,9 +27,10 @@ class DatabaseSeeder extends Seeder
         AdminSeeder::class,
         // Org: default department directory (feeds the add-user form Select).
         DepartmentSeeder::class,
-        // Catalog (products + prices).
+        // Catalog (products + prices + baseline exchange rates).
         ProductGroupSeeder::class,
         ProductSeeder::class,
+        ExchangeRateSeeder::class,
         // CRM directories: acquisition channels, disconnect reasons.
         AcquisitionChannelSeeder::class,
         DisconnectReasonSeeder::class,
@@ -46,6 +47,7 @@ class DatabaseSeeder extends Seeder
         // message templates.
         LicensorEntitySeeder::class,
         TemplateSeeder::class,
+        TemplateVersionSeeder::class,
         TemplateVariableSeeder::class,
         ApprovalRouteSeeder::class,
         MessageTemplateSeeder::class,

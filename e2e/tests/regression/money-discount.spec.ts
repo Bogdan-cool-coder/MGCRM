@@ -63,13 +63,11 @@ function lineNet(lineGross: number, pct: number): number {
 }
 
 test('AUDIT sales-deals#0 — deal discount_percent folded into deals.amount', async () => {
-  test.fail(
-    true,
-    'AUDIT sales-deals#0 (B0 blocker): deal-level discount_percent is ignored in deals.amount; ' +
-      'recalcAmount sums gross line amounts and update() never re-runs recalc on a discount change, ' +
-      'so every money aggregate over-reports a discounted deal. RED until fixed — when this starts ' +
-      'PASSING, remove this test.fail() line to lock the fix.',
-  )
+  // FIXED (B0): DealService::recalcAmount now folds the deal-level discount_percent
+  // into deals.amount (DealAmountCalculator, per-line round then sum), and
+  // DealService::update re-runs recalcAmount on any discount change. deals.amount
+  // is therefore NET — every money aggregate reflects the discount. The original
+  // test.fail() regression-lock has been removed now that this passes.
 
   const token = await login(ctx, USERS.admin)
 

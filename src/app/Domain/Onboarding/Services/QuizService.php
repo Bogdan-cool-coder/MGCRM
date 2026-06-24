@@ -34,7 +34,8 @@ class QuizService
      */
     public function list(?int $lessonId = null): Collection
     {
-        $query = Quiz::query()->with('questions.options');
+        // Admin path: load ALL questions including drafts
+        $query = Quiz::query()->with('allQuestions.options');
 
         if ($lessonId !== null) {
             $query->where('lesson_id', $lessonId);
@@ -45,14 +46,18 @@ class QuizService
 
     public function show(Quiz $quiz): Quiz
     {
-        return $quiz->load('questions.options');
+        // Admin path: load ALL questions including drafts
+        return $quiz->load('allQuestions.options');
     }
 
+    /**
+     * Student-facing: returns quiz with published (non-draft) questions only.
+     */
     public function listByLesson(Lesson $lesson): ?Quiz
     {
         return Quiz::query()
             ->where('lesson_id', $lesson->id)
-            ->with('questions.options')
+            ->with('questions.options')   // questions() already filters is_draft=false
             ->first();
     }
 

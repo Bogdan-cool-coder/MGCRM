@@ -107,8 +107,13 @@ use Illuminate\Support\Facades\Route;
 | No token required. Login may hand back a limited temp token (2FA on).
 | `locale` runs here (despite no user) so a failed-login 422 is localized from
 | the SPA's Accept-Language instead of always falling to the app default (ru).
+|
+| Brute-force lockout (IAM-2) is NOT a route-level throttle — that counts every
+| request including successful logins and would lock out legitimate repeat
+| logins. AuthController applies a FAILURES-ONLY LoginThrottle (hit on failure,
+| clear on success) inside the auth flow instead.
 */
-Route::middleware('locale')->post('/login', [AuthController::class, 'login']);
+Route::middleware(['locale'])->post('/login', [AuthController::class, 'login']);
 
 /*
 |--------------------------------------------------------------------------
@@ -130,10 +135,13 @@ Route::middleware('throttle:inbound')->group(function (): void {
 |--------------------------------------------------------------------------
 | Authenticated by Sanctum but NOT gated by the `2fa` middleware — the limited
 | temp token issued at /login is exactly what /2fa/validate consumes to upgrade
-| to a full token.
+| to a full token. Brute-force lockout on failed TOTP attempts is applied
+| failures-only inside TwoFactorController (LoginThrottle), not as a route-level
+| throttle.
 */
 Route::middleware(['auth:sanctum', 'locale'])->group(function (): void {
-    Route::post('/2fa/validate', [TwoFactorController::class, 'validateCode']);
+    Route::post('/2fa/validate', [TwoFactorController::class, 'validateCode'])
+        ->middleware('ability:2fa:validate');
 });
 
 /*
@@ -332,8 +340,10 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // Products
         Route::apiResource('products', ProductController::class);
 
-        // Product Plans (nested under product)
-        Route::prefix('products/{product}')->name('products.')->group(function (): void {
+        // Product Plans (nested under product).
+        // scopeBindings() ensures {plan} is resolved as $product->plans()->find($planId),
+        // so a mismatched product/plan pair returns 404 instead of leaking a foreign plan.
+        Route::prefix('products/{product}')->name('products.')->scopeBindings()->group(function (): void {
             Route::get('plans', [ProductPlanController::class, 'index'])->name('plans.index');
             Route::post('plans', [ProductPlanController::class, 'store'])->name('plans.store');
             Route::get('plans/{plan}', [ProductPlanController::class, 'show'])->name('plans.show');
@@ -347,8 +357,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         });
 
         // Exchange Rates
-        // NOTE: /convert must be declared BEFORE /{exchangeRate} to avoid route clash.
+        // NOTE: static paths (/convert, /refresh) must be declared BEFORE /{exchangeRate}.
         Route::get('exchange-rates/convert', [ExchangeRateController::class, 'convert'])->name('exchange-rates.convert');
+        Route::post('exchange-rates/refresh', [ExchangeRateController::class, 'refresh'])->name('exchange-rates.refresh');
         Route::apiResource('exchange-rates', ExchangeRateController::class)
             ->parameter('exchange-rates', 'exchangeRate')
             ->names([
@@ -367,7 +378,14 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // Admin — Directories
     // =========================================================================
-    Route::prefix('admin')->name('admin.')->group(function (): void {
+    // NEW-5 / CRM-5: the whole admin-directory group (user mgmt, departments, and
+    // the shared reference catalogs) is gated to admin/director via the
+    // `admin-write` Gate. Previously only the *write* verbs on the directory
+    // controllers were gated, so manager could READ company-types / sources /
+    // countries / cities / contact-positions / acquisition-channels /
+    // disconnect-reasons (sensitive BI). The route-level Gate closes index/show
+    // in one place; the controllers keep their own write gates (defense in depth).
+    Route::prefix('admin')->middleware('can:admin-write')->name('admin.')->group(function (): void {
         // Settings → user management (admin/director). List + create only for
         // now; module-access config (position/department → permissions) lands
         // on a later milestone.
@@ -788,7 +806,11 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::patch('quiz-questions/{question}', [QuizQuestionController::class, 'update'])->name('quiz-questions.update');
         Route::delete('quiz-questions/{question}', [QuizQuestionController::class, 'destroy'])->name('quiz-questions.destroy');
 
-        // Options (nested under question).
+        // Nested question routes (FE uses /quizzes/{quiz}/questions/{question} for patch/delete)
+        Route::patch('quizzes/{quiz}/questions/{question}', [QuizQuestionController::class, 'update'])->name('quizzes.questions.update');
+        Route::delete('quizzes/{quiz}/questions/{question}', [QuizQuestionController::class, 'destroy'])->name('quizzes.questions.destroy');
+
+        // Options (nested under question — shallow path).
         // reorder MUST be declared BEFORE {option} to avoid routing clash.
         Route::post('quiz-questions/{question}/options/reorder', [QuizOptionController::class, 'reorder'])->name('quiz-questions.options.reorder');
         Route::get('quiz-questions/{question}/options', [QuizOptionController::class, 'index'])->name('quiz-questions.options.index');
@@ -797,6 +819,13 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // Shallow option routes (update/delete without question prefix)
         Route::patch('quiz-options/{option}', [QuizOptionController::class, 'update'])->name('quiz-options.update');
         Route::delete('quiz-options/{option}', [QuizOptionController::class, 'destroy'])->name('quiz-options.destroy');
+
+        // Nested option routes (FE uses /quizzes/{quiz}/questions/{question}/options/...)
+        Route::post('quizzes/{quiz}/questions/{question}/options/reorder', [QuizOptionController::class, 'reorder'])->name('quizzes.questions.options.reorder');
+        Route::get('quizzes/{quiz}/questions/{question}/options', [QuizOptionController::class, 'index'])->name('quizzes.questions.options.index');
+        Route::post('quizzes/{quiz}/questions/{question}/options', [QuizOptionController::class, 'store'])->name('quizzes.questions.options.store');
+        Route::patch('quizzes/{quiz}/questions/{question}/options/{option}', [QuizOptionController::class, 'update'])->name('quizzes.questions.options.update');
+        Route::delete('quizzes/{quiz}/questions/{question}/options/{option}', [QuizOptionController::class, 'destroy'])->name('quizzes.questions.options.destroy');
     });
 
     // =========================================================================

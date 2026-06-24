@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources\Sales;
 
 use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Services\DealAmountCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,10 +17,15 @@ class DealResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'amount' => $this->amount, // kopecks
-            // Deal-level discount in PERCENT (0..50). Applied uniformly to the line
-            // items to derive products_net_total below; the per-line discount on
-            // each product (kopecks) is separate. Always present (defaults to 0).
+            // kopecks — NET: the canonical deal value with discount_percent already
+            // folded into the line-item sum (DealService::recalcAmount). Every money
+            // aggregate (board/list/KPI/company/contact/export) reads this directly.
+            // When amount_locked is true it is a fixed budget instead.
+            'amount' => $this->amount,
+            // Deal-level discount in PERCENT (0..50). Already folded into `amount`
+            // above; also applied uniformly to the line items to derive
+            // products_net_total. The per-line discount on each product (kopecks) is
+            // separate. Always present (defaults to 0).
             'discount_percent' => (int) ($this->discount_percent ?? 0),
             // When true, amount is a fixed budget and is NOT re-derived from line
             // items (it may differ from sum(products) by design).
@@ -128,8 +134,10 @@ class DealResource extends JsonResource
             // Recomputed line totals after applying the deal-level discount_percent
             // uniformly to each (already per-line-discounted) product amount. All
             // kopecks; the deal-level percent is applied AFTER the per-line discount.
-            // products_gross_total = Σ line.amount (== Deal.amount when unlocked).
-            // products_net_total   = Σ round(line.amount * (1 - pct/100)).
+            // products_gross_total = Σ line.amount (PRE deal-level discount).
+            // products_net_total   = Σ round(line.amount * (1 - pct/100))
+            //                        (== Deal.amount when unlocked — the canonical
+            //                        NET value; see DealService::recalcAmount).
             // products_discounted  = [{ id, net_amount }] so the FE can render the
             //   discounted price under each line. Only when products are loaded.
             $this->mergeWhen($this->resource->relationLoaded('products'), fn (): array => $this->discountedTotals()),
@@ -170,7 +178,11 @@ class DealResource extends JsonResource
      */
     private function discountedTotals(): array
     {
-        $pct = max(0, min(50, (int) ($this->discount_percent ?? 0)));
+        // Same calculator that DealService::recalcAmount uses to persist
+        // deals.amount — so products_net_total can never drift from the canonical
+        // (now NET) deals.amount. Resolved via app() (Resources are not DI'd).
+        $calculator = app(DealAmountCalculator::class);
+        $pct = $calculator->clampPercent($this->discount_percent ?? 0);
 
         $gross = 0;
         $net = 0;
@@ -178,8 +190,7 @@ class DealResource extends JsonResource
 
         foreach ($this->products as $line) {
             $lineGross = (int) $line->amount;
-            // Integer-kopeck rounding: gross * (100 - pct) / 100.
-            $lineNet = (int) round($lineGross * (100 - $pct) / 100);
+            $lineNet = $calculator->applyPercent($lineGross, $pct);
 
             $gross += $lineGross;
             $net += $lineNet;

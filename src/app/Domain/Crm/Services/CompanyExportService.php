@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Crm\Services;
 
 use App\Domain\Crm\Models\Company;
+use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -20,6 +22,10 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 class CompanyExportService
 {
     private const CHUNK = 500;
+
+    public function __construct(
+        private readonly VisibilityResolver $visibility,
+    ) {}
 
     private const HEADERS = [
         'ID',
@@ -38,11 +44,16 @@ class CompanyExportService
     ];
 
     /**
-     * Build XLSX bytes for the given company IDs.
+     * Build XLSX bytes for the given company IDs, scoped to what $actor may see.
+     *
+     * When $companyIds is non-empty, the export is restricted to that subset
+     * intersected with the actor's visibility scope (selected-rows export).
+     * When $companyIds is empty, exports the actor's entire visible set — never
+     * the full table regardless of who calls this method.
      *
      * @param  list<int>  $companyIds
      */
-    public function buildXlsx(array $companyIds): string
+    public function buildXlsx(array $companyIds, User $actor): string
     {
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -54,7 +65,13 @@ class CompanyExportService
 
         $row = 2;
 
-        Company::query()
+        // Apply row-level visibility scope first — the actor can never export
+        // companies they cannot list. Then narrow to the requested id subset.
+        $this->visibility->applyScope(
+            Company::query(),
+            $actor,
+            ['owner_user_id', 'responsible_user_id'],
+        )
             ->when($companyIds !== [], static fn ($q) => $q->whereIn('id', $companyIds))
             ->with(['companyType', 'ownerUser', 'responsibleUser'])
             ->orderBy('id')

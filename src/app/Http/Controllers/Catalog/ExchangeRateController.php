@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Catalog;
 
+use App\Domain\Catalog\Jobs\UpdateExchangeRatesJob;
 use App\Domain\Catalog\Models\ExchangeRate;
 use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Http\Controllers\Controller;
@@ -101,6 +102,20 @@ class ExchangeRateController extends Controller
         $exchangeRate->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * POST /api/catalog/exchange-rates/refresh
+     * Dispatches UpdateExchangeRatesJob on-demand. Admin/director only.
+     * Returns 202 Accepted immediately; job runs async.
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        $this->authorize('create', ExchangeRate::class);
+
+        UpdateExchangeRatesJob::dispatch();
+
+        return response()->json(['message' => 'Exchange rate refresh queued.'], 202);
     }
 
     /**

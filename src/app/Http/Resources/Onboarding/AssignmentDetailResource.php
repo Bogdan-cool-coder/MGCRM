@@ -40,21 +40,28 @@ class AssignmentDetailResource extends JsonResource
                 return [
                     'id' => $course->id,
                     'title' => $course->title,
+                    'is_published' => $course->is_published,
                     'modules' => $course->relationLoaded('modules')
                         ? $course->modules->map(static function ($module) use ($completedLessonIds): array {
                             return [
                                 'id' => $module->id,
                                 'title' => $module->title,
+                                // Only expose published lessons to students
                                 'lessons' => $module->relationLoaded('lessons')
-                                    ? $module->lessons->map(static function ($lesson) use ($completedLessonIds): array {
-                                        return [
-                                            'id' => $lesson->id,
-                                            'title' => $lesson->title,
-                                            'kind' => $lesson->kind?->value,
-                                            'is_published' => $lesson->is_published,
-                                            'completed' => $completedLessonIds->contains($lesson->id),
-                                        ];
-                                    })->values()->all()
+                                    ? $module->lessons
+                                        ->filter(static fn ($lesson): bool => (bool) $lesson->is_published)
+                                        ->map(static function ($lesson) use ($completedLessonIds): array {
+                                            return [
+                                                'id' => $lesson->id,
+                                                'title' => $lesson->title,
+                                                'kind' => $lesson->kind?->value,
+                                                'is_published' => $lesson->is_published,
+                                                'duration_minutes' => $lesson->duration_minutes,
+                                                // Serialize content body so the lesson player renders
+                                                'content' => $lesson->content,
+                                                'completed' => $completedLessonIds->contains($lesson->id),
+                                            ];
+                                        })->values()->all()
                                     : [],
                             ];
                         })->values()->all()

@@ -57,6 +57,8 @@ class DocumentItemController extends Controller
     ): JsonResource {
         $this->authorize('update', $document);
 
+        abort_unless((int) $item->document_id === $document->id, 404);
+
         $updated = $this->service->updateItem($document, $item, $request->validated());
 
         return DocumentItemResource::make($updated);
@@ -68,6 +70,8 @@ class DocumentItemController extends Controller
     public function destroy(Document $document, DocumentItem $item): JsonResponse
     {
         $this->authorize('update', $document);
+
+        abort_unless((int) $item->document_id === $document->id, 404);
 
         $this->service->deleteItem($document, $item);
 

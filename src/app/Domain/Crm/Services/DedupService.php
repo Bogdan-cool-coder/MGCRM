@@ -512,20 +512,74 @@ class DedupService
     }
 
     /**
-     * Transfer Company's contact links to master, then soft-delete duplicate.
+     * Transfer ALL of the duplicate company's child FK rows to master, then
+     * soft-delete the duplicate. Must be called inside an existing DB::transaction.
+     *
+     * Tables re-parented (in order, to respect FK dependencies):
+     *   1. crm_contact_company_links  — pivot (skip if master already has the contact)
+     *   2. deals                      — deals.company_id
+     *   3. documents                  — documents.source_company_id
+     *   4. company_requisites         — company_requisites.company_id
+     *   5. company_channels           — company_channels.company_id
+     *   6. company_client_status_log  — company_client_status_log.company_id
+     *   7. crm_companies (holding)    — crm_companies.holding_id (subsidiaries of dup → master)
+     *   8. acquisition_channel_history — polymorphic entity_id where entity_type='company'
+     *
+     * After re-parenting, the duplicate is soft-deleted (SoftDeletes sets deleted_at).
+     * DB-level FK CASCADE/RESTRICT actions do NOT fire on soft-delete, so we must
+     * reassign every referencing row explicitly here before the soft-delete.
      */
     private function mergeCompany(int $masterId, int $dupId): void
     {
-        $masterLinks = ContactCompanyLink::where('company_id', $masterId)
+        // 1. Contact-company pivot: transfer links not already on master.
+        $masterContactIds = ContactCompanyLink::where('company_id', $masterId)
             ->pluck('contact_id')
             ->all();
 
         ContactCompanyLink::where('company_id', $dupId)
-            ->whereNotIn('contact_id', $masterLinks)
+            ->whereNotIn('contact_id', $masterContactIds)
             ->update(['company_id' => $masterId, 'is_primary' => false]);
 
+        // Delete any remaining links (master already has them — duplicates).
         ContactCompanyLink::where('company_id', $dupId)->delete();
 
+        // 2. Deals: re-parent deals.company_id.
+        DB::table('deals')
+            ->where('company_id', $dupId)
+            ->update(['company_id' => $masterId]);
+
+        // 3. Documents: re-parent source_company_id (nullable FK).
+        DB::table('documents')
+            ->where('source_company_id', $dupId)
+            ->update(['source_company_id' => $masterId]);
+
+        // 4. Requisites: re-parent company_requisites.company_id.
+        DB::table('company_requisites')
+            ->where('company_id', $dupId)
+            ->update(['company_id' => $masterId]);
+
+        // 5. Company channels: re-parent company_channels.company_id.
+        DB::table('company_channels')
+            ->where('company_id', $dupId)
+            ->update(['company_id' => $masterId]);
+
+        // 6. Client status log: re-parent company_client_status_log.company_id.
+        DB::table('company_client_status_log')
+            ->where('company_id', $dupId)
+            ->update(['company_id' => $masterId]);
+
+        // 7. Holding tree: subsidiaries pointing at the dup become children of master.
+        DB::table('crm_companies')
+            ->where('holding_id', $dupId)
+            ->update(['holding_id' => $masterId]);
+
+        // 8. Polymorphic acquisition-channel history (entity_type = 'company').
+        DB::table('acquisition_channel_history')
+            ->where('entity_type', 'company')
+            ->where('entity_id', $dupId)
+            ->update(['entity_id' => $masterId]);
+
+        // Finally: soft-delete the now-orphan-free duplicate.
         Company::where('id', $dupId)->delete();
     }
 

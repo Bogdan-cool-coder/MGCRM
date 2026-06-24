@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\AuthService;
+use App\Domain\Iam\Services\LoginThrottle;
 use App\Domain\Iam\Services\TwoFactorService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ValidateTwoFactorRequest;
@@ -27,6 +28,7 @@ class TwoFactorController extends Controller
     public function __construct(
         private readonly TwoFactorService $twoFactor,
         private readonly AuthService $auth,
+        private readonly LoginThrottle $throttle,
     ) {}
 
     /**
@@ -98,11 +100,26 @@ class TwoFactorController extends Controller
             ]);
         }
 
-        $token = $this->auth->completeTwoFactor(
-            $user,
-            $request->validated('totp_code'),
-            $request->validated('backup_code'),
-        );
+        // Brute-force gate (IAM-2): reject BEFORE verifying TOTP once the cap of
+        // consecutive FAILED second-factor attempts is hit. Keyed by the
+        // temp-token user id + IP. Failures-only — a valid code clears the budget.
+        $this->throttle->ensureTwoFactorNotLocked($request);
+
+        try {
+            $token = $this->auth->completeTwoFactor(
+                $user,
+                $request->validated('totp_code'),
+                $request->validated('backup_code'),
+            );
+        } catch (ValidationException $e) {
+            // Wrong TOTP / backup code counts as a failure.
+            $this->throttle->hitTwoFactor($request);
+
+            throw $e;
+        }
+
+        // Success resets the 2FA budget.
+        $this->throttle->clearTwoFactor($request);
 
         return UserResource::make($user)->additional([
             'token' => $token->plainTextToken,

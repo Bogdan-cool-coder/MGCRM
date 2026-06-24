@@ -66,6 +66,10 @@ class ContactBulkController extends Controller
 
     public function export(Request $request): Response
     {
+        // Require viewAny authorization — without this any authenticated user
+        // could dump the full contacts table regardless of role (CRM-B2).
+        $this->authorize('viewAny', \App\Domain\Crm\Models\Contact::class);
+
         $request->validate([
             'contact_ids' => ['sometimes', 'array'],
             'contact_ids.*' => ['integer', 'min:1'],
@@ -73,7 +77,9 @@ class ContactBulkController extends Controller
 
         $contactIds = $request->input('contact_ids', []);
 
-        $xlsx = $this->exportService->buildXlsx($contactIds);
+        // Pass the actor so the export service applies the same visibility scope
+        // as the list endpoint — a manager can only export their own contacts.
+        $xlsx = $this->exportService->buildXlsx($contactIds, $request->user());
 
         return response($xlsx, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
