@@ -145,11 +145,11 @@ class ExchangeRateService
         $url = rtrim((string) $apiUrl, '/').'/latest';
         $params = [
             'base' => 'USD',
-            'symbols' => implode(',', $supported),
+            'currencies' => implode(',', $supported),
         ];
 
         if ($apiKey) {
-            $params['access_key'] = $apiKey;
+            $params['api_key'] = $apiKey;
         }
 
         $response = Http::timeout(15)->get($url, $params);

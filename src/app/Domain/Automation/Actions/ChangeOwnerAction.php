@@ -153,7 +153,9 @@ final class ChangeOwnerAction implements ActionHandler
             $filter = is_array($config['user_pool_filter'] ?? null) ? $config['user_pool_filter'] : [];
 
             if (! empty($filter['role'])) {
-                $query->where('role', $filter['role']);
+                // Role is a spatie grant, not a users column (IAM-1) — filter via
+                // the spatie role() query scope on the active (sanctum) guard.
+                $query->role($filter['role']);
             }
 
             if (isset($filter['department'])) {

@@ -113,12 +113,34 @@
                 <i class="pi pi-clock open-tasks__meta-icon" />
                 {{ task.due_at ? formatDueDateShort(task.due_at) : t('activity.fields.dueAt') }}
               </button>
-              <!-- DatePicker inline -->
+              <!-- DatePicker inline + quick-reschedule shortcuts -->
               <div
                 v-if="datePickerOpenId === task.id"
                 class="open-tasks__picker-popover open-tasks__picker-popover--date"
                 @click.stop
               >
+                <!-- Quick shortcuts: «+1 день» / «+1 неделя» (server-side TZ-correct) -->
+                <div class="open-tasks__reschedule-quick">
+                  <button
+                    type="button"
+                    class="open-tasks__reschedule-btn"
+                    :disabled="reschedulingId === task.id"
+                    @click.stop="rescheduleTask(task, '+1d')"
+                  >
+                    <i class="pi pi-angle-right" />
+                    {{ t('activity.reschedule.plus1d') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="open-tasks__reschedule-btn"
+                    :disabled="reschedulingId === task.id"
+                    @click.stop="rescheduleTask(task, '+1w')"
+                  >
+                    <i class="pi pi-angle-double-right" />
+                    {{ t('activity.reschedule.plus1w') }}
+                  </button>
+                </div>
+                <p class="open-tasks__reschedule-label">{{ t('activity.reschedule.pickDate') }}</p>
                 <DatePicker
                   :model-value="taskDueDrafts[task.id] ?? (task.due_at ? new Date(task.due_at) : null)"
                   inline
@@ -291,7 +313,7 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import DatePicker from 'primevue/datepicker'
 import { kindIcon } from '@/utils/activity'
-import { activityApi } from '@/api/activity'
+import { activityApi, type ReschedulePreset } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityTargetType } from '@/entities/activity'
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
@@ -441,6 +463,7 @@ async function patchKind(task: ActivityDto, kind: ActivityKind) {
 
 const datePickerOpenId = ref<number | null>(null)
 const taskDueDrafts = reactive<Record<number, Date | null>>({})
+const reschedulingId = ref<number | null>(null)
 
 function toggleDatePicker(taskId: number) {
   typePickerOpenId.value = null
@@ -457,6 +480,23 @@ async function patchDueAt(task: ActivityDto, date: Date | null) {
     emit('updated', updated)
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  }
+}
+
+// Quick reschedule shortcut (+1d / +1w) — moves ONLY due_at via the dedicated
+// endpoint (TZ-correct server side). Optimistic emit + toast; rollback on error.
+async function rescheduleTask(task: ActivityDto, preset: ReschedulePreset) {
+  if (reschedulingId.value !== null) return
+  reschedulingId.value = task.id
+  datePickerOpenId.value = null
+  try {
+    const updated = await activityApi.rescheduleActivity(task.id, { preset })
+    emit('updated', updated)
+    toast.add({ severity: 'success', summary: t('activity.reschedule.success'), life: 2000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  } finally {
+    reschedulingId.value = null
   }
 }
 
@@ -1000,6 +1040,70 @@ function onDelete(id: number) {
   &--date {
     min-width: 280px;
     padding: $space-2;
+  }
+}
+
+// ─── Quick-reschedule shortcuts (inside the date popover) ─────────────────────
+
+.open-tasks__reschedule-quick {
+  display: flex;
+  gap: $space-1;
+  margin-bottom: $space-2;
+}
+
+.open-tasks__reschedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 4px 8px;
+  border: 1px solid var(--p-surface-300);
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $surface-600;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--app-transition-fast);
+
+  .app-dark & {
+    border-color: var(--p-surface-600);
+    color: var(--p-surface-300);
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--p-primary-color);
+    color: var(--p-primary-color);
+    background: var(--p-primary-50);
+
+    .app-dark & {
+      background: var(--p-surface-200);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  i {
+    font-size: $font-size-3xs;
+  }
+}
+
+.open-tasks__reschedule-label {
+  margin: 0 0 $space-1;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-semibold;
+  color: $surface-400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  .app-dark & {
+    color: var(--p-surface-400);
   }
 }
 

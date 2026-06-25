@@ -152,12 +152,20 @@ class ActivityController extends Controller
     }
 
     /**
-     * Quick due-date shift from the task list — POST a {preset} of tomorrow /
-     * next_week / next_month; the service computes due_at in the app timezone.
+     * Quick due-date shift from the task list — POST EXACTLY ONE of {preset}
+     * (tomorrow / +1d / +1w / next_monday, resolved in the operational timezone)
+     * or {due_at} (an explicit absolute date from the picker). Only moves due_at:
+     * status and engagement are untouched.
      */
     public function reschedule(RescheduleActivityRequest $request, Activity $activity): JsonResource
     {
-        $rescheduled = $this->service->reschedule($activity, $request->validated('preset'));
+        $dueAt = $request->date('due_at');
+
+        $rescheduled = $this->service->reschedule(
+            $activity,
+            $request->validated('preset'),
+            $dueAt,
+        );
 
         return ActivityResource::make(
             $rescheduled->load(['responsible:id,full_name', 'createdBy:id,full_name', 'completedBy:id,full_name'])

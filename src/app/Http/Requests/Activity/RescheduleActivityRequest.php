@@ -8,10 +8,14 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Quick due-date shift from the task list ("завтра / через неделю / через
- * месяц"). The preset is resolved server-side in the app timezone by
- * ActivityService::reschedule(). Rescheduling is an update on the task, so it is
- * gated by the update policy.
+ * Quick due-date shift from the task list. The body carries EXACTLY ONE of:
+ *  - preset  — a relative shortcut resolved server-side in the operational
+ *              timezone (tomorrow / +1d / +1w / next_monday; next_week/next_month
+ *              kept as legacy aliases), or
+ *  - due_at  — an explicit absolute date(time) chosen in the picker.
+ *
+ * Rescheduling only moves due_at (status/engagement are untouched) and is gated by
+ * the same update policy as a normal edit — see ActivityService::reschedule().
  */
 class RescheduleActivityRequest extends FormRequest
 {
@@ -23,7 +27,16 @@ class RescheduleActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'preset' => ['required', 'string', Rule::in(['tomorrow', 'next_week', 'next_month'])],
+            'preset' => [
+                'required_without:due_at',
+                'prohibits:due_at',
+                'string',
+                Rule::in(['tomorrow', '+1d', '+1w', 'next_monday', 'next_week', 'next_month']),
+            ],
+            'due_at' => [
+                'required_without:preset',
+                'date',
+            ],
         ];
     }
 }

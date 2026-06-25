@@ -54,7 +54,7 @@ class SeedQaStudentCommand extends Command
         // ------------------------------------------------------------------
         // 2. Create or update the QA student user
         // ------------------------------------------------------------------
-        $admin = User::where('role', Role::Admin->value)->first();
+        $admin = User::role(Role::Admin->value)->first();
 
         $student = User::updateOrCreate(
             ['email' => $email],

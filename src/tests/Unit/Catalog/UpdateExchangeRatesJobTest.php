@@ -151,4 +151,56 @@ class UpdateExchangeRatesJobTest extends TestCase
 
         $this->assertDatabaseCount('catalog_exchange_rates', $expectedPairs);
     }
+
+    /**
+     * fxratesapi.com returns {success:true, base:.., rates:{..}} — same shape as
+     * exchangerate.host but uses api_key param (not access_key). The service must
+     * hit /latest with api_key and parse the 'rates' key successfully.
+     */
+    public function test_job_accepts_fxratesapi_response_shape(): void
+    {
+        Http::fake([
+            '*/latest*' => Http::response([
+                'success' => true,
+                'terms' => 'https://fxratesapi.com/terms',
+                'privacy' => 'https://fxratesapi.com/privacy',
+                'timestamp' => 1719187200,
+                'date' => Carbon::today()->toDateString(),
+                'base' => 'USD',
+                'rates' => [
+                    'USD' => 1.0,
+                    'RUB' => 89.5,
+                    'KZT' => 453.0,
+                    'EUR' => 0.91,
+                    'UZS' => 12750.0,
+                    'AED' => 3.67,
+                ],
+            ], 200),
+        ]);
+
+        $service = new ExchangeRateService;
+        $job = new UpdateExchangeRatesJob;
+        $job->handle($service);
+
+        $supported = config('crm.currencies.supported', ['RUB', 'USD', 'EUR', 'KZT', 'UZS', 'AED']);
+        $expectedPairs = count($supported) * (count($supported) - 1);
+
+        // All 30 cross-rate pairs written.
+        $this->assertDatabaseCount('catalog_exchange_rates', $expectedPairs);
+
+        // Source label is 'api'.
+        $this->assertDatabaseHas('catalog_exchange_rates', [
+            'from_code' => 'USD',
+            'to_code' => 'RUB',
+            'source' => 'api',
+        ]);
+
+        // Verify the request was made to /latest and does NOT use the legacy
+        // 'access_key' param (exchangerate.host); fxratesapi uses 'api_key'
+        // (only sent when the key is non-empty — no key in tests is expected).
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+            return str_contains($request->url(), '/latest')
+                && ! array_key_exists('access_key', $request->data());
+        });
+    }
 }

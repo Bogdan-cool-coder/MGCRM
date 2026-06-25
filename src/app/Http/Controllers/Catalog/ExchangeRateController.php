@@ -138,6 +138,20 @@ class ExchangeRateController extends Controller
         $amount = (int) $validated['amount'];
         $date = $validated['date'] ?? Carbon::today()->toDateString();
 
+        // Same-currency: echo amount, rate 1 — no DB lookup needed.
+        if ($from === $to) {
+            return response()->json([
+                'data' => [
+                    'from_code' => $from,
+                    'to_code' => $to,
+                    'from_amount' => $amount,
+                    'to_amount' => $amount,
+                    'rate' => '1.000000',
+                    'date' => $date,
+                ],
+            ]);
+        }
+
         $rate = $this->service->getRate($from, $to, $date);
 
         if ($rate === null) {

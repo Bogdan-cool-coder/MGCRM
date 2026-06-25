@@ -193,10 +193,11 @@ class AdminUserManagementTest extends TestCase
             'phone' => '+7 999 123-45-67',
             'job_title' => 'Юрист',
             'department_id' => $department->id,
-            'role' => 'lawyer',
             'is_active' => true,
         ]);
 
+        // Role is no longer a users column (IAM-1: spatie is the single store) —
+        // assert it on the authoritative spatie grant + the virtual accessor.
         $created = User::where('email', 'new.user@mgcrm.test')->firstOrFail();
         $this->assertTrue($created->hasRole('lawyer'));
         $this->assertSame(Role::Lawyer, $created->role);

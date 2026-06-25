@@ -36,6 +36,35 @@ class LoginTest extends TestCase
         $this->assertSame(1, $user->tokens()->count());
     }
 
+    public function test_login_token_expires_in_thirty_days(): void
+    {
+        // config/sanctum.php sets a 30-day (43200 min) TTL; Sanctum stamps the
+        // resulting expires_at on every issued personal access token. The SPA's
+        // axios 401 interceptor handles the expired-token case (redirect to login).
+        $this->assertSame(43200, config('sanctum.expiration'));
+
+        $user = User::factory()->create([
+            'email' => 'ttl@mgcrm.test',
+            'password' => Hash::make('secret-pass'),
+            'role' => Role::Manager,
+        ]);
+
+        $this->postJson('/api/login', [
+            'email' => 'ttl@mgcrm.test',
+            'password' => 'secret-pass',
+        ])->assertOk();
+
+        $token = $user->tokens()->latest('id')->firstOrFail();
+
+        $this->assertNotNull($token->expires_at, 'Issued token must carry an expires_at.');
+        $this->assertEqualsWithDelta(
+            now()->addMinutes(43200)->timestamp,
+            $token->expires_at->timestamp,
+            120, // 2-minute tolerance for execution/clock skew
+            'Token must expire ~30 days from issue.',
+        );
+    }
+
     public function test_login_with_wrong_password_fails(): void
     {
         User::factory()->create([
@@ -153,13 +182,13 @@ class LoginTest extends TestCase
             ->assertJsonMissingPath('token');
     }
 
-    public function test_issued_api_token_does_not_expire_by_default(): void
+    public function test_issued_api_token_expires_in_thirty_days_not_immediately(): void
     {
-        // Guards the prod incident where tokens died after 1-3 minutes: with
-        // sanctum.expiration null and no expires_at set at creation, the session
-        // token must never carry an expiry. A blank SANCTUM_TOKEN_EXPIRATION env
-        // must coerce to null here, not to a truthy "expire after 0 minutes".
-        $this->assertNull(config('sanctum.expiration'));
+        // Guards the prod incident where tokens died after 1-3 minutes: a blank
+        // SANCTUM_TOKEN_EXPIRATION env must fall back to the 30-day (43200 min)
+        // default, NOT to a truthy "expire after 0 minutes". A freshly issued
+        // session token must therefore carry an expiry comfortably in the future.
+        $this->assertSame(43200, config('sanctum.expiration'));
 
         $user = User::factory()->create([
             'email' => 'manager@mgcrm.test',
@@ -171,6 +200,11 @@ class LoginTest extends TestCase
             'password' => 'secret-pass',
         ])->assertOk();
 
-        $this->assertNull($user->tokens()->sole()->expires_at);
+        $expiresAt = $user->tokens()->sole()->expires_at;
+
+        $this->assertNotNull($expiresAt);
+        // Far from the "expired almost immediately" footgun.
+        $this->assertTrue($expiresAt->greaterThan(now()->addDays(29)));
+        $this->assertTrue($expiresAt->lessThanOrEqualTo(now()->addDays(31)));
     }
 }

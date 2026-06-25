@@ -464,7 +464,7 @@ class ManagerKpiService
      * lead via `manager_id` but have a NULL `department_id` (and vice-versa). Only
      * active sales-side users (manager/director) are considered colleagues.
      *
-     * @return list<int>  distinct user ids, always containing the target id
+     * @return list<int> distinct user ids, always containing the target id
      */
     private function resolveTeamMemberIds(User $target): array
     {
@@ -479,7 +479,7 @@ class ManagerKpiService
 
         $ids = User::query()
             ->where('is_active', true)
-            ->whereIn('role', $salesRoles)
+            ->role($salesRoles)
             ->where(function ($query) use ($target, $hasDepartment, $hasManager): void {
                 if ($hasDepartment) {
                     $query->orWhere('department_id', $target->department_id);

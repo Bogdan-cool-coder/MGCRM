@@ -35,7 +35,7 @@ class UserManagementController extends Controller
         $perPage = (int) ($request->validated('per_page') ?? 25);
 
         $users = User::query()
-            ->with('department')
+            ->with(['department', 'roles'])
             ->where('is_service', false)
             ->when(
                 $search !== null && $search !== '',
@@ -48,7 +48,7 @@ class UserManagementController extends Controller
                     });
                 }
             )
-            ->when($role !== null, fn ($q) => $q->where('role', $role))
+            ->when($role !== null, fn ($q) => $q->role($role))
             ->when($departmentId !== null, fn ($q) => $q->where('department_id', $departmentId))
             ->when(
                 $request->validated('is_active') !== null,

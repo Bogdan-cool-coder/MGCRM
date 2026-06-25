@@ -20,7 +20,11 @@ class BulkAssignTest extends TestCase
 
     public function test_admin_can_bulk_assign_multiple_users(): void
     {
-        Event::fake();
+        // Fake only the domain event under test — a bare Event::fake() would
+        // also suppress the User model `saved` hook that syncs the spatie role
+        // (IAM-1: role is a spatie-backed virtual attribute, no column), leaving
+        // the acting admin without an authoritative role → 403.
+        Event::fake([CourseAssigned::class]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create(['is_published' => true]);
@@ -42,7 +46,11 @@ class BulkAssignTest extends TestCase
 
     public function test_bulk_assign_skips_existing_assignment(): void
     {
-        Event::fake();
+        // Fake only the domain event under test — a bare Event::fake() would
+        // also suppress the User model `saved` hook that syncs the spatie role
+        // (IAM-1: role is a spatie-backed virtual attribute, no column), leaving
+        // the acting admin without an authoritative role → 403.
+        Event::fake([CourseAssigned::class]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create(['is_published' => true]);
@@ -71,7 +79,11 @@ class BulkAssignTest extends TestCase
 
     public function test_bulk_assign_returns_created_and_skipped_count(): void
     {
-        Event::fake();
+        // Fake only the domain event under test — a bare Event::fake() would
+        // also suppress the User model `saved` hook that syncs the spatie role
+        // (IAM-1: role is a spatie-backed virtual attribute, no column), leaving
+        // the acting admin without an authoritative role → 403.
+        Event::fake([CourseAssigned::class]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create(['is_published' => true]);
@@ -147,7 +159,11 @@ class BulkAssignTest extends TestCase
 
     public function test_course_assigned_event_dispatched_for_each_new_assignment(): void
     {
-        Event::fake();
+        // Fake only the domain event under test — a bare Event::fake() would
+        // also suppress the User model `saved` hook that syncs the spatie role
+        // (IAM-1: role is a spatie-backed virtual attribute, no column), leaving
+        // the acting admin without an authoritative role → 403.
+        Event::fake([CourseAssigned::class]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create(['is_published' => true]);

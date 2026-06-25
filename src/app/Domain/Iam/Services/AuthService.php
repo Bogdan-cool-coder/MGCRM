@@ -78,10 +78,21 @@ class AuthService
 
     /**
      * Issue a fully authenticated API token.
+     *
+     * The token carries an explicit expires_at derived from the configured
+     * Sanctum TTL (config/sanctum.php — 30 days), so the expiry is persisted on
+     * the token row (not only enforced dynamically at validation time). When the
+     * SPA later sends an expired token it receives a 401 and the axios
+     * interceptor redirects to the login screen.
      */
     public function issueApiToken(User $user): NewAccessToken
     {
-        return $user->createToken(self::API_TOKEN_NAME, ['*']);
+        $ttlMinutes = config('sanctum.expiration');
+        $expiresAt = is_int($ttlMinutes) && $ttlMinutes > 0
+            ? now()->addMinutes($ttlMinutes)
+            : null;
+
+        return $user->createToken(self::API_TOKEN_NAME, ['*'], $expiresAt);
     }
 
     /**

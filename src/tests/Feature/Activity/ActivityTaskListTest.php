@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Activity;
 
+use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Sales\Models\PipelineStage;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -169,7 +172,7 @@ class ActivityTaskListTest extends TestCase
         // Freeze the clock so the service and the test resolve the operational day
         // start from the same instant (the boundary math is otherwise racy at a
         // Dubai-midnight crossing). 10:00 UTC = 14:00 Dubai — mid-day in both.
-        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
 
         $manager = $this->manager();
         $activity = Activity::factory()
@@ -184,22 +187,22 @@ class ActivityTaskListTest extends TestCase
         // timezone midnight (Дубай-окно), not the UTC server clock (MINOR-8).
         // Compare absolute instants (both normalised to UTC).
         $tz = config('salespulse.timezone', 'Asia/Dubai');
-        $expected = \Carbon\Carbon::now($tz)->startOfDay()->addDay()->utc();
+        $expected = Carbon::now($tz)->startOfDay()->addDay()->utc();
 
         $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
             ->assertOk();
 
         $this->assertTrue(
-            \Carbon\Carbon::parse($res->json('data.due_at'))->equalTo($expected),
+            Carbon::parse($res->json('data.due_at'))->equalTo($expected),
             'reschedule tomorrow should land on the operational start of tomorrow',
         );
 
-        \Carbon\Carbon::setTestNow();
+        Carbon::setTestNow();
     }
 
     public function test_reschedule_next_week_and_next_month(): void
     {
-        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
 
         $manager = $this->manager();
         $activity = Activity::factory()
@@ -211,21 +214,153 @@ class ActivityTaskListTest extends TestCase
         Sanctum::actingAs($manager, ['*']);
 
         $tz = config('salespulse.timezone', 'Asia/Dubai');
-        $dayStart = \Carbon\Carbon::now($tz)->startOfDay()->utc();
+        $dayStart = Carbon::now($tz)->startOfDay()->utc();
 
         $week = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_week'])
             ->assertOk();
         $this->assertTrue(
-            \Carbon\Carbon::parse($week->json('data.due_at'))->equalTo($dayStart->copy()->addWeek()),
+            Carbon::parse($week->json('data.due_at'))->equalTo($dayStart->copy()->addWeek()),
         );
 
         $month = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_month'])
             ->assertOk();
         $this->assertTrue(
-            \Carbon\Carbon::parse($month->json('data.due_at'))->equalTo($dayStart->copy()->addMonthNoOverflow()),
+            Carbon::parse($month->json('data.due_at'))->equalTo($dayStart->copy()->addMonthNoOverflow()),
         );
 
-        \Carbon\Carbon::setTestNow();
+        Carbon::setTestNow();
+    }
+
+    public function test_reschedule_shortcut_presets_plus_1d_plus_1w_next_monday(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+
+        $manager = $this->manager();
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+        $dayStart = Carbon::now($tz)->startOfDay()->utc();
+
+        $plus1d = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
+            ->assertOk();
+        $this->assertTrue(
+            Carbon::parse($plus1d->json('data.due_at'))->equalTo($dayStart->copy()->addDay()),
+            '+1d should be an alias of tomorrow',
+        );
+
+        $plus1w = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1w'])
+            ->assertOk();
+        $this->assertTrue(
+            Carbon::parse($plus1w->json('data.due_at'))->equalTo($dayStart->copy()->addWeek()),
+            '+1w should be one week from today',
+        );
+
+        // 2026-03-15 is a Sunday → next Monday is 2026-03-16 (strictly future).
+        $nextMon = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_monday'])
+            ->assertOk();
+        $expectedMon = Carbon::now($tz)->startOfDay()->next(CarbonInterface::MONDAY)->utc();
+        $this->assertTrue(
+            Carbon::parse($nextMon->json('data.due_at'))->equalTo($expectedMon),
+            'next_monday should land on the next Monday in the operational timezone',
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_reschedule_accepts_explicit_due_at(): void
+    {
+        $manager = $this->manager();
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => now()->subDays(2)])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $target = Carbon::parse('2026-05-20 09:00:00', 'UTC');
+
+        $res = $this->postJson("/api/activities/{$activity->id}/reschedule", [
+            'due_at' => $target->toIso8601String(),
+        ])->assertOk();
+
+        $this->assertTrue(
+            Carbon::parse($res->json('data.due_at'))->equalTo($target),
+            'explicit due_at should be persisted as the absolute instant given',
+        );
+    }
+
+    public function test_reschedule_only_moves_due_at_and_leaves_status_untouched(): void
+    {
+        $manager = $this->manager();
+        $activity = Activity::factory()
+            ->state([
+                'kind' => ActivityType::Task->value,
+                'status' => ActivityStatus::InProgress->value,
+                'is_closed' => false,
+                'due_at' => now()->subDays(5),
+            ])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'in_progress')
+            ->assertJsonPath('data.is_closed', false);
+
+        $activity->refresh();
+        $this->assertSame(ActivityStatus::InProgress, $activity->status);
+        $this->assertFalse($activity->is_closed);
+        $this->assertNull($activity->completed_at);
+    }
+
+    public function test_reschedule_requires_exactly_one_of_preset_or_due_at(): void
+    {
+        $manager = $this->manager();
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        // Neither → required_without on both fires.
+        $this->postJson("/api/activities/{$activity->id}/reschedule", [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('preset');
+
+        // Both → prohibits:due_at on the preset rule fires.
+        $this->postJson("/api/activities/{$activity->id}/reschedule", [
+            'preset' => 'tomorrow',
+            'due_at' => '2026-05-20T09:00:00Z',
+        ])->assertStatus(422)
+            ->assertJsonValidationErrorFor('preset');
+    }
+
+    public function test_reschedule_forbidden_for_foreign_manager(): void
+    {
+        $owner = $this->manager();
+        $stranger = $this->manager();
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value])
+            ->responsibleOf($owner)
+            ->createdByUser($owner)
+            ->create();
+
+        Sanctum::actingAs($stranger, ['*']);
+
+        $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
+            ->assertForbidden();
     }
 
     public function test_reschedule_rejects_unknown_preset(): void

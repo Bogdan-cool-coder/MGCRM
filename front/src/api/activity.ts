@@ -18,6 +18,9 @@ import type { BulkCreateActivityPayload } from '@/entities/sales'
 
 export type ActivityPreset = 'my_tasks' | 'my_orders' | 'today' | 'overdue' | 'this_week' | 'pinned'
 
+/** Quick-reschedule relative shortcuts (resolved server-side in the operational TZ). */
+export type ReschedulePreset = 'tomorrow' | '+1d' | '+1w' | 'next_monday' | 'next_week' | 'next_month'
+
 export const activityApi = {
   // ── List ───────────────────────────────────────────────────────────────────
 
@@ -99,17 +102,21 @@ export const activityApi = {
   },
 
   // ── Quick reschedule (POST /api/activities/{id}/reschedule) ──────────────────
-  // The new due_at is computed server-side in the app timezone (start of the
-  // target day), so the preset means the same thing regardless of the client
-  // clock — prefer this over a client-side PATCH of due_at.
+  // Moves ONLY due_at (status/engagement untouched), gated by the same authz as
+  // update. Pass EXACTLY ONE of:
+  //  - a preset → due_at is computed server-side in the operational timezone
+  //    (start of the target day), so the shortcut means the same thing regardless
+  //    of the client clock — prefer this over a client-side PATCH of due_at;
+  //  - an explicit ISO `due_at` from the date picker.
 
   async rescheduleActivity(
     id: number,
-    preset: 'tomorrow' | 'next_week' | 'next_month',
+    arg: { preset: ReschedulePreset } | { dueAt: string },
   ): Promise<ActivityDto> {
+    const body = 'preset' in arg ? { preset: arg.preset } : { due_at: arg.dueAt }
     const res = await apiClient.post<{ data: ActivityDto }>(
       `/api/activities/${id}/reschedule`,
-      { preset },
+      body,
     )
     return res.data.data
   },

@@ -1212,6 +1212,12 @@
       "all": "All"
     },
     "overdueBadge": "Overdue",
+    "reschedule": {
+      "plus1d": "+1 day",
+      "plus1w": "+1 week",
+      "pickDate": "Pick a date",
+      "success": "Due date moved"
+    },
     "form": {
       "createTitle": "New activity",
       "editTitle": "Edit activity",

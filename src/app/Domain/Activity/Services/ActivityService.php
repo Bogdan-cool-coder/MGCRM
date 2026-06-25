@@ -352,36 +352,56 @@ class ActivityService
     }
 
     /**
-     * Quick due-date shift from the task list ("завтра / через неделю / через
-     * месяц"). The new due_at is computed server-side in the app timezone so the
-     * preset means the same thing regardless of the client clock — start of the
-     * target day (Дубай-окно, no client +4h hack). Notes (no deadline) are
-     * rejected via assertCompletable. Returns the rescheduled activity.
+     * Quick due-date shift from the task list. The caller passes EXACTLY ONE of:
+     *  - a {preset} resolved server-side in the operational timezone (start of the
+     *    target day, Дубай-окно, no client +4h hack), or
+     *  - an explicit {due_at} absolute instant (custom date picker).
      *
-     * Presets:
-     *   tomorrow   → start of tomorrow
-     *   next_week  → start of the day one week from today
-     *   next_month → start of the day one month from today
+     * This is the single, timezone-correct source for the relative shortcuts — the
+     * preset means the same thing regardless of the client clock. Reschedule ONLY
+     * moves due_at: status, engagement and the entity-log are untouched (it is an
+     * update on the task, gated by the update policy in the FormRequest). Notes
+     * (no deadline) are rejected via assertCompletable. Returns the activity.
+     *
+     * Presets (start of the target day, operational TZ):
+     *   tomorrow     → start of tomorrow
+     *   +1d          → alias of tomorrow
+     *   +1w          → start of the day one week from today
+     *   next_monday  → start of the next Monday (strictly in the future)
+     *   next_week    → start of the day one week from today (legacy alias of +1w)
+     *   next_month   → start of the day one month from today (legacy)
      */
-    public function reschedule(Activity $activity, string $preset): Activity
+    public function reschedule(Activity $activity, ?string $preset = null, ?CarbonInterface $dueAt = null): Activity
     {
         $this->assertCompletable($activity);
 
-        $todayStart = $this->operationalTodayStart();
-
-        $due = match ($preset) {
-            'tomorrow' => $todayStart->copy()->addDay(),
-            'next_week' => $todayStart->copy()->addWeek(),
-            'next_month' => $todayStart->copy()->addMonthNoOverflow(),
-            default => throw ValidationException::withMessages([
-                'preset' => "Unknown reschedule preset: {$preset}.",
-            ]),
-        };
+        $due = $dueAt !== null
+            ? Carbon::instance($dueAt)
+            : $this->resolveReschedulePreset((string) $preset);
 
         $activity->update(['due_at' => $due]);
         $activity->refresh();
 
         return $activity;
+    }
+
+    /**
+     * Map a quick-reschedule preset to an absolute due_at instant, anchored to the
+     * start of the target day in the operational timezone (returned in UTC).
+     */
+    private function resolveReschedulePreset(string $preset): Carbon
+    {
+        $todayStart = $this->operationalTodayStart();
+
+        return match ($preset) {
+            'tomorrow', '+1d' => $todayStart->copy()->addDay(),
+            '+1w', 'next_week' => $todayStart->copy()->addWeek(),
+            'next_monday' => $this->operationalLocalDayStart()->next(CarbonInterface::MONDAY)->utc(),
+            'next_month' => $todayStart->copy()->addMonthNoOverflow(),
+            default => throw ValidationException::withMessages([
+                'preset' => "Unknown reschedule preset: {$preset}.",
+            ]),
+        };
     }
 
     /**

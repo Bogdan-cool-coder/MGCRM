@@ -132,6 +132,34 @@ class ExchangeRateTest extends TestCase
         ])->assertForbidden();
     }
 
+    // ---- same-currency convert returns amount as-is with rate 1 ----
+
+    public function test_convert_same_currency_returns_amount_unchanged(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        // No rows seeded — same-currency must NOT hit the DB.
+        $this->getJson('/api/catalog/exchange-rates/convert?from=USD&to=USD&amount=50000')
+            ->assertOk()
+            ->assertJsonPath('data.from_code', 'USD')
+            ->assertJsonPath('data.to_code', 'USD')
+            ->assertJsonPath('data.from_amount', 50000)
+            ->assertJsonPath('data.to_amount', 50000)
+            ->assertJsonPath('data.rate', '1.000000');
+    }
+
+    public function test_convert_same_currency_rub_returns_amount_unchanged(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->getJson('/api/catalog/exchange-rates/convert?from=RUB&to=RUB&amount=0')
+            ->assertOk()
+            ->assertJsonPath('data.to_amount', 0)
+            ->assertJsonPath('data.rate', '1.000000');
+    }
+
     // ---- missing rate → validation error on convert ----
 
     public function test_convert_missing_rate_returns_422(): void

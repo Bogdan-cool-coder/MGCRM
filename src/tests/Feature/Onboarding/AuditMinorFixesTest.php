@@ -8,6 +8,7 @@ use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Onboarding\Enums\AssignmentStatus;
 use App\Domain\Onboarding\Enums\LessonKind;
+use App\Domain\Onboarding\Events\CourseAssigned;
 use App\Domain\Onboarding\Models\Course;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\CourseModule;
@@ -15,8 +16,6 @@ use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\LessonProgress;
 use App\Domain\Onboarding\Models\Quiz;
 use App\Domain\Onboarding\Models\QuizAttempt;
-use App\Domain\Onboarding\Models\QuizOption;
-use App\Domain\Onboarding\Models\QuizQuestion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;
@@ -40,7 +39,10 @@ class AuditMinorFixesTest extends TestCase
 
     public function test_bulk_assign_applies_course_deadline_days_when_no_explicit_due_date(): void
     {
-        Event::fake();
+        // Fake only domain events — a bare Event::fake() also suppresses the
+        // User `saved` hook that syncs the spatie role (IAM-1), so the acting
+        // admin would lose its authoritative role and hit 403.
+        Event::fake([CourseAssigned::class]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create([
@@ -71,7 +73,10 @@ class AuditMinorFixesTest extends TestCase
 
     public function test_bulk_assign_explicit_due_date_overrides_course_deadline_days(): void
     {
-        Event::fake();
+        // Fake only domain events — a bare Event::fake() also suppresses the
+        // User `saved` hook that syncs the spatie role (IAM-1), so the acting
+        // admin would lose its authoritative role and hit 403.
+        Event::fake([CourseAssigned::class]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create([
@@ -99,7 +104,10 @@ class AuditMinorFixesTest extends TestCase
 
     public function test_bulk_assign_no_due_date_when_course_has_no_deadline_days(): void
     {
-        Event::fake();
+        // Fake only domain events — a bare Event::fake() also suppresses the
+        // User `saved` hook that syncs the spatie role (IAM-1), so the acting
+        // admin would lose its authoritative role and hit 403.
+        Event::fake([CourseAssigned::class]);
 
         $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create([

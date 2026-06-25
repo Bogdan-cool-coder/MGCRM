@@ -22,11 +22,13 @@ class UserService
     /**
      * Create a new active user and sync its spatie role.
      *
-     * The role mirror column and the spatie grant are kept in lockstep here so
-     * authorization (gates/permissions) and the convenience `role` column never
-     * diverge. When no password is supplied a random one is generated — the
-     * account is provisioned and the password is (re)set out of band (invite /
-     * reset flow lands on a later milestone).
+     * The spatie role grant is the single authoritative store (IAM-1). Writing
+     * the virtual `role` attribute buffers the assignment, which the User model's
+     * `saved` hook applies via syncRoles() — so authorization
+     * (gates/permissions) always reflects the chosen role. When no password is
+     * supplied a random one is generated — the account is provisioned and the
+     * password is (re)set out of band (invite / reset flow lands on a later
+     * milestone).
      *
      * @param  array{full_name: string, email: string, phone?: string|null, job_title?: string|null, department_id?: int|null, manager_id?: int|null, role?: string|null, password?: string|null}  $data
      */
@@ -54,7 +56,11 @@ class UserService
             'totp_enabled' => false,
         ]);
 
-        $user->syncRoles([$role->value]);
+        // The User `saved` hook already synced the spatie grant from the buffered
+        // `role` attribute; this guards against the (unlikely) absence of a grant.
+        if ($user->getRoleNames()->all() !== [$role->value]) {
+            $user->syncRoles([$role->value]);
+        }
 
         return $user;
     }
@@ -63,7 +69,8 @@ class UserService
      * Apply an admin edit to an existing user.
      *
      * Only keys present in $data are touched (partial PATCH). Editing the role
-     * re-syncs the spatie grant so the mirror column and the grant never drift.
+     * writes the virtual `role` attribute, which the User `saved` hook applies to
+     * the authoritative spatie grant (IAM-1 — no mirror column remains).
      * Editing the email is allowed (uniqueness is enforced by the FormRequest)
      * and an optional password is re-hashed; an empty/absent password leaves the
      * existing credential untouched.
@@ -90,11 +97,9 @@ class UserService
             }
         }
 
+        // Saving applies any buffered `role` write to the spatie grant via the
+        // User `saved` hook.
         $user->save();
-
-        if (array_key_exists('role', $data) && $data['role'] !== null) {
-            $user->syncRoles([$user->role->value]);
-        }
 
         return $user;
     }

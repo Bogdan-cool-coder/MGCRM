@@ -56,19 +56,20 @@ return [
     | considered expired. This will override any values set in the token's
     | "expires_at" attribute, but first-party sessions are not affected.
     |
-    | MGCRM is a Bearer-token API whose SPA stores the token; tokens MUST NOT
-    | silently expire mid-session. The default is null (never expires) — the
-    | only correct production value. SANCTUM_TOKEN_EXPIRATION exists purely as a
-    | deliberate escape hatch; a BLANK or unset env var coerces to null here (an
-    | empty string would otherwise read as a truthy non-null config value and is
-    | the kind of foot-gun that expires every token after 0 minutes). Set a
-    | positive integer only if a finite TTL is ever genuinely wanted.
+    | MGCRM is a Bearer-token API whose SPA stores the token. Tokens expire 30
+    | days (43200 minutes) after issue; the SPA's axios 401 interceptor catches
+    | the resulting unauthenticated response and redirects to the login screen.
+    | SANCTUM_TOKEN_EXPIRATION overrides the default — a BLANK or unset env var
+    | falls back to 30 days (an empty string would otherwise read as a truthy
+    | non-null config value and is the kind of foot-gun that expires every token
+    | after 0 minutes). Set a different positive integer only if another finite
+    | TTL is genuinely wanted.
     |
     */
 
     'expiration' => ($sanctumTtl = env('SANCTUM_TOKEN_EXPIRATION')) !== null && $sanctumTtl !== ''
         ? (int) $sanctumTtl
-        : null,
+        : 43200,
 
     /*
     |--------------------------------------------------------------------------

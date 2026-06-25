@@ -362,7 +362,7 @@ import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import DatePicker from 'primevue/datepicker'
 import { kindIcon, statusSeverity, formatDueDate } from '@/utils/activity'
-import { activityApi } from '@/api/activity'
+import { activityApi, type ReschedulePreset } from '@/api/activity'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { ActivityDto, ActivityKind, ActivityStatus } from '@/entities/activity'
@@ -510,6 +510,27 @@ async function commitDueAt(activity: ActivityDto) {
   )
 }
 
+// Quick reschedule via the dedicated endpoint — moves ONLY due_at (status
+// untouched), TZ-correct server side. Optimistic patched-emit; rollback on error.
+async function rescheduleQuick(activity: ActivityDto, preset: ReschedulePreset) {
+  if (patchingId.value !== null) return
+  patchingId.value = activity.id
+  try {
+    const updated = await activityApi.rescheduleActivity(activity.id, { preset })
+    emit('patched', updated)
+    toast.add({ severity: 'success', summary: t('activity.reschedule.success'), life: 2000 })
+  } catch (err) {
+    emit('patched', activity) // rollback
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    patchingId.value = null
+  }
+}
+
 async function commitResponsible(activity: ActivityDto) {
   const userId = editResponsibleId.value
   const user = userId !== null ? users.value.find((u) => u.id === userId) ?? null : null
@@ -594,6 +615,26 @@ const menuItems = computed(() => {
       icon: 'pi pi-refresh',
       command: () => emit('reopen', a),
     })
+  }
+  // Quick reschedule — only for open, deadline-bearing tasks (notes have no due_at).
+  if (a.kind !== 'note' && a.status !== 'done') {
+    items.push(
+      {
+        label: t('activity.reschedule.plus1d'),
+        icon: 'pi pi-angle-right',
+        command: () => void rescheduleQuick(a, '+1d'),
+      },
+      {
+        label: t('activity.reschedule.plus1w'),
+        icon: 'pi pi-angle-double-right',
+        command: () => void rescheduleQuick(a, '+1w'),
+      },
+      {
+        label: t('activity.reschedule.pickDate'),
+        icon: 'pi pi-calendar',
+        command: () => startEdit(a, 'due_at'),
+      },
+    )
   }
   items.push(
     {
