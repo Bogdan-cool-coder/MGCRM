@@ -308,6 +308,13 @@ export const adminNavItems: NavItem[] = [
     labelKey: 'nav.disconnectReasons',
     adminOnly: true,
   },
+  {
+    key: 'access-control',
+    route: '/admin/access-control',
+    icon: 'pi pi-shield',
+    labelKey: 'nav.accessControl',
+    adminOnly: true,
+  },
 ]
 
 /**

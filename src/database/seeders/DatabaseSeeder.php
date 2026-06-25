@@ -27,6 +27,10 @@ class DatabaseSeeder extends Seeder
         AdminSeeder::class,
         // Org: default department directory (feeds the add-user form Select).
         DepartmentSeeder::class,
+        // IAM: role × visibility-scope matrix — seeded with CURRENT behavior
+        // (admin/director/lawyer=all, manager/accountant/cfo=own) so authz is
+        // unchanged until an admin edits it.
+        VisibilitySettingSeeder::class,
         // Catalog (products + prices + baseline exchange rates).
         ProductGroupSeeder::class,
         ProductSeeder::class,

@@ -286,7 +286,6 @@ import { documentsApi } from '@/api/documents'
 import { templatesApi } from '@/api/templates'
 import type {
   DocumentListItemDto,
-  DocumentDto,
   DocumentAttachmentDto,
   ApprovalSummaryDto,
   ApprovalDecision,

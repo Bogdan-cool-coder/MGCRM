@@ -260,6 +260,36 @@ export const routes: RouteRecordRaw[] = [
     },
   },
 
+  // ─── Access Control: Доступ и оргструктура ───────────────────────────────
+  // Settings → отделы / роли и права / видимость записей. Backend gated to
+  // admin/director via can:admin-write; mirror that at the router (fail-closed).
+  // The hub redirects to the Departments tab; tab subroutes all render the same
+  // page (URL ↔ active-tab sync lives in the page-composable).
+  {
+    path: '/admin/access-control',
+    name: 'AccessControl',
+    redirect: '/admin/access-control/departments',
+    meta: { requiresAuth: true, roles: ['admin', 'director'] },
+  },
+  {
+    path: '/admin/access-control/departments',
+    name: 'AccessControlDepartments',
+    component: () => import('@/pages/AccessControlPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.accessControl' },
+  },
+  {
+    path: '/admin/access-control/roles',
+    name: 'AccessControlRoles',
+    component: () => import('@/pages/AccessControlPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.accessControl' },
+  },
+  {
+    path: '/admin/access-control/visibility',
+    name: 'AccessControlVisibility',
+    component: () => import('@/pages/AccessControlPage'),
+    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.accessControl' },
+  },
+
   // ─── Directories: Admin ──────────────────────────────────────────────────
   {
     path: '/admin/acquisition-channels',

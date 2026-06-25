@@ -60,7 +60,9 @@ use App\Http\Controllers\Crm\DedupController;
 use App\Http\Controllers\Crm\HoldingController;
 use App\Http\Controllers\Crm\SavedViewController;
 use App\Http\Controllers\Iam\Admin\DepartmentController;
+use App\Http\Controllers\Iam\Admin\RolePermissionController;
 use App\Http\Controllers\Iam\Admin\UserManagementController;
+use App\Http\Controllers\Iam\Admin\VisibilityConfigController;
 use App\Http\Controllers\Iam\AvatarController;
 use App\Http\Controllers\Iam\ProfileController;
 use App\Http\Controllers\Iam\UserController;
@@ -441,6 +443,37 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
 
         // Department directory (read-only) — feeds the add-user form Select.
         Route::get('departments', [DepartmentController::class, 'index'])->name('departments.index');
+
+        // =====================================================================
+        // Access Control — Org structure (Departments CRUD + members)
+        // =====================================================================
+        // Settings → Доступ и оргструктура → Отделы. Write verbs for the
+        // department tree; structural invariants (cycle guard, child re-homing,
+        // depth warning) live in DepartmentService. {department}/{user} are
+        // route-model-bound. Member add/remove maps to users.department_id.
+        Route::post('departments', [DepartmentController::class, 'store'])->name('departments.store');
+        Route::patch('departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+        Route::delete('departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+        Route::post('departments/{department}/members', [DepartmentController::class, 'addMembers'])->name('departments.members.store');
+        Route::delete('departments/{department}/members/{user}', [DepartmentController::class, 'removeMember'])->name('departments.members.destroy');
+
+        // =====================================================================
+        // Access Control — Roles & permissions (spatie role × permission matrix)
+        // =====================================================================
+        // Settings → Доступ и оргструктура → Роли и права. {role} is a plain
+        // string param (role name, NOT model-bound); the service rejects the
+        // admin role + unknown names with 422.
+        Route::get('roles/permissions', [RolePermissionController::class, 'index'])->name('roles.permissions.index');
+        Route::put('roles/{role}/permissions', [RolePermissionController::class, 'update'])->name('roles.permissions.update');
+
+        // =====================================================================
+        // Access Control — Visibility config (role → scope map for VisibilityResolver)
+        // =====================================================================
+        // Settings → Доступ и оргструктура → Видимость. PATCH body accepts a flat
+        // { role: scope } or a wrapped { config: {...} }; the FormRequest
+        // normalizes. Changes are audited (entity_logs) and bust the resolver cache.
+        Route::get('visibility-config', [VisibilityConfigController::class, 'index'])->name('visibility-config.index');
+        Route::patch('visibility-config', [VisibilityConfigController::class, 'update'])->name('visibility-config.update');
 
         // Directory write verbs (store/update/destroy) — admin/director only.
         Route::apiResource('company-types', CompanyTypeController::class)

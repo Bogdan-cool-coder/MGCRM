@@ -23,6 +23,15 @@ enum LogSubjectType: string
     case Contact = 'contact';
 
     /**
+     * System — not a record subject but an admin/configuration audit anchor.
+     * Used for access-control changes (role-permission grants, visibility-config
+     * edits) where the "subject" is the system itself; subject_id carries the
+     * acting admin's user id. These rows are written by the Access Control
+     * services and are NOT surfaced on any entity timeline.
+     */
+    case System = 'system';
+
+    /**
      * @return list<string>
      */
     public static function values(): array

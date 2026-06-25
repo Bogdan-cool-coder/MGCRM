@@ -107,6 +107,13 @@ const sections: SettingsSection[] = [
     titleKey: 'settings.sections.disconnectReasons.title',
     descKey: 'settings.sections.disconnectReasons.desc',
   },
+  {
+    key: 'access-control',
+    route: '/admin/access-control',
+    icon: 'pi pi-shield',
+    titleKey: 'settings.sections.accessControl.title',
+    descKey: 'settings.sections.accessControl.desc',
+  },
 ]
 </script>
 

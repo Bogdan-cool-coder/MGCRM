@@ -45,6 +45,14 @@ enum LogAction: string
     case ContractEvent = 'contract_event';
     case FinanceEvent = 'finance_event';
 
+    // ---- Access Control audit (System subject) ----
+    // Admin edited a role's spatie permission set (Settings → Access Control →
+    // Roles). meta: { role, added: [...], removed: [...] }.
+    case PermissionChanged = 'permission_changed';
+    // Admin edited a role's visibility scope (Settings → Access Control →
+    // Visibility). meta: { role, from, to }.
+    case VisibilityChanged = 'visibility_changed';
+
     /**
      * @return list<string>
      */

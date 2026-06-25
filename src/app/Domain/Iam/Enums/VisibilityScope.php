@@ -25,6 +25,14 @@ enum VisibilityScope: string
     case Own = 'own';
 
     /**
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(static fn (self $s): string => $s->value, self::cases());
+    }
+
+    /**
      * Resolve the default scope for a role name. Fail-closed: unknown roles
      * (or no role) collapse to the most restrictive Own scope.
      */

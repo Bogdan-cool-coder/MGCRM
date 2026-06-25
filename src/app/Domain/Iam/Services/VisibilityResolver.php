@@ -7,6 +7,7 @@ namespace App\Domain\Iam\Services;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Org\Models\Department;
+// VisibilityConfigService lives in the same namespace (App\Domain\Iam\Services).
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -29,16 +30,25 @@ use Illuminate\Database\Eloquent\Model;
  */
 class VisibilityResolver
 {
+    public function __construct(
+        private readonly VisibilityConfigService $config,
+    ) {}
+
     /**
      * Resolve the effective scope for a user. The user's spatie role takes
      * precedence; the mirrored `role` column is the fallback. No match at all
      * (e.g. a roleless account) collapses to the most restrictive Own.
+     *
+     * The scope per role is read from the admin-editable visibility_settings
+     * matrix (VisibilityConfigService, cached); roles with no stored row fall
+     * back to the legacy VisibilityScope::forRole default — so an unseeded table
+     * (tests) reproduces the historical behavior exactly.
      */
     public function resolve(User $user): VisibilityScope
     {
         $roleName = $user->getRoleNames()->first() ?? $user->role?->value;
 
-        return VisibilityScope::forRole($roleName);
+        return $this->config->scopeForRole($roleName);
     }
 
     /**

@@ -233,8 +233,8 @@ const loadingTemplates = ref(false)
 const templateOptions = ref<{ label: string; value: number }[]>([])
 
 watch(
-  [() => form.value.product_code, () => form.value.country_code, () => form.value.kind],
-  async ([product, country, kind]) => {
+  [() => form.value.product_code, () => form.value.country_code],
+  async ([product, country]) => {
     if (!product || !country) {
       templateOptions.value = []
       form.value.template_id = null

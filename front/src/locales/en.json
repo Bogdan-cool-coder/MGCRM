@@ -35,7 +35,8 @@
     "sections": {
       "learning": "Learning"
     },
-    "licensors": "Licensors"
+    "licensors": "Licensors",
+    "accessControl": "Access & Org Structure"
   },
   "auth": {
     "brand_panel": {
@@ -306,6 +307,10 @@
       "countries": {
         "title": "Countries",
         "desc": "Country and phone prefix reference"
+      },
+      "accessControl": {
+        "title": "Access & Org Structure",
+        "desc": "Departments, roles, permissions and record visibility policies"
       }
     }
   },
@@ -519,7 +524,12 @@
     "createdAt": "Created",
     "add": "Add",
     "no_results": "No results",
-    "search_placeholder": "Start typing…"
+    "search_placeholder": "Start typing…",
+    "name": "Name",
+    "role": "Role",
+    "noData": "No data",
+    "accessDenied": "Access denied",
+    "errorLoad": "Failed to load data"
   },
   "contacts": {
     "page": {
@@ -3730,6 +3740,73 @@
       "thankYouBody": "Your application has been received. We will contact you shortly.",
       "notFoundTitle": "Form unavailable",
       "notFoundBody": "This form does not exist or is no longer accepting applications."
+    }
+  },
+  "accessControl": {
+    "page": {
+      "title": "Access & Org Structure",
+      "subtitle": "Departments, roles and record visibility"
+    },
+    "tabs": {
+      "departments": "Departments",
+      "roles": "Roles & Permissions",
+      "visibility": "Visibility"
+    },
+    "departments": {
+      "addDepartment": "Add department",
+      "editDepartment": "Edit department",
+      "deleteDepartment": "Delete department",
+      "deleteConfirm": "Delete department \"{name}\"? Child departments and members will be left without a parent.",
+      "nameLabel": "Name",
+      "parentLabel": "Parent department",
+      "parentRoot": "— Root —",
+      "managerLabel": "Manager",
+      "membersLabel": "Department members",
+      "addMember": "Add member",
+      "removeMember": "Remove from department",
+      "viewTree": "Tree",
+      "viewChart": "Chart",
+      "empty": "No departments created",
+      "emptyHint": "Add the first department to set up the org structure",
+      "depthWarning": "Tree depth exceeds 4 levels. The org chart may not display correctly.",
+      "saveSuccess": "Department saved",
+      "deleteSuccess": "Department deleted",
+      "errorLoad": "Failed to load departments",
+      "errorSave": "Failed to save department",
+      "errorDelete": "Failed to delete department"
+    },
+    "roles": {
+      "title": "Permissions matrix",
+      "adminNote": "The admin role always has all permissions and cannot be restricted.",
+      "permissionLabel": "Permission",
+      "groupCrm": "CRM",
+      "groupSales": "Sales",
+      "groupContracts": "Contracts",
+      "groupUsers": "Users",
+      "groupAutomation": "Automation",
+      "groupAnalytics": "Analytics",
+      "groupFinance": "Finance",
+      "groupSystem": "System permissions",
+      "save": "Save",
+      "reset": "Reset",
+      "saveSuccess": "Role permissions saved",
+      "errorLoad": "Failed to load permissions matrix",
+      "errorSave": "Failed to save permissions"
+    },
+    "visibility": {
+      "title": "Record visibility",
+      "warning": "Visibility settings affect which records (deals, contacts, tasks) each role can see. Change with caution.",
+      "scopeAll": "All",
+      "scopeDepartment": "Department (+sub-departments)",
+      "scopeOwn": "Own",
+      "roleColumn": "Role",
+      "scopeColumn": "Record visibility",
+      "departmentHint": "The \"Department\" option only works if the user has a department assigned.",
+      "save": "Save",
+      "reset": "Reset",
+      "saveSuccess": "Visibility settings saved",
+      "errorLoad": "Failed to load visibility config",
+      "errorSave": "Failed to save visibility settings"
     }
   },
   "licensors": {
