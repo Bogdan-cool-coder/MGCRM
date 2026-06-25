@@ -6,6 +6,7 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from 'vue-i18n'
 import { onboardingAdminApi } from '@/api/onboardingAdmin'
+import { getApiErrorMessage } from '@/utils/errors'
 import type { Course, CoursePatchPayload } from '@/entities/course'
 
 export function useCourseBuilder(courseId: number) {
@@ -49,8 +50,15 @@ export function useCourseBuilder(courseId: number) {
     try {
       course.value = await onboardingAdminApi.publishCourse(courseId)
       toast.add({ severity: 'success', summary: t('onboarding.courses.publish'), life: 3000 })
-    } catch {
-      toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
+    } catch (err) {
+      // Surface 422 validation message (e.g. "Add at least one published lesson…")
+      const detail = getApiErrorMessage(err, t('common.error'))
+      toast.add({
+        severity: 'error',
+        summary: t('onboarding.courses.publishError'),
+        detail,
+        life: 6000,
+      })
     } finally {
       saving.value = false
     }

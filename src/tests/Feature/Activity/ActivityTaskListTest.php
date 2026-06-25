@@ -167,7 +167,7 @@ class ActivityTaskListTest extends TestCase
             ->assertJsonPath('data.status', 'done');
     }
 
-    public function test_reschedule_tomorrow_moves_due_to_start_of_tomorrow(): void
+    public function test_reschedule_tomorrow_moves_due_to_day_after_existing_due(): void
     {
         // Freeze the clock so the service and the test resolve the operational day
         // start from the same instant (the boundary math is otherwise racy at a
@@ -175,26 +175,70 @@ class ActivityTaskListTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
 
         $manager = $this->manager();
+
+        // A task already due 3 days ago: "+1d / tomorrow" anchors on its EXISTING
+        // due day and adds a day — it must NOT reset to today+1 (the bug a future
+        // task hit, jumping backwards).
+        $existingDue = Carbon::parse('2026-03-12 10:00:00', 'UTC'); // 14:00 Dubai
         $activity = Activity::factory()
-            ->state(['kind' => ActivityType::Task->value, 'due_at' => now()->subDays(3)])
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
             ->responsibleOf($manager)
             ->createdByUser($manager)
             ->create();
 
         Sanctum::actingAs($manager, ['*']);
 
-        // Day boundaries are computed as the true instant of the operational
-        // timezone midnight (Дубай-окно), not the UTC server clock (MINOR-8).
-        // Compare absolute instants (both normalised to UTC).
+        // Start of the day AFTER the existing due day, in the operational timezone.
         $tz = config('salespulse.timezone', 'Asia/Dubai');
-        $expected = Carbon::now($tz)->startOfDay()->addDay()->utc();
+        $expected = $existingDue->copy()->setTimezone($tz)->startOfDay()->addDay()->utc();
 
         $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
             ->assertOk();
 
         $this->assertTrue(
             Carbon::parse($res->json('data.due_at'))->equalTo($expected),
-            'reschedule tomorrow should land on the operational start of tomorrow',
+            'reschedule tomorrow should land on the start of the day after the existing due date',
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_reschedule_plus_1d_on_future_task_moves_forward_not_backward(): void
+    {
+        // Regression for the reported bug: a task due tomorrow 04:00 Dubai (UTC+4)
+        // hit with "+1d" jumped BACKWARD to start-of-today instead of forward to
+        // the day after its existing due date.
+        Carbon::setTestNow(Carbon::parse('2026-06-25 10:00:00', 'UTC'));
+
+        $manager = $this->manager();
+
+        // Due 2026-06-26 04:00 Dubai = 2026-06-26 00:00 UTC — a future deadline.
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+        $existingDue = Carbon::parse('2026-06-26 04:00:00', $tz);
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        // +1d must move to start of 2026-06-27 in the operational timezone, NOT
+        // back to start of today (2026-06-25).
+        $expected = Carbon::parse('2026-06-27 00:00:00', $tz)->utc();
+
+        $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
+            ->assertOk();
+
+        $due = Carbon::parse($res->json('data.due_at'));
+
+        $this->assertTrue(
+            $due->equalTo($expected),
+            '+1d on a future task must move forward to the day after its due date, not backward to today',
+        );
+        $this->assertTrue(
+            $due->greaterThan($existingDue),
+            '+1d must never produce a due_at earlier than the existing one',
         );
 
         Carbon::setTestNow();
@@ -204,28 +248,36 @@ class ActivityTaskListTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
 
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+
         $manager = $this->manager();
+
+        // Anchor on a known existing due day (2026-03-17 14:00 Dubai) so the shift
+        // is measured from the deadline, not from the clock.
+        $existingDue = Carbon::parse('2026-03-17 14:00:00', $tz);
         $activity = Activity::factory()
-            ->state(['kind' => ActivityType::Task->value])
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
             ->responsibleOf($manager)
             ->createdByUser($manager)
             ->create();
 
         Sanctum::actingAs($manager, ['*']);
 
-        $tz = config('salespulse.timezone', 'Asia/Dubai');
-        $dayStart = Carbon::now($tz)->startOfDay()->utc();
+        $anchorDayStart = $existingDue->copy()->setTimezone($tz)->startOfDay();
 
         $week = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_week'])
             ->assertOk();
         $this->assertTrue(
-            Carbon::parse($week->json('data.due_at'))->equalTo($dayStart->copy()->addWeek()),
+            Carbon::parse($week->json('data.due_at'))->equalTo($anchorDayStart->copy()->addWeek()->utc()),
         );
 
+        // After the next_week shift the activity's due day is now one week later;
+        // next_month anchors on THAT new due day.
+        $newAnchor = $anchorDayStart->copy()->addWeek();
         $month = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_month'])
             ->assertOk();
         $this->assertTrue(
-            Carbon::parse($month->json('data.due_at'))->equalTo($dayStart->copy()->addMonthNoOverflow()),
+            Carbon::parse($month->json('data.due_at'))->equalTo($newAnchor->copy()->addMonthNoOverflow()->utc()),
         );
 
         Carbon::setTestNow();
@@ -235,39 +287,76 @@ class ActivityTaskListTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
 
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+
         $manager = $this->manager();
+
+        // Existing due 2026-03-17 (a Tuesday) 14:00 Dubai — the anchor for all
+        // shortcuts.
+        $existingDue = Carbon::parse('2026-03-17 14:00:00', $tz);
         $activity = Activity::factory()
-            ->state(['kind' => ActivityType::Task->value])
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
             ->responsibleOf($manager)
             ->createdByUser($manager)
             ->create();
 
         Sanctum::actingAs($manager, ['*']);
 
-        $tz = config('salespulse.timezone', 'Asia/Dubai');
-        $dayStart = Carbon::now($tz)->startOfDay()->utc();
+        $anchorDayStart = $existingDue->copy()->setTimezone($tz)->startOfDay();
 
         $plus1d = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
             ->assertOk();
         $this->assertTrue(
-            Carbon::parse($plus1d->json('data.due_at'))->equalTo($dayStart->copy()->addDay()),
-            '+1d should be an alias of tomorrow',
+            Carbon::parse($plus1d->json('data.due_at'))->equalTo($anchorDayStart->copy()->addDay()->utc()),
+            '+1d should add a day to the existing due day',
         );
 
+        // Re-anchor: the due day is now 2026-03-18; +1w from there.
+        $afterPlus1d = $anchorDayStart->copy()->addDay();
         $plus1w = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1w'])
             ->assertOk();
         $this->assertTrue(
-            Carbon::parse($plus1w->json('data.due_at'))->equalTo($dayStart->copy()->addWeek()),
-            '+1w should be one week from today',
+            Carbon::parse($plus1w->json('data.due_at'))->equalTo($afterPlus1d->copy()->addWeek()->utc()),
+            '+1w should be one week from the existing due day',
         );
 
-        // 2026-03-15 is a Sunday → next Monday is 2026-03-16 (strictly future).
+        // Re-anchor: the due day is now 2026-03-25 (a Wednesday); next Monday
+        // strictly after it is 2026-03-30.
+        $afterPlus1w = $afterPlus1d->copy()->addWeek();
         $nextMon = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_monday'])
             ->assertOk();
-        $expectedMon = Carbon::now($tz)->startOfDay()->next(CarbonInterface::MONDAY)->utc();
+        $expectedMon = $afterPlus1w->copy()->next(CarbonInterface::MONDAY)->utc();
         $this->assertTrue(
             Carbon::parse($nextMon->json('data.due_at'))->equalTo($expectedMon),
-            'next_monday should land on the next Monday in the operational timezone',
+            'next_monday should land on the next Monday after the existing due day',
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_reschedule_preset_anchors_on_today_when_no_existing_due(): void
+    {
+        // A task with no deadline yet falls back to anchoring on today.
+        Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+
+        $manager = $this->manager();
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => null])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $expected = Carbon::now($tz)->startOfDay()->addDay()->utc();
+
+        $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
+            ->assertOk();
+        $this->assertTrue(
+            Carbon::parse($res->json('data.due_at'))->equalTo($expected),
+            'a deadline-less task anchors +1d on today',
         );
 
         Carbon::setTestNow();

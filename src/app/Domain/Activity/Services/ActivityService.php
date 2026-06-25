@@ -363,13 +363,21 @@ class ActivityService
      * update on the task, gated by the update policy in the FormRequest). Notes
      * (no deadline) are rejected via assertCompletable. Returns the activity.
      *
-     * Presets (start of the target day, operational TZ):
-     *   tomorrow     → start of tomorrow
-     *   +1d          → alias of tomorrow
-     *   +1w          → start of the day one week from today
-     *   next_monday  → start of the next Monday (strictly in the future)
-     *   next_week    → start of the day one week from today (legacy alias of +1w)
-     *   next_month   → start of the day one month from today (legacy)
+     * The relative presets are anchored on the task's EXISTING due date (its
+     * calendar day in the operational timezone), NOT on "today": "+1d" on a task
+     * due tomorrow means the day AFTER tomorrow, not a reset to today+1 (BUG: a
+     * future task's +1d jumped backwards to start-of-today). A task with no due
+     * date falls back to anchoring on today. The result is the start of the target
+     * day in the operational timezone (no client +4h hack).
+     *
+     * Presets (start of the target day, operational TZ, anchored on the existing
+     * due day or today when unset):
+     *   tomorrow     → anchor day + 1 day
+     *   +1d          → alias of tomorrow (anchor day + 1 day)
+     *   +1w          → anchor day + 1 week
+     *   next_monday  → the next Monday strictly after the anchor day
+     *   next_week    → anchor day + 1 week (legacy alias of +1w)
+     *   next_month   → anchor day + 1 month (legacy)
      */
     public function reschedule(Activity $activity, ?string $preset = null, ?CarbonInterface $dueAt = null): Activity
     {
@@ -377,7 +385,7 @@ class ActivityService
 
         $due = $dueAt !== null
             ? Carbon::instance($dueAt)
-            : $this->resolveReschedulePreset((string) $preset);
+            : $this->resolveReschedulePreset((string) $preset, $activity->due_at);
 
         $activity->update(['due_at' => $due]);
         $activity->refresh();
@@ -387,17 +395,28 @@ class ActivityService
 
     /**
      * Map a quick-reschedule preset to an absolute due_at instant, anchored to the
-     * start of the target day in the operational timezone (returned in UTC).
+     * start of the TARGET day in the operational timezone (returned in UTC). The
+     * anchor is the existing due date's local day (so the shortcut shifts the real
+     * deadline forward), falling back to today's local day when the task has no due
+     * date yet.
      */
-    private function resolveReschedulePreset(string $preset): Carbon
+    private function resolveReschedulePreset(string $preset, ?CarbonInterface $currentDue): Carbon
     {
-        $todayStart = $this->operationalTodayStart();
+        // Anchor on the existing due date's operational-day start, or today's when
+        // the task has no deadline yet. Converting the stored UTC instant into the
+        // operational timezone before startOfDay() keeps the calendar day correct
+        // for a Dubai-evening deadline that is still "the next day" in UTC.
+        $tz = $this->operationalTimezone();
+
+        $anchorLocalDayStart = $currentDue !== null
+            ? Carbon::instance($currentDue)->setTimezone($tz)->startOfDay()
+            : $this->operationalLocalDayStart();
 
         return match ($preset) {
-            'tomorrow', '+1d' => $todayStart->copy()->addDay(),
-            '+1w', 'next_week' => $todayStart->copy()->addWeek(),
-            'next_monday' => $this->operationalLocalDayStart()->next(CarbonInterface::MONDAY)->utc(),
-            'next_month' => $todayStart->copy()->addMonthNoOverflow(),
+            'tomorrow', '+1d' => $anchorLocalDayStart->copy()->addDay()->utc(),
+            '+1w', 'next_week' => $anchorLocalDayStart->copy()->addWeek()->utc(),
+            'next_monday' => $anchorLocalDayStart->copy()->next(CarbonInterface::MONDAY)->utc(),
+            'next_month' => $anchorLocalDayStart->copy()->addMonthNoOverflow()->utc(),
             default => throw ValidationException::withMessages([
                 'preset' => "Unknown reschedule preset: {$preset}.",
             ]),
@@ -1255,10 +1274,20 @@ class ActivityService
      */
     private function operationalLocalDayStart(): Carbon
     {
+        return Carbon::now($this->operationalTimezone())->startOfDay();
+    }
+
+    /**
+     * The operational timezone (Дубай-окно) — the single source for every day/week
+     * boundary and the reschedule anchor. Reads config('salespulse.timezone') so it
+     * never drifts from the SalesPulse day-window math.
+     */
+    private function operationalTimezone(): string
+    {
         /** @var string $tz */
         $tz = config('salespulse.timezone', 'Asia/Dubai');
 
-        return Carbon::now($tz)->startOfDay();
+        return $tz;
     }
 
     /**

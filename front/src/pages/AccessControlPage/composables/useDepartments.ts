@@ -8,7 +8,7 @@ import { useToast } from 'primevue/usetoast'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { accessControlApi } from '@/api/accessControl'
-import { adminUsersApi } from '@/api/adminUsers'
+import { usersApi, type UserOptionDto } from '@/api/users'
 import {
   buildDeptTree,
   maxTreeDepth,
@@ -18,7 +18,6 @@ import {
   type DeptTreeNode,
   type UpdateDepartmentPayload,
 } from '@/entities/accessControl'
-import type { AdminUserDto } from '@/entities/adminUser'
 
 export type PanelMode = 'create' | 'edit'
 
@@ -35,7 +34,7 @@ export function useDepartments() {
 
   // ─── data ──────────────────────────────────────────────────────────────────
   const depts = useAsyncResource<DepartmentDto[]>([])
-  const usersResource = useAsyncResource<AdminUserDto[]>([])
+  const usersResource = useAsyncResource<UserOptionDto[]>([])
   const membersResource = useAsyncResource<DepartmentMemberDto[]>([])
 
   const searchQuery = ref('')
@@ -109,10 +108,7 @@ export function useDepartments() {
   }
 
   async function loadUsers() {
-    await usersResource.run(async () => {
-      const res = await adminUsersApi.getUsers({ per_page: 200 })
-      return res.data
-    })
+    await usersResource.run(() => usersApi.getUsers())
   }
 
   async function loadMembers(deptId: number) {

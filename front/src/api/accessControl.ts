@@ -77,8 +77,24 @@ export const accessControlApi = {
   // ─── Roles & Permissions ────────────────────────────────────────────────────
 
   async getRolesPermissions(): Promise<RolePermissionsMap> {
-    const res = await apiClient.get<{ data: RolePermissionsMap }>('/api/admin/roles/permissions')
-    return res.data.data
+    const res = await apiClient.get<{
+      data: { groups: unknown[]; roles: { role: string; permissions: string[] }[] }
+    }>('/api/admin/roles/permissions')
+    // BE returns { groups:[...], roles:[{role, permissions}] } — map to Record<UserRole, string[]>
+    const map: RolePermissionsMap = {
+      admin: [],
+      director: [],
+      lawyer: [],
+      manager: [],
+      accountant: [],
+      cfo: [],
+    }
+    for (const entry of res.data.data.roles ?? []) {
+      if (entry.role in map) {
+        map[entry.role as UserRole] = entry.permissions ?? []
+      }
+    }
+    return map
   },
 
   async updateRolePermissions(

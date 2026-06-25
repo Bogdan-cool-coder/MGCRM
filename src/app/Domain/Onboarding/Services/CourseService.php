@@ -90,6 +90,11 @@ class CourseService
     /**
      * Publish a course.
      * Guard: must have ≥1 module with ≥1 published lesson (422 otherwise).
+     *
+     * The 422 carries a precise, LOCALIZED reason (RU/EN) so the builder can tell
+     * the admin exactly what is missing — no modules, no lessons, or lessons that
+     * exist but are still drafts — instead of a single opaque English string
+     * (BUG: publish returned a 422 the FE could not explain).
      */
     public function publish(Course $course): Course
     {
@@ -99,13 +104,36 @@ class CourseService
 
         if (! $hasPublishedLesson) {
             throw ValidationException::withMessages([
-                'course' => 'Add at least one published lesson before publishing the course.',
+                'course' => $this->publishBlockReason($course),
             ])->status(422);
         }
 
         $course->update(['is_published' => true]);
 
         return $course->refresh();
+    }
+
+    /**
+     * Pick the most specific localized reason the course cannot be published yet:
+     * no modules at all, modules but no lessons anywhere, or lessons that exist but
+     * none are published. Single small query per branch (the form is only shown on
+     * a failed publish), short-circuited cheapest-first.
+     */
+    private function publishBlockReason(Course $course): string
+    {
+        if (! $course->modules()->exists()) {
+            return __('onboarding.publish.no_modules');
+        }
+
+        $hasAnyLesson = $course->modules()
+            ->whereHas('lessons')
+            ->exists();
+
+        if (! $hasAnyLesson) {
+            return __('onboarding.publish.no_lessons');
+        }
+
+        return __('onboarding.publish.no_published_lesson');
     }
 
     /**

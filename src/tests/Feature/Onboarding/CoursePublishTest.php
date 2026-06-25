@@ -19,25 +19,57 @@ class CoursePublishTest extends TestCase
 
     public function test_cannot_publish_course_without_published_lessons(): void
     {
-        $user = User::factory()->create(['role' => Role::Admin]);
+        // The authenticated user's stored locale drives the message language
+        // (SetLocale); pin it to en so the assertion is deterministic.
+        $user = User::factory()->create(['role' => Role::Admin, 'locale' => 'en']);
         $course = Course::factory()->create();
         $module = CourseModule::factory()->create(['course_id' => $course->id]);
         // Lesson exists but is NOT published
         Lesson::factory()->create(['module_id' => $module->id, 'is_published' => false]);
         Sanctum::actingAs($user, ['*']);
 
+        // The 422 must carry the precise, localized "lessons exist but none
+        // published" reason so the FE can tell the admin exactly what to fix.
         $this->postJson("/api/admin/onboarding/courses/{$course->id}/publish")
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('onboarding.publish.no_published_lesson', [], 'en'))
+            ->assertJsonPath('errors.course.0', __('onboarding.publish.no_published_lesson', [], 'en'));
+    }
+
+    public function test_publish_block_reason_is_localized_in_russian(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin, 'locale' => 'ru']);
+        $course = Course::factory()->create();
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        Lesson::factory()->create(['module_id' => $module->id, 'is_published' => false]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/admin/onboarding/courses/{$course->id}/publish")
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('onboarding.publish.no_published_lesson', [], 'ru'));
     }
 
     public function test_cannot_publish_course_without_any_modules(): void
     {
-        $user = User::factory()->create(['role' => Role::Admin]);
+        $user = User::factory()->create(['role' => Role::Admin, 'locale' => 'en']);
         $course = Course::factory()->create();
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson("/api/admin/onboarding/courses/{$course->id}/publish")
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('onboarding.publish.no_modules', [], 'en'));
+    }
+
+    public function test_cannot_publish_course_with_modules_but_no_lessons(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin, 'locale' => 'en']);
+        $course = Course::factory()->create();
+        CourseModule::factory()->create(['course_id' => $course->id]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/admin/onboarding/courses/{$course->id}/publish")
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('onboarding.publish.no_lessons', [], 'en'));
     }
 
     public function test_can_publish_course_with_published_lesson(): void

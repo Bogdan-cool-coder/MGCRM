@@ -31,7 +31,13 @@ class AdminUserIndexRequest extends FormRequest
             'role' => ['nullable', 'string', Rule::in(Role::values())],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'is_active' => ['nullable', 'boolean'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            // The admin user list also backs the Settings directory dropdowns
+            // (manager / department-head pickers), which request the whole roster
+            // in one page (per_page=200+). The endpoint is admin-gated, so a large
+            // cap is safe; 500 comfortably covers the full company directory while
+            // still bounding an unbounded request. A purpose-built thin endpoint
+            // (GET /api/users → UserOptionResource) exists for non-admin dropdowns.
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
         ];
     }
 }

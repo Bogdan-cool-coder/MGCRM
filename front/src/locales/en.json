@@ -2492,6 +2492,7 @@
         "cancel": "Cancel"
       },
       "publish": "Publish",
+      "publishError": "Could not publish course",
       "unpublish": "Unpublish",
       "unpublishConfirm": "Unpublish this course? Students won't be able to take it.",
       "deleteConfirm": "Delete course? This action cannot be undone.",

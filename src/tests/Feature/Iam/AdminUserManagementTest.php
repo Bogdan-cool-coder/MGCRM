@@ -83,6 +83,27 @@ class AdminUserManagementTest extends TestCase
             ->assertJsonPath('meta.per_page', 10);
     }
 
+    public function test_list_accepts_large_per_page_for_directory_dropdowns(): void
+    {
+        // The Settings directory dropdowns load the whole roster in one page
+        // (per_page=200+). This used to 422 at the old max:100 cap; the cap is now
+        // 500 so the dropdowns get a single un-paginated payload.
+        $this->actingAsAdmin();
+
+        $this->getJson('/api/admin/users?per_page=200')
+            ->assertOk()
+            ->assertJsonPath('meta.per_page', 200);
+
+        // The cap itself is exactly 500 (boundary), and 501 is still rejected.
+        $this->getJson('/api/admin/users?per_page=500')
+            ->assertOk()
+            ->assertJsonPath('meta.per_page', 500);
+
+        $this->getJson('/api/admin/users?per_page=501')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('per_page');
+    }
+
     public function test_list_filters_by_search_on_name_email_and_phone(): void
     {
         User::factory()->create(['full_name' => 'Findme Person', 'email' => 'a@x.test']);

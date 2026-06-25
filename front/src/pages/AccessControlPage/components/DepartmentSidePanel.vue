@@ -143,7 +143,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import type { DepartmentMemberDto } from '@/entities/accessControl'
-import type { AdminUserDto } from '@/entities/adminUser'
+import type { UserOptionDto } from '@/api/users'
 import type { UserRole } from '@/entities/user'
 
 const props = defineProps<{
@@ -156,7 +156,7 @@ const props = defineProps<{
   membersLoading: boolean
   saving: boolean
   parentOptions: { id: number | null; name: string }[]
-  userOptions: AdminUserDto[]
+  userOptions: UserOptionDto[]
 }>()
 
 const emit = defineEmits<{
