@@ -721,8 +721,9 @@ const systemGroups: SystemGroup[] = [
     key: 'system',
     labelKey: 'settings.groups.system',
     sections: [
-      { key: 'users',         route: '/admin/users',           icon: 'pi pi-users', titleKey: 'settings.sections.users.title',        descKey: 'settings.sections.users.desc' },
-      { key: 'automationRuns', route: '/admin/automation-runs', icon: 'pi pi-clock', titleKey: 'settings.sections.automationRuns.title', descKey: 'settings.sections.automationRuns.desc' },
+      { key: 'users',         route: '/admin/users',                         icon: 'pi pi-users',   titleKey: 'settings.sections.users.title',          descKey: 'settings.sections.users.desc' },
+      { key: 'accessControl', route: '/admin/access-control/departments',    icon: 'pi pi-shield',  titleKey: 'settings.sections.accessControl.title',  descKey: 'settings.sections.accessControl.desc' },
+      { key: 'automationRuns', route: '/admin/automation-runs',              icon: 'pi pi-clock',   titleKey: 'settings.sections.automationRuns.title', descKey: 'settings.sections.automationRuns.desc' },
     ],
   },
 ]
