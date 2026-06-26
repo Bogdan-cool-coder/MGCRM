@@ -46,3 +46,7 @@
 
 # === Design-system скрэтч-референс (брендбук PDF дублирует brand/, скриншот) — не коммитим ===
 /.claude/skills/macroglobal-design/_ref/
+
+# QA / browser-agent artifacts (screenshots, MCP page dumps)
+.playwright-mcp/
+/*.png
