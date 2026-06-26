@@ -199,6 +199,59 @@ class ContactKpiTest extends TestCase
             ->assertJsonPath('data.kpi.open_tasks_count', 0);
     }
 
+    public function test_kpi_open_tasks_count_excludes_rejected_even_when_not_closed(): void
+    {
+        // D11/D13: a rejected task is a FINAL outcome — never "open" — regardless
+        // of whether is_closed got set. The contact open-tasks badge must drop it.
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        Activity::factory()->create([
+            'kind' => ActivityType::Task->value,
+            'target_type' => ActivityTargetType::Contact->value,
+            'target_id' => $contact->id,
+            'status' => ActivityStatus::Rejected->value,
+            'is_closed' => false, // deliberate status/is_closed disagreement
+            'responsible_id' => $user->id,
+            'created_by_id' => $user->id,
+            'due_at' => now()->addDay(),
+        ]);
+
+        $this->getJson("/api/contacts/{$contact->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kpi.open_tasks_count', 0);
+    }
+
+    public function test_kpi_open_tasks_count_never_exceeds_scoped_list_for_manager(): void
+    {
+        // A5: the contact open-tasks badge is visibility-scoped (Own for a manager),
+        // so a task targeting this contact but owned/created by ANOTHER user is not
+        // counted — the badge can never exceed what the manager's task list shows.
+        $user = $this->actingAsManager();
+        $stranger = User::factory()->create(['role' => Role::Manager]);
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        // One task the manager owns (in scope).
+        $this->openTaskFor($contact, $user);
+
+        // One open task on the SAME contact but owned + created by the stranger.
+        Activity::factory()->create([
+            'kind' => ActivityType::Task->value,
+            'target_type' => ActivityTargetType::Contact->value,
+            'target_id' => $contact->id,
+            'status' => ActivityStatus::New->value,
+            'is_closed' => false,
+            'responsible_id' => $stranger->id,
+            'created_by_id' => $stranger->id,
+            'due_at' => now()->addDay(),
+        ]);
+
+        // Only the in-scope task is counted, not the stranger's.
+        $this->getJson("/api/contacts/{$contact->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kpi.open_tasks_count', 1);
+    }
+
     public function test_kpi_open_tasks_count_includes_all_task_like_kinds(): void
     {
         $user = $this->actingAsManager();

@@ -174,4 +174,145 @@ class DealFeedServiceTest extends TestCase
 
         $this->assertSame(1, $result['meta']['total']);
     }
+
+    // ---- F27: bounded-fetch perf optimisation must be byte-identical ----
+
+    /**
+     * Seeds N events of EACH source with strictly descending, collision-free
+     * timestamps, so the global chronological order across all three sources is
+     * fully deterministic (no created_at ties between rows).
+     *
+     * @return Deal the deal carrying the seeded feed
+     */
+    private function seedInterleavedFeed(Deal $deal, int $perSource): Deal
+    {
+        $base = now()->subYear();
+
+        for ($i = 0; $i < $perSource; $i++) {
+            // Spread the three sources across distinct minute offsets so no two
+            // rows share a timestamp — the same property that lets the bounded
+            // fetch reproduce the page exactly.
+            $this->stage($deal, (string) $base->copy()->addMinutes($i * 3));
+            Activity::factory()->forDeal($deal)->create([
+                'created_at' => $base->copy()->addMinutes($i * 3 + 1),
+            ]);
+            $this->audit($deal, (string) $base->copy()->addMinutes($i * 3 + 2));
+        }
+
+        return $deal;
+    }
+
+    /**
+     * Golden reference: reproduces the PRE-optimisation behaviour — load the
+     * newest min(count, 500) of each source, merge, sort desc, forPage — with
+     * NO bounded fetch. The optimised service must return identical data/meta.
+     *
+     * @return array{ids: array<int, string>, total: int}
+     */
+    private function referencePage(Deal $deal, int $page, int $perPage): array
+    {
+        $cap = 500;
+
+        $stage = DealStageHistory::query()->where('deal_id', $deal->id)
+            ->orderByDesc('created_at')->orderByDesc('id')->limit($cap)->get()
+            ->map(fn (DealStageHistory $r): array => [
+                'id' => "stage_{$r->id}", 'at' => $r->created_at?->toIso8601String(),
+            ]);
+        $activity = Activity::query()
+            ->where('target_type', \App\Domain\Activity\Enums\ActivityTargetType::Deal->value)
+            ->where('target_id', $deal->id)
+            ->orderByDesc('created_at')->orderByDesc('id')->limit($cap)->get()
+            ->map(fn (Activity $r): array => [
+                'id' => "activity_{$r->id}", 'at' => $r->created_at?->toIso8601String(),
+            ]);
+        $audit = DealAudit::query()->where('deal_id', $deal->id)
+            ->orderByDesc('created_at')->orderByDesc('id')->limit($cap)->get()
+            ->map(fn (DealAudit $r): array => [
+                'id' => "audit_{$r->id}", 'at' => $r->created_at?->toIso8601String(),
+            ]);
+
+        $merged = $stage->merge($activity)->merge($audit)
+            ->sortByDesc(fn (array $e): string => $e['at'] ?? '')
+            ->values();
+
+        return [
+            'ids' => $merged->forPage($page, $perPage)->pluck('id')->values()->all(),
+            'total' => $merged->count(),
+        ];
+    }
+
+    public function test_bounded_fetch_is_identical_to_full_merge_on_first_pages(): void
+    {
+        // 40 of each source = 120 events, well over the 30-row page so the
+        // bounded fetch (offset+perPage) genuinely loads fewer than the full set.
+        $deal = $this->seedInterleavedFeed(Deal::factory()->create(), 40);
+
+        foreach ([1, 2, 3] as $page) {
+            $ref = $this->referencePage($deal, $page, 30);
+            $actual = $this->service()->feed($deal, [], $page, 30);
+
+            $this->assertSame(
+                $ref['ids'],
+                array_column($actual['data'], 'id'),
+                "page {$page}: ids/order must match the full-merge reference",
+            );
+            $this->assertSame(120, $actual['meta']['total'], "page {$page}: total parity");
+            $this->assertSame($ref['total'], $actual['meta']['total'], "page {$page}: total vs reference");
+        }
+    }
+
+    public function test_bounded_fetch_preserves_status_and_every_field(): void
+    {
+        $deal = $this->seedInterleavedFeed(Deal::factory()->create(), 40);
+
+        $first = $this->service()->feed($deal, [], 1, 30)['data'][0];
+
+        // Full shape contract (incl. the Phase-1 `status` on activity payloads).
+        $this->assertArrayHasKey('id', $first);
+        $this->assertArrayHasKey('type', $first);
+        $this->assertArrayHasKey('occurred_at', $first);
+        $this->assertArrayHasKey('actor', $first);
+        $this->assertArrayHasKey('payload', $first);
+
+        $activity = collect($this->service()->feed($deal, [], 1, 90)['data'])
+            ->firstWhere('type', 'activity');
+        $this->assertNotNull($activity);
+        $this->assertArrayHasKey('status', $activity['payload']);
+        $this->assertArrayHasKey('is_closed', $activity['payload']);
+        $this->assertArrayHasKey('kind', $activity['payload']);
+    }
+
+    public function test_deep_page_truncates_at_the_500_ceiling_like_before(): void
+    {
+        // 600 audit rows: only the newest 500 survive the per-source ceiling,
+        // identical to the previous flat-500 behaviour. total must clamp to 500
+        // and a page beyond index 500 must be empty.
+        $deal = Deal::factory()->create();
+
+        $base = now()->subYear();
+        $rows = [];
+        for ($i = 0; $i < 600; $i++) {
+            $rows[] = [
+                'deal_id' => $deal->id,
+                'user_id' => null,
+                'field' => 'title',
+                'old_value' => 'A',
+                'new_value' => 'B',
+                'created_at' => $base->copy()->addMinutes($i),
+            ];
+        }
+        DealAudit::query()->insert($rows);
+
+        // total is clamped to the ceiling (sum of min(count, 500)).
+        $this->assertSame(500, $this->service()->feed($deal, [], 1, 30)['meta']['total']);
+
+        // The 500 newest survive: page covering indices 480..510 returns exactly
+        // the 20 rows up to the ceiling, none beyond it.
+        $tail = $this->service()->feed($deal, [], 17, 30); // offset 480
+        $this->assertCount(20, $tail['data']);
+
+        // A page entirely past the ceiling is empty — deep-pagination truncation.
+        $beyond = $this->service()->feed($deal, [], 18, 30); // offset 510 > 500
+        $this->assertCount(0, $beyond['data']);
+    }
 }

@@ -62,7 +62,7 @@ class ContactController extends Controller
             ->whereNull('deals.deleted_at')
             ->count();
 
-        $openTasksCount = $this->activityService->openTasksCountForContact((int) $contact->id);
+        $openTasksCount = $this->activityService->openTasksCountForContact((int) $contact->id, $request->user());
 
         // B-2 (DS-5): aggregate deal amounts for the contact's KPI sum chip.
         $dealTotals = $this->dealService->aggregateForContact($contact);

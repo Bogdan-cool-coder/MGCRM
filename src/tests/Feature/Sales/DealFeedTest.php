@@ -124,4 +124,40 @@ class DealFeedTest extends TestCase
 
         $this->getJson("/api/deals/{$deal->id}/feed")->assertForbidden();
     }
+
+    // ---- C9: the feed exposes the activity's REAL status ----
+
+    public function test_feed_activity_item_exposes_real_status(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->makeDeal($user);
+
+        // A rejected task is closed but NOT done — the FE must render it as
+        // "rejected", not as a green "done" reconstructed from is_closed alone.
+        Activity::factory()->forDeal($deal)->create([
+            'title' => 'Rejected follow-up',
+            'status' => \App\Domain\Activity\Enums\ActivityStatus::Rejected->value,
+            'is_closed' => true,
+        ]);
+        // An in_progress task is open — it must read "in_progress", not "new".
+        Activity::factory()->forDeal($deal)->create([
+            'title' => 'Working call',
+            'status' => \App\Domain\Activity\Enums\ActivityStatus::InProgress->value,
+            'is_closed' => false,
+            'created_at' => now()->subMinute(),
+        ]);
+
+        Sanctum::actingAs($user, ['*']);
+
+        $data = collect($this->getJson("/api/deals/{$deal->id}/feed")->assertOk()->json('data'));
+
+        $rejected = $data->firstWhere('payload.title', 'Rejected follow-up');
+        $working = $data->firstWhere('payload.title', 'Working call');
+
+        $this->assertSame('rejected', $rejected['payload']['status']);
+        $this->assertTrue($rejected['payload']['is_closed']);
+
+        $this->assertSame('in_progress', $working['payload']['status']);
+        $this->assertFalse($working['payload']['is_closed']);
+    }
 }

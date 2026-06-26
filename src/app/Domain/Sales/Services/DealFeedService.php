@@ -51,27 +51,45 @@ class DealFeedService
     {
         $types = $this->normaliseTypes($filters['types'] ?? null);
 
+        $page = max(1, $page);
+        $perPage = max(1, $perPage);
+
+        // Bounded fetch (perf, 2026-06-26 / F27): the final page is the slice
+        // [offset, offset+perPage) of the globally date-desc merge. The k-th
+        // globally-newest event always sits within the top-k newest of its OWN
+        // source (each source is date-desc internally), so pulling the newest
+        // (offset + perPage) rows from each source is provably sufficient to
+        // reproduce this page byte-for-byte — anything past that index is sliced
+        // off anyway. MAX_SOURCE_ROWS stays the hard ceiling so deep-pagination
+        // truncation is IDENTICAL to the previous flat-500 behaviour.
+        $offset = ($page - 1) * $perPage;
+        $fetchLimit = min($offset + $perPage, self::MAX_SOURCE_ROWS);
+
+        // `total` is computed independently from a capped COUNT per source so it
+        // matches the previous "sum of min(source_count, 500)" exactly, even
+        // though the data fetch now pulls fewer rows. Without this, total would
+        // collapse to the bounded fetch size and break meta.total parity.
         $events = collect();
+        $total = 0;
 
         if ($types === null || in_array(self::TYPE_STAGE_CHANGE, $types, true)) {
-            $events = $events->merge($this->stageEvents($deal));
+            $events = $events->merge($this->stageEvents($deal, $fetchLimit));
+            $total += $this->cappedCount($this->stageQuery($deal));
         }
 
         if ($types === null || in_array(self::TYPE_ACTIVITY, $types, true)) {
-            $events = $events->merge($this->activityEvents($deal));
+            $events = $events->merge($this->activityEvents($deal, $fetchLimit));
+            $total += $this->cappedCount($this->activityQuery($deal));
         }
 
         if ($types === null || in_array(self::TYPE_FIELD_CHANGE, $types, true)) {
-            $events = $events->merge($this->fieldChangeEvents($deal));
+            $events = $events->merge($this->fieldChangeEvents($deal, $fetchLimit));
+            $total += $this->cappedCount($this->fieldChangeQuery($deal));
         }
 
         $sorted = $events
             ->sortByDesc(fn (array $event): string => $event['occurred_at'] ?? '')
             ->values();
-
-        $total = $sorted->count();
-        $page = max(1, $page);
-        $perPage = max(1, $perPage);
 
         $data = $sorted->forPage($page, $perPage)->values()->all();
 
@@ -83,6 +101,15 @@ class DealFeedService
                 'current_page' => $page,
             ],
         ];
+    }
+
+    /**
+     * Per-source row count, clamped to MAX_SOURCE_ROWS so `total` mirrors the old
+     * "sum of min(source_count, 500)" merged-size exactly.
+     */
+    private function cappedCount(\Illuminate\Database\Eloquent\Builder $query): int
+    {
+        return min($query->count(), self::MAX_SOURCE_ROWS);
     }
 
     /**
@@ -104,16 +131,28 @@ class DealFeedService
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * Base query for the stage-change source — the single place the WHERE/ORDER
+     * is defined, shared by both the bounded fetch and the capped count so they
+     * can never drift apart.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<DealStageHistory>
      */
-    private function stageEvents(Deal $deal): Collection
+    private function stageQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
     {
         return DealStageHistory::query()
             ->where('deal_id', $deal->id)
-            ->with(['fromStage:id,name', 'toStage:id,name', 'user:id,full_name'])
             ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->limit(self::MAX_SOURCE_ROWS)
+            ->orderByDesc('id');
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function stageEvents(Deal $deal, int $limit): Collection
+    {
+        return $this->stageQuery($deal)
+            ->with(['fromStage:id,name', 'toStage:id,name', 'user:id,full_name'])
+            ->limit($limit)
             ->get()
             ->map(fn (DealStageHistory $row): array => [
                 'id' => "stage_{$row->id}",
@@ -136,20 +175,29 @@ class DealFeedService
     }
 
     /**
-     * Activities are polymorphic without FK; the deal is matched on
-     * target_type + target_id (DDD §2 — no belongsTo Deal relation).
+     * Base query for the activity source. Activities are polymorphic without FK;
+     * the deal is matched on target_type + target_id (DDD §2 — no belongsTo Deal
+     * relation). Single source of the WHERE/ORDER for fetch + count.
      *
-     * @return Collection<int, array<string, mixed>>
+     * @return \Illuminate\Database\Eloquent\Builder<Activity>
      */
-    private function activityEvents(Deal $deal): Collection
+    private function activityQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
     {
         return Activity::query()
             ->where('target_type', ActivityTargetType::Deal->value)
             ->where('target_id', $deal->id)
-            ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
             ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->limit(self::MAX_SOURCE_ROWS)
+            ->orderByDesc('id');
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function activityEvents(Deal $deal, int $limit): Collection
+    {
+        return $this->activityQuery($deal)
+            ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
+            ->limit($limit)
             ->get()
             ->map(fn (Activity $row): array => [
                 'id' => "activity_{$row->id}",
@@ -163,6 +211,12 @@ class DealFeedService
                     'body' => $row->body,
                     'due_at' => $row->due_at?->toIso8601String(),
                     'completed_at' => $row->completed_at?->toIso8601String(),
+                    // Real status (new|in_progress|done|rejected) so the feed renders
+                    // the actual outcome — a rejected task is NOT a green "done", and
+                    // an in_progress task is NOT a "new". The FE previously
+                    // reconstructed status from is_closed alone and mislabelled both
+                    // (C9). is_closed stays alongside for the closed/open partition.
+                    'status' => $row->status instanceof \BackedEnum ? $row->status->value : $row->status,
                     'is_closed' => (bool) $row->is_closed,
                     'responsible' => $this->actor($row->responsible),
                 ],
@@ -170,16 +224,27 @@ class DealFeedService
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * Base query for the field-change source — single source of the WHERE/ORDER
+     * for fetch + count.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<DealAudit>
      */
-    private function fieldChangeEvents(Deal $deal): Collection
+    private function fieldChangeQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
     {
         return DealAudit::query()
             ->where('deal_id', $deal->id)
-            ->with('user:id,full_name')
             ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->limit(self::MAX_SOURCE_ROWS)
+            ->orderByDesc('id');
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function fieldChangeEvents(Deal $deal, int $limit): Collection
+    {
+        return $this->fieldChangeQuery($deal)
+            ->with('user:id,full_name')
+            ->limit($limit)
             ->get()
             ->map(fn (DealAudit $row): array => [
                 'id' => "audit_{$row->id}",

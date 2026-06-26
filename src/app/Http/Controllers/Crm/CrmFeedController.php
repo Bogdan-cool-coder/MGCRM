@@ -36,6 +36,7 @@ class CrmFeedController extends Controller
 
         $result = $this->feed->feed(
             $company,
+            $request->user(),
             ['types' => is_array($types) ? $types : []],
             (int) $request->query('page', '1'),
             $this->perPage($request),
@@ -52,6 +53,7 @@ class CrmFeedController extends Controller
 
         $result = $this->feed->feed(
             $contact,
+            $request->user(),
             ['types' => is_array($types) ? $types : []],
             (int) $request->query('page', '1'),
             $this->perPage($request),
