@@ -44,6 +44,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Poll lock (single-poller guard — self-healing)
+    |--------------------------------------------------------------------------
+    | The `salespulse:run` poller takes a cluster-wide Cache lock so only ONE
+    | getUpdates stream exists per token (defence in depth on top of replicas:1).
+    |
+    | Prod incident (fixed): a container killed mid-poll never ran its finally{}
+    | release, so a NO-TTL lock stayed orphaned forever; every new container then
+    | saw the held lock, exited 0, and `restart: unless-stopped` re-ran it ~every
+    | 2s in a tight loop. The fix makes the lock SELF-HEAL:
+    |
+    |   - the lock carries a TTL (`lock_ttl`) so it cannot outlive a dead holder,
+    |   - the live poller writes a heartbeat every `heartbeat_interval` seconds,
+    |   - on startup a held-but-STALE lock (heartbeat older than `stale_after`) is
+    |     auto-stolen instead of blocking — no manual --steal needed,
+    |   - a held-and-FRESH lock is a real conflict → the command exits NON-ZERO so
+    |     Docker's restart backoff applies (no exit-0 tight loop).
+    |
+    | All windows are in SECONDS. Defaults: heartbeat every 30s; a lock whose
+    | heartbeat is >120s old is considered orphaned; the lock TTL (600s) is a
+    | generous backstop so even a missed heartbeat key self-expires.
+    */
+    'poll_lock' => [
+        'key' => 'salespulse:poll-lock',
+        'lock_ttl' => (int) env('SALESPULSE_POLL_LOCK_TTL', 600),
+        'heartbeat_interval' => (int) env('SALESPULSE_POLL_HEARTBEAT_INTERVAL', 30),
+        'stale_after' => (int) env('SALESPULSE_POLL_STALE_AFTER', 120),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Teams (spec §8 — caller → team → manager resolution)
     |--------------------------------------------------------------------------
     | A Team binds a Telegram chat to a set of MGCRM sales pipelines + a roster of

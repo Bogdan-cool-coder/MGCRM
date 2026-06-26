@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\SalesPulse;
 
+use App\Domain\SalesPulse\Services\PollLock;
+use App\Domain\SalesPulse\Telegram\HeartbeatPolling;
 use App\Domain\SalesPulse\Telegram\SalesPulseBot;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Testing\FakeNutgram;
 
@@ -25,28 +26,32 @@ use SergiX44\Nutgram\Testing\FakeNutgram;
  * token resolves to a FakeNutgram (idle) — the command exits cleanly instead of
  * crash-looping the container.
  *
- * The single-process invariant is now ALSO code-enforced: before polling we grab a
- * cluster-wide Cache lock (Redis in prod). If a second process is already polling,
- * the lock cannot be obtained and this process exits instead of starting a parallel
- * getUpdates that would 409 + drop updates. (replicas:1 on the compose service is
- * still the primary guard; this is defence in depth.)
+ * The single-process invariant is ALSO code-enforced via a SELF-HEALING poll lock
+ * (PollLock): a TTL'd Cache lock plus a heartbeat the live poller refreshes each
+ * loop iteration.
  *
- * The lock is held WITHOUT a TTL for the life of the poll loop and released in the
- * finally block; a graceful restart releases it so the new poller takes over. If the
- * process is killed uncleanly the operator force-recreates the single `salespulse-bot`
- * service, which clears the stale lock (forceRelease via salespulse:run --steal) — see
- * the --steal flag below for an unattended takeover.
+ * PROD INCIDENT (fixed): the old lock had NO TTL and was released only in finally{}.
+ * A container killed mid-poll never ran finally, leaving the lock orphaned forever;
+ * every new container then saw the held lock, exited 0, and `restart: unless-stopped`
+ * re-ran it ~every 2s in a tight loop. Two changes break that loop:
+ *
+ *   - the lock now SELF-HEALS — a held-but-stale lock (dead holder, heartbeat too
+ *     old, or TTL lapsed) is auto-reclaimed on startup with no manual --steal;
+ *   - a REAL conflict (a live poller with a fresh heartbeat) now exits NON-ZERO, so
+ *     Docker's restart backoff applies instead of a 0-exit tight loop.
+ *
+ * `--steal` remains for manual ops (force-release even a fresh lock).
  */
 class RunBotCommand extends Command
 {
-    /** Cluster-wide lock key — one poller per SalesPulse token. */
-    private const POLL_LOCK = 'salespulse:poll-lock';
+    /** Exit code used when a live poller already owns the lock (real conflict). */
+    private const EXIT_CONFLICT = 2;
 
-    protected $signature = 'salespulse:run {--steal : Force-release a stale poll lock before acquiring (use after an unclean crash)}';
+    protected $signature = 'salespulse:run {--steal : Force-release the poll lock before acquiring, even if it is live (manual op after an unclean crash)}';
 
-    protected $description = 'Run the SalesPulse Telegram bot (long-polling, single process per token)';
+    protected $description = 'Run the SalesPulse Telegram bot (long-polling, single self-healing process per token)';
 
-    public function handle(): int
+    public function handle(PollLock $lock): int
     {
         if (! (bool) config('salespulse.bot.run_polling', false)) {
             $this->warn('SalesPulse polling disabled (SALESPULSE_RUN_POLLING=false). Nothing to do.');
@@ -63,23 +68,23 @@ class RunBotCommand extends Command
             return self::SUCCESS;
         }
 
-        // No TTL: the lock lives for the whole poll loop and is released in finally,
-        // so the single poller can hand off cleanly on restart.
-        $lock = Cache::lock(self::POLL_LOCK);
+        if (! $lock->acquire(forceSteal: (bool) $this->option('steal'))) {
+            // A LIVE poller already holds the lock. Exit NON-ZERO so Docker's
+            // restart backoff kicks in (never a 0-exit tight loop). Use --steal
+            // only if you are sure the other process is gone.
+            $this->error('Another LIVE SalesPulse poller already holds the lock — refusing to start a second getUpdates (would 409). Use --steal only after confirming the other process is dead.');
 
-        if ($this->option('steal')) {
-            // Clear a lock orphaned by an unclean crash before re-acquiring.
-            $lock->forceRelease();
-        }
-
-        if (! $lock->get()) {
-            $this->warn('Another SalesPulse poller already holds the poll lock — refusing to start a second getUpdates (would 409). Use --steal after an unclean crash.');
-
-            return self::SUCCESS;
+            return self::EXIT_CONFLICT;
         }
 
         try {
-            $this->info('SalesPulse bot polling started (single process — do NOT scale).');
+            $this->info('SalesPulse bot polling started (single self-healing process — do NOT scale).');
+
+            // Custom running mode: refresh the poll-lock heartbeat on EVERY
+            // getUpdates iteration (incl. idle polls) so a live poller never lets
+            // its own lock go stale, while a dead poller's heartbeat lapses and the
+            // lock is auto-stolen on the next startup.
+            $bot->setRunningMode(new HeartbeatPolling($lock));
 
             $bot->run();
         } finally {
