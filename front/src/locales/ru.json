@@ -1219,7 +1219,8 @@
       "overdue": "Просроченные",
       "thisWeek": "Эта неделя",
       "pinned": "Закреплённые",
-      "all": "Все задачи"
+      "all": "Все задачи",
+      "completed": "Выполненные"
     },
     "overdueBadge": "Просрочено",
     "reschedule": {
@@ -3317,7 +3318,8 @@
       "feed": {
         "filterAll": "Все",
         "filterEvents": "События",
-        "filterChanges": "Изменения"
+        "filterChanges": "Изменения",
+        "fromDeal": "Из сделки"
       },
       "composer": {
         "note": "Заметка",
@@ -3588,6 +3590,8 @@
         "contact_added": "добавил контакт",
         "contact_removed": "удалил контакт",
         "task_completed": "выполнил задачу",
+        "task_rejected": "отклонил задачу",
+        "task_reopened": "переоткрыл задачу",
         "meeting_held": "провёл встречу",
         "note_added": "добавил заметку",
         "document_created": "создал документ",

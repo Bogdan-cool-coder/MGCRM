@@ -49,6 +49,7 @@
           class="w-full"
           :class="{ 'p-invalid': errors.title }"
           :placeholder="t('activity.form.titlePlaceholder')"
+          @input="markDirty"
         />
         <small v-if="errors.title" class="p-error">{{ errors.title }}</small>
       </div>
@@ -62,6 +63,7 @@
           :rows="3"
           auto-resize
           :placeholder="t('activity.form.body')"
+          @input="markDirty"
         />
       </div>
 
@@ -77,6 +79,7 @@
           show-clear
           class="w-full"
           :placeholder="t('activity.form.responsible')"
+          @change="markDirty"
         />
       </div>
 
@@ -90,6 +93,7 @@
           hour-format="24"
           date-format="dd.mm.yy"
           class="w-full"
+          @update:model-value="markDirty"
         />
       </div>
 
@@ -103,7 +107,7 @@
             class="activity-form-dialog__kind-btn"
             :class="{ 'activity-form-dialog__kind-btn--active': form.priority === opt.value }"
             type="button"
-            @click="form.priority = opt.value"
+            @click="form.priority = opt.value; markDirty()"
           >
             {{ opt.label }}
           </button>
@@ -214,9 +218,40 @@ import type {
   ActivityTargetType,
 } from '@/entities/activity'
 
+// ── Module-level users cache — loaded once, shared across all dialog instances ─
+// This prevents re-fetching GET /api/users on every dialog open.
+let cachedUsers: { id: number; full_name: string }[] | null = null
+let usersLoadPromise: Promise<void> | null = null
+
+async function ensureUsersLoaded(target: { value: { id: number; full_name: string }[] }) {
+  if (cachedUsers !== null) {
+    target.value = cachedUsers
+    return
+  }
+  if (usersLoadPromise) {
+    await usersLoadPromise
+    if (cachedUsers !== null) target.value = cachedUsers
+    return
+  }
+  usersLoadPromise = (async () => {
+    try {
+      const list = await usersApi.getUsers()
+      cachedUsers = list.map((u) => ({ id: u.id, full_name: u.full_name }))
+      target.value = cachedUsers
+    } catch {
+      // non-critical — select stays empty
+    } finally {
+      usersLoadPromise = null
+    }
+  })()
+  await usersLoadPromise
+}
+
 const props = defineProps<{
   modelValue: boolean
   activityId?: number | null
+  /** Pre-seeded DTO — form is populated synchronously from this on open (no spinner). */
+  initialActivity?: ActivityDto | null
   targetType?: ActivityTargetType | null
   targetId?: number | null
   defaultKind?: ActivityKind
@@ -323,47 +358,39 @@ const priorityOptions = computed(() =>
 
 // ── Load data ──────────────────────────────────────────────────────────────────
 
-async function loadUsers() {
-  try {
-    const list = await usersApi.getUsers()
-    users.value = list.map((u) => ({ id: u.id, full_name: u.full_name }))
-  } catch {
-    // non-critical
+/** Populate form synchronously from an ActivityDto (no spinner, no flicker). */
+function seedFormFromActivity(activity: ActivityDto) {
+  savedActivityId.value = activity.id
+  form.value = {
+    kind: activity.kind,
+    title: activity.title,
+    body: activity.body ?? '',
+    responsible_id: activity.responsible?.id ?? null,
+    due_at: activity.due_at ? new Date(activity.due_at) : null,
+    priority: activity.priority,
+    status: activity.status,
+    result_text: activity.result_text ?? '',
+    ftm_decision_maker_attended: activity.ftm_decision_maker_attended,
+    ftm_presentation_shown: activity.ftm_presentation_shown,
+    ftm_report_url: activity.ftm_report_url ?? '',
+  }
+  if (activity.target_type === 'deal' && activity.target_id) {
+    meetingReportDealId.value = activity.target_id
   }
 }
 
-async function loadActivity() {
+/** Background refresh of activity fields — does NOT touch loadingActivity so no
+ *  spinner/body-swap occurs during the dialog enter-animation. */
+async function backgroundRefreshActivity() {
   if (!props.activityId) return
-  loadingActivity.value = true
   try {
     const activity = await activityApi.getActivity(props.activityId)
-    savedActivityId.value = activity.id
-    form.value = {
-      kind: activity.kind,
-      title: activity.title,
-      body: activity.body ?? '',
-      responsible_id: activity.responsible?.id ?? null,
-      due_at: activity.due_at ? new Date(activity.due_at) : null,
-      priority: activity.priority,
-      status: activity.status,
-      result_text: activity.result_text ?? '',
-      ftm_decision_maker_attended: activity.ftm_decision_maker_attended,
-      ftm_presentation_shown: activity.ftm_presentation_shown,
-      ftm_report_url: activity.ftm_report_url ?? '',
-    }
-    // If this is a deal activity, store deal id for meeting report
-    if (activity.target_type === 'deal' && activity.target_id) {
-      meetingReportDealId.value = activity.target_id
+    // Only apply if not dirty yet (user hasn't typed anything)
+    if (!isDirty.value) {
+      seedFormFromActivity(activity)
     }
   } catch {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      life: 4000,
-    })
-    visible.value = false
-  } finally {
-    loadingActivity.value = false
+    // non-critical: form is already seeded from initialActivity
   }
 }
 
@@ -373,27 +400,52 @@ watch(
     if (open) {
       errors.value = {}
       isDirty.value = false
-      savedActivityId.value = props.activityId ?? null
+      meetingReportPipelineId.value = null
       meetingReportDealId.value =
         props.targetType === 'deal' && props.targetId ? props.targetId : null
-      // Reset the resolved pipeline so a reused dialog never carries a stale
-      // pipeline id from a previously-opened deal.
-      meetingReportPipelineId.value = null
+
       if (isEditMode.value) {
-        form.value = defaultForm()
-        await Promise.all([loadUsers(), loadActivity()])
+        // Seed synchronously from prop if provided (no spinner, no jitter)
+        if (props.initialActivity) {
+          savedActivityId.value = props.activityId ?? null
+          seedFormFromActivity(props.initialActivity)
+          // Background refresh to catch any server-side updates not in the DTO
+          void backgroundRefreshActivity()
+        } else {
+          // Fallback: fetch with spinner (no initialActivity provided)
+          form.value = defaultForm()
+          loadingActivity.value = true
+          try {
+            const activity = await activityApi.getActivity(props.activityId!)
+            seedFormFromActivity(activity)
+          } catch {
+            toast.add({ severity: 'error', summary: t('errors.server_error'), life: 4000 })
+            visible.value = false
+          } finally {
+            loadingActivity.value = false
+          }
+        }
       } else {
         form.value = defaultForm()
-        await loadUsers()
+        savedActivityId.value = null
       }
+
+      // Populate users from cache (synchronous if already loaded)
+      void ensureUsersLoaded(users)
+
+      // Reset dirty AFTER all synchronous form seeding so the background-refresh
+      // can correctly detect "user hasn't typed anything yet"
+      isDirty.value = false
     }
   },
   { immediate: false },
 )
 
-watch(form, () => {
+// Per-field dirty tracking via @input/@change in template; NOT a deep watcher.
+// isDirty is set to true by markDirty() which is called from field handlers.
+function markDirty() {
   isDirty.value = true
-}, { deep: true })
+}
 
 // ── Submit ─────────────────────────────────────────────────────────────────────
 

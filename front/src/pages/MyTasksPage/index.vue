@@ -172,16 +172,15 @@ function onEdit(activity: ActivityDto) {
 
 async function onComplete(activity: ActivityDto) {
   completingId.value = activity.id
-  // Optimistic
-  updateLocal({ ...activity, status: 'done', is_closed: true })
+  // Optimistic: remove from the OPEN list so the row moves to «Выполненные» tab (F3)
+  removeLocal(activity.id)
   try {
-    const updated = await activityApi.completeActivity(activity.id)
-    updateLocal(updated)
+    await activityApi.completeActivity(activity.id)
     toast.add({ severity: 'success', summary: t('activity.actions.completeSuccess'), life: 3000 })
     void refreshCounts()
   } catch (err) {
-    // Rollback
-    updateLocal(activity)
+    // Rollback: re-add the original task
+    addLocal(activity)
     const status = (err as { response?: { status?: number } })?.response?.status
     const msg =
       status === 403
@@ -195,14 +194,15 @@ async function onComplete(activity: ActivityDto) {
 
 async function onReopen(activity: ActivityDto) {
   reopeningId.value = activity.id
-  updateLocal({ ...activity, status: 'in_progress', is_closed: false })
+  // When reopening from the «Выполненные» tab, remove from list (F3)
+  removeLocal(activity.id)
   try {
-    const updated = await activityApi.reopenActivity(activity.id)
-    updateLocal(updated)
+    await activityApi.reopenActivity(activity.id)
     toast.add({ severity: 'success', summary: t('activity.actions.reopenSuccess'), life: 3000 })
     void refreshCounts()
   } catch (err) {
-    updateLocal(activity)
+    // Rollback
+    addLocal(activity)
     toast.add({
       severity: 'error',
       summary: getApiErrorMessage(err, t('errors.server_error')),

@@ -260,6 +260,7 @@
                   ref="activitiesTabRef"
                   entity-type="contact"
                   :entity-id="contact.id"
+                  @changed="onActivityChanged"
                 />
               </div>
             </TabPanel>
@@ -413,6 +414,7 @@ const {
   dealsHasMore,
   channels,
   loadAll,
+  loadContact,
   loadCompanies,
   loadRelations,
   loadDeals,
@@ -449,6 +451,15 @@ const {
 // ── Entity log ────────────────────────────────────────────────────────────────
 
 const contactLog = useEntityLog('contact', () => contactId.value ?? null)
+
+// ── Activity changed handler ──────────────────────────────────────────────────
+// Refreshes both the log timeline AND the open-tasks KPI chip (open_tasks_count
+// comes from ContactController::show, so we re-fetch the contact resource).
+
+function onActivityChanged() {
+  void contactLog.load()
+  void loadContact()
+}
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 

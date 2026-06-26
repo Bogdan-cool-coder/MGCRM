@@ -163,11 +163,12 @@
     popup
   />
 
-  <!-- Activity edit dialog -->
+  <!-- Activity edit dialog — only mounted when open (saves N idle Dialog subtrees) -->
   <ActivityFormDialog
-    v-if="isActivity"
+    v-if="isActivity && formDialogOpen"
     v-model="formDialogOpen"
     :activity-id="editingActivityId"
+    :initial-activity="item.activity ?? null"
     :target-type="undefined"
     :target-id="undefined"
     @updated="onActivityUpdated"

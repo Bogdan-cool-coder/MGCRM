@@ -5,10 +5,14 @@ import { ref, computed, watch } from 'vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { activityApi } from '@/api/activity'
 import { useActivityStore } from '@/stores/activityStore'
+import { localDateString, todayInOperationalTz, thisWeekRangeInOperationalTz, dateInOperationalTz } from '@/utils/activity'
 import type { ActivityDto, ActivityKind, ActivityStatus, ActivityPriority } from '@/entities/activity'
 import type { ActivityPreset } from '@/api/activity'
 
 export type TaskPreset = ActivityPreset | 'all'
+
+// The completed preset uses its own endpoint; keep it out of the "open" presets.
+export const COMPLETED_PRESET: TaskPreset = 'completed'
 
 export interface TaskFilters {
   kind: ActivityKind | null
@@ -63,8 +67,10 @@ export function useMyTasks() {
         return res.data
       })
     } else {
+      // 'completed' uses its own dedicated endpoint (GET /api/activities/presets/completed)
+      const presetKey = activePreset.value as ActivityPreset
       await resource.run(async () => {
-        const res = await activityApi.getPresetActivities(activePreset.value as ActivityPreset, {
+        const res = await activityApi.getPresetActivities(presetKey, {
           ...params,
           page: page.value,
           per_page: perPage.value,
@@ -81,8 +87,9 @@ export function useMyTasks() {
       kind: f.kind ? [f.kind] : undefined,
       status: f.status ? [f.status] : undefined,
       priority: f.priority ? [f.priority] : undefined,
-      due_from: f.due_from ? f.due_from.toISOString().split('T')[0] : undefined,
-      due_to: f.due_to ? f.due_to.toISOString().split('T')[0] : undefined,
+      // Use local calendar fields — TZ-safe for Asia/Dubai (F4)
+      due_from: f.due_from ? localDateString(f.due_from) : undefined,
+      due_to: f.due_to ? localDateString(f.due_to) : undefined,
       q: f.q || undefined,
       sort: 'pinned_first' as const,
     }
@@ -155,38 +162,27 @@ export function useMyTasks() {
     if (preset === 'all') return true
     if (preset === 'my_tasks') return true // responsible=me filter is server-side; allow optimistic
     if (preset === 'overdue') {
-      const now = Date.now()
-      return (
-        !!activity.due_at &&
-        new Date(activity.due_at).getTime() < now &&
-        !activity.is_closed &&
-        activity.status !== 'done'
-      )
+      // B31: compare day strings in operational tz (Asia/Dubai) so the overdue boundary
+      // matches the server's applyPreset — not the browser's local midnight.
+      if (!activity.due_at || activity.is_closed || activity.status === 'done') return false
+      const dueDayStr = dateInOperationalTz(new Date(activity.due_at))
+      return dueDayStr < todayInOperationalTz()
     }
     if (preset === 'today') {
       if (!activity.due_at || activity.is_closed) return false
-      const dueDate = new Date(activity.due_at)
-      const todayStart = new Date()
-      todayStart.setHours(0, 0, 0, 0)
-      const todayEnd = new Date()
-      todayEnd.setHours(23, 59, 59, 999)
-      return dueDate >= todayStart && dueDate <= todayEnd
+      // B31: use operational tz day boundary
+      return dateInOperationalTz(new Date(activity.due_at)) === todayInOperationalTz()
     }
     if (preset === 'this_week') {
       if (!activity.due_at || activity.is_closed) return false
-      const dueDate = new Date(activity.due_at)
-      const now2 = new Date()
-      const day = now2.getDay()
-      const weekStart = new Date(now2)
-      weekStart.setDate(now2.getDate() - (day === 0 ? 6 : day - 1))
-      weekStart.setHours(0, 0, 0, 0)
-      const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekStart.getDate() + 6)
-      weekEnd.setHours(23, 59, 59, 999)
-      return dueDate >= weekStart && dueDate <= weekEnd
+      // B31: use operational tz week boundaries (Monday–Sunday)
+      const dueDayStr = dateInOperationalTz(new Date(activity.due_at))
+      const { start, end } = thisWeekRangeInOperationalTz()
+      return dueDayStr >= start && dueDayStr <= end
     }
     if (preset === 'pinned') return activity.is_pinned
     if (preset === 'my_orders') return true // server-side filter; allow optimistic
+    if (preset === 'completed') return activity.is_closed || activity.status === 'done'
     return true
   }
 

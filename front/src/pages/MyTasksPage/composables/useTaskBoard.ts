@@ -1,6 +1,7 @@
 /**
  * useTaskBoard — composable for personal task kanban in the Tasks section.
- * Loads tasks via GET /api/activities/my-board and groups them into deadline buckets.
+ * Loads tasks via GET /api/activities/my-board and renders the server's
+ * Dubai-tz buckets directly (F4: no client-side re-bucketing in browser-local tz).
  */
 import { ref, computed } from 'vue'
 import { activityApi } from '@/api/activity'
@@ -17,36 +18,6 @@ export interface TaskBucket {
 
 const ALL_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']
 
-function getBucket(task: MyBoardActivityDto): MyBoardBucket {
-  if (task.is_overdue) return 'overdue'
-  if (!task.due_at) return 'this_week'
-
-  const due = new Date(task.due_at)
-  const now = new Date()
-
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const tomorrowStart = new Date(todayStart)
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1)
-  const dayAfterTomorrow = new Date(tomorrowStart)
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
-
-  // This week: Monday to Sunday
-  const dayOfWeek = todayStart.getDay() === 0 ? 6 : todayStart.getDay() - 1 // 0=Mon
-  const weekStart = new Date(todayStart)
-  weekStart.setDate(weekStart.getDate() - dayOfWeek)
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekEnd.getDate() + 7)
-
-  const nextWeekEnd = new Date(weekEnd)
-  nextWeekEnd.setDate(nextWeekEnd.getDate() + 7)
-
-  if (due < tomorrowStart) return 'today'
-  if (due < dayAfterTomorrow) return 'tomorrow'
-  if (due < weekEnd) return 'this_week'
-  if (due < nextWeekEnd) return 'next_week'
-  return 'next_week'
-}
-
 function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
   if (scope === 'day') return ['overdue', 'today', 'tomorrow']
   if (scope === 'week') return ['overdue', 'today', 'tomorrow', 'this_week']
@@ -54,19 +25,24 @@ function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
 }
 
 export function useTaskBoard() {
+  // Store the server's bucket map directly — keys are already Dubai-tz correct
+  const serverBuckets = ref<Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>>({})
   const resource = useAsyncResource<MyBoardActivityDto[]>(() => [])
   const completeMutation = useMutation()
   const scope = ref<TaskScope>('week')
   const searchQuery = ref('')
 
-  const allTasks = computed(() => resource.data.value ?? [])
+  const allTasks = computed(() =>
+    // Flat list for allDone check (all buckets, all tasks)
+    ALL_BUCKETS.flatMap((k) => serverBuckets.value[k] ?? []),
+  )
 
   const bucketsData = computed((): TaskBucket[] => {
     const q = searchQuery.value.toLowerCase()
     const visibleBuckets = bucketsForScope(scope.value)
 
     return visibleBuckets.map((key) => {
-      let tasks = allTasks.value.filter((t) => getBucket(t) === key)
+      let tasks = serverBuckets.value[key] ?? []
       if (q) {
         tasks = tasks.filter(
           (t) =>
@@ -81,29 +57,35 @@ export function useTaskBoard() {
   const totalVisible = computed(() => bucketsData.value.reduce((s, b) => s + b.tasks.length, 0))
 
   const allDone = computed(
-    () => !resource.loading.value && totalVisible.value === 0 && allTasks.value.length === 0,
+    () => !resource.loading.value && allTasks.value.length === 0,
   )
 
   async function load() {
     await resource.run(
-      () =>
-        activityApi.getMyBoard().then((r) => Object.values(r.data).flat() as MyBoardActivityDto[]),
-      {
-        commit: (result) => {
-          resource.data.value = result
-        },
+      async () => {
+        const r = await activityApi.getMyBoard()
+        // Store server buckets directly — TZ-correct (F4)
+        serverBuckets.value = r.data
+        // Return flat list so resource.loading/error tracking works
+        return ALL_BUCKETS.flatMap((k) => r.data[k] ?? [])
       },
     )
   }
 
   async function completeTask(id: number) {
-    // Optimistic removal
-    const idx = (resource.data.value ?? []).findIndex((t) => t.id === id)
-    if (idx >= 0) {
-      resource.data.value = [
-        ...(resource.data.value ?? []).slice(0, idx),
-        ...(resource.data.value ?? []).slice(idx + 1),
-      ]
+    // Optimistic: remove from whichever server bucket contains this task
+    for (const key of ALL_BUCKETS) {
+      const bucket = serverBuckets.value[key]
+      if (bucket) {
+        const idx = bucket.findIndex((t) => t.id === id)
+        if (idx >= 0) {
+          serverBuckets.value = {
+            ...serverBuckets.value,
+            [key]: [...bucket.slice(0, idx), ...bucket.slice(idx + 1)],
+          }
+          break
+        }
+      }
     }
 
     try {

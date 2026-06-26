@@ -137,6 +137,7 @@ export interface ActivityCountsDto {
   today: number
   this_week: number
   pinned: number
+  completed: number
 }
 
 // ─── Paginated response ───────────────────────────────────────────────────────

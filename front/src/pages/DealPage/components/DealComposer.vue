@@ -276,6 +276,8 @@ async function doCreate(payload: CreateActivityPayload) {
 }
 
 async function submitNote() {
+  // In-flight guard: Ctrl+Enter can bypass the :loading button (F4)
+  if (saving.value) return
   errors.value = {}
   if (!noteForm.value.body.trim()) {
     errors.value.title = t('common.required')
@@ -296,6 +298,8 @@ async function submitNote() {
 }
 
 async function submitTask() {
+  // In-flight guard: Ctrl+Enter can bypass the :loading button (F4)
+  if (saving.value) return
   errors.value = {}
   if (!taskForm.value.title.trim()) {
     errors.value.title = t('common.required')

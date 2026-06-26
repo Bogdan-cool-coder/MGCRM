@@ -247,6 +247,7 @@ async function doCreate(payload: CreateActivityPayload) {
 }
 
 async function submitNote() {
+  if (saving.value) return
   errors.value = {}
   if (!noteForm.value.body.trim()) {
     errors.value.body = t('common.required')
@@ -267,6 +268,7 @@ async function submitNote() {
 }
 
 async function submitTask() {
+  if (saving.value) return
   errors.value = {}
   if (!taskForm.value.title.trim()) {
     errors.value.title = t('common.required')

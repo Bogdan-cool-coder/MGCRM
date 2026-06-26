@@ -141,6 +141,17 @@
                       :value="t(`activity.statuses.${item.activity.status}`)"
                       size="small"
                     />
+                    <!-- A3/A4: deal-origin chip — shown when the activity came from a linked deal -->
+                    <RouterLink
+                      v-if="item.dealId"
+                      :to="`/deals/${item.dealId}`"
+                      class="entity-activities__deal-chip"
+                      :title="item.dealTitle ?? t('crm.entity.feed.fromDeal')"
+                      @click.stop
+                    >
+                      <i class="pi pi-briefcase entity-activities__deal-chip-icon" />
+                      <span>{{ item.dealTitle ?? `#${item.dealId}` }}</span>
+                    </RouterLink>
                   </div>
                   <!-- Note body -->
                   <p
@@ -222,6 +233,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
+import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
@@ -237,6 +249,12 @@ type FeedFilter = 'all' | 'events' | 'changes'
 const props = defineProps<{
   entityType: EntityFeedType
   entityId: number
+}>()
+
+const emit = defineEmits<{
+  /** Fired after any activity action (create/complete/update/delete) so parents
+   *  can reload the /log widget (Хронология) — F2 fix. */
+  changed: []
 }>()
 
 const { t } = useI18n()
@@ -350,10 +368,12 @@ watch(
 function onActivityCreated(activity: ActivityDto) {
   feed.prependLocal(activity)
   scrollToBottom()
+  emit('changed')
 }
 
 function onTaskCompleted(activity: ActivityDto) {
   feed.updateActivityLocal(activity)
+  emit('changed')
 }
 
 async function onTaskDeleted(activityId: number) {
@@ -361,6 +381,7 @@ async function onTaskDeleted(activityId: number) {
     // API-backed delete (removes the row locally on success). The local-only
     // sibling removeActivityLocal would resurrect the task on reload.
     await feed.deleteActivity(activityId)
+    emit('changed')
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
   }
@@ -370,6 +391,7 @@ function onTaskUpdated(activity: ActivityDto) {
   // Inline picker edits (kind/date/responsible/title) — sync the feed item so the
   // displayed value reflects the server response without a reload.
   feed.updateActivityLocal(activity)
+  emit('changed')
 }
 
 function formatGroupDate(dateStr: string): string {
@@ -745,5 +767,50 @@ defineExpose({
   color: $surface-400;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+// ─── A3/A4: deal-origin chip ─────────────────────────────────────────────────
+// Subtle inline link «from deal» shown when the feed item came from a linked deal.
+
+.entity-activities__deal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 2px 6px;
+  border-radius: $radius-sm;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  color: $primary-color;
+  background: $primary-100;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background var(--app-transition-fast), color var(--app-transition-fast);
+
+  &:hover {
+    background: $primary-200;
+    color: $primary-900;
+  }
+
+  .app-dark & {
+    background: var(--p-primary-900);
+    color: var(--p-primary-200);
+  }
+
+  .app-dark &:hover {
+    background: var(--p-primary-800);
+    color: var(--p-primary-100);
+  }
+}
+
+.entity-activities__deal-chip-icon {
+  font-size: $font-size-3xs;
+  flex-shrink: 0;
 }
 </style>

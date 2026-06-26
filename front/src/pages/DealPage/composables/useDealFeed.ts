@@ -12,7 +12,7 @@ import { ref, computed } from 'vue'
 import { apiClient } from '@/api/client'
 import { activityApi } from '@/api/activity'
 import { useMutation } from '@/composables/async/useMutation'
-import type { ActivityDto, ActivityKind } from '@/entities/activity'
+import type { ActivityDto, ActivityKind, ActivityStatus } from '@/entities/activity'
 
 // ─── Feed item types ──────────────────────────────────────────────────────────
 
@@ -86,6 +86,8 @@ interface RawFeedPayloadStage {
 interface RawFeedPayloadActivity {
   activity_id: number
   kind: ActivityKind
+  /** Real status enum from backend (new|in_progress|done|rejected). */
+  status?: ActivityStatus | null
   title: string
   body: string | null
   due_at: string | null
@@ -148,7 +150,9 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
     const activity: ActivityDto = {
       id: p.activity_id,
       kind,
-      status: p.is_closed ? 'done' : 'new',
+      // C9: prefer the real status field from backend; fall back to derivation for
+      // older feed rows that might not carry it yet.
+      status: p.status ?? (p.is_closed ? 'done' : 'new'),
       priority: 'normal',
       title: p.title,
       body: p.body,
@@ -435,8 +439,14 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
   function prependLocal(activity: ActivityDto) {
     const kind = activity.kind as ActivityKind
     const ts = activity.created_at
+    const itemId = `activity_${activity.id}`
+    // F20: dedupe — skip if this activity is already in the feed (can happen after
+    // loadMore brings in pages that include an optimistically-prepended item).
+    if (allItems.value.some((i) => i.id === itemId)) {
+      return
+    }
     const item: FeedItem = {
-      id: `activity_${activity.id}`,
+      id: itemId,
       type: kind,
       timestamp: ts,
       date: toDate(ts),
@@ -451,6 +461,24 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
   }
 
   function updateActivityLocal(updated: ActivityDto) {
+    const exists = allItems.value.some(
+      (item) =>
+        item.type !== 'deal_created' &&
+        (item.type === 'note' ||
+          item.type === 'task' ||
+          item.type === 'call' ||
+          item.type === 'meeting' ||
+          item.type === 'follow_up') &&
+        item.activity?.id === updated.id,
+    )
+
+    if (!exists) {
+      // Item not in local allItems — reload the feed so the updated/completed
+      // activity appears correctly (F3b: no silent no-op).
+      void load()
+      return
+    }
+
     allItems.value = allItems.value.map((item) => {
       if (item.type === 'deal_created') return item
       if (

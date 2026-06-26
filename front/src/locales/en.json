@@ -1219,7 +1219,8 @@
       "overdue": "Overdue",
       "thisWeek": "This week",
       "pinned": "Pinned",
-      "all": "All"
+      "all": "All",
+      "completed": "Completed"
     },
     "overdueBadge": "Overdue",
     "reschedule": {
@@ -3317,7 +3318,8 @@
       "feed": {
         "filterAll": "All",
         "filterEvents": "Events",
-        "filterChanges": "Changes"
+        "filterChanges": "Changes",
+        "fromDeal": "From deal"
       },
       "composer": {
         "note": "Note",
@@ -3588,6 +3590,8 @@
         "contact_added": "added contact",
         "contact_removed": "removed contact",
         "task_completed": "completed task",
+        "task_rejected": "rejected task",
+        "task_reopened": "reopened task",
         "meeting_held": "held meeting",
         "note_added": "added note",
         "document_created": "created document",

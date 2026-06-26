@@ -47,6 +47,7 @@ const presets = computed(() => [
   { value: 'today' as TaskPreset, label: t('activity.presets.today') },
   { value: 'overdue' as TaskPreset, label: t('activity.presets.overdue') },
   { value: 'all' as TaskPreset, label: t('activity.presets.all') },
+  { value: 'completed' as TaskPreset, label: t('activity.presets.completed') },
 ])
 
 function getCount(preset: TaskPreset): number {
@@ -55,6 +56,7 @@ function getCount(preset: TaskPreset): number {
     my_tasks: props.counts.my_tasks,
     today: props.counts.today,
     overdue: props.counts.overdue,
+    completed: props.counts.completed,
   }
   return map[preset] ?? 0
 }

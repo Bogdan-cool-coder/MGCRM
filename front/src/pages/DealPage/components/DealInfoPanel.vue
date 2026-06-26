@@ -205,7 +205,11 @@ function onExpandAll() {
   emit('expandAllGroups')
 }
 
-defineExpose({ onCollapseAll, onExpandAll })
+function reloadLog() {
+  void entityLog.load()
+}
+
+defineExpose({ onCollapseAll, onExpandAll, reloadLog })
 </script>
 
 <style lang="scss" scoped>

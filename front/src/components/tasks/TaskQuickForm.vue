@@ -192,7 +192,7 @@ import DatePicker from 'primevue/datepicker'
 import Menu from 'primevue/menu'
 import { activityApi } from '@/api/activity'
 import { useMutation } from '@/composables/async/useMutation'
-import { kindIcon } from '@/utils/activity'
+import { kindIcon, formatDueDateOperational } from '@/utils/activity'
 import type {
   ActivityDto,
   ActivityKind,
@@ -321,16 +321,8 @@ const responsibleLabel = computed(() =>
 const dueLabel = computed(() => {
   const d = form.value.due_at
   if (!d) return null
-  const now = new Date()
-  const todayStr = now.toDateString()
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  if (d.toDateString() === todayStr) return t('tasks.board.card.today', { time: hhmm })
-  if (d.toDateString() === tomorrow.toDateString()) return t('tasks.board.card.tomorrow', { time: hhmm })
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  return `${day}.${month} ${hhmm}`
+  // B32: format in operational tz (Asia/Dubai) so the label matches the server deadline.
+  return formatDueDateOperational(d.toISOString(), t)
 })
 
 const isOverdue = computed(() => {

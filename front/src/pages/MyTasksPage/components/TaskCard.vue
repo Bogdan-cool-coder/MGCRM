@@ -45,6 +45,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
+import { formatDueDateOperational } from '@/utils/activity'
 import type { MyBoardActivityDto } from '@/entities/activity'
 import type { ActivityKind } from '@/entities/activity'
 
@@ -90,19 +91,10 @@ const assigneeName = computed(() => {
   return `${parts[0]} ${parts[1]?.charAt(0).toUpperCase() ?? ''}.`
 })
 
+// B32: format relative day/time in the operational timezone (Asia/Dubai) so labels
+// match how the server sets deadlines — not the browser's local time.
 function formatDue(dueAt: string): string {
-  const d = new Date(dueAt)
-  const now = new Date()
-  const todayStr = now.toDateString()
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-
-  if (d.toDateString() === todayStr) return t('tasks.board.card.today', { time: hhmm })
-  if (d.toDateString() === tomorrow.toDateString()) return t('tasks.board.card.tomorrow', { time: hhmm })
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  return `${day}.${month} ${hhmm}`
+  return formatDueDateOperational(dueAt, t)
 }
 
 async function onComplete() {

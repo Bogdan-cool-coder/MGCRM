@@ -239,6 +239,7 @@
                   ref="companyActivitiesTabRef"
                   entity-type="company"
                   :entity-id="company.id"
+                  @changed="onActivityChanged"
                 />
               </div>
             </TabPanel>
@@ -575,6 +576,7 @@ const {
   dealsLoading,
   documents,
   loadAll,
+  loadCompany,
   loadEmployees,
   loadHolding,
   loadDeals,
@@ -609,6 +611,15 @@ const {
 // ── Entity log ─────────────────────────────────────────────────────────────────
 
 const companyLog = useEntityLog('company', () => companyId.value ?? null)
+
+// ── Activity changed handler ────────────────────────────────────────────────────
+// Refreshes both the log timeline AND the company KPI strip (last_activity_at and
+// deal/employee counters come from CompanyController::show).
+
+function onActivityChanged() {
+  void companyLog.load()
+  void loadCompany()
+}
 
 // ── Computed ───────────────────────────────────────────────────────────────────
 

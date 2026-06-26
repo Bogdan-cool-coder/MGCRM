@@ -693,8 +693,8 @@ async function onCompleteSubmit(task: ActivityDto) {
   completingId.value = task.id
   try {
     const updated = await activityApi.completeActivity(task.id, resultText)
-    // Clear local draft
-    delete taskResultDrafts[task.id]
+    // Clear local draft + prune all per-task map entries (F25)
+    pruneTaskMaps(task.id)
     resultRequired.value = null
     expandedId.value = null
     // Emit so parent (DealPage/index.vue) updates feedComposable → openTasks drops this task
@@ -732,9 +732,23 @@ function handleDeleteClick(task: ActivityDto) {
   }
 }
 
+// ─── F25: Prune per-task maps ─────────────────────────────────────────────────
+// When a task leaves the list (complete or delete), release all per-id map entries
+// so the reactive maps don't grow unbounded.
+
+function pruneTaskMaps(id: number) {
+  delete taskResultDrafts[id]
+  delete deleteClickCounts[id]
+  delete rowRefs[id]
+  delete resultRefs[id]
+  delete taskTitleDraft[id]
+  delete taskDueDrafts[id]
+}
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 
 function onDelete(id: number) {
+  pruneTaskMaps(id)
   expandedId.value = null
   emit('deleted', id)
 }

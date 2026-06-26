@@ -19,7 +19,7 @@
       <i class="pi pi-check-square tasks-table-wrap__empty-icon" />
       <p>{{ t('activity.myTasksPage.empty') }}</p>
       <Button
-        v-if="preset !== 'overdue'"
+        v-if="preset !== 'overdue' && preset !== 'completed'"
         icon="pi pi-plus"
         :label="t('activity.myTasksPage.create')"
         severity="secondary"
@@ -361,7 +361,7 @@ import Menu from 'primevue/menu'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import DatePicker from 'primevue/datepicker'
-import { kindIcon, statusSeverity, formatDueDate } from '@/utils/activity'
+import { kindIcon, statusSeverity, formatDueDate, localDateString } from '@/utils/activity'
 import { activityApi, type ReschedulePreset } from '@/api/activity'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { getApiErrorMessage } from '@/utils/errors'
@@ -500,8 +500,9 @@ async function patchStatus(
 // ── Commit per field ──────────────────────────────────────────────────────────
 
 async function commitDueAt(activity: ActivityDto) {
+  // Build date string from local calendar fields — TZ-safe for Asia/Dubai (F4)
   const isoDate: string | null = editDueAt.value
-    ? (editDueAt.value.toISOString().split('T')[0] ?? null)
+    ? localDateString(editDueAt.value)
     : null
   await patchActivity(
     activity,

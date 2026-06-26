@@ -11,7 +11,7 @@ import { ref, computed } from 'vue'
 import { apiClient } from '@/api/client'
 import { activityApi } from '@/api/activity'
 import { useMutation } from '@/composables/async/useMutation'
-import type { ActivityDto, ActivityKind } from '@/entities/activity'
+import type { ActivityDto, ActivityKind, ActivityStatus } from '@/entities/activity'
 
 // ─── Re-export the same FeedItem/FeedGroup types as useDealFeed ───────────────
 
@@ -38,6 +38,12 @@ export interface FeedItem {
   activity?: ActivityDto
   fieldChanges?: Array<{ field: string; old_value: string | null; new_value: string | null }>
   isEntityCreated?: boolean
+  /**
+   * A3/A4: set when the item originated from a linked deal's activity feed.
+   * Allows the UI to show a subtle «from deal» chip.
+   */
+  dealId?: number | null
+  dealTitle?: string | null
 }
 
 export interface FeedGroup {
@@ -80,22 +86,24 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
   if (raw.type === 'activity') {
     const p = raw.payload
     const kind = (p['kind'] as ActivityKind) ?? 'note'
+    const isClosed = (p['is_closed'] as boolean) ?? false
     const activity: ActivityDto = {
       id: (p['activity_id'] as number) ?? 0,
       kind,
-      status: p['is_closed'] ? 'done' : 'new',
+      // C9: prefer the real status field from backend; fall back to is_closed derivation.
+      status: (p['status'] as ActivityStatus | null | undefined) ?? (isClosed ? 'done' : 'new'),
       priority: 'normal',
       title: (p['title'] as string) ?? '',
       body: (p['body'] as string | null) ?? null,
       result_text: null,
       due_at: (p['due_at'] as string | null) ?? null,
-      is_closed: (p['is_closed'] as boolean) ?? false,
+      is_closed: isClosed,
       is_pinned: false,
       is_overdue:
-        !(p['is_closed'] as boolean) &&
+        !isClosed &&
         !!(p['due_at'] as string | null) &&
         new Date((p['due_at'] as string) ?? '') < new Date(),
-      target_type: (p['target_type'] as 'deal' | 'company') ?? 'company',
+      target_type: (p['target_type'] as 'deal' | 'company' | 'contact') ?? 'company',
       target_id: null,
       target_label: null,
       responsible: null,
@@ -109,7 +117,19 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
       created_at: timestamp,
       updated_at: timestamp,
     }
-    return { id: raw.id, type: kind as FeedItemType, timestamp, date, actor, activity }
+    // A3/A4: capture deal_id when the item is sourced from a linked deal's feed
+    const dealId = (p['deal_id'] as number | null | undefined) ?? null
+    const dealTitle = (p['deal_title'] as string | null | undefined) ?? null
+    return {
+      id: raw.id,
+      type: kind as FeedItemType,
+      timestamp,
+      date,
+      actor,
+      activity,
+      dealId: dealId ?? undefined,
+      dealTitle: dealTitle ?? undefined,
+    }
   }
 
   if (raw.type === 'field_change') {
@@ -369,8 +389,14 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
   function prependLocal(activity: ActivityDto) {
     const kind = activity.kind as ActivityKind
     const ts = activity.created_at
+    const itemId = `activity_${activity.id}`
+    // F20: dedupe — skip if already present (can happen when loadMore brings back
+    // pages that include an optimistically-prepended item).
+    if (allItems.value.some((i) => i.id === itemId)) {
+      return
+    }
     const item: FeedItem = {
-      id: `activity_${activity.id}`,
+      id: itemId,
       type: kind as FeedItemType,
       timestamp: ts,
       date: toDate(ts),
@@ -383,6 +409,14 @@ export function useEntityFeed(entityType: () => EntityFeedType, entityId: () => 
   }
 
   function updateActivityLocal(updated: ActivityDto) {
+    const exists = allItems.value.some((item) => item.activity?.id === updated.id)
+
+    if (!exists) {
+      // Not in local items — reload so completed/updated activity is visible (F3b)
+      void load()
+      return
+    }
+
     allItems.value = allItems.value.map((item) => {
       if (item.activity?.id === updated.id) {
         return { ...item, activity: updated }

@@ -325,6 +325,13 @@ function onExpandAll() {
   infoPanelMobileRef.value?.onExpandAll()
 }
 
+/** Reload the /log widget in all rendered info-panel instances (F2 fix). */
+function reloadInfoPanelLog() {
+  infoPanelRef.value?.reloadLog()
+  infoPanelTabletRef.value?.reloadLog()
+  infoPanelMobileRef.value?.reloadLog()
+}
+
 // ── Main deal data ─────────────────────────────────────────────────────────────────
 
 const { dealId, deal, loading, error, load, reloadSilent, updateDealLocal } = useDealPage()
@@ -363,17 +370,23 @@ function onActivityCreated(activity: ActivityDto) {
   feedComposable.prependLocal(activity)
   // Scroll feed to bottom so new event is visible
   dealFeedRef.value?.scrollToBottom()
+  // Reload /log so Хронология reflects the new note/task (F2)
+  reloadInfoPanelLog()
 }
 
 // Open-task complete/delete/update handlers (wired to OpenTasksList)
 function onTaskCompleted(activity: ActivityDto) {
   feedComposable.updateActivityLocal(activity)
+  // Reload /log — completed task appears in log widget (F2)
+  reloadInfoPanelLog()
 }
 
 function onTaskUpdated(activity: ActivityDto) {
   // Inline picker edits (kind/date/responsible/title) — sync the feed item so the
   // displayed value reflects the server response without a reload.
   feedComposable.updateActivityLocal(activity)
+  // Reload /log so any field-change is visible in Хронология (F2)
+  reloadInfoPanelLog()
 }
 
 async function onTaskDeleted(activityId: number) {
@@ -381,6 +394,8 @@ async function onTaskDeleted(activityId: number) {
     // API-backed delete (removes the row locally on success). The local-only
     // sibling removeActivityLocal would resurrect the task on reload.
     await feedComposable.deleteActivity(activityId)
+    // Reload /log so deleted entry is gone from Хронология (F2)
+    reloadInfoPanelLog()
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
   }

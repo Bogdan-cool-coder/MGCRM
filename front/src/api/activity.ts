@@ -16,7 +16,7 @@ import type {
 } from '@/entities/activity'
 import type { BulkCreateActivityPayload } from '@/entities/sales'
 
-export type ActivityPreset = 'my_tasks' | 'my_orders' | 'today' | 'overdue' | 'this_week' | 'pinned'
+export type ActivityPreset = 'my_tasks' | 'my_orders' | 'today' | 'overdue' | 'this_week' | 'pinned' | 'completed'
 
 /** Quick-reschedule relative shortcuts (resolved server-side in the operational TZ). */
 export type ReschedulePreset = 'tomorrow' | '+1d' | '+1w' | 'next_monday' | 'next_week' | 'next_month'
