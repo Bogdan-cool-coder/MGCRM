@@ -17,10 +17,13 @@ class ChangeStatusRequest extends FormRequest
 
     public function rules(): array
     {
+        // is_closed is intentionally NOT validated here: it is server-derived by
+        // the status machine (changeStatus()/complete()) from the target status,
+        // never accepted from the client. The request contract is exactly what the
+        // service consumes — status (+ optional result_text) (D14).
         return [
             'status' => ['required', 'string', Rule::in(ActivityStatus::values())],
             'result_text' => ['nullable', 'string'],
-            'is_closed' => ['nullable', 'boolean'],
         ];
     }
 }

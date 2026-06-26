@@ -120,8 +120,14 @@ class Activity extends Model
 
     /**
      * Computed overdue predicate (no column). Overdue ⇔ due_at in the past AND
-     * not closed AND status != done. Mirrors the query predicate in
+     * not closed AND status is not final. Mirrors the query predicate in
      * ActivityService so badge counts and lists never drift (E4).
+     *
+     * A FINAL status (done OR rejected) is never overdue — keying on Done alone
+     * left a rejected task that somehow lost its is_closed flag reported as
+     * overdue, disagreeing with the open/overdue surfaces (D11/D13). is_closed
+     * stays the primary partition, but the status check is robust to an
+     * is_closed/status disagreement.
      */
     public function isOverdue(): bool
     {
@@ -129,7 +135,7 @@ class Activity extends Model
             return false;
         }
 
-        if ($this->status === ActivityStatus::Done) {
+        if ($this->status?->isFinal()) {
             return false;
         }
 

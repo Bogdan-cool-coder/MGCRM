@@ -149,7 +149,11 @@ class MeetingReportService
         // than duplicate the engagement/entity-log plumbing here.
         $this->activityService->recordCompletedActivitySideEffects($activity, $user);
 
-        ActivityCreated::dispatch($activity);
+        // Pass the acting user as the event actor, matching how ActivityService
+        // dispatches ActivityCreated (C8). Harmless today — the audit-log listener's
+        // onCreated only writes note_added for kind=note, and this is a meeting — but
+        // keeps actor attribution consistent for any future ActivityCreated consumer.
+        ActivityCreated::dispatch($activity, $user);
 
         return $activity;
     }

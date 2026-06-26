@@ -21,6 +21,10 @@ namespace App\Domain\Log\Enums;
  *                      CompanyService::addEmployee)
  *   - meeting_held     a meeting activity completed (ActivityService::complete)
  *   - task_completed   a task-like activity completed (ActivityService::complete)
+ *   - note_added       a note logged against a target (ActivityService::create)
+ *   - task_reopened    a completed activity reopened (ActivityService::reopen)
+ *   - task_rejected    a task rejected — terminal outcome (ActivityService::
+ *                      changeStatus reject branch)
  *   - kp_sent          КП (commercial proposal) marked as sent on a deal
  *                      (DealService::markKpSent)
  *   - contract_sent    contract marked as sent on a deal (DealService::
@@ -39,6 +43,9 @@ enum LogAction: string
     case ContactAdded = 'contact_added';
     case MeetingHeld = 'meeting_held';
     case TaskCompleted = 'task_completed';
+    case NoteAdded = 'note_added';
+    case TaskReopened = 'task_reopened';
+    case TaskRejected = 'task_rejected';
     case KpSent = 'kp_sent';
     case ContractSent = 'contract_sent';
     case DataChanged = 'data_changed';

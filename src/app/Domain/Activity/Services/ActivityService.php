@@ -17,9 +17,6 @@ use App\Domain\Crm\Services\EngagementService;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
-use App\Domain\Log\Enums\LogAction;
-use App\Domain\Log\Enums\LogSubjectType;
-use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Models\Deal;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -44,12 +41,12 @@ use Illuminate\Validation\ValidationException;
  */
 class ActivityService
 {
-    private const PRESETS = ['my_tasks', 'my_orders', 'overdue', 'today', 'this_week', 'pinned'];
+    private const PRESETS = ['my_tasks', 'my_orders', 'overdue', 'today', 'this_week', 'pinned', 'completed'];
 
     public function __construct(
         private readonly VisibilityResolver $visibility,
         private readonly EngagementService $engagement,
-        private readonly EntityLogService $entityLog,
+        private readonly ActivityAuditLogger $auditLogger,
     ) {}
 
     /**
@@ -77,8 +74,10 @@ class ActivityService
         // Stamp the linked deal context (title + stage + company) onto every
         // deal-targeted row in the page in ONE pair of queries, so the task list
         // columns "связанная сделка / компания / статус сделки" render with no
-        // N+1 (Задачник 2.0 §список).
-        $this->stampDealContext($page->getCollection());
+        // N+1 (Задачник 2.0 §список). The Deal lookup is visibility-scoped so a
+        // task on a deal that moved out of the user's scope yields null context
+        // (E18) — the activity row is still theirs, but the now-foreign deal is not.
+        $this->stampDealContext($page->getCollection(), $user, $scope);
 
         return $page;
     }
@@ -129,7 +128,11 @@ class ActivityService
                 }
             });
         } else {
-            $query->where('target_type', ActivityTargetType::Deal->value)
+            // A single non-company target (deal OR contact) returns only that
+            // entity's own activities. Previously this hardcoded target_type='deal'
+            // for ANY non-company target, so a contact timeline silently queried
+            // deal-tasks (B5). Query the actual requested target_type.
+            $query->where('target_type', $type->value)
                 ->where('target_id', $targetId);
         }
 
@@ -185,7 +188,11 @@ class ActivityService
         // deal-targeted one touches the deal's company + its linked contacts.
         $this->touchTargetEngagement($activity);
 
-        ActivityCreated::dispatch($activity);
+        // The note_added action-journal row (B1) is no longer written inline: the
+        // ActivityCreated event below is the single trigger, handled by
+        // RecordActivityAuditLogListener (C8). A standalone (target-less) note
+        // still writes no row — the logger no-ops on a missing target.
+        ActivityCreated::dispatch($activity, $creator);
 
         if ($activity->responsible_id !== null) {
             ActivityAssigned::dispatch($activity, null);
@@ -283,22 +290,21 @@ class ActivityService
     {
         $this->assertCompletable($activity);
 
-        if ($activity->status === ActivityStatus::Done && $activity->completed_at !== null) {
-            // Already done: still allow a late result to be recorded.
-            if ($resultText !== null) {
-                $activity->update(['result_text' => $resultText]);
-                $activity->refresh();
-            }
-
-            return $activity; // idempotent
-        }
-
         $from = $activity->status;
 
+        // Race / idempotency guard (B3): two concurrent completes must NOT
+        // double-write the completion log or double-bump engagement. A single
+        // conditional UPDATE (status != done) is the atomic gate — only the
+        // request that flips exactly one row owns the discrete side-effects
+        // (engagement + entity-log + ActivityStatusChanged), so they fire AT MOST
+        // once even under a double-submit. The losing request falls through to the
+        // idempotent no-op below.
+        $now = now();
+
         $payload = [
-            'status' => ActivityStatus::Done,
+            'status' => ActivityStatus::Done->value,
             'is_closed' => true,
-            'completed_at' => now(),
+            'completed_at' => $now,
             'completed_by_id' => $user->id,
             'progress_pct' => 100,
         ];
@@ -307,19 +313,38 @@ class ActivityService
             $payload['result_text'] = $resultText;
         }
 
-        $activity->update($payload);
+        $affected = Activity::query()
+            ->whereKey($activity->getKey())
+            ->where('status', '!=', ActivityStatus::Done->value)
+            ->update($payload);
+
+        if ($affected === 0) {
+            // Already done (or won the race elsewhere): idempotent no-op, but still
+            // allow a late result to be recorded without re-firing side-effects.
+            if ($resultText !== null) {
+                $activity->update(['result_text' => $resultText]);
+            }
+
+            $activity->refresh();
+
+            return $activity;
+        }
+
         $activity->refresh();
+
+        // Exactly one row transitioned here — run the discrete side-effects once.
 
         // Completing a call/meeting/task is fresh engagement on its target.
         $this->touchTargetEngagement($activity);
 
-        // Polymorphic action log on the activity's target subject: a meeting is a
-        // meeting_held event, any other task-like kind is task_completed. A note
-        // never reaches here (assertCompletable), and a standalone (target-less)
-        // task has no subject to log against → recordCompletionOnTarget no-ops.
-        $this->recordCompletionOnTarget($activity, $user);
-
-        ActivityStatusChanged::dispatch($activity, $from, ActivityStatus::Done);
+        // The completion action-journal rows (the meeting_held/task_completed row
+        // on the target + the deal→company/contact fan-out, A1) are no longer
+        // written inline: the ActivityStatusChanged event below is the single
+        // trigger, handled by RecordActivityAuditLogListener (C8). Because this
+        // branch only runs when the conditional UPDATE flipped exactly one row
+        // (B3), the event — and therefore the listener's write — fires at most
+        // once per real transition.
+        ActivityStatusChanged::dispatch($activity, $from, ActivityStatus::Done, $user);
 
         return $activity;
     }
@@ -332,21 +357,35 @@ class ActivityService
     {
         $this->assertCompletable($activity);
 
-        if ($activity->status !== ActivityStatus::Done && $activity->completed_at === null) {
+        $from = $activity->status;
+
+        // Single-fire guard mirroring complete() (B3): a conditional UPDATE gated
+        // on status = done atomically claims the reopen, so a double-submit can
+        // only write ONE task_reopened log row and dispatch ONE status event. The
+        // losing request falls through to the idempotent no-op below.
+        $affected = Activity::query()
+            ->whereKey($activity->getKey())
+            ->where('status', ActivityStatus::Done->value)
+            ->update([
+                'status' => ActivityStatus::InProgress->value,
+                'completed_at' => null,
+                'completed_by_id' => null,
+                'is_closed' => false,
+            ]);
+
+        if ($affected === 0) {
+            $activity->refresh();
+
             return $activity; // idempotent — nothing to reopen
         }
 
-        $from = $activity->status;
-
-        $activity->update([
-            'status' => ActivityStatus::InProgress,
-            'completed_at' => null,
-            'completed_by_id' => null,
-            'is_closed' => false,
-        ]);
         $activity->refresh();
 
-        ActivityStatusChanged::dispatch($activity, $from, ActivityStatus::InProgress);
+        // The task_reopened action-journal row (B2) is no longer written inline:
+        // the ActivityStatusChanged event below (done → in_progress) is the single
+        // trigger, handled by RecordActivityAuditLogListener (C8). The conditional
+        // UPDATE above (B3) guarantees this fires at most once per reopen.
+        ActivityStatusChanged::dispatch($activity, $from, ActivityStatus::InProgress, $user);
 
         return $activity;
     }
@@ -474,11 +513,38 @@ class ActivityService
             $payload['result_text'] = $extra['result_text'];
         }
 
+        // Rejecting is a terminal action logged on the target's canonical timeline
+        // (B2). Use the same single-fire guard as complete()/reopen(): a
+        // conditional UPDATE gated on status != rejected atomically claims the
+        // transition, so a double-submit writes ONE task_rejected log row and
+        // dispatches ONE status event. Other open-state transitions keep the plain
+        // update (no discrete log event is recorded for them).
+        if ($to === ActivityStatus::Rejected) {
+            $affected = Activity::query()
+                ->whereKey($activity->getKey())
+                ->where('status', '!=', ActivityStatus::Rejected->value)
+                ->update($payload);
+
+            $activity->refresh();
+
+            if ($affected === 0) {
+                return $activity; // already rejected — idempotent no-op
+            }
+
+            // The task_rejected action-journal row (B2) is no longer written
+            // inline: the ActivityStatusChanged event is the single trigger,
+            // handled by RecordActivityAuditLogListener (C8). The conditional
+            // UPDATE above (B3) guarantees one event per real reject.
+            ActivityStatusChanged::dispatch($activity, $from, $to, $user);
+
+            return $activity;
+        }
+
         $activity->update($payload);
         $activity->refresh();
 
         if ($from !== $to) {
-            ActivityStatusChanged::dispatch($activity, $from, $to);
+            ActivityStatusChanged::dispatch($activity, $from, $to, $user);
         }
 
         return $activity;
@@ -495,12 +561,18 @@ class ActivityService
      *
      * The Activity domain owns both side-effects, so the constructor service
      * delegates here instead of duplicating the EngagementService /
-     * EntityLogService plumbing.
+     * ActivityAuditLogger plumbing.
+     *
+     * This is the ONE completion path that does NOT flow through complete() and so
+     * fires NO ActivityStatusChanged event — the meeting-report constructor writes
+     * a done meeting directly. It therefore still writes the completion log here,
+     * through the SAME ActivityAuditLogger the event listener uses (C8), so the row
+     * and fan-out are byte-identical to a meeting completed via POST /complete.
      */
     public function recordCompletedActivitySideEffects(Activity $activity, User $actor): void
     {
         $this->touchTargetEngagement($activity);
-        $this->recordCompletionOnTarget($activity, $actor);
+        $this->auditLogger->recordCompletion($activity, $actor);
     }
 
     public function delete(Activity $activity): void
@@ -523,15 +595,27 @@ class ActivityService
     {
         $this->assertKnownPreset($preset);
 
-        $page = $this->scopedQuery($scope, $user)
+        $query = $this->scopedQuery($scope, $user)
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
-            ->where(fn (Builder $q) => $this->applyPreset($q, $preset, $user))
-            ->orderByRaw('due_at is null')
-            ->orderBy('due_at')
-            ->orderByDesc('created_at')
-            ->paginate($perPage);
+            ->where(fn (Builder $q) => $this->applyPreset($q, $preset, $user));
 
-        $this->stampDealContext($page->getCollection());
+        if ($preset === 'completed') {
+            // The «Выполненные» tab is sorted by recency of completion: most
+            // recently completed first, nulls last (a closed-but-not-Done row, e.g.
+            // rejected, has no completed_at). Other presets keep deadline order
+            // (due_at nulls last → due_at → created_at desc).
+            $query->orderByRaw('completed_at is null')
+                ->orderByDesc('completed_at')
+                ->orderByDesc('created_at');
+        } else {
+            $query->orderByRaw('due_at is null')
+                ->orderBy('due_at')
+                ->orderByDesc('created_at');
+        }
+
+        $page = $query->paginate($perPage);
+
+        $this->stampDealContext($page->getCollection(), $user, $scope);
 
         return $page;
     }
@@ -541,50 +625,119 @@ class ActivityService
      * same per-preset predicate as presets() — the single source of truth that
      * fixes the old badge≠list discrepancy.
      *
+     * One DB round-trip (F23): every preset count is a conditional
+     * SUM(CASE WHEN <preset predicate> THEN 1 ELSE 0 END) over the SAME scoped
+     * base, instead of one ->count() per preset (6 round-trips) that also re-ran
+     * the Department-subtree BFS once per preset. The per-preset predicate is still
+     * single-sourced through applyPreset() — extracted as a raw WHERE fragment per
+     * preset — so the badge can never drift from the matching list, and the numbers
+     * are byte-identical to the old per-preset counts (incl. 'completed').
+     *
      * @return array<string, int>
      */
     public function countsByPreset(VisibilityScope $scope, User $user): array
     {
+        $query = $this->scopedQuery($scope, $user);
+
+        $selects = [];
+        $bindings = [];
+
+        foreach (self::PRESETS as $preset) {
+            // Reuse the exact preset predicate: apply it to a throwaway builder,
+            // then lift its WHERE SQL + bindings into a CASE column. Wrapping the
+            // fragment in parentheses keeps each preset's OR-clauses isolated.
+            $predicate = Activity::query()->where(fn (Builder $q) => $this->applyPreset($q, $preset, $user));
+
+            $where = $this->extractWhereSql($predicate);
+
+            if ($where === null) {
+                // Defensive: a preset that adds no predicate counts every scoped row.
+                $selects[] = "count(*) as {$preset}";
+
+                continue;
+            }
+
+            $selects[] = "sum(case when {$where} then 1 else 0 end) as {$preset}";
+            $bindings = array_merge($bindings, $predicate->getBindings());
+        }
+
+        /** @var object|null $row */
+        $row = $query
+            ->selectRaw(implode(', ', $selects), $bindings)
+            ->first();
+
         $counts = [];
 
         foreach (self::PRESETS as $preset) {
-            $counts[$preset] = $this->scopedQuery($scope, $user)
-                ->where(fn (Builder $q) => $this->applyPreset($q, $preset, $user))
-                ->count();
+            $counts[$preset] = (int) ($row?->{$preset} ?? 0);
         }
 
         return $counts;
     }
 
     /**
-     * Open (not-closed) activities assigned to the user — the header badge.
+     * Lift the WHERE clause of a built query into a raw SQL fragment (without the
+     * leading "where" keyword), so it can be embedded in a CASE expression for the
+     * single-query countsByPreset() roll-up. Returns null when the builder carries
+     * no WHERE constraint. Bindings are taken from the source builder by the caller.
      */
-    public function myOpenCount(User $user): int
+    private function extractWhereSql(Builder $query): ?string
     {
-        return Activity::query()
+        $sql = $query->toSql();
+
+        $pos = stripos($sql, ' where ');
+
+        if ($pos === false) {
+            return null;
+        }
+
+        return substr($sql, $pos + strlen(' where '));
+    }
+
+    /**
+     * Open activities assigned to the user — the header badge.
+     *
+     * Routed through the SAME scopedQuery() the lists use (A2/A5) so the badge can
+     * never exceed the visible "my tasks" list: count == list. "Open" uses the
+     * single-source scopeOpen() predicate (not closed AND status not final), so a
+     * rejected task never inflates the badge even if its is_closed flag desynced
+     * (D11/D13).
+     */
+    public function myOpenCount(VisibilityScope $scope, User $user): int
+    {
+        return $this->scopedQuery($scope, $user)
             ->where('responsible_id', $user->id)
-            ->where('is_closed', false)
+            ->where(fn (Builder $q) => $this->scopeOpen($q))
             ->count();
     }
 
     /**
-     * Count of OPEN (not closed, status != done) task-like activities targeting a
-     * specific contact — the KPI card signal for ContactResource.
+     * Count of OPEN task-like activities targeting a specific contact directly —
+     * the KPI card signal for ContactResource.
      *
      * "Task-like" mirrors taskLikeValues() (call/meeting/task/follow_up/presentation).
-     * No visibility scope here: the count is shown to anyone who can view the contact
-     * (the controller already gates access via Policy).
+     * "Open" uses the single-source scopeOpen() predicate (not closed AND status not
+     * final) so a rejected task is never counted as open (D11/D13).
+     *
+     * Routed through the SAME scopedQuery() the lists use (A2/A5) so the badge can
+     * never exceed the visibility-scoped list — count == list. The scope is
+     * resolved from the user's role here (like countDealsWithoutTasks), so the
+     * caller stays thin and never re-derives scope.
+     *
+     * NB: this stays a contact-DIRECT metric (only activities whose target IS this
+     * contact), intentionally different from the contact's last_touch_at, which
+     * ALSO includes the deal-engagement fan-out (deal-targeted activities touch the
+     * deal's contacts). The two answer different questions and must not be merged.
      *
      * Single DB query — safe to call from ContactController::show() without N+1.
      */
-    public function openTasksCountForContact(int $contactId): int
+    public function openTasksCountForContact(int $contactId, User $user): int
     {
-        return Activity::query()
+        return $this->scopedQuery($this->visibility->resolve($user), $user)
             ->where('target_type', ActivityTargetType::Contact->value)
             ->where('target_id', $contactId)
             ->whereIn('kind', ActivityType::taskLikeValues())
-            ->where('is_closed', false)
-            ->where('status', '!=', ActivityStatus::Done->value)
+            ->where(fn (Builder $q) => $this->scopeOpen($q))
             ->count();
     }
 
@@ -724,8 +877,7 @@ class ActivityService
             ->where('target_type', ActivityTargetType::Deal->value)
             ->whereIn('target_id', $dealIds)
             ->whereIn('kind', ActivityType::taskLikeValues())
-            ->where('is_closed', false)
-            ->where('status', '!=', ActivityStatus::Done->value)
+            ->where(fn (Builder $q) => $this->scopeOpen($q))
             ->whereNotNull('due_at');
 
         if (DB::connection()->getDriverName() === 'pgsql') {
@@ -965,8 +1117,7 @@ class ActivityService
         $activities = Activity::query()
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
             ->whereIn('kind', ActivityType::taskLikeValues())
-            ->where('is_closed', false)
-            ->where('status', '!=', ActivityStatus::Done->value)
+            ->where(fn (Builder $q) => $this->scopeOpen($q))
             ->where(function (Builder $q) use ($user): void {
                 $q->where('responsible_id', $user->id)
                     ->orWhere('created_by_id', $user->id);
@@ -986,8 +1137,10 @@ class ActivityService
         // Batch-resolve the linked deal context (title + stage + company) for the
         // whole board in one pair of queries, stamped onto each activity so
         // ActivityCardResource renders the parent deal / its company / its stage
-        // with no N+1 (Сделки — ТЗ §4.3 + Задачник 2.0 §карточка).
-        $this->stampDealContext($activities);
+        // with no N+1 (Сделки — ТЗ §4.3 + Задачник 2.0 §карточка). The Deal lookup
+        // is visibility-scoped (resolved from the user's role) so a board task on a
+        // now-foreign deal renders null context instead of leaking it (E18).
+        $this->stampDealContext($activities, $user);
 
         $buckets = [
             'overdue' => [],
@@ -1025,56 +1178,6 @@ class ActivityService
     }
 
     // ---- Private ----
-
-    /**
-     * Record a completion event on the activity's target subject's entity-log.
-     * A meeting completion is meeting_held; any other task-like kind (call /
-     * task / follow_up) is task_completed. The target_type → LogSubjectType map
-     * is 1:1 (deal/company/contact). A standalone (target-less) personal task
-     * has no subject and is intentionally NOT logged (no card to show it on).
-     * A note can never reach here (assertCompletable rejects it first).
-     */
-    private function recordCompletionOnTarget(Activity $activity, User $actor): void
-    {
-        $subjectType = $this->targetSubjectType($activity->target_type);
-        $targetId = $activity->target_id !== null ? (int) $activity->target_id : null;
-
-        if ($subjectType === null || $targetId === null) {
-            return; // standalone personal task — nothing to log against
-        }
-
-        $kind = $activity->kind instanceof ActivityType ? $activity->kind : ActivityType::tryFrom((string) $activity->kind);
-
-        $action = $kind === ActivityType::Meeting
-            ? LogAction::MeetingHeld
-            : LogAction::TaskCompleted;
-
-        $this->entityLog->record(
-            $subjectType,
-            $targetId,
-            $actor,
-            $action,
-            [
-                'activity_id' => (int) $activity->id,
-                'kind' => $kind?->value,
-                'title' => $activity->title,
-            ],
-        );
-    }
-
-    /**
-     * Map an Activity target_type string to the matching entity-log subject type.
-     * The two enums share the same string values (deal/company/contact), so the
-     * mapping is a direct tryFrom; an unknown/null type yields null.
-     */
-    private function targetSubjectType(?string $targetType): ?LogSubjectType
-    {
-        if ($targetType === null) {
-            return null;
-        }
-
-        return LogSubjectType::tryFrom($targetType);
-    }
 
     /**
      * Stamp last_activity_at on the Crm entities behind an activity's target
@@ -1133,9 +1236,17 @@ class ActivityService
      * The Activity domain reads the Deal model only through its own batched lookup
      * (no foreign-table coupling beyond the already-imported Sales models).
      *
+     * The Deal lookup is visibility-scoped (E18): a user may legitimately OWN an
+     * activity on a deal that later moved out of their scope, but they must not see
+     * the now-foreign deal's title/stage/company through the task context. Filtering
+     * the Deal query through the SAME scope as the deal board (owner_user_id +
+     * department subtree, via VisibilityResolver::applyScope) makes a now-foreign
+     * deal resolve to null context — without dropping the user's own activity row.
+     * The scope is resolved from the user's role when not supplied by the caller.
+     *
      * @param  Collection<int, Activity>  $activities
      */
-    private function stampDealContext(Collection $activities): void
+    private function stampDealContext(Collection $activities, User $user, ?VisibilityScope $scope = null): void
     {
         $dealIds = $activities
             ->filter(static fn (Activity $a): bool => $a->target_type === ActivityTargetType::Deal->value && $a->target_id !== null)
@@ -1147,9 +1258,15 @@ class ActivityService
         /** @var Collection<int, Deal> $deals */
         $deals = $dealIds === []
             ? collect()
-            : Deal::query()
-                ->whereIn('id', $dealIds)
-                ->with(['stage:id,name,color,is_won,is_lost', 'company:id,name'])
+            : $this->visibility->applyScope(
+                Deal::query()
+                    ->whereIn('id', $dealIds)
+                    ->with(['stage:id,name,color,is_won,is_lost', 'company:id,name']),
+                $user,
+                ['owner_user_id'],
+                'department_id',
+                $scope,
+            )
                 ->get()
                 ->keyBy('id');
 
@@ -1229,8 +1346,7 @@ class ActivityService
                 ->where('responsible_id', $user->id),
             'overdue' => $query
                 ->where('due_at', '<', $now)
-                ->where('is_closed', false)
-                ->where('status', '!=', ActivityStatus::Done->value)
+                ->where(fn (Builder $q) => $this->scopeOpen($q))
                 ->where($mineClause),
             'today' => $query
                 ->where('due_at', '>=', $todayStart)
@@ -1241,6 +1357,19 @@ class ActivityService
                 ->where('due_at', '>=', $todayStart)
                 ->where('due_at', '<', $weekEnd)
                 ->where('is_closed', false)
+                ->where($mineClause),
+            // The «Выполненные» tab (B6): the current user's CLOSED tasks — done OR
+            // closed (a rejected task is closed but not done). Scoped to "my work"
+            // (responsible OR creator), same as the open buckets, and routed
+            // through the SAME scopedQuery as every preset/list so count == list and
+            // visibility holds. Newest-first ordering comes from presets() (due_at
+            // nulls last → due_at → created_at desc); completed tasks generally have
+            // a due date so this lands them in deadline order.
+            'completed' => $query
+                ->where(function (Builder $q): void {
+                    $q->where('is_closed', true)
+                        ->orWhere('status', ActivityStatus::Done->value);
+                })
                 ->where($mineClause),
             default => null,
         };
@@ -1341,15 +1470,19 @@ class ActivityService
     }
 
     /**
-     * Guard responsible_id reassignment against the actor's visibility scope.
+     * Guard responsible_id reassignment against the actor's visibility scope (E17).
      *
-     * The FormRequest only checks exists:users,id, which would let any actor push
-     * a task to ANY user — including one in a department they cannot see, moving
-     * the task out of their own scope at will. An All-scope actor (admin/director)
-     * may assign to anyone; a scoped actor may only assign to themselves or to a
-     * user inside their department subtree. Mirrors the visibility model used by
-     * scopedQuery / VisibilityResolver so the receiver stays bounded by what the
-     * actor can already see.
+     * The FormRequest only checks exists:users,id, which would let any actor push a
+     * task to ANY user — including one they cannot even see, moving the task out of
+     * their own scope at will. The allowed-target set must match the actor's REAL
+     * read scope, so we resolve the scope FIRST and branch the allowed receivers on
+     * it (previously a department subtree was computed even for an Own-scope actor,
+     * who can't see that subtree — widening the allowed set beyond their read scope):
+     *   All        — assign to anyone (admin / director / lawyer reassign freely);
+     *   Department — assign within the actor's department subtree;
+     *   Own        — assign to SELF only (an Own-scope actor sees no one else, so
+     *                they cannot hand a task to an arbitrary user).
+     * Assigning to self or clearing the responsible is always allowed.
      */
     private function assertResponsibleAssignable(?int $responsibleId, User $actor): void
     {
@@ -1357,10 +1490,22 @@ class ActivityService
             return; // clearing, or assigning to self — always allowed.
         }
 
-        if ($this->visibility->resolve($actor) === VisibilityScope::All) {
-            return; // admin/director/lawyer reassign freely.
+        $scope = $this->visibility->resolve($actor);
+
+        // All scope reassigns freely.
+        if ($scope === VisibilityScope::All) {
+            return;
         }
 
+        // Own scope sees no one but themselves — only self-assignment is allowed
+        // (already returned above for self). Any other target is out of scope.
+        if ($scope === VisibilityScope::Own) {
+            throw ValidationException::withMessages([
+                'responsible_id' => 'You cannot assign this task to a user outside your scope.',
+            ]);
+        }
+
+        // Department scope: the receiver must sit inside the actor's subtree.
         $allowedDeptIds = $this->visibility->departmentSubtreeIds($actor);
         $targetDeptId = User::query()->whereKey($responsibleId)->value('department_id');
 
@@ -1444,6 +1589,27 @@ class ActivityService
         };
 
         return $query->pluck('id')->map(static fn ($id): int => (int) $id)->all();
+    }
+
+    /**
+     * The single-source "open work" predicate, applied IN PLACE. A task is open
+     * when it is not closed AND its status is not final (done OR rejected). Keying
+     * on is_closed alone OR on status != done alone each left a hole: a rejected
+     * task that lost its is_closed flag (or vice-versa) was reported open/overdue,
+     * disagreeing across the surfaces (D11/D13). is_closed stays the primary
+     * partition; the status guard makes every open/overdue predicate robust to an
+     * is_closed/status disagreement.
+     *
+     * @param  Builder<Activity>  $query
+     */
+    private function scopeOpen(Builder $query): void
+    {
+        $query
+            ->where('is_closed', false)
+            ->whereNotIn('status', [
+                ActivityStatus::Done->value,
+                ActivityStatus::Rejected->value,
+            ]);
     }
 
     /**

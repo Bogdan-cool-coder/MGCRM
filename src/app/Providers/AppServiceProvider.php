@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Domain\Activity\Events\ActivityAssigned;
+use App\Domain\Activity\Events\ActivityCreated;
+use App\Domain\Activity\Events\ActivityStatusChanged;
+use App\Domain\Activity\Listeners\RecordActivityAuditLogListener;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Models\MeetingReportQuestion;
 use App\Domain\Activity\Policies\ActivityPolicy;
@@ -291,6 +294,17 @@ class AppServiceProvider extends ServiceProvider
         //   - DocumentSubmittedForApproval → "approval requested" (each approver)
         Event::listen(ActivityAssigned::class, NotifyActivityAssigneeListener::class);
         Event::listen(DocumentSubmittedForApproval::class, NotifyApproversListener::class);
+
+        // Activity action-journal (C8). The note_added / task_completed /
+        // meeting_held / task_reopened / task_rejected EntityLog rows used to be
+        // written inline in ActivityService; they now fire from this listener off
+        // ActivityCreated / ActivityStatusChanged so the journal is single-sourced
+        // and append-only. The conditional-UPDATE single-fire guard in the service
+        // (B3) means each event fires at most once per real transition, so the
+        // listener writes exactly one set of rows (no double-write). Synchronous,
+        // DB-only (no I/O) — never blocks the web request.
+        Event::listen(ActivityCreated::class, [RecordActivityAuditLogListener::class, 'onCreated']);
+        Event::listen(ActivityStatusChanged::class, [RecordActivityAuditLogListener::class, 'onStatusChanged']);
 
         // Onboarding — Certificate generation (S3.6). On CourseCompleted, dispatch
         // GenerateCertificateJob to the queue (never block the HTTP request).

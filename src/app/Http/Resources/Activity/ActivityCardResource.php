@@ -26,6 +26,7 @@ class ActivityCardResource extends JsonResource
             'title' => $this->title,
             'body' => $this->body,
             'due_at' => $this->due_at?->toIso8601String(),
+            'completed_at' => $this->completed_at?->toIso8601String(),
             'status' => $this->status?->value,
             'priority' => $this->priority?->value,
             'is_closed' => $this->is_closed,

@@ -171,4 +171,56 @@ class ActivityPresetsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.count', 2);
     }
+
+    // ---- B6: the «Выполненные» tab — current user's closed tasks ----
+
+    public function test_completed_preset_returns_only_closed_tasks(): void
+    {
+        $manager = $this->manager();
+
+        // Done, rejected (closed but not done) and a plain is_closed task all count.
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)->completed($manager)->create();
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['status' => \App\Domain\Activity\Enums\ActivityStatus::Rejected->value, 'is_closed' => true]);
+        // Two OPEN tasks that must NOT appear.
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)->count(2)->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities/presets/completed')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_completed_preset_is_visibility_scoped_to_current_user(): void
+    {
+        $manager = $this->manager();
+        $other = $this->manager();
+
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)->completed($manager)->create();
+        // Another user's completed task — not "my work", must not leak.
+        Activity::factory()->responsibleOf($other)->createdByUser($other)->completed($other)->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities/presets/completed')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_completed_preset_count_matches_list(): void
+    {
+        $manager = $this->manager();
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)->completed($manager)->count(3)->create();
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)->count(2)->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $counts = $this->getJson('/api/activities/counts-by-preset')->json('data');
+        $list = $this->getJson('/api/activities/presets/completed')->json('data');
+
+        $this->assertSame(count($list), $counts['completed']);
+        $this->assertSame(3, $counts['completed']);
+    }
 }

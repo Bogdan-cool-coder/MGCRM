@@ -250,7 +250,7 @@ class ActivityController extends Controller
         $this->authorize('viewAny', Activity::class);
 
         return response()->json([
-            'data' => ['count' => $this->service->myOpenCount($request->user())],
+            'data' => ['count' => $this->service->myOpenCount($this->scope($request), $request->user())],
         ]);
     }
 

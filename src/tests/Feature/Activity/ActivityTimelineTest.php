@@ -6,6 +6,7 @@ namespace Tests\Feature\Activity;
 
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Sales\Models\Deal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -108,5 +109,27 @@ class ActivityTimelineTest extends TestCase
         $this->getJson("/api/activities?target_type=deal&target_id={$deal->id}")
             ->assertOk()
             ->assertJsonCount(2, 'data');
+    }
+
+    public function test_contact_timeline_returns_contact_activities_not_deal(): void
+    {
+        // Audit B5: the timeline else-branch used to hardcode target_type='deal'
+        // for ANY non-company target, so a CONTACT timeline silently queried
+        // deal-tasks. It must now return the contact's OWN activities.
+        $pipeline = $this->seedSalesPipeline();
+        $director = $this->director();
+        $contact = $this->contactFor($director);
+        $deal = $this->dealFor($director, $pipeline);
+
+        // Two activities ON the contact + a deal activity that must NOT leak in.
+        Activity::factory()->forContact($contact)->responsibleOf($director)->createdByUser($director)->count(2)->create();
+        Activity::factory()->forDeal($deal)->responsibleOf($director)->createdByUser($director)->create();
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson("/api/activities?target_type=contact&target_id={$contact->id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.target_type', 'contact');
     }
 }
