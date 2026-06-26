@@ -229,6 +229,36 @@ class DealListFiltersTest extends TestCase
         $this->assertSame([$ru->id], $this->listIds('?country=ru'));
     }
 
+    public function test_countries_multi_select_filters_to_any_of_the_codes(): void
+    {
+        $kz = $this->dealOn('new', Company::factory()->create(['country_code' => 'kz']));
+        $uz = $this->dealOn('new', Company::factory()->create(['country_code' => 'uz']));
+        $this->dealOn('new', Company::factory()->create(['country_code' => 'ru'])); // excluded
+
+        $ids = $this->listIds('?countries[]=kz&countries[]=uz');
+
+        $this->assertEqualsCanonicalizing([$kz->id, $uz->id], $ids);
+    }
+
+    public function test_single_country_still_works_alongside_multi(): void
+    {
+        $this->dealOn('new', Company::factory()->create(['country_code' => 'kz']));
+        $this->dealOn('new', Company::factory()->create(['country_code' => 'uz']));
+        $ru = $this->dealOn('new', Company::factory()->create(['country_code' => 'ru']));
+
+        // Backward-compat: legacy single `country` param still narrows correctly.
+        $this->assertSame([$ru->id], $this->listIds('?country=ru'));
+    }
+
+    public function test_empty_countries_array_is_ignored(): void
+    {
+        $this->dealOn('new', Company::factory()->create(['country_code' => 'kz']));
+        $this->dealOn('new', Company::factory()->create(['country_code' => 'uz']));
+
+        // countries with no items must NOT collapse to whereIn([]) (zero rows).
+        $this->assertCount(2, $this->listIds('?countries='));
+    }
+
     // ------------------------------------------------------------------ city
 
     public function test_city_filters_by_company_city(): void
@@ -254,6 +284,41 @@ class DealListFiltersTest extends TestCase
         $this->assertEqualsCanonicalizing([$mid->id, $high->id], $this->listIds('?budget_from=100000'));
         // to only.
         $this->assertEqualsCanonicalizing([$low->id, $mid->id], $this->listIds('?budget_to=1000000'));
+    }
+
+    /**
+     * Reproduction of the production anomaly: filtering «Бюджет от 1 000 000 до
+     * 3 509 000 ₽» wrongly surfaced a «34 483 ₽» deal. The FE sends both bounds
+     * already converted to KOPECKS (rubles×100); deals.amount is kopecks. With the
+     * range below ONLY the 2 000 000 ₽ deal must return — the 34 483 ₽ deal (far
+     * below the lower bound) and the 5 000 000 ₽ deal (above the upper bound) are
+     * both excluded. A pass here proves the logic is sound and the live anomaly is
+     * a DATA issue (an amount row stored in rubles, not kopecks).
+     */
+    public function test_budget_range_in_kopecks_excludes_out_of_range_deals(): void
+    {
+        $tiny = $this->dealOn('new', null, ['amount' => 34_483_00, 'amount_locked' => true]);   // 34 483 ₽
+        $inRange = $this->dealOn('new', null, ['amount' => 2_000_000_00, 'amount_locked' => true]); // 2 000 000 ₽
+        $tooHigh = $this->dealOn('new', null, ['amount' => 5_000_000_00, 'amount_locked' => true]); // 5 000 000 ₽
+
+        // от 1 000 000 ₽ до 3 509 000 ₽, both bounds in kopecks (rubles×100).
+        $ids = $this->listIds('?budget_from=100000000&budget_to=350900000');
+
+        $this->assertSame([$inRange->id], $ids);
+        $this->assertNotContains($tiny->id, $ids, 'A deal far below the lower bound must be excluded.');
+        $this->assertNotContains($tooHigh->id, $ids, 'A deal above the upper bound must be excluded.');
+    }
+
+    /**
+     * A blank budget_to bound must be a no-op, NOT `amount <= 0` (which would empty
+     * the result). Guards the defensive numericBound() skip.
+     */
+    public function test_empty_budget_bounds_are_ignored(): void
+    {
+        $a = $this->dealOn('new', null, ['amount' => 50_000, 'amount_locked' => true]);
+        $b = $this->dealOn('new', null, ['amount' => 5_000_000, 'amount_locked' => true]);
+
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $this->listIds('?budget_from=&budget_to='));
     }
 
     // ------------------------------------------------------------ created range

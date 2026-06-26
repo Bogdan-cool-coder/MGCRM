@@ -259,7 +259,9 @@ function hidePopover() {
   border: 1px solid var(--p-surface-200);
   border-radius: $radius-lg;
   overflow: hidden;
-  max-height: 100%;
+  // F4: max-height must NOT be set here — it was relative to the flex parent
+  // which shrinks when the filter panel opens, squishing cards. Cards now scroll
+  // naturally inside .kanban-col__list (overflow-y: auto) without a hard cap.
 
   .app-dark & {
     border-color: var(--p-surface-300);

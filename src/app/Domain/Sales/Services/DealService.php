@@ -467,8 +467,18 @@ class DealService
             )
 
             // ----- company geography -----
+            // Multi-country (`countries[]`) takes precedence; the legacy single
+            // `country` param is the fallback when no non-empty array is sent.
             ->when(
-                $this->nonEmptyString($filters['country'] ?? null),
+                $this->nonEmptyList($filters['countries'] ?? null),
+                fn (Builder $q) => $q->whereHas(
+                    'company',
+                    fn (Builder $c) => $c->whereIn('country_code', $filters['countries']),
+                ),
+            )
+            ->when(
+                $this->nonEmptyList($filters['countries'] ?? null) === false
+                    && $this->nonEmptyString($filters['country'] ?? null),
                 fn (Builder $q) => $q->whereHas(
                     'company',
                     fn (Builder $c) => $c->where('country_code', $filters['country']),
@@ -483,13 +493,16 @@ class DealService
             )
 
             // ----- budget range (kopecks, on the denormalised Deal.amount) -----
+            // Bounds arrive from the FE already converted to kopecks (rubles×100).
+            // Skip a null / empty / non-numeric bound entirely — never cast it to 0,
+            // or an empty budget_to would silently zero the result set.
             ->when(
-                isset($filters['budget_from']),
-                fn (Builder $q) => $q->where('amount', '>=', (int) $filters['budget_from']),
+                $this->numericBound($filters['budget_from'] ?? null) !== null,
+                fn (Builder $q) => $q->where('amount', '>=', $this->numericBound($filters['budget_from'] ?? null)),
             )
             ->when(
-                isset($filters['budget_to']),
-                fn (Builder $q) => $q->where('amount', '<=', (int) $filters['budget_to']),
+                $this->numericBound($filters['budget_to'] ?? null) !== null,
+                fn (Builder $q) => $q->where('amount', '<=', $this->numericBound($filters['budget_to'] ?? null)),
             )
 
             // ----- created_at range (inclusive day boundaries) -----
@@ -557,6 +570,28 @@ class DealService
     private function nonEmptyString(mixed $value): bool
     {
         return is_string($value) && trim($value) !== '';
+    }
+
+    /**
+     * Normalise a numeric range bound (budget_from / budget_to, in kopecks) to a
+     * plain int, or null when the bound is absent / empty / non-numeric. Returning
+     * null (rather than casting to 0) is deliberate: a blank `budget_to` must be a
+     * no-op, not `amount <= 0` which would empty the result set. A formatted string
+     * such as "1 000 000 ₽" is treated as non-numeric and skipped — it would never
+     * reach here through the validated request (the `integer` rule rejects it), but
+     * the service is also called directly by tests / cross-domain code.
+     */
+    private function numericBound(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && is_numeric(trim($value))) {
+            return (int) trim($value);
+        }
+
+        return null;
     }
 
     /**

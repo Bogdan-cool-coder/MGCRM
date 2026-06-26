@@ -44,8 +44,8 @@
         </div>
       </template>
 
-      <!-- 1. Название (link) -->
-      <Column field="title">
+      <!-- 1. Название (link) — auto width (flex remaining space) -->
+      <Column field="title" style="min-width: 180px">
         <template #header>
           <button class="deals-list__sort-btn" @click="emit('sort', 'name')">
             {{ t('sales.deals.page.columns.title') }}
@@ -59,8 +59,8 @@
         </template>
       </Column>
 
-      <!-- 2. Страна -->
-      <Column style="width: 100px">
+      <!-- 2. Страна — fixed 90px -->
+      <Column style="width: 90px; min-width: 90px; max-width: 90px">
         <template #header>
           <button class="deals-list__sort-btn" @click="emit('sort', 'country')">
             {{ t('sales.deals.page.list.columns.country') }}
@@ -74,8 +74,8 @@
         </template>
       </Column>
 
-      <!-- 3. Сумма -->
-      <Column style="text-align: right; width: 130px">
+      <!-- 3. Сумма — fixed 130px, right-aligned data -->
+      <Column style="width: 130px; min-width: 130px; max-width: 130px; text-align: right">
         <template #header>
           <button class="deals-list__sort-btn" @click="emit('sort', 'amount')">
             {{ t('sales.deals.page.columns.amount') }}
@@ -87,8 +87,8 @@
         </template>
       </Column>
 
-      <!-- 4. Статус (stage chip with tint 22%) -->
-      <Column>
+      <!-- 4. Статус (stage chip with tint 22%) — fixed 150px -->
+      <Column style="width: 150px; min-width: 150px; max-width: 150px">
         <template #header>
           <button class="deals-list__sort-btn" @click="emit('sort', 'stage')">
             {{ t('sales.deals.page.columns.stage') }}
@@ -108,8 +108,8 @@
         </template>
       </Column>
 
-      <!-- 5. В статусе (days in stage, plural) -->
-      <Column style="width: 110px">
+      <!-- 5. В статусе (days in stage, plural) — fixed 110px -->
+      <Column style="width: 110px; min-width: 110px; max-width: 110px">
         <template #header>
           <button class="deals-list__sort-btn" @click="emit('sort', 'days_in_stage')">
             {{ t('sales.deals.page.list.columns.inStage') }}
@@ -126,8 +126,8 @@
         </template>
       </Column>
 
-      <!-- 6. Посл. контакт (freshness) -->
-      <Column style="width: 130px">
+      <!-- 6. Посл. контакт (freshness) — fixed 130px -->
+      <Column style="width: 130px; min-width: 130px; max-width: 130px">
         <template #header>
           <button class="deals-list__sort-btn" @click="emit('sort', 'last_contact')">
             {{ t('sales.deals.page.list.columns.lastContact') }}
@@ -144,8 +144,8 @@
         </template>
       </Column>
 
-      <!-- 7. Задача (custom pills per spec §5.2) -->
-      <Column>
+      <!-- 7. Задача (custom pills per spec §5.2) — fixed 120px -->
+      <Column style="width: 120px; min-width: 120px; max-width: 120px">
         <template #header>
           <!-- Task column: no dedicated server sort key — maps to 'created' as nearest field -->
           <button class="deals-list__sort-btn" @click="emit('sort', 'created')">
@@ -179,8 +179,8 @@
         </template>
       </Column>
 
-      <!-- 8. Ответственный (avatar 22px + full name) -->
-      <Column style="width: 150px">
+      <!-- 8. Ответственный (avatar 22px + full name) — fixed 150px -->
+      <Column style="width: 150px; min-width: 150px; max-width: 150px">
         <template #header>
           <button class="deals-list__sort-btn" @click="emit('sort', 'owner')">
             {{ t('sales.deals.page.columns.owner') }}
@@ -367,48 +367,59 @@ function taskDateShort(dueAt: string | null): string {
 .deals-list__table {
   width: 100%;
   cursor: pointer;
+
+  // L2: fixed layout so opening the filter panel NEVER reflows column widths
+  :deep(table) {
+    table-layout: fixed;
+    width: 100%;
+  }
 }
 
 :deep(.p-datatable-thead th) {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  color: $surface-500;
+  // L1: bigger, bolder, near-black header text
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $surface-900;
   background: $surface-card;
   // Remove default PrimeVue header padding so our button fills it
   padding: 0 !important;
+  // L1: center header labels over columns
+  text-align: center;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-900); // dark surface-900 = #F9FAFB — near-white on dark bg
   }
 }
 
 // Sort button inside each column header
 .deals-list__sort-btn {
+  // L1: match th font spec + centered
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: $space-1;
   width: 100%;
   padding: $space-2 $space-3;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  color: $surface-500;
-  text-align: left;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $surface-900;
+  text-align: center;
   white-space: nowrap;
   transition: color 0.15s;
 
   &:hover {
-    color: $surface-700;
+    color: $primary-color;
 
     .app-dark & {
-      color: var(--p-surface-200);
+      color: var(--p-primary-300);
     }
   }
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-900);
   }
 }
 

@@ -36,6 +36,7 @@ class IndexDealRequest extends FormRequest
         'stage_ids',
         'tags',
         'revealed_stage_ids',
+        'countries',
     ];
 
     /**
@@ -144,12 +145,20 @@ class IndexDealRequest extends FormRequest
             'product_q' => ['sometimes', 'nullable', 'string', 'max:255'],
 
             // ----- company geography -----
+            // Single-country param kept for backward compatibility; `countries`
+            // (multi-select) is the new canonical shape and takes precedence when
+            // a non-empty array is present.
             'country' => ['sometimes', 'nullable', 'string', 'max:8'],
+            'countries' => ['sometimes', 'array'],
+            'countries.*' => ['string', 'max:8'],
             'city' => ['sometimes', 'nullable', 'string', 'max:128'],
 
             // ----- amount range (kopecks) -----
-            'budget_from' => ['sometimes', 'integer', 'min:0'],
-            'budget_to' => ['sometimes', 'integer', 'min:0'],
+            // nullable so a blank ?budget_from=/?budget_to= (emptied to null by the
+            // global ConvertEmptyStringsToNull middleware) is a silent no-op rather
+            // than a 422. The service's numericBound() then skips the null bound.
+            'budget_from' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'budget_to' => ['sometimes', 'nullable', 'integer', 'min:0'],
 
             // ----- created_at range -----
             'created_from' => ['sometimes', 'date'],

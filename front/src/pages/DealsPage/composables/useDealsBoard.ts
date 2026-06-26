@@ -80,7 +80,9 @@ export function useDealsBoard(
           only_no_task: f.only_no_task || undefined,
           only_overdue: f.only_overdue || undefined,
           product_q: f.product_q || undefined,
-          country: f.country || undefined,
+          // countries[] takes precedence over single country when non-empty (backend whereIn).
+          countries: f.countries.length ? f.countries : undefined,
+          country: f.countries.length ? undefined : (f.country || undefined),
           city: f.city || undefined,
           // Budget inputs are in rubles (UI suffix " ₽"); the API compares
           // against deals.amount in kopecks → convert before sending (×100).

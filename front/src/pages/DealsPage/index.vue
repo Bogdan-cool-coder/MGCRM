@@ -747,7 +747,11 @@ onMounted(async () => {
 }
 
 .deals-page__board-wrap {
+  // F4: use min-height:0 so flex shrinking doesn't collapse this container
+  // when the filter panel opens. The board itself overflows and scrolls
+  // internally — cards keep their natural shape at all times.
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: $space-4 $space-5;
   display: flex;

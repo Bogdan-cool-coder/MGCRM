@@ -534,6 +534,11 @@ export interface DealListParams {
   only_overdue?: boolean
   product_q?: string | null
   country?: string | null
+  /**
+   * Multi-country filter: array of lowercase ISO-2 codes (e.g. ["kz","ru"]).
+   * Takes precedence over `country` when non-empty (backend whereIn).
+   */
+  countries?: string[]
   city?: string | null
   budget_from?: number | null
   budget_to?: number | null

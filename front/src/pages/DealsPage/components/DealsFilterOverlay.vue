@@ -7,7 +7,7 @@
         <InputText
           v-model="localFilters.q"
           :placeholder="t('sales.deals.page.filters.search')"
-          class="filter-overlay__search-input"
+          class="filter-overlay__search-input filter-overlay__control"
         />
       </div>
     </div>
@@ -53,7 +53,7 @@
           option-label="name"
           option-value="id"
           filter
-          class="w-100"
+          class="w-100 filter-overlay__control"
         />
       </div>
 
@@ -66,27 +66,62 @@
           option-label="name"
           option-value="id"
           filter
-          class="w-100"
+          class="w-100 filter-overlay__control"
         />
       </div>
 
-      <!-- Продукт -->
+      <!-- Продукт (searchable dropdown backed by catalog) -->
       <div class="filter-overlay__field">
         <label class="filter-overlay__label">{{ t('sales.deals.page.filters.product') }}</label>
-        <InputText v-model="localFilters.product_q" class="w-100" placeholder="..." />
+        <div class="filter-overlay__product-wrap">
+          <i class="pi pi-search filter-overlay__product-icon" />
+          <InputText
+            v-model="productSearch"
+            class="w-100 filter-overlay__control filter-overlay__product-input"
+            :placeholder="t('sales.deals.page.filters.productSearch')"
+            autocomplete="off"
+            @focus="productDropdownOpen = true"
+            @input="onProductSearchInput"
+            @blur="onProductBlur"
+          />
+          <div
+            v-if="productDropdownOpen && filteredProducts.length > 0"
+            class="filter-overlay__product-dropdown"
+          >
+            <div
+              v-for="prod in filteredProducts"
+              :key="prod.id"
+              class="filter-overlay__product-option"
+              :class="{ 'filter-overlay__product-option--selected': localFilters.product_q === prod.name }"
+              @mousedown.prevent="selectProduct(prod)"
+            >
+              {{ prod.name }}
+            </div>
+          </div>
+          <div
+            v-if="productDropdownOpen && filteredProducts.length === 0 && productSearch.length > 0"
+            class="filter-overlay__product-dropdown"
+          >
+            <div class="filter-overlay__product-empty">
+              {{ t('sales.deals.page.filters.productEmpty') }}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Регион / страна -->
+      <!-- Страна (multi-select) — NOTE: backend currently accepts single country only -->
+      <!-- C1 multi-select sends country_codes[] but backend needs IN-clause update  -->
+      <!-- For now: single Select (multi UX pending backend IAM patch)               -->
       <div class="filter-overlay__field">
         <label class="filter-overlay__label">{{ t('sales.deals.page.filters.country') }}</label>
-        <Select
-          v-model="localFilters.country"
+        <MultiSelect
+          v-model="localFilters.countries"
           :options="countriesOptions"
           option-label="name"
           option-value="code"
           filter
           show-clear
-          class="w-100"
+          class="w-100 filter-overlay__control"
           :placeholder="t('sales.deals.page.filters.country')"
         />
       </div>
@@ -94,7 +129,7 @@
       <!-- Город -->
       <div class="filter-overlay__field">
         <label class="filter-overlay__label">{{ t('sales.deals.page.filters.city') }}</label>
-        <InputText v-model="localFilters.city" class="w-100" />
+        <InputText v-model="localFilters.city" class="w-100 filter-overlay__control" />
       </div>
 
       <!-- Бюджет (single column, two inputs 50/50) -->
@@ -105,29 +140,24 @@
             v-model="localFilters.budget_from"
             suffix=" ₽"
             mode="decimal"
-            class="flex-1"
+            class="flex-1 filter-overlay__control"
           />
           <span class="filter-overlay__budget-sep">{{ t('sales.deals.page.filters.budgetTo') }}</span>
           <InputNumber
             v-model="localFilters.budget_to"
             suffix=" ₽"
             mode="decimal"
-            class="flex-1"
+            class="flex-1 filter-overlay__control"
           />
         </div>
       </div>
 
-      <!-- Теги -->
+      <!-- Теги — checkbox list only, no standalone search field below -->
       <div class="filter-overlay__field">
         <label class="filter-overlay__label">{{ t('sales.deals.page.filters.tags') }}</label>
-        <InputText
-          v-model="tagSearch"
-          :placeholder="t('sales.deals.page.filters.tagsSearch')"
-          class="w-100 mb-2"
-        />
         <div class="filter-overlay__tags-list">
           <div
-            v-for="tag in filteredTags"
+            v-for="tag in tags"
             :key="tag"
             class="filter-overlay__tag-item"
           >
@@ -138,8 +168,8 @@
             />
             <span class="filter-overlay__tag-name">{{ tag }}</span>
           </div>
-          <div v-if="filteredTags.length === 0" class="filter-overlay__tags-empty">
-            {{ t('sales.deals.page.filters.tagsSearch') }}...
+          <div v-if="tags.length === 0" class="filter-overlay__tags-empty">
+            {{ t('sales.deals.page.filters.tagsEmpty') }}
           </div>
         </div>
       </div>
@@ -151,7 +181,7 @@
           v-model="localFilters.dateRange"
           selection-mode="range"
           show-icon
-          class="w-100"
+          class="w-100 filter-overlay__control"
         />
       </div>
     </div>
@@ -224,12 +254,13 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import MultiSelect from 'primevue/multiselect'
-import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Checkbox from 'primevue/checkbox'
 import type { PipelineStageDto, UserRefDto, HiddenStageDto } from '@/entities/sales'
+import type { ProductDto } from '@/entities/catalog'
 import { useSalesStore } from '@/stores/salesStore'
 import { useDirectoriesStore } from '@/stores/directories'
+import { catalogApi } from '@/api/catalog'
 
 export interface OverlayFilters {
   q: string
@@ -237,7 +268,10 @@ export interface OverlayFilters {
   stage_ids: number[]
   owner_ids: number[]
   product_q: string
+  /** @deprecated kept for backward compat; when countries[] is non-empty, use that instead. */
   country: string
+  /** Multi-country filter: array of lowercase ISO-2 codes. Backend supports whereIn via countries[]. */
+  countries: string[]
   city: string
   budget_from: number | null
   budget_to: number | null
@@ -283,7 +317,10 @@ const revealedCount = computed(() => {
 
 // ── Local state ────────────────────────────────────────────────────────────────
 
-const localFilters = reactive<OverlayFilters>({ ...props.filters })
+const localFilters = reactive<OverlayFilters>({
+  ...props.filters,
+  countries: props.filters.countries ?? (props.filters.country ? [props.filters.country] : []),
+})
 
 const localPresets = reactive<Record<PresetKey, boolean>>({
   open: props.filters.status === 'open',
@@ -294,12 +331,58 @@ const localPresets = reactive<Record<PresetKey, boolean>>({
   overdue: props.filters.only_overdue,
 })
 
-const tagSearch = ref('')
 const hiddenExpanded = ref(false)
+
+// ── Product search (C2) ────────────────────────────────────────────────────────
+
+const allProducts = ref<ProductDto[]>([])
+const productSearch = ref(props.filters.product_q ?? '')
+const productDropdownOpen = ref(false)
+
+// Load products on mount
+catalogApi.getProducts({ active_only: true, per_page: 200 }).then((res) => {
+  allProducts.value = res.data
+}).catch(() => {
+  // non-critical; filter works via text search too
+})
+
+const filteredProducts = computed(() => {
+  const q = productSearch.value.toLowerCase().trim()
+  if (!q) return allProducts.value.slice(0, 30)
+  return allProducts.value.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 30)
+})
+
+let productDebounce: ReturnType<typeof setTimeout> | null = null
+
+function onProductSearchInput() {
+  if (productDebounce) clearTimeout(productDebounce)
+  productDropdownOpen.value = true
+  productDebounce = setTimeout(() => {
+    localFilters.product_q = productSearch.value
+  }, 200)
+}
+
+function selectProduct(prod: ProductDto) {
+  productSearch.value = prod.name
+  localFilters.product_q = prod.name
+  productDropdownOpen.value = false
+}
+
+// Close product dropdown when clicking outside
+function onProductBlur() {
+  // short delay so mousedown on option fires first
+  setTimeout(() => {
+    productDropdownOpen.value = false
+  }, 150)
+}
 
 // Sync when parent filters change
 watch(() => props.filters, (next) => {
-  Object.assign(localFilters, { ...next })
+  Object.assign(localFilters, {
+    ...next,
+    countries: next.countries ?? (next.country ? [next.country] : []),
+  })
+  productSearch.value = next.product_q ?? ''
   localPresets.open = next.status === 'open'
   localPresets.mine = next.only_mine
   localPresets.won = next.status === 'won'
@@ -325,12 +408,6 @@ function togglePreset(key: PresetKey) {
 
 // ── Tags ───────────────────────────────────────────────────────────────────────
 
-const filteredTags = computed(() => {
-  if (!tagSearch.value) return props.tags
-  const q = tagSearch.value.toLowerCase()
-  return props.tags.filter((tag) => tag.toLowerCase().includes(q))
-})
-
 function toggleTag(tag: string) {
   const idx = localFilters.tags.indexOf(tag)
   if (idx >= 0) {
@@ -351,8 +428,15 @@ function onApply() {
         ? 'open'
         : null
 
+  // Backend now supports countries[] (whereIn). Pass full array; keep country as first value
+  // for backward-compat with saved-views and any consumers still reading the single field.
+  const selectedCountries = localFilters.countries ?? []
+  const firstCountry = selectedCountries[0] ?? ''
+
   emit('apply', {
     ...localFilters,
+    countries: selectedCountries,
+    country: firstCountry,
     status,
     only_mine: localPresets.mine,
     only_no_task: localPresets.noTask,
@@ -368,6 +452,7 @@ function onReset() {
     owner_ids: [],
     product_q: '',
     country: '',
+    countries: [],
     city: '',
     budget_from: null,
     budget_to: null,
@@ -377,6 +462,8 @@ function onReset() {
     only_no_task: false,
     only_overdue: false,
   })
+  productSearch.value = ''
+  productDropdownOpen.value = false
   localPresets.open = false
   localPresets.mine = false
   localPresets.won = false
@@ -384,6 +471,8 @@ function onReset() {
   localPresets.noTask = false
   localPresets.overdue = false
   emit('reset')
+  // F3: auto-close filter panel on reset
+  emit('close')
 }
 </script>
 
@@ -398,6 +487,45 @@ function onReset() {
     background: var(--p-surface-100);
     border-bottom-color: var(--p-surface-300);
   }
+}
+
+// ── Unified control height (F1) ──────────────────────────────────────────────
+// All filter inputs/selects normalised to 38px so every field row is identical
+// height. Applied via .filter-overlay__control on each PrimeVue component root
+// plus deep override for their inner input elements.
+$_filter-h: 38px;
+
+.filter-overlay__control {
+  // PrimeVue InputText / InputNumber / DatePicker — the root IS the input element
+  height: $_filter-h !important;
+  min-height: $_filter-h !important;
+
+  // PrimeVue MultiSelect / Select — root is a wrapper div; inner button is the height ref
+  :deep(.p-multiselect),
+  :deep(.p-select),
+  :deep(.p-multiselect-label-container),
+  :deep(.p-select-label-container) {
+    height: $_filter-h !important;
+    min-height: $_filter-h !important;
+  }
+  :deep(.p-inputnumber-input) {
+    height: $_filter-h !important;
+    min-height: $_filter-h !important;
+  }
+}
+
+// When the component IS the MultiSelect/Select root (class on component tag)
+:deep(.p-multiselect.filter-overlay__control),
+:deep(.p-select.filter-overlay__control) {
+  height: $_filter-h !important;
+  min-height: $_filter-h !important;
+  align-items: center;
+}
+
+// DatePicker wrapper
+:deep(.p-datepicker.filter-overlay__control .p-datepicker-input) {
+  height: $_filter-h !important;
+  min-height: $_filter-h !important;
 }
 
 // Search row (standalone, max-width 460)
@@ -423,7 +551,7 @@ function onReset() {
 .filter-overlay__search-input {
   width: 100%;
   padding-left: 34px !important;
-  height: 38px;
+  height: $_filter-h;
 }
 
 // Presets row (label + chips + spacer + close)
@@ -559,6 +687,72 @@ function onReset() {
   font-size: $font-size-xs;
   color: $surface-500;
   margin-bottom: $space-1;
+}
+
+// Product search field (C2)
+.filter-overlay__product-wrap {
+  position: relative;
+}
+
+.filter-overlay__product-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: $font-size-sm;
+  color: $surface-400;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.filter-overlay__product-input {
+  padding-left: 30px !important;
+}
+
+.filter-overlay__product-dropdown {
+  position: absolute;
+  top: calc(100% + $space-1);
+  left: 0;
+  right: 0;
+  background: $surface-card;
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  box-shadow: $shadow-elevated;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: none;
+
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-color: var(--p-surface-300);
+  }
+}
+
+.filter-overlay__product-option {
+  padding: $space-2 $space-3;
+  font-size: $font-size-sm;
+  color: $surface-700;
+  cursor: pointer;
+
+  .app-dark & {
+    color: var(--p-surface-200);
+  }
+
+  &:hover,
+  &--selected {
+    background: var(--p-surface-100);
+
+    .app-dark & {
+      background: var(--p-surface-200);
+    }
+  }
+}
+
+.filter-overlay__product-empty {
+  padding: $space-2 $space-3;
+  font-size: $font-size-xs;
+  color: $surface-400;
 }
 
 .filter-overlay__budget-row {
