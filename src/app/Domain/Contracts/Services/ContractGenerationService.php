@@ -53,12 +53,16 @@ class ContractGenerationService
     /**
      * Generate DOCX + PDF for the given Document.
      *
+     * @param  int|null  $templateId  Optional explicit Template ID from the UI picker.
+     *                                When provided, the chosen template is used instead
+     *                                of the kind-based fallback to master_skeleton.
+     *
      * @return array{document: Document, warnings: list<string>}
      *
      * @throws ValidationException 422 on business rule violations
      * @throws HttpException 503/502 on Gotenberg failures
      */
-    public function generate(Document $doc, int $userId): array
+    public function generate(Document $doc, int $userId, ?int $templateId = null): array
     {
         // Guard: only draft or needs_rework can be (re)generated.
         if (! in_array($doc->status, [ContractStatus::Draft, ContractStatus::NeedsRework], strict: true)) {
@@ -75,11 +79,12 @@ class ContractGenerationService
         }
 
         // 1. Resolve template:
+        //    - Explicit template_id from request (UI picker) takes highest priority.
         //    - If Document carries a pinned template_version FK, use that version's template.
         //    - Otherwise fall back to master_skeleton (default for kind=contract).
         //    This lets termination_agreement docs use a dedicated template without
         //    touching the master_skeleton flow.
-        $resolvedTemplate = $this->resolveTemplate($doc);
+        $resolvedTemplate = $this->resolveTemplate($doc, $templateId);
 
         $masterTemplate = $resolvedTemplate;
 
@@ -194,19 +199,33 @@ class ContractGenerationService
     /**
      * Resolve the Template to use for generation.
      *
-     * Priority:
-     *  1. Template code derived from Document.kind:
-     *     - termination_agreement → Template(code='termination_agreement')
-     *     - contract (default)    → Template(code='master_skeleton')
-     *  2. Explicit template_code override (future use): if Document.context['template_code']
-     *     is set, that code takes precedence over the kind-based resolution.
+     * Priority (highest → lowest):
+     *  1. Explicit $templateId passed from the UI picker (most specific — user intent).
+     *  2. Explicit template_code stored in Document.context['template_code'] (future use).
+     *  3. Document.kind-based code:
+     *       termination_agreement → Template(code='termination_agreement')
+     *       contract (default)    → Template(code='master_skeleton')
      *
      * Falls back to master_skeleton when the kind-specific template is not found
      * so existing contract generation keeps working without disruption.
+     *
+     * @throws ValidationException 422 when $templateId is provided but the template does not exist.
      */
-    private function resolveTemplate(Document $doc): Template
+    private function resolveTemplate(Document $doc, ?int $templateId = null): Template
     {
-        // Explicit override stored in context (future use, no breaking change).
+        // 1. Explicit template from the UI picker.
+        if ($templateId !== null) {
+            $t = Template::with('currentVersion')->find($templateId);
+            if ($t === null) {
+                throw ValidationException::withMessages([
+                    'template_id' => "Шаблон #{$templateId} не найден.",
+                ])->status(422);
+            }
+
+            return $t;
+        }
+
+        // 2. Explicit override stored in context (future use, no breaking change).
         $explicitCode = (string) ($doc->context['template_code'] ?? '');
         if ($explicitCode !== '') {
             $t = Template::where('code', $explicitCode)->with('currentVersion')->first();
@@ -215,7 +234,7 @@ class ContractGenerationService
             }
         }
 
-        // Kind-based resolution.
+        // 3. Kind-based resolution.
         $kindCode = match ($doc->kind) {
             DocumentKind::TerminationAgreement => 'termination_agreement',
             default => 'master_skeleton',

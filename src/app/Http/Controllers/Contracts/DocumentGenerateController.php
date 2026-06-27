@@ -37,7 +37,8 @@ class DocumentGenerateController extends Controller
     {
         $this->authorize('generate', $document);
 
-        $result = $this->service->generate($document, $request->user()->id);
+        $templateId = $request->integer('template_id') ?: null;
+        $result = $this->service->generate($document, $request->user()->id, $templateId);
 
         return new GenerateResultResource($result['document'], $result['warnings']);
     }

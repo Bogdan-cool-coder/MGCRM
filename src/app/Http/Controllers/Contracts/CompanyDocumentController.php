@@ -44,7 +44,8 @@ class CompanyDocumentController extends Controller
 
         $this->authorize('generate', $document);
 
-        $result = $this->generationService->generate($document, $request->user()->id);
+        $templateId = $request->integer('template_id') ?: null;
+        $result = $this->generationService->generate($document, $request->user()->id, $templateId);
 
         return new GenerateResultResource($result['document'], $result['warnings']);
     }

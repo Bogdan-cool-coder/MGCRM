@@ -24,6 +24,9 @@ class UpdateDocumentRequest extends FormRequest
             'context' => ['nullable', 'array'],
             'discount_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'extra_fields' => ['nullable', 'array'],
+            // Factual date the physical contract was signed (set by the author after
+            // uploading the scan; distinct from the status transition timestamp).
+            'signed_at' => ['nullable', 'date'],
         ];
     }
 }

@@ -30,6 +30,8 @@ class DocumentPolicy
     /**
      * Author can view own documents; admin/lawyer/director see all.
      * Manager/accountant/cfo see own documents only.
+     * Active approvers (users with an Approval row on the current attempt)
+     * can also view the document and its files so they can review and decide.
      */
     public function view(User $user, Document $document): bool
     {
@@ -37,7 +39,11 @@ class DocumentPolicy
             return true;
         }
 
-        return (int) $document->author_user_id === $user->id;
+        if ((int) $document->author_user_id === $user->id) {
+            return true;
+        }
+
+        return $this->isActiveApprover($user, $document);
     }
 
     /**
@@ -245,6 +251,26 @@ class DocumentPolicy
     private function isPrivileged(User $user): bool
     {
         return in_array($user->role, [Role::Admin, Role::Lawyer], strict: true);
+    }
+
+    /**
+     * Returns true when the user has an Approval row for this document on the
+     * current attempt — i.e. they are an active approver in the approval route.
+     *
+     * This matches the logic already used by approvalSummary() and mirrors the
+     * view-capability given to approvers so they can download DOCX/PDF for review.
+     * Deliberately narrow: only users actually assigned to the route are allowed;
+     * unrelated users are never granted access this way.
+     */
+    private function isActiveApprover(User $user, Document $document): bool
+    {
+        $attempt = $this->currentAttempt($document->id);
+
+        return Approval::query()
+            ->where('document_id', $document->id)
+            ->where('attempt', $attempt)
+            ->where('user_id', $user->id)
+            ->exists();
     }
 
     /**

@@ -33,11 +33,18 @@ class GenerateDocumentRequest extends FormRequest
             // For deal/company entry points — optionally pass an existing document_id.
             'document_id' => ['nullable', 'integer', 'exists:documents,id'],
 
+            // Explicit template to use for generation. When present the generation
+            // service uses this template instead of falling back to master_skeleton.
+            'template_id' => ['nullable', 'integer', 'exists:templates,id'],
+
             // Required when creating a document inline from company/deal context.
             'product_code' => ['nullable', 'string', 'max:50'],
             'country_code' => ['nullable', 'string', 'max:10'],
             'city' => ['nullable', 'string', 'max:100'],
             'currency' => ['nullable', 'string', 'size:3'],
+
+            // Optional kind — ignored for direct /documents/{id}/generate (kind is on Document).
+            'kind' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

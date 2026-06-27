@@ -136,30 +136,46 @@ class DocumentService
     }
 
     /**
-     * Update mutable fields. Forbidden when status is not Draft or NeedsRework.
+     * Update mutable fields. Forbidden when status is not Draft or NeedsRework,
+     * EXCEPT for `signed_at` which can be recorded on any status (the author records
+     * the factual date the physical contract was signed after uploading the scan).
      *
      * @param  array<string, mixed>  $data
      */
     public function update(Document $doc, array $data): Document
     {
-        $this->assertEditable($doc);
+        // `signed_at` is always patchable regardless of status.
+        // Extract it, apply it separately, then proceed with the editable-only fields.
+        $signedAt = array_key_exists('signed_at', $data) ? $data['signed_at'] : false;
+        $editableData = array_diff_key($data, ['signed_at' => true]);
 
-        // Merge context if provided (patch semantics).
-        if (isset($data['context']) && is_array($data['context'])) {
-            $merged = array_merge((array) ($doc->context ?? []), $data['context']);
-            $data['context'] = $merged;
+        if ($editableData !== []) {
+            $this->assertEditable($doc);
+
+            // Merge context if provided (patch semantics).
+            if (isset($editableData['context']) && is_array($editableData['context'])) {
+                $merged = array_merge((array) ($doc->context ?? []), $editableData['context']);
+                $editableData['context'] = $merged;
+            }
+
+            // Recalculate discount_amount and total if discount_pct changes.
+            if (isset($editableData['discount_pct'])) {
+                $subtotal = $doc->subtotal;
+                $pct = (float) $editableData['discount_pct'];
+                $discountAmount = (int) round($subtotal * $pct / 100);
+                $editableData['discount_amount'] = $discountAmount;
+                $editableData['total'] = $subtotal - $discountAmount;
+            }
+
+            $doc->update($editableData);
         }
 
-        // Recalculate discount_amount and total if discount_pct changes.
-        if (isset($data['discount_pct'])) {
-            $subtotal = $doc->subtotal;
-            $pct = (float) $data['discount_pct'];
-            $discountAmount = (int) round($subtotal * $pct / 100);
-            $data['discount_amount'] = $discountAmount;
-            $data['total'] = $subtotal - $discountAmount;
+        // Persist signed_at factual date (unconditional when provided in the PATCH payload).
+        if ($signedAt !== false) {
+            $doc->signed_at = $signedAt !== null ? \Illuminate\Support\Carbon::parse($signedAt) : null;
+            $doc->save();
         }
 
-        $doc->update($data);
         $doc->refresh();
 
         return $doc;
