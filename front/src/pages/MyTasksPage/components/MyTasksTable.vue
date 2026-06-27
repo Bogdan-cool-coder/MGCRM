@@ -41,22 +41,39 @@
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
       row-hover
       class="activity-table"
+      :row-class="(data: ActivityDto) => ({
+        'activity-table__row--selected': selectMode && selectedIds?.has(data.id),
+      })"
       @page="(e: DataTablePageEvent) => $emit('page', e)"
     >
-      <!-- Checkbox complete -->
-      <Column header="" style="width: 40px; flex-shrink: 0">
+      <!-- Select-mode checkbox column (visible only in selectMode) -->
+      <Column v-if="selectMode" header="" style="width: 44px; flex-shrink: 0">
+        <template #header>
+          <div
+            class="tasks-cell__select-all"
+            :class="{
+              'tasks-cell__select-all--checked': allSelected,
+              'tasks-cell__select-all--indeterminate': someSelected,
+            }"
+            @click="onSelectAllClick"
+          >
+            <i v-if="allSelected" class="pi pi-check" />
+            <span v-else-if="someSelected" class="tasks-cell__select-minus" />
+          </div>
+        </template>
         <template #body="{ data }">
-          <Checkbox
-            :model-value="data.status === 'done'"
-            binary
-            :disabled="patchingId === data.id || completingId === data.id || reopeningId === data.id"
-            @change="onCheckboxChange(data)"
-          />
+          <div
+            class="tasks-cell__row-select"
+            :class="{ 'tasks-cell__row-select--checked': selectedIds?.has(data.id) }"
+            @click.stop="$emit('toggleSelect', data.id)"
+          >
+            <i v-if="selectedIds?.has(data.id)" class="pi pi-check" />
+          </div>
         </template>
       </Column>
 
-      <!-- Дата исполнения (inline DatePicker) -->
-      <Column :header="t('tasks.list.col.dueAt')" style="width: 160px">
+      <!-- 1. Срок (inline DatePicker) -->
+      <Column sortable :header="t('tasks.list.col.dueAt')" style="width: 160px">
         <template #body="{ data }">
           <div
             v-if="editingCell?.id !== data.id || editingCell?.field !== 'due_at'"
@@ -64,16 +81,19 @@
             :class="{ 'tasks-cell--overdue': data.is_overdue && !data.is_closed }"
             @click="startEdit(data, 'due_at')"
           >
-            <span v-if="data.due_at">{{ formatDueDate(data.due_at) }}</span>
-            <span v-else class="tasks-cell__placeholder">{{ t('tasks.list.placeholder.date') }}</span>
+            <div class="tasks-cell__due-wrap">
+              <span v-if="data.due_at" class="tasks-cell__due-time" :class="{ 'tasks-cell__due-time--overdue': data.is_overdue && !data.is_closed }">
+                {{ formatDueDate(data.due_at) }}
+              </span>
+              <span v-else class="tasks-cell__placeholder">{{ t('tasks.list.placeholder.date') }}</span>
+              <Tag
+                v-if="data.is_overdue && !data.is_closed"
+                severity="danger"
+                :value="t('activity.overdueBadge')"
+                size="small"
+              />
+            </div>
             <i class="pi pi-pencil tasks-cell__edit-icon" />
-            <Tag
-              v-if="data.is_overdue && !data.is_closed"
-              severity="danger"
-              :value="t('activity.overdueBadge')"
-              size="small"
-              class="ms-1"
-            />
           </div>
           <div v-else class="tasks-cell--editing">
             <DatePicker
@@ -105,15 +125,182 @@
         </template>
       </Column>
 
-      <!-- Ответственный (inline Select) -->
-      <Column :header="t('tasks.list.col.responsible')" style="width: 160px">
+      <!-- 2. Сделка / компания (read-only links) -->
+      <Column sortable :header="t('tasks.list.col.dealCompany')" style="min-width: 160px">
+        <template #body="{ data }">
+          <div class="tasks-cell tasks-cell--readonly">
+            <template v-if="data.deal">
+              <RouterLink
+                v-if="data.deal.company"
+                :to="{ name: 'CompanyDetail', params: { id: data.deal.company.id } }"
+                class="tasks-cell__link"
+              >
+                {{ data.deal.company.name }}
+              </RouterLink>
+              <span v-if="data.deal.company && data.deal.title" class="tasks-cell__sep">/</span>
+              <RouterLink
+                :to="{ name: 'DealDetail', params: { id: data.deal.id } }"
+                class="tasks-cell__link"
+              >
+                {{ data.deal.title }}
+              </RouterLink>
+            </template>
+            <span v-else class="tasks-cell__placeholder">—</span>
+          </div>
+        </template>
+      </Column>
+
+      <!-- 3. Этап сделки (dot + name, read-only) -->
+      <Column sortable :header="t('tasks.list.col.dealStage')" style="width: 150px">
+        <template #body="{ data }">
+          <div class="tasks-cell tasks-cell--readonly">
+            <template v-if="data.deal?.stage">
+              <span
+                class="tasks-cell__stage-dot"
+                :style="{ background: data.deal.stage.color ?? '#94a3b8' }"
+              />
+              <span class="tasks-cell__stage-name">{{ data.deal.stage.name }}</span>
+            </template>
+            <span v-else class="tasks-cell__placeholder">—</span>
+          </div>
+        </template>
+      </Column>
+
+      <!-- 4. Тип задачи (inline Select) -->
+      <Column sortable :header="t('tasks.list.col.kind')" style="width: 130px">
+        <template #body="{ data }">
+          <div
+            v-if="editingCell?.id !== data.id || editingCell?.field !== 'kind'"
+            class="tasks-cell tasks-cell--clickable"
+            @click="startEdit(data, 'kind')"
+          >
+            <span class="tasks-cell__kind-tag" :class="`tasks-cell__kind-tag--${data.kind}`">
+              <i :class="kindIcon(data.kind)" class="tasks-cell__kind-icon" />
+              {{ t(`activity.kinds.${data.kind}`) }}
+            </span>
+            <i class="pi pi-pencil tasks-cell__edit-icon" />
+          </div>
+          <div v-else class="tasks-cell--editing">
+            <Select
+              v-model="editKind"
+              :options="kindOptions"
+              option-label="label"
+              option-value="value"
+              :placeholder="t('tasks.list.placeholder.kind')"
+              class="tasks-cell__input"
+            />
+            <Button
+              icon="pi pi-check"
+              size="small"
+              :loading="patchingId === data.id"
+              class="tasks-cell__btn-save"
+              @click="commitKind(data)"
+            />
+            <Button
+              icon="pi pi-times"
+              size="small"
+              severity="secondary"
+              text
+              @click="cancelEdit"
+            />
+          </div>
+        </template>
+      </Column>
+
+      <!-- 5. Текст задачи (inline InputText) -->
+      <Column sortable :header="t('tasks.list.col.title')" style="min-width: 200px">
+        <template #body="{ data }">
+          <div
+            v-if="editingCell?.id !== data.id || editingCell?.field !== 'title'"
+            class="tasks-cell tasks-cell--clickable"
+            :class="{ 'tasks-cell--done': data.status === 'done' }"
+            @click="startEdit(data, 'title')"
+          >
+            <span class="tasks-cell__title">
+              <s v-if="data.status === 'done'">{{ data.title }}</s>
+              <template v-else>{{ data.title }}</template>
+            </span>
+            <i v-if="data.is_pinned" class="pi pi-bookmark-fill tasks-cell__pin-icon" />
+            <i v-if="data.priority === 'critical'" class="pi pi-flag-fill tasks-cell__critical-icon" />
+            <i class="pi pi-pencil tasks-cell__edit-icon" />
+          </div>
+          <div v-else class="tasks-cell--editing">
+            <InputText
+              v-model="editTitle"
+              :placeholder="t('tasks.list.placeholder.title')"
+              class="tasks-cell__input"
+              @keydown="onTitleKeydown($event, data)"
+            />
+            <Button
+              icon="pi pi-check"
+              size="small"
+              :loading="patchingId === data.id"
+              class="tasks-cell__btn-save"
+              @click="commitTitle(data)"
+            />
+            <Button
+              icon="pi pi-times"
+              size="small"
+              severity="secondary"
+              text
+              @click="cancelEdit"
+            />
+          </div>
+        </template>
+      </Column>
+
+      <!-- 6. Статус задачи — transition-gated dropdown (B32: must stay) -->
+      <Column sortable :header="t('tasks.list.col.status')" style="width: 130px">
+        <template #body="{ data }">
+          <div
+            v-if="editingCell?.id !== data.id || editingCell?.field !== 'status'"
+            class="tasks-cell tasks-cell--clickable"
+            @click="startEdit(data, 'status')"
+          >
+            <span class="tasks-cell__status-pill" :class="`tasks-cell__status-pill--${data.status}`">
+              {{ t(`activity.statuses.${data.status}`) }}
+            </span>
+            <i class="pi pi-pencil tasks-cell__edit-icon" />
+          </div>
+          <div v-else class="tasks-cell--editing">
+            <Select
+              v-model="editStatus"
+              :options="statusOptionsFor(editingRowCurrentStatus ?? 'new')"
+              option-label="label"
+              option-value="value"
+              :placeholder="t('tasks.list.placeholder.status')"
+              class="tasks-cell__input"
+            />
+            <Button
+              icon="pi pi-check"
+              size="small"
+              :loading="patchingId === data.id"
+              class="tasks-cell__btn-save"
+              @click="commitStatus(data)"
+            />
+            <Button
+              icon="pi pi-times"
+              size="small"
+              severity="secondary"
+              text
+              @click="cancelEdit"
+            />
+          </div>
+        </template>
+      </Column>
+
+      <!-- 7. Ответственный (inline Select) -->
+      <Column sortable :header="t('tasks.list.col.responsible')" style="width: 170px">
         <template #body="{ data }">
           <div
             v-if="editingCell?.id !== data.id || editingCell?.field !== 'responsible'"
             class="tasks-cell tasks-cell--clickable"
             @click="startEditResponsible(data)"
           >
-            <span v-if="data.responsible">{{ data.responsible.full_name }}</span>
+            <span v-if="data.responsible" class="tasks-cell__responsible">
+              <span class="tasks-cell__avatar">{{ (data.responsible.full_name?.charAt(0) ?? '?').toUpperCase() }}</span>
+              {{ data.responsible.full_name ?? '—' }}
+            </span>
             <span v-else class="tasks-cell__placeholder">{{ t('tasks.list.placeholder.responsible') }}</span>
             <i class="pi pi-pencil tasks-cell__edit-icon" />
           </div>
@@ -147,187 +334,7 @@
         </template>
       </Column>
 
-      <!-- Компания / Сделка (read-only links) -->
-      <Column :header="t('tasks.list.col.dealCompany')" style="min-width: 160px">
-        <template #body="{ data }">
-          <div class="tasks-cell tasks-cell--readonly">
-            <template v-if="data.deal">
-              <RouterLink
-                v-if="data.deal.company"
-                :to="{ name: 'CompanyDetail', params: { id: data.deal.company.id } }"
-                class="tasks-cell__link"
-              >
-                {{ data.deal.company.name }}
-              </RouterLink>
-              <span v-if="data.deal.company && data.deal.title" class="tasks-cell__sep">/</span>
-              <RouterLink
-                :to="{ name: 'DealDetail', params: { id: data.deal.id } }"
-                class="tasks-cell__link"
-              >
-                {{ data.deal.title }}
-              </RouterLink>
-            </template>
-            <span v-else class="tasks-cell__placeholder">—</span>
-          </div>
-        </template>
-      </Column>
-
-      <!-- Тип задачи (inline Select) -->
-      <Column :header="t('tasks.list.col.kind')" style="width: 130px">
-        <template #body="{ data }">
-          <div
-            v-if="editingCell?.id !== data.id || editingCell?.field !== 'kind'"
-            class="tasks-cell tasks-cell--clickable"
-            @click="startEdit(data, 'kind')"
-          >
-            <i :class="kindIcon(data.kind)" class="tasks-cell__kind-icon" />
-            <span>{{ t(`activity.kinds.${data.kind}`) }}</span>
-            <i class="pi pi-pencil tasks-cell__edit-icon" />
-          </div>
-          <div v-else class="tasks-cell--editing">
-            <Select
-              v-model="editKind"
-              :options="kindOptions"
-              option-label="label"
-              option-value="value"
-              :placeholder="t('tasks.list.placeholder.kind')"
-              class="tasks-cell__input"
-            />
-            <Button
-              icon="pi pi-check"
-              size="small"
-              :loading="patchingId === data.id"
-              class="tasks-cell__btn-save"
-              @click="commitKind(data)"
-            />
-            <Button
-              icon="pi pi-times"
-              size="small"
-              severity="secondary"
-              text
-              @click="cancelEdit"
-            />
-          </div>
-        </template>
-      </Column>
-
-      <!-- Статус сделки (read-only, from deal context) -->
-      <Column :header="t('tasks.list.col.dealStage')" style="width: 150px">
-        <template #body="{ data }">
-          <div class="tasks-cell tasks-cell--readonly">
-            <template v-if="data.deal?.stage">
-              <span
-                class="tasks-cell__stage-dot"
-                :style="{ background: data.deal.stage.color ?? '#94a3b8' }"
-              />
-              <span class="tasks-cell__stage-name">{{ data.deal.stage.name }}</span>
-              <i
-                v-if="data.deal.stage.is_won"
-                class="pi pi-check-circle tasks-cell__stage-badge tasks-cell__stage-badge--won"
-                :title="t('tasks.list.stageWon')"
-              />
-              <i
-                v-else-if="data.deal.stage.is_lost"
-                class="pi pi-times-circle tasks-cell__stage-badge tasks-cell__stage-badge--lost"
-                :title="t('tasks.list.stageLost')"
-              />
-            </template>
-            <span v-else class="tasks-cell__placeholder">—</span>
-          </div>
-        </template>
-      </Column>
-
-      <!-- Статус задачи (inline select/toggle via /status endpoint) -->
-      <Column :header="t('tasks.list.col.status')" style="width: 130px">
-        <template #body="{ data }">
-          <div
-            v-if="editingCell?.id !== data.id || editingCell?.field !== 'status'"
-            class="tasks-cell tasks-cell--clickable"
-            @click="startEdit(data, 'status')"
-          >
-            <Tag
-              :severity="statusSeverity(data.status)"
-              :value="t(`activity.statuses.${data.status}`)"
-              size="small"
-              :pt="{ root: { class: `task-status-tag--${data.status}` } }"
-            />
-            <i class="pi pi-pencil tasks-cell__edit-icon" />
-          </div>
-          <div v-else class="tasks-cell--editing">
-            <Select
-              v-model="editStatus"
-              :options="statusOptionsFor(editingRowCurrentStatus ?? 'new')"
-              option-label="label"
-              option-value="value"
-              :placeholder="t('tasks.list.placeholder.status')"
-              class="tasks-cell__input"
-            />
-            <Button
-              icon="pi pi-check"
-              size="small"
-              :loading="patchingId === data.id"
-              class="tasks-cell__btn-save"
-              @click="commitStatus(data)"
-            />
-            <Button
-              icon="pi pi-times"
-              size="small"
-              severity="secondary"
-              text
-              @click="cancelEdit"
-            />
-          </div>
-        </template>
-      </Column>
-
-      <!-- Текст задачи (inline InputText) -->
-      <Column :header="t('tasks.list.col.title')" style="min-width: 200px">
-        <template #body="{ data }">
-          <div
-            v-if="editingCell?.id !== data.id || editingCell?.field !== 'title'"
-            class="tasks-cell tasks-cell--clickable"
-            :class="{ 'tasks-cell--done': data.status === 'done' }"
-            @click="startEdit(data, 'title')"
-          >
-            <span class="tasks-cell__title">
-              <s v-if="data.status === 'done'">{{ data.title }}</s>
-              <template v-else>{{ data.title }}</template>
-            </span>
-            <Tag
-              v-if="data.is_pinned"
-              icon="pi pi-bookmark-fill"
-              severity="secondary"
-              size="small"
-              class="ms-1"
-            />
-            <i class="pi pi-pencil tasks-cell__edit-icon" />
-          </div>
-          <div v-else class="tasks-cell--editing">
-            <InputText
-              v-model="editTitle"
-              :placeholder="t('tasks.list.placeholder.title')"
-              class="tasks-cell__input"
-              @keydown="onTitleKeydown($event, data)"
-            />
-            <Button
-              icon="pi pi-check"
-              size="small"
-              :loading="patchingId === data.id"
-              class="tasks-cell__btn-save"
-              @click="commitTitle(data)"
-            />
-            <Button
-              icon="pi pi-times"
-              size="small"
-              severity="secondary"
-              text
-              @click="cancelEdit"
-            />
-          </div>
-        </template>
-      </Column>
-
-      <!-- Actions -->
+      <!-- Actions column (⋮ context menu) -->
       <Column style="width: 50px">
         <template #body="{ data }">
           <Button
@@ -353,7 +360,6 @@ import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import Checkbox from 'primevue/checkbox'
 import Tag from 'primevue/tag'
 import Skeleton from 'primevue/skeleton'
 import Button from 'primevue/button'
@@ -361,7 +367,7 @@ import Menu from 'primevue/menu'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import DatePicker from 'primevue/datepicker'
-import { kindIcon, statusSeverity, formatDueDate, localDateString } from '@/utils/activity'
+import { kindIcon, formatDueDate, localDateString } from '@/utils/activity'
 import { activityApi, type ReschedulePreset } from '@/api/activity'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { getApiErrorMessage } from '@/utils/errors'
@@ -377,7 +383,7 @@ interface DataTablePageEvent {
   pageCount: number
 }
 
-defineProps<{
+const props = defineProps<{
   items: ActivityDto[]
   total: number
   loading: boolean
@@ -385,6 +391,9 @@ defineProps<{
   preset: TaskPreset
   completingId?: number | null
   reopeningId?: number | null
+  selectMode?: boolean
+  selectedIds?: Set<number>
+  totalVisible?: number
 }>()
 
 const emit = defineEmits<{
@@ -396,13 +405,32 @@ const emit = defineEmits<{
   'delete': [activity: ActivityDto]
   'create': []
   'patched': [activity: ActivityDto]
+  'toggleSelect': [id: number]
+  'selectAll': []
+  'clearSelection': []
 }>()
 
 const { t } = useI18n()
 const toast = useToast()
 const { users, loading: usersLoading, load: loadUsers } = useUsersCache()
 
-// ── Inline edit state ─────────────────────────────────────────────────────────
+// ── Select-mode ────────────────────────────────────────────────────────────────
+const allSelected = computed(
+  () => (props.totalVisible ?? 0) > 0 && (props.selectedIds?.size ?? 0) === (props.totalVisible ?? 0),
+)
+const someSelected = computed(
+  () => (props.selectedIds?.size ?? 0) > 0 && (props.selectedIds?.size ?? 0) < (props.totalVisible ?? 0),
+)
+
+function onSelectAllClick() {
+  if (allSelected.value) {
+    emit('clearSelection')
+  } else {
+    emit('selectAll')
+  }
+}
+
+// ── Inline edit state ─────────────────────────────────────────────────────────────
 
 interface EditingCell {
   id: number
@@ -412,14 +440,11 @@ interface EditingCell {
 const editingCell = ref<EditingCell | null>(null)
 const patchingId = ref<number | null>(null)
 
-// Per-field local values while editing
 const editDueAt = ref<Date | null>(null)
 const editResponsibleId = ref<number | null>(null)
 const editKind = ref<ActivityKind | null>(null)
 const editStatus = ref<ActivityStatus | null>(null)
 const editTitle = ref<string>('')
-// Current status of the row being edited — used to gate the status dropdown
-// to only valid transitions (mirrors ActivityStatus::allowedTransitions()).
 const editingRowCurrentStatus = ref<ActivityStatus | null>(null)
 
 function startEdit(activity: ActivityDto, field: EditingCell['field']) {
@@ -431,8 +456,6 @@ function startEdit(activity: ActivityDto, field: EditingCell['field']) {
     editKind.value = activity.kind
   } else if (field === 'status') {
     editStatus.value = activity.status
-    // Capture the row's current status so the dropdown can be gated to only
-    // valid transitions (see statusOptionsFor / ACTIVITY_STATUS_TRANSITIONS).
     editingRowCurrentStatus.value = activity.status
   } else if (field === 'title') {
     editTitle.value = activity.title
@@ -451,7 +474,7 @@ function cancelEdit() {
   editingRowCurrentStatus.value = null
 }
 
-// ── Patch helpers ─────────────────────────────────────────────────────────────
+// ── Patch helpers ─────────────────────────────────────────────────────────────────
 
 async function patchActivity(
   activity: ActivityDto,
@@ -477,10 +500,7 @@ async function patchActivity(
   }
 }
 
-async function patchStatus(
-  activity: ActivityDto,
-  newStatus: ActivityStatus,
-) {
+async function patchStatus(activity: ActivityDto, newStatus: ActivityStatus) {
   patchingId.value = activity.id
   const optimistic: ActivityDto = {
     ...activity,
@@ -505,22 +525,13 @@ async function patchStatus(
   }
 }
 
-// ── Commit per field ──────────────────────────────────────────────────────────
+// ── Commit per field ──────────────────────────────────────────────────────────────
 
 async function commitDueAt(activity: ActivityDto) {
-  // Build date string from local calendar fields — TZ-safe for Asia/Dubai (F4)
-  const isoDate: string | null = editDueAt.value
-    ? localDateString(editDueAt.value)
-    : null
-  await patchActivity(
-    activity,
-    { ...activity, due_at: isoDate },
-    { due_at: isoDate },
-  )
+  const isoDate: string | null = editDueAt.value ? localDateString(editDueAt.value) : null
+  await patchActivity(activity, { ...activity, due_at: isoDate }, { due_at: isoDate })
 }
 
-// Quick reschedule via the dedicated endpoint — moves ONLY due_at (status
-// untouched), TZ-correct server side. Optimistic patched-emit; rollback on error.
 async function rescheduleQuick(activity: ActivityDto, preset: ReschedulePreset) {
   if (patchingId.value !== null) return
   patchingId.value = activity.id
@@ -529,7 +540,7 @@ async function rescheduleQuick(activity: ActivityDto, preset: ReschedulePreset) 
     emit('patched', updated)
     toast.add({ severity: 'success', summary: t('activity.reschedule.success'), life: 2000 })
   } catch (err) {
-    emit('patched', activity) // rollback
+    emit('patched', activity)
     toast.add({
       severity: 'error',
       summary: getApiErrorMessage(err, t('errors.server_error')),
@@ -555,11 +566,7 @@ async function commitResponsible(activity: ActivityDto) {
 
 async function commitKind(activity: ActivityDto) {
   if (!editKind.value) return cancelEdit()
-  await patchActivity(
-    activity,
-    { ...activity, kind: editKind.value },
-    { kind: editKind.value },
-  )
+  await patchActivity(activity, { ...activity, kind: editKind.value }, { kind: editKind.value })
 }
 
 async function commitStatus(activity: ActivityDto) {
@@ -570,11 +577,7 @@ async function commitStatus(activity: ActivityDto) {
 async function commitTitle(activity: ActivityDto) {
   const title = editTitle.value.trim()
   if (!title) return cancelEdit()
-  await patchActivity(
-    activity,
-    { ...activity, title },
-    { title },
-  )
+  await patchActivity(activity, { ...activity, title }, { title })
 }
 
 function onTitleKeydown(e: KeyboardEvent, activity: ActivityDto) {
@@ -586,7 +589,7 @@ function onTitleKeydown(e: KeyboardEvent, activity: ActivityDto) {
   }
 }
 
-// ── Options ───────────────────────────────────────────────────────────────────
+// ── Options ───────────────────────────────────────────────────────────────────────
 
 const kindOptions = computed<Array<{ label: string; value: ActivityKind }>>(() => [
   { label: t('activity.kinds.call'), value: 'call' },
@@ -597,19 +600,15 @@ const kindOptions = computed<Array<{ label: string; value: ActivityKind }>>(() =
 ])
 
 /**
- * Returns the allowed status options for a given current status.
- * Always includes the current status itself (idempotent no-op) plus every
- * valid transition target from ACTIVITY_STATUS_TRANSITIONS — mirroring
- * ActivityStatus::allowedTransitions() + canTransitionTo(same) on the server.
+ * Returns allowed status transitions mirroring ActivityStatus::allowedTransitions().
+ * Always includes the current status itself (idempotent no-op).
  */
-function statusOptionsFor(
-  current: ActivityStatus,
-): Array<{ label: string; value: ActivityStatus }> {
+function statusOptionsFor(current: ActivityStatus): Array<{ label: string; value: ActivityStatus }> {
   const targets: ActivityStatus[] = [current, ...ACTIVITY_STATUS_TRANSITIONS[current]]
   return targets.map((s) => ({ label: t(`activity.statuses.${s}`), value: s }))
 }
 
-// ── Context menu ──────────────────────────────────────────────────────────────
+// ── Context menu ──────────────────────────────────────────────────────────────────
 
 const menuRef = ref<InstanceType<typeof Menu> | null>(null)
 const menuActivity = ref<ActivityDto | null>(null)
@@ -631,7 +630,6 @@ const menuItems = computed(() => {
       command: () => emit('reopen', a),
     })
   }
-  // Quick reschedule — only for open, deadline-bearing tasks (notes have no due_at).
   if (a.kind !== 'note' && a.status !== 'done') {
     items.push(
       {
@@ -671,15 +669,7 @@ function toggleMenu(event: MouseEvent, activity: ActivityDto) {
   menuRef.value?.toggle(event)
 }
 
-function onCheckboxChange(activity: ActivityDto) {
-  if (activity.status === 'done') {
-    emit('reopen', activity)
-  } else {
-    emit('complete', activity)
-  }
-}
-
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
+// ── Bootstrap ─────────────────────────────────────────────────────────────────────
 
 onMounted(() => {
   void loadUsers()
@@ -718,6 +708,75 @@ onMounted(() => {
   }
 }
 
+// ── Select-mode header checkbox ───────────────────────────────────────────────
+
+.tasks-cell__select-all {
+  width: 17px;
+  height: 17px;
+  border-radius: $radius-xs;
+  border: 1px solid $surface-400;
+  background: $surface-card;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--app-transition-fast);
+
+  .app-dark & {
+    border-color: var(--p-surface-500);
+    background: var(--p-surface-700);
+  }
+
+  &--checked {
+    background: $primary-900;
+    border-color: $primary-900;
+    color: $surface-0;
+
+    .pi {
+      font-size: $font-size-3xs;
+    }
+  }
+
+  &--indeterminate {
+    border-color: $primary-900;
+  }
+}
+
+.tasks-cell__select-minus {
+  width: 9px;
+  height: 2px;
+  background: $primary-900;
+  border-radius: $radius-2xs; // 2px — snap from 1px
+}
+
+.tasks-cell__row-select {
+  width: 17px;
+  height: 17px;
+  border-radius: $radius-xs;
+  border: 1px solid $surface-300;
+  background: $surface-card;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--app-transition-fast);
+
+  .app-dark & {
+    border-color: var(--p-surface-500);
+    background: var(--p-surface-700);
+  }
+
+  &--checked {
+    background: $primary-900;
+    border-color: $primary-900;
+    color: $surface-0;
+
+    .pi {
+      font-size: $font-size-3xs;
+    }
+  }
+}
+
 // ── Table cells ───────────────────────────────────────────────────────────────
 
 .tasks-cell {
@@ -728,7 +787,7 @@ onMounted(() => {
   font-size: $font-size-sm;
 
   &--clickable {
-    padding: $space-1 $space-1;
+    padding: $space-1;
     border-radius: $radius-sm;
     border: 1px solid transparent;
     cursor: pointer;
@@ -738,7 +797,7 @@ onMounted(() => {
       border-color: $surface-300;
       background-color: $surface-50;
 
-      :global(.app-dark) & {
+      .app-dark & {
         border-color: var(--p-surface-600);
         background-color: var(--p-surface-800);
       }
@@ -795,14 +854,21 @@ onMounted(() => {
     flex-shrink: 0;
   }
 
-  &__kind-icon {
-    font-size: $font-size-sm;
-    color: $surface-500;
-  }
-
   &__title {
     font-size: $font-size-sm;
     word-break: break-word;
+  }
+
+  &__pin-icon {
+    font-size: $font-size-xs;
+    color: $primary-900;
+    flex-shrink: 0;
+  }
+
+  &__critical-icon {
+    font-size: $font-size-xs;
+    color: $color-danger;
+    flex-shrink: 0;
   }
 
   // Deal context links
@@ -810,6 +876,7 @@ onMounted(() => {
     color: $primary-color;
     text-decoration: none;
     font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
 
     &:hover {
       text-decoration: underline;
@@ -824,12 +891,11 @@ onMounted(() => {
 
   // Stage dot + name
   &__stage-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: $radius-circle;
     flex-shrink: 0;
   }
-
 
   &__stage-name {
     font-size: $font-size-sm;
@@ -838,36 +904,158 @@ onMounted(() => {
     text-overflow: ellipsis;
     white-space: nowrap;
 
-    :global(.app-dark) & {
+    .app-dark & {
       color: var(--p-surface-200);
     }
   }
 
-  &__stage-badge {
+  // Kind tag in list view
+  &__kind-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    border-radius: $radius-sm;
+    padding: 2px 9px;
     font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+
+    &--task {
+      background: $surface-100;
+      color: $surface-600;
+
+      .app-dark & {
+        background: var(--p-surface-200);
+        color: var(--p-surface-400);
+      }
+    }
+
+    &--call {
+      background: $task-tag-call-bg;
+      color: $task-tag-call-text;
+    }
+
+    &--meeting {
+      background: $task-tag-meeting-bg;
+      color: $task-tag-meeting-text;
+    }
+
+    &--note {
+      background: $task-tag-note-bg;
+      color: $task-tag-note-text;
+    }
+
+    &--follow_up {
+      background: $task-tag-follow-up-bg;
+      color: $task-tag-follow-up-text;
+    }
+
+    &--presentation {
+      background: $task-tag-follow-up-bg;
+      color: $task-tag-follow-up-text;
+    }
+  }
+
+  &__kind-icon {
+    font-size: $font-size-xs;
+  }
+
+  // Due date cell
+  &__due-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__due-time {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+
+    &--overdue {
+      color: var(--p-red-600);
+    }
+  }
+
+  // Status pill
+  &__status-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: $radius-sm;
+    padding: 3px $space-2;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    white-space: nowrap;
+
+    &--new {
+      background: var(--p-blue-100);
+      color: var(--p-blue-700);
+
+      .app-dark & {
+        background: var(--p-blue-900);
+        color: var(--p-blue-200);
+      }
+    }
+
+    &--in_progress {
+      background: $color-warning-bg;
+      color: $color-warning-text;
+
+      .app-dark & {
+        background: var(--p-yellow-900);
+        color: var(--p-yellow-200);
+      }
+    }
+
+    &--done {
+      background: $task-tag-meeting-bg;
+      color: $task-tag-meeting-text;
+
+      .app-dark & {
+        background: var(--p-green-900);
+        color: var(--p-green-200);
+      }
+    }
+
+    &--rejected {
+      background: $surface-100;
+      color: $surface-500;
+
+      .app-dark & {
+        background: var(--p-surface-700);
+        color: var(--p-surface-400);
+      }
+    }
+  }
+
+  // Responsible
+  &__responsible {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    font-size: $font-size-sm;
+  }
+
+  &__avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: $radius-circle;
+    background: $primary-900;
+    color: $surface-0;
+    font-size: $font-size-3xs;
+    font-weight: $font-weight-bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-
-    &--won {
-      color: var(--p-green-500);
-    }
-
-    &--lost {
-      color: var(--p-red-500);
-    }
   }
 }
 
-// ── Status tag dark overrides ─────────────────────────────────────────────────
-// PrimeVue Tag severity=info in dark can have low contrast — boost it per-status
-:global(.app-dark) .task-status-tag--new {
-  background: var(--p-blue-900);
-  color: var(--p-blue-200);
-  border-color: transparent;
-}
+// ── Selected row ──────────────────────────────────────────────────────────────
+:deep(.activity-table__row--selected td) {
+  background: $primary-100;
 
-:global(.app-dark) .task-status-tag--in_progress {
-  background: var(--p-yellow-900);
-  color: var(--p-yellow-200);
-  border-color: transparent;
+  .app-dark & {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(23, 39, 71, 0.2);
+  }
 }
 </style>

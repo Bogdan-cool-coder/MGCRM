@@ -3215,6 +3215,83 @@
       "create": "Создать",
       "complete": "Выполнить",
       "delete": "Удалить"
+    },
+    "topbar": {
+      "subtitle": "{count} задач · {overdue} просрочено",
+      "subtitleNoOverdue": "{count} задач",
+      "filterBtn": "Поиск и фильтр",
+      "createBtn": "Создать задачу",
+      "moreMenu": {
+        "select": "Выбрать",
+        "calendarSync": "Синхронизация с календарём",
+        "exportCsv": "Экспорт в CSV",
+        "comingSoon": "Скоро"
+      }
+    },
+    "bulk": {
+      "cancel": "Отмена",
+      "selectAll": "Выбрать все",
+      "selected": "Выбрано: {n}",
+      "edit": "Редактировать",
+      "pin": "Закрепить",
+      "reopen": "Открыть заново",
+      "delete": "Удалить",
+      "completeSuccess": "Задачи выполнены",
+      "reopenSuccess": "Задачи открыты",
+      "deleteSuccess": "Задачи удалены",
+      "confirmDelete": "Удалить выбранные задачи?",
+      "confirmDeleteBody": "Действие необратимо.",
+      "confirmYes": "Удалить",
+      "confirmNo": "Отмена"
+    },
+    "kanban": {
+      "bucketMeta": {
+        "overdue": "требуют внимания",
+        "today": "",
+        "tomorrow": "",
+        "this_week": "",
+        "next_week": ""
+      }
+    },
+    "quickCreate": {
+      "entityPlaceholder": "Компания или контакт…",
+      "titlePlaceholder": "Что нужно сделать?",
+      "kindLabel": "Тип задачи",
+      "dueLabel": "Сегодня 18:00",
+      "responsibleLabel": "Ответственный",
+      "createBtn": "Создать",
+      "cancelBtn": "Отмена",
+      "notFound": "Ничего не найдено · создать «{q}»",
+      "company": "Компания",
+      "contact": "Контакт"
+    },
+    "filter": {
+      "searchPlaceholder": "Поиск по задачам, сделкам, компаниям…",
+      "presets": {
+        "my_tasks": "Мои задачи",
+        "today": "Сегодня",
+        "overdue": "Просрочено",
+        "no_due": "Без срока",
+        "completed": "Выполненные",
+        "all": "Все"
+      },
+      "fields": {
+        "kind": "Тип задачи",
+        "status": "Статус",
+        "priority": "Приоритет",
+        "responsible": "Ответственный",
+        "dueFrom": "Срок от",
+        "dueTo": "Срок до",
+        "dealCompany": "Сделка / компания",
+        "targetType": "Тип объекта"
+      },
+      "reset": "Сбросить",
+      "apply": "Применить"
+    },
+    "health": {
+      "done": "Выполнено",
+      "overdue": "Просрочено: {when}",
+      "complete": "Выполнить"
     }
   },
   "system": {

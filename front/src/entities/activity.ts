@@ -239,12 +239,20 @@ export type MyBoardBucket = 'overdue' | 'today' | 'tomorrow' | 'this_week' | 'ne
 export interface MyBoardActivityDto {
   id: number
   kind: ActivityKind
+  status: ActivityStatus
+  priority: ActivityPriority
   title: string | null
   description: string | null
+  body: string | null
   due_at: string | null
   is_overdue: boolean
+  is_closed: boolean
+  is_pinned: boolean
   deal: { id: number; title: string } | null
+  // The backend uses `responsible` (ActivityCardResource) not `assigned_to` — keep
+  // `assigned_to` as an alias for backward compat with useTaskBoard internals.
   assigned_to: { id: number; full_name: string } | null
+  responsible: { id: number; full_name: string } | null
 }
 
 export interface MyBoardResponse {

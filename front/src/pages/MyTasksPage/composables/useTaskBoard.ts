@@ -18,18 +18,13 @@ export interface TaskBucket {
 
 const ALL_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']
 
-function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
-  if (scope === 'day') return ['overdue', 'today', 'tomorrow']
-  if (scope === 'week') return ['overdue', 'today', 'tomorrow', 'this_week']
-  return ALL_BUCKETS
-}
-
 export function useTaskBoard() {
   // Store the server's bucket map directly — keys are already Dubai-tz correct
   const serverBuckets = ref<Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>>({})
   const resource = useAsyncResource<MyBoardActivityDto[]>(() => [])
   const completeMutation = useMutation()
-  const scope = ref<TaskScope>('week')
+  // scope is now controlled by the parent (TasksTopBar); keep ref for backward compat
+  const scope = ref<TaskScope>('month')
   const searchQuery = ref('')
 
   const allTasks = computed(() =>
@@ -37,17 +32,18 @@ export function useTaskBoard() {
     ALL_BUCKETS.flatMap((k) => serverBuckets.value[k] ?? []),
   )
 
+  // Returns ALL bucket data (unfiltered by scope). Scope-filtering is done in
+  // TasksKanbanBoard which receives scope as a prop from the page.
   const bucketsData = computed((): TaskBucket[] => {
     const q = searchQuery.value.toLowerCase()
-    const visibleBuckets = bucketsForScope(scope.value)
 
-    return visibleBuckets.map((key) => {
+    return ALL_BUCKETS.map((key) => {
       let tasks = serverBuckets.value[key] ?? []
       if (q) {
         tasks = tasks.filter(
           (t) =>
             (t.title ?? '').toLowerCase().includes(q) ||
-            (t.description ?? '').toLowerCase().includes(q),
+            (t.body ?? t.description ?? '').toLowerCase().includes(q),
         )
       }
       return { key, tasks }
@@ -64,10 +60,22 @@ export function useTaskBoard() {
     await resource.run(
       async () => {
         const r = await activityApi.getMyBoard()
+        // Normalise: backend sends `responsible`, DTO also has `assigned_to` alias
+        // for backward compat with old TaskCard internals. Both fields are set.
+        const normalised = Object.fromEntries(
+          ALL_BUCKETS.map((k) => [
+            k,
+            (r.data[k] ?? []).map((t) => ({
+              ...t,
+              // Ensure assigned_to mirrors responsible so both work in components
+              assigned_to: t.responsible ?? t.assigned_to ?? null,
+            })),
+          ]),
+        ) as Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>
         // Store server buckets directly — TZ-correct (F4)
-        serverBuckets.value = r.data
+        serverBuckets.value = normalised
         // Return flat list so resource.loading/error tracking works
-        return ALL_BUCKETS.flatMap((k) => r.data[k] ?? [])
+        return ALL_BUCKETS.flatMap((k) => normalised[k] ?? [])
       },
     )
   }

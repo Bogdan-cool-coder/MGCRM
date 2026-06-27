@@ -1,54 +1,14 @@
 <template>
   <div class="task-board">
-    <!-- Sub-toolbar -->
-    <div class="task-board__subtoolbar">
-      <InputText
-        v-model="taskBoard.searchQuery.value"
-        :placeholder="t('tasks.board.searchPlaceholder')"
-        class="task-board__search"
-      />
-      <Select
-        v-model="taskBoard.scope.value"
-        :options="scopeOptions"
-        option-label="label"
-        option-value="value"
-        class="task-board__scope"
-      />
-      <Button
-        icon="pi pi-plus"
-        :label="t('tasks.board.addTask')"
-        severity="secondary"
-        outlined
-        @click="showQuickCreate = !showQuickCreate"
-      />
-    </div>
-
-    <!-- Inline quick-create form -->
-    <Transition name="tqf-slide">
-      <TaskQuickForm
-        v-if="showQuickCreate"
-        mode="create"
-        :closable="true"
-        :auto-focus="true"
-        class="task-board__quick-create"
-        @created="onQuickCreated"
-        @cancel="showQuickCreate = false"
-      />
-    </Transition>
-
-    <!-- Loading -->
+    <!-- Loading skeleton -->
     <template v-if="taskBoard.loading.value">
       <div class="task-board__columns">
-        <div
-          v-for="col in 3"
-          :key="col"
-          class="task-board__col"
-        >
-          <div class="task-board__col-header task-board__col-header--neutral">
-            <Skeleton width="100px" height="16px" />
+        <div v-for="col in 3" :key="col" class="task-board__col">
+          <div class="task-board__col-header task-board__col-header--skeleton">
+            <Skeleton width="80px" height="14px" />
           </div>
           <div class="task-board__col-body">
-            <Skeleton v-for="s in 3" :key="s" height="64px" class="mb-2" />
+            <Skeleton v-for="s in 3" :key="s" height="100px" class="mb-2" />
           </div>
         </div>
       </div>
@@ -64,32 +24,37 @@
     <!-- Board columns -->
     <div v-else class="task-board__columns">
       <div
-        v-for="bucket in taskBoard.bucketsData.value"
+        v-for="bucket in visibleBuckets"
         :key="bucket.key"
         class="task-board__col"
-        :class="{ 'task-board__col--overdue': bucket.key === 'overdue' && bucket.tasks.length > 0 }"
       >
         <!-- Column header -->
         <div
           class="task-board__col-header"
-          :class="{
-            'task-board__col-header--danger': bucket.key === 'overdue' && bucket.tasks.length > 0,
-            'task-board__col-header--neutral': bucket.key !== 'overdue' || bucket.tasks.length === 0,
-          }"
+          :style="{ '--bucket-color': BUCKET_COLORS[bucket.key] }"
         >
-          <span class="task-board__col-name">{{ t(`tasks.board.columns.${bucket.key}`) }}</span>
-          <span class="task-board__col-count">{{ bucket.tasks.length }}</span>
+          <!-- Top row: count | name | spacer -->
+          <div class="task-board__col-header-row">
+            <span class="task-board__col-count">{{ bucket.tasks.length }}</span>
+            <span class="task-board__col-name">{{ t(`tasks.board.columns.${bucket.key}`) }}</span>
+            <span />
+          </div>
+          <!-- Meta line -->
+          <p class="task-board__col-meta">{{ bucketMeta(bucket.key) }}</p>
         </div>
 
-        <!-- Cards -->
+        <!-- Cards list -->
         <div class="task-board__col-body">
           <TaskCard
             v-for="task in bucket.tasks"
             :key="task.id"
             :task="task"
-            :is-overdue="bucket.key === 'overdue'"
+            :bucket="bucket.key"
+            :select-mode="selectMode"
+            :selected="(selectedIds ?? new Set()).has(task.id)"
             class="task-board__card"
             @complete="onComplete"
+            @toggle-select="emit('toggleSelect', $event)"
           />
           <div v-if="bucket.tasks.length === 0" class="task-board__col-empty">
             {{ t('tasks.board.columns.noTasks') }}
@@ -101,35 +66,99 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
-import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import TaskCard from './TaskCard.vue'
-import TaskQuickForm from '@/components/tasks/TaskQuickForm.vue'
 import { useTaskBoard } from '../composables/useTaskBoard'
 import type { TaskScope } from '../composables/useTaskBoard'
+import type { MyBoardBucket } from '@/entities/activity'
 import type { ActivityDto } from '@/entities/activity'
+
+const props = defineProps<{
+  scope: TaskScope
+  selectMode?: boolean
+  selectedIds?: Set<number>
+}>()
 
 const emit = defineEmits<{
   taskCompleted: []
   taskCreated: [activity: ActivityDto]
   error: [message: string]
+  toggleSelect: [id: number]
 }>()
 
 const { t } = useI18n()
-
 const taskBoard = useTaskBoard()
-const showQuickCreate = ref(false)
 
-const scopeOptions = computed(() => [
-  { label: t('tasks.board.scope.day'), value: 'day' as TaskScope },
-  { label: t('tasks.board.scope.week'), value: 'week' as TaskScope },
-  { label: t('tasks.board.scope.month'), value: 'month' as TaskScope },
-])
+// ── Bucket colors (spec §0) ────────────────────────────────────────────────────
+const BUCKET_COLORS: Record<MyBoardBucket, string> = {
+  overdue: '#FF5A44',
+  today: '#EF9F27',
+  tomorrow: '#378ADD',
+  this_week: '#7F77DD',
+  next_week: '#1D9E75',
+}
 
+// ── Scope → visible buckets ────────────────────────────────────────────────────
+const ALL_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']
+
+function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
+  if (scope === 'day') return ['overdue', 'today', 'tomorrow']
+  if (scope === 'week') return ['overdue', 'today', 'tomorrow', 'this_week']
+  return ALL_BUCKETS
+}
+
+// ── Computed board ─────────────────────────────────────────────────────────────
+const visibleBuckets = computed(() => {
+  const scopeBuckets = bucketsForScope(props.scope)
+  return taskBoard.bucketsData.value
+    .filter((b) => {
+      // Always scope-filter
+      if (!scopeBuckets.includes(b.key)) return false
+      // Auto-hide overdue when no non-done tasks (spec §5)
+      if (b.key === 'overdue') {
+        return b.tasks.some((t) => t.status !== 'done')
+      }
+      return true
+    })
+})
+
+// ── Meta line (spec §5.1) ──────────────────────────────────────────────────────
+function bucketMeta(key: MyBoardBucket): string {
+  if (key === 'overdue') return t('tasks.kanban.bucketMeta.overdue')
+
+  const now = new Date()
+  const locale = 'ru-RU'
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'short', timeZone: 'Asia/Dubai' }
+
+  if (key === 'today') {
+    return new Intl.DateTimeFormat(locale, opts).format(now)
+  }
+  if (key === 'tomorrow') {
+    const d = new Date(now.getTime() + 86_400_000)
+    return new Intl.DateTimeFormat(locale, opts).format(d)
+  }
+  if (key === 'this_week') {
+    // "до {end of week}"
+    const dayIdx = now.getDay() // 0=Sun
+    const daysToSunday = dayIdx === 0 ? 0 : 7 - dayIdx
+    const sun = new Date(now.getTime() + daysToSunday * 86_400_000)
+    const d = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' }).format(sun)
+    return `до ${d}`
+  }
+  if (key === 'next_week') {
+    const dayIdx = now.getDay()
+    const daysToNextMon = dayIdx === 0 ? 1 : 8 - dayIdx
+    const nextMon = new Date(now.getTime() + daysToNextMon * 86_400_000)
+    const nextSun = new Date(nextMon.getTime() + 6 * 86_400_000)
+    const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' }).format(d)
+    return `${fmt(nextMon)} – ${fmt(nextSun)}`
+  }
+  return ''
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────────
 async function onComplete(id: number) {
   try {
     await taskBoard.completeTask(id)
@@ -137,13 +166,6 @@ async function onComplete(id: number) {
   } catch {
     emit('error', t('tasks.board.card.completed'))
   }
-}
-
-async function onQuickCreated(activity: ActivityDto) {
-  showQuickCreate.value = false
-  emit('taskCreated', activity)
-  // Reload board so new task appears in correct bucket
-  await taskBoard.load()
 }
 
 onMounted(() => { void taskBoard.load() })
@@ -156,48 +178,7 @@ onMounted(() => { void taskBoard.load() })
   height: 100%;
 }
 
-.task-board__subtoolbar {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  padding: $space-3 0 $space-3;
-  flex-shrink: 0;
-}
-
-.task-board__search {
-  flex: 1;
-  max-width: 280px;
-}
-
-.task-board__scope {
-  width: 140px;
-}
-
-.task-board__quick-create {
-  margin-bottom: $space-3;
-  flex-shrink: 0;
-  max-width: 420px;
-}
-
-// Slide-in transition
-.tqf-slide-enter-active,
-.tqf-slide-leave-active {
-  transition: all 0.18s ease;
-  overflow: hidden;
-}
-
-.tqf-slide-enter-from,
-.tqf-slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-bottom: 0;
-}
-
-.tqf-slide-enter-to,
-.tqf-slide-leave-from {
-  opacity: 1;
-  max-height: 200px;
-}
+// ── Empty / loading ───────────────────────────────────────────────────────────
 
 .task-board__empty {
   display: flex;
@@ -207,6 +188,7 @@ onMounted(() => { void taskBoard.load() })
   padding: $space-8;
   color: $surface-400;
   flex: 1;
+  justify-content: center;
 }
 
 .task-board__empty-icon {
@@ -230,102 +212,137 @@ onMounted(() => { void taskBoard.load() })
   margin: 0;
 }
 
+// ── Columns container ─────────────────────────────────────────────────────────
+
 .task-board__columns {
   display: flex;
-  flex-direction: row;
+  align-items: flex-start;
   gap: $space-3;
+  padding: $space-4 $space-5;
   overflow-x: auto;
   overflow-y: hidden;
   flex: 1;
-  align-items: flex-start;
-  padding-bottom: $space-4;
-  scrollbar-width: thin;
-  scrollbar-color: $surface-300 transparent;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
+// ── Single column ─────────────────────────────────────────────────────────────
+
 .task-board__col {
-  width: 260px;
-  min-width: 260px;
+  width: 284px;
+  min-width: 284px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  align-self: flex-start;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
 
-  &--overdue .task-board__col-body {
-    border-left: 3px solid $color-danger;
-
-    :global(.app-dark) & {
-      border-left-color: var(--p-red-400);
-    }
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-color: var(--p-surface-200);
   }
 }
 
+// ── Column header ─────────────────────────────────────────────────────────────
+
 .task-board__col-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $space-2 $space-3;
-  border-radius: $radius-md $radius-md 0 0;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  flex-shrink: 0;
+  border-top: 3px solid var(--bucket-color, #{$surface-300});
+  // color-mix tint: 13% of bucket color into card bg
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: color-mix(in srgb, var(--bucket-color, #{$surface-300}) 13%, var(--app-surface-card));
+  border-bottom: 1px solid $surface-200;
+  padding: 11px $space-3 9px;
 
-  &--neutral {
-    background: $surface-50;
-    color: $surface-700;
-
-    :global(.app-dark) & {
-      background: var(--p-surface-800);
-      color: var(--p-surface-200);
-    }
+  .app-dark & {
+    border-bottom-color: var(--p-surface-200);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: color-mix(in srgb, var(--bucket-color, #{$surface-300}) 13%, var(--p-surface-100));
   }
+}
 
-  &--danger {
-    background: $color-danger-bg;
-    color: $color-danger-text;
+.task-board__col-header--skeleton {
+  border-top: 3px solid $surface-200;
+  background: $surface-50;
+  border-bottom: 1px solid $surface-200;
+  padding: 11px $space-3 9px;
 
-    :global(.app-dark) & {
-      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: rgba(255, 90, 68, 0.15); // danger tint in dark mode — alpha blend of $color-danger, no dedicated token
-      color: $color-danger;
-    }
+  .app-dark & {
+    background: var(--p-surface-200);
+    border-color: var(--p-surface-300);
+  }
+}
+
+.task-board__col-header-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+}
+
+.task-board__col-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 $space-1;
+  border: 1px solid $surface-200;
+  border-radius: $radius-pill;
+  background: $surface-card;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  color: $surface-600;
+  justify-self: start;
+
+  .app-dark & {
+    background: var(--p-surface-50);
+    border-color: var(--p-surface-200);
+    color: var(--p-surface-300);
   }
 }
 
 .task-board__col-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  text-align: center;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $surface-800;
 
-.task-board__col-count {
-  font-size: $font-size-xs;
-  padding: 1px 6px;
-  border-radius: $radius-sm;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  background: rgba(0, 0, 0, 0.08); // count badge translucent fill — no token for alpha-on-bg overlays
-  flex-shrink: 0;
-
-  :global(.app-dark) & {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    background: rgba(255, 255, 255, 0.1); // count badge translucent fill dark mode — no token
+  .app-dark & {
+    color: var(--p-surface-100);
   }
 }
 
+.task-board__col-meta {
+  margin: 6px 0 0;
+  font-size: $font-size-xs;
+  color: $surface-400;
+  text-align: center;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+// ── Column body ───────────────────────────────────────────────────────────────
+
 .task-board__col-body {
-  border: 1px solid $surface-200;
-  border-top: none;
-  border-radius: 0 0 $radius-md $radius-md;
   padding: $space-2;
   display: flex;
   flex-direction: column;
   gap: $space-2;
-  min-height: 80px;
-  flex: 1;
+  min-height: 60px;
   overflow-y: auto;
-
-  :global(.app-dark) & {
-    border-color: var(--p-surface-700);
-  }
+  max-height: calc(100vh - 280px);
+  scrollbar-width: thin;
+  scrollbar-color: $surface-200 transparent;
 }
 
 .task-board__col-empty {
@@ -335,5 +352,13 @@ onMounted(() => { void taskBoard.load() })
   font-size: $font-size-xs;
   color: $surface-400;
   min-height: 60px;
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
+}
+
+.task-board__card {
+  flex: 0 0 auto; // prevent flex-shrink crushing cards when column overflows; col scrolls instead
 }
 </style>

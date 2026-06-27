@@ -3215,6 +3215,83 @@
       "create": "Create",
       "complete": "Complete",
       "delete": "Delete"
+    },
+    "topbar": {
+      "subtitle": "{count} tasks · {overdue} overdue",
+      "subtitleNoOverdue": "{count} tasks",
+      "filterBtn": "Search & filter",
+      "createBtn": "Create task",
+      "moreMenu": {
+        "select": "Select",
+        "calendarSync": "Sync with calendar",
+        "exportCsv": "Export to CSV",
+        "comingSoon": "Coming soon"
+      }
+    },
+    "bulk": {
+      "cancel": "Cancel",
+      "selectAll": "Select all",
+      "selected": "Selected: {n}",
+      "edit": "Edit",
+      "pin": "Pin",
+      "reopen": "Reopen",
+      "delete": "Delete",
+      "completeSuccess": "Tasks completed",
+      "reopenSuccess": "Tasks reopened",
+      "deleteSuccess": "Tasks deleted",
+      "confirmDelete": "Delete selected tasks?",
+      "confirmDeleteBody": "This action is irreversible.",
+      "confirmYes": "Delete",
+      "confirmNo": "Cancel"
+    },
+    "kanban": {
+      "bucketMeta": {
+        "overdue": "require attention",
+        "today": "",
+        "tomorrow": "",
+        "this_week": "",
+        "next_week": ""
+      }
+    },
+    "quickCreate": {
+      "entityPlaceholder": "Company or contact…",
+      "titlePlaceholder": "What needs to be done?",
+      "kindLabel": "Task type",
+      "dueLabel": "Today 18:00",
+      "responsibleLabel": "Assignee",
+      "createBtn": "Create",
+      "cancelBtn": "Cancel",
+      "notFound": "Nothing found · create \"{q}\"",
+      "company": "Company",
+      "contact": "Contact"
+    },
+    "filter": {
+      "searchPlaceholder": "Search by tasks, deals, companies…",
+      "presets": {
+        "my_tasks": "My tasks",
+        "today": "Today",
+        "overdue": "Overdue",
+        "no_due": "No deadline",
+        "completed": "Completed",
+        "all": "All"
+      },
+      "fields": {
+        "kind": "Task type",
+        "status": "Status",
+        "priority": "Priority",
+        "responsible": "Assignee",
+        "dueFrom": "Due from",
+        "dueTo": "Due to",
+        "dealCompany": "Deal / company",
+        "targetType": "Object type"
+      },
+      "reset": "Reset",
+      "apply": "Apply"
+    },
+    "health": {
+      "done": "Completed",
+      "overdue": "Overdue: {when}",
+      "complete": "Complete"
     }
   },
   "system": {
