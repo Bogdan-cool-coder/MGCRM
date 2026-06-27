@@ -21,6 +21,12 @@ class ApprovalResource extends JsonResource
             'attempt' => $this->attempt,
             'stage_order' => $this->stage_order,
             'user_id' => $this->user_id,
+            // Flat user_name for ApprovalVoteDto (FE expects string, not nested object).
+            'user_name' => $this->whenLoaded(
+                'user',
+                fn () => (string) ($this->user?->full_name ?? ''),
+                '',
+            ),
             'user' => $this->whenLoaded('user', fn () => [
                 'id' => $this->user->id,
                 'full_name' => $this->user->full_name,

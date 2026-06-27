@@ -8,7 +8,6 @@ use App\Domain\Catalog\Models\Product;
 use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
-use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Iam\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -78,13 +77,17 @@ class DemoDocumentsSeeder extends Seeder
             return;
         }
 
-        $doc = Document::create([
+        // NOTE: keep as Draft — a submitted doc must have docx_path set (guard in
+        // ApprovalService::submit). Creating a fake submitted row with docx_path=null
+        // poisons smoke tests and manual QA (generate→submit flow breaks on this doc).
+        // Demo reviewers can generate + submit this doc manually to see the full flow.
+        Document::create([
             'kind' => 'contract',
             'title' => '[DEMO] MacroSales UZ Ташкент',
             'product_code' => 'macrosales',
             'country_code' => 'uz',
             'city' => 'Ташкент',
-            'status' => ContractStatus::Submitted->value,
+            'status' => ContractStatus::Draft->value,
             'author_user_id' => $author->id,
             'currency' => 'UZS',
             'context' => [
@@ -100,20 +103,6 @@ class DemoDocumentsSeeder extends Seeder
             'discount_amount' => 15000000,
             'total' => 135000000,
             'extra_fields' => [],
-        ]);
-
-        // Create a revision snapshot (as submit would do).
-        DocumentRevision::create([
-            'document_id' => $doc->id,
-            'version_number' => 1,
-            'attempt' => 1,
-            'context_snapshot' => $doc->context,
-            'template_version' => null,
-            'docx_path' => null,
-            'pdf_path' => null,
-            'note' => 'Submitted for approval (demo)',
-            'created_by_user_id' => $author->id,
-            'created_at' => now(),
         ]);
     }
 

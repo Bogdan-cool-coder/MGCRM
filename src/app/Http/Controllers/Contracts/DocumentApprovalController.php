@@ -70,6 +70,7 @@ class DocumentApprovalController extends Controller
      * GET /api/documents/{document}/approval-summary
      *
      * Returns current approval progress: stages, votes, counts.
+     * Passes the authenticated user so the resource can compute is_current_user_approver.
      */
     public function approvalSummary(Request $request, Document $document): ApprovalSummaryResource
     {
@@ -77,7 +78,7 @@ class DocumentApprovalController extends Controller
 
         $progress = $this->approvalService->getProgress($document);
 
-        return new ApprovalSummaryResource($progress);
+        return new ApprovalSummaryResource($progress, $request->user());
     }
 
     /**

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Contracts\Policies;
 
+use App\Domain\Contracts\Models\Approval;
 use App\Domain\Contracts\Models\Document;
+use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
@@ -207,8 +209,13 @@ class DocumentPolicy
 
     /**
      * View approval summary:
-     *   admin/lawyer — any document;
-     *   others       — own documents only.
+     *   admin/lawyer           — any document;
+     *   author                 — own documents only;
+     *   active-route approvers — users configured in any stage of the document's
+     *                            current approval run (i.e. they have an Approval
+     *                            row for the current attempt, regardless of stage).
+     *                            This lets a director/CFO/etc. assigned as a stage-2
+     *                            approver view and act on the document via the deal page.
      */
     public function approvalSummary(User $user, Document $document): bool
     {
@@ -216,7 +223,21 @@ class DocumentPolicy
             return true;
         }
 
-        return (int) $document->author_user_id === $user->id;
+        if ((int) $document->author_user_id === $user->id) {
+            return true;
+        }
+
+        // Allow any user who has an Approval row for this document (any stage,
+        // current attempt).  Approval rows are created at submit-time for each
+        // stage as it activates, so this covers both already-active and future
+        // stages within the current run.
+        $attempt = $this->currentAttempt($document->id);
+
+        return Approval::query()
+            ->where('document_id', $document->id)
+            ->where('attempt', $attempt)
+            ->where('user_id', $user->id)
+            ->exists();
     }
 
     // ---- Helpers ----
@@ -224,5 +245,23 @@ class DocumentPolicy
     private function isPrivileged(User $user): bool
     {
         return in_array($user->role, [Role::Admin, Role::Lawyer], strict: true);
+    }
+
+    /**
+     * Mirror of ApprovalService::currentAttempt() — kept local so the Policy
+     * has zero service-layer dependency and remains a pure authorization concern.
+     *
+     * Returns the highest submit-created attempt (attempt > 0), or 1 when no
+     * submit revisions exist yet (document never submitted).
+     */
+    private function currentAttempt(int $documentId): int
+    {
+        $last = DocumentRevision::query()
+            ->where('document_id', $documentId)
+            ->where('attempt', '>', 0)
+            ->orderByDesc('attempt')
+            ->value('attempt');
+
+        return $last !== null ? (int) $last : 1;
     }
 }

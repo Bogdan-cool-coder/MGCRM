@@ -232,6 +232,8 @@ class ApprovalService
             $stages = $this->sortedStages($route->stages ?? []);
         } catch (ValidationException) {
             return [
+                'document_id' => $doc->id,
+                'author_user_id' => (int) $doc->author_user_id,
                 'current_stage_order' => null,
                 'total_stages' => 0,
                 'attempt' => $attempt,
@@ -271,6 +273,8 @@ class ApprovalService
         }, $stages);
 
         return [
+            'document_id' => $doc->id,
+            'author_user_id' => (int) $doc->author_user_id,
             'current_stage_order' => $activeStage['order'] ?? null,
             'total_stages' => count($stages),
             'attempt' => $attempt,
