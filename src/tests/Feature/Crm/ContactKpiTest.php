@@ -299,6 +299,7 @@ class ContactKpiTest extends TestCase
                         'deals_sum_currency',
                         'last_touch_at',
                         'open_tasks_count',
+                        'open_tasks_count_deals',
                         'companies_count',
                     ],
                 ],
@@ -424,6 +425,104 @@ class ContactKpiTest extends TestCase
         // Verify ISO 8601 format (contains 'T' separator)
         $this->assertStringContainsString('T', $response->json('data.created_at'));
         $this->assertStringContainsString('T', $response->json('data.updated_at'));
+    }
+
+    // ---- open_tasks_count_deals (B-wiring) ----
+
+    private function openTaskOnDeal(Deal $deal, User $user): Activity
+    {
+        return Activity::factory()->create([
+            'kind' => ActivityType::Task->value,
+            'target_type' => ActivityTargetType::Deal->value,
+            'target_id' => $deal->id,
+            'status' => ActivityStatus::New->value,
+            'is_closed' => false,
+            'responsible_id' => $user->id,
+            'created_by_id' => $user->id,
+            'due_at' => now()->addDay(),
+        ]);
+    }
+
+    public function test_kpi_open_tasks_count_deals_counts_open_tasks_on_visible_deals(): void
+    {
+        // open task on a VISIBLE linked deal increments open_tasks_count_deals
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+        $stage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+        $deal = Deal::factory()->inStage($stage)->create(['owner_user_id' => $user->id]);
+        DealContact::factory()->create(['deal_id' => $deal->id, 'contact_id' => $contact->id]);
+
+        // open task targeting the deal
+        $this->openTaskOnDeal($deal, $user);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+        $this->assertSame(1, $response->json('data.kpi.open_tasks_count_deals'));
+        // direct contact tasks unaffected
+        $this->assertSame(0, $response->json('data.kpi.open_tasks_count'));
+    }
+
+    public function test_kpi_open_tasks_count_deals_excludes_out_of_scope_deals(): void
+    {
+        // a task on a deal that does NOT belong to this contact counts for neither counter
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+        $stage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+
+        // unlinked deal
+        $unlinkedDeal = Deal::factory()->inStage($stage)->create(['owner_user_id' => $user->id]);
+        $this->openTaskOnDeal($unlinkedDeal, $user);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+        $this->assertSame(0, $response->json('data.kpi.open_tasks_count_deals'));
+        $this->assertSame(0, $response->json('data.kpi.open_tasks_count'));
+    }
+
+    public function test_kpi_open_tasks_count_deals_excludes_done_and_rejected(): void
+    {
+        // done/rejected tasks on linked deals must NOT count
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+        $stage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
+        $deal = Deal::factory()->inStage($stage)->create(['owner_user_id' => $user->id]);
+        DealContact::factory()->create(['deal_id' => $deal->id, 'contact_id' => $contact->id]);
+
+        // done task
+        Activity::factory()->create([
+            'kind' => ActivityType::Task->value,
+            'target_type' => ActivityTargetType::Deal->value,
+            'target_id' => $deal->id,
+            'status' => ActivityStatus::Done->value,
+            'is_closed' => true,
+            'responsible_id' => $user->id,
+            'created_by_id' => $user->id,
+            'due_at' => now()->subDay(),
+            'completed_at' => now()->subHour(),
+        ]);
+
+        // rejected task
+        Activity::factory()->create([
+            'kind' => ActivityType::Task->value,
+            'target_type' => ActivityTargetType::Deal->value,
+            'target_id' => $deal->id,
+            'status' => ActivityStatus::Rejected->value,
+            'is_closed' => false,
+            'responsible_id' => $user->id,
+            'created_by_id' => $user->id,
+            'due_at' => now()->addDay(),
+        ]);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+        $this->assertSame(0, $response->json('data.kpi.open_tasks_count_deals'));
+    }
+
+    public function test_kpi_deal_tasks_use_same_deal_set_as_feed(): void
+    {
+        // Verify that open_tasks_count_deals is 0 when the contact has no linked deals
+        $user = $this->actingAsManager();
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $response = $this->getJson("/api/contacts/{$contact->id}")->assertOk();
+        $this->assertSame(0, $response->json('data.kpi.open_tasks_count_deals'));
     }
 
     // ---- index does NOT expose kpi (no N+1 on list) ----

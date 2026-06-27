@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Crm;
 use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\ContactService;
+use App\Domain\Crm\Services\CrmFeedService;
+use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Sales\Services\DealService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\IndexContactRequest;
@@ -29,6 +31,8 @@ class ContactController extends Controller
         private readonly ContactService $service,
         private readonly ActivityService $activityService,
         private readonly DealService $dealService,
+        private readonly CrmFeedService $feedService,
+        private readonly VisibilityResolver $visibility,
     ) {}
 
     public function index(IndexContactRequest $request): AnonymousResourceCollection
@@ -64,6 +68,13 @@ class ContactController extends Controller
 
         $openTasksCount = $this->activityService->openTasksCountForContact((int) $contact->id, $request->user());
 
+        // B-wiring: open tasks on the contact's VISIBLE linked deals ("+N по сделкам").
+        // Resolve the deal-id set once (shared with the feed — no drift).
+        $user = $request->user();
+        $scope = $this->visibility->resolve($user);
+        $visibleDealIds = $this->feedService->visibleDealIdsForContact((int) $contact->id, $scope, $user);
+        $openTasksCountDeals = $this->activityService->openTasksCountForDeals($visibleDealIds, $user);
+
         // B-2 (DS-5): aggregate deal amounts for the contact's KPI sum chip.
         $dealTotals = $this->dealService->aggregateForContact($contact);
 
@@ -81,6 +92,7 @@ class ContactController extends Controller
                 'deals_sum_currency' => $dealTotals->base_currency, // ISO 4217
                 'last_touch_at' => $contact->last_activity_at?->toIso8601String(),
                 'open_tasks_count' => $openTasksCount,
+                'open_tasks_count_deals' => $openTasksCountDeals,
                 'companies_count' => $companiesCount,
             ],
         ]);

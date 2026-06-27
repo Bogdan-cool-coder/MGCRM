@@ -38,7 +38,7 @@ class AttachHoldingRequest extends FormRequest
                 Rule::notIn([$company->id]),
             ],
             'holding_role' => [
-                'required',
+                'nullable',
                 Rule::enum(HoldingRole::class),
             ],
         ];

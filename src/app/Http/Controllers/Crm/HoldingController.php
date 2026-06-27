@@ -46,10 +46,14 @@ class HoldingController extends Controller
     public function attach(AttachHoldingRequest $request, Company $company): JsonResponse
     {
         try {
+            $role = $request->validated('holding_role') !== null
+                ? HoldingRole::from($request->validated('holding_role'))
+                : HoldingRole::Subsidiary;
+
             $this->service->setParent(
                 $company,
                 (int) $request->validated('parent_id'),
-                HoldingRole::from($request->validated('holding_role')),
+                $role,
                 $request->user(),
             );
         } catch (InvalidArgumentException $e) {

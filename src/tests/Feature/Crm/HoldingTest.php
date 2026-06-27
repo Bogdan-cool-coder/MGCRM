@@ -348,4 +348,60 @@ class HoldingTest extends TestCase
         // Leaf has no children
         $this->assertSame([], $resp->json('data.children'));
     }
+
+    // ---- A-Холдинг: role persistence and default ----
+
+    public function test_attach_with_each_role_persists_correct_role(): void
+    {
+        $user = User::factory()->create(['role' => Role::Director]);
+        Sanctum::actingAs($user, ['*']);
+
+        foreach (HoldingRole::cases() as $role) {
+            $parent = Company::factory()->create(['owner_user_id' => $user->id]);
+            $child = Company::factory()->create(['owner_user_id' => $user->id]);
+
+            $this->postJson("/api/companies/{$child->id}/holding", [
+                'parent_id' => $parent->id,
+                'holding_role' => $role->value,
+            ])->assertOk();
+
+            $this->assertDatabaseHas('crm_companies', [
+                'id' => $child->id,
+                'holding_id' => $parent->id,
+                'holding_role' => $role->value,
+            ]);
+        }
+    }
+
+    public function test_attach_without_role_defaults_to_subsidiary(): void
+    {
+        $user = User::factory()->create(['role' => Role::Director]);
+        $parent = Company::factory()->create(['owner_user_id' => $user->id]);
+        $child = Company::factory()->create(['owner_user_id' => $user->id]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/companies/{$child->id}/holding", [
+            'parent_id' => $parent->id,
+            // holding_role omitted → defaults to subsidiary
+        ])->assertOk();
+
+        $this->assertDatabaseHas('crm_companies', [
+            'id' => $child->id,
+            'holding_id' => $parent->id,
+            'holding_role' => HoldingRole::Subsidiary->value,
+        ]);
+    }
+
+    public function test_attach_with_invalid_role_returns_422(): void
+    {
+        $user = User::factory()->create(['role' => Role::Director]);
+        $parent = Company::factory()->create(['owner_user_id' => $user->id]);
+        $child = Company::factory()->create(['owner_user_id' => $user->id]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/companies/{$child->id}/holding", [
+            'parent_id' => $parent->id,
+            'holding_role' => 'not_a_valid_role',
+        ])->assertStatus(422);
+    }
 }

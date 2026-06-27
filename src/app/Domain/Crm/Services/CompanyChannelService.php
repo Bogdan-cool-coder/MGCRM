@@ -26,6 +26,8 @@ class CompanyChannelService
     /**
      * Create a channel for a company.
      * Enforces uniqueness on (company_id, channel_type, value).
+     * If is_primary_for_channel=true, atomically unsets the flag on all other
+     * channels of the same channel_type so there is at most one primary per type.
      *
      * @param  array<string, mixed>  $data
      */
@@ -33,12 +35,18 @@ class CompanyChannelService
     {
         $this->guardDuplicate($company, (string) $data['channel_type'], (string) $data['value']);
 
+        if (! empty($data['is_primary_for_channel'])) {
+            $this->clearPrimaryForType($company->id, (string) $data['channel_type']);
+        }
+
         return $company->channels()->create($data);
     }
 
     /**
      * Update an existing channel.
      * Re-checks uniqueness if channel_type or value changes.
+     * If is_primary_for_channel is being set to true, atomically unsets the flag
+     * on all OTHER channels of the same channel_type for this company.
      *
      * @param  array<string, mixed>  $data
      */
@@ -54,6 +62,10 @@ class CompanyChannelService
             $this->guardDuplicate($channel->company, (string) $newType, (string) $newValue, $channel->id);
         }
 
+        if (! empty($data['is_primary_for_channel'])) {
+            $this->clearPrimaryForType($channel->company_id, (string) $newType, $channel->id);
+        }
+
         $channel->update($data);
 
         return $channel->fresh();
@@ -65,6 +77,20 @@ class CompanyChannelService
     }
 
     // ---- Private helpers ----
+
+    /**
+     * Unset is_primary_for_channel on all channels of $channelType for $companyId,
+     * optionally skipping $excludeId (the channel being updated/created right after).
+     * Atomic single UPDATE — no N+1.
+     */
+    private function clearPrimaryForType(int $companyId, string $channelType, ?int $excludeId = null): void
+    {
+        CompanyChannel::where('company_id', $companyId)
+            ->where('channel_type', $channelType)
+            ->where('is_primary_for_channel', true)
+            ->when($excludeId !== null, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->update(['is_primary_for_channel' => false]);
+    }
 
     private function guardDuplicate(Company $company, string $channelType, string $value, ?int $excludeId = null): void
     {

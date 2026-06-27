@@ -39,6 +39,7 @@ class UpdateCompanyRequisiteRequest extends FormRequest
             'bank_details.account' => ['nullable', 'string', 'max:64'],
             'valid_from' => ['nullable', 'date'],
             'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'is_current' => ['nullable', 'boolean'],
             'label' => ['nullable', 'string', 'max:128'],
             'note' => ['nullable', 'string'],
         ];

@@ -442,4 +442,71 @@ class CompanyRequisiteTest extends TestCase
             'company_requisite_id' => $requisite->id,
         ]);
     }
+
+    // ---------------------------------------------------------------- A-Реквизиты: full field set
+
+    public function test_store_and_update_persist_director_and_bank_details_fields(): void
+    {
+        $owner = $this->makeOwner();
+        $company = $this->makeCompany($owner);
+        // Make a current requisite so the new one can be non-current (no conflict)
+        $this->makeRequisite($company, ['is_current' => true]);
+
+        Sanctum::actingAs($owner, ['*']);
+
+        $response = $this->postJson("/api/companies/{$company->id}/requisites", [
+            'legal_name' => 'ТОО «Полный набор»',
+            'legal_form' => 'ТОО',
+            'full_legal_form' => 'Товарищество с ограниченной ответственностью',
+            'director_position' => 'Директор',
+            'director_short' => 'Иванов И.И.',
+            'director_genitive' => 'Иванова Ивана Ивановича',
+            'acts_basis' => 'Устава',
+            'tax_id' => '987654321000',
+            'tax_id_label' => 'БИН',
+            'country_code' => 'kz',
+            'bank_details' => [
+                'bank' => 'Halyk Bank',
+                'bank_code_label' => 'БИК',
+                'bank_code' => 'HSBKKZKX',
+                'account' => 'KZ88125KZT1234567890',
+            ],
+            'valid_from' => '2024-01-01',
+            'valid_to' => '2025-12-31',
+            'label' => 'Тестовые реквизиты',
+        ])->assertCreated();
+
+        $id = $response->json('data.id');
+
+        $this->assertDatabaseHas('company_requisites', [
+            'id' => $id,
+            'director_position' => 'Директор',
+            'director_short' => 'Иванов И.И.',
+            'director_genitive' => 'Иванова Ивана Ивановича',
+            'acts_basis' => 'Устава',
+            'tax_id_label' => 'БИН',
+        ]);
+
+        $requisite = CompanyRequisite::find($id);
+        $this->assertNotNull($requisite);
+        $this->assertSame('Halyk Bank', $requisite->bank_details['bank']);
+        $this->assertSame('HSBKKZKX', $requisite->bank_details['bank_code']);
+        $this->assertSame('KZ88125KZT1234567890', $requisite->bank_details['account']);
+        $this->assertSame('БИК', $requisite->bank_details['bank_code_label']);
+
+        // Update director_short and bank account
+        $this->patchJson("/api/companies/{$company->id}/requisites/{$id}", [
+            'director_short' => 'Петров П.П.',
+            'bank_details' => [
+                'bank' => 'Halyk Bank',
+                'bank_code_label' => 'БИК',
+                'bank_code' => 'HSBKKZKX',
+                'account' => 'KZ99NEW',
+            ],
+        ])->assertOk();
+
+        $requisite->refresh();
+        $this->assertSame('Петров П.П.', $requisite->director_short);
+        $this->assertSame('KZ99NEW', $requisite->bank_details['account']);
+    }
 }

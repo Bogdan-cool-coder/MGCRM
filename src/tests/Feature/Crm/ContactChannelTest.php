@@ -206,4 +206,79 @@ class ContactChannelTest extends TestCase
 
         $this->assertDatabaseHas('contact_channels', ['id' => $channelOfB->id]);
     }
+
+    // ---- A-Контакты: at-most-one primary per channel_type ----
+
+    public function test_creating_second_phone_as_primary_unsets_first(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        // First phone — primary
+        $phone1 = ContactChannel::create([
+            'contact_id' => $contact->id,
+            'channel_type' => ChannelType::Phone->value,
+            'value' => '+77001111111',
+            'is_primary_for_channel' => true,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        // Second phone — also primary → should unset first
+        $this->postJson("/api/contacts/{$contact->id}/channels", [
+            'channel_type' => 'phone',
+            'value' => '+77002222222',
+            'is_primary_for_channel' => true,
+        ])->assertCreated()
+            ->assertJsonPath('data.is_primary_for_channel', true);
+
+        // First phone must now be non-primary
+        $this->assertDatabaseHas('contact_channels', [
+            'id' => $phone1->id,
+            'is_primary_for_channel' => false,
+        ]);
+    }
+
+    public function test_updating_phone_to_primary_unsets_other_phones_but_not_emails(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $contact = Contact::factory()->create(['owner_id' => $user->id]);
+
+        $phone1 = ContactChannel::create([
+            'contact_id' => $contact->id,
+            'channel_type' => ChannelType::Phone->value,
+            'value' => '+77001111111',
+            'is_primary_for_channel' => true,
+        ]);
+        $phone2 = ContactChannel::create([
+            'contact_id' => $contact->id,
+            'channel_type' => ChannelType::Phone->value,
+            'value' => '+77002222222',
+            'is_primary_for_channel' => false,
+        ]);
+        $email = ContactChannel::create([
+            'contact_id' => $contact->id,
+            'channel_type' => ChannelType::Email->value,
+            'value' => 'test@example.com',
+            'is_primary_for_channel' => true,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        // Set phone2 as primary
+        $this->patchJson("/api/contacts/{$contact->id}/channels/{$phone2->id}", [
+            'is_primary_for_channel' => true,
+        ])->assertOk()
+            ->assertJsonPath('data.is_primary_for_channel', true);
+
+        // phone1 must now be non-primary
+        $this->assertDatabaseHas('contact_channels', [
+            'id' => $phone1->id,
+            'is_primary_for_channel' => false,
+        ]);
+
+        // email is a different type — must remain primary
+        $this->assertDatabaseHas('contact_channels', [
+            'id' => $email->id,
+            'is_primary_for_channel' => true,
+        ]);
+    }
 }

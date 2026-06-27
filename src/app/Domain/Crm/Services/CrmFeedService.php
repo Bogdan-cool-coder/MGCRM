@@ -361,7 +361,7 @@ class CrmFeedService
      *
      * @return list<int>
      */
-    private function visibleDealIdsForContact(int $contactId, VisibilityScope $scope, User $user): array
+    public function visibleDealIdsForContact(int $contactId, VisibilityScope $scope, User $user): array
     {
         $allDealIds = DealContact::query()
             ->where('contact_id', $contactId)
