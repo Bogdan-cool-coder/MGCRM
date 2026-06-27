@@ -43,8 +43,11 @@
 
       <!-- Kind tag + priority -->
       <div class="task-card__meta-row">
-        <span class="task-card__kind-tag" :class="`task-card__kind-tag--${task.kind}`">
-          <i :class="kindIconFn(task.kind)" class="task-card__kind-icon" />
+        <span
+          class="task-card__kind-tag"
+          :class="task.kind ? `task-card__kind-tag--${task.kind}` : 'task-card__kind-tag--unknown'"
+        >
+          <i v-if="task.kind" :class="kindIconFn(task.kind)" class="task-card__kind-icon" />
           {{ kindLabelFn(task.kind) }}
         </span>
         <span v-if="showPriority" class="task-card__priority" :class="`task-card__priority--${task.priority}`">
@@ -104,8 +107,9 @@ const { t } = useI18n()
 const completing = ref(false)
 
 // ── Kind label ─────────────────────────────────────────────────────────────────
-function kindLabelFn(kind: ActivityKind): string {
-  const map: Record<ActivityKind, string> = {
+function kindLabelFn(kind: ActivityKind | null | undefined): string {
+  if (!kind) return t('tasks.board.taskTypes.task')
+  const map: Partial<Record<ActivityKind, string>> = {
     call: t('tasks.board.taskTypes.call'),
     meeting: t('tasks.board.taskTypes.meeting'),
     task: t('tasks.board.taskTypes.task'),
@@ -113,7 +117,7 @@ function kindLabelFn(kind: ActivityKind): string {
     follow_up: t('tasks.board.taskTypes.follow_up'),
     presentation: t('tasks.board.taskTypes.presentation'),
   }
-  return map[kind] ?? kind
+  return map[kind] ?? t('tasks.board.taskTypes.task')
 }
 
 // ── Priority ───────────────────────────────────────────────────────────────────
@@ -375,7 +379,8 @@ async function onComplete() {
   font-size: $font-size-2xs;
   font-weight: $font-weight-medium;
 
-  &--task {
+  &--task,
+  &--unknown {
     background: $surface-100;
     color: $surface-600;
 

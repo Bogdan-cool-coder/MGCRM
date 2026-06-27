@@ -248,14 +248,25 @@ function onHide() {
   resetPreview()
 }
 
-function downloadTemplate() {
-  const url = catalogApi.downloadTemplateUrl()
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'price_template.xlsx'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+async function downloadTemplate() {
+  try {
+    const blob = await catalogApi.downloadTemplate()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = 'price_template.xlsx'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(objectUrl)
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('catalog.import.dialog.errorToast'),
+      detail: getApiErrorMessage(err, t('catalog.import.dialog.errorToast')),
+      life: 5000,
+    })
+  }
 }
 </script>
 

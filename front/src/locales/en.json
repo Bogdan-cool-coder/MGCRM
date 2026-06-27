@@ -1818,6 +1818,7 @@
         },
         "events": {
           "stageChanged": "Stage changed",
+          "stageChangedVerb": "changed stage",
           "dealCreated": "Deal created",
           "dealCreatedVerb": "created the deal",
           "fieldsChanged": "Fields changed",

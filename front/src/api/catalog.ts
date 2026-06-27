@@ -331,4 +331,15 @@ export const catalogApi = {
   downloadTemplateUrl(): string {
     return '/api/catalog/price-import/template'
   },
+
+  /**
+   * Download the price-import Excel template via the authenticated apiClient
+   * (Bearer token). Returns a Blob so the caller can create an object URL.
+   */
+  async downloadTemplate(): Promise<Blob> {
+    const res = await apiClient.get<Blob>('/api/catalog/price-import/template', {
+      responseType: 'blob',
+    })
+    return res.data
+  },
 }

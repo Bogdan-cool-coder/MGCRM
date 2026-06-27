@@ -53,11 +53,16 @@
         :scope="boardScope"
         :select-mode="selectMode"
         :selected-ids="selectedIds"
+        :loading="taskBoard.loading.value"
+        :all-done="taskBoard.allDone.value"
+        :buckets-data="taskBoard.bucketsData.value"
         @task-created="onKanbanTaskCreated"
         @task-completed="onKanbanTaskCompleted"
         @task-rescheduled="onKanbanTaskRescheduled"
         @error="onKanbanError"
         @toggle-select="toggleSelectItem"
+        @complete="onKanbanComplete"
+        @reschedule="onKanbanReschedule"
       />
     </div>
 
@@ -130,8 +135,10 @@ import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import { activityApi } from '@/api/activity'
 import { useActivityStore } from '@/stores/activityStore'
 import { useMyTasks } from './composables/useMyTasks'
+import { useTaskBoard } from './composables/useTaskBoard'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { ActivityDto } from '@/entities/activity'
+import type { MyBoardBucket } from '@/entities/activity'
 import type { TaskScope } from './composables/useTaskBoard'
 
 const { t } = useI18n()
@@ -147,11 +154,14 @@ type TasksPageView = 'kanban' | 'list'
 const _savedView = localStorage.getItem(TASKS_VIEW_KEY) as TasksPageView | null
 const activeView = ref<TasksPageView>(_savedView ?? 'kanban')
 
-// Persist view and trigger list reload when switching to list
+// Persist view and trigger reload when switching views
 watch(activeView, (view) => {
   localStorage.setItem(TASKS_VIEW_KEY, view)
   if (view === 'list') {
     void Promise.all([load(), refreshCounts()])
+  } else {
+    // Switching to kanban: ensure board is loaded (may be stale or unloaded)
+    void taskBoard.load()
   }
 })
 
@@ -184,9 +194,20 @@ function toggleSelectItem(id: number) {
 }
 
 function selectAll() {
-  // For kanban: can't easily enumerate all IDs here; let the board handle it
-  // For list: select all visible items
-  selectedIds.value = new Set(items.value.map((a) => a.id))
+  if (activeView.value === 'kanban') {
+    // Select all tasks visible in the current scope across all kanban buckets
+    const scopeBuckets = bucketsForScope(boardScope.value)
+    const ids: number[] = []
+    for (const bucket of taskBoard.bucketsData.value) {
+      if (!scopeBuckets.includes(bucket.key)) continue
+      for (const task of bucket.tasks) {
+        ids.push(task.id)
+      }
+    }
+    selectedIds.value = new Set(ids)
+  } else {
+    selectedIds.value = new Set(items.value.map((a) => a.id))
+  }
 }
 
 function selectAllList() {
@@ -195,6 +216,14 @@ function selectAllList() {
 
 function clearSelection() {
   selectedIds.value = new Set()
+}
+
+// Helper: mirrors TasksKanbanBoard.bucketsForScope (kept here for selectAll)
+const ALL_BOARD_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']
+function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
+  if (scope === 'day') return ['overdue', 'today', 'tomorrow']
+  if (scope === 'week') return ['overdue', 'today', 'tomorrow', 'this_week']
+  return ALL_BOARD_BUCKETS
 }
 
 // ── Filters ───────────────────────────────────────────────────────────────────
@@ -215,6 +244,9 @@ const {
   addLocal,
 } = useMyTasks()
 
+// ── Task board (lifted here so select-all / bulk / BulkBar count work in kanban)
+const taskBoard = useTaskBoard()
+
 const hasActiveFilters = computed(() => {
   const f = filters.value
   return !!(f.kind || f.status || f.priority || f.responsible_id || f.due_from || f.due_to || f.q)
@@ -228,9 +260,14 @@ const activeFilterCount = computed(() => {
 
 const totalCount = computed(() => counts.value?.my_tasks ?? 0)
 
-const totalVisibleCount = computed(() =>
-  activeView.value === 'list' ? items.value.length : 0,
-)
+const totalVisibleCount = computed(() => {
+  if (activeView.value === 'list') return items.value.length
+  // Kanban: count all tasks in scope-visible buckets
+  const scopeBuckets = bucketsForScope(boardScope.value)
+  return taskBoard.bucketsData.value
+    .filter((b) => scopeBuckets.includes(b.key))
+    .reduce((sum, b) => sum + b.tasks.length, 0)
+})
 
 function onResetFilters() {
   resetFilters()
@@ -371,11 +408,17 @@ function onActivityPatched(activity: ActivityDto) {
 async function onBulkPin() {
   const ids = [...selectedIds.value]
   if (!ids.length) return
+  const isKanban = activeView.value === 'kanban'
   let succeeded = 0
   for (const id of ids) {
     try {
       const updated = await activityApi.updateActivity(id, { is_pinned: true })
-      updateLocal(updated)
+      if (isKanban) {
+        // Merge only is_pinned into the existing board task (preserves MyBoardActivityDto shape)
+        taskBoard.patchLocalById(id, { is_pinned: true })
+      } else {
+        updateLocal(updated)
+      }
       succeeded++
     } catch {
       // continue
@@ -390,19 +433,26 @@ async function onBulkPin() {
 async function onBulkReopen() {
   const ids = [...selectedIds.value]
   if (!ids.length) return
+  const isKanban = activeView.value === 'kanban'
   let succeeded = 0
   for (const id of ids) {
     try {
-      const updated = await activityApi.reopenActivity(id)
-      updateLocal(updated)
-      // Remove from current list (reopened tasks leave the «completed» view)
-      removeLocal(id)
+      await activityApi.reopenActivity(id)
+      if (isKanban) {
+        // Reopened tasks stay in the board (they were likely "done" tasks still in a bucket)
+        // Just reload the board to get fresh server state
+      } else {
+        removeLocal(id)
+      }
       succeeded++
     } catch {
       // continue
     }
   }
   if (succeeded > 0) {
+    if (isKanban) {
+      void taskBoard.load()
+    }
     toast.add({ severity: 'success', summary: t('tasks.bulk.reopenSuccess'), life: 2000 })
     void refreshCounts()
   }
@@ -412,6 +462,7 @@ async function onBulkReopen() {
 function onBulkDelete() {
   const ids = [...selectedIds.value]
   if (!ids.length) return
+  const isKanban = activeView.value === 'kanban'
   confirm.require({
     header: t('tasks.bulk.confirmDelete'),
     message: t('tasks.bulk.confirmDeleteBody'),
@@ -423,7 +474,11 @@ function onBulkDelete() {
       for (const id of ids) {
         try {
           await activityApi.deleteActivity(id)
-          removeLocal(id)
+          if (isKanban) {
+            taskBoard.removeLocalById(id)
+          } else {
+            removeLocal(id)
+          }
           succeeded++
         } catch {
           // continue
@@ -461,13 +516,39 @@ function onKanbanError(message: string) {
   toast.add({ severity: 'error', summary: message, life: 4000 })
 }
 
+/**
+ * Board card "complete" — lifted from TasksKanbanBoard so the page owns all
+ * board mutations (required for correct bulk/select-all state).
+ */
+async function onKanbanComplete(id: number) {
+  try {
+    await taskBoard.completeTask(id)
+    onKanbanTaskCompleted()
+  } catch {
+    onKanbanError(t('tasks.board.card.completed'))
+  }
+}
+
+/**
+ * Board drag-and-drop reschedule — lifted from TasksKanbanBoard.
+ */
+async function onKanbanReschedule(taskId: number, targetBucket: MyBoardBucket) {
+  try {
+    await taskBoard.rescheduleTask(taskId, targetBucket)
+    onKanbanTaskRescheduled()
+  } catch {
+    onKanbanError(t('tasks.board.reschedule.error'))
+  }
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
   if (activeView.value === 'list') {
     await Promise.all([load(), refreshCounts()])
   } else {
-    await refreshCounts()
+    // Kanban: load board data + counts; list data on demand (when switching to list)
+    await Promise.all([taskBoard.load(), refreshCounts()])
   }
   await activityStore.fetchMyOpenCount()
 })

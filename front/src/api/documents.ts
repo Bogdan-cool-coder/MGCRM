@@ -99,12 +99,52 @@ export async function unarchiveDocument(id: number): Promise<DocumentDto> {
 
 // ─── Downloads ────────────────────────────────────────────────────────────────
 
+/**
+ * Trigger a client-side file download through apiClient (Bearer auth).
+ * Fetches the resource as a Blob, creates a temporary object URL, simulates
+ * an anchor click, then revokes the URL to release memory.
+ */
+async function downloadViaBlob(url: string, filename: string): Promise<void> {
+  const response = await apiClient.get<Blob>(url, { responseType: 'blob' })
+  const blob = new Blob([response.data], { type: String(response.headers['content-type'] ?? 'application/octet-stream') })
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(objectUrl)
+}
+
+export async function downloadDocx(id: number, filename?: string): Promise<void> {
+  await downloadViaBlob(`/api/documents/${id}/download/docx`, filename ?? `document-${id}.docx`)
+}
+
+export async function downloadPdf(id: number, filename?: string): Promise<void> {
+  await downloadViaBlob(`/api/documents/${id}/download/pdf`, filename ?? `document-${id}.pdf`)
+}
+
+export async function downloadAttachmentBlob(docId: number, attachmentId: number, filename?: string): Promise<void> {
+  await downloadViaBlob(
+    `/api/documents/${docId}/attachments/${attachmentId}/download`,
+    filename ?? `attachment-${attachmentId}`,
+  )
+}
+
+/** @deprecated Use downloadDocx() — returns URL only, no Bearer auth */
 export function getDownloadDocxUrl(id: number): string {
   return `/api/documents/${id}/download/docx`
 }
 
+/** @deprecated Use downloadPdf() — returns URL only, no Bearer auth */
 export function getDownloadPdfUrl(id: number): string {
   return `/api/documents/${id}/download/pdf`
+}
+
+/** @deprecated Use downloadAttachmentBlob() — returns URL only, no Bearer auth */
+export function getAttachmentDownloadUrl(docId: number, attachmentId: number): string {
+  return `/api/documents/${docId}/attachments/${attachmentId}/download`
 }
 
 // ─── Document Items ───────────────────────────────────────────────────────────
@@ -195,10 +235,6 @@ export async function uploadAttachment(
   return response.data.data
 }
 
-export function getAttachmentDownloadUrl(docId: number, attachmentId: number): string {
-  return `/api/documents/${docId}/attachments/${attachmentId}/download`
-}
-
 export async function deleteAttachment(docId: number, attachmentId: number): Promise<void> {
   await apiClient.delete(`/api/documents/${docId}/attachments/${attachmentId}`)
 }
@@ -258,8 +294,12 @@ export const documentsApi = {
   unsignDocument,
   archiveDocument,
   unarchiveDocument,
+  downloadDocx,
+  downloadPdf,
+  downloadAttachmentBlob,
   getDownloadDocxUrl,
   getDownloadPdfUrl,
+  getAttachmentDownloadUrl,
   getDocumentItems,
   createDocumentItem,
   updateDocumentItem,
@@ -269,7 +309,6 @@ export const documentsApi = {
   resolveRemark,
   getDocumentAttachments,
   uploadAttachment,
-  getAttachmentDownloadUrl,
   deleteAttachment,
   getApprovalSummary,
   generateFromDeal,

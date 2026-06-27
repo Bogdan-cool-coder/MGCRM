@@ -1,7 +1,7 @@
 <template>
   <div class="task-board">
     <!-- Loading skeleton -->
-    <template v-if="taskBoard.loading.value">
+    <template v-if="loading">
       <div class="task-board__columns">
         <div v-for="col in 3" :key="col" class="task-board__col">
           <div class="task-board__col-header task-board__col-header--skeleton">
@@ -15,7 +15,7 @@
     </template>
 
     <!-- All done empty state -->
-    <div v-else-if="taskBoard.allDone.value" class="task-board__empty">
+    <div v-else-if="allDone" class="task-board__empty">
       <i class="pi pi-check-circle task-board__empty-icon task-board__empty-icon--success" />
       <p class="task-board__empty-title">{{ t('tasks.board.empty.title') }}</p>
       <p class="task-board__empty-subtitle">{{ t('tasks.board.empty.subtitle') }}</p>
@@ -72,12 +72,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Skeleton from 'primevue/skeleton'
 import TaskCard from './TaskCard.vue'
-import { useTaskBoard } from '../composables/useTaskBoard'
-import type { TaskScope } from '../composables/useTaskBoard'
+import type { TaskScope, TaskBucket } from '../composables/useTaskBoard'
 import { OPERATIONAL_TZ } from '@/utils/activity'
 import type { MyBoardBucket } from '@/entities/activity'
 import type { ActivityDto } from '@/entities/activity'
@@ -86,6 +85,10 @@ const props = defineProps<{
   scope: TaskScope
   selectMode?: boolean
   selectedIds?: Set<number>
+  // Board state lifted from parent (index.vue) — single source of truth for select/bulk
+  loading: boolean
+  allDone: boolean
+  bucketsData: TaskBucket[]
 }>()
 
 const emit = defineEmits<{
@@ -94,10 +97,11 @@ const emit = defineEmits<{
   error: [message: string]
   toggleSelect: [id: number]
   taskRescheduled: []
+  complete: [id: number]
+  reschedule: [taskId: number, targetBucket: MyBoardBucket]
 }>()
 
 const { t } = useI18n()
-const taskBoard = useTaskBoard()
 
 // ── Bucket colors (spec §0) ────────────────────────────────────────────────────
 const BUCKET_COLORS: Record<MyBoardBucket, string> = {
@@ -120,7 +124,7 @@ function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
 // ── Computed board ─────────────────────────────────────────────────────────────
 const visibleBuckets = computed(() => {
   const scopeBuckets = bucketsForScope(props.scope)
-  return taskBoard.bucketsData.value
+  return props.bucketsData
     .filter((b) => {
       // Always scope-filter
       if (!scopeBuckets.includes(b.key)) return false
@@ -167,13 +171,8 @@ function bucketMeta(key: MyBoardBucket): string {
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────────
-async function onComplete(id: number) {
-  try {
-    await taskBoard.completeTask(id)
-    emit('taskCompleted')
-  } catch {
-    emit('error', t('tasks.board.card.completed'))
-  }
+function onComplete(id: number) {
+  emit('complete', id)
 }
 
 // ── Drag-and-drop ─────────────────────────────────────────────────────────────
@@ -209,7 +208,7 @@ function onDragLeave(bucket: MyBoardBucket) {
   }
 }
 
-async function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
+function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   dragOverBucket.value = null
   if (targetBucket === 'overdue') return
 
@@ -218,15 +217,8 @@ async function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
 
   if (!payload || payload.sourceBucket === targetBucket) return
 
-  try {
-    await taskBoard.rescheduleTask(payload.taskId, targetBucket)
-    emit('taskRescheduled')
-  } catch {
-    emit('error', t('tasks.board.reschedule.error'))
-  }
+  emit('reschedule', payload.taskId, targetBucket)
 }
-
-onMounted(() => { void taskBoard.load() })
 </script>
 
 <style lang="scss" scoped>

@@ -399,9 +399,15 @@ async function generateDoc() {
   }
 }
 
-function downloadDocx() {
+async function downloadDocx() {
   if (!activeDocId.value) return
-  window.open(documentsApi.getDownloadDocxUrl(activeDocId.value), '_blank')
+  const doc = activeDoc.value
+  const filename = doc?.number ? `Договор ${doc.number}.docx` : `document-${activeDocId.value}.docx`
+  try {
+    await documentsApi.downloadDocx(activeDocId.value, filename)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+  }
 }
 
 // ── Approval ───────────────────────────────────────────────────────────────────
@@ -442,10 +448,10 @@ const canSubmit = computed(
   () => activeDoc.value?.status === 'draft' && !!activeDoc.value?.docx_path,
 )
 
+// Resubmit is only allowed from needs_rework (state machine: needs_rework → submitted).
+// rejected is terminal — the backend will 422; do not offer the button to avoid lying to the user.
 const canResubmit = computed(
-  () =>
-    (activeDoc.value?.status === 'rejected' || activeDoc.value?.status === 'needs_rework') &&
-    !!activeDoc.value?.docx_path,
+  () => activeDoc.value?.status === 'needs_rework' && !!activeDoc.value?.docx_path,
 )
 
 const submitMutation = useMutation<DocumentListItemDto>()
@@ -558,9 +564,13 @@ async function uploadScan(event: FileUploadUploaderEvent) {
   }
 }
 
-function downloadAttachment(att: DocumentAttachmentDto) {
+async function downloadAttachment(att: DocumentAttachmentDto) {
   if (!activeDocId.value) return
-  window.open(documentsApi.getAttachmentDownloadUrl(activeDocId.value, att.id), '_blank')
+  try {
+    await documentsApi.downloadAttachmentBlob(activeDocId.value, att.id, att.original_name)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+  }
 }
 
 async function deleteAtt(attId: number) {
@@ -618,6 +628,7 @@ watch(activeDocId, async (id) => {
   if (id !== null) {
     showRejectForm.value = false
     rejectComment.value = ''
+    signedAtIso.value = activeDoc.value?.signed_at ?? null
     await Promise.all([loadApproval(), loadAttachments()])
   }
 })

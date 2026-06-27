@@ -1818,6 +1818,7 @@
         },
         "events": {
           "stageChanged": "Стадия изменена",
+          "stageChangedVerb": "изменил стадию",
           "dealCreated": "Сделка создана",
           "dealCreatedVerb": "создал сделку",
           "fieldsChanged": "Изменены поля",

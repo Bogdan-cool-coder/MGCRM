@@ -55,19 +55,23 @@ export type TriggerConfig =
 
 // ─── Action configs (one per ActionKind) ─────────────────────────────────────
 
+// recipient is the single canonical spec string the engine's RecipientResolver
+// reads: 'owner' | 'user_id:N' | 'chat_id:X'. The wizard composes it from its
+// type/user/chat fields on emit; do NOT send recipient_type/user_id/chat_id
+// separately — the backend ignores them.
 export interface ActionConfigTgNotify {
-  recipient_type: 'owner' | 'user' | 'chat_id'
-  user_id?: number | null
-  chat_id?: string | null
+  recipient: string
   message: string
   [key: string]: unknown
 }
 
+// body + responsible (spec string 'owner' | 'user_id:N') + due_days are the keys
+// CreateTaskAction reads. The wizard's assignee_type/user_id are folded into
+// `responsible` on emit; description is stored as `body`.
 export interface ActionConfigCreateTask {
   title: string
-  description?: string | null
-  assignee_type?: 'owner' | 'user'
-  user_id?: number | null
+  body?: string | null
+  responsible?: string
   due_days?: number | null
   [key: string]: unknown
 }

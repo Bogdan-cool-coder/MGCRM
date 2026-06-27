@@ -82,10 +82,23 @@ onMounted(() => {
   loadUsers()
 })
 
+// Parse the canonical `responsible` spec ('owner' | 'user_id:N') back into the
+// wizard's assignee_type / user_id fields when re-hydrating a stored config.
+function parseResponsible(spec: unknown): { assigneeType: 'owner' | 'user'; userId: number | null } {
+  const s = typeof spec === 'string' ? spec.trim() : ''
+  if (s.startsWith('user_id:')) {
+    const id = Number.parseInt(s.slice('user_id:'.length), 10)
+    return { assigneeType: 'user', userId: Number.isFinite(id) && id > 0 ? id : null }
+  }
+  return { assigneeType: 'owner', userId: null }
+}
+
+const initial = parseResponsible(props.config.responsible)
+
 const title = ref<string>((props.config.title as string) ?? '')
-const description = ref<string>((props.config.description as string) ?? '')
-const assigneeType = ref<'owner' | 'user'>((props.config.assignee_type as 'owner' | 'user') ?? 'owner')
-const userId = ref<number | null>((props.config.user_id as number | null) ?? null)
+const description = ref<string>((props.config.body as string) ?? '')
+const assigneeType = ref<'owner' | 'user'>(initial.assigneeType)
+const userId = ref<number | null>(initial.userId)
 const dueDays = ref<number | null>((props.config.due_days as number | null) ?? null)
 
 const localErrors = ref<Record<string, string>>({})
@@ -95,15 +108,15 @@ const assigneeOptions = computed(() => [
   { label: t('automation.fields.recipientUser'), value: 'user' },
 ])
 
+// Emit the canonical engine contract: body / responsible spec string / due_days.
+// (The friendly assignee_type + user_id locals are folded into `responsible`.)
 function buildConfig() {
-  const cfg: Record<string, unknown> = {
+  return {
     title: title.value,
-    description: description.value || null,
-    assignee_type: assigneeType.value,
+    body: description.value || null,
+    responsible: assigneeType.value === 'user' && userId.value ? `user_id:${userId.value}` : 'owner',
     due_days: dueDays.value,
   }
-  if (assigneeType.value === 'user') cfg.user_id = userId.value
-  return cfg
 }
 
 watch([title, description, assigneeType, userId, dueDays], () => {
@@ -118,9 +131,10 @@ watch(
     // is reflected back by the parent as a new prop object and restarts the emission.
     if (JSON.stringify(v) === JSON.stringify(buildConfig())) return
     title.value = (v.title as string) ?? ''
-    description.value = (v.description as string) ?? ''
-    assigneeType.value = (v.assignee_type as 'owner' | 'user') ?? 'owner'
-    userId.value = (v.user_id as number | null) ?? null
+    description.value = (v.body as string) ?? ''
+    const parsed = parseResponsible(v.responsible)
+    assigneeType.value = parsed.assigneeType
+    userId.value = parsed.userId
     dueDays.value = (v.due_days as number | null) ?? null
   },
   { deep: true },

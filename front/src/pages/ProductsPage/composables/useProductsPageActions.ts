@@ -112,13 +112,15 @@ export const useProductsPageActions = ({ reload }: UseProductsPageActionsOptions
   }
 
   async function downloadTemplate() {
-    const url = catalogApi.downloadTemplateUrl()
+    const blob = await catalogApi.downloadTemplate()
+    const objectUrl = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = url
+    link.href = objectUrl
     link.download = 'price_template.xlsx'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(objectUrl)
   }
 
   return {

@@ -343,7 +343,7 @@ const paymentFixedLabel = computed((): string => {
     parts.push(formatCurrency(pf.amount, 'RUB'))
   }
   if (pf.paid_at) {
-    parts.push(t('sales.deal.feed.events.paymentFixedOn', { date: pf.paid_at }))
+    parts.push(t('sales.deal.feed.events.paymentFixedOn', { date: formatPaymentDate(pf.paid_at) }))
   }
   return parts.join(' ')
 })
@@ -400,6 +400,15 @@ function formatSystemDate(iso: string): string {
   const datePart = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
   const timePart = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
   return `${datePart}, ${timePart}`
+}
+
+/**
+ * Payment date: «27 июн 2026» (day + short-month + year, no time).
+ * Handles both ISO datetime strings and bare date strings (YYYY-MM-DD).
+ */
+function formatPaymentDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────

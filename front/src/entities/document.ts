@@ -35,6 +35,7 @@ export interface DocumentListItemDto {
   template_version: string | { id: number; code: string; version_number: number } | null
   docx_path: string | null
   pdf_path: string | null
+  signed_at: string | null
   archived_at: string | null
   created_at: string
   updated_at: string

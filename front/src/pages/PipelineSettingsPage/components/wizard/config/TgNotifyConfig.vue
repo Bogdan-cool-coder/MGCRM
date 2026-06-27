@@ -93,11 +93,29 @@ onMounted(() => {
 
 const PLACEHOLDERS = ['{target_id}', '{target_type}', '{target_title}', '{owner_name}']
 
-const recipientType = ref<'owner' | 'user' | 'chat_id'>(
-  (props.config.recipient_type as 'owner' | 'user' | 'chat_id') ?? 'owner',
-)
-const userId = ref<number | null>((props.config.user_id as number | null) ?? null)
-const chatId = ref<string>((props.config.chat_id as string) ?? '')
+// Parse the canonical `recipient` spec ('owner' | 'user_id:N' | 'chat_id:X')
+// back into the wizard's type / user / chat fields when re-hydrating a config.
+function parseRecipient(spec: unknown): {
+  type: 'owner' | 'user' | 'chat_id'
+  userId: number | null
+  chatId: string
+} {
+  const s = typeof spec === 'string' ? spec.trim() : ''
+  if (s.startsWith('user_id:')) {
+    const id = Number.parseInt(s.slice('user_id:'.length), 10)
+    return { type: 'user', userId: Number.isFinite(id) && id > 0 ? id : null, chatId: '' }
+  }
+  if (s.startsWith('chat_id:')) {
+    return { type: 'chat_id', userId: null, chatId: s.slice('chat_id:'.length) }
+  }
+  return { type: 'owner', userId: null, chatId: '' }
+}
+
+const initial = parseRecipient(props.config.recipient)
+
+const recipientType = ref<'owner' | 'user' | 'chat_id'>(initial.type)
+const userId = ref<number | null>(initial.userId)
+const chatId = ref<string>(initial.chatId)
 const message = ref<string>((props.config.message as string) ?? '')
 
 const localErrors = ref<Record<string, string>>({})
@@ -117,14 +135,24 @@ function insertPlaceholder(p: string) {
   message.value = message.value + p
 }
 
+// Emit the single canonical `recipient` spec string the engine resolves, folding
+// the friendly type/user/chat locals into it: owner → 'owner', user → 'user_id:N',
+// chat_id → 'chat_id:X'. recipient_type/user_id/chat_id are NOT sent separately.
+function buildRecipient(): string {
+  if (recipientType.value === 'user') {
+    return userId.value ? `user_id:${userId.value}` : 'owner'
+  }
+  if (recipientType.value === 'chat_id') {
+    return chatId.value.trim() ? `chat_id:${chatId.value.trim()}` : 'owner'
+  }
+  return 'owner'
+}
+
 function buildConfig() {
-  const cfg: Record<string, unknown> = {
-    recipient_type: recipientType.value,
+  return {
+    recipient: buildRecipient(),
     message: message.value,
   }
-  if (recipientType.value === 'user') cfg.user_id = userId.value
-  if (recipientType.value === 'chat_id') cfg.chat_id = chatId.value
-  return cfg
 }
 
 watch([recipientType, userId, chatId, message], () => {
@@ -136,9 +164,10 @@ watch(
   (v) => {
     // Identity guard: skip re-hydration if incoming config equals our own last emit.
     if (JSON.stringify(v) === JSON.stringify(buildConfig())) return
-    recipientType.value = (v.recipient_type as 'owner' | 'user' | 'chat_id') ?? 'owner'
-    userId.value = (v.user_id as number | null) ?? null
-    chatId.value = (v.chat_id as string) ?? ''
+    const parsed = parseRecipient(v.recipient)
+    recipientType.value = parsed.type
+    userId.value = parsed.userId
+    chatId.value = parsed.chatId
     message.value = (v.message as string) ?? ''
   },
   { deep: true },

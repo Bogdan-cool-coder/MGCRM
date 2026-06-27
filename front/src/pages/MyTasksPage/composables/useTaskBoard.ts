@@ -196,6 +196,50 @@ export function useTaskBoard() {
     }
   }
 
+  /**
+   * Optimistically remove a task from any bucket by ID (used by page-level bulk actions).
+   */
+  function removeLocalById(id: number) {
+    for (const key of ALL_BUCKETS) {
+      const bucket = serverBuckets.value[key]
+      if (bucket) {
+        const idx = bucket.findIndex((t) => t.id === id)
+        if (idx >= 0) {
+          serverBuckets.value = {
+            ...serverBuckets.value,
+            [key]: [...bucket.slice(0, idx), ...bucket.slice(idx + 1)],
+          }
+          break
+        }
+      }
+    }
+  }
+
+  /**
+   * Optimistically patch specific fields of a task in any bucket by ID.
+   * Used by page-level bulk actions (e.g. pin) where the full DTO shape
+   * of the board task must be preserved.
+   */
+  function patchLocalById(id: number, patch: Partial<MyBoardActivityDto>) {
+    for (const key of ALL_BUCKETS) {
+      const bucket = serverBuckets.value[key]
+      if (bucket) {
+        const idx = bucket.findIndex((t) => t.id === id)
+        if (idx >= 0) {
+          serverBuckets.value = {
+            ...serverBuckets.value,
+            [key]: [
+              ...bucket.slice(0, idx),
+              { ...(bucket[idx] as MyBoardActivityDto), ...patch },
+              ...bucket.slice(idx + 1),
+            ],
+          }
+          break
+        }
+      }
+    }
+  }
+
   return {
     loading: computed(() => resource.loading.value),
     error: computed(() => resource.error.value),
@@ -207,5 +251,7 @@ export function useTaskBoard() {
     load,
     completeTask,
     rescheduleTask,
+    removeLocalById,
+    patchLocalById,
   }
 }
