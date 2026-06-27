@@ -8,7 +8,8 @@
 <link rel="stylesheet" href="../styles.css" />
 <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none; }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
   html, body { margin: 0; }
   body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
   /* light/dark local surface vars — brand navy header stays invariant */
@@ -483,28 +484,33 @@ function ActivityFeed({ setDialog }) {
   { ic: 'pi-calendar', t: 'Встреча — демо MACRO AI Core', st: 'Запланировано', sv: 'warning', who: 'И. Петров · завтра 11:00' }];
 
   return <TabCard>
-    <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{ display: 'flex', gap: '6px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '68vh' }}>
+      {/* filters (fixed top) */}
+      <div style={{ display: 'flex', gap: '6px', padding: '14px 16px 10px', flexShrink: 0 }}>
         {['Все', 'События', 'Изменения'].map((f, i) => <span key={i} style={{ fontSize: '12px', fontWeight: 600, padding: '4px 11px', borderRadius: '999px', cursor: 'pointer', background: i === 0 ? 'var(--mg-primary-100)' : 'var(--c-hover)', color: i === 0 ? 'var(--mg-primary-900)' : 'var(--c-muted)' }}>{f}</span>)}</div>
-      <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--c-muted)' }}><i className="pi pi-angle-up" style={{ fontSize: '10px' }} /> более ранние события выше</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} />
-        <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--c-muted)' }}>20 июня 2026</span>
-        <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} /></div>
-      {items.map((a, i) => a.log ?
-      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--c-muted)', padding: '0 2px' }}>
-          <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, background: 'var(--c-tile)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><i className={`pi ${a.ic}`} style={{ fontSize: '10px', color: 'var(--mg-primary-light)' }} /></span>
-          <span style={{ flex: 1 }}><strong style={{ color: 'var(--c-text2)' }}>{a.who}</strong> {a.txt} <span style={{ textDecoration: 'line-through' }}>{a.old}</span> <i className="pi pi-arrow-right" style={{ fontSize: '8px' }} /> <span style={{ color: 'var(--mg-primary-light)', fontWeight: 600 }}>{a.neu}</span></span>
-          <span>{a.time}</span></div> :
-      <div key={i} style={{ border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <i className={`pi ${a.ic}`} style={{ fontSize: '13px', color: 'var(--mg-primary-light)' }} />
-            <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>{a.t}</span>
-            {a.st && <Tag sev={a.sv} size="sm">{a.st}</Tag>}</div>
-          {a.body && <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text2)' }}>{a.body}</p>}
-          <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{a.who}</span></div>)}
+      {/* feed (scrolls bottom-up: newest at bottom near composer) */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <div style={{ marginTop: 'auto', padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} />
+            <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--c-muted)' }}>20 июня 2026</span>
+            <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} /></div>
+          {items.map((a, i) => a.log ?
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--c-muted)', padding: '0 2px' }}>
+              <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, background: 'var(--c-tile)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><i className={`pi ${a.ic}`} style={{ fontSize: '10px', color: 'var(--mg-primary-light)' }} /></span>
+              <span style={{ flex: 1 }}><strong style={{ color: 'var(--c-text2)' }}>{a.who}</strong> {a.txt} <span style={{ textDecoration: 'line-through' }}>{a.old}</span> <i className="pi pi-arrow-right" style={{ fontSize: '8px' }} /> <span style={{ color: 'var(--mg-primary-light)', fontWeight: 600 }}>{a.neu}</span></span>
+              <span>{a.time}</span></div> :
+          <div key={i} style={{ border: '1px solid ' + ('color-mix(in srgb, ' + ({ 'pi-phone': '#2A6FDB', 'pi-calendar': '#1F8A5B', 'pi-file-check': '#E8A317' }[a.ic] || 'var(--c-border)') + ' 45%, var(--c-border))'), borderRadius: 'var(--mg-radius-md)', padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, ' + ({ 'pi-phone': '#2A6FDB', 'pi-calendar': '#1F8A5B', 'pi-file-check': '#E8A317' }[a.ic] || 'var(--mg-primary-900)') + ' 16%, var(--c-card))' }}><i className={`pi ${a.ic}`} style={{ fontSize: '12px', color: ({ 'pi-phone': '#2A6FDB', 'pi-calendar': '#1F8A5B', 'pi-file-check': '#E8A317' }[a.ic] || 'var(--mg-primary-900)') }} /></span>
+                <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>{a.t}</span>
+                {a.st && <Tag sev={a.sv} size="sm">{a.st}</Tag>}</div>
+              {a.body && <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text2)' }}>{a.body}</p>}
+              <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{a.who}</span></div>)}
+        </div>
+      </div>
+      <Composer />
     </div>
-    <Composer />
   </TabCard>;
 }
 function DealsTab({ setDialog }) {

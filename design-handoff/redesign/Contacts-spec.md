@@ -1,14 +1,15 @@
 # Раздел «Контакты» — ТЗ для реализации (Claude Code)
 
-> **STATUS: SHIPPED 2026-06 — design-intent reference, не активный TODO.**
-
 Редизайн списочного раздела CRM с переключением **Компании ⇄ Физлица**. Эталон —
 `redesign/contacts.html`. Документ описывает разметку, размеры, токены и поведение так,
 чтобы фронтендер (или агент `frontend-specialist`) собрал страницу пиксель-в-пиксель.
 
 - **Стек:** Vue 3 + PrimeVue 4 (в проекте), либо React — компоненты ниже даны структурно.
-- **Где в коде:** `front/src/pages/ContactsPage/` (+ `useContactsView` для состояния
-  колонок/фильтров/пагинации, сохраняется per-user в `localStorage`).
+- **Где в коде:** `front/src/pages/ContactsPage/` (`index.vue` + `index.ts`; роут `name: 'Contacts'`
+  в `front/src/router/routes/base.ts` лениво грузит `@/pages/ContactsPage`). Состояние колонок/
+  фильтров/пагинации — `front/src/pages/ContactsPage/composables/useContactsView.ts` (сохраняется
+  per-user в `localStorage`). *(as-built 2026-06-27: исправлен путь — каталога `pages/crm/` нет,
+  страница лежит в `pages/ContactsPage/`.)*
 - **Шрифт:** `--mg-font-sans` (SF UI Display → web-фолбэк Inter). Иконки — **PrimeIcons 7**.
 - **Темы:** светлая и тёмная, переключаются классом `.surface` / `.surface.dark` (см. токены).
 

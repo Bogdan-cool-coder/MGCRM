@@ -1,0 +1,918 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1280x900" name="Redesign — Карточка сделки (как в коде)" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Карточка сделки</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
+  .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
+    --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-feed:#F1F2F3; --c-sub:#FAFBFC; }
+  .surface.dark { --c-page:#272829; --c-card:#444547; --c-border:#616263; --c-border2:#54595E;
+    --c-text:#F9FAFB; --c-text2:#E3E4E6; --c-muted:#9B9C9F; --c-hover:#3a3b3d; --c-feed:#1f2021; --c-sub:#3a3b3d; }
+  .nv-dim { color: rgba(255,255,255,0.5); }
+  * { scrollbar-width: none; -ms-overflow-style: none; }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+
+
+const { useState } = React;
+
+/* ════════════════════════ data (DealDto) ════════════════════════ */
+const STAGES = [
+{ id: 1, name: 'Новые лиды', color: '#7F77DD' },
+{ id: 2, name: 'Квалификация', color: '#378ADD' },
+{ id: 3, name: 'Презентация', color: '#1D9E75' },
+{ id: 4, name: 'Переговоры', color: '#EF9F27' },
+{ id: 5, name: 'Договор', color: '#D4537E' },
+{ id: 6, name: 'Успешная сделка', color: '#36a04b', won: true }];
+const DEAL = {
+  id: 1042,
+  title: 'Внедрение MACRO ERP — ТОО «Қазмұнай Логистик»',
+  company: 'Қазмұнай Логистик',
+  category: 'L',
+  owner: 'Богдан Меркулов', ownerInit: 'БМ',
+  stageId: 4,
+  expected_sign_date: '25.07.2026',
+  expected_payment_date: '10.08.2026',
+  daysInStage: 6,
+  nextTask: { kind: 'Звонок', date: '24 июн', overdue: false },
+  tags: ['Тендер', 'Q3', 'Приоритет'] };
+const KEY_ACTIONS = [
+{ type: 'last_presentation', icon: 'pi-desktop', label: 'Презентация', value: '10.06', accent: '#8b5cf6' },
+{ type: 'kp_sent', icon: 'pi-file-check', label: 'КП', value: '12.06', accent: '#10b981' },
+{ type: 'last_touch', icon: 'pi-phone', label: 'Касание', value: '18.06', accent: '#ec4899' },
+{ type: 'last_event', icon: 'pi-calendar', label: 'Событие', value: '15.06', accent: '#0ea5e9' }];
+const PRODUCTS = [
+{ id: 1, name: 'MACRO ERP — лицензия Core (50 польз.)', period: '12 мес', price: '3 200 000 ₸', sum: '3 200 000 ₸' },
+{ id: 2, name: 'Модуль «Логистика и склад»', period: '12 мес', price: '900 000 ₸', sum: '900 000 ₸' },
+{ id: 3, name: 'Внедрение и обучение (40 ч.)', period: 'разово', price: '400 000 ₸', sum: '400 000 ₸' }];
+const CONTACTS = [
+{ id: 1, init: 'АН', name: 'Алия Нурланова', role: 'Финансовый директор', primary: true,
+  channels: [{ icon: 'pi-phone', v: '+7 701 234-56-78' }, { icon: 'pi-envelope', v: 'a.nurlanova@qaz.kz' }] },
+{ id: 2, init: 'ДК', name: 'Дмитрий Ким', role: 'Руководитель ИТ', primary: false,
+  channels: [{ icon: 'pi-send', v: '@dkim' }] }];
+const OPEN_TASKS = [
+{ id: 't1', title: 'Звонок — уточнить бюджет на Q3', due: '24 июн, 14:00', who: 'Богдан Меркулов', kind: 'call' },
+{ id: 't2', title: 'Подготовить пересчёт КП с модулем аналитики', due: '25 июн', who: 'Богдан Меркулов', kind: 'proposal' }];
+const FEED = [
+{ date: '12 июня 2026', items: [
+  { id: 'a6', system: true, dt: '12 июн', icon: 'pi-flag', who: 'Алина Сергеева', txt: 'создала сделку', time: '09:02' },
+  { id: 'a5', system: true, dt: '12 июн', icon: 'pi-arrow-right', who: 'Богдан Меркулов', txt: 'изменил этап', old: 'Презентация', neu: 'Переговоры', time: '10:15' },
+  { id: 'p1', card: true, icon: 'pi-desktop', dot: 'green', kind: 'meeting', title: 'Презентация MACRO ERP проведена', body: 'Демо для финдиректора и ИТ-руководителя.', status: 'done', actor: 'Богдан Меркулов', time: '14:30', due: '12 июн', ka: 'last_presentation' }]
+},
+{ date: '18 июня 2026', items: [
+  { id: 'a4', system: true, dt: '18 июн', icon: 'pi-pencil', who: 'Богдан Меркулов', txt: 'изменил бюджет', old: '3 800 000 ₸', neu: '4 500 000 ₸', time: '15:40' },
+  { id: 'k1', card: true, icon: 'pi-file-check', dot: 'green', kind: 'task', title: 'КП отправлено клиенту', status: 'done', actor: 'Богдан Меркулов', time: '12:30', due: '18 июн', ka: 'kp_sent' },
+  { id: 'a3', card: true, icon: 'pi-phone', dot: 'green', kind: 'call', title: 'Звонок — обсудили условия договора', body: 'Клиент готов подписать при скидке 5%. Согласовать с РОП.', status: 'done', actor: 'Богдан Меркулов', time: '16:05', due: '18 июн', ka: 'last_touch' },
+  { id: 'e1', card: true, icon: 'pi-calendar', dot: 'green', kind: 'meeting', title: 'Встреча — согласование объёма работ', status: 'done', actor: 'Богдан Меркулов', time: '17:00', due: '18 июн', ka: 'last_event' }]
+},
+{ date: 'Сегодня', items: [
+  { id: 'a2', card: true, icon: 'pi-pencil', dot: 'surface', kind: 'note', title: 'Клиент просит добавить модуль аналитики в КП. Подготовить пересчёт.', actor: 'Богдан Меркулов', time: '11:20' }]
+}];
+const LOG = [
+{ f: 'Бюджет', from: '3 800 000 ₸', to: '4 500 000 ₸', actor: 'Богдан Меркулов', time: '18 июн, 15:40' },
+{ f: 'Ответственный', from: 'Алина Сергеева', to: 'Богдан Меркулов', actor: 'Система', time: '14 июн, 09:30' },
+{ f: 'Стадия', from: 'Презентация', to: 'Переговоры', actor: 'Богдан Меркулов', time: '12 июн, 10:15' }];
+
+/* ════════════════════════ shared primitives ════════════════════════ */
+function FakeSelect({ ph, icon, grow }) {
+  return <span style={{ display: 'flex', alignItems: 'center', gap: '6px', width: grow ? 'auto' : '100%', flex: grow ? 1 : 'none', minWidth: 0, height: 34, padding: '0 10px', border: '1px solid var(--c-border2)',
+    borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontSize: '13px', color: 'var(--c-text2)', cursor: 'pointer', boxSizing: 'border-box' }}>
+    {icon && <i className={'pi ' + icon} style={{ fontSize: '11px', color: 'var(--c-muted)', flexShrink: 0 }} />}<span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ph}</span><i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)', flexShrink: 0 }} /></span>;
+}
+function SolidBtn({ label, icon, onClick }) {
+  return <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--mg-primary-900)', color: '#fff', border: 'none',
+    borderRadius: 'var(--mg-radius-sm)', padding: '8px 14px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+    {icon && <i className={'pi ' + icon} style={{ fontSize: '12px' }} />}{label}</button>;
+}
+function OutlineBtn({ label, icon, onClick }) {
+  return <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: 'var(--c-text2)', border: '1px solid var(--c-border2)',
+    borderRadius: 'var(--mg-radius-sm)', padding: '8px 14px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+    {icon && <i className={'pi ' + icon} style={{ fontSize: '12px' }} />}{label}</button>;
+}
+function DateField({ v }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(v || '');
+  const fmt = (raw) => {const d = raw.replace(/\D/g, '').slice(0, 8);let out = d.slice(0, 2);if (d.length >= 3) out += '.' + d.slice(2, 4);if (d.length >= 5) out += '.' + d.slice(4, 8);return out;};
+  return <span style={{ position: 'relative', display: 'inline-block' }}>
+    <span onClick={() => setOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', width: 150, height: 32, padding: '0 9px', border: '1px solid ' + (open ? 'var(--mg-primary-900)' : 'var(--c-border2)'),
+      borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', cursor: 'text' }}>
+      <input value={val} onChange={(e) => setVal(fmt(e.target.value))} onFocus={() => setOpen(true)} placeholder="дд.мм.гггг" style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+      <i className="pi pi-calendar" style={{ fontSize: '11px', color: 'var(--c-muted)', cursor: 'pointer' }} /></span>
+    {open && <div onMouseLeave={() => setOpen(false)} style={{ position: 'absolute', top: 36, left: 0, zIndex: 30, width: 232, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '10px' }}>
+      <MiniCalendar sel={parseInt(val) || 24} onSel={(d) => {setVal(String(d).padStart(2, '0') + '.06.2026');setOpen(false);}} />
+    </div>}
+  </span>;
+}
+
+/* generic searchable dropdown (как в задачах) */
+function SearchPicker({ value, placeholder, icon, options, search }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(value || '');
+  const [q, setQ] = useState('');
+  const list = search ? options.filter((o) => o.toLowerCase().includes(q.toLowerCase())) : options;
+  return <span style={{ position: 'relative', display: 'block' }}>
+    <span onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: 36, padding: '0 11px', border: '1px solid ' + (open ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontSize: '13px', color: val ? 'var(--c-text)' : 'var(--c-muted)', cursor: 'pointer', boxSizing: 'border-box' }}>
+      {icon && <i className={'pi ' + icon} style={{ fontSize: '11px', color: 'var(--c-muted)' }} />}<span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{val || placeholder}</span><i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></span>
+    {open && <div onMouseLeave={() => setOpen(false)} style={{ position: 'absolute', top: 40, left: 0, right: 0, zIndex: 30, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '6px' }}>
+      {search && <div style={{ position: 'relative', marginBottom: '5px' }}>
+        <i className="pi pi-search" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: 'var(--c-muted)' }} />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Начните вводить…" style={{ width: '100%', height: 32, padding: '0 10px 0 28px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box', outline: 'none' }} /></div>}
+      <div style={{ maxHeight: 168, overflowY: 'auto' }}>
+        {list.map((o) => {const a = o === val;
+          return <button key={o} onClick={() => {setVal(o);setOpen(false);setQ('');}} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', background: a ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', padding: '7px 9px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: a ? 'var(--mg-primary-900)' : 'var(--c-text)' }}
+          onMouseEnter={(e) => {if (!a) e.currentTarget.style.background = 'var(--c-hover)';}} onMouseLeave={(e) => {if (!a) e.currentTarget.style.background = 'transparent';}}>
+            <span style={{ flex: 1 }}>{o}</span>{a && <i className="pi pi-check" style={{ fontSize: '11px' }} />}</button>;})}
+        {list.length === 0 && <div style={{ fontSize: '12px', color: 'var(--c-muted)', padding: '8px' }}>Не найдено</div>}
+      </div>
+    </div>}
+  </span>;
+}
+function Toggle({ on }) {
+  return <span style={{ width: 34, height: 19, borderRadius: '999px', background: on ? 'var(--mg-primary-900)' : 'var(--c-border2)', position: 'relative', display: 'inline-block', flexShrink: 0 }}>
+    <span style={{ position: 'absolute', top: 2, left: on ? 17 : 2, width: 15, height: 15, borderRadius: '50%', background: '#fff' }} /></span>;
+}
+
+/* ════════════════════════ navy header ════════════════════════ */
+function StageTag({ stage, onClick }) {
+  return <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}>
+    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 'var(--mg-radius-sm)', fontSize: '12px', fontWeight: 500, color: '#fff', background: stage.color, whiteSpace: 'nowrap' }}>{stage.name}</span></button>;
+}
+function HealthChip({ task }) {
+  const overdue = task && task.overdue,none = !task;
+  const bg = overdue ? 'rgba(239,68,68,0.15)' : none ? 'rgba(234,179,8,0.12)' : 'rgba(255,255,255,0.1)';
+  const col = overdue ? '#ffaba5' : none ? '#ffe08a' : 'rgba(255,255,255,0.8)';
+  const icon = overdue ? 'pi-exclamation-triangle' : none ? 'pi-clock' : 'pi-check-square';
+  const label = none ? 'Нет задачи' : overdue ? 'Просрочено: ' + task.kind : task.kind + ' · ' + task.date;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '2px 8px', borderRadius: 'var(--mg-radius-sm)',
+    background: bg, color: col, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+    <i className={'pi ' + icon} style={{ fontSize: '9px' }} />{label}</span>;
+}
+function NavyIconBtn({ icon, onClick, ref_ }) {
+  const [h, setH] = useState(false);
+  return <button ref={ref_} onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: h ? 'rgba(255,255,255,0.12)' : 'transparent',
+    border: 'none', borderRadius: 'var(--mg-radius-sm)', color: '#fff', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+    <i className={'pi ' + icon} style={{ fontSize: '14px' }} /></button>;
+}
+function DealHeader({ onMenu, menuRef, onStage }) {
+  const stage = STAGES.find((s) => s.id === DEAL.stageId);
+  const normal = STAGES.filter((s) => !s.won),won = STAGES.filter((s) => s.won);
+  const ordered = [...normal, ...won];
+  const curIdx = ordered.findIndex((s) => s.id === DEAL.stageId);
+  return <div style={{ background: 'var(--mg-primary-900)', padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+    {/* title + controls in one row (controls on right) */}
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+      <h2 style={{ flex: 1, color: '#fff', fontSize: '18px', fontWeight: 600, margin: 0, lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{DEAL.title}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+        <NavyIconBtn icon="pi-arrow-left" />
+        <NavyIconBtn icon="pi-ellipsis-v" onClick={onMenu} ref_={menuRef} />
+      </div>
+    </div>
+    {/* stage + category + health + days */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <StageTag stage={stage} onClick={onStage} />
+      <span title="Категория компании" style={{ fontSize: '11px', fontWeight: 700, color: '#fff', background: 'var(--mg-red-600)', padding: '2px 8px', borderRadius: 'var(--mg-radius-sm)' }}>{DEAL.category}</span>
+      <HealthChip task={DEAL.nextTask} />
+      <span style={{ flex: 1 }} />
+      <span className="nv-dim" style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>{DEAL.daysInStage} дн. в стадии</span>
+    </div>
+    {/* tags */}
+    {DEAL.tags && DEAL.tags.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+      {DEAL.tags.map((tg) => <span key={tg} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.85)', background: 'rgba(255,255,255,0.12)', padding: '2px 8px', borderRadius: '999px' }}><i className="pi pi-tag" style={{ fontSize: '8px' }} />{tg}</span>)}
+    </div>}
+    {/* progress */}
+    <div style={{ display: 'flex', gap: '2px', height: '6px', borderRadius: 'var(--mg-radius-sm)', overflow: 'hidden', marginTop: '2px' }}>
+      {ordered.map((s, i) => {
+        let bg;if (s.won) bg = '#A7EFAA';else if (i <= curIdx) bg = s.color;else bg = 'rgba(255,255,255,0.2)';
+        return <span key={s.id} title={s.name} style={{ flex: 1, height: '100%', background: bg, borderRadius: '2px' }} />;
+      })}
+    </div>
+  </div>;
+}
+
+/* ════════════════════════ field groups (toggle by clicking the strip, no chevron) ════════════════════════ */
+function Group({ title, icon, accent, tile, count, total, action, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return <div style={{ borderBottom: '1px solid var(--c-border)' }}>
+    <div onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', cursor: 'pointer', minHeight: 36, background: accent ? 'var(--c-sub)' : 'transparent' }}>
+      {(accent || tile) && icon ?
+      <span style={{ width: 24, height: 24, borderRadius: 'var(--mg-radius-sm)', background: 'var(--mg-primary-100)', color: 'var(--mg-primary-900)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><i className={'pi ' + icon} style={{ fontSize: '11px' }} /></span> :
+      icon && <i className={'pi ' + icon} style={{ fontSize: '12px', color: 'var(--c-muted)' }} />}
+      <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: accent ? 'var(--c-text)' : 'var(--c-muted)' }}>{title}</span>
+      {count != null && <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text2)', background: 'var(--c-hover)', borderRadius: '999px', padding: '0 7px', minWidth: 18, textAlign: 'center' }}>{count}</span>}
+      {total && <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--mg-primary-900)' }}>{total}</span>}
+      <span style={{ flex: 1 }} />
+      {action && <span onClick={(e) => e.stopPropagation()}>{action}</span>}
+    </div>
+    {open && <div>{children}</div>}
+  </div>;
+}
+function TextAction({ label, icon, onClick }) {
+  const [h, setH] = useState(false);
+  return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'transparent', border: 'none', color: 'var(--c-muted)', fontFamily: 'var(--mg-font-sans)',
+    fontSize: '12px', fontWeight: 500, cursor: 'pointer', padding: '3px 6px', borderRadius: 'var(--mg-radius-sm)', textDecoration: h ? 'underline' : 'none' }}>
+    {icon && <i className={'pi ' + icon} style={{ fontSize: '10px' }} />}{label}</button>;
+}
+
+/* owner field — click name → choose responsible */
+const RESPONSIBLES = [{ i: 'БМ', n: 'Богдан Меркулов' }, { i: 'АС', n: 'Алина Сергеева' }, { i: 'ИВ', n: 'Игорь Волков' }, { i: 'МР', n: 'Мария Раева' }];
+function OwnerField() {
+  const [open, setOpen] = useState(false);
+  const [sel, setSel] = useState(DEAL.owner);
+  const [q, setQ] = useState('');
+  const init = (RESPONSIBLES.find((r) => r.n === sel) || { i: DEAL.ownerInit }).i;
+  const filtered = RESPONSIBLES.filter((r) => r.n.toLowerCase().includes(q.toLowerCase()));
+  return <span style={{ position: 'relative', display: 'inline-block' }}>
+    <span onClick={() => setOpen((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', padding: '2px 6px', margin: '-2px -6px', borderRadius: 'var(--mg-radius-sm)' }}>
+      <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 600 }}>{init}</span>
+      <span style={{ fontSize: '13px', color: 'var(--c-text)' }}>{sel}</span>
+    </span>
+    {open && <div onMouseLeave={() => setOpen(false)} style={{ position: 'absolute', top: 28, left: 0, zIndex: 25, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '6px', minWidth: 210 }}>
+      <div style={{ position: 'relative', marginBottom: '5px' }}>
+        <i className="pi pi-search" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: 'var(--c-muted)' }} />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Начните вводить имя…" style={{ width: '100%', height: 32, padding: '0 10px 0 28px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box', outline: 'none' }} /></div>
+      <div style={{ maxHeight: 168, overflowY: 'auto' }}>
+      {filtered.map((r) => {const a = r.n === sel;
+          return <button key={r.n} onClick={() => {setSel(r.n);setOpen(false);setQ('');}} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', background: a ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', padding: '7px 9px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: a ? 'var(--mg-primary-900)' : 'var(--c-text)' }}
+          onMouseEnter={(e) => {if (!a) e.currentTarget.style.background = 'var(--c-hover)';}} onMouseLeave={(e) => {if (!a) e.currentTarget.style.background = 'transparent';}}>
+          <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 600, flexShrink: 0 }}>{r.i}</span>
+          <span style={{ flex: 1 }}>{r.n}</span>{a && <i className="pi pi-check" style={{ fontSize: '11px' }} />}</button>;})}
+      {filtered.length === 0 && <div style={{ fontSize: '12px', color: 'var(--c-muted)', padding: '8px' }}>Не найдено</div>}
+      </div>
+    </div>}
+  </span>;
+}
+function AddChannel() {
+  const [open, setOpen] = useState(false);
+  return <span style={{ position: 'relative', display: 'inline-block' }}>
+    <button onClick={() => setOpen((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 7px', borderRadius: 'var(--mg-radius-sm)', border: '1px dashed ' + (open ? 'var(--mg-primary-900)' : 'var(--c-border2)'), background: 'transparent', color: open ? 'var(--mg-primary-900)' : 'var(--c-muted)', fontFamily: 'var(--mg-font-sans)', fontSize: '12px', cursor: 'pointer' }}>
+      <i className="pi pi-plus" style={{ fontSize: '9px' }} />Добавить канал</button>
+    {open && <div onMouseLeave={() => setOpen(false)} style={{ position: 'absolute', top: 28, left: 0, zIndex: 25, width: 230, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div><label style={{ fontSize: '11px', fontWeight: 500, color: 'var(--c-text2)', display: 'block', marginBottom: '4px' }}>Тип канала</label>
+        <SearchPicker placeholder="Выберите тип" options={['Телефон', 'Email', 'Telegram', 'WhatsApp', 'LinkedIn', 'Instagram']} /></div>
+      <div><label style={{ fontSize: '11px', fontWeight: 500, color: 'var(--c-text2)', display: 'block', marginBottom: '4px' }}>Значение / ID</label>
+        <input placeholder="+7 ___ или @username" style={{ width: '100%', height: 34, padding: '0 10px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box', outline: 'none' }} /></div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><SolidBtn label="Добавить" icon="pi-plus" onClick={() => setOpen(false)} /></div>
+    </div>}
+  </span>;
+}
+function ContactRow({ c }) {
+  const [menu, setMenu] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [prim, setPrim] = useState(c.primary);
+  return <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--c-border)', position: 'relative' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        <a style={{ fontSize: '13px', fontWeight: 600, color: 'var(--mg-primary-900)', textDecoration: 'none', cursor: 'pointer' }}>{c.name}</a>
+        {c.primary && <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--mg-blue-700)', background: 'var(--mg-blue-100)', padding: '1px 7px', borderRadius: '999px' }}>Основной</span>}
+      </span>
+      <i className="pi pi-ellipsis-v" onClick={() => setMenu((m) => !m)} style={{ fontSize: '13px', color: 'var(--c-muted)', cursor: 'pointer', padding: '2px 4px' }} />
+    </div>
+    {menu && <div onMouseLeave={() => setMenu(false)} style={{ position: 'absolute', top: 30, right: 12, zIndex: 20, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '4px', minWidth: 160 }}>
+      {[['pi-pencil', 'Редактировать', () => {setEdit(true);setMenu(false);}], ['pi-times-circle', 'Отвязать', () => setMenu(false)]].map(([ic, l, fn], i) =>
+      <button key={i} onClick={fn} style={{ display: 'flex', alignItems: 'center', gap: '9px', width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 500, padding: '7px 9px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: 'var(--c-text)' }}
+      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+          <i className={'pi ' + ic} style={{ fontSize: '12px', color: 'var(--c-muted)' }} />{l}</button>)}
+    </div>}
+    {edit ?
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+          <label style={{ fontSize: '11px', color: 'var(--c-muted)' }}>Имя</label>
+          <input defaultValue={c.name} style={{ height: 32, padding: '0 9px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+          <label style={{ fontSize: '11px', color: 'var(--c-muted)' }}>Должность</label>
+          <input defaultValue={c.role} style={{ height: 32, padding: '0 9px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+          <label style={{ fontSize: '11px', color: 'var(--c-muted)' }}>Каналы связи</label>
+          {c.channels.map((ch, i) =>
+            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <i className={'pi ' + ch.icon} style={{ fontSize: '11px', color: 'var(--c-muted)', width: 14, textAlign: 'center' }} />
+              <input defaultValue={ch.v} style={{ flex: 1, height: 32, padding: '0 9px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+              <i className="pi pi-times" style={{ fontSize: '11px', color: 'var(--c-muted)', cursor: 'pointer' }} /></span>)}
+          <button style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 7px', borderRadius: 'var(--mg-radius-sm)', border: '1px dashed var(--c-border2)', background: 'transparent', color: 'var(--c-muted)', fontFamily: 'var(--mg-font-sans)', fontSize: '12px', cursor: 'pointer' }}><i className="pi pi-plus" style={{ fontSize: '9px' }} />Добавить канал</button>
+          <span onClick={() => setPrim((p) => !p)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '2px' }}><Toggle on={prim} /><span style={{ fontSize: '12px', color: 'var(--c-text2)' }}>Основной контакт</span></span>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '2px' }}><OutlineBtn label="Отмена" onClick={() => setEdit(false)} /><SolidBtn label="Сохранить" icon="pi-check" onClick={() => setEdit(false)} /></div>
+        </div> :
+    <>
+          {c.role && <p style={{ fontSize: '12px', color: 'var(--c-muted)', margin: '2px 0 6px' }}>{c.role}</p>}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+            {c.channels.map((ch, i) =>
+        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 7px', borderRadius: 'var(--mg-radius-sm)', border: '1px solid var(--c-border2)', background: 'var(--c-sub)', fontSize: '12px', color: 'var(--c-text2)' }}>
+                <i className={'pi ' + ch.icon} style={{ fontSize: '10px' }} /><span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.v}</span></span>)}
+            <AddChannel />
+          </div>
+        </>}
+  </div>;
+}
+
+function MainTab({ setDialog }) {
+  const [perp, setPerp] = useState(false);
+  const QuickRow = ({ l, children }) => <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', alignItems: 'center', gap: '8px', padding: '5px 16px', minHeight: 32 }}>
+    <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{l}</span><span>{children}</span></div>;
+  return <div>
+    {/* quick fields */}
+    <div style={{ padding: '12px 0 8px', borderBottom: '1px solid var(--c-border)' }}>
+      <QuickRow l="Ответственный"><OwnerField /></QuickRow>
+      <QuickRow l="Компания"><a style={{ fontSize: '13px', color: 'var(--mg-primary-900)', fontWeight: 500, textDecoration: 'none', cursor: 'pointer' }}>{DEAL.company}</a></QuickRow>
+      <QuickRow l="Договор план"><DateField v={DEAL.expected_sign_date} /></QuickRow>
+      <QuickRow l="Оплата план"><DateField v={DEAL.expected_payment_date} /></QuickRow>
+    </div>
+
+    {/* products */}
+    <Group title="Продукты" icon="pi-shopping-cart" accent total="4 500 000 ₸ · 12 мес" action={<TextAction label="Добавить" icon="pi-plus" onClick={() => setDialog('product')} />}>
+      {/* лицензия — сегментированный переключатель (подписка/вечная) + скидка */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', padding: '9px 16px', borderBottom: '1px solid var(--c-border)' }}>
+        <span style={{ display: 'inline-flex', gap: '2px', background: 'var(--mg-gray-100)', borderRadius: '7px', padding: '3px' }}>
+          {[[false, 'Подписка'], [true, 'Вечная']].map(([v, l]) =>
+          <button key={l} onClick={() => setPerp(v)} style={{ background: perp === v ? 'var(--c-card)' : 'transparent', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--mg-font-sans)', fontSize: '12px', fontWeight: 600, padding: '5px 13px', borderRadius: '5px',
+            color: perp === v ? 'var(--mg-primary-900)' : 'var(--c-muted)', boxShadow: perp === v ? 'var(--mg-shadow-sm)' : 'none' }}>{l}</button>)}
+        </span>
+        <span style={{ flex: 1 }} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>Скидка</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', width: 70, height: 30, border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', overflow: 'hidden' }}>
+            <input defaultValue="0" style={{ flex: 1, width: '100%', border: 'none', outline: 'none', background: 'transparent', textAlign: 'right', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', padding: '0 4px' }} />
+            <span style={{ padding: '0 8px 0 2px', fontSize: '13px', color: 'var(--c-muted)' }}>%</span></span>
+        </span>
+      </div>
+      {PRODUCTS.map((p) =>
+      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: '1px solid var(--c-border)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '13px', color: 'var(--c-text)', marginBottom: '2px' }}>{p.name}</div>
+            <div style={{ fontSize: '11px', color: 'var(--c-muted)' }}>{p.period} × {p.price}</div>
+          </div>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text)', whiteSpace: 'nowrap' }}>{p.sum}</span>
+        </div>)}
+    </Group>
+
+    {/* contacts */}
+    <Group title="Контакты" icon="pi-users" accent count={CONTACTS.length}>
+      {CONTACTS.map((c) => <ContactRow key={c.id} c={c} />)}
+      <div style={{ padding: '8px 12px' }}><TextAction label="Добавить контакт" icon="pi-user-plus" onClick={() => setDialog('contact')} /></div>
+    </Group>
+
+    {/* company (collapsed) */}
+    <Group title="Компания" icon="pi-building" accent defaultOpen={false}>
+      {[['Телефон', '+7 727 350-10-10'], ['Email', 'office@qazlogistic.kz'], ['Сайт', 'qazlogistic.kz'], ['Адрес', 'г. Алматы, пр. Аль-Фараби 17'], ['Тип компании', 'Логистика и транспорт']].map(([l, v]) =>
+      <div key={l} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', padding: '7px 16px', borderBottom: '1px solid var(--c-border)' }}>
+          <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{l}</span><span style={{ fontSize: '13px', color: 'var(--c-text)', textAlign: 'right' }}>{v}</span></div>)}
+    </Group>
+
+    {/* custom fields (collapsed) */}
+    <Group title="Дополнительные поля" icon="pi-sliders-h" accent defaultOpen={false}>
+      {[['Источник лида', 'Входящий звонок'], ['Используют', '1С:ERP']].map(([l, v]) =>
+      <div key={l} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', padding: '7px 16px', borderBottom: '1px solid var(--c-border)' }}>
+          <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{l}</span><span style={{ fontSize: '13px', color: 'var(--c-text)' }}>{v}</span></div>)}
+    </Group>
+  </div>;
+}
+
+/* ── Documents tab ── */
+function Section({ title, icon, children }) {
+  return <div style={{ border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', padding: '12px', marginBottom: '12px' }}>
+    <p style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--c-text)', margin: '0 0 10px' }}>
+      <i className={'pi ' + icon} style={{ fontSize: '12px', color: 'var(--c-muted)' }} />{title}</p>{children}</div>;
+}
+function ApprovalSection() {
+  const [status, setStatus] = useState('pending');
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState('');
+  const meta = { pending: ['Ожидает', 'var(--mg-orange-900)', 'var(--mg-orange-50)'], approved: ['Согласовано', 'var(--mg-green-900)', 'var(--mg-green-100)'], rejected: ['Отклонено', 'var(--mg-red-700)', 'var(--mg-red-50)'] }[status];
+  return <Section title="Согласование" icon="pi-send">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 600 }}>ИС</span>
+        <span style={{ flex: 1, fontSize: '13px', color: 'var(--c-text)' }}>Игорь Соколов</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: meta[1], background: meta[2], padding: '2px 9px', borderRadius: '999px' }}>{meta[0]}</span>
+      </div>
+      {status === 'rejected' && reason && <div style={{ display: 'flex', gap: '8px', padding: '8px 10px', background: 'var(--mg-red-50)', borderRadius: 'var(--mg-radius-sm)' }}>
+        <i className="pi pi-exclamation-circle" style={{ fontSize: '12px', color: 'var(--mg-red-700)', marginTop: '1px' }} />
+        <span style={{ flex: 1, fontSize: '12px', color: 'var(--c-text2)' }}><strong style={{ color: 'var(--mg-red-700)' }}>Причина отклонения:</strong> {reason}</span></div>}
+    </div>
+    {!rejecting ? <div style={{ display: 'flex', gap: '8px' }}>
+      {status === 'pending' && <>
+        <button onClick={() => setStatus('approved')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--mg-green-700)', color: '#fff', border: 'none', borderRadius: 'var(--mg-radius-sm)', padding: '8px 14px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><i className="pi pi-check" style={{ fontSize: '12px' }} />Согласовать</button>
+        <button onClick={() => setRejecting(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: 'var(--mg-red-700)', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', padding: '8px 14px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><i className="pi pi-times" style={{ fontSize: '12px' }} />Отклонить</button>
+      </>}
+      {status === 'rejected' && <OutlineBtn label="Отправить на согласование повторно" icon="pi-refresh" onClick={() => {setStatus('pending');setReason('');}} />}
+      {status === 'approved' && <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>Документ согласован.</span>}
+    </div> : <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--c-text2)' }}>Причина отклонения</label>
+      <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Укажите, что нужно исправить…" style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', background: 'var(--c-card)', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', padding: '8px 10px', outline: 'none' }} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+        <OutlineBtn label="Отмена" onClick={() => setRejecting(false)} />
+        <button onClick={() => {setStatus('rejected');setRejecting(false);}} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--mg-red-600)', color: '#fff', border: 'none', borderRadius: 'var(--mg-radius-sm)', padding: '8px 14px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><i className="pi pi-times" style={{ fontSize: '12px' }} />Отклонить</button>
+      </div>
+    </div>}
+  </Section>;
+}
+function DocumentsTab() {
+  return <div style={{ padding: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: 'var(--mg-radius-sm)', background: 'var(--mg-primary-100)', border: '1px solid var(--mg-primary-100)', cursor: 'pointer' }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--mg-orange-900)', background: 'var(--mg-orange-50)', padding: '2px 8px', borderRadius: 'var(--mg-radius-sm)' }}>Согласование</span>
+        <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--c-text)' }}>#ДГ-2026-0042</span>
+        <span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>12 июн</span>
+      </div>
+    </div>
+    <Section title="Создать документ" icon="pi-file-plus">
+      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', display: 'block', marginBottom: '5px' }}>Шаблон</label>
+      <SearchPicker placeholder="Выберите шаблон" search options={['Договор поставки (v3)', 'Договор оказания услуг', 'Счёт на оплату', 'Спецификация', 'Акт выполненных работ', 'Доп. соглашение']} />
+      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}><SolidBtn label="Сформировать PDF" icon="pi-file-pdf" /><OutlineBtn label="Скачать DOCX" icon="pi-download" /></div>
+    </Section>
+    <ApprovalSection />
+    <Section title="Итоговые документы" icon="pi-file-check">
+      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', display: 'block', marginBottom: '5px' }}>Загрузить подписанный скан</label>
+      <OutlineBtn label="Загрузить скан" icon="pi-upload" />
+      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', display: 'block', margin: '12px 0 5px' }}>Договор — факт (дата подписания)</label>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}><DateField v="" /><SolidBtn label="Сохранить" icon="pi-check" /></div>
+      <p style={{ fontSize: '11px', color: 'var(--c-muted)', margin: '8px 0 0' }}>После сохранения дата подставится в карточку и закроет «Договор — план».</p>
+    </Section>
+  </div>;
+}
+
+/* ── Finances tab ── */
+function FinancesTab() {
+  return <div style={{ padding: '12px' }}>
+    <Section title="Фиксация оплаты" icon="pi-wallet">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div><label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', display: 'block', marginBottom: '5px' }}>Оплата — факт (дата)</label><DateField v="" /></div>
+        <div><label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', display: 'block', marginBottom: '5px' }}>Сумма оплаты</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input placeholder="0" style={{ flex: 1, height: 34, padding: '0 10px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box' }} />
+            <div style={{ width: 92 }}><SearchPicker placeholder="₸ KZT" options={['₸ KZT', '₽ RUB', '$ USD', '€ EUR']} /></div>
+          </div></div>
+        <div><SolidBtn label="Зафиксировать оплату" icon="pi-check" /></div>
+      </div>
+    </Section>
+    <Section title="График платежей" icon="pi-calendar-clock">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', textAlign: 'center', padding: '20px 8px' }}>
+        <i className="pi pi-lock" style={{ fontSize: '24px', color: 'var(--c-border2)' }} />
+        <p style={{ fontSize: '13px', color: 'var(--c-muted)', margin: 0, maxWidth: 240 }}>Условия оплаты из договора: сроки, периоды, актирование.</p>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--mg-orange-900)', background: 'var(--mg-orange-50)', padding: '4px 10px', borderRadius: '999px', marginTop: '4px' }}>Ожидает договора</span>
+      </div>
+    </Section>
+  </div>;
+}
+
+/* ── Активность tab ── */
+function ActivityLogTab() {
+  const metrics = [['Дней в сделке', '14'], ['В стадии', '6'], ['Активностей', '5'], ['Смен стадий', '2'], ['Документов', '1'], ['Посл. активность', '0 дн.']];
+  return <div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', borderBottom: '1px solid var(--c-border)' }}>
+      {metrics.map(([l, v], i) =>
+      <div key={l} style={{ padding: '10px 16px', borderBottom: i < 4 ? '1px solid var(--c-border)' : 'none', borderRight: i % 2 === 0 ? '1px solid var(--c-border)' : 'none' }}>
+          <div style={{ fontSize: '11px', color: 'var(--c-muted)', marginBottom: '2px' }}>{l}</div>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text)' }}>{v}</div></div>)}
+    </div>
+    <div style={{ padding: '6px 0' }}>
+      {LOG.map((e, i) =>
+      <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px', fontSize: '12px', color: 'var(--c-muted)', padding: '7px 16px' }}>
+          <span style={{ flex: 1 }}><strong style={{ color: 'var(--c-text2)', fontWeight: 600 }}>{e.actor}</strong> · {e.f}: <span style={{ textDecoration: 'line-through' }}>{e.from}</span> <i className="pi pi-arrow-right" style={{ fontSize: '8px' }} /> <span style={{ color: 'var(--c-text2)', fontWeight: 600 }}>{e.to}</span></span>
+          <span style={{ whiteSpace: 'nowrap' }}>{e.time}</span></div>)}
+    </div>
+  </div>;
+}
+
+function LeftPanel({ tab, setTab, onMenu, menuRef, setDialog }) {
+  const tabs = [['main', 'Основное'], ['documents', 'Документы'], ['finances', 'Финансы'], ['activity', 'Активность']];
+  return <div style={{ width: 420, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid var(--c-border)', background: 'var(--c-card)' }}>
+    <DealHeader onMenu={onMenu} menuRef={menuRef} onStage={() => setDialog('stage')} />
+    <div style={{ display: 'flex', gap: '4px', padding: '0 12px', borderBottom: '1px solid var(--c-border)', background: 'var(--c-card)', flexShrink: 0 }}>
+      {tabs.map(([k, l]) =>
+      <button key={k} onClick={() => setTab(k)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px',
+        fontWeight: tab === k ? 600 : 500, padding: '11px 10px', color: tab === k ? 'var(--mg-primary-900)' : 'var(--c-muted)', borderBottom: '2px solid ' + (tab === k ? 'var(--mg-primary-900)' : 'transparent') }}>{l}</button>)}
+    </div>
+    <div style={{ flex: 1, overflowY: 'auto' }}>
+      {tab === 'main' && <MainTab setDialog={setDialog} />}
+      {tab === 'documents' && <DocumentsTab />}
+      {tab === 'finances' && <FinancesTab />}
+      {tab === 'activity' && <ActivityLogTab />}
+    </div>
+  </div>;
+}
+
+/* ════════════════════════ right: feed + open tasks + composer ════════════════════════ */
+function FeedItem({ it, hlKa }) {
+  const hl = it.ka && it.ka === hlKa;
+  if (it.system) {
+    return <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', fontSize: '12px', color: 'var(--c-muted)', padding: '5px 0' }}>
+      <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, alignSelf: 'flex-start', background: 'var(--c-hover)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+        <i className={'pi ' + it.icon} style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></span>
+      <span style={{ flex: 1 }}><strong style={{ color: 'var(--c-text2)', fontWeight: 600 }}>{it.who}</strong>{it.dt ? ', ' + it.dt : ''}, {it.time} {it.txt}
+        {it.old && <> <span style={{ textDecoration: 'line-through' }}>{it.old}</span> <i className="pi pi-arrow-right" style={{ fontSize: '8px' }} /> <span style={{ color: 'var(--c-text2)', fontWeight: 600 }}>{it.neu}</span></>}</span>
+    </div>;
+  }
+  const dotBg = { primary: 'var(--mg-primary-900)', green: 'var(--mg-green-700)', red: 'var(--mg-red-600)', surface: 'var(--c-border2)' }[it.dot];
+  const done = it.status === 'done';
+  const isTask = it.kind && it.kind !== 'note';
+  const km = kindMeta(it.kind);
+  return <div data-ka={it.ka} style={{ display: 'flex', gap: '12px', position: 'relative' }}>
+    <span style={{ width: 26, height: 26, borderRadius: '50%', background: isTask ? 'color-mix(in srgb, ' + km[0] + ' 16%, var(--c-card))' : dotBg, color: '#fff', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+      <i className={'pi ' + (isTask ? km[1] : it.icon)} style={{ fontSize: '11px', color: isTask ? km[0] : '#fff' }} /></span>
+    <div style={{ flex: 1, minWidth: 0, background: 'var(--c-card)', border: '1px solid ' + (hl ? 'var(--mg-primary-900)' : 'var(--c-border)'), borderRadius: 'var(--mg-radius-md)', padding: '10px 12px', marginBottom: '4px', opacity: done ? 0.72 : 1, boxShadow: hl ? '0 0 0 3px var(--mg-primary-100)' : 'none', transition: 'box-shadow .2s, border-color .2s' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+        <span style={{ flex: 1, fontSize: '13px', fontWeight: it.kind === 'note' ? 400 : 600, color: 'var(--c-text)', lineHeight: 1.45, textDecoration: done ? 'line-through' : 'none' }}>{it.title}</span>
+        {it.kind !== 'note' && <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '999px', whiteSpace: 'nowrap', color: done ? 'var(--mg-green-900)' : 'var(--mg-orange-900)', background: done ? 'var(--mg-green-100)' : 'var(--mg-orange-50)' }}>{done ? 'Выполнено' : 'Открыта'}</span>}
+        <span style={{ fontSize: '11px', color: 'var(--c-muted)', whiteSpace: 'nowrap' }}>{it.time}</span>
+      </div>
+      {it.body && <p style={{ fontSize: '12px', color: 'var(--c-text2)', margin: '5px 0 0', lineHeight: 1.45 }}>{it.body}</p>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px', flexWrap: 'wrap', fontSize: '11px', color: 'var(--c-muted)' }}>
+        {it.due && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="pi pi-calendar" style={{ fontSize: '9px' }} />{it.due}</span>}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="pi pi-clock" style={{ fontSize: '9px' }} />{it.time}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="pi pi-user" style={{ fontSize: '9px' }} />{it.responsible || it.actor}</span>
+      </div>
+    </div>
+  </div>;
+}
+
+/* composer — reused from contact card (Заметка / Задача) */
+const TASK_TYPES = [['task', 'pi-check-square', 'Задача'], ['call', 'pi-phone', 'Звонок'], ['meeting', 'pi-calendar', 'Встреча'], ['follow_up', 'pi-replay', 'Follow-up']];
+function ComposerSelect({ value, placeholder, icon, kind }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(value || '');
+  const [q, setQ] = useState('');
+  const [cDay, setCDay] = useState(24);
+  const [cTime, setCTime] = useState('14:00');
+  const filtered = RESPONSIBLES.filter((r) => r.n.toLowerCase().includes(q.toLowerCase()));
+  return <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+    {kind === 'date' ?
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', border: '1px solid ' + (open ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)' }}>
+          {icon && <i className={'pi ' + icon} style={{ fontSize: '12px', color: 'var(--c-muted)', flexShrink: 0 }} />}
+          <input value={val} onChange={(e) => {const d = e.target.value.replace(/\D/g, '').slice(0, 8);let o = d.slice(0, 2);if (d.length >= 3) o += '.' + d.slice(2, 4);if (d.length >= 5) o += '.' + d.slice(4, 8);setVal(o);if (d.slice(0, 2)) setCDay(parseInt(d.slice(0, 2)) || cDay);}} onFocus={() => setOpen(true)} placeholder={placeholder} style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+          <i className="pi pi-calendar" onClick={() => setOpen((o) => !o)} style={{ fontSize: '11px', color: 'var(--c-muted)', cursor: 'pointer', flexShrink: 0 }} /></div> :
+    <div onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', border: '1px solid ' + (open ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-md)', fontSize: '13px', color: val ? 'var(--c-text)' : 'var(--c-muted)', cursor: 'pointer', background: 'var(--c-card)', whiteSpace: 'nowrap' }}>
+      {icon && <i className={'pi ' + icon} style={{ fontSize: '12px', color: 'var(--c-muted)', flexShrink: 0 }} />}<span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{val || placeholder}</span><i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)', flexShrink: 0 }} /></div>}
+    {open && kind === 'date' && <div onMouseLeave={() => setOpen(false)} style={{ position: 'absolute', bottom: 42, left: 0, zIndex: 30, width: 232, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '10px' }}>
+      <MiniCalendar sel={cDay} onSel={(d) => {setCDay(d);setVal(String(d).padStart(2, '0') + '.06.2026 ' + cTime);}} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
+        <i className="pi pi-clock" style={{ fontSize: '11px', color: 'var(--c-muted)' }} />
+        <input value={cTime} onChange={(e) => setCTime(e.target.value)} style={{ width: 70, height: 30, padding: '0 8px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+        <span style={{ flex: 1 }} /><SolidBtn label="ОК" onClick={() => {setVal(String(cDay).padStart(2, '0') + '.06.2026 ' + cTime);setOpen(false);}} />
+      </div>
+    </div>}
+    {open && kind === 'who' && <div onMouseLeave={() => setOpen(false)} style={{ position: 'absolute', bottom: 42, left: 0, zIndex: 30, width: 232, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '6px' }}>
+      <div style={{ position: 'relative', marginBottom: '5px' }}>
+        <i className="pi pi-search" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: 'var(--c-muted)' }} />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Начните вводить имя…" style={{ width: '100%', height: 32, padding: '0 10px 0 28px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box', outline: 'none' }} />
+      </div>
+      <div style={{ maxHeight: 160, overflowY: 'auto' }}>
+        {filtered.map((r) => {const a = r.n === val;
+          return <button key={r.n} onClick={() => {setVal(r.n);setOpen(false);setQ('');}} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', background: a ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', padding: '7px 8px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: a ? 'var(--mg-primary-900)' : 'var(--c-text)' }}
+          onMouseEnter={(e) => {if (!a) e.currentTarget.style.background = 'var(--c-hover)';}} onMouseLeave={(e) => {if (!a) e.currentTarget.style.background = 'transparent';}}>
+            <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 600, flexShrink: 0 }}>{r.i}</span>
+            <span style={{ flex: 1 }}>{r.n}</span>{a && <i className="pi pi-check" style={{ fontSize: '11px' }} />}</button>;})}
+        {filtered.length === 0 && <div style={{ fontSize: '12px', color: 'var(--c-muted)', padding: '8px' }}>Не найдено</div>}
+      </div>
+    </div>}
+    {open && kind === 'type' && <div onMouseLeave={() => setOpen(false)} style={{ position: 'absolute', bottom: 42, left: 0, zIndex: 30, width: 200, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px' }}>
+      {TASK_TYPES.map(([k, ic, l]) => {const a = l === val;
+        return <button key={k} onClick={() => {setVal(l);setOpen(false);}} style={{ display: 'flex', alignItems: 'center', gap: '9px', width: '100%', background: a ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', padding: '8px 9px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: a ? 'var(--mg-primary-900)' : 'var(--c-text)' }}
+        onMouseEnter={(e) => {if (!a) e.currentTarget.style.background = 'var(--c-hover)';}} onMouseLeave={(e) => {if (!a) e.currentTarget.style.background = 'transparent';}}>
+          <i className={'pi ' + ic} style={{ fontSize: '12px', color: kindMeta(k)[0] }} />{l}{a && <span style={{ flex: 1 }} />}{a && <i className="pi pi-check" style={{ fontSize: '11px' }} />}</button>;})}
+    </div>}
+  </div>;
+}
+function Composer() {
+  const [mode, setMode] = useState('note');
+  const ModeBtn = ({ id, icon, label }) => {const a = mode === id;
+    return <button onClick={() => setMode(id)} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, padding: '8px 12px', borderRadius: 'var(--mg-radius-md)', cursor: 'pointer', width: '108px',
+      border: '1px solid ' + (a ? 'var(--mg-primary-900)' : 'var(--c-border2)'), background: a ? 'var(--mg-primary-900)' : 'var(--c-card)', color: a ? '#fff' : 'var(--c-text2)', transition: 'all .15s' }}>
+      <i className={'pi ' + icon} style={{ fontSize: '13px' }} />{label}</button>;};
+  return <div style={{ borderTop: '1px solid var(--c-border)', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'flex-start', background: 'var(--c-card)', flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+      <ModeBtn id="note" icon="pi-comment" label="Заметка" />
+      <ModeBtn id="task" icon="pi-check-square" label="Задача" />
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {mode === 'note' ?
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '74px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', padding: '8px', background: 'var(--c-card)' }}>
+            <textarea placeholder="Введите текст заметки…" style={{ flex: 1, alignSelf: 'stretch', outline: 'none', resize: 'none', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', background: 'transparent', color: 'var(--c-text)', border: 'none', padding: '2px 4px' }} />
+            <SolidBtn label="Добавить" /></div> :
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '74px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', padding: '8px', background: 'var(--c-card)' }}>
+            <div style={{ flex: 1, minWidth: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+              <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', gap: '8px' }}>
+                <ComposerSelect placeholder="Тип задачи" icon="pi-tag" kind="type" />
+                <ComposerSelect placeholder="Дд.мм.гггг чч:мм" icon="pi-calendar" kind="date" />
+                <ComposerSelect placeholder="Ответственный" icon="pi-user" kind="who" /></div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1 }}>
+                <span style={{ color: 'var(--c-muted)', fontWeight: 700, lineHeight: '1.5' }}>:</span>
+                <textarea placeholder="Текст задачи…" style={{ flex: 1, alignSelf: 'stretch', minWidth: '120px', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--mg-font-sans)', fontSize: '14px', background: 'transparent', color: 'var(--c-text)' }} /></div>
+            </div>
+            <SolidBtn label="Добавить" /></div>}
+    </div>
+  </div>;
+}
+
+/* search overlay */
+function SearchOverlay() {
+  const types = ['Все', 'Смена стадии', 'Изменения полей', 'Примечания', 'Задачи', 'Звонки', 'Встречи'];
+  return <div style={{ position: 'absolute', top: 44, right: 14, zIndex: 30, width: 320, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '12px' }}>
+    <div style={{ position: 'relative', marginBottom: '10px' }}>
+      <i className="pi pi-search" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: 'var(--c-muted)' }} />
+      <input placeholder="Поиск в ленте…" autoFocus style={{ width: '100%', height: 36, padding: '0 12px 0 32px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box' }} />
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '7px' }}>
+      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--c-muted)' }}>Тип</span>
+      <span style={{ flex: 1 }} /><TextAction label="Сбросить" icon="pi-times" /></div>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+      {types.map((tp, i) => <span key={tp} style={{ fontSize: '12px', fontWeight: 600, padding: '4px 11px', borderRadius: '999px', cursor: 'pointer', background: i === 0 ? 'var(--mg-primary-100)' : 'transparent', color: i === 0 ? 'var(--mg-primary-900)' : 'var(--c-text2)', border: '1px solid ' + (i === 0 ? 'transparent' : 'var(--c-border2)') }}>{tp}</span>)}
+    </div>
+  </div>;
+}
+
+/* open task row — expands on click to show result input + Выполнить/Удалить */
+function MiniCalendar({ sel, onSel }) {
+  const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const cells = [];for (let i = 0; i < 30; i++) cells.push(i + 1);
+  return <div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+      <i className="pi pi-chevron-left" style={{ fontSize: '10px', color: 'var(--c-muted)', cursor: 'pointer' }} />
+      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text)' }}>Июнь 2026</span>
+      <i className="pi pi-chevron-right" style={{ fontSize: '10px', color: 'var(--c-muted)', cursor: 'pointer' }} />
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px' }}>
+      {days.map((d) => <span key={d} style={{ fontSize: '10px', color: 'var(--c-muted)', textAlign: 'center', padding: '2px 0' }}>{d}</span>)}
+      {cells.map((n) => <span key={n} onClick={() => onSel && onSel(n)} style={{ fontSize: '12px', textAlign: 'center', padding: '4px 0', borderRadius: 'var(--mg-radius-sm)', cursor: 'pointer',
+        background: n === sel ? 'var(--mg-primary-900)' : 'transparent', color: n === sel ? '#fff' : 'var(--c-text)', fontWeight: n === sel ? 600 : 400 }}>{n}</span>)}
+    </div>
+  </div>;
+}
+function kindMeta(kind) {
+  const m = { call: ['#2A6FDB', 'pi-phone'], proposal: ['#E8A317', 'pi-file-edit'], contract: ['#D14343', 'pi-file'], meeting: ['#1F8A5B', 'pi-calendar'], task: ['var(--mg-primary-900)', 'pi-check-square'] };
+  return m[kind] || m.task;
+}
+function OpenTaskRow({ t }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  const [pick, setPick] = useState(null); // 'date' | 'type' | 'who'
+  const [tk, setTk] = useState(t.kind);
+  const [reqHL, setReqHL] = useState(false);
+  const [result, setResult] = useState('');
+  const [title, setTitle] = useState(t.title);
+  const [editing, setEditing] = useState(false);
+  const [delC, setDelC] = useState(0);
+  const onComplete = (e) => { if (e) e.stopPropagation(); if (!open) { setOpen(true); setReqHL(true); return; } if (!result.trim()) { setReqHL(true); return; } setReqHL(false); };
+  const [km0, km1] = kindMeta(tk);
+  const [who, setWho] = useState(t.who);
+  const [q, setQ] = useState('');
+  const [due, setDue] = useState(t.due);
+  const [oDay, setODay] = useState(24);
+  const [oTime, setOTime] = useState('14:00');
+  const filtered = RESPONSIBLES.filter((r) => r.n.toLowerCase().includes(q.toLowerCase()));
+  return <div ref={rootRef} style={{ border: '1px solid ' + (open ? km0 : 'color-mix(in srgb, ' + km0 + ' 45%, var(--c-border))'), borderRadius: 'var(--mg-radius-md)', background: 'var(--c-sub)', overflow: 'visible', position: 'relative' }}>
+    <div onClick={() => setOpen(true)} style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', padding: '8px 10px', cursor: 'pointer' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <textarea value={title} rows={1} readOnly={!editing} onDoubleClick={(e) => { setEditing(true); e.target.focus(); }} onBlur={() => setEditing(false)} onChange={(e) => setTitle(e.target.value)} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} onClick={(e) => { if (editing) e.stopPropagation(); }} style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', overflow: 'hidden', background: 'transparent', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', lineHeight: 1.4, padding: 0, cursor: editing ? 'text' : 'pointer' }} />
+        <div style={{ display: 'flex', gap: '12px', marginTop: '3px' }}>
+          <span onClick={(e) => {e.stopPropagation();setPick((p) => p === 'type' ? null : 'type');}} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: pick === 'type' ? 'var(--mg-primary-900)' : km0, cursor: 'pointer' }}><i className={'pi ' + km1} style={{ fontSize: '9px' }} />{({ call: 'Звонок', proposal: 'Предложение', contract: 'Договор', meeting: 'Встреча', task: 'Задача' })[tk] || 'Задача'}</span>
+          <span onClick={(e) => {e.stopPropagation();setPick((p) => p === 'date' ? null : 'date');}} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: pick === 'date' ? 'var(--mg-primary-900)' : 'var(--c-muted)', cursor: 'pointer' }}><i className="pi pi-calendar" style={{ fontSize: '9px' }} />{due}</span>
+          <span onClick={(e) => {e.stopPropagation();setPick((p) => p === 'who' ? null : 'who');}} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: pick === 'who' ? 'var(--mg-primary-900)' : 'var(--c-muted)', cursor: 'pointer' }}><i className="pi pi-user" style={{ fontSize: '9px' }} />{who}</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+        <button onClick={onComplete} title="Выполнить" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--mg-green-700)', color: '#fff', border: 'none', borderRadius: 'var(--mg-radius-sm)', padding: '7px 14px', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><i className="pi pi-check" style={{ fontSize: '12px' }} />Выполнить</button>
+        <i className="pi pi-times" title={delC >= 1 ? 'Ещё ' + (3 - delC) + ' клик(а) для удаления' : 'Удалить (3 клика)'} onClick={() => setDelC((n) => n + 1)} style={{ fontSize: '12px', color: delC >= 1 ? 'var(--mg-red-600)' : 'var(--c-muted)', cursor: 'pointer', padding: '2px', transform: delC >= 1 ? 'scale(' + (1 + delC * 0.12) + ')' : 'none', transition: 'transform .1s' }} />
+      </div>
+    </div>
+    {/* type picker popover */}
+    {pick === 'type' && <div onMouseLeave={() => setPick(null)} style={{ position: 'absolute', top: 50, left: 10, zIndex: 25, width: 190, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px' }}>
+      {[['call', 'Звонок'], ['proposal', 'Предложение'], ['contract', 'Договор'], ['meeting', 'Встреча'], ['task', 'Задача']].map(([k, l]) => { const a = k === tk, mm = kindMeta(k);
+        return <button key={k} onClick={() => { setTk(k); setPick(null); }} style={{ display: 'flex', alignItems: 'center', gap: '9px', width: '100%', background: a ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', padding: '7px 9px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: 'var(--c-text)' }}
+          onMouseEnter={(e) => { if (!a) e.currentTarget.style.background = 'var(--c-hover)'; }} onMouseLeave={(e) => { if (!a) e.currentTarget.style.background = 'transparent'; }}>
+          <i className={'pi ' + mm[1]} style={{ fontSize: '12px', color: mm[0] }} /><span style={{ flex: 1 }}>{l}</span>{a && <i className="pi pi-check" style={{ fontSize: '11px' }} />}</button>; })}
+    </div>}
+    {/* date picker popover */}
+    {pick === 'date' && <div onMouseLeave={() => setPick(null)} style={{ position: 'absolute', top: 50, left: 10, zIndex: 25, width: 232, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '10px' }}>
+      <MiniCalendar sel={oDay} onSel={setODay} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
+        <i className="pi pi-clock" style={{ fontSize: '11px', color: 'var(--c-muted)' }} />
+        <input value={oTime} onChange={(e) => setOTime(e.target.value)} style={{ width: 70, height: 30, padding: '0 8px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+        <span style={{ flex: 1 }} /><SolidBtn label="ОК" onClick={() => {setDue(String(oDay).padStart(2, '0') + '.06.2026 ' + oTime);setPick(null);}} />
+      </div>
+    </div>}
+    {/* responsible picker popover (с поиском) */}
+    {pick === 'who' && <div onMouseLeave={() => setPick(null)} style={{ position: 'absolute', top: 50, left: 10, zIndex: 25, width: 232, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '6px' }}>
+      <div style={{ position: 'relative', marginBottom: '5px' }}>
+        <i className="pi pi-search" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: 'var(--c-muted)' }} />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Начните вводить имя…" style={{ width: '100%', height: 32, padding: '0 10px 0 28px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box', outline: 'none' }} />
+      </div>
+      <div style={{ maxHeight: 168, overflowY: 'auto' }}>
+        {filtered.map((r) => {const a = r.n === who;
+          return <button key={r.n} onClick={() => {setWho(r.n);setPick(null);setQ('');}} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', background: a ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', padding: '7px 8px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: a ? 'var(--mg-primary-900)' : 'var(--c-text)' }}
+          onMouseEnter={(e) => {if (!a) e.currentTarget.style.background = 'var(--c-hover)';}} onMouseLeave={(e) => {if (!a) e.currentTarget.style.background = 'transparent';}}>
+            <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 600, flexShrink: 0 }}>{r.i}</span>
+            <span style={{ flex: 1 }}>{r.n}</span>{a && <i className="pi pi-check" style={{ fontSize: '11px' }} />}</button>;})}
+        {filtered.length === 0 && <div style={{ fontSize: '12px', color: 'var(--c-muted)', padding: '8px' }}>Не найдено</div>}
+      </div>
+    </div>}
+    {open && <div style={{ borderTop: '1px solid var(--c-border)', padding: '10px' }}>
+      <textarea value={result} onChange={(e) => { setResult(e.target.value); if (e.target.value.trim()) setReqHL(false); }} placeholder="Опишите результат…" rows={2} style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', background: 'var(--c-card)', border: '1px solid ' + (reqHL ? 'var(--mg-red-600)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-sm)', padding: '8px 10px', outline: 'none', boxShadow: reqHL ? '0 0 0 3px var(--mg-red-50)' : 'none' }} />
+    </div>}
+  </div>;
+}
+
+function RightPanel() {
+  const [search, setSearch] = useState(false);
+  const [openTasksOpen, setOpenTasksOpen] = useState(true);
+  const [feed] = useState(FEED);
+  const scrollRef = React.useRef(null);
+  const [hlKa, setHlKa] = useState(null);
+  const goToKa = (type) => {
+    const c = scrollRef.current;if (!c) return;
+    const el = c.querySelector('[data-ka="' + type + '"]');
+    if (el) {const er = el.getBoundingClientRect(),cr = c.getBoundingClientRect();c.scrollTop += er.top - cr.top - 40;setHlKa(type);setTimeout(() => setHlKa(null), 2000);}
+  };
+  return <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--c-feed)', overflow: 'hidden', position: 'relative' }}>
+    {/* topbar: key-action widgets (KPI-style pills, reused) + search */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderBottom: '1px solid var(--c-border)', background: 'var(--c-card)', flexShrink: 0, flexWrap: 'wrap' }}>
+      {KEY_ACTIONS.map((k) =>
+      <span key={k.type} onClick={() => goToKa(k.type)} title={'Найти в ленте: ' + k.label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 11px', borderRadius: '999px',
+        background: 'var(--c-hover)', border: '1px solid var(--c-border)', color: 'var(--c-text2)', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <i className={'pi ' + k.icon} style={{ fontSize: '11px', color: 'var(--c-muted)' }} /><span style={{ opacity: 0.85 }}>{k.label}:</span><strong style={{ fontWeight: 700, color: 'var(--c-text)' }}>{k.value}</strong></span>)}
+      <span style={{ flex: 1 }} />
+      <i className="pi pi-search" onClick={() => setSearch((s) => !s)} style={{ fontSize: '14px', color: search ? 'var(--mg-primary-900)' : 'var(--c-muted)', cursor: 'pointer', padding: '4px' }} />
+    </div>
+    {search && <SearchOverlay />}
+    {/* feed (bottom-up) */}
+    <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '18px 22px', marginTop: 'auto' }}>
+        {feed.map((g) =>
+        <div key={g.date} style={{ marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', cursor: 'pointer' }}>
+              <span style={{ flex: 1, height: 1, background: 'var(--c-border)' }} />
+              <span style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--c-muted)' }}>{g.date}</span>
+              <span style={{ flex: 1, height: 1, background: 'var(--c-border)' }} />
+            </div>
+            <div style={{ position: 'relative', paddingLeft: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ position: 'absolute', left: '13px', top: '8px', bottom: '12px', width: '2px', background: 'var(--c-border)' }} />
+              {g.items.map((it) => <FeedItem key={it.id} it={it} hlKa={hlKa} />)}
+            </div>
+          </div>)}
+      </div>
+    </div>
+    {/* open tasks — list of 2 (collapsible by clicking the strip) */}
+    <div style={{ background: 'var(--c-card)', borderTop: '1px solid var(--c-border)', flexShrink: 0 }}>
+      <div onClick={() => setOpenTasksOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', cursor: 'pointer' }}>
+        <i className="pi pi-list-check" style={{ fontSize: '13px', color: 'var(--mg-orange-900)' }} />
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text2)' }}>Открытые задачи: {OPEN_TASKS.length}</span>
+      </div>
+      {openTasksOpen && <div style={{ padding: '0 18px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {OPEN_TASKS.map((t) => <OpenTaskRow key={t.id} t={t} />)}
+      </div>}
+    </div>
+    <Composer />
+  </div>;
+}
+
+/* ════════════════════════ dialogs ════════════════════════ */
+function Modal({ title, onClose, children, footer, width = 460 }) {
+  return <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+    <div onClick={(e) => e.stopPropagation()} style={{ width, maxWidth: '100%', background: 'var(--c-card)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-lg)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--c-border)' }}>
+        <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--c-text)' }}>{title}</span>
+        <i className="pi pi-times" onClick={onClose} style={{ fontSize: '14px', color: 'var(--c-muted)', cursor: 'pointer', padding: '4px' }} /></div>
+      <div style={{ padding: '18px', maxHeight: '70vh', overflowY: 'auto' }}>{children}</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 18px', borderTop: '1px solid var(--c-border)', background: 'var(--c-sub)' }}>{footer}</div>
+    </div>
+  </div>;
+}
+function MField({ label, children, req }) {
+  return <div style={{ marginBottom: '14px' }}><label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--c-text2)', display: 'block', marginBottom: '5px' }}>{label}{req && <span style={{ color: 'var(--mg-red-600)', marginLeft: '3px' }}>*</span>}</label>{children}</div>;
+}
+function MInput({ ph }) {
+  return <input placeholder={ph} style={{ width: '100%', height: 36, padding: '0 11px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box' }} />;
+}
+function AddProductDialog({ onClose }) {
+  return <Modal title="Добавить продукт" onClose={onClose} footer={<><OutlineBtn label="Отмена" onClick={onClose} /><SolidBtn label="Добавить" icon="pi-plus" onClick={onClose} /></>}>
+    <div style={{ display: 'flex', gap: '12px' }}>
+      <div style={{ flex: 1 }}><MField label="Период"><SearchPicker placeholder="12 мес" options={['1 мес', '3 мес', '6 мес', '12 мес', '24 мес', 'разово']} /></MField></div>
+      <div style={{ flex: 1 }}><MField label="Валюта"><SearchPicker placeholder="₸ KZT" options={['₸ KZT', '₽ RUB', '$ USD', '€ EUR']} /></MField></div>
+    </div>
+    <MField label="Продукт"><SearchPicker placeholder="Выберите продукт из каталога" icon="pi-box" search options={['MACRO ERP — лицензия Core', 'Модуль «Логистика и склад»', 'Модуль «Аналитика BI»', 'Внедрение и обучение', 'Техподдержка Premium']} /></MField>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--c-sub)', borderRadius: 'var(--mg-radius-sm)' }}>
+      <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>Сумма (авто):</span><span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--mg-primary-900)' }}>3 200 000 ₸</span>
+    </div>
+    <p style={{ fontSize: '11px', color: 'var(--c-muted)', margin: '8px 0 0' }}>Сумма рассчитывается автоматически по периоду и цене продукта из каталога.</p>
+  </Modal>;
+}
+function AddContactDialog({ onClose }) {
+  const [q, setQ] = useState('');
+  const [picked, setPicked] = useState(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const DB = ['Алия Нурланова', 'Дмитрий Ким', 'Сергей Иванов', 'Елена Орлова'];
+  const matches = q ? DB.filter((n) => n.toLowerCase().includes(q.toLowerCase())) : DB;
+  return <Modal title="Добавить контакт" onClose={onClose} footer={<><OutlineBtn label="Отмена" onClick={onClose} /><SolidBtn label="Добавить" icon="pi-plus" onClick={onClose} /></>}>
+    {!creating ? <>
+      <MField label="Контакт">
+        <div style={{ position: 'relative' }}>
+          <i className="pi pi-search" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--c-muted)' }} />
+          <input value={picked || q} onFocus={() => setListOpen(true)} onChange={(e) => {setQ(e.target.value);setPicked(null);setListOpen(true);}} placeholder="Поиск по имени или телефону…" style={{ width: '100%', height: 36, padding: '0 11px 0 32px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)', boxSizing: 'border-box', outline: 'none' }} />
+        </div>
+        {listOpen && !picked && <div style={{ marginTop: '6px', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-sm)', overflow: 'hidden' }}>
+          {matches.map((n) =>
+          <button key={n} onClick={() => {setPicked(n);setListOpen(false);}} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--c-border)', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', padding: '8px 10px', textAlign: 'left', color: 'var(--c-text)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+              <i className="pi pi-user" style={{ fontSize: '11px', color: 'var(--c-muted)' }} />{n}</button>)}
+          <button onClick={() => setCreating(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', background: 'var(--c-sub)', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, padding: '9px 10px', textAlign: 'left', color: 'var(--mg-primary-900)' }}>
+            <i className="pi pi-plus" style={{ fontSize: '11px' }} />Создать новый контакт{q ? ' «' + q + '»' : ''}</button>
+        </div>}
+      </MField>
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', cursor: 'pointer' }}>
+        <span style={{ width: 16, height: 16, borderRadius: '4px', border: '1.5px solid var(--c-border2)', display: 'inline-block' }} />
+        <span style={{ fontSize: '13px', color: 'var(--c-text)' }}>Основной контакт</span></label>
+    </> : <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+        <i className="pi pi-arrow-left" onClick={() => setCreating(false)} style={{ fontSize: '13px', color: 'var(--c-muted)', cursor: 'pointer' }} />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>Новый контакт</span>
+      </div>
+      <MField label="Имя" req><MInput ph="Иван Петров" /></MField>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ flex: 1 }}><MField label="Телефон" req><MInput ph="+7 ___ ___-__-__" /></MField></div>
+        <div style={{ flex: 1 }}><MField label="Email"><MInput ph="name@company.kz" /></MField></div>
+      </div>
+      <MField label="Должность" req><SearchPicker placeholder="Выберите должность" search options={['Генеральный директор', 'Финансовый директор', 'Коммерческий директор', 'Руководитель ИТ', 'Главный бухгалтер', 'Менеджер по закупкам', 'Специалист']} /></MField>
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', cursor: 'pointer' }}>
+        <span style={{ width: 16, height: 16, borderRadius: '4px', border: '1.5px solid var(--c-border2)', display: 'inline-block' }} />
+        <span style={{ fontSize: '13px', color: 'var(--c-text)' }}>Основной контакт</span></label>
+    </>}
+  </Modal>;
+}
+function StageDialog({ onClose }) {
+  const cur = STAGES.find((s) => s.id === DEAL.stageId);
+  return <Modal title="Сменить стадию" onClose={onClose} footer={<><OutlineBtn label="Отмена" onClick={onClose} /><SolidBtn label="Переместить" icon="pi-arrow-right" onClick={onClose} /></>}>
+    <MField label="Текущая стадия"><span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+      <span style={{ width: 9, height: 9, borderRadius: '50%', background: cur.color }} /><span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>{cur.name}</span></span></MField>
+    <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--c-text2)', display: 'block', marginBottom: '7px' }}>Новая стадия</label>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {STAGES.map((s) => {const sel = s.id === DEAL.stageId;
+        return <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '8px 10px', borderRadius: 'var(--mg-radius-sm)', cursor: 'pointer',
+          background: sel ? 'var(--mg-primary-100)' : 'transparent', border: '1px solid ' + (sel ? 'transparent' : 'var(--c-border)') }}>
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: '13px', fontWeight: sel ? 600 : 500, color: sel ? 'var(--mg-primary-900)' : 'var(--c-text)' }}>{s.name}</span>
+          {sel && <i className="pi pi-check" style={{ fontSize: '12px', color: 'var(--mg-primary-900)' }} />}</div>;})}
+    </div>
+  </Modal>;
+}
+function DealMenu({ onClose }) {
+  const items = [['pi-link', 'Копировать ссылку'], ['sep'], ['pi-pencil', 'Переименовать'], ['pi-tag', 'Изменить теги'], ['sep'],
+  ['pi-arrows-v', 'Свернуть все группы'], ['pi-arrows-v', 'Развернуть все группы'], ['pi-cog', 'Настроить поля'], ['sep'], ['pi-trash', 'Удалить сделку', true]];
+  return <div onMouseLeave={onClose} style={{ position: 'absolute', top: 12, left: 392, zIndex: 30, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px', minWidth: 210 }}>
+    {items.map((it, i) => it[0] === 'sep' ? <div key={i} style={{ height: 1, background: 'var(--c-border)', margin: '5px 0' }} /> :
+    <button key={i} onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 500, padding: '8px 10px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: it[2] ? 'var(--mg-red-700)' : 'var(--c-text)' }}
+    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+        <i className={'pi ' + it[0]} style={{ fontSize: '14px', color: it[2] ? 'var(--mg-red-700)' : 'var(--c-muted)' }} />{it[1]}</button>)}
+  </div>;
+}
+
+/* ════════════════════════ app ════════════════════════ */
+const TWEAK_DEFAULTS = { accent: '#172747', dark: false };
+function App() {
+  const [tab, setTab] = useState('main');
+  const [menu, setMenu] = useState(false);
+  const [dialog, setDialog] = useState(null);
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const accent = t.accent,dark = t.dark;
+  const ACC = { '#172747': '#1f2f5a', '#2b2f36': '#3a3f47', '#312e81': '#3f3a9e', '#0f4d3a': '#13654c' };
+  const menuRef = React.useRef(null);
+  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': ACC[accent] || '#1f2f5a', height: '100vh', display: 'flex', position: 'relative', background: 'var(--c-page)' }}>
+    <LeftPanel tab={tab} setTab={setTab} onMenu={() => setMenu((m) => !m)} menuRef={menuRef} setDialog={setDialog} />
+    {menu && <DealMenu onClose={() => setMenu(false)} />}
+    <RightPanel />
+    {dialog === 'product' && <AddProductDialog onClose={() => setDialog(null)} />}
+    {dialog === 'contact' && <AddContactDialog onClose={() => setDialog(null)} />}
+    {dialog === 'stage' && <StageDialog onClose={() => setDialog(null)} />}
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Бренд" />
+      <TweakColor label="Акцент" value={t.accent} options={['#172747', '#2b2f36', '#312e81', '#0f4d3a']} onChange={(v) => setTweak('accent', v)} />
+      <TweakSection label="Полотно" />
+      <TweakToggle label="Тёмная тема" value={t.dark} onChange={(v) => setTweak('dark', v)} />
+    </TweaksPanel>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

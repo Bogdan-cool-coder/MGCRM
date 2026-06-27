@@ -1,0 +1,445 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1280x860" name="Redesign — Воронка продаж (kanban)" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Воронка продаж</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
+  .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
+    --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-board:#ECEDEF; }
+  .surface.dark { --c-page:#272829; --c-card:#3a3b3d; --c-border:#54595E; --c-border2:#54595E;
+    --c-text:#F9FAFB; --c-text2:#E3E4E6; --c-muted:#9B9C9F; --c-hover:#444547; --c-board:#1f2021; }
+  * { scrollbar-width: none; -ms-overflow-style: none; }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+
+
+
+const { useState } = React;
+
+/* ════════════════════════ data (board, по BoardColumnDto / DealCardDto) ════════════════════════ */
+const COLUMNS = [
+{ id: 1, name: 'Новая', color: '#7F77DD', total: 6, sum: '≈ 12 400 000 ₸', deals: [
+  { id: 1101, title: 'CRM для сети клиник «МедПлюс»', amount: '2 100 000 ₸', product: 'MACRO CRM', owner: 'Алина Сергеева', oi: 'А', days: 2, health: 'no-task' },
+  { id: 1102, title: 'ERP — завод «СтройМаш»', amount: '5 800 000 ₸', product: 'MACRO ERP', owner: 'Игорь Волков', oi: 'И', days: 1, health: 'ok', task: { type: 'call', date: 'завтра 10:00' } },
+  { id: 1103, title: 'Учёт для «АгроТрейд»', amount: '1 300 000 ₸', product: null, owner: 'Алина Сергеева', oi: 'А', days: 4, health: 'ok', task: { type: 'meeting', date: '24.06 15:00' } }]
+},
+{ id: 2, name: 'Квалификация', color: '#378ADD', total: 4, sum: '≈ 18 900 000 ₸', deals: [
+  { id: 1201, title: 'Внедрение MACRO ERP — «Қазмұнай Логистик»', amount: '4 500 000 ₸', product: 'MACRO ERP', owner: 'Богдан Меркулов', oi: 'Б', days: 6, health: 'ok', task: { type: 'call', date: 'сегодня 14:00' } },
+  { id: 1202, title: 'Документооборот — «ТехноСервис»', amount: '3 200 000 ₸', product: 'MACRO DOC', owner: 'Игорь Волков', oi: 'И', days: 9, health: 'overdue', task: { type: 'task', when: '2 дня назад' } }]
+},
+{ id: 3, name: 'Презентация', color: '#1D9E75', total: 3, sum: '≈ 9 700 000 ₸', deals: [
+  { id: 1301, title: 'BI-аналитика — «Финрезерв Банк»', amount: '6 400 000 ₸', product: 'MACRO BI', owner: 'Богдан Меркулов', oi: 'Б', days: 3, health: 'ok', task: { type: 'meeting', date: '25.06 11:00' } },
+  { id: 1302, title: 'CRM — «Альфа Ритейл»', amount: '1 900 000 ₸', product: 'MACRO CRM', owner: 'Алина Сергеева', oi: 'А', days: 11, health: 'no-task' }]
+},
+{ id: 4, name: 'Переговоры', color: '#EF9F27', total: 5, sum: '≈ 24 300 000 ₸', deals: [
+  { id: 1401, title: 'Комплекс MACRO — «Каспий Девелопмент»', amount: '11 200 000 ₸', product: 'MACRO ERP', owner: 'Богдан Меркулов', oi: 'Б', days: 5, health: 'ok', task: { type: 'call', date: 'завтра 16:30' } },
+  { id: 1402, title: 'ERP — «ЭнергоПром»', amount: '7 600 000 ₸', product: 'MACRO ERP', owner: 'Игорь Волков', oi: 'И', days: 16, health: 'overdue', task: { type: 'call', when: '4 дня назад' } }]
+},
+{ id: 5, name: 'Договор', color: '#D4537E', total: 2, sum: '≈ 8 100 000 ₸', deals: [
+  { id: 1501, title: 'CRM + DOC — «СтройИнвест Групп»', amount: '5 300 000 ₸', product: 'MACRO CRM', owner: 'Богдан Меркулов', oi: 'Б', days: 2, health: 'ok', task: { type: 'task', date: 'сегодня 17:00' } }]
+},
+{ id: 6, name: 'Успешно', color: '#36a04b', won: true, total: 8, sum: '≈ 41 600 000 ₸', deals: [
+  { id: 1601, title: 'ERP — «Темир Жолы Транс»', amount: '9 800 000 ₸', product: 'MACRO ERP', owner: 'Игорь Волков', oi: 'И', days: 1, health: 'ok', task: { type: 'task', date: 'онбординг' } }]
+}];
+/* скрытые статусы (по умолчанию выключены; включаются по триггеру) */
+const HIDDEN_COLS = [
+{ id: 7, name: 'Холодные', color: '#9B9C9F', hidden: true, sum: '≈ 3 100 000 ₸', deals: [
+  { id: 1701, title: 'CRM — «Дельта Снаб»', amount: '1 600 000 ₸', product: 'MACRO CRM', owner: 'Алина Сергеева', oi: 'А', days: 38, health: 'no-task' },
+  { id: 1702, title: 'Учёт — «ПромКомплект»', amount: '1 500 000 ₸', product: null, owner: 'Игорь Волков', oi: 'И', days: 52, health: 'no-task' }]
+},
+{ id: 8, name: 'Закрыта (проиграно)', color: '#7E7F82', hidden: true, sum: '≈ 5 400 000 ₸', deals: [
+  { id: 1801, title: 'ERP — «Орбита Трейд»', amount: '5 400 000 ₸', product: 'MACRO ERP', owner: 'Богдан Меркулов', oi: 'Б', days: 7, health: 'ok', task: { type: 'note', date: 'причина: бюджет' } }]
+}];
+
+
+const TASK_ICON = { call: 'pi-phone', meeting: 'pi-calendar', task: 'pi-check-square', note: 'pi-file-edit', follow_up: 'pi-arrow-right-arrow-left' };
+
+/* ════════════════════════ kanban card ════════════════════════ */
+function KanbanCard({ d }) {
+  const [hover, setHover] = useState(false);
+  const inset = d.health === 'overdue' ? '4px 0 0 var(--mg-danger)' : d.health === 'no-task' ? '4px 0 0 var(--mg-warning)' : 'none';
+  const strip = d.health === 'overdue' ?
+  { bg: 'var(--mg-red-50)', col: 'var(--mg-red-700)' } :
+  d.health === 'no-task' ?
+  { bg: 'var(--mg-orange-50)', col: 'var(--mg-orange-900)' } :
+  { bg: 'var(--c-hover)', col: 'var(--c-text2)' };
+  const daysCol = d.days >= 14 ? 'var(--mg-red-600)' : d.days >= 7 ? 'var(--mg-orange-700)' : 'var(--c-muted)';
+  return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+  style={{ background: 'var(--c-card)', border: '1px solid ' + (d.health === 'overdue' ? 'var(--mg-danger)' : 'var(--c-border)'),
+    borderRadius: 'var(--mg-radius-md)', overflow: 'hidden', cursor: 'pointer', boxShadow: inset === 'none' ? 'var(--mg-shadow-sm)' : 'var(--mg-shadow-sm), inset ' + inset,
+    transition: 'box-shadow .15s' }}>
+    <div style={{ padding: '11px 12px' }}>
+      {/* title */}
+      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text)', marginBottom: '8px',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.title}>{d.title}</div>
+      {/* amount + product */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', minWidth: 0 }}>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--mg-primary-900)', whiteSpace: 'nowrap', flexShrink: 0 }}>{d.amount}</span>
+        {d.product && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'var(--c-hover)',
+          borderRadius: 'var(--mg-radius-sm)', padding: '1px 7px', fontSize: '11px', color: 'var(--c-muted)', minWidth: 0, overflow: 'hidden' }}>
+          <i className="pi pi-box" style={{ fontSize: '10px', flexShrink: 0 }} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.product}</span></span>}
+      </div>
+      {/* owner + days + quick add */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
+          <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 600, flexShrink: 0 }}>{d.oi}</span>
+          <span style={{ fontSize: '12px', color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shortName(d.owner)}</span>
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '12px', color: daysCol, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <i className="pi pi-clock" style={{ fontSize: '11px' }} />{d.days} дн.</span>
+      </div>
+    </div>
+    {/* health strip */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', borderTop: '1px solid var(--c-border)',
+      background: strip.bg, fontSize: '11px', minHeight: 28 }}>
+      {d.health === 'ok' && <>
+        <i className={'pi ' + (TASK_ICON[d.task.type] || 'pi-check-square')} style={{ fontSize: '11px', color: 'var(--c-muted)' }} />
+        <span style={{ color: strip.col, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.task.date}</span></>}
+      {d.health === 'no-task' && <>
+        <span style={{ color: strip.col, flex: 1 }}>Нет задачи</span>
+        <button style={{ border: 'none', background: 'transparent', color: 'var(--mg-primary-900)', cursor: 'pointer', fontSize: '11px',
+          fontFamily: 'var(--mg-font-sans)', padding: 0, whiteSpace: 'nowrap' }}>+ Задача</button></>}
+      {d.health === 'overdue' && <>
+        <i className={'pi ' + (TASK_ICON[d.task.type] || 'pi-check-square')} style={{ fontSize: '11px', color: 'var(--mg-red-600)' }} />
+        <span style={{ color: strip.col, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          Просрочено: {d.task.when}</span></>}
+    </div>
+  </div>;
+}
+function shortName(name) {
+  const p = name.trim().split(' ');
+  return p.length === 1 ? p[0] : p[0] + ' ' + p[1].charAt(0).toUpperCase() + '.';
+}
+
+/* ════════════════════════ column ════════════════════════ */
+function Column({ col }) {
+  // белая подложка-колонка по высоте карточек; шапка — мягкий тон этапа
+  const tint = 'color-mix(in srgb, ' + col.color + ' 13%, var(--c-card))';
+  return <div style={{ width: 284, flexShrink: 0, display: 'flex', flexDirection: 'column', alignSelf: 'flex-start', maxHeight: '100%',
+    background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)',
+    boxShadow: 'var(--mg-shadow-sm)', overflow: 'hidden' }}>
+    {/* header — мягкий тинт + верхняя полоска цвета этапа; название по центру, капсом */}
+    <div style={{ background: tint, borderBottom: '1px solid var(--c-border)', padding: '11px 13px 9px', flexShrink: 0,
+      borderTop: '3px solid ' + col.color }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '34px 1fr 34px', alignItems: 'center' }}>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text2)', background: 'var(--c-card)',
+          border: '1px solid var(--c-border)', borderRadius: '999px', padding: '1px 0', minWidth: 26, textAlign: 'center', justifySelf: 'start' }}>{col.deals.length}</span>
+        <span style={{ textAlign: 'center', fontSize: '14px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+          color: 'var(--c-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.name}</span>
+        <span />
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--c-muted)', marginTop: '6px', textAlign: 'center' }}>{col.sum}</div>
+    </div>
+    {/* list (все карточки всегда показаны) */}
+    <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--c-card)' }}>
+      {col.deals.map((d) => <KanbanCard key={d.id} d={d} />)}
+    </div>
+  </div>;
+}
+
+/* ════════════════════════ top bar (шапка + тулбар в одной строке) ════════════════════════ */
+function ToolBtn({ icon, label, outlined, primary, active, onClick, ref_, compact }) {
+  const [h, setH] = useState(false);
+  const base = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', height: compact ? 31 : 38,
+    padding: label ? '0 14px' : compact ? '0 8px' : '0 10px', borderRadius: 'var(--mg-radius-md)', fontFamily: 'var(--mg-font-sans)',
+    fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', boxSizing: 'border-box' };
+  let st;
+  if (primary) st = { ...base, background: h ? 'var(--mg-primary-800)' : 'var(--mg-primary-900)', color: '#fff', border: 'none' };else
+  if (outlined) st = { ...base, background: h ? 'var(--c-hover)' : 'transparent', color: 'var(--c-text2)', border: '1px solid var(--c-border2)' };else
+  st = { ...base, background: active ? 'var(--mg-primary-100)' : h ? 'var(--c-hover)' : 'transparent',
+    color: active ? 'var(--mg-primary-900)' : 'var(--c-muted)', border: 'none' };
+  return <button ref={ref_} onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={st}>
+    <i className={'pi ' + icon} style={{ fontSize: '14px' }} />{label}</button>;
+}
+function TopBar({ view, setView, onMore, moreRef, onFilter, filterOn, fcount, pipeOpen, setPipeOpen, pipe, setPipe }) {
+  const totalDeals = COLUMNS.reduce((s, c) => s + c.deals.length, 0);
+  return <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px',
+    borderBottom: '1px solid var(--c-border)', background: 'var(--c-card)', flexShrink: 0, flexWrap: 'wrap' }}>
+    {/* section title */}
+    <span style={{ width: 38, height: 38, borderRadius: 'var(--mg-radius-md)', background: 'var(--mg-primary-100)',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <i className="pi pi-briefcase" style={{ fontSize: '17px', color: 'var(--mg-primary-900)' }} /></span>
+    <div>
+      <h1 style={{ fontSize: '19px', fontWeight: 600, color: 'var(--c-text)', margin: 0, lineHeight: 1.1 }}>Сделки</h1>
+      <div style={{ fontSize: '12px', color: 'var(--c-muted)', marginTop: '2px' }}>MACRO Global · {totalDeals} сделок · ≈ 114 млн ₸</div>
+    </div>
+    <span style={{ flex: 1, minWidth: 12 }} />
+    {/* controls */}
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <button onClick={onFilter} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px', height: 38,
+        padding: '0 14px', borderRadius: 'var(--mg-radius-md)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+        whiteSpace: 'nowrap', boxSizing: 'border-box', background: filterOn ? 'var(--mg-primary-100)' : 'transparent',
+        color: filterOn ? 'var(--mg-primary-900)' : 'var(--c-text2)', border: '1px solid ' + (filterOn ? 'var(--mg-primary-900)' : 'var(--c-border2)') }}>
+        <i className="pi pi-search" style={{ fontSize: '14px' }} />Поиск и фильтр</button>
+      {fcount > 0 && <span style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, borderRadius: 9,
+        background: 'var(--mg-orange-700)', color: '#fff', fontSize: '10px', fontWeight: 700, display: 'inline-flex',
+        alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{fcount}</span>}
+    </span>
+    {/* pipeline switch */}
+    <span style={{ position: 'relative' }}>
+      <span onClick={() => setPipeOpen((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--c-text2)',
+        padding: '0 12px', height: 38, border: '1px solid ' + (pipeOpen ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-md)', cursor: 'pointer', boxSizing: 'border-box' }}>
+        <i className="pi pi-sitemap" style={{ fontSize: '13px', color: 'var(--c-muted)' }} />{pipe}
+        <i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></span>
+      {pipeOpen && <PipelineMenu current={pipe} onPick={(p) => {setPipe(p);setPipeOpen(false);}} />}
+    </span>
+    <span style={{ display: 'inline-flex', gap: '2px', background: 'var(--mg-gray-100)', borderRadius: '7px', padding: '3px', alignItems: 'center' }}>
+      <ToolBtn icon="pi-th-large" compact active={view === 'kanban'} onClick={() => setView('kanban')} />
+      <ToolBtn icon="pi-list" compact active={view === 'list'} onClick={() => setView('list')} />
+    </span>
+    <ToolBtn icon="pi-ellipsis-v" compact outlined onClick={onMore} ref_={moreRef} />
+    <ToolBtn icon="pi-plus" label="Создать сделку" primary />
+  </div>;
+}
+/* pipeline picker dropdown */
+function PipelineMenu({ current, onPick }) {
+  const items = [['Продажи', 'воронка продаж', 'pi-sitemap'], ['Онбординг', 'внедрение и запуск', 'pi-flag'], ['Партнёрская', 'реферальные сделки', 'pi-users']];
+  return <div onMouseLeave={() => onPick(current)} style={{ position: 'absolute', top: 42, right: 0, zIndex: 30, background: 'var(--c-card)',
+    border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px', minWidth: 230 }}>
+    {items.map((it) => {
+      const on = it[0] === current;
+      return <button key={it[0]} onClick={() => onPick(it[0])} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+        background: on ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)',
+        padding: '8px 10px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left' }}
+      onMouseEnter={(e) => {if (!on) e.currentTarget.style.background = 'var(--c-hover)';}}
+      onMouseLeave={(e) => {if (!on) e.currentTarget.style.background = 'transparent';}}>
+        <i className={'pi ' + it[2]} style={{ fontSize: '14px', color: on ? 'var(--mg-primary-900)' : 'var(--c-muted)' }} />
+        <span style={{ flex: 1 }}>
+          <span style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: on ? 'var(--mg-primary-900)' : 'var(--c-text)' }}>{it[0]}</span>
+          <span style={{ display: 'block', fontSize: '11px', color: 'var(--c-muted)' }}>{it[1]}</span></span>
+        {on && <i className="pi pi-check" style={{ fontSize: '12px', color: 'var(--mg-primary-900)' }} />}
+      </button>;
+    })}
+    <div style={{ height: 1, background: 'var(--c-border)', margin: '5px 0' }} />
+    <button onClick={() => onPick(current)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', background: 'transparent',
+      border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 500, padding: '8px 10px', borderRadius: 'var(--mg-radius-sm)', color: 'var(--c-text2)' }}>
+      <i className="pi pi-cog" style={{ fontSize: '14px', color: 'var(--c-muted)' }} />Настроить воронки</button>
+  </div>;
+}
+function MoreMenu({ onClose }) {
+  const items = [['pi-check-square', 'Массовые действия'], ['pi-clone', 'Поиск дублей'], ['sep'],
+  ['pi-download', 'Импорт'], ['pi-upload', 'Экспорт']];
+  return <div onMouseLeave={onClose} style={{ position: 'absolute', top: 56, right: 150, zIndex: 30, background: 'var(--c-card)',
+    border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px', minWidth: 210 }}>
+    {items.map((it, i) => it[0] === 'sep' ? <div key={i} style={{ height: 1, background: 'var(--c-border)', margin: '5px 0' }} /> :
+    <button key={i} onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', background: 'transparent',
+      border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 500, padding: '8px 10px',
+      borderRadius: 'var(--mg-radius-sm)', textAlign: 'left', color: 'var(--c-text)' }}
+    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'}
+    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+        <i className={'pi ' + it[0]} style={{ fontSize: '14px', color: 'var(--c-muted)' }} />{it[1]}</button>)}
+  </div>;
+}
+
+/* ════════════════════════ list view (DataTable, по DealsListView.vue) ════════════════════════ */
+function companyOf(title) {const m = title.match(/«([^»]+)»/);return m ? m[1] : title.split('—')[0].trim();}
+function daysWord(n) {const m10 = n % 10,m100 = n % 100;if (m100 >= 11 && m100 <= 14) return 'дней';if (m10 === 1) return 'день';if (m10 >= 2 && m10 <= 4) return 'дня';return 'дней';}
+const TRC = { g: 'var(--mg-green-700)', a: 'var(--mg-orange-700)', r: 'var(--mg-red-600)', n: 'var(--c-muted)' };
+function freshOf(d) {const tr = d.health === 'overdue' || d.days >= 21 ? 'r' : d.days >= 7 ? 'a' : 'g';const last = d.days <= 1 ? 'Сегодня' : d.days + ' дн назад';return { tr, last };}
+function ListView() {
+  const rows = COLUMNS.flatMap((c, ci) => c.deals.map((d) => ({ ...d, stage: c.name, stageNo: ci + 1, stageColor: c.color, company: companyOf(d.title), country: ['Казахстан', 'Казахстан', 'Россия', 'Казахстан', 'Узбекистан'][d.id % 5], ...freshOf(d) })));
+  const companies = new Set(rows.filter((r) => r.stage !== 'Успешно').map((r) => r.company)).size;
+  const noTask = rows.filter((r) => r.health === 'no-task').length;
+  const overdue = rows.filter((r) => r.health === 'overdue').length;
+  const Chip = ({ icon, label, value, bg, col }) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '6px 13px', borderRadius: '999px', background: bg, color: col, fontSize: '13px', whiteSpace: 'nowrap' }}><i className={'pi ' + icon} style={{ fontSize: '12px' }} /><span style={{ opacity: .8 }}>{label}:</span><strong style={{ fontWeight: 700 }}>{value}</strong></span>;
+  const Th = ({ children, right, sort }) => <th style={{ padding: '11px 14px', fontSize: '12px', fontWeight: 600,
+    color: 'var(--c-text2)', borderBottom: '1px solid var(--c-border)', textAlign: right ? 'right' : 'left', whiteSpace: 'nowrap', background: 'var(--c-card)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', justifyContent: right ? 'flex-end' : 'flex-start' }}>{children}
+      {sort && <i className="pi pi-sort-alt" style={{ fontSize: '11px', color: 'var(--c-muted)' }} />}</span></th>;
+  const Td = ({ children, right, muted }) => <td style={{ padding: '12px 14px', fontSize: '13px', borderBottom: '1px solid var(--c-border)',
+    textAlign: right ? 'right' : 'left', color: muted ? 'var(--c-muted)' : 'var(--c-text)', verticalAlign: 'middle' }}>{children}</td>;
+  const stageTint = (color) => 'color-mix(in srgb, ' + color + ' 22%, var(--c-card))';
+  return <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+    {/* KPI чипы — вторая строка под шапкой, на белой подложке */}
+    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px', background: 'var(--c-card)',
+      border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-sm)', padding: '12px 14px' }}>
+      <Chip icon="pi-briefcase" label="В работе" value={companies + ' компаний'} bg="var(--mg-primary-100)" col="var(--mg-primary-900)" />
+      <Chip icon="pi-tags" label="Категории L/M/S" value="3 / 5 / 4" bg="var(--mg-blue-100)" col="var(--mg-blue-700)" />
+      <Chip icon="pi-check-circle" label="Успешных" value="8" bg="var(--mg-green-100)" col="var(--mg-green-900)" />
+      <Chip icon="pi-clock" label="Без задачи" value={noTask} bg="var(--mg-orange-50)" col="var(--mg-orange-900)" />
+      <Chip icon="pi-exclamation-circle" label="Просрочено" value={overdue} bg="var(--mg-red-50)" col="var(--mg-red-700)" />
+    </div>
+    <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', overflow: 'hidden', boxShadow: 'var(--mg-shadow-sm)' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead><tr>
+          <Th sort>Название</Th><Th sort>Страна</Th><Th right sort>Сумма</Th><Th sort>Статус</Th><Th sort>В статусе</Th><Th sort>Посл. контакт</Th>
+          <Th sort>Задача</Th><Th sort>Ответственный</Th>
+        </tr></thead>
+        <tbody>{rows.map((r, i) =>
+          <tr key={r.id} style={{ background: i % 2 ? 'var(--c-hover)' : 'var(--c-card)', cursor: 'pointer' }}>
+            <Td><span style={{ color: 'var(--mg-primary-900)', fontWeight: 500 }}>{r.title}</span></Td>
+            <Td muted>{r.country}</Td>
+            <Td right><span style={{ fontWeight: 700 }}>{r.amount}</span></Td>
+            <Td><span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '3px 10px', borderRadius: 'var(--mg-radius-sm)',
+                fontSize: '12px', fontWeight: 600, color: 'var(--c-text)', background: stageTint(r.stageColor) }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: r.stageColor }} />{r.stageNo}. {r.stage}</span></Td>
+            <Td muted>{r.days} {daysWord(r.days)}</Td>
+            <Td><span style={{ color: TRC[r.tr], fontWeight: r.tr === 'n' ? 400 : 500, whiteSpace: 'nowrap' }}>{r.last}</span></Td>
+            <Td>{r.health === 'overdue' ?
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--mg-red-700)', background: 'var(--mg-red-50)', padding: '4px 9px', borderRadius: 'var(--mg-radius-sm)', whiteSpace: 'nowrap' }}>Просрочено</span> :
+              r.health === 'no-task' ?
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--mg-orange-900)', background: 'var(--mg-orange-50)', padding: '4px 9px', borderRadius: 'var(--mg-radius-sm)', whiteSpace: 'nowrap' }}>Нет задачи</span> :
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--c-text2)', whiteSpace: 'nowrap' }}>
+                  <i className={'pi ' + (TASK_ICON[r.task.type] || 'pi-check-square')} style={{ fontSize: '11px', color: 'var(--c-muted)' }} />{r.task.date}</span>}</Td>
+            <Td><span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+              <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 600, flexShrink: 0 }}>{r.oi}</span>
+              {r.owner}</span></Td>
+          </tr>)}</tbody>
+      </table>
+    </div>
+  </div>;
+}
+
+/* ════════════════════════ filter panel ════════════════════════ */
+function FilterField({ label, value, ph }) {
+  return <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--c-text2)' }}>{label}</span>
+    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: 36, padding: '0 11px', border: '1px solid var(--c-border2)',
+      borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', cursor: 'pointer', fontSize: '13px',
+      color: value ? 'var(--c-text)' : 'var(--c-muted)' }}>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value || ph}</span>
+      <i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></span>
+  </label>;
+}
+function FilterPanel({ onClose, shown, setShown }) {
+  const presets = [['Открытые', null], ['Только мои', null], ['Успешно завершённые', 'success'],
+  ['Нереализованные', 'danger'], ['Без задач', 'warning'], ['С просроченными', 'danger']];
+  const sev = { success: ['var(--mg-green-900)', 'var(--mg-green-100)'], danger: ['var(--mg-red-700)', 'var(--mg-red-50)'], warning: ['var(--mg-orange-900)', 'var(--mg-orange-50)'] };
+  const [active, setActive] = useState(['Открытые']);
+  const [hidOpen, setHidOpen] = useState(false);
+  const toggle = (l) => setActive((a) => a.includes(l) ? a.filter((x) => x !== l) : [...a, l]);
+  return <div style={{ borderBottom: '1px solid var(--c-border)', background: 'var(--c-hover)', padding: '16px 20px', flexShrink: 0 }}>
+    {/* search row */}
+    <div style={{ position: 'relative', marginBottom: '14px', maxWidth: 460 }}>
+      <i className="pi pi-search" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: 'var(--c-muted)' }} />
+      <input placeholder="Поиск по сделкам, компаниям, контактам…" style={{ width: '100%', height: 38, padding: '0 12px 0 34px',
+        border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+    </div>
+    {/* presets */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--c-muted)', marginRight: '2px' }}>Пресеты</span>
+      {presets.map(([l, s]) => {
+        const c = s ? sev[s] : ['var(--mg-primary-900)', 'var(--mg-primary-100)'];
+        const on = active.includes(l);
+        return <span key={l} onClick={() => toggle(l)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, padding: '6px 13px', borderRadius: '999px', cursor: 'pointer',
+          background: on ? c[1] : 'transparent', color: on ? c[0] : 'var(--c-text2)', border: '1px solid ' + (on ? 'transparent' : 'var(--c-border2)') }}>
+          {on && <i className="pi pi-check" style={{ fontSize: '10px' }} />}{l}</span>;
+      })}
+      <span style={{ flex: 1 }} />
+      <i className="pi pi-times" onClick={onClose} style={{ fontSize: '14px', color: 'var(--c-muted)', cursor: 'pointer', padding: '4px' }} />
+    </div>
+    {/* fields grid */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px 18px' }}>
+      <FilterField label="Ответственный" ph="Все сотрудники" />
+      <FilterField label="Этап" ph="Любой" />
+      <FilterField label="Продукт" ph="Любой" />
+      <FilterField label="Регион / страна" ph="Любой" />
+      <FilterField label="Город" ph="Любой" />
+      <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--c-text2)' }}>Бюджет</span>
+        <span style={{ display: 'flex', gap: '6px' }}>
+          <input placeholder="от" style={{ width: '50%', height: 36, padding: '0 10px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+          <input placeholder="до" style={{ width: '50%', height: 36, padding: '0 10px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+        </span></label>
+      <FilterField label="Теги" ph="Выбрать…" />
+      <FilterField label="Период создания" ph="За всё время" />
+    </div>
+    {/* скрытые статусы — раскрывающийся список с тригерами */}
+    <div style={{ marginTop: '16px', maxWidth: '50%', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', overflow: 'hidden' }}>
+      <button onClick={() => setHidOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', background: 'transparent',
+        border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', padding: '11px 13px', textAlign: 'left' }}>
+        <i className="pi pi-eye-slash" style={{ fontSize: '14px', color: 'var(--c-muted)' }} />
+        <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>Скрытые статусы</span>
+        {shown.length > 0 && <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--mg-primary-900)', background: 'var(--mg-primary-100)', borderRadius: '999px', padding: '1px 8px' }}>{shown.length} вкл.</span>}
+        <i className={'pi ' + (hidOpen ? 'pi-chevron-up' : 'pi-chevron-down')} style={{ fontSize: '11px', color: 'var(--c-muted)' }} />
+      </button>
+      {hidOpen && <div style={{ borderTop: '1px solid var(--c-border)', padding: '6px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--c-muted)', padding: '4px 7px 8px' }}>По умолчанию эти статусы скрыты из воронки. Включите тригер, чтобы отобразить колонку.</div>
+        {HIDDEN_COLS.map((h) => {
+          const on = shown.includes(h.id);
+          return <button key={h.id} onClick={() => setShown((s) => on ? s.filter((x) => x !== h.id) : [...s, h.id])}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', background: 'transparent', border: 'none',
+            cursor: 'pointer', padding: '8px 7px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--c-text)' }}>{h.name}</span>
+            <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{h.deals.length}</span>
+            <span style={{ width: 34, height: 19, borderRadius: '999px', background: on ? 'var(--mg-primary-900)' : 'var(--c-border2)',
+              position: 'relative', flexShrink: 0, transition: 'background .15s' }}>
+              <span style={{ position: 'absolute', top: 2, left: on ? 17 : 2, width: 15, height: 15, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} /></span>
+          </button>;
+        })}
+        <div style={{ height: 1, background: 'var(--c-border)', margin: '6px 0' }} />
+        <button style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', background: 'transparent',
+          border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 500, padding: '8px 7px', borderRadius: 'var(--mg-radius-sm)', color: 'var(--c-text2)' }}>
+          <i className="pi pi-cog" style={{ fontSize: '14px', color: 'var(--c-muted)' }} />Настроить, какие статусы скрывать</button>
+      </div>}
+    </div>
+    {/* footer */}
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+      <button onClick={onClose} style={{ height: 36, padding: '0 16px', borderRadius: 'var(--mg-radius-md)', border: 'none', background: 'transparent',
+        color: 'var(--c-text2)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Сбросить</button>
+      <button onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', height: 36, padding: '0 16px', borderRadius: 'var(--mg-radius-md)',
+        border: 'none', background: 'var(--mg-primary-900)', color: '#fff', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+        <i className="pi pi-check" style={{ fontSize: '12px' }} />Применить</button>
+    </div>
+  </div>;
+}
+
+/* ════════════════════════ app ════════════════════════ */
+const TWEAK_DEFAULTS = { accent: '#172747', dark: false, density: 'Обычная' };
+function App() {
+  const [view, setView] = useState('kanban');
+  const [more, setMore] = useState(false);
+  const [filter, setFilter] = useState(false);
+  const [pipe, setPipe] = useState('Продажи');
+  const [pipeOpen, setPipeOpen] = useState(false);
+  const [shownHidden, setShownHidden] = useState([]);
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const accent = t.accent,dark = t.dark;
+  const ACC = { '#172747': '#1f2f5a', '#2b2f36': '#3a3f47', '#312e81': '#3f3a9e', '#0f4d3a': '#13654c' };
+  const moreRef = React.useRef(null);
+  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': ACC[accent] || '#1f2f5a',
+    height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--c-board)' }}>
+    <TopBar view={view} setView={setView} onMore={() => setMore((m) => !m)} moreRef={moreRef}
+    onFilter={() => setFilter((f) => !f)} filterOn={filter} fcount={2} pipe={pipe} pipeOpen={pipeOpen} setPipeOpen={setPipeOpen} setPipe={setPipe} />
+    {pipeOpen && <span />}
+    {filter && <FilterPanel onClose={() => setFilter(false)} shown={shownHidden} setShown={setShownHidden} />}
+    {more && <MoreMenu onClose={() => setMore(false)} />}
+    {view === 'kanban' ?
+    <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px 20px', minHeight: 0 }}>
+          {COLUMNS.map((c) => <Column key={c.id} col={c} />)}
+          {HIDDEN_COLS.filter((h) => shownHidden.includes(h.id)).map((c) => <Column key={c.id} col={c} />)}
+        </div> :
+    <ListView />}
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Бренд" />
+      <TweakColor label="Акцент" value={t.accent} options={['#172747', '#2b2f36', '#312e81', '#0f4d3a']} onChange={(v) => setTweak('accent', v)} />
+      <TweakSection label="Полотно" />
+      <TweakToggle label="Тёмная тема" value={t.dark} onChange={(v) => setTweak('dark', v)} />
+    </TweaksPanel>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

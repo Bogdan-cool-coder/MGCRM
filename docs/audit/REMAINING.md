@@ -103,6 +103,13 @@
 - **F20/F22 prependLocal dedupe + updateActivityLocal reload** — **FIXED (2026-06-26):** `prependLocal` in both `useDealFeed` and `useEntityFeed` checks for existing `activity_${id}` before inserting; `updateActivityLocal` calls `load()` when the item is not in local list (F3b no-op guard).
 - **F25 OpenTasksList map pruning** — **FIXED (2026-06-26):** `pruneTaskMaps(id)` clears all per-id reactive maps on complete/delete.
 
+### Activity — My Tasks redesign + orphaned-target hardening (2026-06-27) — DONE
+
+- **My Tasks screen redesign** — DONE (QA PASS ×2): TasksTopBar, TasksBulkBar, TasksQuickCreate (новые компоненты); TasksKanbanBoard/TaskCard/MyTasksTable/MyTasksFilterPanel/MyTasksPresetTabs (переписаны). Kanban: 284px-колонки, bucket-colored headers (color-mix 13%), health-strip, auto-hide overdue (only non-done), flex:0 0 auto на картах. Список: 7-col (Срок/Сделка/Этап/Тип/Текст/Статус/Ответственный), select-mode, null-safe аватар-инициал. Bulk-режим: pin/reopen/delete. EntityPicker: autocomplete companies+contacts (debounced 250ms). Scope-сегмент: день/неделя/месяц в kanban. View-switch с localStorage.
+- **ActivityPolicy orphaned-target hardening** — DONE: `targetVisible()` возвращает `true` когда `Deal::find()` / `Company::find()` / `Contact::find()` = null (target soft-deleted/missing). ownershipAllows() остаётся единственным авторитетом для orphaned-активности. Out-of-scope target (EXISTS but foreign) по-прежнему блокирует. +7 тестов в `ActivityTargetVisibilityTest` (включая non-owner-stranger-still-blocked). 2258 PHPUnit зелёных.
+- **Стабы (UI-заглушки, беклог):** calendar-sync (toast «скоро»), CSV-export (toast «скоро») — backend не реализован, ожидают спринта Интеграций.
+- **Spec reconciliation (design-handoff):** Tasks-spec.md, EntityCard-spec.md, Contacts-spec.md (path fix → `front/src/pages/ContactsPage/`), DealCard-spec.md (note), HANDOFF.md — as-built пометки внесены.
+
 ### Activity — open follow-ups (deferred, not blockers)
 - **MINOR-9 FTM triplication** — Still open (Sales-domain files out of Activity agent scope).
 
