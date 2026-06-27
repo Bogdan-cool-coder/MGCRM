@@ -18,6 +18,7 @@ export interface TaskFilters {
   kind: ActivityKind | null
   status: ActivityStatus | null
   priority: ActivityPriority | null
+  responsible_id: number | null
   due_from: Date | null
   due_to: Date | null
   q: string
@@ -27,6 +28,7 @@ const DEFAULT_FILTERS: TaskFilters = {
   kind: null,
   status: null,
   priority: null,
+  responsible_id: null,
   due_from: null,
   due_to: null,
   q: '',
@@ -87,6 +89,7 @@ export function useMyTasks() {
       kind: f.kind ? [f.kind] : undefined,
       status: f.status ? [f.status] : undefined,
       priority: f.priority ? [f.priority] : undefined,
+      responsible_id: f.responsible_id ?? undefined,
       // Use local calendar fields — TZ-safe for Asia/Dubai (F4)
       due_from: f.due_from ? localDateString(f.due_from) : undefined,
       due_to: f.due_to ? localDateString(f.due_to) : undefined,
@@ -127,6 +130,7 @@ export function useMyTasks() {
       filters.value.kind,
       filters.value.status,
       filters.value.priority,
+      filters.value.responsible_id,
       filters.value.due_from,
       filters.value.due_to,
     ],

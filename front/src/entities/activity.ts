@@ -95,6 +95,8 @@ export interface ActivityDto {
     comment: string | null
   } | null
   department_id: number | null
+  /** ISO timestamp set by the server when the activity is completed. */
+  completed_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -212,6 +214,7 @@ export interface ActivityListParams {
   kind?: ActivityKind[]
   status?: ActivityStatus[]
   priority?: ActivityPriority[]
+  responsible_id?: number | null
   due_from?: string | null
   due_to?: string | null
   q?: string | null

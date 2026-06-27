@@ -32,7 +32,15 @@
 
         <!-- Center: value + action label on hover -->
         <div class="company-channels__info">
-          <span class="company-channels__value">{{ ch.value }}</span>
+          <div class="company-channels__value-row">
+            <span class="company-channels__value">{{ ch.value }}</span>
+            <!-- Primary star indicator -->
+            <i
+              v-if="ch.is_primary_for_channel"
+              class="pi pi-star-fill company-channels__primary-star"
+              :title="t('crm.company.channels.primary')"
+            />
+          </div>
           <span
             class="company-channels__action-label"
             :class="{ 'company-channels__action-label--visible': hoveredId === ch.id }"
@@ -73,37 +81,53 @@
         <p class="company-channels__empty-text">{{ t('crm.company.channels.empty') }}</p>
       </div>
 
-      <!-- Add channel form -->
-      <div v-if="addingOpen" class="company-channels__add-form">
-        <Select
-          v-model="newChannelType"
-          :options="channelTypeOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="t('crm.company.channels.selectType')"
-          class="company-channels__type-select"
-        />
-        <InputText
-          v-model="newChannelValue"
-          :placeholder="channelPlaceholder(newChannelType)"
-          class="company-channels__value-input"
-          @keyup.enter="submitAddChannel"
-        />
+      <!-- «+канал» Popover trigger -->
+      <div class="company-channels__add-trigger">
         <Button
-          icon="pi pi-check"
-          size="small"
-          :loading="saving"
-          :disabled="!newChannelType || !newChannelValue.trim()"
-          @click="submitAddChannel"
-        />
-        <Button
-          icon="pi pi-times"
+          :label="t('crm.company.channels.addChannel')"
+          icon="pi pi-plus"
           size="small"
           severity="secondary"
           text
-          @click="cancelAdd"
+          @click="toggleAddPopover"
         />
       </div>
+
+      <!-- Add channel Popover -->
+      <Popover ref="addPopoverRef" class="company-channels__popover">
+        <div class="company-channels__add-form">
+          <Select
+            v-model="newChannelType"
+            :options="channelTypeOptions"
+            option-label="label"
+            option-value="value"
+            :placeholder="t('crm.company.channels.selectType')"
+            class="company-channels__type-select"
+          />
+          <InputText
+            v-model="newChannelValue"
+            :placeholder="channelPlaceholder(newChannelType)"
+            class="company-channels__value-input"
+            @keyup.enter="submitAddChannel"
+          />
+          <div class="company-channels__add-actions">
+            <Button
+              :label="t('common.add')"
+              size="small"
+              :loading="saving"
+              :disabled="!newChannelType || !newChannelValue.trim()"
+              @click="submitAddChannel"
+            />
+            <Button
+              :label="t('common.cancel')"
+              size="small"
+              severity="secondary"
+              text
+              @click="cancelAdd"
+            />
+          </div>
+        </div>
+      </Popover>
     </template>
   </div>
 </template>
@@ -118,6 +142,7 @@ import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
 import Menu from 'primevue/menu'
+import Popover from 'primevue/popover'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { CompanyChannel, ChannelType } from '@/entities/crm'
@@ -138,6 +163,7 @@ const confirm = useConfirm()
 
 const hoveredId = ref<number | null>(null)
 const menuRefs = ref<Map<number, InstanceType<typeof Menu>>>(new Map())
+const addPopoverRef = ref<InstanceType<typeof Popover> | null>(null)
 
 // ── Channel action helpers ────────────────────────────────────────────────────
 
@@ -194,14 +220,23 @@ function onMenuClick(event: Event, ch: CompanyChannel) {
   menuRefs.value.get(ch.id)?.toggle(event)
 }
 
+const settingPrimaryId = ref<number | null>(null)
+
 function channelMenuItems(ch: CompanyChannel) {
-  return [
-    {
-      label: t('common.delete'),
-      icon: 'pi pi-times',
-      command: () => onDeleteChannel(ch),
-    },
-  ]
+  const items = []
+  if (!ch.is_primary_for_channel) {
+    items.push({
+      label: t('crm.company.channels.setPrimary'),
+      icon: 'pi pi-star',
+      command: () => onSetPrimary(ch),
+    })
+  }
+  items.push({
+    label: t('common.delete'),
+    icon: 'pi pi-times',
+    command: () => onDeleteChannel(ch),
+  })
+  return items
 }
 
 // ── Copy ──────────────────────────────────────────────────────────────────────
@@ -215,7 +250,7 @@ async function copyValue(value: string) {
   }
 }
 
-// ── Add form ──────────────────────────────────────────────────────────────────
+// ── Add — Popover ─────────────────────────────────────────────────────────────
 
 const addingOpen = ref(false)
 const newChannelType = ref<ChannelType | null>(null)
@@ -228,6 +263,9 @@ const channelTypeOptions = computed(() => [
   { value: 'website', label: t('crm.company.channels.website') },
   { value: 'tg', label: t('crm.company.channels.telegram') },
   { value: 'wa', label: t('crm.company.channels.whatsapp') },
+  { value: 'linkedin', label: t('crm.company.channels.linkedin') },
+  { value: 'instagram', label: t('crm.company.channels.instagram') },
+  { value: 'viber', label: t('crm.company.channels.viber') },
 ])
 
 function channelPlaceholder(type: ChannelType | null): string {
@@ -236,12 +274,17 @@ function channelPlaceholder(type: ChannelType | null): string {
   if (type === 'email') return 'email@example.com'
   if (type === 'tg') return '@username'
   if (type === 'wa') return '+7 (999) 000-00-00'
+  if (type === 'linkedin') return 'https://linkedin.com/in/...'
+  if (type === 'instagram') return '@username'
   if (type === 'website') return 'https://example.com'
   return ''
 }
 
+function toggleAddPopover(event: Event) {
+  addPopoverRef.value?.toggle(event)
+}
+
 function openAdd() {
-  addingOpen.value = true
   newChannelType.value = null
   newChannelValue.value = ''
 }
@@ -249,7 +292,10 @@ function openAdd() {
 defineExpose({ openAdd })
 
 function cancelAdd() {
+  addPopoverRef.value?.hide()
   addingOpen.value = false
+  newChannelType.value = null
+  newChannelValue.value = ''
 }
 
 async function submitAddChannel() {
@@ -261,7 +307,7 @@ async function submitAddChannel() {
       value: newChannelValue.value.trim(),
     })
     emit('updated', [...props.channels, created])
-    addingOpen.value = false
+    cancelAdd()
     toast.add({ severity: 'success', summary: t('crm.company.channels.added'), life: 2500 })
   } catch (err) {
     toast.add({
@@ -272,6 +318,37 @@ async function submitAddChannel() {
     })
   } finally {
     saving.value = false
+  }
+}
+
+// ── Set primary ───────────────────────────────────────────────────────────────
+
+async function onSetPrimary(ch: CompanyChannel) {
+  if (settingPrimaryId.value) return
+  settingPrimaryId.value = ch.id
+  try {
+    const updated = await companiesApi.updateChannel(props.companyId, ch.id, {
+      is_primary_for_channel: true,
+    })
+    // Optimistic unset others of same channel_type
+    const newChannels = props.channels.map((c) =>
+      c.id === updated.id
+        ? updated
+        : c.channel_type === updated.channel_type
+          ? { ...c, is_primary_for_channel: false }
+          : c,
+    )
+    emit('updated', newChannels)
+    toast.add({ severity: 'success', summary: t('crm.company.channels.setPrimarySuccess'), life: 2500 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    settingPrimaryId.value = null
   }
 }
 
@@ -384,6 +461,13 @@ function onDeleteChannel(ch: CompanyChannel) {
   gap: 1px;
 }
 
+.company-channels__value-row {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  min-width: 0;
+}
+
 .company-channels__value {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
@@ -395,6 +479,12 @@ function onDeleteChannel(ch: CompanyChannel) {
   .app-dark & {
     color: var(--p-surface-100);
   }
+}
+
+.company-channels__primary-star {
+  font-size: $font-size-2xs;
+  color: var(--p-yellow-500);
+  flex-shrink: 0;
 }
 
 .company-channels__action-label {
@@ -475,24 +565,33 @@ function onDeleteChannel(ch: CompanyChannel) {
   margin: 0;
 }
 
-// ─── Add form ─────────────────────────────────────────────────────────────────
+// ─── Add trigger ──────────────────────────────────────────────────────────────
+
+.company-channels__add-trigger {
+  padding: $space-1 $space-2;
+}
+
+// ─── Add form (inside Popover) ────────────────────────────────────────────────
 
 .company-channels__add-form {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: $space-2;
-  flex-wrap: wrap;
-  padding: $space-2 $space-3;
-  border-top: 1px solid var(--p-surface-100);
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  min-width: 240px;
 }
 
 .company-channels__type-select {
-  width: 140px;
-  flex-shrink: 0;
+  width: 100%;
 }
 
 .company-channels__value-input {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
+}
+
+.company-channels__add-actions {
+  display: flex;
+  gap: $space-2;
+  justify-content: flex-end;
 }
 </style>

@@ -19,7 +19,7 @@
       >
         <!-- Left: circular action icon 30×30 -->
         <component
-          :is="channelHref(ch)"
+          :is="channelLinkTag(ch)"
           :href="channelHref(ch)"
           :target="channelLinkTarget(ch)"
           :rel="channelLinkTarget(ch) ? 'noopener noreferrer' : undefined"
@@ -30,9 +30,17 @@
           <i :class="['pi', channelIcon(ch)]" />
         </component>
 
-        <!-- Center: value + right label (action on hover) -->
+        <!-- Center: value + action label on hover -->
         <div class="contact-channels__info">
-          <span class="contact-channels__value">{{ ch.value }}</span>
+          <div class="contact-channels__value-row">
+            <span class="contact-channels__value">{{ ch.value }}</span>
+            <!-- Primary star indicator -->
+            <i
+              v-if="ch.is_primary_for_channel"
+              class="pi pi-star-fill contact-channels__primary-star"
+              :title="t('crm.contact.channels.primary')"
+            />
+          </div>
           <span
             class="contact-channels__action-label"
             :class="{ 'contact-channels__action-label--visible': hoveredId === ch.id }"
@@ -51,7 +59,7 @@
           <i class="pi pi-copy" />
         </button>
 
-        <!-- Edit / Delete menu trigger -->
+        <!-- More menu -->
         <button
           type="button"
           class="contact-channels__more-btn"
@@ -73,37 +81,54 @@
         <p class="contact-channels__empty-text">{{ t('crm.contact.channels.empty') }}</p>
       </div>
 
-      <!-- Add channel form -->
-      <div v-if="addingOpen" class="contact-channels__add-form">
-        <Select
-          v-model="newChannelType"
-          :options="channelTypeOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="t('crm.contact.channels.selectType')"
-          class="contact-channels__type-select"
-        />
-        <InputText
-          v-model="newChannelValue"
-          :placeholder="channelPlaceholder(newChannelType)"
-          class="contact-channels__value-input"
-          @keyup.enter="submitAddChannel"
-        />
+      <!-- «+канал» Popover trigger -->
+      <div class="contact-channels__add-trigger">
         <Button
-          icon="pi pi-check"
-          size="small"
-          :loading="saving"
-          :disabled="!newChannelType || !newChannelValue.trim()"
-          @click="submitAddChannel"
-        />
-        <Button
-          icon="pi pi-times"
+          ref="addTriggerRef"
+          :label="t('crm.contact.channels.addChannel')"
+          icon="pi pi-plus"
           size="small"
           severity="secondary"
           text
-          @click="cancelAdd"
+          @click="toggleAddPopover"
         />
       </div>
+
+      <!-- Add channel Popover -->
+      <Popover ref="addPopoverRef" class="contact-channels__popover">
+        <div class="contact-channels__add-form">
+          <Select
+            v-model="newChannelType"
+            :options="channelTypeOptions"
+            option-label="label"
+            option-value="value"
+            :placeholder="t('crm.contact.channels.selectType')"
+            class="contact-channels__type-select"
+          />
+          <InputText
+            v-model="newChannelValue"
+            :placeholder="channelPlaceholder(newChannelType)"
+            class="contact-channels__value-input"
+            @keyup.enter="submitAddChannel"
+          />
+          <div class="contact-channels__add-actions">
+            <Button
+              :label="t('common.add')"
+              size="small"
+              :loading="saving"
+              :disabled="!newChannelType || !newChannelValue.trim()"
+              @click="submitAddChannel"
+            />
+            <Button
+              :label="t('common.cancel')"
+              size="small"
+              severity="secondary"
+              text
+              @click="cancelAdd"
+            />
+          </div>
+        </div>
+      </Popover>
     </template>
   </div>
 </template>
@@ -118,6 +143,7 @@ import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
 import Menu from 'primevue/menu'
+import Popover from 'primevue/popover'
 import { contactsApi } from '@/api/crm/contacts'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { ContactChannel, ChannelType } from '@/entities/crm'
@@ -138,6 +164,7 @@ const confirm = useConfirm()
 
 const hoveredId = ref<number | null>(null)
 const menuRefs = ref<Map<number, InstanceType<typeof Menu>>>(new Map())
+const addPopoverRef = ref<InstanceType<typeof Popover> | null>(null)
 
 // ── Channel action helpers (spec §4) ──────────────────────────────────────────
 
@@ -160,17 +187,25 @@ function channelHref(ch: ContactChannel): string {
   if (ch.channel_type === 'email') return `mailto:${ch.value}`
   if (ch.channel_type === 'tg') return `https://t.me/${ch.value.replace('@', '')}`
   if (ch.channel_type === 'wa') return `https://wa.me/${ch.value.replace(/\D/g, '')}`
+  if (ch.channel_type === 'website') {
+    return ch.value.startsWith('http') ? ch.value : `https://${ch.value}`
+  }
   return '#'
 }
 
+function channelLinkTag(ch: ContactChannel): string {
+  return ['phone', 'email', 'tg', 'wa', 'website'].includes(ch.channel_type) ? 'a' : 'span'
+}
+
 function channelLinkTarget(ch: ContactChannel): string | undefined {
-  if (ch.channel_type === 'tg' || ch.channel_type === 'wa') return '_blank'
+  if (['tg', 'wa', 'website', 'linkedin', 'instagram'].includes(ch.channel_type)) return '_blank'
   return undefined
 }
 
 function channelActionLabel(ch: ContactChannel): string {
   if (ch.channel_type === 'phone') return t('crm.contact.channels.call')
   if (ch.channel_type === 'email') return t('crm.contact.channels.sendEmail')
+  if (ch.channel_type === 'website') return t('crm.contact.channels.openSite')
   return t('crm.contact.channels.openChat')
 }
 
@@ -185,14 +220,23 @@ function onMenuClick(event: Event, ch: ContactChannel) {
   menuRefs.value.get(ch.id)?.toggle(event)
 }
 
+const settingPrimaryId = ref<number | null>(null)
+
 function channelMenuItems(ch: ContactChannel) {
-  return [
-    {
-      label: t('common.delete'),
-      icon: 'pi pi-times',
-      command: () => onDeleteChannel(ch),
-    },
-  ]
+  const items = []
+  if (!ch.is_primary_for_channel) {
+    items.push({
+      label: t('crm.contact.channels.setPrimary'),
+      icon: 'pi pi-star',
+      command: () => onSetPrimary(ch),
+    })
+  }
+  items.push({
+    label: t('common.delete'),
+    icon: 'pi pi-times',
+    command: () => onDeleteChannel(ch),
+  })
+  return items
 }
 
 // ── Copy ──────────────────────────────────────────────────────────────────────
@@ -206,9 +250,8 @@ async function copyValue(value: string) {
   }
 }
 
-// ── Add form ──────────────────────────────────────────────────────────────────
+// ── Add — Popover ─────────────────────────────────────────────────────────────
 
-const addingOpen = ref(false)
 const newChannelType = ref<ChannelType | null>(null)
 const newChannelValue = ref('')
 const saving = ref(false)
@@ -218,6 +261,10 @@ const channelTypeOptions = computed(() => [
   { value: 'email', label: t('crm.contact.channels.email') },
   { value: 'tg', label: t('crm.contact.channels.telegram') },
   { value: 'wa', label: t('crm.contact.channels.whatsapp') },
+  { value: 'linkedin', label: t('crm.contact.channels.linkedin') },
+  { value: 'instagram', label: t('crm.contact.channels.instagram') },
+  { value: 'viber', label: t('crm.contact.channels.viber') },
+  { value: 'website', label: t('crm.contact.channels.website') },
 ])
 
 function channelPlaceholder(type: ChannelType | null): string {
@@ -226,11 +273,20 @@ function channelPlaceholder(type: ChannelType | null): string {
   if (type === 'email') return 'email@example.com'
   if (type === 'tg') return '@username'
   if (type === 'wa') return '+7 (999) 000-00-00'
+  if (type === 'linkedin') return 'https://linkedin.com/in/...'
+  if (type === 'instagram') return '@username'
+  if (type === 'website') return 'https://example.com'
   return ''
 }
 
+function toggleAddPopover(event: Event) {
+  addPopoverRef.value?.toggle(event)
+}
+
 function openAdd() {
-  addingOpen.value = true
+  // Legacy expose kept for CompanyPage/ContactPage openAdd() delegation
+  // Now delegates to popover — trigger via button click simulation is not needed;
+  // parent just calls openAdd() to programmatically show it; we open state instead.
   newChannelType.value = null
   newChannelValue.value = ''
 }
@@ -238,7 +294,9 @@ function openAdd() {
 defineExpose({ openAdd })
 
 function cancelAdd() {
-  addingOpen.value = false
+  addPopoverRef.value?.hide()
+  newChannelType.value = null
+  newChannelValue.value = ''
 }
 
 async function submitAddChannel() {
@@ -250,7 +308,7 @@ async function submitAddChannel() {
       value: newChannelValue.value.trim(),
     })
     emit('updated', [...props.channels, created])
-    addingOpen.value = false
+    cancelAdd()
     toast.add({ severity: 'success', summary: t('crm.contact.channels.added'), life: 2500 })
   } catch (err) {
     toast.add({
@@ -261,6 +319,37 @@ async function submitAddChannel() {
     })
   } finally {
     saving.value = false
+  }
+}
+
+// ── Set primary ───────────────────────────────────────────────────────────────
+
+async function onSetPrimary(ch: ContactChannel) {
+  if (settingPrimaryId.value) return
+  settingPrimaryId.value = ch.id
+  try {
+    const updated = await contactsApi.updateChannel(props.contactId, ch.id, {
+      is_primary_for_channel: true,
+    })
+    // Backend auto-unsets others of same type; reflect via refetch
+    const newChannels = props.channels.map((c) =>
+      c.id === updated.id
+        ? updated
+        : c.channel_type === updated.channel_type
+          ? { ...c, is_primary_for_channel: false }
+          : c,
+    )
+    emit('updated', newChannels)
+    toast.add({ severity: 'success', summary: t('crm.contact.channels.setPrimarySuccess'), life: 2500 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    settingPrimaryId.value = null
   }
 }
 
@@ -374,6 +463,13 @@ function onDeleteChannel(ch: ContactChannel) {
   gap: 1px;
 }
 
+.contact-channels__value-row {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  min-width: 0;
+}
+
 .contact-channels__value {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
@@ -385,6 +481,12 @@ function onDeleteChannel(ch: ContactChannel) {
   .app-dark & {
     color: var(--p-surface-100);
   }
+}
+
+.contact-channels__primary-star {
+  font-size: $font-size-2xs;
+  color: var(--p-yellow-500);
+  flex-shrink: 0;
 }
 
 // Action label — shown on hover; spec §4: right label = «Позвонить / Написать / Открыть чат»
@@ -444,6 +546,36 @@ function onDeleteChannel(ch: ContactChannel) {
   }
 }
 
+// ─── Add trigger ──────────────────────────────────────────────────────────────
+
+.contact-channels__add-trigger {
+  padding: $space-1 $space-2;
+}
+
+// ─── Add form (inside Popover) ─────────────────────────────────────────────────
+
+.contact-channels__add-form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  min-width: 240px;
+}
+
+.contact-channels__type-select {
+  width: 100%;
+}
+
+.contact-channels__value-input {
+  width: 100%;
+}
+
+.contact-channels__add-actions {
+  display: flex;
+  gap: $space-2;
+  justify-content: flex-end;
+}
+
 // ─── Empty ────────────────────────────────────────────────────────────────────
 
 .contact-channels__empty {
@@ -464,26 +596,5 @@ function onDeleteChannel(ch: ContactChannel) {
   font-size: $font-size-sm;
   color: $surface-500;
   margin: 0;
-}
-
-// ─── Add form ─────────────────────────────────────────────────────────────────
-
-.contact-channels__add-form {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  flex-wrap: wrap;
-  padding: $space-2 $space-3;
-  border-top: 1px solid var(--p-surface-100);
-}
-
-.contact-channels__type-select {
-  width: 140px;
-  flex-shrink: 0;
-}
-
-.contact-channels__value-input {
-  flex: 1;
-  min-width: 0;
 }
 </style>

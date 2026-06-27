@@ -197,13 +197,20 @@ function openEdit(req: CompanyRequisite) {
   formOpen.value = true
 }
 
-async function onFormSaved(payload: CreateRequisitePayload, id?: number) {
+async function onFormSaved(payload: CreateRequisitePayload, id?: number, setAsCurrent?: boolean) {
   formDialog.value?.setSaving(true)
   try {
+    let savedId: number
     if (id) {
       await companiesApi.updateRequisite(props.company.id, id, payload)
+      savedId = id
     } else {
-      await companiesApi.createRequisite(props.company.id, payload)
+      const created = await companiesApi.createRequisite(props.company.id, payload)
+      savedId = created.id
+    }
+    // If user checked "set as current", call the dedicated endpoint
+    if (setAsCurrent) {
+      await companiesApi.setCurrentRequisite(props.company.id, savedId)
     }
     // Close dialog immediately on success; background-refresh list without blocking
     formOpen.value = false

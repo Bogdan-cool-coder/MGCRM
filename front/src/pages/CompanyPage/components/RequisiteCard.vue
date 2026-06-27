@@ -131,8 +131,8 @@ const visibleFields = computed((): ReqField[] => {
   if (r.country_code) {
     fields.push({ key: 'country_code', label: t('company.page.fields.country'), value: r.country_code })
   }
-  if (r.director) {
-    fields.push({ key: 'director', label: t('crm.company.requisites.fields.director'), value: r.director })
+  if (r.director_short) {
+    fields.push({ key: 'director', label: t('crm.company.requisites.fields.directorShort'), value: r.director_short })
   }
   if (r.bank_details?.bank) {
     fields.push({ key: 'bank', label: t('crm.company.requisites.fields.bank'), value: r.bank_details.bank })

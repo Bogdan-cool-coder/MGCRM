@@ -278,6 +278,15 @@ export const salesApi = {
     return res.data.data
   },
 
+  /** Fix payment fact — POST /api/deals/{deal}/fix-payment (kopecks). */
+  async fixPayment(
+    id: number,
+    payload: { paid_at?: string | null; paid_amount?: number | null; payment_currency?: string | null },
+  ): Promise<DealDto> {
+    const res = await apiClient.post<{ data: DealDto }>(`/api/deals/${id}/fix-payment`, payload)
+    return res.data.data
+  },
+
   // ── Deal Products ──────────────────────────────────────────────────────────
 
   async getDealProducts(dealId: number): Promise<DealProductDto[]> {

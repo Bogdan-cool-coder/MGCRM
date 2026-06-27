@@ -19,8 +19,9 @@
 
     <div class="tasks-top-bar__spacer" />
 
-    <!-- Filter button -->
+    <!-- Filter button — list view only (kanban has no server-side filter support) -->
     <button
+      v-if="view === 'list'"
       type="button"
       class="tasks-top-bar__filter-btn"
       :class="{ 'tasks-top-bar__filter-btn--active': filterActive }"

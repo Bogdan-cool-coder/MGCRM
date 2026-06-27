@@ -56,7 +56,7 @@ export interface BulkCompanyPayload {
 
 export interface AttachHoldingPayload {
   parent_id: number
-  holding_role: 'parent' | 'subsidiary'
+  holding_role: 'parent' | 'subsidiary' | 'affiliate'
 }
 
 export interface CreateCompanyPayload {
@@ -325,7 +325,7 @@ export const companiesApi = {
 
   async addChannel(
     companyId: number,
-    payload: { channel_type: string; value: string },
+    payload: { channel_type: string; value: string; label?: string },
   ): Promise<CompanyChannel> {
     const res = await apiClient.post<{ data: CompanyChannel }>(
       `/api/companies/${companyId}/channels`,
@@ -337,7 +337,7 @@ export const companiesApi = {
   async updateChannel(
     companyId: number,
     channelId: number,
-    payload: { channel_type?: string; value?: string },
+    payload: { channel_type?: string; value?: string; label?: string; is_primary_for_channel?: boolean },
   ): Promise<CompanyChannel> {
     const res = await apiClient.patch<{ data: CompanyChannel }>(
       `/api/companies/${companyId}/channels/${channelId}`,

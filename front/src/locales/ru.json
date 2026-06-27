@@ -858,7 +858,8 @@
       "lastContact": "Посл. контакт",
       "openTasks": "Открытых задач",
       "companies": "Компании",
-      "dealsSum": "Сумма сделок"
+      "dealsSum": "Сумма сделок",
+      "openTasksTooltip": "Прямые задачи контакта · задачи по связанным сделкам"
     },
     "page": {
       "back": "Назад",
@@ -1820,7 +1821,9 @@
           "dealCreated": "Сделка создана",
           "dealCreatedVerb": "создал сделку",
           "fieldsChanged": "Изменены поля",
-          "moreChanges": "ещё {n} изм."
+          "moreChanges": "ещё {n} изм.",
+          "paymentFixedVerb": "зафиксировал оплату",
+          "paymentFixedOn": "на {date}"
         }
       },
       "composer": {
@@ -3173,9 +3176,14 @@
         "task": "Задача",
         "note": "Заметка",
         "follow_up": "Follow-up",
+        "presentation": "КП",
         "qualification": "Квалификация",
         "warm": "Warm",
         "hot": "HOT"
+      },
+      "reschedule": {
+        "success": "Срок перенесён",
+        "error": "Не удалось перенести задачу"
       }
     },
     "page": {
@@ -3520,10 +3528,25 @@
           "bik": "БИК",
           "validFrom": "Действует с",
           "note": "Примечание",
-          "notePlaceholder": "Необязательно"
+          "notePlaceholder": "Необязательно",
+          "legalForm": "Юр. форма (кратко)",
+          "directorPosition": "Должность директора",
+          "directorPositionPlaceholder": "Генеральный директор",
+          "directorShort": "Директор (ФИО кратко)",
+          "directorShortPlaceholder": "Иванов И.И.",
+          "actsBasis": "Действует на основании",
+          "actsBasisPlaceholder": "Устава",
+          "bankCodeLabel": "Тип кода банка",
+          "bankCode": "Код банка",
+          "validTo": "Действует до"
         },
         "errors": {
           "legalNameRequired": "Юридическое название обязательно"
+        },
+        "section": {
+          "director": "Директор",
+          "tax": "Налог / Идентификатор",
+          "bank": "Банковские реквизиты"
         }
       },
       "holding": {
@@ -3536,7 +3559,10 @@
         "detach": "Отвязать от группы",
         "attached": "Компания добавлена в группу",
         "detached": "Компания отвязана от группы",
-        "cyclicError": "Нельзя создать циклическую зависимость"
+        "cyclicError": "Нельзя создать циклическую зависимость",
+        "roleSubsidiary": "Дочерняя",
+        "roleAffiliate": "Аффилированная",
+        "roleLabel": "Роль в группе"
       },
       "payments": {
         "placeholder": "Платежи доступны после подключения финансового модуля (M9)",
@@ -3558,7 +3584,13 @@
         "empty": "Каналы связи не указаны",
         "added": "Канал добавлен",
         "deleted": "Канал удалён",
-        "deleteConfirm": "Удалить этот канал связи?"
+        "deleteConfirm": "Удалить этот канал связи?",
+        "linkedin": "LinkedIn",
+        "instagram": "Instagram",
+        "viber": "Viber",
+        "primary": "Основной",
+        "setPrimary": "Сделать основным",
+        "setPrimarySuccess": "Основной канал обновлён"
       }
     },
     "contact": {
@@ -3599,7 +3631,15 @@
         "empty": "Каналы связи не указаны",
         "added": "Канал добавлен",
         "deleted": "Канал удалён",
-        "deleteConfirm": "Удалить этот канал связи?"
+        "deleteConfirm": "Удалить этот канал связи?",
+        "linkedin": "LinkedIn",
+        "instagram": "Instagram",
+        "viber": "Viber",
+        "website": "Сайт",
+        "openSite": "Открыть сайт",
+        "primary": "Основной",
+        "setPrimary": "Сделать основным",
+        "setPrimarySuccess": "Основной канал обновлён"
       },
       "relations": {
         "add": "Добавить связь",
@@ -3685,7 +3725,8 @@
         "data_changed": "изменил данные",
         "contract_event": "событие по договору",
         "finance_event": "финансовое событие",
-        "unknown": "выполнил действие"
+        "unknown": "выполнил действие",
+        "payment_fixed": "зафиксировал оплату"
       },
       "metrics": {
         "openDeals": "Открытых сделок",

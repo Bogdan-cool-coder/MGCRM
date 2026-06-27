@@ -75,7 +75,7 @@ export interface Contact {
 // ─── Company ──────────────────────────────────────────────────────────────────
 
 export type CategoryCode = 'L' | 'M' | 'S1' | 'S2'
-export type HoldingRole = 'parent' | 'child'
+export type HoldingRole = 'parent' | 'subsidiary' | 'affiliate'
 
 export interface Company {
   id: number
@@ -394,8 +394,9 @@ export interface CompanyClientStatusLogEntry {
 
 export interface CompanyRequisiteBankDetails {
   bank: string | null
+  bank_code_label: string | null
+  bank_code: string | null
   account: string | null
-  bik: string | null
 }
 
 export interface CompanyRequisite {
@@ -403,12 +404,16 @@ export interface CompanyRequisite {
   company_id: number
   label: string | null
   legal_name: string
+  legal_form: string | null
   full_legal_form: string | null
+  gender_ending_oe: string | null
+  director_position: string | null
+  director_short: string | null
+  director_genitive: string | null
+  acts_basis: string | null
   tax_id_label: string | null
   tax_id: string | null
   country_code: string | null
-  director: string | null
-  director_genitive: string | null
   address: string | null
   bank_details: CompanyRequisiteBankDetails | null
   is_current: boolean
@@ -421,20 +426,28 @@ export interface CompanyRequisite {
 
 export interface CreateRequisitePayload {
   label?: string | null
-  legal_name: string
+  legal_name?: string | null
+  legal_form?: string | null
   full_legal_form?: string | null
+  gender_ending_oe?: string | null
+  director_position?: string | null
+  director_short?: string | null
+  director_genitive?: string | null
+  acts_basis?: string | null
   tax_id_label?: string | null
   tax_id?: string | null
   country_code?: string | null
-  director?: string | null
-  director_genitive?: string | null
   address?: string | null
-  bank?: string | null
-  account?: string | null
-  bik?: string | null
+  bank_details?: {
+    bank?: string | null
+    bank_code_label?: string | null
+    bank_code?: string | null
+    account?: string | null
+  } | null
   valid_from?: string | null
+  valid_to?: string | null
   note?: string | null
-  set_as_current?: boolean
+  is_current?: boolean | null
 }
 
 export type UpdateRequisitePayload = Partial<CreateRequisitePayload>

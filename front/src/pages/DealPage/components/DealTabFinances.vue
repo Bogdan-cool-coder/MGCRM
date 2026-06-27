@@ -165,7 +165,7 @@ const currencyOptions = [
   { label: 'AED', value: 'AED' },
 ]
 
-// ── Handle save — PATCH /api/deals/{id} with paid_at, paid_amount, payment_currency ──
+// ── Handle save — POST /api/deals/{id}/fix-payment ───────────────────────────
 
 async function handleFixPayment() {
   if (!canSave.value) return
@@ -181,11 +181,11 @@ async function handleFixPayment() {
       payload.paid_amount = paymentAmountKopecks.value
       payload.payment_currency = paymentCurrency.value
     }
-    const updated = await salesApi.updateDeal(props.deal.id, payload)
+    const updated = await salesApi.fixPayment(props.deal.id, payload)
     emit('dealUpdated', updated)
     toast.add({
       severity: 'success',
-      summary: t('sales.deal.finances.fixPayment'),
+      summary: t('crm.log.events.payment_fixed'),
       life: 2000,
     })
   } catch {

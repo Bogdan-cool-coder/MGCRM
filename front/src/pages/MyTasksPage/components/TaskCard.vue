@@ -7,6 +7,7 @@
       'task-card--done': task.status === 'done',
       'task-card--selected': selected,
     }"
+    draggable="true"
     @click="onCardClick"
   >
     <!-- Select-mode checkbox -->
@@ -110,7 +111,7 @@ function kindLabelFn(kind: ActivityKind): string {
     task: t('tasks.board.taskTypes.task'),
     note: t('tasks.board.taskTypes.note'),
     follow_up: t('tasks.board.taskTypes.follow_up'),
-    presentation: 'КП',
+    presentation: t('tasks.board.taskTypes.presentation'),
   }
   return map[kind] ?? kind
 }

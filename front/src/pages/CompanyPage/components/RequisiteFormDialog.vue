@@ -3,7 +3,7 @@
     v-model:visible="visible"
     :header="isEdit ? t('crm.company.requisites.edit') : t('crm.company.requisites.add')"
     modal
-    style="width: 600px; max-width: 95vw"
+    style="width: 660px; max-width: 95vw"
     @hide="onHide"
   >
     <form class="requisite-form" @submit.prevent="onSubmit">
@@ -20,7 +20,7 @@
 
         <!-- Legal name (required) -->
         <div class="col-md-8">
-          <label class="requisite-form__label requisite-form__label--required">
+          <label class="requisite-form__label">
             {{ t('crm.company.requisites.fields.legalName') }}
           </label>
           <InputText
@@ -32,14 +32,78 @@
           <small v-if="errors.legal_name" class="p-error">{{ errors.legal_name }}</small>
         </div>
 
-        <!-- Full legal form -->
+        <!-- Legal form short -->
         <div class="col-md-4">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.legalForm') }}</label>
+          <InputText
+            v-model="form.legal_form"
+            class="w-full"
+            placeholder="ООО / АО / ТОО"
+          />
+        </div>
+
+        <!-- Full legal form -->
+        <div class="col-12">
           <label class="requisite-form__label">{{ t('crm.company.requisites.fields.fullLegalForm') }}</label>
           <InputText
             v-model="form.full_legal_form"
             class="w-full"
-            placeholder="ТОО / ООО / АО"
+            placeholder="Общество с ограниченной ответственностью"
           />
+        </div>
+
+        <!-- Director section divider -->
+        <div class="col-12">
+          <div class="requisite-form__section-divider">
+            <span>{{ t('crm.company.requisites.section.director') }}</span>
+          </div>
+        </div>
+
+        <!-- Director position -->
+        <div class="col-md-6">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.directorPosition') }}</label>
+          <InputText
+            v-model="form.director_position"
+            class="w-full"
+            :placeholder="t('crm.company.requisites.fields.directorPositionPlaceholder')"
+          />
+        </div>
+
+        <!-- Director short -->
+        <div class="col-md-6">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.directorShort') }}</label>
+          <InputText
+            v-model="form.director_short"
+            class="w-full"
+            :placeholder="t('crm.company.requisites.fields.directorShortPlaceholder')"
+          />
+        </div>
+
+        <!-- Director genitive -->
+        <div class="col-md-6">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.directorGenitive') }}</label>
+          <InputText
+            v-model="form.director_genitive"
+            class="w-full"
+            :placeholder="t('crm.company.requisites.fields.directorGenitivePlaceholder')"
+          />
+        </div>
+
+        <!-- Acts basis -->
+        <div class="col-md-6">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.actsBasis') }}</label>
+          <InputText
+            v-model="form.acts_basis"
+            class="w-full"
+            :placeholder="t('crm.company.requisites.fields.actsBasisPlaceholder')"
+          />
+        </div>
+
+        <!-- Tax section divider -->
+        <div class="col-12">
+          <div class="requisite-form__section-divider">
+            <span>{{ t('crm.company.requisites.section.tax') }}</span>
+          </div>
         </div>
 
         <!-- Tax ID label + Tax ID -->
@@ -77,28 +141,8 @@
           />
         </div>
 
-        <!-- Director -->
-        <div class="col-md-8">
-          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.director') }}</label>
-          <InputText
-            v-model="form.director"
-            class="w-full"
-            :placeholder="t('crm.company.requisites.fields.directorPlaceholder')"
-          />
-        </div>
-
-        <!-- Director genitive -->
-        <div class="col-12">
-          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.directorGenitive') }}</label>
-          <InputText
-            v-model="form.director_genitive"
-            class="w-full"
-            :placeholder="t('crm.company.requisites.fields.directorGenitivePlaceholder')"
-          />
-        </div>
-
         <!-- Address -->
-        <div class="col-12">
+        <div class="col-md-8">
           <label class="requisite-form__label">{{ t('company.page.fields.address') }}</label>
           <Textarea
             v-model="form.address"
@@ -111,7 +155,7 @@
         <!-- Bank section divider -->
         <div class="col-12">
           <div class="requisite-form__section-divider">
-            <span>{{ t('company.requisites.section.bank') }}</span>
+            <span>{{ t('crm.company.requisites.section.bank') }}</span>
           </div>
         </div>
 
@@ -121,17 +165,23 @@
           <InputText v-model="form.bank" class="w-full" />
         </div>
 
-        <!-- Account + BIK -->
+        <!-- Bank code label + Bank code -->
+        <div class="col-md-4">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.bankCodeLabel') }}</label>
+          <InputText v-model="form.bank_code_label" class="w-full" placeholder="БИК / SWIFT" />
+        </div>
         <div class="col-md-8">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.bankCode') }}</label>
+          <InputText v-model="form.bank_code" class="w-full" />
+        </div>
+
+        <!-- Account -->
+        <div class="col-12">
           <label class="requisite-form__label">{{ t('crm.company.requisites.fields.account') }}</label>
           <InputText v-model="form.account" class="w-full" />
         </div>
-        <div class="col-md-4">
-          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.bik') }}</label>
-          <InputText v-model="form.bik" class="w-full" />
-        </div>
 
-        <!-- Valid from + note -->
+        <!-- Valid from / to -->
         <div class="col-md-6">
           <label class="requisite-form__label">{{ t('crm.company.requisites.fields.validFrom') }}</label>
           <DatePicker
@@ -142,8 +192,18 @@
           />
         </div>
         <div class="col-md-6">
-          <!-- Set as current (only on create) -->
-          <div v-if="!isEdit" class="requisite-form__toggle-row">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.validTo') }}</label>
+          <DatePicker
+            v-model="form.valid_to_date"
+            class="w-full"
+            date-format="dd.mm.yy"
+            show-button-bar
+          />
+        </div>
+
+        <!-- Set as current (only on create) -->
+        <div v-if="!isEdit" class="col-12">
+          <div class="requisite-form__toggle-row">
             <label class="requisite-form__label">{{ t('crm.company.requisites.setAsCurrentOnCreate') }}</label>
             <ToggleSwitch v-model="form.set_as_current" />
           </div>
@@ -199,7 +259,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  saved: [payload: CreateRequisitePayload, id?: number]
+  saved: [payload: CreateRequisitePayload, id?: number, setAsCurrent?: boolean]
 }>()
 
 const { t } = useI18n()
@@ -219,17 +279,23 @@ const visible = computed({
 interface FormState {
   label: string
   legal_name: string
+  legal_form: string
   full_legal_form: string
+  director_position: string
+  director_short: string
+  director_genitive: string
+  acts_basis: string
   tax_id_label: string
   tax_id: string
   country_code: string | null
-  director: string
-  director_genitive: string
   address: string
+  // bank fields (flat in form, nested in payload)
   bank: string
+  bank_code_label: string
+  bank_code: string
   account: string
-  bik: string
   valid_from_date: Date | null
+  valid_to_date: Date | null
   note: string
   set_as_current: boolean
 }
@@ -238,17 +304,22 @@ function emptyForm(): FormState {
   return {
     label: '',
     legal_name: '',
+    legal_form: '',
     full_legal_form: '',
+    director_position: '',
+    director_short: '',
+    director_genitive: '',
+    acts_basis: '',
     tax_id_label: '',
     tax_id: '',
     country_code: null,
-    director: '',
-    director_genitive: '',
     address: '',
     bank: '',
+    bank_code_label: '',
+    bank_code: '',
     account: '',
-    bik: '',
     valid_from_date: null,
+    valid_to_date: null,
     note: '',
     set_as_current: false,
   }
@@ -273,17 +344,22 @@ watch(
       form.value = {
         label: req.label ?? '',
         legal_name: req.legal_name ?? '',
+        legal_form: req.legal_form ?? '',
         full_legal_form: req.full_legal_form ?? '',
+        director_position: req.director_position ?? '',
+        director_short: req.director_short ?? '',
+        director_genitive: req.director_genitive ?? '',
+        acts_basis: req.acts_basis ?? '',
         tax_id_label: req.tax_id_label ?? '',
         tax_id: req.tax_id ?? '',
         country_code: req.country_code ?? null,
-        director: req.director ?? '',
-        director_genitive: req.director_genitive ?? '',
         address: req.address ?? '',
         bank: req.bank_details?.bank ?? '',
+        bank_code_label: req.bank_details?.bank_code_label ?? '',
+        bank_code: req.bank_details?.bank_code ?? '',
         account: req.bank_details?.account ?? '',
-        bik: req.bank_details?.bik ?? '',
         valid_from_date: req.valid_from ? new Date(req.valid_from) : null,
+        valid_to_date: req.valid_to ? new Date(req.valid_to) : null,
         note: req.note ?? '',
         set_as_current: false,
       }
@@ -299,9 +375,6 @@ watch(
 
 function validate(): boolean {
   errors.value = {}
-  if (!form.value.legal_name.trim()) {
-    errors.value.legal_name = t('crm.company.requisites.errors.legalNameRequired')
-  }
   return Object.keys(errors.value).length === 0
 }
 
@@ -310,27 +383,41 @@ function validate(): boolean {
 function onSubmit() {
   if (!validate()) return
 
+  // Build bank_details only if any bank field is set
+  const bank = form.value.bank.trim() || null
+  const bankCodeLabel = form.value.bank_code_label.trim() || null
+  const bankCode = form.value.bank_code.trim() || null
+  const account = form.value.account.trim() || null
+
+  const bankDetails =
+    bank || bankCodeLabel || bankCode || account
+      ? { bank, bank_code_label: bankCodeLabel, bank_code: bankCode, account }
+      : null
+
   const payload: CreateRequisitePayload = {
     label: form.value.label.trim() || null,
-    legal_name: form.value.legal_name.trim(),
+    legal_name: form.value.legal_name.trim() || null,
+    legal_form: form.value.legal_form.trim() || null,
     full_legal_form: form.value.full_legal_form.trim() || null,
+    director_position: form.value.director_position.trim() || null,
+    director_short: form.value.director_short.trim() || null,
+    director_genitive: form.value.director_genitive.trim() || null,
+    acts_basis: form.value.acts_basis.trim() || null,
     tax_id_label: form.value.tax_id_label.trim() || null,
     tax_id: form.value.tax_id.trim() || null,
     country_code: form.value.country_code || null,
-    director: form.value.director.trim() || null,
-    director_genitive: form.value.director_genitive.trim() || null,
     address: form.value.address.trim() || null,
-    bank: form.value.bank.trim() || null,
-    account: form.value.account.trim() || null,
-    bik: form.value.bik.trim() || null,
+    bank_details: bankDetails,
     valid_from: form.value.valid_from_date
       ? form.value.valid_from_date.toISOString().slice(0, 10)
       : null,
+    valid_to: form.value.valid_to_date
+      ? form.value.valid_to_date.toISOString().slice(0, 10)
+      : null,
     note: form.value.note.trim() || null,
-    set_as_current: form.value.set_as_current,
   }
 
-  emit('saved', payload, props.requisite?.id)
+  emit('saved', payload, props.requisite?.id, form.value.set_as_current)
 }
 
 function onHide() {
@@ -369,7 +456,7 @@ defineExpose({ setSaving: (v: boolean) => { saving.value = v } })
   gap: $space-2;
 
   span {
-    font-size: $font-size-3xs; // snap from 10px
+    font-size: $font-size-3xs;
     font-weight: $font-weight-bold;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -395,9 +482,8 @@ defineExpose({ setSaving: (v: boolean) => { saving.value = v } })
 
 .requisite-form__toggle-row {
   display: flex;
-  flex-direction: column;
-  gap: $space-2;
-  padding-top: $space-4;
+  align-items: center;
+  gap: $space-3;
 }
 
 .w-full {

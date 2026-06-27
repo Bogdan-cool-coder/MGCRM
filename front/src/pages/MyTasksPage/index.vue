@@ -22,10 +22,10 @@
       />
     </Transition>
 
-    <!-- FilterPanel -->
+    <!-- FilterPanel — list view only (kanban has no server-side filter support) -->
     <Transition name="tasks-panel-slide">
       <MyTasksFilterPanel
-        v-if="filterOpen"
+        v-if="filterOpen && activeView === 'list'"
         v-model="filters"
         @reset="onResetFilters"
         @close="filterOpen = false"
@@ -55,6 +55,7 @@
         :selected-ids="selectedIds"
         @task-created="onKanbanTaskCreated"
         @task-completed="onKanbanTaskCompleted"
+        @task-rescheduled="onKanbanTaskRescheduled"
         @error="onKanbanError"
         @toggle-select="toggleSelectItem"
       />
@@ -216,12 +217,12 @@ const {
 
 const hasActiveFilters = computed(() => {
   const f = filters.value
-  return !!(f.kind || f.status || f.priority || f.due_from || f.due_to || f.q)
+  return !!(f.kind || f.status || f.priority || f.responsible_id || f.due_from || f.due_to || f.q)
 })
 
 const activeFilterCount = computed(() => {
   const f = filters.value
-  return [f.kind, f.status, f.priority, f.due_from, f.due_to, f.q]
+  return [f.kind, f.status, f.priority, f.responsible_id, f.due_from, f.due_to, f.q]
     .filter(Boolean).length
 })
 
@@ -448,6 +449,11 @@ function onKanbanTaskCreated(activity: ActivityDto) {
 
 function onKanbanTaskCompleted() {
   toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 3000 })
+  void refreshCounts()
+}
+
+function onKanbanTaskRescheduled() {
+  toast.add({ severity: 'success', summary: t('tasks.board.reschedule.success'), life: 2500 })
   void refreshCounts()
 }
 

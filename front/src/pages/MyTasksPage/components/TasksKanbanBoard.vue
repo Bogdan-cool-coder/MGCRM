@@ -27,6 +27,10 @@
         v-for="bucket in visibleBuckets"
         :key="bucket.key"
         class="task-board__col"
+        :class="{ 'task-board__col--drop-target': dragOverBucket === bucket.key }"
+        @dragover.prevent="onDragOver(bucket.key)"
+        @dragleave="onDragLeave(bucket.key)"
+        @drop.prevent="onDrop($event, bucket.key)"
       >
         <!-- Column header -->
         <div
@@ -55,6 +59,8 @@
             class="task-board__card"
             @complete="onComplete"
             @toggle-select="emit('toggleSelect', $event)"
+            @dragstart="onCardDragStart($event, task.id, bucket.key)"
+            @dragend="onCardDragEnd"
           />
           <div v-if="bucket.tasks.length === 0" class="task-board__col-empty">
             {{ t('tasks.board.columns.noTasks') }}
@@ -66,12 +72,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Skeleton from 'primevue/skeleton'
 import TaskCard from './TaskCard.vue'
 import { useTaskBoard } from '../composables/useTaskBoard'
 import type { TaskScope } from '../composables/useTaskBoard'
+import { OPERATIONAL_TZ } from '@/utils/activity'
 import type { MyBoardBucket } from '@/entities/activity'
 import type { ActivityDto } from '@/entities/activity'
 
@@ -86,6 +93,7 @@ const emit = defineEmits<{
   taskCreated: [activity: ActivityDto]
   error: [message: string]
   toggleSelect: [id: number]
+  taskRescheduled: []
 }>()
 
 const { t } = useI18n()
@@ -130,7 +138,7 @@ function bucketMeta(key: MyBoardBucket): string {
 
   const now = new Date()
   const locale = 'ru-RU'
-  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'short', timeZone: 'Asia/Dubai' }
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'short', timeZone: OPERATIONAL_TZ }
 
   if (key === 'today') {
     return new Intl.DateTimeFormat(locale, opts).format(now)
@@ -144,7 +152,7 @@ function bucketMeta(key: MyBoardBucket): string {
     const dayIdx = now.getDay() // 0=Sun
     const daysToSunday = dayIdx === 0 ? 0 : 7 - dayIdx
     const sun = new Date(now.getTime() + daysToSunday * 86_400_000)
-    const d = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' }).format(sun)
+    const d = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: OPERATIONAL_TZ }).format(sun)
     return `до ${d}`
   }
   if (key === 'next_week') {
@@ -152,7 +160,7 @@ function bucketMeta(key: MyBoardBucket): string {
     const daysToNextMon = dayIdx === 0 ? 1 : 8 - dayIdx
     const nextMon = new Date(now.getTime() + daysToNextMon * 86_400_000)
     const nextSun = new Date(nextMon.getTime() + 6 * 86_400_000)
-    const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' }).format(d)
+    const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: OPERATIONAL_TZ }).format(d)
     return `${fmt(nextMon)} – ${fmt(nextSun)}`
   }
   return ''
@@ -165,6 +173,56 @@ async function onComplete(id: number) {
     emit('taskCompleted')
   } catch {
     emit('error', t('tasks.board.card.completed'))
+  }
+}
+
+// ── Drag-and-drop ─────────────────────────────────────────────────────────────
+
+const dragOverBucket = ref<MyBoardBucket | null>(null)
+/** Tracks the in-flight drag payload — set on dragstart, cleared on dragend/drop */
+const dragPayload = ref<{ taskId: number; sourceBucket: MyBoardBucket } | null>(null)
+
+function onCardDragStart(event: DragEvent, taskId: number, sourceBucket: MyBoardBucket) {
+  if (!event.dataTransfer) return
+  event.dataTransfer.effectAllowed = 'move'
+  // Store payload both in dataTransfer (cross-component) and in a local ref
+  // so the drop handler can read it even in browsers where dataTransfer.getData
+  // is restricted during dragover.
+  event.dataTransfer.setData('text/plain', String(taskId))
+  dragPayload.value = { taskId, sourceBucket }
+}
+
+function onCardDragEnd() {
+  dragOverBucket.value = null
+  dragPayload.value = null
+}
+
+function onDragOver(bucket: MyBoardBucket) {
+  // «overdue» is not a valid drop target — you can't reschedule into the past
+  if (bucket === 'overdue') return
+  dragOverBucket.value = bucket
+}
+
+function onDragLeave(bucket: MyBoardBucket) {
+  if (dragOverBucket.value === bucket) {
+    dragOverBucket.value = null
+  }
+}
+
+async function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
+  dragOverBucket.value = null
+  if (targetBucket === 'overdue') return
+
+  const payload = dragPayload.value
+  dragPayload.value = null
+
+  if (!payload || payload.sourceBucket === targetBucket) return
+
+  try {
+    await taskBoard.rescheduleTask(payload.taskId, targetBucket)
+    emit('taskRescheduled')
+  } catch {
+    emit('error', t('tasks.board.reschedule.error'))
   }
 }
 
@@ -360,5 +418,31 @@ onMounted(() => { void taskBoard.load() })
 
 .task-board__card {
   flex: 0 0 auto; // prevent flex-shrink crushing cards when column overflows; col scrolls instead
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// ── Drag-and-drop drop-target highlight ────────────────────────────────────────
+
+.task-board__col--drop-target {
+  outline: 2px dashed $primary-900;
+  outline-offset: -2px;
+  border-radius: $radius-lg;
+
+  .app-dark & {
+    outline-color: $primary-300;
+  }
+
+  .task-board__col-body {
+    background: $primary-50;
+
+    .app-dark & {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: rgba(23, 39, 71, 0.18);
+    }
+  }
 }
 </style>

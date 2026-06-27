@@ -217,7 +217,8 @@ const childrenCount = computed(() => {
 
 function holdingRoleLabel(role: HoldingRole | null): string {
   if (role === 'parent') return t('crm.company.holding.roleParent')
-  if (role === 'child') return t('crm.company.holding.roleChild')
+  if (role === 'subsidiary') return t('crm.company.holding.roleSubsidiary')
+  if (role === 'affiliate') return t('crm.company.holding.roleAffiliate')
   return role ?? ''
 }
 </script>

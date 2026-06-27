@@ -518,12 +518,18 @@ const contactKpiItems = computed((): KpiItem[] => {
       deals_sum?: number
       deals_sum_currency?: string
       open_tasks_count?: number
+      open_tasks_count_deals?: number
       companies_count?: number
       last_touch_at?: string | null
     } | null
   }) | null
   const lastAt = ext?.last_activity_at ?? ext?.kpi?.last_touch_at ?? null
-  const openTasksCount = ext?.kpi?.open_tasks_count ?? 0
+  const openTasksDirect = ext?.kpi?.open_tasks_count ?? 0
+  const openTasksDeals = ext?.kpi?.open_tasks_count_deals ?? 0
+  // Format: «3 · +5 по сделкам» when both are non-zero, else just direct count
+  const openTasksValue = openTasksDeals > 0
+    ? `${openTasksDirect} · +${openTasksDeals}`
+    : String(openTasksDirect)
   const companiesCount = ext?.kpi?.companies_count ?? companies.value.length
   const dealsSum = ext?.kpi?.deals_sum ?? null
   const dealsSumCurrency = ext?.kpi?.deals_sum_currency ?? null
@@ -548,8 +554,9 @@ const contactKpiItems = computed((): KpiItem[] => {
       key: 'open_tasks',
       icon: 'pi-check-square',
       label: 'contact.kpi.openTasks',
-      value: openTasksCount,
+      value: openTasksValue,
       accent: 'amber', // spec §2: tasks pill always amber
+      tooltip: 'contact.kpi.openTasksTooltip',
     },
     {
       key: 'companies',

@@ -20,6 +20,7 @@ export type FeedItemType =
   | 'stage_change'
   | 'field_change'
   | 'deal_created'
+  | 'payment_fixed'
   | 'note'
   | 'task'
   | 'call'
@@ -43,8 +44,15 @@ export interface FieldChange {
   new_value: string | null
 }
 
+export interface PaymentFixedPayload {
+  /** Amount in kopecks (integer) or null */
+  amount: number | null
+  currency: string | null
+  paid_at: string | null
+}
+
 export interface FeedItem {
-  /** Composite key from backend: stage_{id} / activity_{id} / audit_{id} / deal_created */
+  /** Composite key from backend: stage_{id} / activity_{id} / audit_{id} / deal_created / payment_{id} */
   id: string
   type: FeedItemType
   /** ISO timestamp for sorting */
@@ -61,6 +69,8 @@ export interface FeedItem {
   fieldChanges?: FieldChange[]
   /** True when this is the synthetic deal_created item */
   isDealCreated?: boolean
+  /** Populated for payment_fixed */
+  paymentFixed?: PaymentFixedPayload
 }
 
 export interface FeedGroup {
@@ -102,12 +112,18 @@ interface RawFeedPayloadFieldChange {
   new_value: string | null
 }
 
+interface RawFeedPayloadPaymentFixed {
+  amount: number | null
+  currency: string | null
+  paid_at: string | null
+}
+
 interface RawFeedItem {
   id: string
-  type: 'stage_change' | 'activity' | 'field_change'
+  type: 'stage_change' | 'activity' | 'field_change' | 'payment_fixed'
   occurred_at: string
   actor: RawFeedActor | null
-  payload: RawFeedPayloadStage | RawFeedPayloadActivity | RawFeedPayloadFieldChange
+  payload: RawFeedPayloadStage | RawFeedPayloadActivity | RawFeedPayloadFieldChange | RawFeedPayloadPaymentFixed
 }
 
 interface FeedApiResponse {
@@ -204,6 +220,22 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
           new_value: p.new_value,
         },
       ],
+    }
+  }
+
+  if (raw.type === 'payment_fixed') {
+    const p = raw.payload as RawFeedPayloadPaymentFixed
+    return {
+      id: raw.id,
+      type: 'payment_fixed',
+      timestamp,
+      date,
+      actor,
+      paymentFixed: {
+        amount: p.amount,
+        currency: p.currency,
+        paid_at: p.paid_at,
+      },
     }
   }
 
@@ -479,6 +511,14 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
       return
     }
 
+    // D3: when a task is completed, bump the feed item's timestamp to completed_at
+    // so the live update re-sorts it to "now" — matching reload behavior where
+    // backend stamps occurred_at = completed_at on the feed event.
+    const isClosed =
+      updated.status === 'done' || updated.status === 'rejected' || updated.is_closed
+    const completedTs =
+      isClosed && updated.completed_at ? updated.completed_at : null
+
     allItems.value = allItems.value.map((item) => {
       if (item.type === 'deal_created') return item
       if (
@@ -489,7 +529,16 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
           item.type === 'follow_up') &&
         item.activity?.id === updated.id
       ) {
-        return { ...item, activity: updated }
+        // If the activity was just closed and we have a completed_at timestamp,
+        // move the feed item to that time so groupByDate re-sorts it near "now".
+        const newTimestamp = completedTs ?? item.timestamp
+        const newDate = toDate(newTimestamp)
+        return {
+          ...item,
+          timestamp: newTimestamp,
+          date: newDate,
+          activity: updated,
+        }
       }
       return item
     })

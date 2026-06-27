@@ -858,7 +858,8 @@
       "lastContact": "Last contact",
       "openTasks": "Open tasks",
       "companies": "Companies",
-      "dealsSum": "Deals amount"
+      "dealsSum": "Deals amount",
+      "openTasksTooltip": "Direct contact tasks · tasks via linked deals"
     },
     "page": {
       "back": "Back",
@@ -1820,7 +1821,9 @@
           "dealCreated": "Deal created",
           "dealCreatedVerb": "created the deal",
           "fieldsChanged": "Fields changed",
-          "moreChanges": "{n} more"
+          "moreChanges": "{n} more",
+          "paymentFixedVerb": "fixed payment",
+          "paymentFixedOn": "on {date}"
         }
       },
       "composer": {
@@ -3173,9 +3176,14 @@
         "task": "Task",
         "note": "Note",
         "follow_up": "Follow-up",
+        "presentation": "Presentation",
         "qualification": "Qualification",
         "warm": "Warm",
         "hot": "HOT"
+      },
+      "reschedule": {
+        "success": "Task rescheduled",
+        "error": "Failed to reschedule task"
       }
     },
     "page": {
@@ -3520,10 +3528,25 @@
           "bik": "Bank code (BIC)",
           "validFrom": "Valid from",
           "note": "Note",
-          "notePlaceholder": "Optional"
+          "notePlaceholder": "Optional",
+          "legalForm": "Legal form (short)",
+          "directorPosition": "Director position",
+          "directorPositionPlaceholder": "CEO",
+          "directorShort": "Director (short name)",
+          "directorShortPlaceholder": "Smith J.",
+          "actsBasis": "Acts on the basis of",
+          "actsBasisPlaceholder": "Charter",
+          "bankCodeLabel": "Bank code type",
+          "bankCode": "Bank code",
+          "validTo": "Valid until"
         },
         "errors": {
           "legalNameRequired": "Legal name is required"
+        },
+        "section": {
+          "director": "Director",
+          "tax": "Tax / Identifier",
+          "bank": "Bank details"
         }
       },
       "holding": {
@@ -3536,7 +3559,10 @@
         "detach": "Remove from group",
         "attached": "Company added to group",
         "detached": "Company removed from group",
-        "cyclicError": "Cannot create a cyclic dependency"
+        "cyclicError": "Cannot create a cyclic dependency",
+        "roleSubsidiary": "Subsidiary",
+        "roleAffiliate": "Affiliated",
+        "roleLabel": "Role in group"
       },
       "payments": {
         "placeholder": "Payments are available after connecting the finance module (M9)",
@@ -3558,7 +3584,13 @@
         "empty": "No channels added",
         "added": "Channel added",
         "deleted": "Channel deleted",
-        "deleteConfirm": "Delete this channel?"
+        "deleteConfirm": "Delete this channel?",
+        "linkedin": "LinkedIn",
+        "instagram": "Instagram",
+        "viber": "Viber",
+        "primary": "Primary",
+        "setPrimary": "Set as primary",
+        "setPrimarySuccess": "Primary channel updated"
       }
     },
     "contact": {
@@ -3599,7 +3631,15 @@
         "empty": "No channels added",
         "added": "Channel added",
         "deleted": "Channel deleted",
-        "deleteConfirm": "Delete this channel?"
+        "deleteConfirm": "Delete this channel?",
+        "linkedin": "LinkedIn",
+        "instagram": "Instagram",
+        "viber": "Viber",
+        "website": "Website",
+        "openSite": "Open website",
+        "primary": "Primary",
+        "setPrimary": "Set as primary",
+        "setPrimarySuccess": "Primary channel updated"
       },
       "relations": {
         "add": "Add relation",
@@ -3685,7 +3725,8 @@
         "data_changed": "changed data",
         "contract_event": "contract event",
         "finance_event": "finance event",
-        "unknown": "performed action"
+        "unknown": "performed action",
+        "payment_fixed": "fixed payment"
       },
       "metrics": {
         "openDeals": "Open deals",

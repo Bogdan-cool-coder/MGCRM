@@ -105,7 +105,13 @@
           <p>{{ t('crm.files.emptyFiles') }}</p>
         </div>
 
-        <!-- File rows -->
+        <!-- File rows.
+             Spec §9 mentions a pi-ellipsis-v overflow menu (Скачать / Удалить).
+             Decision: kept as inline icons — Скачать must be a native <a> link for
+             browser "Save as" to work, and Удалить is a single destructive action;
+             an overlay menu for 2 items adds click-overhead for no UX gain.
+             System folder names ('Папка менеджера сделки', 'Сканы договоров', 'Папка ОКС')
+             come from the backend and are rendered as-is — they match spec strings. -->
         <template v-else>
           <div
             v-for="file in files"

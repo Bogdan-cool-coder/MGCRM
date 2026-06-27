@@ -10,6 +10,7 @@
       <div
         v-for="item in items"
         :key="item.key"
+        v-tooltip.bottom="item.tooltip ? t(item.tooltip) : undefined"
         class="entity-kpi-strip__item"
         :class="[accentBgClass(item.accent), { 'entity-kpi-strip__item--clickable': item.clickable }]"
         role="listitem"
@@ -33,6 +34,7 @@ export interface KpiItem {
   label: string
   value: string | number
   accent?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'brand' | 'teal' | 'amber'
+  tooltip?: string
   clickable?: boolean
   onClick?: () => void
 }

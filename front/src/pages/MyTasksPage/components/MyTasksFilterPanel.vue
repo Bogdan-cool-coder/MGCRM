@@ -15,24 +15,6 @@
       </button>
     </div>
 
-    <!-- Preset pills -->
-    <div class="tasks-filter-panel__presets">
-      <button
-        v-for="preset in FILTER_PRESETS"
-        :key="preset.value"
-        type="button"
-        class="tasks-filter-panel__preset-pill"
-        :class="[
-          `tasks-filter-panel__preset-pill--${preset.severity}`,
-          { 'tasks-filter-panel__preset-pill--active': localFilters.activePresets?.includes(preset.value) },
-        ]"
-        @click="togglePreset(preset.value)"
-      >
-        <i v-if="localFilters.activePresets?.includes(preset.value)" class="pi pi-check tasks-filter-panel__preset-check" />
-        {{ t(`tasks.filter.presets.${preset.value}`) }}
-      </button>
-    </div>
-
     <!-- Field grid -->
     <div class="tasks-filter-panel__grid">
       <!-- Kind -->
@@ -137,11 +119,6 @@ import Button from 'primevue/button'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import type { TaskFilters } from '../composables/useMyTasks'
 
-interface LocalFilters extends TaskFilters {
-  activePresets: string[]
-  responsible_id: number | null
-}
-
 const props = defineProps<{
   modelValue: TaskFilters
 }>()
@@ -155,62 +132,27 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const { users, loading: usersLoading, load: loadUsers } = useUsersCache()
 
-const FILTER_PRESETS = [
-  { value: 'my_tasks', severity: 'brand' },
-  { value: 'today', severity: 'brand' },
-  { value: 'overdue', severity: 'danger' },
-  { value: 'no_due', severity: 'warning' },
-  { value: 'completed', severity: 'success' },
-  { value: 'all', severity: 'brand' },
-]
-
-const localFilters = ref<LocalFilters>({
-  ...props.modelValue,
-  activePresets: [],
-  responsible_id: null,
-})
+const localFilters = ref<TaskFilters>({ ...props.modelValue })
 
 watch(() => props.modelValue, (val) => {
-  localFilters.value = {
-    ...val,
-    activePresets: localFilters.value.activePresets,
-    responsible_id: localFilters.value.responsible_id,
-  }
+  localFilters.value = { ...val }
 }, { deep: true })
-
-function togglePreset(preset: string) {
-  const arr = localFilters.value.activePresets
-  const idx = arr.indexOf(preset)
-  if (idx >= 0) {
-    localFilters.value.activePresets = arr.filter((p) => p !== preset)
-  } else {
-    localFilters.value.activePresets = [...arr, preset]
-  }
-}
 
 function onReset() {
   localFilters.value = {
     kind: null,
     status: null,
     priority: null,
+    responsible_id: null,
     due_from: null,
     due_to: null,
     q: '',
-    activePresets: [],
-    responsible_id: null,
   }
   emit('reset')
 }
 
 function onApply() {
-  emit('update:modelValue', {
-    kind: localFilters.value.kind,
-    status: localFilters.value.status,
-    priority: localFilters.value.priority,
-    due_from: localFilters.value.due_from,
-    due_to: localFilters.value.due_to,
-    q: localFilters.value.q,
-  })
+  emit('update:modelValue', { ...localFilters.value })
 }
 
 const kindOptions = computed(() => [
@@ -344,96 +286,6 @@ onMounted(() => {
       background: var(--p-surface-700);
     }
   }
-}
-
-// ── Preset pills ──────────────────────────────────────────────────────────────
-
-.tasks-filter-panel__presets {
-  display: flex;
-  gap: $space-2;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.tasks-filter-panel__preset-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-1;
-  padding: 6px $space-3;
-  border: 1px solid $surface-300;
-  border-radius: $radius-pill;
-  background: $surface-card;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $surface-600;
-  cursor: pointer;
-  transition: all var(--app-transition-fast);
-
-  .app-dark & {
-    border-color: var(--p-surface-600);
-    background: var(--p-surface-700);
-    color: var(--p-surface-300);
-  }
-
-  &:hover {
-    border-color: $primary-900;
-    color: $primary-900;
-  }
-
-  &--active {
-    &.tasks-filter-panel__preset-pill--brand {
-      background: $primary-100;
-      border-color: $primary-900;
-      color: $primary-900;
-
-      .app-dark & {
-        // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-        background: rgba(23, 39, 71, 0.25);
-        border-color: $primary-300;
-        color: $primary-300;
-      }
-    }
-
-    &.tasks-filter-panel__preset-pill--danger {
-      background: $color-danger-bg;
-      border-color: $color-danger;
-      color: $color-danger-text;
-
-      .app-dark & {
-        background: var(--p-red-900);
-        border-color: var(--p-red-500);
-        color: var(--p-red-300);
-      }
-    }
-
-    &.tasks-filter-panel__preset-pill--warning {
-      background: $color-warning-bg;
-      border-color: $color-warning;
-      color: $color-warning-text;
-
-      .app-dark & {
-        background: var(--p-yellow-900);
-        border-color: var(--p-yellow-500);
-        color: var(--p-yellow-300);
-      }
-    }
-
-    &.tasks-filter-panel__preset-pill--success {
-      background: $task-tag-meeting-bg;
-      border-color: $task-tag-meeting-text;
-      color: $task-tag-meeting-text;
-
-      .app-dark & {
-        background: var(--p-green-900);
-        border-color: var(--p-green-500);
-        color: var(--p-green-300);
-      }
-    }
-  }
-}
-
-.tasks-filter-panel__preset-check {
-  font-size: $font-size-xs;
 }
 
 // ── Grid ──────────────────────────────────────────────────────────────────────

@@ -65,6 +65,10 @@
               <span class="feed-item__sys-new">{{ change.new_value ?? '—' }}</span>
             </span>
           </template>
+          <!-- payment fixed -->
+          <template v-else-if="item.type === 'payment_fixed'">
+            <span v-if="paymentFixedLabel" class="feed-item__sys-new">{{ paymentFixedLabel }}</span>
+          </template>
           <span class="feed-item__sys-time">{{ formatTime(item.timestamp) }}</span>
         </div>
       </template>
@@ -196,6 +200,7 @@ import Menu from 'primevue/menu'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import MeetingReportDialog from '@/components/MeetingReportDialog.vue'
 import { statusSeverity, formatDueDate } from '@/utils/activity'
+import { formatCurrency } from '@/utils/currency'
 import type { FeedItem } from '../composables/useDealFeed'
 import type { ActivityDto } from '@/entities/activity'
 
@@ -258,7 +263,8 @@ const isSystem = computed(
   (): boolean =>
     props.item.type === 'stage_change' ||
     props.item.type === 'field_change' ||
-    props.item.type === 'deal_created',
+    props.item.type === 'deal_created' ||
+    props.item.type === 'payment_fixed',
 )
 
 /** Dot size: 22px for system events, 26px for activities (spec §7.2) */
@@ -276,6 +282,7 @@ const dotVariant = computed((): 'primary' | 'green' | 'red' | 'surface' | 'kind'
   if (props.item.type === 'deal_created') return 'green'
   if (props.item.type === 'stage_change') return 'primary'
   if (props.item.type === 'field_change') return 'surface'
+  if (props.item.type === 'payment_fixed') return 'green'
   if (kindAccentColor.value) return 'kind'
   // fallback activity
   const a = props.item.activity
@@ -292,6 +299,7 @@ const itemIcon = computed((): string => {
     case 'stage_change': return 'pi-flag'
     case 'deal_created': return 'pi-plus-circle'
     case 'field_change': return 'pi-pencil'
+    case 'payment_fixed': return 'pi-wallet'
     default: return 'pi-circle'
   }
 })
@@ -319,8 +327,25 @@ const systemVerb = computed((): string => {
     case 'deal_created': return t('sales.deal.feed.events.dealCreatedVerb', 'создал сделку')
     case 'stage_change': return t('sales.deal.feed.events.stageChangedVerb', 'изменил стадию')
     case 'field_change': return t('sales.deal.feed.events.fieldsChangedVerb', 'изменил')
+    case 'payment_fixed': return t('sales.deal.feed.events.paymentFixedVerb', 'зафиксировал оплату')
     default: return ''
   }
+})
+
+/** Formatted payment amount string for payment_fixed items */
+const paymentFixedLabel = computed((): string => {
+  const pf = props.item.paymentFixed
+  if (!pf) return ''
+  const parts: string[] = []
+  if (pf.amount != null && pf.currency) {
+    parts.push(formatCurrency(pf.amount, pf.currency))
+  } else if (pf.amount != null) {
+    parts.push(formatCurrency(pf.amount, 'RUB'))
+  }
+  if (pf.paid_at) {
+    parts.push(t('sales.deal.feed.events.paymentFixedOn', { date: pf.paid_at }))
+  }
+  return parts.join(' ')
 })
 
 const menuItems = computed(() => {
@@ -472,6 +497,11 @@ function onActivityUpdated(activity: ActivityDto) {
   &--green {
     background: var(--p-green-500);
     color: $sidebar-text-active;
+
+    .app-dark & {
+      background: var(--p-green-400);
+      color: var(--p-surface-900);
+    }
   }
 
   &--red {

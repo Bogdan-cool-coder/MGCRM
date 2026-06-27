@@ -21,7 +21,7 @@ export function localDateString(d: Date): string {
 }
 
 /** Operational timezone for the system (server and task deadlines). */
-const OPERATIONAL_TZ = 'Asia/Dubai'
+export const OPERATIONAL_TZ = 'Asia/Dubai'
 
 /**
  * Return the current YYYY-MM-DD date in the operational timezone (Asia/Dubai).

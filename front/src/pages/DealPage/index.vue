@@ -95,7 +95,7 @@
           @back="router.back()"
           @open-move-dialog="openMoveDialog"
           @open-move-dialog-with-stage="openMoveDialogWithStage"
-          @deal-updated="updateDealLocal"
+          @deal-updated="onDealUpdatedFromPanel"
           @deal-deleted="onDealDeleted"
           @deal-archived="onDealArchived"
           @open-add-product="addProductDialogOpen = true"
@@ -137,7 +137,7 @@
           @back="infoPanelOpen = false"
           @open-move-dialog="openMoveDialog"
           @open-move-dialog-with-stage="openMoveDialogWithStage"
-          @deal-updated="updateDealLocal"
+          @deal-updated="onDealUpdatedFromPanel"
           @deal-deleted="onDealDeleted"
           @deal-archived="onDealArchived"
           @open-add-product="addProductDialogOpen = true"
@@ -175,7 +175,7 @@
           @back="router.back()"
           @open-move-dialog="openMoveDialog"
           @open-move-dialog-with-stage="openMoveDialogWithStage"
-          @deal-updated="updateDealLocal"
+          @deal-updated="onDealUpdatedFromPanel"
           @deal-deleted="onDealDeleted"
           @deal-archived="onDealArchived"
           @open-add-product="addProductDialogOpen = true"
@@ -399,6 +399,18 @@ async function onTaskDeleted(activityId: number) {
   } catch {
     toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
   }
+}
+
+/**
+ * Handles dealUpdated from DealInfoPanel (and any sub-panel — DealTabFinances, etc.).
+ * Updates local deal state AND reloads the feed so payment_fixed (and any other
+ * server-emitted feed items) appear immediately without a manual page reload.
+ * Also refreshes the /log widget (same as note/complete actions).
+ */
+function onDealUpdatedFromPanel(updates: Partial<DealDto>) {
+  updateDealLocal(updates)
+  void feedComposable.load()
+  reloadInfoPanelLog()
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────────────

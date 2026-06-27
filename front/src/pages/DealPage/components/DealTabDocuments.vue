@@ -101,13 +101,27 @@
             </div>
           </div>
 
-          <!-- Rejected reason plate -->
+          <!-- Rejected / needs-rework reason plate (visible to ALL roles) -->
           <div
-            v-if="approval.decision === 'rejected' && approval.comment"
+            v-if="rejectionComments.length > 0"
             class="deal-tab-docs__reject-plate"
           >
-            <i class="pi pi-times-circle me-1" />
-            {{ approval.comment }}
+            <div class="deal-tab-docs__reject-plate-header">
+              <i class="pi pi-times-circle me-1" />
+              <span>{{
+                activeDoc?.status === 'needs_rework'
+                  ? t('documents.approval.reworkAlert')
+                  : t('documents.approval.rejectedAlert')
+              }}</span>
+            </div>
+            <div
+              v-for="rc in rejectionComments"
+              :key="rc.user_id"
+              class="deal-tab-docs__reject-plate-item"
+            >
+              <span class="deal-tab-docs__reject-plate-author">{{ rc.user_name }}:</span>
+              {{ rc.comment }}
+            </div>
           </div>
 
           <!-- Reject inline form -->
@@ -403,6 +417,13 @@ const flatVotes = computed(() => {
   if (!approval.value) return []
   return approval.value.stages.flatMap((s) => s.approvals)
 })
+
+// All rejection/rework vote comments — shown in the rejection plate for all roles
+const rejectionComments = computed(() =>
+  flatVotes.value.filter(
+    (v) => (v.decision === 'rejected' || v.decision === 'needs_rework') && v.comment,
+  ),
+)
 
 async function loadApproval() {
   if (!activeDocId.value) return
@@ -794,7 +815,7 @@ onMounted(async () => {
     }
   }
 
-  // Rejected reason plate
+  // Rejection reason plate — visible to all roles
   &__reject-plate {
     background: var(--p-red-50);
     border: 1px solid var(--p-red-200);
@@ -803,12 +824,31 @@ onMounted(async () => {
     font-size: $font-size-sm;
     color: var(--p-red-700);
     margin-bottom: $space-2;
+    display: flex;
+    flex-direction: column;
+    gap: $space-1;
 
     .app-dark & {
       background: transparent;
       border-color: var(--p-red-500);
       color: var(--p-red-400);
     }
+  }
+
+  &__reject-plate-header {
+    font-weight: $font-weight-semibold;
+    display: flex;
+    align-items: center;
+  }
+
+  &__reject-plate-item {
+    padding-left: $space-3;
+    line-height: $line-height-normal;
+  }
+
+  &__reject-plate-author {
+    font-weight: $font-weight-medium;
+    margin-right: $space-1;
   }
 
   // Inline reject form

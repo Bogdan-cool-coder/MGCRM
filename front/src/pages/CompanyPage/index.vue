@@ -396,32 +396,45 @@
       </template>
     </Dialog>
 
-    <!-- Attach holding dialog (simple) -->
+    <!-- Attach holding dialog -->
     <Dialog
       v-model:visible="showAttachHolding"
       :header="t('crm.company.holding.addParent')"
       modal
-      style="width: 420px"
+      style="width: 440px"
     >
-      <div class="company-page-v2__field">
-        <label class="company-page-v2__label">{{ t('crm.company.holding.parentCompany') }} *</label>
-        <AutoComplete
-          v-model="holdingParentSearch"
-          :suggestions="holdingParentSuggestions"
-          option-label="name"
-          :placeholder="t('common.search')"
-          class="w-full"
-          force-selection
-          @complete="searchHoldingParent($event.query)"
-          @option-select="holdingParentId = $event.value.id"
-        />
+      <div class="row g-3" style="padding-top: 4px">
+        <div class="col-12">
+          <label class="company-page-v2__label">{{ t('crm.company.holding.parentCompany') }} *</label>
+          <AutoComplete
+            v-model="holdingParentSearch"
+            :suggestions="holdingParentSuggestions"
+            option-label="name"
+            :placeholder="t('common.search')"
+            class="w-full"
+            force-selection
+            @complete="searchHoldingParent($event.query)"
+            @option-select="holdingParentId = $event.value.id"
+          />
+        </div>
+        <div class="col-12">
+          <label class="company-page-v2__label">{{ t('crm.company.holding.roleLabel') }} *</label>
+          <Select
+            v-model="holdingRole"
+            :options="holdingRoleOptions"
+            option-label="label"
+            option-value="value"
+            class="w-full"
+            :placeholder="t('common.select')"
+          />
+        </div>
       </div>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" text @click="showAttachHolding = false" />
         <Button
           :label="t('common.save')"
           :loading="holdingAttaching"
-          :disabled="!holdingParentId"
+          :disabled="!holdingParentId || !holdingRole"
           @click="onAttachHolding"
         />
       </template>
@@ -549,6 +562,13 @@ const holdingParentSearch = ref('')
 const holdingParentId = ref<number | null>(null)
 const holdingParentSuggestions = ref<Array<{ id: number; name: string }>>([])
 const holdingAttaching = ref(false)
+const holdingRole = ref<'parent' | 'subsidiary' | 'affiliate' | null>(null)
+
+const holdingRoleOptions = computed(() => [
+  { value: 'parent', label: t('crm.company.holding.roleParent') },
+  { value: 'subsidiary', label: t('crm.company.holding.roleSubsidiary') },
+  { value: 'affiliate', label: t('crm.company.holding.roleAffiliate') },
+])
 
 // ── Channels state ─────────────────────────────────────────────────────────────
 
@@ -894,16 +914,17 @@ function searchHoldingParent(query: string) {
 }
 
 async function onAttachHolding() {
-  if (!holdingParentId.value || !companyId.value) return
+  if (!holdingParentId.value || !companyId.value || !holdingRole.value) return
   holdingAttaching.value = true
   try {
     await companiesApi.attachHolding(companyId.value, {
       parent_id: holdingParentId.value,
-      holding_role: 'subsidiary',
+      holding_role: holdingRole.value,
     })
     showAttachHolding.value = false
     holdingParentSearch.value = ''
     holdingParentId.value = null
+    holdingRole.value = null
     await loadHolding()
     toast.add({ severity: 'success', summary: t('crm.company.holding.attached'), life: 3000 })
   } catch (err) {

@@ -290,13 +290,8 @@ function onTitleKeydown(e: KeyboardEvent) {
   }
 }
 
-// Ctrl+Enter double-submit guard — reuse single-submit loading
-let lastSubmit = 0
-
 async function onSubmit() {
-  const now = Date.now()
-  if (now - lastSubmit < 1000) return
-  lastSubmit = now
+  if (creating.value) return
 
   titleError.value = null
   if (!form.value.title.trim()) {
