@@ -81,41 +81,68 @@ class Activity extends Model
     }
 
     /**
+     * The three boolean attributes that must ALL be true for a counted FTM —
+     * factored out of the query scope AND the object predicate so the two forms
+     * (SQL and PHP) of the rule can never silently drift apart (risk Н from plan).
+     * The remaining two conditions are kind=meeting and a non-null report URL,
+     * which differ in form between the scope (SQL) and predicate (PHP) and are
+     * applied explicitly in each.
+     *
+     * @var list<string>
+     */
+    private const FTM_BOOLEAN_FLAGS = [
+        'is_first_time_meeting',
+        'ftm_decision_maker_attended',
+        'ftm_presentation_shown',
+    ];
+
+    /**
      * The five FTM (first-time meeting) conditions (plan §Б2) — the SINGLE
      * SOURCE for the FTM predicate. The KPI count, the feed's ftm_only filter,
      * the per-item ftm_counted flag and ManagerKpiService all delegate here so a
      * rule change can never silently desync the surfaces (risk Н from plan).
      *
-     * Query form: scope the builder to counted FTM meetings.
+     * Query form: scope the builder to counted FTM meetings. The field list is
+     * shared with qualifiesAsFtm() via FTM_BOOLEAN_FLAGS — the scope and the
+     * object predicate cannot diverge on which flags are required.
      *
      * @param  Builder<Activity>  $query
      * @return Builder<Activity>
      */
     public function scopeFtmCounted(Builder $query): Builder
     {
-        return $query
-            ->where('kind', ActivityType::Meeting->value)
-            ->where('is_first_time_meeting', true)
-            ->where('ftm_decision_maker_attended', true)
-            ->where('ftm_presentation_shown', true)
-            ->whereNotNull('ftm_report_url');
+        $query->where('kind', ActivityType::Meeting->value);
+
+        foreach (self::FTM_BOOLEAN_FLAGS as $flag) {
+            $query->where($flag, true);
+        }
+
+        return $query->whereNotNull('ftm_report_url');
     }
 
     /**
      * Object form of the five FTM conditions — true ⇔ this row is a counted FTM.
      * Accepts any object carrying the FTM attributes (Activity model, stdClass
      * row, feed item) so the KPI service and the feed resource share one rule.
+     * The required boolean flags are read from FTM_BOOLEAN_FLAGS — the same list
+     * the query scope iterates — so the two forms stay in lock-step.
      */
     public static function qualifiesAsFtm(object $row): bool
     {
         $kind = $row->kind ?? null;
         $kindValue = $kind instanceof \BackedEnum ? $kind->value : $kind;
 
-        return $kindValue === ActivityType::Meeting->value
-            && (bool) ($row->is_first_time_meeting ?? false)
-            && (bool) ($row->ftm_decision_maker_attended ?? false)
-            && (bool) ($row->ftm_presentation_shown ?? false)
-            && ! empty($row->ftm_report_url);
+        if ($kindValue !== ActivityType::Meeting->value) {
+            return false;
+        }
+
+        foreach (self::FTM_BOOLEAN_FLAGS as $flag) {
+            if (! (bool) ($row->{$flag} ?? false)) {
+                return false;
+            }
+        }
+
+        return ! empty($row->ftm_report_url);
     }
 
     /**
