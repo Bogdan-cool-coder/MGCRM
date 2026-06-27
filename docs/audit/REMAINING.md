@@ -4,7 +4,68 @@
 
 Закрыто за 3 волны: **161** проблем (17 P0 + ~80 major + ~60 minor/trivial), запушено в main (04dfa8c, b092670, bdc59d3, bd7f966). Backend 2954 тестов зелёные, vue-tsc 0, e2e 7 замков зелёные.
 
+**Волна 4 (2026-06-28) — audit-remediation security+hardening batch (uncommitted, pending commit):** закрыто ещё 12 critical/high findings из audit-репорта + task-board bulk fix. Детали — см. секцию «Волна 4» ниже.
+
 Осознанно **отложено: 124** пунктов — требуют продуктовых решений, отдельной инфры или выходят за рамки точечного багфикса. Список ниже (источник — отчёты волн).
+
+---
+
+## Волна 4 — remediation batch (2026-06-28, uncommitted)
+
+### ЗАКРЫТО в волне 4
+
+**CRM / IAM security (crm-specialist):**
+- **CompanyChannel IDOR** — `CompanyChannelController::update/destroy` добавлен `abort_if(channel->company_id !== company->id, 404)` (400→404 при cross-company обращении). Тест: `CompanyChannelTest::test_update_channel_of_another_company_returns_404` + `test_delete_channel_of_another_company_returns_404`.
+- **Holding attach — авторизация parent_id** — `AttachHoldingRequest::authorize()` теперь проверяет `$user->can('view', $parent)` на company, к которой прикрепляется. Предотвращает graft-under-invisible-holding. Тест: `HoldingTest`.
+- **Holding tree — маскинг out-of-scope узлов** — `HoldingService::buildTree()` принимает `?User $viewer`; `resolveVisibleIds()` возвращает null (All-scope) или массив visible company_id; `companyNode()` выдаёт `name=null / holding_role=null` для скрытых узлов. Tree structure сохранена (id присутствует), PII не утекает.
+- **Contact merge re-parents все FK** — `DedupService::mergeContact()` теперь переносит: `crm_contact_company_links` (pivot, skip-if-exists) · `deal_contacts` (pivot, skip-if-exists) · `contact_channels` · `activities` (polymorphic target) · `crm_contact_relations` (оба направления, затем drop self-links) · `crm_folders/crm_files` (polymorphic owner). Всё в `DB::transaction`. Тест: `ContactMergeOrphansTest` (новый, untracked).
+- **Company merge — one-current-requisite** — `DedupService::mergeCompany()` после переноса `company_requisites` оставляет ровно один `is_current=true` (lowest id = оригинальный master). Тест: `CompanyMergeOrphansTest`.
+
+**Contracts (contract-specialist):**
+- **Download 401 fix** — `downloadViaBlob()` в `front/src/api/documents.ts` — Bearer-authenticated Blob download вместо `window.open`; `@deprecated` URL-helper-функции оставлены для backward-compat.
+- **template_id в generate** — `GenerateDocumentRequest` принимает `template_id`; `ContractGenerationService::generate()` передаёт его в `TemplateService`; `DealDocumentController` / `CompanyDocumentController` / `DocumentGenerateController` пробрасывают через. UI picker может явно указать шаблон.
+- **signed_at в UpdateDocumentRequest** — поле добавлено в validation rules (nullable date).
+- **Resubmit gate** — FE `DealTabDocuments` кнопка «Переотправить» показывается только в статусе `needs_rework`.
+- **DocumentPolicy::view — active approvers** — директор/CFO назначенный в approval route могут просматривать документ и скачивать файлы для рецензирования (`isActiveApprover()` query по `Approval` rows текущего attempt). Тест: `AuditWave5BugsTest` (новый, untracked).
+
+**Automation (automation/pipeline-specialist):**
+- **CreateTaskConfig FE** — компонент перепрошит на канонические ключи движка: `body` (description), `responsible` (spec string `'owner'|'user_id:N'`), `due_days`. Parse/emit функции `parseResponsible` / `buildConfig` двусторонни. `ValidatesAutomationConfig` обновлён под те же ключи.
+- **TgNotifyConfig FE** — `recipient` теперь `spec string ('deal_owner'|'user_id:N'|chat_id)`, parse/build аналогичны.
+- **Config validation** — `ValidatesAutomationConfig::validateCreateTaskConfig()` и `validateTgNotifyConfig()` проверяют канонические поля; 422 на невалидный config.
+
+**Onboarding (onboarding-specialist):**
+- **Quiz options persist** — `StoreQuizQuestionRequest` добавляет `options` (array of strings, nullable); `QuizQuestionService::create()` сохраняет их в `options` JSON-колонку. Тест: `QuizQuestionCrudTest`.
+
+**Catalog (crm-specialist):**
+- **ImportResultResource dry-run preview** — `would_insert` / `would_update` эмитируются на dry-run (реальные counts из `inserted`/`updated`); `inserted`/`updated` = 0 на dry-run; `skipped`/`errors` всегда. FE preview dialog теперь показывает корректные projected counts. Тест: `PriceImportTest`.
+- **Price-import template download** — `PriceImportDialog.vue` использует `apiClient` Blob-download (Bearer) вместо `window.open`. Аналогично fix documents.
+
+**Tasks FE (frontend-specialist) — Board state lifted:**
+- **`index.vue` как SSOT** — `taskBoard` composable (`useTaskBoard`) живёт в `index.vue`, props-down (`bucketsData`, `loading`, `allDone`, `selectedIds`, `selectMode`) переданы в `TasksKanbanBoard`. `TasksKanbanBoard` стал presentational: получает готовый state, не владеет им.
+- **Bulk в kanban** — select-all / BulkBar count / pin/reopen/delete корректно работают в kanban-view (раньше broken, т.к. board держал свой isolated state).
+- **payment_fixed feed date** — `DealFeedItem` форматирует дату `payment_fixed` записи.
+- **Null/unknown activity kind chip** — fallback для unknown kind избегает render-ошибки.
+
+### ОТКРЫТО (medium/low, деферы волны 4)
+
+**Contracts:**
+- Production-formatted docx-шаблоны (мастер-скелет с реальными юр-формулировками + Jinja2→`${...}` конверсия) — pending юр-ревью. Пока работают seed-шаблоны.
+- Реальные approver-пользователи не прописаны в ApprovalRoute в проде (нужен admin UI action).
+- Country-code display в документе (FE `CreateDocumentDialog` хардкодит countryOptions вместо `/api/admin/countries`).
+
+**CRM:**
+- `contact-channel-idor` — nested routes `channels/{channel}` и `relations/{relation}` без `->scoped()` (routes/api.php, вне file ownership crm-specialist). Остаётся в REMAINING.
+
+**Automation:**
+- FE↔BE config-drift `change_owner` pool — частично: create_task/tg_notify закрыты; `change_owner` pool assignee_spec ещё не прошит в FE (беклог).
+- Per-run Retry endpoint (needsRoutes, api.php).
+
+**Onboarding:**
+- deadline_days не применяется в bulkAssign (#7-minor).
+- Certificate regenerate без completion-guard (#8-minor).
+- AiTutorController ask/history без authorize('view', lesson) (#10-minor).
+
+**Inbox / Automation routes:** `/inbox` и `/automation` не на сайдбар-навигации (route-gaps), не блокеры проду, но UX пробелы.
 
 ## Крупные (требуют твоего решения)
 - **IAM-1 — миграция RBAC на spatie.** Решение «оживить spatie» принято, но сама миграция (config/sanctum.php + auth-guard + перенос Gate→permissions) — отдельный трек. Сейчас авторизация работает на role-enum Gates (безопасно, дыры закрыты), spatie-таблицы засеяны, но не подключены.
