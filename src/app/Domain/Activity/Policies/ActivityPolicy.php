@@ -112,8 +112,15 @@ class ActivityPolicy
      * on create — so the mutation gate can never drift from the create-time gate.
      *
      * A standalone (target-less) activity has no target to gate → always visible
-     * (the ownership rules in canAccess/complete/delete still apply). A target
-     * whose row was deleted resolves to null → not visible.
+     * (the ownership rules in ownershipAllows still apply).
+     *
+     * ORPHANED TARGET: when target_id is set but the target row no longer exists
+     * (the deal/company/contact was deleted), the lookup returns null. We treat
+     * that as "no target to gate" and return true — a non-existent target must not
+     * permanently LOCK an otherwise-owned activity (QA: reopen/status on a task
+     * whose deal was deleted 403'd even for an All-scope admin). The ownershipAllows()
+     * gate is then the sole, correct authority for an orphaned activity. Only a
+     * target that EXISTS but is out of the actor's scope blocks the action.
      */
     private function targetVisible(User $user, Activity $activity): bool
     {
@@ -133,7 +140,13 @@ class ActivityPolicy
             ActivityTargetType::Contact => Contact::find($targetId),
         };
 
-        return $model !== null && Gate::forUser($user)->allows('view', $model);
+        if ($model === null) {
+            // Target deleted/missing — don't let a non-existent target block the
+            // action; ownership is the sole authority for an orphaned activity.
+            return true;
+        }
+
+        return Gate::forUser($user)->allows('view', $model);
     }
 
     /**

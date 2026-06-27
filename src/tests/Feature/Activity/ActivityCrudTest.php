@@ -71,6 +71,27 @@ class ActivityCrudTest extends TestCase
             ->assertJsonPath('data.target_id', $company->id);
     }
 
+    public function test_user_can_create_activity_on_contact(): void
+    {
+        // The My Tasks QuickCreate can target a CONTACT (target_type='contact').
+        // The create path must accept it: validation allows the contact target type
+        // and ActivityService::create() applies the deal-only task_types gate ONLY
+        // to deal targets, never to a contact — so a plain task on a contact is
+        // created with target-visibility enforced and no spurious 422.
+        $manager = $this->manager();
+        $contact = $this->contactFor($manager); // owned by the manager → visible
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->postJson('/api/activities', [
+            'kind' => ActivityType::Task->value,
+            'target_type' => 'contact',
+            'target_id' => $contact->id,
+            'title' => 'Follow up with contact',
+        ])->assertCreated()
+            ->assertJsonPath('data.target_type', 'contact')
+            ->assertJsonPath('data.target_id', $contact->id);
+    }
+
     public function test_user_can_create_standalone_activity_with_responsible_forced_to_self(): void
     {
         $manager = $this->manager();
