@@ -6,6 +6,9 @@ namespace Tests\Unit\Sales;
 
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Iam\Models\User;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Models\EntityLog;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealAudit;
 use App\Domain\Sales\Models\DealStageHistory;
@@ -41,6 +44,18 @@ class DealFeedServiceTest extends TestCase
             'field' => 'title',
             'old_value' => 'A',
             'new_value' => 'B',
+            'created_at' => $at ?? now(),
+        ]);
+    }
+
+    private function paymentFixed(Deal $deal, ?string $at = null, ?User $actor = null): EntityLog
+    {
+        return EntityLog::query()->create([
+            'subject_type' => LogSubjectType::Deal->value,
+            'subject_id' => $deal->id,
+            'actor_id' => $actor?->id,
+            'action' => LogAction::PaymentFixed->value,
+            'meta' => ['amount' => 1_500_00, 'currency' => 'RUB', 'paid_at' => '2026-06-20'],
             'created_at' => $at ?? now(),
         ]);
     }
@@ -175,6 +190,112 @@ class DealFeedServiceTest extends TestCase
         $this->assertSame(1, $result['meta']['total']);
     }
 
+    // ---- payment_fixed: entity_logs surfaced as a feed source ----
+
+    public function test_payment_fixed_log_appears_in_the_feed(): void
+    {
+        $deal = Deal::factory()->create();
+        $actor = User::factory()->create(['full_name' => 'Acc Ountant']);
+
+        $log = $this->paymentFixed($deal, null, $actor);
+
+        $result = $this->service()->feed($deal);
+
+        $payment = collect($result['data'])->firstWhere('type', 'payment_fixed');
+
+        $this->assertNotNull($payment, 'a payment_fixed event must be present in the feed');
+        $this->assertSame("payment_{$log->id}", $payment['id']);
+        $this->assertSame(['id' => $actor->id, 'full_name' => 'Acc Ountant'], $payment['actor']);
+        $this->assertSame(1_500_00, $payment['payload']['amount']);
+        $this->assertSame('RUB', $payment['payload']['currency']);
+        $this->assertSame('2026-06-20', $payment['payload']['paid_at']);
+    }
+
+    public function test_payment_fixed_is_not_duplicated_and_other_log_actions_excluded(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // One payment_fixed → must appear EXACTLY once.
+        $this->paymentFixed($deal);
+
+        // Other log verbs share the entity_logs table but are already represented
+        // by stage/activity rows — they must NOT be pulled into the feed.
+        EntityLog::factory()->forDeal($deal)->action(LogAction::Created)->create();
+        EntityLog::factory()->forDeal($deal)->action(LogAction::TaskCompleted)->create();
+        EntityLog::factory()->forDeal($deal)->action(LogAction::MeetingHeld)->create();
+        EntityLog::factory()->forDeal($deal)->action(LogAction::StageChanged)->create();
+
+        $result = $this->service()->feed($deal);
+
+        $payments = collect($result['data'])->where('type', 'payment_fixed');
+
+        $this->assertCount(1, $payments, 'payment_fixed must appear once, never duplicated');
+        $this->assertSame(1, $result['meta']['total'], 'only the payment_fixed log contributes to total');
+    }
+
+    public function test_payment_fixed_filter_returns_only_that_source(): void
+    {
+        $deal = Deal::factory()->create();
+
+        $this->stage($deal);
+        Activity::factory()->forDeal($deal)->create();
+        $this->audit($deal);
+        $this->paymentFixed($deal);
+
+        $result = $this->service()->feed($deal, ['types' => ['payment_fixed']]);
+
+        $this->assertSame(1, $result['meta']['total']);
+        $this->assertSame('payment_fixed', $result['data'][0]['type']);
+    }
+
+    public function test_payment_fixed_is_ordered_with_other_sources_by_date(): void
+    {
+        $deal = Deal::factory()->create();
+
+        $this->audit($deal, (string) now()->subDays(3));
+        $this->paymentFixed($deal, (string) now()->subDays(2));
+        Activity::factory()->forDeal($deal)->create(['created_at' => now()->subDay()]);
+        $this->stage($deal, (string) now());
+
+        $events = $this->service()->feed($deal)['data'];
+
+        $occurred = array_column($events, 'occurred_at');
+        $sorted = $occurred;
+        rsort($sorted);
+
+        $this->assertSame($sorted, $occurred);
+        // The payment event sits in the middle of the timeline, not first/last.
+        $this->assertSame('payment_fixed', $events[2]['type']);
+    }
+
+    public function test_payment_fixed_contributes_to_total_and_pagination(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // 3 audits + 2 payments interleaved on distinct minutes.
+        $this->audit($deal, (string) now()->subMinutes(5));
+        $this->paymentFixed($deal, (string) now()->subMinutes(4));
+        $this->audit($deal, (string) now()->subMinutes(3));
+        $this->paymentFixed($deal, (string) now()->subMinutes(2));
+        $this->audit($deal, (string) now()->subMinutes(1));
+
+        $page1 = $this->service()->feed($deal, [], 1, 2);
+        $page2 = $this->service()->feed($deal, [], 2, 2);
+        $page3 = $this->service()->feed($deal, [], 3, 2);
+
+        $this->assertSame(5, $page1['meta']['total'], 'total spans audits + payments');
+        $this->assertCount(2, $page1['data']);
+        $this->assertCount(2, $page2['data']);
+        $this->assertCount(1, $page3['data']);
+
+        $allIds = array_merge(
+            array_column($page1['data'], 'id'),
+            array_column($page2['data'], 'id'),
+            array_column($page3['data'], 'id'),
+        );
+        $this->assertCount(5, array_unique($allIds), 'no id appears on more than one page');
+    }
+
     // ---- F27: bounded-fetch perf optimisation must be byte-identical ----
 
     /**
@@ -280,6 +401,108 @@ class DealFeedServiceTest extends TestCase
         $this->assertArrayHasKey('status', $activity['payload']);
         $this->assertArrayHasKey('is_closed', $activity['payload']);
         $this->assertArrayHasKey('kind', $activity['payload']);
+    }
+
+    // ---- D3: a completed task surfaces in the feed at completion time ----
+
+    public function test_completed_activity_uses_completed_at_as_occurred_at(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // A task created long ago but completed just now: its feed timeline position
+        // must be the COMPLETION instant, not the (old) creation instant — otherwise
+        // it re-sorts back out of view and looks like the completion wasn't recorded.
+        $createdAt = now()->subDays(10);
+        $completedAt = now();
+
+        $activity = Activity::factory()->forDeal($deal)->completed()->create([
+            'created_at' => $createdAt,
+            'completed_at' => $completedAt,
+        ]);
+
+        $events = $this->service()->feed($deal)['data'];
+
+        $item = collect($events)->firstWhere('id', "activity_{$activity->id}");
+
+        $this->assertNotNull($item);
+        $this->assertSame(
+            $completedAt->toIso8601String(),
+            $item['occurred_at'],
+            'a completed task must take its completed_at as the feed occurred_at',
+        );
+        $this->assertNotSame(
+            $createdAt->toIso8601String(),
+            $item['occurred_at'],
+            'a completed task must NOT keep its old created_at as the feed position',
+        );
+    }
+
+    public function test_completed_activity_sorts_after_older_items_and_is_not_duplicated(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // An audit 1h ago, plus a task created 10 days ago but completed NOW. With
+        // occurred_at = completed_at, the just-completed task must sort to the TOP
+        // (newest), ahead of the 1h-old audit — appearing where the user looks.
+        $this->audit($deal, (string) now()->subHour());
+
+        $activity = Activity::factory()->forDeal($deal)->completed()->create([
+            'created_at' => now()->subDays(10),
+            'completed_at' => now(),
+        ]);
+
+        $events = $this->service()->feed($deal)['data'];
+
+        // The completed activity is the newest event in the merge.
+        $this->assertSame("activity_{$activity->id}", $events[0]['id']);
+        $this->assertSame('activity', $events[0]['type']);
+
+        // Exactly one row for the activity — no separate task_completed twin.
+        $activityRows = collect($events)->where('id', "activity_{$activity->id}");
+        $this->assertCount(1, $activityRows, 'a completed task must appear once, never duplicated');
+    }
+
+    public function test_open_activity_still_uses_created_at_as_occurred_at(): void
+    {
+        $deal = Deal::factory()->create();
+
+        $createdAt = now()->subDays(3);
+
+        // Open task (factory default: status new, is_closed false, no completed_at).
+        $activity = Activity::factory()->forDeal($deal)->create(['created_at' => $createdAt]);
+
+        $item = collect($this->service()->feed($deal)['data'])
+            ->firstWhere('id', "activity_{$activity->id}");
+
+        $this->assertNotNull($item);
+        $this->assertSame(
+            $createdAt->toIso8601String(),
+            $item['occurred_at'],
+            'an open task keeps created_at as its feed occurred_at',
+        );
+    }
+
+    public function test_rejected_activity_without_completed_at_falls_back_to_created_at(): void
+    {
+        $deal = Deal::factory()->create();
+
+        $createdAt = now()->subDays(2);
+
+        // Rejected: is_closed = true, but no completed_at (rejection stamps no
+        // completion). The fallback keeps it on created_at, identical to the PHP
+        // and SQL branches.
+        $activity = Activity::factory()->forDeal($deal)->create([
+            'created_at' => $createdAt,
+            'status' => \App\Domain\Activity\Enums\ActivityStatus::Rejected->value,
+            'is_closed' => true,
+            'completed_at' => null,
+        ]);
+
+        $item = collect($this->service()->feed($deal)['data'])
+            ->firstWhere('id', "activity_{$activity->id}");
+
+        $this->assertNotNull($item);
+        $this->assertSame($createdAt->toIso8601String(), $item['occurred_at']);
     }
 
     public function test_deep_page_truncates_at_the_500_ceiling_like_before(): void

@@ -613,6 +613,11 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::post('deals/{deal}/kp-sent', [DealController::class, 'markKpSent'])->name('deals.kp-sent');
     Route::post('deals/{deal}/contract-sent', [DealController::class, 'markContractSent'])->name('deals.contract-sent');
 
+    // Финансы tab — first-class payment fixation. Stamps paid_at/paid_amount/
+    // payment_currency + a payment_fixed log row (the generic PATCH still works
+    // but emits no feed event). Returns the updated DealResource.
+    Route::post('deals/{deal}/fix-payment', [DealController::class, 'fixPayment'])->name('deals.fix-payment');
+
     // Archive / restore (archived ≠ deleted: stamps archived_at, stays in
     // ?archived=true; delete is a separate soft delete on deals.destroy).
     Route::post('deals/{deal}/archive', [DealController::class, 'archive'])->name('deals.archive');

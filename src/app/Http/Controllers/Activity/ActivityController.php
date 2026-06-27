@@ -206,6 +206,9 @@ class ActivityController extends Controller
             $this->scope($request),
             $request->user(),
             (int) $request->query('limit', 50),
+            // The FilterPanel feeds the same query params to the preset endpoint as
+            // to the flat list (D2): they narrow within the preset.
+            $request->query(),
         );
 
         return ActivityCardResource::collection($activities);

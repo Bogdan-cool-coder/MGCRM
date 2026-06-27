@@ -4,27 +4,38 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Iam\Models\User;
+use App\Domain\Log\Enums\LogAction;
+use App\Domain\Log\Enums\LogSubjectType;
+use App\Domain\Log\Models\EntityLog;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealAudit;
 use App\Domain\Sales\Models\DealStageHistory;
 use Illuminate\Support\Collection;
 
 /**
- * DealFeedService — single chronological timeline for a deal, merging three
+ * DealFeedService — single chronological timeline for a deal, merging four
  * append-only sources:
  *   - deal_stage_history → type "stage_change"
  *   - activities targeting the deal → type "activity"
  *   - deal_audits → type "field_change"
+ *   - entity_logs (payment_fixed only) → type "payment_fixed"
  *
  * MVP approach (decision 2026-06-15): each source is loaded, normalised into a
  * uniform shape [id, type, occurred_at, actor, payload], merged in PHP, sorted
  * by occurred_at desc and paginated manually via forPage(). A SQL UNION refactor
  * is deferred until a deal exceeds ~1000 events. The composite id (activity_{id}
- * / stage_{id} / audit_{id}) keeps rows from different tables collision-free for
- * the frontend's :key.
+ * / stage_{id} / audit_{id} / payment_{id}) keeps rows from different tables
+ * collision-free for the frontend's :key.
+ *
+ * entity_logs is pulled NARROWLY — only LogAction::PaymentFixed rows. The other
+ * action verbs (created / stage_changed / task_completed / meeting_held / …) are
+ * already represented in the feed by their stage_history / activity rows, so
+ * reading the whole log would DUPLICATE them. payment_fixed has no stage/activity
+ * representation, so it is the one log action that must be surfaced here.
  */
 class DealFeedService
 {
@@ -33,6 +44,8 @@ class DealFeedService
     public const TYPE_ACTIVITY = 'activity';
 
     public const TYPE_FIELD_CHANGE = 'field_change';
+
+    public const TYPE_PAYMENT_FIXED = 'payment_fixed';
 
     /**
      * Hard upper bound on rows pulled from EACH source before the in-memory
@@ -87,6 +100,11 @@ class DealFeedService
             $total += $this->cappedCount($this->fieldChangeQuery($deal));
         }
 
+        if ($types === null || in_array(self::TYPE_PAYMENT_FIXED, $types, true)) {
+            $events = $events->merge($this->paymentFixedEvents($deal, $fetchLimit));
+            $total += $this->cappedCount($this->paymentFixedQuery($deal));
+        }
+
         $sorted = $events
             ->sortByDesc(fn (array $event): string => $event['occurred_at'] ?? '')
             ->values();
@@ -124,7 +142,7 @@ class DealFeedService
             return null;
         }
 
-        $allowed = [self::TYPE_STAGE_CHANGE, self::TYPE_ACTIVITY, self::TYPE_FIELD_CHANGE];
+        $allowed = [self::TYPE_STAGE_CHANGE, self::TYPE_ACTIVITY, self::TYPE_FIELD_CHANGE, self::TYPE_PAYMENT_FIXED];
         $types = array_values(array_intersect($allowed, $raw));
 
         return $types === [] ? null : $types;
@@ -179,6 +197,16 @@ class DealFeedService
      * the deal is matched on target_type + target_id (DDD §2 — no belongsTo Deal
      * relation). Single source of the WHERE/ORDER for fetch + count.
      *
+     * Ordering is by the EFFECTIVE feed timestamp, not the raw created_at: a closed
+     * (done/rejected) activity that carries a completed_at takes its completion
+     * instant as its timeline position (D3 — see activityEffectiveAtSql / the
+     * occurred_at mapping in activityEvents). This keeps the bounded fetch
+     * (MAX_SOURCE_ROWS, offset+perPage per source) correct — the per-source order
+     * MUST match the global merge key (occurred_at), or a just-completed task could
+     * be sliced off the first page even though its completion is the newest event.
+     * Falls back to created_at when there is no completion stamp (open tasks,
+     * rejected tasks with no completed_at), exactly as the occurred_at mapping does.
+     *
      * @return \Illuminate\Database\Eloquent\Builder<Activity>
      */
     private function activityQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
@@ -186,8 +214,41 @@ class DealFeedService
         return Activity::query()
             ->where('target_type', ActivityTargetType::Deal->value)
             ->where('target_id', $deal->id)
-            ->orderByDesc('created_at')
+            ->orderByRaw($this->activityEffectiveAtSql().' desc')
             ->orderByDesc('id');
+    }
+
+    /**
+     * SQL for an activity's EFFECTIVE feed timestamp (D3): the completed_at when the
+     * activity is closed/done AND carries a completion stamp, else the created_at.
+     * Mirrors the PHP occurred_at mapping in activityEvents() so the per-source
+     * ORDER (used by the bounded fetch) can never drift from the merge sort key.
+     * COALESCE(completed_at, created_at) gated on the closed/done condition keeps a
+     * rejected-without-stamp row on its created_at, identical to the PHP branch.
+     */
+    private function activityEffectiveAtSql(): string
+    {
+        $done = ActivityStatus::Done->value;
+
+        return "case when (is_closed = true or status = '{$done}') and completed_at is not null then completed_at else created_at end";
+    }
+
+    /**
+     * The effective feed timestamp for one activity row (D3, PHP twin of
+     * activityEffectiveAtSql): completed_at when the activity is closed/done AND
+     * carries a completion stamp, else created_at. Returned as an ISO-8601 string
+     * for the uniform feed shape / the occurred_at merge sort.
+     */
+    private function activityOccurredAt(Activity $row): ?string
+    {
+        $status = $row->status instanceof ActivityStatus ? $row->status : ActivityStatus::tryFrom((string) $row->status);
+        $isClosedOrDone = (bool) $row->is_closed || $status === ActivityStatus::Done;
+
+        if ($isClosedOrDone && $row->completed_at !== null) {
+            return $row->completed_at->toIso8601String();
+        }
+
+        return $row->created_at?->toIso8601String();
     }
 
     /**
@@ -202,7 +263,18 @@ class DealFeedService
             ->map(fn (Activity $row): array => [
                 'id' => "activity_{$row->id}",
                 'type' => self::TYPE_ACTIVITY,
-                'occurred_at' => $row->created_at?->toIso8601String(),
+                // D3: a completed task must surface in the feed at COMPLETION time,
+                // not at its (often much earlier) creation time — otherwise a
+                // just-completed task re-sorts back to its original position,
+                // scrolled out of view, and looks like the completion wasn't
+                // recorded. The effective timeline instant is completed_at when the
+                // activity is closed/done AND carries a completion stamp, else
+                // created_at (rejected-without-stamp + open tasks keep created_at).
+                // This mirrors activityEffectiveAtSql() so the in-memory occurred_at
+                // and the per-source ORDER (bounded fetch) never disagree. A
+                // separate task_completed feed event is deliberately NOT emitted —
+                // that would duplicate the activity row (audit warning).
+                'occurred_at' => $this->activityOccurredAt($row),
                 'actor' => $this->actor($row->createdBy ?? $row->responsible),
                 'payload' => [
                     'activity_id' => $row->id,
@@ -257,6 +329,50 @@ class DealFeedService
                     'new_value' => $row->new_value,
                 ],
             ]);
+    }
+
+    /**
+     * Base query for the payment-fixed source — entity_logs rows on THIS deal
+     * with action = payment_fixed only (see class docblock for why the rest of
+     * the log vocabulary is intentionally excluded). Single source of the
+     * WHERE/ORDER for fetch + count.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<EntityLog>
+     */
+    private function paymentFixedQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
+    {
+        return EntityLog::query()
+            ->where('subject_type', LogSubjectType::Deal->value)
+            ->where('subject_id', $deal->id)
+            ->where('action', LogAction::PaymentFixed->value)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function paymentFixedEvents(Deal $deal, int $limit): Collection
+    {
+        return $this->paymentFixedQuery($deal)
+            ->with('actor:id,full_name')
+            ->limit($limit)
+            ->get()
+            ->map(function (EntityLog $row): array {
+                $meta = is_array($row->meta) ? $row->meta : [];
+
+                return [
+                    'id' => "payment_{$row->id}",
+                    'type' => self::TYPE_PAYMENT_FIXED,
+                    'occurred_at' => $row->created_at?->toIso8601String(),
+                    'actor' => $this->actor($row->actor),
+                    'payload' => [
+                        'amount' => $meta['amount'] ?? null,
+                        'currency' => $meta['currency'] ?? null,
+                        'paid_at' => $meta['paid_at'] ?? null,
+                    ],
+                ];
+            });
     }
 
     /**

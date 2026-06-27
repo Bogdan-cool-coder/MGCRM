@@ -111,6 +111,56 @@ class ActivityPresetsTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
+    public function test_preset_combined_with_filter_narrows_within_the_preset(): void
+    {
+        // D2: the FilterPanel feeds the same params to the preset endpoint as to the
+        // flat list. A kind filter on the "today" tab must narrow WITHIN the preset
+        // — both tasks are due today, but only the call survives the kind filter.
+        $manager = $this->manager();
+
+        $todayCall = Activity::factory()->call()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['due_at' => now()->setTime(12, 0)]);
+        Activity::factory()->task()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['due_at' => now()->setTime(13, 0)]);
+        // A call due NEXT week — outside the preset, the filter must not pull it in.
+        Activity::factory()->call()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['due_at' => now()->addDays(20)]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities/presets/today?kind[]=call')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $todayCall->id);
+    }
+
+    public function test_preset_filter_by_responsible_id_stays_inside_preset(): void
+    {
+        // A director (All scope) on the "today" preset is scoped to their OWN work
+        // (responsible OR creator) by the preset. Filtering by another user's id
+        // therefore yields nothing — the preset window still bounds the result.
+        $director = $this->director();
+        $other = $this->manager();
+
+        Activity::factory()->responsibleOf($director)->createdByUser($director)
+            ->create(['due_at' => now()->setTime(12, 0)]);
+        Activity::factory()->responsibleOf($other)->createdByUser($other)
+            ->create(['due_at' => now()->setTime(12, 0)]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        // Filtering for the OTHER user's id: the today preset is mine-only, so the
+        // intersection is empty.
+        $this->getJson('/api/activities/presets/today?responsible_id='.$other->id)
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        // Filtering for my own id keeps my today task.
+        $this->getJson('/api/activities/presets/today?responsible_id='.$director->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
     public function test_counts_by_preset_matches_preset_lists(): void
     {
         $manager = $this->manager();

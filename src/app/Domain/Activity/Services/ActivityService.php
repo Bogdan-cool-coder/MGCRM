@@ -62,12 +62,7 @@ class ActivityService
             ->with(['responsible:id,full_name', 'createdBy:id,full_name', 'completedBy:id,full_name'])
             ->when(isset($filters['target_type']), fn (Builder $q) => $q->where('target_type', $filters['target_type']))
             ->when(isset($filters['target_id']), fn (Builder $q) => $q->where('target_id', (int) $filters['target_id']))
-            ->when(! empty($filters['kind']), fn (Builder $q) => $q->whereIn('kind', (array) $filters['kind']))
-            ->when(! empty($filters['status']), fn (Builder $q) => $q->whereIn('status', (array) $filters['status']))
-            ->when(! empty($filters['priority']), fn (Builder $q) => $q->whereIn('priority', (array) $filters['priority']))
-            ->when(isset($filters['due_from']), fn (Builder $q) => $q->where('due_at', '>=', $filters['due_from']))
-            ->when(isset($filters['due_to']), fn (Builder $q) => $q->where('due_at', '<=', $filters['due_to']))
-            ->when(isset($filters['q']), fn (Builder $q) => $q->where('title', 'like', '%'.$filters['q'].'%'))
+            ->where(fn (Builder $q) => $this->applyListFilters($q, $filters))
             ->orderByDesc('created_at')
             ->paginate($perPage);
 
@@ -589,15 +584,23 @@ class ActivityService
      * always carries a `meta.total` envelope — every preset tab on the frontend
      * reads res.meta.total and would crash on a meta-less payload (BUG-1).
      *
+     * @param  array<string, mixed>  $filters  optional list filters (kind/status/priority/due_from/due_to/q/responsible_id), narrowed within the preset
      * @return LengthAwarePaginator<int, Activity>
      */
-    public function presets(string $preset, VisibilityScope $scope, User $user, int $perPage = 50): LengthAwarePaginator
+    public function presets(string $preset, VisibilityScope $scope, User $user, int $perPage = 50, array $filters = []): LengthAwarePaginator
     {
         $this->assertKnownPreset($preset);
 
+        // The MyTasks FilterPanel sends the SAME filter params (kind/status/priority/
+        // due_from/due_to/q/responsible_id) to the preset endpoint as to the flat
+        // list (useMyTasks.buildParams feeds both getActivities and
+        // getPresetActivities). They must NARROW within the preset — a kind/status
+        // filter on the "overdue" tab is silently dropped otherwise (D2). Applied on
+        // top of the preset predicate, so the preset window always still holds.
         $query = $this->scopedQuery($scope, $user)
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
-            ->where(fn (Builder $q) => $this->applyPreset($q, $preset, $user));
+            ->where(fn (Builder $q) => $this->applyPreset($q, $preset, $user))
+            ->where(fn (Builder $q) => $this->applyListFilters($q, $filters));
 
         if ($preset === 'completed') {
             // The «Выполненные» tab is sorted by recency of completion: most
@@ -736,6 +739,39 @@ class ActivityService
         return $this->scopedQuery($this->visibility->resolve($user), $user)
             ->where('target_type', ActivityTargetType::Contact->value)
             ->where('target_id', $contactId)
+            ->whereIn('kind', ActivityType::taskLikeValues())
+            ->where(fn (Builder $q) => $this->scopeOpen($q))
+            ->count();
+    }
+
+    /**
+     * Aggregated count of OPEN task-like activities across a SET of deals — the
+     * "+N по сделкам" signal on the contact KPI (open tasks on every deal the
+     * contact is linked to, summed). Mirrors openTasksCountForContact() but keyed
+     * on target_type = deal AND target_id IN $dealIds, so the whole fan-out is a
+     * SINGLE query (no per-deal N+1).
+     *
+     * "Task-like" mirrors taskLikeValues(); "open" uses the single-source
+     * scopeOpen() predicate (not closed AND status not final) so a rejected/done
+     * task is never counted. Routed through the SAME scopedQuery() the lists use
+     * so the badge can never exceed the visibility-scoped list (a deal the user
+     * cannot see contributes nothing). The scope is resolved from the user's role
+     * here, so the caller stays thin.
+     *
+     * Empty $dealIds short-circuits to 0 (no query) — the contact has no linked
+     * deals.
+     *
+     * @param  list<int>  $dealIds
+     */
+    public function openTasksCountForDeals(array $dealIds, User $user): int
+    {
+        if ($dealIds === []) {
+            return 0;
+        }
+
+        return $this->scopedQuery($this->visibility->resolve($user), $user)
+            ->where('target_type', ActivityTargetType::Deal->value)
+            ->whereIn('target_id', $dealIds)
             ->whereIn('kind', ActivityType::taskLikeValues())
             ->where(fn (Builder $q) => $this->scopeOpen($q))
             ->count();
@@ -1310,6 +1346,43 @@ class ActivityService
     private function applyFtmConditions(Builder $query): void
     {
         $query->ftmCounted();
+    }
+
+    /**
+     * Apply the MyTasks FilterPanel query params to a list/preset query (D2). The
+     * single source for the flat list AND the preset tabs (the FE feeds the same
+     * buildParams() to both endpoints), so a filter narrows identically wherever it
+     * is applied. Visibility stays intact: this only ADDS predicates inside the
+     * already-scoped query, never widens it.
+     *
+     * Accepted params:
+     *   - kind          (string|string[]) — whereIn on kind
+     *   - status        (string|string[]) — whereIn on status
+     *   - priority      (string|string[]) — whereIn on priority
+     *   - responsible_id (int)            — exact responsible (the FE-collected
+     *                                       param the backend previously ignored)
+     *   - due_from / due_to (date)        — due_at range
+     *   - q             (string)          — substring match on title OR body
+     *
+     * @param  Builder<Activity>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyListFilters(Builder $query, array $filters): void
+    {
+        $query
+            ->when(! empty($filters['kind']), fn (Builder $q) => $q->whereIn('kind', (array) $filters['kind']))
+            ->when(! empty($filters['status']), fn (Builder $q) => $q->whereIn('status', (array) $filters['status']))
+            ->when(! empty($filters['priority']), fn (Builder $q) => $q->whereIn('priority', (array) $filters['priority']))
+            ->when(! empty($filters['responsible_id']), fn (Builder $q) => $q->where('responsible_id', (int) $filters['responsible_id']))
+            ->when(isset($filters['due_from']), fn (Builder $q) => $q->where('due_at', '>=', $filters['due_from']))
+            ->when(isset($filters['due_to']), fn (Builder $q) => $q->where('due_at', '<=', $filters['due_to']))
+            ->when(
+                isset($filters['q']) && $filters['q'] !== '',
+                fn (Builder $q) => $q->where(function (Builder $inner) use ($filters): void {
+                    $inner->where('title', 'like', '%'.$filters['q'].'%')
+                        ->orWhere('body', 'like', '%'.$filters['q'].'%');
+                }),
+            );
     }
 
     /**

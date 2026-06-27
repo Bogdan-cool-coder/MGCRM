@@ -177,6 +177,45 @@ class DealService
     }
 
     /**
+     * Fix the payment on a deal — the Финансы-tab first-class action (DealPage 2.0).
+     * Persists the actual paid fact (paid_at / paid_amount / payment_currency) and
+     * appends a payment_fixed entity-log row so the fixation surfaces on the deal
+     * feed/log, exactly like markKpSent / markContractSent. Returns the refreshed
+     * deal.
+     *
+     * Distinct from the generic PATCH /deals/{id} (which still writes the same
+     * columns but emits no discrete event): this is the preferred, audited path.
+     * Only the keys actually present in $data are written, so a partial fixation
+     * (e.g. date only) does not clobber a previously-saved amount.
+     *
+     * @param  array{paid_at?: string|null, paid_amount?: int|null, payment_currency?: string|null}  $data
+     */
+    public function fixPayment(Deal $deal, array $data, ?User $actor = null): Deal
+    {
+        $deal->fill(array_intersect_key($data, array_flip([
+            'paid_at',
+            'paid_amount',
+            'payment_currency',
+        ])));
+        $deal->save();
+        $deal->refresh();
+
+        $this->entityLog->record(
+            LogSubjectType::Deal,
+            (int) $deal->id,
+            $actor,
+            LogAction::PaymentFixed,
+            [
+                'amount' => $deal->paid_amount,
+                'currency' => $deal->payment_currency,
+                'paid_at' => $deal->paid_at?->toDateString(),
+            ],
+        );
+
+        return $deal;
+    }
+
+    /**
      * Auto-mark contract_sent from the Contracts domain when a contract Document
      * reaches `submitted` (DocumentService::recordContractEvent). Resolves the
      * deal by id and stamps idempotently (first send only); a missing deal is a

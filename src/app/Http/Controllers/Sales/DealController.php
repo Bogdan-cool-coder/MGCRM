@@ -16,6 +16,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolveVisibility;
 use App\Http\Requests\Sales\BulkDealActionRequest;
 use App\Http\Requests\Sales\BulkDealDeleteRequest;
+use App\Http\Requests\Sales\FixPaymentRequest;
 use App\Http\Requests\Sales\IndexDealRequest;
 use App\Http\Requests\Sales\MoveDealRequest;
 use App\Http\Requests\Sales\StoreDealRequest;
@@ -233,6 +234,20 @@ class DealController extends Controller
         $this->service->markContractSent($deal, $request->user());
 
         return $this->keyActionResponse($deal);
+    }
+
+    /**
+     * POST /api/deals/{deal}/fix-payment — the Финансы-tab first-class payment
+     * fixation. Persists paid_at / paid_amount / payment_currency and appends a
+     * payment_fixed log row (so the fixation shows on the deal feed), unlike the
+     * generic PATCH /deals/{id} which writes the same columns silently. Returns
+     * the updated deal. Authorized via DealPolicy@update inside the FormRequest.
+     */
+    public function fixPayment(FixPaymentRequest $request, Deal $deal): JsonResource
+    {
+        $updated = $this->service->fixPayment($deal, $request->validated(), $request->user());
+
+        return DealResource::make($updated->load(['pipeline:id,name,kind', 'stage', 'company:id,name', 'owner:id,full_name']));
     }
 
     /** Cache TTL for replaying an idempotent move result (HD1, Q1: 24h). */

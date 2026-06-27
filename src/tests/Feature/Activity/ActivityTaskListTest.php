@@ -90,6 +90,130 @@ class ActivityTaskListTest extends TestCase
         $this->assertLessThanOrEqual(12, $queries, "Too many queries ({$queries}) — deal context is N+1.");
     }
 
+    // ---- D2: GET /api/activities honours the FilterPanel query params ----
+
+    public function test_list_filters_by_responsible_id_within_scope(): void
+    {
+        // A director (All scope) sees every manager's tasks; responsible_id must
+        // narrow the list to exactly one manager's tasks. This is the param the FE
+        // collected but the backend previously ignored.
+        $director = $this->director();
+        $alice = $this->manager();
+        $bob = $this->manager();
+
+        $aliceTask = Activity::factory()->responsibleOf($alice)->createdByUser($alice)->create();
+        Activity::factory()->responsibleOf($bob)->createdByUser($bob)->create();
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson('/api/activities?responsible_id='.$alice->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $aliceTask->id);
+    }
+
+    public function test_list_responsible_id_stays_within_visibility_scope(): void
+    {
+        // An Own-scope manager filtering by another user's id sees nothing — the
+        // filter narrows WITHIN the scope, it never widens past it.
+        $alice = $this->manager();
+        $bob = $this->manager();
+
+        Activity::factory()->responsibleOf($bob)->createdByUser($bob)->create();
+
+        Sanctum::actingAs($alice, ['*']);
+
+        $this->getJson('/api/activities?responsible_id='.$bob->id)
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_list_filters_by_status(): void
+    {
+        $manager = $this->manager();
+
+        $done = Activity::factory()->responsibleOf($manager)->createdByUser($manager)->completed($manager)->create();
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)->create(); // new
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities?status[]=done')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $done->id);
+    }
+
+    public function test_list_filters_by_priority(): void
+    {
+        $manager = $this->manager();
+
+        $high = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['priority' => \App\Domain\Activity\Enums\ActivityPriority::High->value]);
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['priority' => \App\Domain\Activity\Enums\ActivityPriority::Low->value]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities?priority[]=high')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $high->id);
+    }
+
+    public function test_list_filters_by_kind(): void
+    {
+        $manager = $this->manager();
+
+        $call = Activity::factory()->call()->responsibleOf($manager)->createdByUser($manager)->create();
+        Activity::factory()->task()->responsibleOf($manager)->createdByUser($manager)->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities?kind[]=call')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $call->id);
+    }
+
+    public function test_list_q_searches_title_and_body(): void
+    {
+        $manager = $this->manager();
+
+        $byTitle = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['title' => 'Подписать контракт', 'body' => null]);
+        $byBody = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['title' => 'Звонок клиенту', 'body' => 'Обсудить контракт по телефону']);
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['title' => 'Встреча', 'body' => 'Демо продукта']);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $ids = collect($this->getJson('/api/activities?q=контракт')->assertOk()->json('data'))
+            ->pluck('id')->all();
+
+        $this->assertContains($byTitle->id, $ids, 'q must match the title');
+        $this->assertContains($byBody->id, $ids, 'q must match the body');
+        $this->assertCount(2, $ids, 'q must NOT match the unrelated row');
+    }
+
+    public function test_list_combines_responsible_and_status_filters(): void
+    {
+        $director = $this->director();
+        $alice = $this->manager();
+        $bob = $this->manager();
+
+        $aliceDone = Activity::factory()->responsibleOf($alice)->createdByUser($alice)->completed($alice)->create();
+        Activity::factory()->responsibleOf($alice)->createdByUser($alice)->create(); // alice, new
+        Activity::factory()->responsibleOf($bob)->createdByUser($bob)->completed($bob)->create(); // bob, done
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson('/api/activities?responsible_id='.$alice->id.'&status[]=done')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $aliceDone->id);
+    }
+
     public function test_inline_edit_changes_task_type(): void
     {
         $manager = $this->manager();

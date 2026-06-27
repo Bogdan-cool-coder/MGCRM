@@ -30,6 +30,9 @@ namespace App\Domain\Log\Enums;
  *   - contract_sent    contract marked as sent on a deal (DealService::
  *                      markContractSent — manual action OR auto from a contract
  *                      Document reaching `submitted`)
+ *   - payment_fixed    payment fixed on a deal — the Финансы-tab first-class
+ *                      action (DealService::fixPayment). meta: { amount, currency,
+ *                      paid_at }
  *   - data_changed     deal/company key-field diff (Deal/CompanyService::update)
  *   - contract_event   contract lifecycle (recorded ONLY if Contracts domain
  *                      exists; extension point — see EntityLogService docblock)
@@ -48,6 +51,7 @@ enum LogAction: string
     case TaskRejected = 'task_rejected';
     case KpSent = 'kp_sent';
     case ContractSent = 'contract_sent';
+    case PaymentFixed = 'payment_fixed';
     case DataChanged = 'data_changed';
     case ContractEvent = 'contract_event';
     case FinanceEvent = 'finance_event';
