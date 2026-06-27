@@ -133,6 +133,69 @@ class PriceImportTest extends TestCase
         $this->assertDatabaseMissing('catalog_products', ['code' => 'dry_run_prod']);
     }
 
+    /**
+     * Regression CRM-audit: dry-run preview must return would_insert/would_update
+     * so the FE preview dialog shows real projected counts instead of 0/0.
+     * inserted/updated must be 0 in dry-run mode; they carry counts on real runs only.
+     */
+    public function test_dry_run_preview_returns_projected_counts(): void
+    {
+        // One product already in DB → it will be "updated".
+        Product::factory()->create(['code' => 'existing_for_dry']);
+
+        Sanctum::actingAs($this->admin, ['*']);
+
+        $file = $this->buildExcel([
+            ['code' => 'new_for_dry',      'name' => 'New For Dry',      'currency_code' => 'KZT', 'amount' => 1000],
+            ['code' => 'existing_for_dry', 'name' => 'Existing For Dry', 'currency_code' => 'KZT', 'amount' => 2000],
+        ]);
+
+        $response = $this->postImport('/api/catalog/price-import/preview', $file);
+
+        $response->assertOk();
+        $data = $response->json('data');
+
+        $this->assertTrue($data['dry_run']);
+        // Projected counts present and correct.
+        $this->assertSame(1, $data['would_insert'], 'would_insert must count new products');
+        $this->assertSame(1, $data['would_update'], 'would_update must count existing products');
+        // Real-run counters must be zero in dry-run.
+        $this->assertSame(0, $data['inserted']);
+        $this->assertSame(0, $data['updated']);
+        // Nothing actually written.
+        $this->assertDatabaseMissing('catalog_products', ['code' => 'new_for_dry']);
+    }
+
+    /**
+     * Regression: on a real (non-dry) run inserted/updated must carry counts,
+     * and would_insert/would_update must be zero (not meaningful outside preview).
+     */
+    public function test_real_run_returns_actual_counts_not_projected(): void
+    {
+        Product::factory()->create(['code' => 'existing_real']);
+
+        Sanctum::actingAs($this->admin, ['*']);
+
+        $file = $this->buildExcel([
+            ['code' => 'new_real',      'name' => 'New Real',      'currency_code' => 'KZT', 'amount' => 1000],
+            ['code' => 'existing_real', 'name' => 'Existing Real', 'currency_code' => 'KZT', 'amount' => 2000],
+        ]);
+
+        $response = $this->postImport('/api/catalog/price-import', $file);
+
+        $response->assertOk();
+        $data = $response->json('data');
+
+        $this->assertFalse($data['dry_run']);
+        $this->assertSame(1, $data['inserted']);
+        $this->assertSame(1, $data['updated']);
+        // Projected counters must be zero on real run.
+        $this->assertSame(0, $data['would_insert']);
+        $this->assertSame(0, $data['would_update']);
+        // Data was written.
+        $this->assertDatabaseHas('catalog_products', ['code' => 'new_real']);
+    }
+
     public function test_import_excel_invalid_currency_returns_validation_error(): void
     {
         Sanctum::actingAs($this->admin, ['*']);

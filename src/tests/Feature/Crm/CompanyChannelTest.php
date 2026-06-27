@@ -366,4 +366,56 @@ class CompanyChannelTest extends TestCase
             'is_primary_for_channel' => true,
         ]);
     }
+
+    // ---- IDOR: channel must belong to the route-bound company ----
+
+    public function test_update_channel_of_another_company_returns_404(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $companyA = Company::factory()->create(['owner_user_id' => $admin->id]);
+        $companyB = Company::factory()->create(['owner_user_id' => $admin->id]);
+
+        // Channel belongs to companyB
+        $channel = CompanyChannel::create([
+            'company_id' => $companyB->id,
+            'channel_type' => ChannelType::Phone->value,
+            'value' => '+70001111111',
+            'is_primary_for_channel' => false,
+        ]);
+        Sanctum::actingAs($admin, ['*']);
+
+        // Route says companyA, but channel belongs to companyB → 404
+        $this->patchJson("/api/companies/{$companyA->id}/channels/{$channel->id}", [
+            'value' => '+70009999999',
+        ])->assertNotFound();
+
+        // Channel must be unchanged
+        $this->assertDatabaseHas('company_channels', [
+            'id' => $channel->id,
+            'value' => '+70001111111',
+        ]);
+    }
+
+    public function test_delete_channel_of_another_company_returns_404(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $companyA = Company::factory()->create(['owner_user_id' => $admin->id]);
+        $companyB = Company::factory()->create(['owner_user_id' => $admin->id]);
+
+        // Channel belongs to companyB
+        $channel = CompanyChannel::create([
+            'company_id' => $companyB->id,
+            'channel_type' => ChannelType::Email->value,
+            'value' => 'other@company.com',
+            'is_primary_for_channel' => false,
+        ]);
+        Sanctum::actingAs($admin, ['*']);
+
+        // Route says companyA, but channel belongs to companyB → 404
+        $this->deleteJson("/api/companies/{$companyA->id}/channels/{$channel->id}")
+            ->assertNotFound();
+
+        // Channel must still exist
+        $this->assertDatabaseHas('company_channels', ['id' => $channel->id]);
+    }
 }

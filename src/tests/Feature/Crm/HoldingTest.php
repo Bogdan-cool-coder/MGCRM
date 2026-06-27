@@ -404,4 +404,117 @@ class HoldingTest extends TestCase
             'holding_role' => 'not_a_valid_role',
         ])->assertStatus(422);
     }
+
+    // ---- Fix-2: parent_id authorization ----
+
+    /**
+     * A manager cannot graft their company under a parent they cannot see.
+     */
+    public function test_attach_under_invisible_parent_returns_403(): void
+    {
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        $other = User::factory()->create(['role' => Role::Manager]);
+
+        // Child belongs to $manager, parent belongs to $other (invisible to $manager)
+        $child = Company::factory()->create(['owner_user_id' => $manager->id]);
+        $parent = Company::factory()->create(['owner_user_id' => $other->id]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->postJson("/api/companies/{$child->id}/holding", [
+            'parent_id' => $parent->id,
+            'holding_role' => HoldingRole::Subsidiary->value,
+        ])->assertForbidden();
+
+        // holding_id must remain null
+        $this->assertDatabaseHas('crm_companies', [
+            'id' => $child->id,
+            'holding_id' => null,
+        ]);
+    }
+
+    /**
+     * A manager CAN attach under a parent they own.
+     */
+    public function test_attach_under_visible_parent_succeeds(): void
+    {
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        $child = Company::factory()->create(['owner_user_id' => $manager->id]);
+        $parent = Company::factory()->create(['owner_user_id' => $manager->id]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->postJson("/api/companies/{$child->id}/holding", [
+            'parent_id' => $parent->id,
+            'holding_role' => HoldingRole::Subsidiary->value,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('crm_companies', [
+            'id' => $child->id,
+            'holding_id' => $parent->id,
+        ]);
+    }
+
+    // ---- Fix-3: holding tree PII masking for Own-scope viewers ----
+
+    /**
+     * A manager (Own scope) viewing a holding tree must not see the names
+     * of companies outside their ownership — those nodes are masked (name=null).
+     */
+    public function test_manager_sees_only_own_companies_in_holding_tree(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $manager = User::factory()->create(['role' => Role::Manager]);
+
+        // Holding structure: root (admin's) → child (manager's)
+        // Manager can view the focal child but not the root.
+        $root = Company::factory()->create(['owner_user_id' => $admin->id]);
+        $child = Company::factory()->create([
+            'owner_user_id' => $manager->id,
+            'holding_id' => $root->id,
+            'holding_role' => HoldingRole::Subsidiary,
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $resp = $this->getJson("/api/companies/{$child->id}/holding")
+            ->assertOk();
+
+        // Focal company is the manager's own — name must be visible
+        $this->assertNotNull($resp->json('data.company.name'));
+        $this->assertSame($child->id, $resp->json('data.company.id'));
+
+        // Ancestor (root) is admin's — must be masked (name=null)
+        $ancestors = $resp->json('data.ancestors');
+        $this->assertCount(1, $ancestors);
+        $this->assertSame($root->id, $ancestors[0]['id']);
+        $this->assertNull($ancestors[0]['name'], 'Out-of-scope ancestor name must be masked');
+    }
+
+    /**
+     * A director (All scope) sees all company names in the tree, none masked.
+     */
+    public function test_director_sees_all_names_in_holding_tree(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $director = User::factory()->create(['role' => Role::Director]);
+
+        $root = Company::factory()->create(['owner_user_id' => $admin->id]);
+        $child = Company::factory()->create([
+            'owner_user_id' => $admin->id,
+            'holding_id' => $root->id,
+            'holding_role' => HoldingRole::Subsidiary,
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $resp = $this->getJson("/api/companies/{$child->id}/holding")
+            ->assertOk();
+
+        // Director has All scope — ancestor name must NOT be masked
+        $ancestors = $resp->json('data.ancestors');
+        $this->assertCount(1, $ancestors);
+        $this->assertNotNull($ancestors[0]['name'], 'Director must see all ancestor names');
+        $this->assertSame($root->name, $ancestors[0]['name']);
+    }
 }

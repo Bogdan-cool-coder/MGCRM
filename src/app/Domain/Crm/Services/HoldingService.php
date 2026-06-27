@@ -6,7 +6,9 @@ namespace App\Domain\Crm\Services;
 
 use App\Domain\Crm\Enums\HoldingRole;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\VisibilityResolver;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -26,6 +28,8 @@ use InvalidArgumentException;
 class HoldingService
 {
     private const MAX_DEPTH = 10;
+
+    public function __construct(private readonly VisibilityResolver $visibility) {}
 
     /**
      * Build the full holding tree rooted at the given company's group root.
@@ -47,6 +51,12 @@ class HoldingService
      *      For real-world holding sizes (< 1000 companies) this is always
      *      a single round-trip.
      *
+     * Privacy / PII:
+     *   When $viewer is provided and their scope is NOT All, nodes outside
+     *   their ownership are returned as masked nodes (id only, name=null) to
+     *   preserve the structural integrity of the ancestor chain without leaking
+     *   company names they cannot access.
+     *
      * Returns:
      *   {
      *     company:   { id, name, holding_role, you_are_here },
@@ -55,9 +65,10 @@ class HoldingService
      *   }
      *
      * @param  Company  $focal  The company currently being viewed
+     * @param  User|null  $viewer  When provided, nodes outside their scope are masked
      * @return array<string, mixed>
      */
-    public function buildTree(Company $focal): array
+    public function buildTree(Company $focal, ?User $viewer = null): array
     {
         // Step 1: walk up to root (small loop, max MAX_DEPTH individual finds
         // — this is O(depth), typically 1-3 queries, not per-node).
@@ -85,23 +96,59 @@ class HoldingService
             $byId[$root->id] = $root;
         }
 
+        // Resolve which IDs the viewer may see (null viewer = no masking, e.g. tests
+        // calling buildTree() directly without a viewer context).
+        $visibleIds = $this->resolveVisibleIds($byId, $viewer);
+
         // Step 3: build ancestors list from the map (pure PHP, zero DB).
         $ancestors = $this->ancestorsFromMap($focal, $byId);
 
         // Step 4: collect direct children of the focal company (flat list, zero DB).
-        $children = $this->directChildrenFromMap($focal->id, $byId);
+        $children = $this->directChildrenFromMap($focal->id, $byId, $visibleIds);
 
         return [
             // company = the focal company being viewed (you_are_here: true)
-            'company' => $this->companyNode($focal, true),
+            'company' => $this->companyNode($focal, true, $visibleIds),
             // ancestors = root-first chain up to focal's direct parent
             'ancestors' => array_map(
-                fn (Company $c) => $this->companyNode($c, false),
+                fn (Company $c) => $this->companyNode($c, false, $visibleIds),
                 $ancestors,
             ),
             // children = flat HoldingCompanyNode[] of focal's direct subsidiaries
             'children' => $children,
         ];
+    }
+
+    /**
+     * Determine which company IDs in the map the viewer is allowed to see.
+     * Returns null when there is no viewer (no restriction) or the viewer has
+     * All scope (admin/director/lawyer).
+     *
+     * @param  array<int, Company>  $byId
+     * @return array<int, true>|null ID set for fast lookup, or null = all visible
+     */
+    private function resolveVisibleIds(array $byId, ?User $viewer): ?array
+    {
+        if ($viewer === null) {
+            return null; // no masking requested
+        }
+
+        if ($this->visibility->resolve($viewer) === VisibilityScope::All) {
+            return null; // admin/director/lawyer see everything
+        }
+
+        // Own scope: only companies where the viewer is owner or responsible.
+        $visible = [];
+        foreach ($byId as $id => $company) {
+            if (
+                (int) $company->owner_user_id === $viewer->id
+                || (int) $company->responsible_user_id === $viewer->id
+            ) {
+                $visible[$id] = true;
+            }
+        }
+
+        return $visible;
     }
 
     /**
@@ -127,7 +174,7 @@ class HoldingService
             $batch = Company::query()
                 ->whereIn('holding_id', $knownIds)
                 ->whereNull('deleted_at')
-                ->get(['id', 'name', 'holding_id', 'holding_role']);
+                ->get(['id', 'name', 'holding_id', 'holding_role', 'owner_user_id', 'responsible_user_id']);
 
             if ($batch->isEmpty()) {
                 break;
@@ -148,7 +195,7 @@ class HoldingService
         $root = Company::query()
             ->where('id', $rootId)
             ->whereNull('deleted_at')
-            ->first(['id', 'name', 'holding_id', 'holding_role']);
+            ->first(['id', 'name', 'holding_id', 'holding_role', 'owner_user_id', 'responsible_user_id']);
 
         if ($root !== null) {
             $allRows->push($root);
@@ -188,16 +235,17 @@ class HoldingService
      * Zero DB calls — pure PHP lookup.
      *
      * @param  array<int, Company>  $byId
+     * @param  array<int, true>|null  $visibleIds  null = no masking
      * @return array<int, array<string, mixed>>
      */
-    private function directChildrenFromMap(int $parentId, array $byId): array
+    private function directChildrenFromMap(int $parentId, array $byId, ?array $visibleIds = null): array
     {
         $result = [];
         foreach ($byId as $company) {
             if ((int) $company->holding_id !== $parentId) {
                 continue;
             }
-            $result[] = $this->companyNode($company, false);
+            $result[] = $this->companyNode($company, false, $visibleIds);
         }
 
         return $result;
@@ -356,14 +404,21 @@ class HoldingService
     /**
      * Build a minimal company node for the tree response.
      *
+     * When $visibleIds is provided and the company's ID is NOT in that set,
+     * the node is masked: id is preserved (tree structure stays intact) but
+     * name and holding_role are null to avoid leaking PII.
+     *
+     * @param  array<int, true>|null  $visibleIds  null = no masking
      * @return array<string, mixed>
      */
-    private function companyNode(Company $company, bool $youAreHere): array
+    private function companyNode(Company $company, bool $youAreHere, ?array $visibleIds = null): array
     {
+        $masked = $visibleIds !== null && ! isset($visibleIds[$company->id]);
+
         return [
             'id' => $company->id,
-            'name' => $company->name,
-            'holding_role' => $company->holding_role?->value,
+            'name' => $masked ? null : $company->name,
+            'holding_role' => $masked ? null : $company->holding_role?->value,
             'you_are_here' => $youAreHere,
         ];
     }

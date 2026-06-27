@@ -447,23 +447,88 @@ class DedupService
     }
 
     /**
-     * Transfer Contact's company links to master, then soft-delete duplicate.
+     * Transfer ALL of the duplicate contact's child FK rows to master, then
+     * soft-delete the duplicate. Must be called inside an existing DB::transaction.
+     *
+     * Tables re-parented (in order):
+     *   1. crm_contact_company_links  — pivot (skip if master already has the company)
+     *   2. deal_contacts              — pivot deal↔contact (skip if master already on deal)
+     *   3. contact_channels           — contact's communication channels
+     *   4. activities                 — polymorphic (target_type='contact', target_id=dup)
+     *   5. crm_contact_relations      — directional link: both contact_id and related_contact_id
+     *   6. crm_folders / crm_files    — polymorphic (owner_entity_type='contact', owner_entity_id=dup)
      */
     private function mergeContact(int $masterId, int $dupId): void
     {
-        // Transfer company links — skip if master already has a link to same company
-        $masterLinks = ContactCompanyLink::where('contact_id', $masterId)
+        // 1. Contact-company pivot: transfer links not already on master.
+        $masterCompanyIds = ContactCompanyLink::where('contact_id', $masterId)
             ->pluck('company_id')
             ->all();
 
         ContactCompanyLink::where('contact_id', $dupId)
-            ->whereNotIn('company_id', $masterLinks)
+            ->whereNotIn('company_id', $masterCompanyIds)
             ->update(['contact_id' => $masterId, 'is_primary' => false]);
 
-        // Delete orphaned links (master already has them)
+        // Delete any remaining links (master already has them — duplicates).
         ContactCompanyLink::where('contact_id', $dupId)->delete();
 
-        // Soft-delete the duplicate
+        // 2. Deal-contact pivot: transfer links not already on master.
+        $masterDealIds = DB::table('deal_contacts')
+            ->where('contact_id', $masterId)
+            ->pluck('deal_id')
+            ->all();
+
+        DB::table('deal_contacts')
+            ->where('contact_id', $dupId)
+            ->whereNotIn('deal_id', $masterDealIds)
+            ->update(['contact_id' => $masterId, 'is_primary' => false]);
+
+        // Delete orphaned deal_contacts (master already has them).
+        DB::table('deal_contacts')
+            ->where('contact_id', $dupId)
+            ->delete();
+
+        // 3. Contact channels: re-parent all.
+        DB::table('contact_channels')
+            ->where('contact_id', $dupId)
+            ->update(['contact_id' => $masterId]);
+
+        // 4. Activities (polymorphic target): re-parent all.
+        DB::table('activities')
+            ->where('target_type', 'contact')
+            ->where('target_id', $dupId)
+            ->update(['target_id' => $masterId]);
+
+        // 5. Contact relations: the table stores both sides (contact_id and related_contact_id).
+        //    Re-parent dup as the initiating side.
+        DB::table('crm_contact_relations')
+            ->where('contact_id', $dupId)
+            ->update(['contact_id' => $masterId]);
+
+        //    Re-parent dup as the receiving side.
+        DB::table('crm_contact_relations')
+            ->where('related_contact_id', $dupId)
+            ->update(['related_contact_id' => $masterId]);
+
+        //    After re-parenting, self-referential rows (master↔master) and duplicate
+        //    pairs may have been created. Remove them.
+        DB::table('crm_contact_relations')
+            ->where('contact_id', $masterId)
+            ->where('related_contact_id', $masterId)
+            ->delete();
+
+        // 6. CRM folders and files (polymorphic owner): re-parent all.
+        DB::table('crm_folders')
+            ->where('owner_entity_type', 'contact')
+            ->where('owner_entity_id', $dupId)
+            ->update(['owner_entity_id' => $masterId]);
+
+        DB::table('crm_files')
+            ->where('owner_entity_type', 'contact')
+            ->where('owner_entity_id', $dupId)
+            ->update(['owner_entity_id' => $masterId]);
+
+        // Soft-delete the now-orphan-free duplicate.
         Contact::where('id', $dupId)->delete();
     }
 
@@ -513,6 +578,27 @@ class DedupService
         DB::table('company_requisites')
             ->where('company_id', $dupId)
             ->update(['company_id' => $masterId]);
+
+        // Ensure exactly one is_current=true for the master after merge.
+        // If the master already had a current requisite before the merge, the
+        // merged-in ones must be set to false. If the master had none, keep the
+        // first merged-in current as-is (no change needed) but clear all others.
+        $currentIds = DB::table('company_requisites')
+            ->where('company_id', $masterId)
+            ->where('is_current', true)
+            ->orderBy('id') // lowest id = the original master's current, if present
+            ->pluck('id')
+            ->all();
+
+        if (count($currentIds) > 1) {
+            // Keep only the first (lowest id = original master's requisite when it existed).
+            $keepId = $currentIds[0];
+            DB::table('company_requisites')
+                ->where('company_id', $masterId)
+                ->where('is_current', true)
+                ->where('id', '!=', $keepId)
+                ->update(['is_current' => false]);
+        }
 
         // 5. Company channels: re-parent company_channels.company_id.
         DB::table('company_channels')

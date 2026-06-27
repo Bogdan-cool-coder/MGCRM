@@ -34,7 +34,7 @@ class HoldingController extends Controller
     {
         $this->authorize('view', $company);
 
-        $tree = $this->service->buildTree($company);
+        $tree = $this->service->buildTree($company, $request->user());
 
         return response()->json(['data' => $tree]);
     }
@@ -60,7 +60,7 @@ class HoldingController extends Controller
             return response()->json(['error' => 'holding_cycle', 'message' => $e->getMessage()], 422);
         }
 
-        $tree = $this->service->buildTree($company->fresh());
+        $tree = $this->service->buildTree($company->fresh(), $request->user());
 
         return response()->json(['data' => $tree]);
     }
@@ -75,7 +75,7 @@ class HoldingController extends Controller
 
         $this->service->detach($company);
 
-        $tree = $this->service->buildTree($company->fresh());
+        $tree = $this->service->buildTree($company->fresh(), $request->user());
 
         return response()->json(['data' => $tree]);
     }

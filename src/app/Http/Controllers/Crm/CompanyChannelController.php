@@ -45,6 +45,9 @@ class CompanyChannelController extends Controller
 
     public function update(UpdateCompanyChannelRequest $request, Company $company, CompanyChannel $channel): JsonResource
     {
+        // Ensure the channel belongs to the route-bound company (prevent IDOR).
+        abort_if((int) $channel->company_id !== (int) $company->id, 404);
+
         $updated = $this->service->update($channel, $request->validated());
 
         return CompanyChannelResource::make($updated);
@@ -53,6 +56,9 @@ class CompanyChannelController extends Controller
     public function destroy(Request $request, Company $company, CompanyChannel $channel): JsonResponse
     {
         $this->authorize('update', $company);
+
+        // Ensure the channel belongs to the route-bound company (prevent IDOR).
+        abort_if((int) $channel->company_id !== (int) $company->id, 404);
 
         $this->service->delete($channel);
 

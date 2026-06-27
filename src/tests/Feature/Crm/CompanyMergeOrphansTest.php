@@ -266,6 +266,67 @@ class CompanyMergeOrphansTest extends TestCase
     }
 
     // -----------------------------------------------------------------------
+    // Requisite is_current uniqueness after merge (Fix-5)
+    // -----------------------------------------------------------------------
+
+    public function test_merge_company_leaves_exactly_one_current_requisite(): void
+    {
+        $master = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $dup = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+
+        // Both have a current requisite — after merge only one must remain current.
+        $masterReq = CompanyRequisite::factory()->current()->create(['company_id' => $master->id]);
+        $dupReq = CompanyRequisite::factory()->current()->create(['company_id' => $dup->id]);
+
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'company',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        $this->assertSoftDeleted('crm_companies', ['id' => $dup->id]);
+
+        // Both requisites now belong to master
+        $this->assertDatabaseHas('company_requisites', ['id' => $masterReq->id, 'company_id' => $master->id]);
+        $this->assertDatabaseHas('company_requisites', ['id' => $dupReq->id, 'company_id' => $master->id]);
+
+        // Exactly one must be is_current=true
+        $currentCount = \Illuminate\Support\Facades\DB::table('company_requisites')
+            ->where('company_id', $master->id)
+            ->where('is_current', true)
+            ->count();
+
+        $this->assertSame(1, $currentCount, 'Exactly one requisite must be current after merge');
+    }
+
+    public function test_merge_company_no_current_on_dup_keeps_master_current(): void
+    {
+        $master = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $dup = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+
+        // Only master has a current requisite; dup has a non-current one.
+        $masterReq = CompanyRequisite::factory()->current()->create(['company_id' => $master->id]);
+        $dupReq = CompanyRequisite::factory()->create(['company_id' => $dup->id]); // is_current=false
+
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'company',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        // Master's requisite remains current; dup's remains non-current.
+        $this->assertDatabaseHas('company_requisites', ['id' => $masterReq->id, 'is_current' => true]);
+        $this->assertDatabaseHas('company_requisites', ['id' => $dupReq->id, 'is_current' => false]);
+
+        $currentCount = \Illuminate\Support\Facades\DB::table('company_requisites')
+            ->where('company_id', $master->id)
+            ->where('is_current', true)
+            ->count();
+
+        $this->assertSame(1, $currentCount);
+    }
+
+    // -----------------------------------------------------------------------
     // Multi-dup: multiple duplicates merged in one call
     // -----------------------------------------------------------------------
 

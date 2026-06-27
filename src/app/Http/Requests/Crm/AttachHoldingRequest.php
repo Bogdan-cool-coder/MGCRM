@@ -19,7 +19,21 @@ class AttachHoldingRequest extends FormRequest
         /** @var Company $company */
         $company = $this->route('company');
 
-        return $this->user()->can('update', $company);
+        if (! $this->user()->can('update', $company)) {
+            return false;
+        }
+
+        // Also authorize the parent company being attached under.
+        // Prevents grafting a company under a holding the user cannot see.
+        $parentId = (int) $this->input('parent_id');
+        if ($parentId > 0) {
+            $parent = Company::find($parentId);
+            if ($parent === null || ! $this->user()->can('view', $parent)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
