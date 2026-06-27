@@ -10,6 +10,26 @@ export type ActivityStatus = 'new' | 'in_progress' | 'done' | 'rejected'
 export type ActivityPriority = 'low' | 'normal' | 'high' | 'critical'
 export type ActivityTargetType = 'deal' | 'company' | 'contact'
 
+/**
+ * Client-side mirror of ActivityStatus::allowedTransitions()
+ * (src/app/Domain/Activity/Enums/ActivityStatus.php).
+ *
+ * Keep in sync with the backend whenever the server-side state machine changes.
+ * Same-status is always a no-op (idempotent) — it is NOT listed here; the UI
+ * always includes the current status in the dropdown regardless of this map.
+ *
+ *   new        → in_progress | rejected
+ *   in_progress→ done | rejected | new
+ *   done       → in_progress
+ *   rejected   → new | in_progress
+ */
+export const ACTIVITY_STATUS_TRANSITIONS: Record<ActivityStatus, ActivityStatus[]> = {
+  new:         ['in_progress', 'rejected'],
+  in_progress: ['done', 'rejected', 'new'],
+  done:        ['in_progress'],
+  rejected:    ['new', 'in_progress'],
+}
+
 // ─── User ref (minimal) ───────────────────────────────────────────────────────
 
 export interface ActivityUserRefDto {

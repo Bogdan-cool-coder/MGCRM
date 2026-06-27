@@ -256,7 +256,7 @@
           <div v-else class="tasks-cell--editing">
             <Select
               v-model="editStatus"
-              :options="statusOptions"
+              :options="statusOptionsFor(editingRowCurrentStatus ?? 'new')"
               option-label="label"
               option-value="value"
               :placeholder="t('tasks.list.placeholder.status')"
@@ -366,6 +366,7 @@ import { activityApi, type ReschedulePreset } from '@/api/activity'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { ActivityDto, ActivityKind, ActivityStatus } from '@/entities/activity'
+import { ACTIVITY_STATUS_TRANSITIONS } from '@/entities/activity'
 import type { TaskPreset } from '../composables/useMyTasks'
 
 // PrimeVue DataTable page event type
@@ -417,6 +418,9 @@ const editResponsibleId = ref<number | null>(null)
 const editKind = ref<ActivityKind | null>(null)
 const editStatus = ref<ActivityStatus | null>(null)
 const editTitle = ref<string>('')
+// Current status of the row being edited — used to gate the status dropdown
+// to only valid transitions (mirrors ActivityStatus::allowedTransitions()).
+const editingRowCurrentStatus = ref<ActivityStatus | null>(null)
 
 function startEdit(activity: ActivityDto, field: EditingCell['field']) {
   if (patchingId.value !== null) return
@@ -427,6 +431,9 @@ function startEdit(activity: ActivityDto, field: EditingCell['field']) {
     editKind.value = activity.kind
   } else if (field === 'status') {
     editStatus.value = activity.status
+    // Capture the row's current status so the dropdown can be gated to only
+    // valid transitions (see statusOptionsFor / ACTIVITY_STATUS_TRANSITIONS).
+    editingRowCurrentStatus.value = activity.status
   } else if (field === 'title') {
     editTitle.value = activity.title
   }
@@ -441,6 +448,7 @@ function startEditResponsible(activity: ActivityDto) {
 
 function cancelEdit() {
   editingCell.value = null
+  editingRowCurrentStatus.value = null
 }
 
 // ── Patch helpers ─────────────────────────────────────────────────────────────
@@ -588,12 +596,18 @@ const kindOptions = computed<Array<{ label: string; value: ActivityKind }>>(() =
   { label: t('activity.kinds.follow_up'), value: 'follow_up' },
 ])
 
-const statusOptions = computed<Array<{ label: string; value: ActivityStatus }>>(() => [
-  { label: t('activity.statuses.new'), value: 'new' },
-  { label: t('activity.statuses.in_progress'), value: 'in_progress' },
-  { label: t('activity.statuses.done'), value: 'done' },
-  { label: t('activity.statuses.rejected'), value: 'rejected' },
-])
+/**
+ * Returns the allowed status options for a given current status.
+ * Always includes the current status itself (idempotent no-op) plus every
+ * valid transition target from ACTIVITY_STATUS_TRANSITIONS — mirroring
+ * ActivityStatus::allowedTransitions() + canTransitionTo(same) on the server.
+ */
+function statusOptionsFor(
+  current: ActivityStatus,
+): Array<{ label: string; value: ActivityStatus }> {
+  const targets: ActivityStatus[] = [current, ...ACTIVITY_STATUS_TRANSITIONS[current]]
+  return targets.map((s) => ({ label: t(`activity.statuses.${s}`), value: s }))
+}
 
 // ── Context menu ──────────────────────────────────────────────────────────────
 
