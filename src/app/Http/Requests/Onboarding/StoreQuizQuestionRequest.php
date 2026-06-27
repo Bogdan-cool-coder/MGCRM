@@ -20,10 +20,16 @@ class StoreQuizQuestionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'text' => ['required', 'string'],
-            'kind' => ['required', Rule::enum(QuestionKind::class)],
-            'explanation' => ['nullable', 'string'],
-            'points' => ['nullable', 'integer', 'min:1'],
+            'text'                   => ['required', 'string'],
+            'kind'                   => ['required', Rule::enum(QuestionKind::class)],
+            'explanation'            => ['nullable', 'string'],
+            'points'                 => ['nullable', 'integer', 'min:1'],
+            // Inline options — allows FE to create question + options in one request.
+            // Each item: text (required), is_correct (boolean, default false).
+            // sort_order is assigned server-side as dense 1..N from array position.
+            'options'                => ['sometimes', 'array'],
+            'options.*.text'         => ['required', 'string', 'max:512'],
+            'options.*.is_correct'   => ['sometimes', 'boolean'],
         ];
     }
 }

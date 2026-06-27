@@ -68,6 +68,26 @@ class TgNotifyActionTest extends TestCase
         $this->assertSame("deal #{$deal->id}: ACME", $result->data['message']);
     }
 
+    public function test_execute_sends_to_chosen_user_not_owner(): void
+    {
+        // The builder folds its recipient picker into recipient="user_id:N". The
+        // send must target THAT user's chat, not the deal owner — the FE/BE
+        // contract drift previously always sent to the owner.
+        $owner = User::factory()->create(['telegram_user_id' => '111']);
+        $recipient = User::factory()->create(['telegram_user_id' => '999']);
+        $deal = Deal::factory()->create(['owner_user_id' => $owner->id]);
+        $automation = PipelineAutomation::factory()->create();
+
+        $result = $this->action->execute($automation, $deal, [
+            'recipient' => "user_id:{$recipient->id}",
+            'message' => 'hi',
+        ]);
+
+        $this->assertSame(ActionStatus::Queued, $result->status);
+        $this->assertSame('999', $result->data['chat_id']);
+        $this->assertNotSame('111', $result->data['chat_id']);
+    }
+
     public function test_execute_resolves_explicit_chat_id(): void
     {
         $deal = Deal::factory()->create();

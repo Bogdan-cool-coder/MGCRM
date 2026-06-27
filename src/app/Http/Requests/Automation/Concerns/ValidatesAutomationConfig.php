@@ -113,18 +113,8 @@ trait ValidatesAutomationConfig
         $config = $this->actionConfigInput();
 
         match ($kind) {
-            ActionKind::TgNotify => $this->requireNonEmptyString(
-                $validator,
-                $config,
-                'action_config.message',
-                'tg_notify requires a non-empty "message".',
-            ),
-            ActionKind::CreateTask => $this->requireNonEmptyString(
-                $validator,
-                $config,
-                'action_config.title',
-                'create_task requires a non-empty "title".',
-            ),
+            ActionKind::TgNotify => $this->validateTgNotify($validator, $config),
+            ActionKind::CreateTask => $this->validateCreateTask($validator, $config),
             ActionKind::SetField => $this->validateSetField($validator, $config),
             ActionKind::GenerateDocument => $this->requireNonEmptyString(
                 $validator,
@@ -138,6 +128,93 @@ trait ValidatesAutomationConfig
             // email is a forward-compatible no-op — no hard required field.
             ActionKind::Email => null,
         };
+    }
+
+    /**
+     * tg_notify — non-empty "message" + a recipient spec the RecipientResolver
+     * understands. The builder folds its type/user/chat fields into the single
+     * `recipient` string ('owner' | 'user_id:N' | 'chat_id:X'); validating the
+     * shape here means a malformed spec 422s at save instead of silently
+     * resolving to the deal owner at runtime.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function validateTgNotify(Validator $validator, array $config): void
+    {
+        $this->requireNonEmptyString(
+            $validator,
+            $config,
+            'action_config.message',
+            'tg_notify requires a non-empty "message".',
+        );
+
+        // recipient is optional (defaults to "owner") but, if present, must be a
+        // recognised spec: owner | user_id:N | chat_id:X.
+        if (array_key_exists('recipient', $config)
+            && ! $this->isValidTgRecipient($config['recipient'])
+        ) {
+            $validator->errors()->add(
+                'action_config.recipient',
+                'tg_notify "recipient" must be "owner", "user_id:N" or "chat_id:X".',
+            );
+        }
+    }
+
+    /**
+     * create_task — non-empty "title" + an optional "responsible" spec the
+     * RecipientResolver understands ('owner' | 'user_id:N'). The builder folds its
+     * assignee_type/user_id fields into this single string; a bad spec 422s at
+     * save instead of silently falling back to the deal owner.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function validateCreateTask(Validator $validator, array $config): void
+    {
+        $this->requireNonEmptyString(
+            $validator,
+            $config,
+            'action_config.title',
+            'create_task requires a non-empty "title".',
+        );
+
+        if (array_key_exists('responsible', $config)
+            && ! $this->isValidUserSpec($config['responsible'])
+        ) {
+            $validator->errors()->add(
+                'action_config.responsible',
+                'create_task "responsible" must be "owner" or "user_id:N".',
+            );
+        }
+    }
+
+    /**
+     * "owner" | "user_id:N" (N > 0).
+     */
+    private function isValidUserSpec(mixed $spec): bool
+    {
+        if (! is_string($spec)) {
+            return false;
+        }
+
+        $spec = trim($spec);
+
+        if ($spec === 'owner') {
+            return true;
+        }
+
+        return (bool) preg_match('/^user_id:[1-9]\d*$/', $spec);
+    }
+
+    /**
+     * "owner" | "user_id:N" | "chat_id:X" (chat ids may be negative for groups).
+     */
+    private function isValidTgRecipient(mixed $spec): bool
+    {
+        if ($this->isValidUserSpec($spec)) {
+            return true;
+        }
+
+        return is_string($spec) && (bool) preg_match('/^chat_id:-?[1-9]\d*$/', trim($spec));
     }
 
     /**

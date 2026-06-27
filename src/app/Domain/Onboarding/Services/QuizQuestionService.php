@@ -6,6 +6,7 @@ namespace App\Domain\Onboarding\Services;
 
 use App\Domain\Onboarding\Enums\QuestionKind;
 use App\Domain\Onboarding\Models\Quiz;
+use App\Domain\Onboarding\Models\QuizOption;
 use App\Domain\Onboarding\Models\QuizQuestion;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +42,7 @@ class QuizQuestionService
                 ->get(['sort_order'])
                 ->max('sort_order');
 
-            return QuizQuestion::create([
+            $question = QuizQuestion::create([
                 'quiz_id' => $quiz->id,
                 'text' => $data['text'],
                 'kind' => QuestionKind::from($data['kind']),
@@ -50,6 +51,23 @@ class QuizQuestionService
                 'points' => $data['points'] ?? 1,
                 'is_draft' => $data['is_draft'] ?? false,
             ]);
+
+            // Persist inline options when provided (mirrors QuizGenerationService pattern).
+            // sort_order is the array position (1-indexed) — no lockForUpdate needed
+            // because the question row was just inserted and no other writer can race it.
+            foreach (($data['options'] ?? []) as $position => $opt) {
+                QuizOption::create([
+                    'question_id' => $question->id,
+                    'text' => (string) $opt['text'],
+                    'is_correct' => (bool) ($opt['is_correct'] ?? false),
+                    'sort_order' => $position + 1,
+                ]);
+            }
+
+            // Reload the options relation so callers and the Resource reflect them.
+            $question->load('options');
+
+            return $question;
         });
     }
 

@@ -149,4 +149,92 @@ class QuizQuestionCrudTest extends TestCase
             ['order' => [['id' => $own->id], ['id' => $foreign->id]]]
         )->assertUnprocessable();
     }
+
+    // ------------------------------------------------------------------
+    // Inline options on create (the bug: options were silently dropped)
+    // ------------------------------------------------------------------
+
+    public function test_create_question_with_inline_options_persists_option_rows(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+
+        $response = $this->postJson("/api/admin/onboarding/quizzes/{$this->quiz->id}/questions", [
+            'text' => 'Which planet is closest to the Sun?',
+            'kind' => 'single_choice',
+            'options' => [
+                ['text' => 'Mercury', 'is_correct' => true],
+                ['text' => 'Venus',   'is_correct' => false],
+                ['text' => 'Earth',   'is_correct' => false],
+            ],
+        ]);
+
+        $response->assertCreated();
+
+        $questionId = $response->json('data.id');
+        $this->assertNotNull($questionId);
+
+        // 3 option rows must exist in the DB
+        $this->assertSame(3, QuizOption::where('question_id', $questionId)->count());
+
+        // is_correct flag must be persisted correctly
+        $correct = QuizOption::where('question_id', $questionId)->where('is_correct', true)->get();
+        $this->assertCount(1, $correct);
+        $this->assertSame('Mercury', $correct->first()->text);
+    }
+
+    public function test_create_question_with_inline_options_returns_options_in_response(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+
+        $response = $this->postJson("/api/admin/onboarding/quizzes/{$this->quiz->id}/questions", [
+            'text' => 'Select all even numbers',
+            'kind' => 'multiple_choice',
+            'options' => [
+                ['text' => '2', 'is_correct' => true],
+                ['text' => '3', 'is_correct' => false],
+                ['text' => '4', 'is_correct' => true],
+            ],
+        ]);
+
+        $response->assertCreated();
+
+        $options = $response->json('data.options');
+        $this->assertIsArray($options);
+        $this->assertCount(3, $options);
+
+        // sort_order must be dense 1..N from array position
+        $sortOrders = array_column($options, 'sort_order');
+        $this->assertSame([1, 2, 3], $sortOrders);
+    }
+
+    public function test_create_question_without_options_key_still_works(): void
+    {
+        // Regression guard: omitting 'options' must not break existing callers.
+        Sanctum::actingAs($this->admin, ['*']);
+
+        $this->postJson("/api/admin/onboarding/quizzes/{$this->quiz->id}/questions", [
+            'text' => 'No options supplied',
+            'kind' => 'single_choice',
+        ])->assertCreated()
+            ->assertJsonPath('data.text', 'No options supplied');
+
+        // Zero options — the question is saved (caller adds options separately)
+        $questionId = QuizQuestion::where('text', 'No options supplied')->first()?->id;
+        $this->assertNotNull($questionId);
+        $this->assertSame(0, QuizOption::where('question_id', $questionId)->count());
+    }
+
+    public function test_create_question_options_validation_requires_text(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+
+        $this->postJson("/api/admin/onboarding/quizzes/{$this->quiz->id}/questions", [
+            'text' => 'Broken option',
+            'kind' => 'single_choice',
+            'options' => [
+                ['is_correct' => true], // missing 'text'
+            ],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['options.0.text']);
+    }
 }

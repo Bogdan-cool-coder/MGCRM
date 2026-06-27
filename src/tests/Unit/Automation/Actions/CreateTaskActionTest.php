@@ -56,6 +56,33 @@ class CreateTaskActionTest extends TestCase
         $this->assertNotNull($activity->due_at);
     }
 
+    public function test_execute_assigns_to_chosen_user_with_body(): void
+    {
+        // The builder folds its assignee picker into responsible="user_id:N" and
+        // its description into "body". The created task must honour BOTH — the
+        // FE/BE contract drift previously dropped them (unassigned, no body).
+        $admin = User::factory()->role(Role::Admin)->create();
+        $owner = User::factory()->create();
+        $assignee = User::factory()->create();
+        $deal = Deal::factory()->create(['owner_user_id' => $owner->id, 'title' => 'Big deal']);
+        $automation = PipelineAutomation::factory()->create(['created_by_user_id' => $admin->id]);
+
+        $result = $this->action->execute($automation, $deal, [
+            'title' => 'Prepare proposal',
+            'body' => 'Discuss {target_title} terms',
+            'responsible' => "user_id:{$assignee->id}",
+            'due_days' => 2,
+        ]);
+
+        $this->assertSame(ActionStatus::Success, $result->status);
+
+        $activity = Activity::findOrFail($result->data['activity_id']);
+        $this->assertSame('Prepare proposal', $activity->title);
+        $this->assertSame('Discuss Big deal terms', $activity->body);
+        $this->assertSame($assignee->id, (int) $activity->responsible_id);
+        $this->assertNotSame($owner->id, (int) $activity->responsible_id);
+    }
+
     public function test_execute_falls_back_to_deal_owner_as_actor(): void
     {
         // No automation creator => the deal owner is used as the acting user.

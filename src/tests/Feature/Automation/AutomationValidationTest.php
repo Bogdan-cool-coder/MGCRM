@@ -251,6 +251,63 @@ class AutomationValidationTest extends TestCase
             ->assertJsonValidationErrorFor('action_config.message');
     }
 
+    public function test_tg_notify_accepts_user_recipient_spec(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+        $user = User::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'tg_notify',
+            'action_config' => ['recipient' => "user_id:{$user->id}", 'message' => 'hi'],
+        ]))->assertCreated();
+    }
+
+    public function test_tg_notify_rejects_malformed_recipient_spec(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'tg_notify',
+            // The builder must fold its picker into the spec string, not leak
+            // recipient_type/user_id; a raw type word is not a valid spec.
+            'action_config' => ['recipient' => 'user', 'message' => 'hi'],
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('action_config.recipient');
+    }
+
+    public function test_create_task_accepts_user_responsible_spec(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+        $user = User::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'create_task',
+            'action_config' => [
+                'title' => 'Task',
+                'body' => 'Do it',
+                'responsible' => "user_id:{$user->id}",
+                'due_days' => 2,
+            ],
+        ]))->assertCreated();
+    }
+
+    public function test_create_task_rejects_malformed_responsible_spec(): void
+    {
+        $this->admin();
+        $pipeline = Pipeline::factory()->create();
+
+        $this->postJson('/api/automations', $this->payload($pipeline, null, [
+            'action_kind' => 'create_task',
+            'action_config' => ['title' => 'Task', 'responsible' => 'user'],
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('action_config.responsible');
+    }
+
     public function test_stage_must_belong_to_pipeline(): void
     {
         $this->admin();
