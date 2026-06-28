@@ -72,7 +72,28 @@ class ProductService
     /** @param array<string, mixed> $data */
     public function update(Product $product, array $data): Product
     {
-        $product->update($data);
+        // Explicit field map — symmetric with create() so unexpected payload keys
+        // (e.g. injected 'id', 'created_at') are silently ignored rather than
+        // mass-assigned. Per ARCHITECTURE.md §3.
+        $updateFields = array_filter([
+            'code' => $data['code'] ?? null,
+            'name' => $data['name'] ?? null,
+            'description' => $data['description'] ?? null,
+            'group_id' => array_key_exists('group_id', $data) ? $data['group_id'] : null,
+            'pricing_type' => $data['pricing_type'] ?? null,
+            'maps_to_product_code' => array_key_exists('maps_to_product_code', $data) ? $data['maps_to_product_code'] : null,
+            'is_active' => $data['is_active'] ?? null,
+            'sort_order' => $data['sort_order'] ?? null,
+        ], fn ($v) => $v !== null);
+
+        // Preserve explicit null for nullable FK fields if passed.
+        foreach (['group_id', 'maps_to_product_code'] as $nullable) {
+            if (array_key_exists($nullable, $data)) {
+                $updateFields[$nullable] = $data[$nullable];
+            }
+        }
+
+        $product->update($updateFields);
         $product->refresh();
 
         return $product->load(['group', 'plans', 'prices']);

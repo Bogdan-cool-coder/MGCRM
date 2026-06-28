@@ -31,9 +31,12 @@ class DealFeedTest extends TestCase
 
     private function seedThreeSources(Deal $deal): void
     {
+        // A REAL transition (from_stage_id non-null): the feed surfaces genuine
+        // stage moves but excludes the genesis row (from_stage_id = null) so the
+        // deal's creation isn't rendered twice (#4).
         DealStageHistory::query()->create([
             'deal_id' => $deal->id,
-            'from_stage_id' => null,
+            'from_stage_id' => $deal->stage_id,
             'to_stage_id' => $deal->stage_id,
             'user_id' => null,
             'created_at' => now()->subDays(2),
@@ -123,6 +126,34 @@ class DealFeedTest extends TestCase
         Sanctum::actingAs($other, ['*']);
 
         $this->getJson("/api/deals/{$deal->id}/feed")->assertForbidden();
+    }
+
+    // ---- #4: a freshly created deal does not duplicate its creation ----
+
+    public function test_newly_created_deal_feed_excludes_genesis_stage_row(): void
+    {
+        // create() writes a genesis stage row (from_stage_id = null). It must NOT
+        // surface in the feed, so the deal's creation isn't rendered twice (#4):
+        // a brand-new deal has zero stage_change events in its timeline.
+        $pipeline = $this->seedSalesPipeline();
+        $company = \App\Domain\Crm\Models\Company::factory()->create();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        $dealId = $this->postJson('/api/deals', [
+            'company_id' => $company->id,
+            'pipeline_id' => $pipeline->id,
+            'title' => 'Fresh deal',
+            'currency' => 'RUB',
+        ])->assertCreated()->json('data.id');
+
+        $data = collect($this->getJson("/api/deals/{$dealId}/feed")->assertOk()->json('data'));
+
+        $this->assertCount(
+            0,
+            $data->where('type', 'stage_change'),
+            'the genesis (creation) stage row must not appear as a feed stage_change',
+        );
     }
 
     // ---- C9: the feed exposes the activity's REAL status ----

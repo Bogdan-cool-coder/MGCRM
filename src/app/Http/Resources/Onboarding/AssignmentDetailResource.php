@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Onboarding;
 
+use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\LessonProgress;
 use App\Domain\Onboarding\Services\ProgressService;
@@ -51,14 +52,33 @@ class AssignmentDetailResource extends JsonResource
                                     ? $module->lessons
                                         ->filter(static fn ($lesson): bool => (bool) $lesson->is_published)
                                         ->map(static function ($lesson) use ($completedLessonIds): array {
+                                            // For PDF lessons, resolve a single canonical player_src
+                                            // so the student player doesn't need to know whether the
+                                            // PDF is stored on-disk (path) or hosted externally (url).
+                                            //
+                                            // - kind=pdf + content.path  → streaming route URL (authenticated)
+                                            // - kind=pdf + content.url   → streaming route URL (redirects to ext URL)
+                                            // - other kinds              → null (player uses content directly)
+                                            $playerSrc = null;
+                                            if ($lesson->kind === LessonKind::Pdf) {
+                                                $hasSource = ! empty($lesson->content['path'] ?? null)
+                                                    || ! empty($lesson->content['url'] ?? null);
+                                                if ($hasSource) {
+                                                    $playerSrc = url("/api/onboarding/lessons/{$lesson->id}/pdf");
+                                                }
+                                            }
+
                                             return [
                                                 'id' => $lesson->id,
                                                 'title' => $lesson->title,
                                                 'kind' => $lesson->kind?->value,
                                                 'is_published' => $lesson->is_published,
                                                 'duration_minutes' => $lesson->duration_minutes,
-                                                // Serialize content body so the lesson player renders
+                                                // Raw content body (for text/video/quiz players).
                                                 'content' => $lesson->content,
+                                                // Canonical player source for PDF lessons.
+                                                // null for non-PDF kinds.
+                                                'player_src' => $playerSrc,
                                                 'completed' => $completedLessonIds->contains($lesson->id),
                                             ];
                                         })->values()->all()

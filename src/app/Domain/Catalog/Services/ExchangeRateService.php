@@ -105,7 +105,12 @@ class ExchangeRateService
     }
 
     /**
-     * Return all latest rates (one per pair) up to today.
+     * Return rates ordered by date descending, then pair ascending.
+     *
+     * NOTE: this returns ALL historical rows (multiple rows per pair when more
+     * than one date exists). It does NOT guarantee one row per (from_code, to_code)
+     * pair. Callers that need the latest-per-pair rate should use getRate() or
+     * ExchangeRate::scopeLatestForPair() instead.
      */
     public function latestRates(?int $limit = null): Collection
     {

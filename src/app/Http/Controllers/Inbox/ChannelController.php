@@ -33,7 +33,7 @@ class ChannelController extends Controller
 
         $channels = $this->service->list(
             $request->only(['kind', 'is_active']),
-            (int) $request->query('per_page', 25),
+            min((int) $request->query('per_page', 25), 100), // clamp unbounded per_page (#15)
         );
 
         return ChannelResource::collection($channels);

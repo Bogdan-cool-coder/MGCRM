@@ -25,7 +25,30 @@ class DealFeedServiceTest extends TestCase
         return new DealFeedService;
     }
 
+    /**
+     * A REAL stage transition (from_stage_id is non-null). The feed deliberately
+     * EXCLUDES the genesis row (from_stage_id = null) so the deal's creation isn't
+     * rendered twice (#4); see test_creation_stage_row_is_excluded_from_feed and
+     * stageGenesis() for that case. Helpers used by every other test create a real
+     * move so they exercise a stage_change the feed is supposed to surface.
+     */
     private function stage(Deal $deal, ?string $at = null): DealStageHistory
+    {
+        return DealStageHistory::query()->create([
+            'deal_id' => $deal->id,
+            'from_stage_id' => $deal->stage_id, // non-null: a genuine transition
+            'to_stage_id' => $deal->stage_id,
+            'user_id' => null,
+            'created_at' => $at ?? now(),
+        ]);
+    }
+
+    /**
+     * The genesis stage row written when a deal is first created: from_stage_id is
+     * null. It must NEVER appear in the feed (#4) — its presence would duplicate
+     * the deal-creation already represented by the other sources.
+     */
+    private function stageGenesis(Deal $deal, ?string $at = null): DealStageHistory
     {
         return DealStageHistory::query()->create([
             'deal_id' => $deal->id,
@@ -188,6 +211,39 @@ class DealFeedServiceTest extends TestCase
         $result = $this->service()->feed($deal);
 
         $this->assertSame(1, $result['meta']['total']);
+    }
+
+    // ---- #4: the genesis stage row (from_stage_id = null) is excluded ----
+
+    public function test_creation_stage_row_is_excluded_from_feed(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // Only the genesis row exists — it must NOT surface as a stage_change, so
+        // the deal's creation is not rendered twice in the timeline (#4).
+        $this->stageGenesis($deal);
+
+        $result = $this->service()->feed($deal);
+
+        $this->assertSame(0, $result['meta']['total'], 'the genesis stage row must not appear in the feed');
+        $this->assertCount(0, $result['data']);
+    }
+
+    public function test_newly_created_deal_has_exactly_one_creation_entry(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // A real "deal created" representation: the genesis stage row PLUS the
+        // first real move. The genesis is dropped, so only the genuine transition
+        // remains — exactly one creation/first entry, never a duplicate.
+        $this->stageGenesis($deal, (string) now()->subMinute());
+        $move = $this->stage($deal, (string) now());
+
+        $result = $this->service()->feed($deal);
+
+        $stageEvents = collect($result['data'])->where('type', 'stage_change');
+        $this->assertCount(1, $stageEvents, 'only the real transition appears, not the genesis duplicate');
+        $this->assertSame("stage_{$move->id}", $stageEvents->first()['id']);
     }
 
     // ---- payment_fixed: entity_logs surfaced as a feed source ----

@@ -234,7 +234,7 @@ class SalesPulseDemoSeeder extends Seeder
         $exists = DealStageHistory::query()
             ->where('deal_id', $deal->id)
             ->where('to_stage_id', $stage->id)
-            ->whereBetween('created_at', [$today->startOfDay()->utc(), $today->endOfDay()->utc()])
+            ->whereBetween('created_at', [$today->startOfDay(), $today->endOfDay()])
             ->exists();
 
         if ($exists) {

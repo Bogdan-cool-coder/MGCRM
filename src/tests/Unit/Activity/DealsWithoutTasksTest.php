@@ -20,8 +20,11 @@ use Tests\TestCase;
  * consumed by the S1.7 dashboard "deals without tasks" widget (BQ1).
  *
  * A deal counts when it is OPEN (stage not won/lost), lives in the pipeline,
- * is inside the user's visibility scope, and has NO open task-like activity
- * (call/meeting/task with is_closed = false) targeting it.
+ * is inside the user's visibility scope, and has NO open NEXT task targeting it.
+ * "No next task" is single-sourced on the Deal::nextTask relation (#10) — the
+ * same predicate the deep-linked only_no_task list uses (whereDoesntHave
+ * ('nextTask')): task-like kind, is_closed = false, status != Done, due_at NOT
+ * NULL. The count and the list it links to therefore always agree.
  */
 class DealsWithoutTasksTest extends TestCase
 {
@@ -223,5 +226,90 @@ class DealsWithoutTasksTest extends TestCase
         $service = app(ActivityService::class);
 
         $this->assertSame(0, $service->countDealsWithoutTasks($pipeline->id, $admin));
+    }
+
+    // ---- #10: the widget count equals the list it deep-links to ----
+
+    public function test_done_but_unclosed_task_does_not_cover_the_deal(): void
+    {
+        // A task with status=Done but is_closed=false is NOT an open next task
+        // (nextTask requires status != Done). The OLD count predicate only checked
+        // is_closed and would have wrongly treated this deal as "covered", drifting
+        // from the list. The deal must still count as "without tasks".
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $pipeline = $this->pipeline();
+        $stage = $this->openStage($pipeline);
+
+        $deal = $this->dealFor($admin, $pipeline, $stage);
+        Activity::factory()->task()->forDeal($deal)->create([
+            'is_closed' => false,
+            'status' => \App\Domain\Activity\Enums\ActivityStatus::Done->value,
+        ]);
+
+        $service = app(ActivityService::class);
+
+        $this->assertSame(1, $service->countDealsWithoutTasks($pipeline->id, $admin));
+    }
+
+    public function test_task_without_due_at_does_not_cover_the_deal(): void
+    {
+        // A task-like activity with no due_at is not a next task (nextTask requires
+        // due_at IS NOT NULL). The OLD predicate ignored due_at and would have
+        // counted this deal as covered. The list (whereDoesntHave('nextTask'))
+        // counts it as "without tasks" — the widget must agree.
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $pipeline = $this->pipeline();
+        $stage = $this->openStage($pipeline);
+
+        $deal = $this->dealFor($admin, $pipeline, $stage);
+        Activity::factory()->task()->forDeal($deal)->create([
+            'is_closed' => false,
+            'due_at' => null,
+        ]);
+
+        $service = app(ActivityService::class);
+
+        $this->assertSame(1, $service->countDealsWithoutTasks($pipeline->id, $admin));
+    }
+
+    public function test_count_matches_the_deep_linked_list_query(): void
+    {
+        // The badge count must equal the list the widget deep-links to. The list
+        // filters open deals by whereDoesntHave('nextTask') (DealService
+        // only_no_task); the count single-sources the same predicate (#10). Seed a
+        // mix of covering / non-covering edge cases and assert the two agree.
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $pipeline = $this->pipeline();
+        $stage = $this->openStage($pipeline);
+
+        // Counts (no open next task):
+        $this->dealFor($admin, $pipeline, $stage);                       // bare
+        $covered = $this->dealFor($admin, $pipeline, $stage);
+        Activity::factory()->task()->forDeal($covered)->create([         // closed → counts
+            'is_closed' => true,
+        ]);
+        $dueLess = $this->dealFor($admin, $pipeline, $stage);
+        Activity::factory()->task()->forDeal($dueLess)->create([         // no due_at → counts
+            'is_closed' => false, 'due_at' => null,
+        ]);
+
+        // Does NOT count (has an open next task):
+        $withNext = $this->dealFor($admin, $pipeline, $stage);
+        Activity::factory()->task()->forDeal($withNext)->create([
+            'is_closed' => false, 'due_at' => now()->addDay(),
+        ]);
+
+        $service = app(ActivityService::class);
+        $count = $service->countDealsWithoutTasks($pipeline->id, $admin);
+
+        // The list predicate, applied directly to the same open-deal universe.
+        $listTotal = Deal::query()
+            ->where('pipeline_id', $pipeline->id)
+            ->whereHas('stage', fn ($q) => $q->where('is_won', false)->where('is_lost', false))
+            ->whereDoesntHave('nextTask')
+            ->count();
+
+        $this->assertSame($listTotal, $count, 'badge count must equal the deep-linked list query');
+        $this->assertSame(3, $count);
     }
 }

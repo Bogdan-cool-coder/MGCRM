@@ -35,7 +35,11 @@ class DealProductController extends Controller
 
     public function store(StoreDealProductRequest $request, Deal $deal): JsonResource
     {
-        $product = $this->service->addProduct($deal, $request->validated());
+        $product = $this->service->addProduct(
+            $deal,
+            $request->validated(),
+            $this->allowPriceOverride($request, $deal),
+        );
 
         return DealProductResource::make($product);
     }
@@ -44,7 +48,11 @@ class DealProductController extends Controller
     {
         $this->assertBelongsToDeal($deal, $dealProduct);
 
-        $updated = $this->service->updateProduct($dealProduct, $request->validated());
+        $updated = $this->service->updateProduct(
+            $dealProduct,
+            $request->validated(),
+            $this->allowPriceOverride($request, $deal),
+        );
 
         return DealProductResource::make($updated);
     }
@@ -57,6 +65,20 @@ class DealProductController extends Controller
         $this->service->removeProduct($dealProduct);
 
         return response()->noContent();
+    }
+
+    /**
+     * A manual unit_price is honoured by the service only when the client opts in
+     * with override_price=true AND the user is authorized to override the catalog
+     * price (DealPolicy::overridePrice — managerial scope). Otherwise the service
+     * snapshots the catalog price and ignores any supplied unit_price (#3 — price
+     * tampering). Authorization is silently downgraded to "no override" rather than
+     * thrown: a tampered price falls back to the trustworthy catalog value.
+     */
+    private function allowPriceOverride(Request $request, Deal $deal): bool
+    {
+        return $request->boolean('override_price')
+            && $request->user()->can('overridePrice', $deal);
     }
 
     private function assertBelongsToDeal(Deal $deal, DealProduct $dealProduct): void

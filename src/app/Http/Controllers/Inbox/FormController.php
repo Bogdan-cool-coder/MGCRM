@@ -31,7 +31,7 @@ class FormController extends Controller
 
         $forms = $this->service->list(
             $request->only(['is_active', 'channel_id']),
-            (int) $request->query('per_page', 25),
+            min((int) $request->query('per_page', 25), 100), // clamp unbounded per_page (#15)
         );
 
         return FormResource::collection($forms);

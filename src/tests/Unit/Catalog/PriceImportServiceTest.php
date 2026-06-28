@@ -138,4 +138,50 @@ class PriceImportServiceTest extends TestCase
             'amount' => 120050,
         ]);
     }
+
+    /**
+     * Fix #4: string cells with grouping separators (e.g. "1 500,00" from a
+     * locale-formatted export) must strip the separators and parse correctly.
+     *
+     * We simulate this by storing the amount as a string value with a space
+     * as the grouping separator and a comma as the decimal separator.
+     */
+    public function test_amount_string_with_grouping_separators_parses_correctly(): void
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $sheet->fromArray([['code', 'name', 'currency_code', 'amount']], null, 'A1');
+        $sheet->setCellValue('A2', 'fmt_test_prod');
+        $sheet->setCellValue('B2', 'Formatted String Product');
+        $sheet->setCellValue('C2', 'KZT');
+        // Simulate a locale-formatted string cell: "1 500" = 1500 currency units.
+        $sheet->setCellValueExplicit(
+            'D2',
+            '1 500',
+            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING,
+        );
+
+        $path = sys_get_temp_dir().'/unit_fmt_'.uniqid().'.xlsx';
+        (new Xlsx($spreadsheet))->save($path);
+
+        $file = new UploadedFile(
+            $path,
+            'import.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
+
+        $result = $this->service->importFromExcel($file);
+
+        $this->assertSame(1, $result->inserted, 'Row should be inserted without error: '.json_encode($result->errors));
+        $this->assertSame(0, count($result->errors));
+
+        // "1 500" → strip space → "1500" → 1500 × 100 = 150000 kopecks.
+        $this->assertDatabaseHas('catalog_product_prices', [
+            'currency_code' => 'KZT',
+            'amount' => 150000,
+        ]);
+    }
 }

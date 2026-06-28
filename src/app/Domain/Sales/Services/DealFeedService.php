@@ -153,12 +153,19 @@ class DealFeedService
      * is defined, shared by both the bounded fetch and the capped count so they
      * can never drift apart.
      *
+     * The creation row (from_stage_id = null — the deal's first landing on a
+     * stage) is EXCLUDED here: the deal's creation is already represented in the
+     * feed by other sources, and surfacing the null-from history row would render
+     * a second, redundant "deal created"/empty-from stage_change next to it (#4).
+     * This mirrors how stage analytics already drop the genesis row.
+     *
      * @return \Illuminate\Database\Eloquent\Builder<DealStageHistory>
      */
     private function stageQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
     {
         return DealStageHistory::query()
             ->where('deal_id', $deal->id)
+            ->whereNotNull('from_stage_id')
             ->orderByDesc('created_at')
             ->orderByDesc('id');
     }

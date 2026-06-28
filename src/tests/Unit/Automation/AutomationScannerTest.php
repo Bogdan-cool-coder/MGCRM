@@ -119,6 +119,34 @@ class AutomationScannerTest extends TestCase
         $this->assertDatabaseCount('automation_runs', 0);
     }
 
+    public function test_idle_scan_does_not_fire_on_won_or_lost_deals(): void
+    {
+        // #10: time-based triggers fire on deals merely aging in place. A closed
+        // (won/lost) deal must never be nagged by the scanner.
+        Queue::fake();
+
+        $pipeline = Pipeline::factory()->create();
+        $wonStage = PipelineStage::factory()->won()->create(['pipeline_id' => $pipeline->id]);
+        $lostStage = PipelineStage::factory()->lost()->create(['pipeline_id' => $pipeline->id]);
+
+        // Pipeline-wide idle rule (no stage_id) — would catch every aging deal.
+        PipelineAutomation::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => null,
+            'trigger_kind' => 'idle_in_stage_days',
+            'trigger_config' => ['days' => 3],
+        ]);
+
+        Deal::factory()->inStage($wonStage)->create(['stage_changed_at' => now()->subDays(10)]);
+        Deal::factory()->inStage($lostStage)->create(['stage_changed_at' => now()->subDays(10)]);
+
+        $claimed = $this->scanner()->scanIdleInStage();
+
+        $this->assertSame(0, $claimed, 'Won/lost deals must be excluded from the idle scan.');
+        $this->assertDatabaseCount('automation_runs', 0);
+        Queue::assertNothingPushed();
+    }
+
     public function test_idle_scan_continues_when_one_automation_is_broken(): void
     {
         Queue::fake();
@@ -268,6 +296,32 @@ class AutomationScannerTest extends TestCase
         $this->assertSame(1, $first);
         $this->assertSame(0, $second);
         $this->assertSame(1, AutomationRun::count());
+    }
+
+    public function test_date_field_scan_does_not_fire_on_won_or_lost_deals(): void
+    {
+        // #10: a closed deal whose date field still falls in the window must not fire.
+        Queue::fake();
+
+        $pipeline = Pipeline::factory()->create();
+        $wonStage = PipelineStage::factory()->won()->create(['pipeline_id' => $pipeline->id]);
+        $lostStage = PipelineStage::factory()->lost()->create(['pipeline_id' => $pipeline->id]);
+
+        PipelineAutomation::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => null,
+            'trigger_kind' => 'date_field_approaching',
+            'trigger_config' => ['field' => 'expected_close_date', 'days' => 7],
+        ]);
+
+        Deal::factory()->inStage($wonStage)->create(['expected_close_date' => now()->addDays(3)]);
+        Deal::factory()->inStage($lostStage)->create(['expected_close_date' => now()->addDays(3)]);
+
+        $claimed = $this->scanner()->scanDateFieldApproaching();
+
+        $this->assertSame(0, $claimed, 'Won/lost deals must be excluded from the date-field scan.');
+        $this->assertDatabaseCount('automation_runs', 0);
+        Queue::assertNothingPushed();
     }
 
     public function test_date_field_scan_rejects_non_whitelisted_field(): void

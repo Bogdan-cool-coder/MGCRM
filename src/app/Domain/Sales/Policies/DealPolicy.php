@@ -52,6 +52,21 @@ class DealPolicy
         return $this->canAccess($user, $deal);
     }
 
+    /**
+     * Whether the user may override a line-item unit_price with a hand-supplied
+     * value instead of the server-snapshotted catalog price (#3 — price
+     * tampering). The default add/update flow ALWAYS snapshots from the Catalog
+     * and ignores any client unit_price; this ability is the single gate that
+     * re-enables a manual override, restricted to managerial scope (All — admin /
+     * director / lawyer) so a plain manager cannot set an arbitrary deal value.
+     * Resolved through VisibilityScope (no inline role checks; ARCHITECTURE §authz).
+     */
+    public function overridePrice(User $user, Deal $deal): bool
+    {
+        return $this->resolver->resolve($user) === VisibilityScope::All
+            && $this->canAccess($user, $deal);
+    }
+
     // ---- Private ----
 
     private function canAccess(User $user, Deal $deal): bool

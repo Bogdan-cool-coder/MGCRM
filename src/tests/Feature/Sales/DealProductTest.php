@@ -53,17 +53,82 @@ class DealProductTest extends TestCase
             ->assertJsonPath('data.amount', 1_000_00);
     }
 
-    public function test_add_product_with_unit_price_override(): void
+    public function test_add_product_ignores_tampered_unit_price_without_override_flag(): void
     {
+        // A manager (Own scope) posts a hand-crafted unit_price but no override
+        // flag — the server must IGNORE it and snapshot the catalog price (#3).
         [$deal, $product] = $this->setupDealAndProduct(500_00);
 
         $this->postJson("/api/deals/{$deal->id}/products", [
             'product_id' => $product->id,
             'quantity' => 1,
+            'unit_price' => 1, // tampered: 1 kopeck
+        ])->assertCreated()
+            ->assertJsonPath('data.unit_price', 500_00)
+            ->assertJsonPath('data.amount', 500_00);
+    }
+
+    public function test_add_product_ignores_unit_price_when_override_unauthorized(): void
+    {
+        // Even WITH override_price=true, a manager is not authorized to override —
+        // the tampered price is dropped and the catalog snapshot wins (#3).
+        [$deal, $product] = $this->setupDealAndProduct(500_00);
+
+        $this->postJson("/api/deals/{$deal->id}/products", [
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'unit_price' => 1,
+            'override_price' => true,
+        ])->assertCreated()
+            ->assertJsonPath('data.unit_price', 500_00)
+            ->assertJsonPath('data.amount', 500_00);
+    }
+
+    public function test_authorized_user_may_override_unit_price(): void
+    {
+        // A director (All scope) with override_price=true keeps the manual price.
+        $pipeline = $this->seedSalesPipeline();
+        $director = User::factory()->create(['role' => Role::Director]);
+        $deal = Deal::factory()->forOwner($director)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'currency' => 'RUB',
+            'amount' => 0,
+        ]);
+        $product = Product::factory()->create();
+        ProductPrice::factory()->create([
+            'product_id' => $product->id,
+            'plan_id' => null,
+            'currency_code' => 'RUB',
+            'amount' => 500_00,
+        ]);
+        Sanctum::actingAs($director, ['*']);
+
+        $this->postJson("/api/deals/{$deal->id}/products", [
+            'product_id' => $product->id,
+            'quantity' => 1,
             'unit_price' => 999_00,
+            'override_price' => true,
         ])->assertCreated()
             ->assertJsonPath('data.unit_price', 999_00)
             ->assertJsonPath('data.amount', 999_00);
+    }
+
+    public function test_update_product_ignores_tampered_unit_price_without_override(): void
+    {
+        // A manager edits a line and tries to lower the unit_price; without an
+        // authorized override the existing snapshot price is preserved (#3).
+        [$deal, $product] = $this->setupDealAndProduct(300_00);
+
+        $line = $this->postJson("/api/deals/{$deal->id}/products", [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ])->json('data.id');
+
+        $this->patchJson("/api/deals/{$deal->id}/products/{$line}", ['unit_price' => 1])
+            ->assertOk()
+            ->assertJsonPath('data.unit_price', 300_00)
+            ->assertJsonPath('data.amount', 300_00);
     }
 
     public function test_deal_amount_recalculated_on_add(): void

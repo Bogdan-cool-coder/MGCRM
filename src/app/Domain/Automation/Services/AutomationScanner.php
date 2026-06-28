@@ -8,6 +8,7 @@ use App\Domain\Automation\Enums\TriggerKind;
 use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Sales\Models\Deal;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -169,6 +170,7 @@ class AutomationScanner
             ->whereNotNull('stage_changed_at')
             ->where('stage_changed_at', '<=', $threshold)
             ->whereNull('archived_at')
+            ->tap($this->excludeTerminalStages(...))
             ->orderBy('id');
 
         if ($automation->stage_id !== null) {
@@ -217,6 +219,7 @@ class AutomationScanner
             ->where($field, '>=', $windowStart)
             ->where($field, '<=', $windowEnd)
             ->whereNull('archived_at')
+            ->tap($this->excludeTerminalStages(...))
             ->orderBy('id');
 
         if ($automation->stage_id !== null) {
@@ -244,6 +247,22 @@ class AutomationScanner
         }
 
         return $claimed;
+    }
+
+    /**
+     * Exclude deals sitting in a terminal (won/lost) stage from a scanner query.
+     *
+     * Time-based triggers fire on deals merely *aging* in place; a closed deal
+     * should never be nagged. The inline triggers can't hit this (a won/lost deal
+     * isn't being created or actively moved by the rule), but the cron scanners
+     * walk the whole pipeline, so they must filter the terminal stages out here.
+     * A deal whose stage row is missing is treated as non-terminal (kept).
+     */
+    private function excludeTerminalStages(Builder $query): void
+    {
+        $query->whereHas('stage', function ($stage): void {
+            $stage->where('is_won', false)->where('is_lost', false);
+        });
     }
 
     /**

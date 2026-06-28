@@ -34,8 +34,10 @@ class QuizService
      */
     public function list(?int $lessonId = null): Collection
     {
-        // Admin path: load ALL questions including drafts
-        $query = Quiz::query()->with('allQuestions.options');
+        // Admin path: load ALL questions including drafts.
+        // 'lesson' is eager-loaded to avoid N+1 in QuizAdminResource::ai_generation_status
+        // (which reads lesson.content JSONB per row — fix for audit MINOR #15).
+        $query = Quiz::query()->with(['allQuestions.options', 'lesson']);
 
         if ($lessonId !== null) {
             $query->where('lesson_id', $lessonId);
@@ -46,8 +48,8 @@ class QuizService
 
     public function show(Quiz $quiz): Quiz
     {
-        // Admin path: load ALL questions including drafts
-        return $quiz->load('allQuestions.options');
+        // Admin path: load ALL questions including drafts + lesson for ai_generation_status.
+        return $quiz->load(['allQuestions.options', 'lesson']);
     }
 
     /**
@@ -214,14 +216,27 @@ class QuizService
             ];
         }
 
-        // Division-by-zero guard: quiz with no questions → score 0
-        $scorePct = $totalPoints > 0
-            ? (int) round($earnedPoints / $totalPoints * 100)
-            : 0;
+        // Division-by-zero guard: quiz with no questions → score 0 and not passed.
+        // Pass gate uses the UNROUNDED ratio so rounding cannot inflate a borderline
+        // score over the threshold (e.g. 79.5% must NOT pass an 80% gate).
+        // The displayed score_pct is rounded for readability only.
+        if ($totalPoints === 0) {
+            return [
+                'score_pct' => 0,
+                'passed' => false,
+                'n_correct' => 0,
+                'annotated_answers' => $annotated,
+            ];
+        }
+
+        $rawRatio = $earnedPoints / $totalPoints * 100;
+        $scorePct = (int) round($rawRatio);
+        // Strict gate: use the unrounded ratio to decide pass/fail.
+        $passed = $rawRatio >= $passScorePct;
 
         return [
             'score_pct' => $scorePct,
-            'passed' => $scorePct >= $passScorePct,
+            'passed' => $passed,
             'n_correct' => $nCorrect,
             'annotated_answers' => $annotated,
         ];

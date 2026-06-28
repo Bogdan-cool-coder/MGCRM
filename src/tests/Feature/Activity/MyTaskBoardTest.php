@@ -68,10 +68,33 @@ class MyTaskBoardTest extends TestCase
             ->assertJsonCount(1, 'data.today')
             ->assertJsonCount(1, 'data.tomorrow');
 
-        // All five buckets are always present (frontend renders fixed columns).
-        foreach (['overdue', 'today', 'tomorrow', 'this_week', 'next_week'] as $bucket) {
+        // All six buckets are always present (frontend renders fixed columns).
+        foreach (['overdue', 'today', 'tomorrow', 'this_week', 'next_week', 'later'] as $bucket) {
             $res->assertJsonStructure(['data' => [$bucket]]);
         }
+    }
+
+    public function test_my_board_buckets_far_future_tasks_into_later(): void
+    {
+        // #6: a task due ~3 weeks out (well past next-week-end) was previously
+        // dropped by the bucketing chain; it must now surface in "later".
+        $manager = $this->manager();
+
+        // near-term task keeps its existing bucket (today, noon)
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['due_at' => now()->setTime(12, 0)]);
+        // ~3 weeks out → "later"
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['due_at' => now()->addWeeks(3)->setTime(12, 0)]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities/my-board')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.later')
+            ->assertJsonCount(1, 'data.today')
+            ->assertJsonCount(0, 'data.next_week')
+            ->assertJsonCount(0, 'data.this_week');
     }
 
     public function test_my_board_scopes_to_current_user(): void
@@ -174,7 +197,7 @@ class MyTaskBoardTest extends TestCase
 
         $this->getJson('/api/activities/my-board')
             ->assertOk()
-            ->assertJsonStructure(['data' => ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']]);
+            ->assertJsonStructure(['data' => ['overdue', 'today', 'tomorrow', 'this_week', 'next_week', 'later']]);
     }
 
     public function test_my_board_day_buckets_use_operational_timezone(): void

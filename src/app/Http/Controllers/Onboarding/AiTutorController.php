@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Onboarding;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\Lesson;
+use Illuminate\Support\Facades\Gate;
 use App\Domain\Onboarding\Services\AiTutorService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\AskTutorRequest;
@@ -102,17 +103,26 @@ class AiTutorController extends Controller
     // -------------------------------------------------------------------------
 
     /**
-     * Guard: admin/director pass always.
-     * Other roles must have at least one non-archived assignment for the lesson's course.
-     * Aborts with 403 if the check fails.
+     * Guard: delegates admin-bypass to LessonPolicy::useTutor, then checks the
+     * assignment for non-admin users. Aborts with 403 if the check fails.
+     *
+     * Two-step approach (Vizion pattern):
+     *   1. Gate/Policy provides the admin-bypass rule (no inline role check).
+     *   2. Controller resolves the DB assignment check for other roles.
      */
     private function authorizeAssignment(mixed $user, Lesson $lesson): void
     {
+        // Policy gate — throws AuthorizationException (403) if denied.
+        // LessonPolicy::useTutor grants admin/director unconditionally and
+        // returns true for others, allowing step 2 below.
+        Gate::authorize('useTutor', $lesson);
+
+        // Fast-exit for admin/director (Policy already handled them).
         if (in_array($user->role, [Role::Admin, Role::Director], strict: true)) {
             return;
         }
 
-        // Resolve course_id via already-loaded BelongsTo relation (no extra query).
+        // Non-admin: must have an active (non-archived) assignment for the lesson's course.
         $module = $lesson->module;
 
         if ($module === null) {

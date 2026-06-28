@@ -122,6 +122,25 @@ class DealKpiTest extends TestCase
         $this->assertSame(2, $this->kpi()['in_work']);
     }
 
+    public function test_in_work_distinct_key_does_not_collide_across_companies(): void
+    {
+        // #4: in_work counts DISTINCT companies via COALESCE(company_id, -id). This
+        // guards that the null-safe key never makes two distinct companies collapse
+        // into one (the negative -id space can never alias a real positive company
+        // id). Three separate companies, several deals each → exactly 3.
+        $c1 = Company::factory()->create();
+        $c2 = Company::factory()->create();
+        $c3 = Company::factory()->create();
+
+        $this->dealOn('new', $c1);
+        $this->dealOn('qualify', $c1);
+        $this->dealOn('new', $c2);
+        $this->dealOn('new', $c3);
+        $this->dealOn('qualify', $c3);
+
+        $this->assertSame(3, $this->kpi()['in_work']);
+    }
+
     // ----------------------------------------------------------------------- won
 
     public function test_won_counts_only_won_stage_deals(): void

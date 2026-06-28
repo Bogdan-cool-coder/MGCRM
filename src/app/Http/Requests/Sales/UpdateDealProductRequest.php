@@ -17,7 +17,8 @@ class UpdateDealProductRequest extends FormRequest
     {
         return [
             'quantity' => ['sometimes', 'numeric', 'min:0'],
-            'unit_price' => ['sometimes', 'integer', 'min:0'],
+            'unit_price' => ['sometimes', 'integer', 'min:0'], // honoured ONLY with an authorized override_price=true
+            'override_price' => ['sometimes', 'boolean'], // opt into a manual unit_price (gated by DealPolicy::overridePrice)
             'discount' => ['sometimes', 'integer', 'min:0'],
             'sort_order' => ['sometimes', 'integer'],
         ];

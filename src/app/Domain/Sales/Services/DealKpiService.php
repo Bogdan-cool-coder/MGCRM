@@ -9,6 +9,7 @@ use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * DealKpiService — funnel-wide KPI counters for the Deals page chip bar
@@ -88,6 +89,13 @@ class DealKpiService
      * deals on the same company count once (matches the frontend's distinct count
      * of company.id over deals where stage.is_won === false).
      *
+     * A company-less open deal (company_id IS NULL) must still count: a plain
+     * COUNT(DISTINCT company_id) silently DROPS nulls, undercounting work in
+     * progress. COALESCE(company_id, -id) gives every null-company deal a unique
+     * negative key (deal ids are positive, real company ids positive, so the
+     * spaces never collide), so each such deal is counted once on its own while
+     * shared companies still collapse to one. (#4)
+     *
      * @param  Builder<Deal>  $base
      */
     private function inWork(Builder $base): int
@@ -95,7 +103,7 @@ class DealKpiService
         return (int) (clone $base)
             ->whereHas('stage', static fn (Builder $s): Builder => $s->where('is_won', false))
             ->distinct()
-            ->count('company_id');
+            ->count(DB::raw('coalesce(deals.company_id, -deals.id)'));
     }
 
     /**

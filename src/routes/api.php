@@ -945,6 +945,11 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // S3.4: Lesson completion (text/video/pdf — not quiz).
         Route::post('lessons/{lesson}/complete', [LessonController::class, 'complete'])->name('lessons.complete');
 
+        // PDF streaming route: authenticated, streams disk-stored PDFs or
+        // redirects to external URLs. Used as the canonical `player_src` for
+        // kind=pdf lessons (both path- and url-configured).
+        Route::get('lessons/{lesson}/pdf', [LessonController::class, 'streamPdf'])->name('lessons.pdf.stream');
+
         // =====================================================================
         // Onboarding — S3.5: AI-тьютор (any authenticated student)
         // history DELETE must be before history GET to avoid clash.

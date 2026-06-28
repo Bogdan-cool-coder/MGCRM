@@ -212,4 +212,71 @@ class ExchangeRateTest extends TestCase
 
         Queue::assertNothingPushed();
     }
+
+    // ---- Fix #1: date_from / date_to filters on index ----
+
+    public function test_index_filters_by_date_from(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-05-01']);
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-06-01']);
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-06-15']);
+
+        $this->getJson('/api/catalog/exchange-rates?date_from=2026-06-01')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2);
+    }
+
+    public function test_index_filters_by_date_to(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-05-01']);
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-06-01']);
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-06-15']);
+
+        $this->getJson('/api/catalog/exchange-rates?date_to=2026-06-01')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2);
+    }
+
+    public function test_index_filters_by_date_range(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-05-01']);
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-06-01']);
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-06-15']);
+        ExchangeRate::factory()->create(['from_code' => 'USD', 'to_code' => 'KZT', 'date' => '2026-07-01']);
+
+        $this->getJson('/api/catalog/exchange-rates?date_from=2026-06-01&date_to=2026-06-15')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2);
+    }
+
+    // ---- Fix #2: rate is a number (not a string) in the resource ----
+
+    public function test_rate_is_numeric_in_resource_output(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        ExchangeRate::factory()->create([
+            'from_code' => 'USD',
+            'to_code' => 'KZT',
+            'rate' => '450.123456',
+            'date' => '2026-06-01',
+        ]);
+
+        $response = $this->getJson('/api/catalog/exchange-rates')
+            ->assertOk();
+
+        $rate = $response->json('data.0.rate');
+        $this->assertIsFloat($rate);
+        $this->assertEqualsWithDelta(450.123456, $rate, 0.000001);
+    }
 }

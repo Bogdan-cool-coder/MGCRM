@@ -13,6 +13,7 @@ use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Models\PipelineStage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -95,6 +96,23 @@ class CreateTaskActionTest extends TestCase
 
         $this->assertSame(ActionStatus::Success, $result->status);
         $this->assertDatabaseHas('activities', ['id' => $result->data['activity_id'], 'created_by_id' => $owner->id]);
+    }
+
+    public function test_execute_is_skipped_when_stage_forbids_task_kind(): void
+    {
+        // The deal's current stage whitelists only non-task kinds (E1 gate). The
+        // task creation must be recorded SKIPPED (not FAILED, which would flag the
+        // run for retry) so the automation pass continues unbothered.
+        $admin = User::factory()->role(Role::Admin)->create();
+        $stage = PipelineStage::factory()->create(['task_types' => ['call', 'meeting']]);
+        $deal = Deal::factory()->inStage($stage)->create(['owner_user_id' => $admin->id]);
+        $automation = PipelineAutomation::factory()->create(['created_by_user_id' => $admin->id]);
+
+        $result = $this->action->execute($automation, $deal, ['title' => 'Follow up']);
+
+        $this->assertSame(ActionStatus::Skipped, $result->status);
+        $this->assertArrayNotHasKey('activity_id', $result->data);
+        $this->assertDatabaseCount('activities', 0);
     }
 
     public function test_dry_run_does_not_write(): void

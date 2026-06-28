@@ -779,12 +779,18 @@ class ActivityService
 
     /**
      * Number of OPEN deals (stage not won/lost) in a pipeline, within the user's
-     * visibility scope, that have NO open task-like activity (S1.7 dashboard
-     * "deals without tasks" widget, BQ1).
+     * visibility scope, that have NO open next task (S1.7 dashboard "deals without
+     * tasks" widget, BQ1).
      *
-     * A deal counts as "without tasks" when there is no open Activity of a
-     * task-like kind (call/meeting/task with is_closed = false) targeting it —
-     * a NOT EXISTS correlated subquery on activities (target_type = 'deal').
+     * "Without tasks" is single-sourced on the Deal::nextTask relation predicate
+     * (#10): exactly whereDoesntHave('nextTask'), the same criterion the deep-linked
+     * list uses for only_no_task (DealService::applyFilters → whereDoesntHave
+     * ('nextTask')) and the KPI no_task chip (DealKpiService::noTask). nextTask is
+     * the open task-like activity (call/meeting/task, is_closed=false, status!=Done,
+     * due_at IS NOT NULL) with the soonest due_at. Reusing the relation guarantees
+     * the badge count equals the list it links to — they can no longer drift over a
+     * status=Done-but-not-closed or a due-less activity, which the old hand-rolled
+     * NOT EXISTS counted differently.
      *
      * This is the public contract consumed by SalesDashboardService: the Sales
      * domain never imports the Activity model directly (DDD §2) and instead asks
@@ -797,23 +803,14 @@ class ActivityService
     {
         $scope = $this->visibility->resolve($user);
 
-        $taskLikeKinds = ActivityType::taskLikeValues();
-
         $query = Deal::query()
             ->where('pipeline_id', $pipelineId)
             // Open deals only: exclude won/lost stages (status lives on the stage).
             ->whereHas('stage', function (Builder $q): void {
                 $q->where('is_won', false)->where('is_lost', false);
             })
-            // No open task-like activity targets this deal.
-            ->whereNotExists(function ($sub) use ($taskLikeKinds): void {
-                $sub->select(DB::raw(1))
-                    ->from('activities')
-                    ->whereColumn('activities.target_id', 'deals.id')
-                    ->where('activities.target_type', ActivityTargetType::Deal->value)
-                    ->whereIn('activities.kind', $taskLikeKinds)
-                    ->where('activities.is_closed', false);
-            });
+            // Single-sourced with the list / KPI: no open next task on this deal.
+            ->whereDoesntHave('nextTask');
 
         $query = match ($scope) {
             VisibilityScope::All => $query,
@@ -1126,11 +1123,12 @@ class ActivityService
      *   tomorrow   — due within tomorrow
      *   this_week  — due after tomorrow, within the current calendar week (→ Sun)
      *   next_week  — due within the following calendar week
+     *   later      — due on/after next-week-end (further-out horizon, #6)
      *
      * Tasks with no due_at fall into this_week (ТЗ §4.2 default). Tasks due beyond
-     * next week are not bucketed (they belong to a later horizon). Every bucket is
-     * an ordered list (soonest first); buckets are always present (possibly empty)
-     * so the frontend can render fixed columns without null checks.
+     * next week land in "later" (previously dropped — #6). Every bucket is an
+     * ordered list (soonest first); buckets are always present (possibly empty) so
+     * the frontend can render fixed columns without null checks.
      *
      * @return array<string, list<Activity>>
      */
@@ -1184,6 +1182,7 @@ class ActivityService
             'tomorrow' => [],
             'this_week' => [],
             'next_week' => [],
+            'later' => [],
         ];
 
         foreach ($activities as $activity) {
@@ -1206,8 +1205,11 @@ class ActivityService
                 $buckets['this_week'][] = $activity;
             } elseif ($due->lt($nextWeekEnd)) {
                 $buckets['next_week'][] = $activity;
+            } else {
+                // On/after next-week-end → "later" horizon (#6). Previously these
+                // were silently dropped, hiding any task due more than two weeks out.
+                $buckets['later'][] = $activity;
             }
-            // Beyond next week → not bucketed (out of board horizon).
         }
 
         return $buckets;

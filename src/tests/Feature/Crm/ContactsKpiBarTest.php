@@ -564,4 +564,62 @@ class ContactsKpiBarTest extends TestCase
             ->assertJsonPath('data.clients', 0)
             ->assertJsonPath('data.total', 1); // total still works — no guard needed there
     }
+
+    // =========================================================================
+    // Fix #6 — KPI scope routed through VisibilityResolver (Department-safe)
+    // =========================================================================
+
+    /**
+     * Verify that the KPI company counter routes through VisibilityResolver::applyScope()
+     * rather than the old inline branch. With today's role map no role resolves to
+     * Department (it is an unreachable M1 reserve), so this test verifies the
+     * behaviorally-equivalent Own path: a Manager sees only their companies and the
+     * count matches what the list endpoint returns.
+     */
+    public function test_kpi_company_scope_matches_list_endpoint_for_manager(): void
+    {
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $other = User::factory()->create(['role' => Role::Manager]);
+        Company::factory()->count(3)->create(['owner_user_id' => $manager->id]);
+        Company::factory()->count(5)->create(['owner_user_id' => $other->id]);
+
+        // KPI must match the list endpoint count.
+        $listCount = $this->getJson('/api/companies')
+            ->assertOk()
+            ->json('meta.total');
+
+        $kpiTotal = $this->getJson('/api/contacts/kpi?entity=company')
+            ->assertOk()
+            ->json('data.total');
+
+        $this->assertSame($listCount, $kpiTotal, 'KPI total must match list endpoint total for same user+scope');
+        $this->assertSame(3, $kpiTotal);
+    }
+
+    /**
+     * Verify that the KPI contact counter routes through VisibilityResolver::applyScope().
+     * Manager's KPI contact total must match what GET /api/contacts returns for the same user.
+     */
+    public function test_kpi_contact_scope_matches_list_endpoint_for_manager(): void
+    {
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($manager, ['*']);
+
+        $other = User::factory()->create(['role' => Role::Manager]);
+        Contact::factory()->count(4)->create(['owner_id' => $manager->id]);
+        Contact::factory()->count(6)->create(['owner_id' => $other->id]);
+
+        $listCount = $this->getJson('/api/contacts')
+            ->assertOk()
+            ->json('meta.total');
+
+        $kpiTotal = $this->getJson('/api/contacts/kpi?entity=contact')
+            ->assertOk()
+            ->json('data.total');
+
+        $this->assertSame($listCount, $kpiTotal, 'KPI total must match list endpoint total for same user+scope');
+        $this->assertSame(4, $kpiTotal);
+    }
 }

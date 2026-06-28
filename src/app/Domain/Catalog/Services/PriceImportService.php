@@ -216,6 +216,13 @@ class PriceImportService
     /**
      * Extract a keyed row array using the header map.
      *
+     * For the `amount` column we read the raw cell value (getValue()) instead of
+     * the formatted display string (getFormattedValue()). The formatted value can
+     * carry locale-specific thousands separators and currency symbols (e.g.
+     * "1 500,00 KZT") that break (float) casting; the raw value is always the
+     * bare numeric.  For all other columns the formatted value is preferred so
+     * string cells (code, name, etc.) render as expected.
+     *
      * @param  array<string, string>  $headers  column name => column letter
      * @return array<string, mixed>
      */
@@ -227,7 +234,28 @@ class PriceImportService
 
         foreach ($headers as $name => $colLetter) {
             $cell = $sheet->getCell($colLetter.$rowIndex);
-            $data[$name] = $cell->getFormattedValue();
+
+            if ($name === 'amount') {
+                // Use the raw (unformatted) cell value for numeric accuracy.
+                $raw = $cell->getValue();
+
+                // Fallback: if the cell was stored as a formatted string (e.g.
+                // exported from Excel with grouping), strip grouping separators and
+                // normalise the decimal symbol so (float) cast produces the correct
+                // value.
+                if (is_string($raw) && $raw !== '') {
+                    // Remove common grouping separators (space, comma when followed
+                    // by 3 digits, apostrophe) and normalise comma→dot for decimal.
+                    $raw = preg_replace('/[\s\x{00A0}]/u', '', $raw); // strip spaces/NBSP
+                    $raw = preg_replace('/,(\d{3})/', '$1', $raw ?? ''); // remove grouping comma
+                    $raw = str_replace(',', '.', $raw ?? ''); // comma decimal → dot
+                    $raw = preg_replace('/[^\d.]/', '', $raw ?? ''); // strip currency symbols
+                }
+
+                $data[$name] = $raw;
+            } else {
+                $data[$name] = $cell->getFormattedValue();
+            }
         }
 
         return $data;

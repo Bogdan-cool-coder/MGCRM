@@ -49,4 +49,19 @@ class InboundMessageListTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.from_name', 'Shown');
     }
+
+    public function test_per_page_is_clamped_to_a_sane_max(): void
+    {
+        // #15: an absurd per_page must not pull the whole table into one page.
+        // 105 rows + per_page=100000 → the page is capped at 100.
+        $channel = Channel::factory()->create();
+        InboundMessage::factory()->for($channel)->count(105)->create();
+
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Admin]), ['*']);
+
+        $response = $this->getJson('/api/inbox?per_page=100000')->assertOk();
+
+        $this->assertCount(100, $response->json('data'));
+        $this->assertSame(100, $response->json('meta.per_page'));
+    }
 }

@@ -15,6 +15,7 @@ use App\Domain\Automation\Support\MessageFormatter;
 use App\Domain\Automation\Support\RecipientResolver;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
+use Illuminate\Validation\ValidationException;
 
 /**
  * create_task — create an Activity(kind=task) on the deal.
@@ -57,15 +58,29 @@ final class CreateTaskAction implements ActionHandler
             : null;
         $dueAt = $this->dueAt($config);
 
-        $activity = $this->activities->create([
-            'kind' => ActivityType::Task->value,
-            'target_type' => ActivityTargetType::Deal->value,
-            'target_id' => $target->id,
-            'title' => mb_substr($title, 0, 255),
-            'body' => $body,
-            'responsible_id' => $responsibleId,
-            'due_at' => $dueAt,
-        ], $creator);
+        try {
+            $activity = $this->activities->create([
+                'kind' => ActivityType::Task->value,
+                'target_type' => ActivityTargetType::Deal->value,
+                'target_id' => $target->id,
+                'title' => mb_substr($title, 0, 255),
+                'body' => $body,
+                'responsible_id' => $responsibleId,
+                'due_at' => $dueAt,
+            ], $creator);
+        } catch (ValidationException $e) {
+            // The deal's current stage forbids the `task` kind in its task_types
+            // whitelist (E1 gate). This is a deliberate stage config, not an engine
+            // fault — record SKIPPED (not FAILED) so the run isn't flagged for retry
+            // and the rest of the automation pass continues unbothered.
+            if (array_key_exists('kind', $e->errors())) {
+                return ActionResult::skipped(
+                    $e->validator->errors()->first('kind') ?: 'Task kind is not allowed at this stage.',
+                );
+            }
+
+            throw $e; // any other validation error stays a genuine failure
+        }
 
         return ActionResult::success("Created task #{$activity->id}", [
             'activity_id' => $activity->id,

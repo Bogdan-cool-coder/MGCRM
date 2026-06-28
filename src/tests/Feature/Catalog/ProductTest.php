@@ -288,4 +288,51 @@ class ProductTest extends TestCase
             'amount' => 100000,
         ]);
     }
+
+    // ---- Fix #5: ProductService::update ignores unexpected payload fields ----
+
+    public function test_update_does_not_persist_unknown_fields(): void
+    {
+        // Fix #5: ProductService::update must map only known fields, not mass-assign
+        // the whole validated array. An unexpected key injected in payload must be
+        // silently ignored (not cause DB error or persist).
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $product = Product::factory()->create(['name' => 'Original Name', 'sort_order' => 0]);
+        Sanctum::actingAs($user, ['*']);
+
+        // PATCH with a valid field AND a bogus field that is NOT in the fillable map.
+        $this->patchJson("/api/catalog/products/{$product->id}", [
+            'name' => 'Updated Name',
+            'totally_bogus_field' => 'should_be_ignored',
+        ])->assertOk()
+            ->assertJsonPath('data.name', 'Updated Name');
+
+        // The name was updated.
+        $this->assertDatabaseHas('catalog_products', [
+            'id' => $product->id,
+            'name' => 'Updated Name',
+        ]);
+    }
+
+    public function test_update_only_persists_allowed_fields(): void
+    {
+        // Only the subset of allowed fields should be saved; sort_order unchanged
+        // when not provided; code unchanged when not provided.
+        $user = User::factory()->create(['role' => Role::Admin]);
+        $product = Product::factory()->create([
+            'name' => 'Original',
+            'sort_order' => 5,
+            'is_active' => true,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/catalog/products/{$product->id}", [
+            'name' => 'Renamed',
+        ])->assertOk();
+
+        $product->refresh();
+        $this->assertSame('Renamed', $product->name);
+        $this->assertSame(5, $product->sort_order); // unchanged
+        $this->assertTrue((bool) $product->is_active); // unchanged
+    }
 }

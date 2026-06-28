@@ -27,7 +27,9 @@ class InboundMessageController extends Controller
             ->when($request->filled('routing_status'), fn (Builder $q) => $q->where('routing_status', $request->query('routing_status')))
             ->orderByDesc('received_at')
             ->orderByDesc('id')
-            ->paginate((int) $request->query('per_page', 50));
+            // Clamp per_page so a hostile/absurd value can't pull the whole table
+            // into one page (#15). Mirrors DocumentController's min(..., 100) cap.
+            ->paginate(min((int) $request->query('per_page', 50), 100));
 
         return InboundMessageResource::collection($messages);
     }

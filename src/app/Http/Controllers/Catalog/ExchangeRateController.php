@@ -35,6 +35,8 @@ class ExchangeRateController extends Controller
             ->when($request->query('from_code'), fn ($q) => $q->where('from_code', strtoupper((string) $request->query('from_code'))))
             ->when($request->query('to_code'), fn ($q) => $q->where('to_code', strtoupper((string) $request->query('to_code'))))
             ->when($request->query('date'), fn ($q) => $q->where('date', (string) $request->query('date')))
+            ->when($request->query('date_from'), fn ($q) => $q->where('date', '>=', (string) $request->query('date_from')))
+            ->when($request->query('date_to'), fn ($q) => $q->where('date', '<=', (string) $request->query('date_to')))
             ->orderByDesc('date')
             ->orderBy('from_code')
             ->paginate($perPage);

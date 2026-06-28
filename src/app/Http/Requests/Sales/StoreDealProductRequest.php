@@ -22,7 +22,8 @@ class StoreDealProductRequest extends FormRequest
             'product_id' => ['required', 'integer', 'exists:catalog_products,id'],
             'plan_id' => ['nullable', 'integer', 'exists:catalog_product_plans,id'],
             'quantity' => ['required', 'numeric', 'min:0'],
-            'unit_price' => ['nullable', 'integer', 'min:0'], // kopecks override
+            'unit_price' => ['nullable', 'integer', 'min:0'], // kopecks; honoured ONLY with an authorized override_price=true
+            'override_price' => ['nullable', 'boolean'], // opt into a manual unit_price (gated by DealPolicy::overridePrice)
             'discount' => ['nullable', 'integer', 'min:0'], // kopecks, manual per-line discount
             'currency' => ['nullable', 'string', Rule::in($currencies)],
             'sort_order' => ['nullable', 'integer'],

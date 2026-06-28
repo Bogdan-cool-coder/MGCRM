@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Onboarding;
 
 use App\Domain\Onboarding\Enums\LessonKind;
+use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\CourseModule;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\LessonProgress;
@@ -24,6 +25,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 
 class LessonController extends Controller
 {
@@ -155,6 +158,83 @@ class LessonController extends Controller
             'status' => 'pending',
             'message' => 'Генерация вопросов запущена. Проверьте статус через несколько минут.',
         ], 202);
+    }
+
+    /**
+     * GET /api/onboarding/lessons/{lesson}/pdf
+     *
+     * Stream the PDF file for a kind=pdf lesson to the authenticated student.
+     * Requires either an active CourseAssignment for the lesson's course OR
+     * admin/director role.
+     *
+     * Handles both storage contracts:
+     *   - content.path → read from disk 'documents' and stream.
+     *   - content.url  → redirect (302) to the external URL.
+     *
+     * This is the single "player_src" a student's lesson player should call for
+     * PDF lessons, so the frontend never needs to know which storage contract
+     * was used. AssignmentDetailResource returns this URL as `player_src`.
+     */
+    public function streamPdf(Request $request, Lesson $lesson): Response|JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        // Guard: lesson must be kind=pdf.
+        if ($lesson->kind !== LessonKind::Pdf) {
+            return response()->json(['message' => 'Lesson is not a PDF lesson.'], 422);
+        }
+
+        // Ownership guard (same logic as AiTutorController).
+        $user = $request->user();
+        $isAdminOrDirector = in_array($user->role, [\App\Domain\Iam\Enums\Role::Admin, \App\Domain\Iam\Enums\Role::Director], strict: true);
+
+        if (! $isAdminOrDirector) {
+            $lesson->loadMissing('module');
+            $module = $lesson->module;
+
+            if ($module === null) {
+                abort(403, 'Lesson is not attached to a module.');
+            }
+
+            $hasAssignment = CourseAssignment::query()
+                ->where('user_id', $user->id)
+                ->where('course_id', $module->course_id)
+                ->whereNotIn('status', ['archived'])
+                ->exists();
+
+            if (! $hasAssignment) {
+                abort(403, 'You are not assigned to this course.');
+            }
+        }
+
+        $content = $lesson->content ?? [];
+        $path = $content['path'] ?? null;
+        $url = $content['url'] ?? null;
+
+        // URL-configured PDF: redirect the player to the external URL.
+        if ($path === null && $url !== null) {
+            return redirect()->away((string) $url);
+        }
+
+        // Path-configured PDF: stream from disk.
+        if ($path !== null) {
+            $disk = Storage::disk('documents');
+
+            if (! $disk->exists((string) $path)) {
+                return response()->json(['message' => 'PDF file not found on disk.'], 404);
+            }
+
+            $filename = basename((string) $path);
+
+            return response(
+                (string) $disk->get((string) $path),
+                200,
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="'.rawurlencode($filename).'"',
+                ],
+            );
+        }
+
+        return response()->json(['message' => 'PDF lesson has no source configured.'], 404);
     }
 
     /**

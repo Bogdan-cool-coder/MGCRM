@@ -226,7 +226,7 @@ class ActivityController extends Controller
     /**
      * Personal task board (Сделки — ТЗ §4): the current user's open task-like
      * activities grouped into fixed urgency buckets (overdue / today / tomorrow /
-     * this_week / next_week). Scoped to the authenticated user (responsible OR
+     * this_week / next_week / later). Scoped to the authenticated user (responsible OR
      * creator) — no visibility scope, this is "my work". Optional ?q= filters by
      * title/body. Each bucket is rendered with the lightweight card resource.
      */

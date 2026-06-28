@@ -39,8 +39,13 @@ class DealProductService
     }
 
     /**
-     * Add a line item. Price = override (if given) else Catalog snapshot in the
-     * deal's currency. Recomputes Deal.amount.
+     * Add a line item. Price = Catalog snapshot in the deal's currency by default;
+     * a client-supplied unit_price is honoured ONLY when $allowOverride is true
+     * (the caller resolved an authorized override_price flag — DealProductController
+     * ::allowPriceOverride). This closes the price-tampering hole (#3): without an
+     * authorized override the client unit_price is IGNORED and the trustworthy
+     * catalog snapshot is used, so a manager cannot post an arbitrary deal value.
+     * Recomputes Deal.amount.
      *
      * Perpetual awareness (N4): when no explicit plan_id is given AND the deal is
      * flagged perpetual_license=true, the new line is created on the product's
@@ -52,9 +57,9 @@ class DealProductService
      *
      * @param  array<string, mixed>  $data
      */
-    public function addProduct(Deal $deal, array $data): DealProduct
+    public function addProduct(Deal $deal, array $data, bool $allowOverride = false): DealProduct
     {
-        return DB::transaction(function () use ($deal, $data): DealProduct {
+        return DB::transaction(function () use ($deal, $data, $allowOverride): DealProduct {
             $currency = $data['currency'] ?? $deal->currency;
             $productId = (int) $data['product_id'];
 
@@ -68,7 +73,10 @@ class DealProductService
                 $planId = null;
             }
 
-            $unitPrice = isset($data['unit_price'])
+            // Default flow: ALWAYS snapshot the catalog price server-side and ignore
+            // any client unit_price. The override is honoured only when explicitly
+            // authorized AND a value was supplied (price-tampering guard, #3).
+            $unitPrice = ($allowOverride && isset($data['unit_price']))
                 ? (int) $data['unit_price']
                 : $this->products->getPriceSnapshot($productId, $planId, $currency);
 
@@ -104,15 +112,21 @@ class DealProductService
      * Update a line item (quantity/unit_price/discount/sort_order). Recomputes
      * amount and Deal.amount.
      *
+     * A client-supplied unit_price is applied ONLY when $allowOverride is true
+     * (an authorized override_price flag — see DealProductController). Without it
+     * the existing snapshot price is preserved and a supplied unit_price is
+     * ignored, matching addProduct's price-tampering guard (#3). quantity /
+     * discount / sort_order are always free to edit.
+     *
      * @param  array<string, mixed>  $data
      */
-    public function updateProduct(DealProduct $dealProduct, array $data): DealProduct
+    public function updateProduct(DealProduct $dealProduct, array $data, bool $allowOverride = false): DealProduct
     {
-        return DB::transaction(function () use ($dealProduct, $data): DealProduct {
+        return DB::transaction(function () use ($dealProduct, $data, $allowOverride): DealProduct {
             if (array_key_exists('quantity', $data)) {
                 $dealProduct->quantity = (float) $data['quantity'];
             }
-            if (array_key_exists('unit_price', $data) && $data['unit_price'] !== null) {
+            if ($allowOverride && array_key_exists('unit_price', $data) && $data['unit_price'] !== null) {
                 $dealProduct->unit_price = (int) $data['unit_price'];
             }
             if (array_key_exists('discount', $data) && $data['discount'] !== null) {

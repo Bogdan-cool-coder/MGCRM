@@ -17,7 +17,10 @@ class ExchangeRateResource extends JsonResource
             'id' => $this->id,
             'from_code' => $this->from_code,
             'to_code' => $this->to_code,
-            'rate' => $this->rate, // 6 decimal string from cast
+            // Cast to float so the FE receives a JSON number, not a string.
+            // The decimal:6 Eloquent cast produces a string ('1.234560'); the
+            // FE types it as number — this cast bridges that drift.
+            'rate' => (float) $this->rate,
             'date' => $this->date, // stored as Y-m-d string, no Carbon cast
             'source' => $this->source,
             'created_at' => $this->created_at?->toIso8601String(),
