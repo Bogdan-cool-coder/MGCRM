@@ -94,6 +94,7 @@ export function useNotificationsFlyout() {
     // Optimistic update
     setItemRead(item.id)
     if (wasUnread) {
+      decrementDigest(item)
       notificationsStore.decrement(1)
     }
 
@@ -114,7 +115,7 @@ export function useNotificationsFlyout() {
     const digestBefore = { ...digest.value }
     actionable.value.forEach((n) => { n.is_read = true })
     feed.value.forEach((n) => { n.is_read = true })
-    // Reset digest so the chip clears immediately (BUG-NOTIF-DIGEST-STALE)
+    // Reset digest so the chips clear immediately
     digest.value = { unread_total: 0, by_category: {} }
     notificationsStore.clearCount()
 
@@ -135,16 +136,29 @@ export function useNotificationsFlyout() {
   // ─── Mark-read-on-close ────────────────────────────────────────────────────
   /**
    * Call when the flyout closes.
-   * All unread items that were visible get marked read in a single batch request.
+   *
+   * Only non-actionable feed items are auto-marked on close. Actionable items
+   * ("Требует внимания") require explicit user interaction — silently marking
+   * them read when the user merely glanced at the panel is surprising and may
+   * cause important CTAs to be missed.
    */
   async function onFlyoutClose(): Promise<void> {
-    const unreadShown = [...actionable.value, ...feed.value].filter(
-      (n) => !n.is_read && shownIds.value.has(n.id),
+    // Exclude actionable items from auto-close mark-read.
+    // Items already flipped optimistically by markRead() will have is_read=true
+    // and are naturally skipped by the !n.is_read guard.
+    const unreadShown = [...feed.value].filter(
+      (n) => !n.is_read && !n.is_actionable && shownIds.value.has(n.id),
     )
-    if (unreadShown.length === 0) return
+    if (unreadShown.length === 0) {
+      shownIds.value.clear()
+      return
+    }
 
     // Optimistic: mark locally before the request completes
-    unreadShown.forEach((n) => { n.is_read = true })
+    unreadShown.forEach((n) => {
+      decrementDigest(n)
+      n.is_read = true
+    })
     notificationsStore.decrement(unreadShown.length)
     shownIds.value.clear()
 
@@ -170,6 +184,22 @@ export function useNotificationsFlyout() {
     if (inActionable) inActionable.is_read = true
     const inFeed = feed.value.find((n) => n.id === id)
     if (inFeed) inFeed.is_read = true
+  }
+
+  /**
+   * Decrement digest counters for the given item, clamping at 0.
+   * Call whenever a previously-unread item is flipped to read (single or batch).
+   * Keeps the digest chips in sync without a round-trip refetch.
+   */
+  function decrementDigest(item: NotificationDto): void {
+    if (!digest.value.by_category) return
+    const cat = item.category
+    if (cat && digest.value.by_category[cat] !== undefined) {
+      digest.value.by_category[cat] = Math.max(0, (digest.value.by_category[cat] ?? 0) - 1)
+    }
+    if (digest.value.unread_total !== undefined) {
+      digest.value.unread_total = Math.max(0, digest.value.unread_total - 1)
+    }
   }
 
   return {

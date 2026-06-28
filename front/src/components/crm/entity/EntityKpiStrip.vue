@@ -217,7 +217,8 @@ function accentIconClass(accent?: string): string {
 
     .app-dark & {
       background: var(--p-surface-200);
-      color: var(--p-surface-300);
+      // surface-300 in dark (#7E7F82) is dark-on-dark; bump to surface-800 (#F1F2F3) for AA contrast.
+      color: var(--p-surface-800);
     }
   }
 }
@@ -244,8 +245,8 @@ function accentIconClass(accent?: string): string {
   }
 
   &--amber {
-    color: var(--p-amber-500);
-    .app-dark & { color: var(--p-orange-400); }
+    color: var(--p-orange-500);
+    .app-dark & { color: var(--p-orange-300); }
   }
 
   &--success {

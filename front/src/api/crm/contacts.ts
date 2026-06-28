@@ -181,7 +181,7 @@ export const contactsApi = {
 
   async addChannel(
     contactId: number,
-    payload: { channel_type: string; value: string; label?: string },
+    payload: { channel_type: string; value: string; label?: string; is_primary_for_channel?: boolean },
   ): Promise<ContactChannel> {
     const res = await apiClient.post<{ data: ContactChannel }>(
       `/api/contacts/${contactId}/channels`,

@@ -134,8 +134,7 @@ function getCount(preset: TaskPreset): number {
     color: $primary-900;
 
     .app-dark & {
-      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: rgba(23, 39, 71, 0.25);
+      background: var(--p-surface-700);
       color: $primary-300;
     }
   }

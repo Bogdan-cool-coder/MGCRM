@@ -90,6 +90,7 @@ import Tag from 'primevue/tag'
 import Menu from 'primevue/menu'
 import ConfirmDialog from 'primevue/confirmdialog'
 import type { MenuItem } from 'primevue/menuitem'
+import { useDirectoriesStore } from '@/stores/directories'
 import type { CompanyRequisite } from '@/entities/crm'
 
 const props = defineProps<{
@@ -106,6 +107,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const confirm = useConfirm()
 const toast = useToast()
+const directoriesStore = useDirectoriesStore()
 
 const menu = ref<InstanceType<typeof Menu> | null>(null)
 
@@ -129,7 +131,9 @@ const visibleFields = computed((): ReqField[] => {
     fields.push({ key: 'legal_name', label: t('crm.company.requisites.fields.legalName'), value: r.legal_name })
   }
   if (r.country_code) {
-    fields.push({ key: 'country_code', label: t('company.page.fields.country'), value: r.country_code })
+    // Resolve ISO code → display name from loaded countries directory; fallback = uppercased code
+    const countryName = directoriesStore.getCountryName(r.country_code) || r.country_code.toUpperCase()
+    fields.push({ key: 'country_code', label: t('company.page.fields.country'), value: countryName })
   }
   if (r.director_short) {
     fields.push({ key: 'director', label: t('crm.company.requisites.fields.directorShort'), value: r.director_short })

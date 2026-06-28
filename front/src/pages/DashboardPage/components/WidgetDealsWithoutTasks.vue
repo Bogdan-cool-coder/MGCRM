@@ -22,8 +22,7 @@
         <div class="deals-no-tasks d-flex flex-column align-items-center justify-content-center text-center h-100">
           <i
             class="pi deals-no-tasks__icon"
-            :class="iconClass"
-            :style="iconStyle"
+            :class="[iconClass, iconColorClass]"
           />
 
           <span class="deals-no-tasks__count" :class="countClass">
@@ -98,9 +97,15 @@ const iconClass = computed(() =>
   (props.data?.count ?? 0) > 0 ? 'pi-exclamation-triangle' : 'pi-check-circle',
 )
 
-const iconStyle = computed(() => ({
-  color: (props.data?.count ?? 0) > 0 ? 'var(--p-orange-500)' : 'var(--p-green-500)',
-}))
+/**
+ * Icon colour via DS status tokens ($status-warning-text / $status-success-text)
+ * so it matches the count text colour and is theme-aware.
+ */
+const iconColorClass = computed(() =>
+  (props.data?.count ?? 0) > 0
+    ? 'deals-no-tasks__icon--warning'
+    : 'deals-no-tasks__icon--success',
+)
 
 const countClass = computed(() => ({
   'deals-no-tasks__count--danger': (props.data?.count ?? 0) > 0,
@@ -137,6 +142,15 @@ const countClass = computed(() => ({
 
   &--neutral {
     color: $surface-400;
+  }
+
+  // Matches count text tokens so icon and number use the same semantic colour.
+  &--warning {
+    color: $status-warning-text;
+  }
+
+  &--success {
+    color: $status-success-text;
   }
 }
 

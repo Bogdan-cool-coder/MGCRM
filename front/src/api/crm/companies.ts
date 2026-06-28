@@ -325,7 +325,7 @@ export const companiesApi = {
 
   async addChannel(
     companyId: number,
-    payload: { channel_type: string; value: string; label?: string },
+    payload: { channel_type: string; value: string; label?: string; is_primary_for_channel?: boolean },
   ): Promise<CompanyChannel> {
     const res = await apiClient.post<{ data: CompanyChannel }>(
       `/api/companies/${companyId}/channels`,

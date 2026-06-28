@@ -237,10 +237,12 @@ async function onHide(): Promise<void> {
   await onFlyoutClose()
 }
 
-// Clicking an item marks it read and navigates via deep_link; close the popover.
+// Clicking an item marks it read (optimistic flip fires immediately), then hides
+// the popover. Order matters: hide() synchronously triggers onHide → onFlyoutClose
+// which skips already-read items — so markRead must flip is_read BEFORE hide().
 async function onItemClick(item: NotificationDto): Promise<void> {
-  popoverRef.value?.hide()
   await markRead(item)
+  popoverRef.value?.hide()
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -512,7 +514,7 @@ function formatTime(iso: string): string {
   }
 
   &--unread {
-    background: rgba($primary, 0.03);
+    background: rgba($primary, 0.07);
 
     &::before {
       content: '';
@@ -524,6 +526,16 @@ function formatTime(iso: string): string {
       height: 60%;
       background: $primary;
       border-radius: 0 $radius-2xs $radius-2xs 0;
+
+      .app-dark & {
+        // Navy $primary (#172747) is invisible on dark surface-100 (#444547);
+        // use a lighter accent that reads on dark bg.
+        background: var(--p-primary-400);
+      }
+    }
+
+    .app-dark & {
+      background: rgba(255, 255, 255, 0.05);
     }
   }
 }

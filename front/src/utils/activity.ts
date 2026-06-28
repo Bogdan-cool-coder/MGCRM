@@ -20,6 +20,29 @@ export function localDateString(d: Date): string {
   return `${yyyy}-${mm}-${dd}`
 }
 
+/**
+ * Parse a bare date-only string (YYYY-MM-DD) as a LOCAL midnight Date.
+ *
+ * ECMAScript parses date-only strings as UTC midnight, which causes a one-day
+ * shift in any timezone with a non-zero UTC offset. This helper splits the
+ * string into components and constructs the Date in local time — safe for
+ * display, calendar binding, and form min/max comparisons.
+ *
+ * Usage: `parseDateLocal('2026-06-28')` → local midnight June 28 2026
+ *
+ * For datetime strings (ISO with 'T') use `new Date(iso)` as normal.
+ */
+export function parseDateLocal(iso: string): Date | null {
+  // Only handle bare date strings; datetime strings go through normal Date()
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!m) return null
+  const y = parseInt(m[1]!, 10)
+  const mo = parseInt(m[2]!, 10) - 1 // 0-indexed month
+  const d = parseInt(m[3]!, 10)
+  const result = new Date(y, mo, d)
+  return isNaN(result.getTime()) ? null : result
+}
+
 /** Operational timezone for the system (server and task deadlines). */
 export const OPERATIONAL_TZ = 'Asia/Dubai'
 

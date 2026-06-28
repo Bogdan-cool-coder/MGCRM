@@ -312,7 +312,7 @@ import { ref, reactive, computed, nextTick, onMounted, onBeforeUnmount } from 'v
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import DatePicker from 'primevue/datepicker'
-import { kindIcon } from '@/utils/activity'
+import { kindIcon, todayInOperationalTz, dateInOperationalTz } from '@/utils/activity'
 import { activityApi, type ReschedulePreset } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityTargetType } from '@/entities/activity'
 
@@ -583,9 +583,12 @@ function formatDueDateShort(dateStr: string): string {
 function isTaskOverdue(task: ActivityDto): boolean {
   if (task.is_closed) return false
   if (!task.due_at) return false
-  // Compare date parts only (strip time) to avoid timezone edge cases
-  const todayStr = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-  const dueStr = task.due_at.slice(0, 10) // YYYY-MM-DD
+  // Use operational timezone (Asia/Dubai) to match server day boundaries,
+  // consistent with the rest of the app. todayInOperationalTz() / dateInOperationalTz()
+  // replace the previous new Date().toISOString().slice(0,10) (UTC) comparison
+  // that drifted by 1 day for clients ahead of UTC.
+  const todayStr = todayInOperationalTz()
+  const dueStr = dateInOperationalTz(new Date(task.due_at))
   return dueStr < todayStr
 }
 

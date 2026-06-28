@@ -28,6 +28,7 @@
     "onboardingAdmin": "Курсы (HR)",
     "onboardingAssignments": "Назначения",
     "hrProgress": "Прогресс",
+    "automation": "Автоматизация",
     "automationRuns": "Журнал автоматизаций",
     "acquisitionChannels": "Каналы привлечения",
     "disconnectReasons": "Причины отключения",
@@ -1619,7 +1620,8 @@
             "addSuccess": "Продукт добавлен",
             "updateSuccess": "Позиция обновлена",
             "removeSuccess": "Позиция удалена",
-            "removeConfirm": "Удалить позицию?"
+            "removeConfirm": "Удалить позицию?",
+            "noPriceHint": "Нет цены для выбранной валюты"
           }
         },
         "contacts": {
@@ -3157,6 +3159,7 @@
         "tomorrow": "Завтра",
         "this_week": "Эта неделя",
         "next_week": "Следующая неделя",
+        "later": "Позже",
         "noDate": "Без срока",
         "noTasks": "Нет задач"
       },
@@ -3259,7 +3262,8 @@
         "today": "",
         "tomorrow": "",
         "this_week": "",
-        "next_week": ""
+        "next_week": "",
+        "later": "через 2+ недели"
       }
     },
     "quickCreate": {
@@ -3539,7 +3543,8 @@
           "actsBasisPlaceholder": "Устава",
           "bankCodeLabel": "Тип кода банка",
           "bankCode": "Код банка",
-          "validTo": "Действует до"
+          "validTo": "Действует до",
+          "genderEndingOe": "Родовое окончание (ОЕ)"
         },
         "errors": {
           "legalNameRequired": "Юридическое название обязательно"

@@ -99,6 +99,10 @@
           </div>
         </div>
         <small v-if="errors.product_id" class="p-error">{{ errors.product_id }}</small>
+        <!-- No-price hint shown inline below the picker -->
+        <small v-if="selectedProduct && !hasPriceForCurrency" class="p-error">
+          {{ t('sales.deal.page.products.addDialog.noPriceHint') }}
+        </small>
       </div>
 
       <!-- Сумма (авто, read-only) -->
@@ -120,7 +124,7 @@
         icon="pi pi-plus"
         :label="t('sales.deal.page.products.addDialog.save')"
         :loading="saving"
-        :disabled="!selectedProduct"
+        :disabled="!selectedProduct || !hasPriceForCurrency"
         @click="onSubmit"
       />
     </template>
@@ -272,15 +276,35 @@ onUnmounted(() => {
   if (searchTimer) clearTimeout(searchTimer)
 })
 
-// ── Unit price (from product + currency) ─────────────────────────────────────
+// ── Unit price preview (product + currency, display only) ────────────────────
+// Priority: base price (plan_id=null) → first plan-attached price → plan.prices.
+// The actual price is snapshotted server-side; this is for the sum display only.
 
 const unitPriceKopecks = computed((): number => {
   if (!selectedProduct.value) return 0
-  // Find matching price for selected currency
-  const price = selectedProduct.value.prices?.find(
-    (p) => p.currency_code === form.value.currency && p.plan_id === null,
-  )
-  return price?.amount ?? 0
+  const currency = form.value.currency
+  const prices = selectedProduct.value.prices ?? []
+  // 1. Base price (no plan)
+  const base = prices.find((p) => p.currency_code === currency && p.plan_id === null)
+  if (base) return base.amount
+  // 2. Fallback: first plan-attached price for this currency (display estimate)
+  const planPrice = prices.find((p) => p.currency_code === currency && p.plan_id !== null)
+  if (planPrice) return planPrice.amount
+  // 3. Check nested plan prices (product.plans[*].prices)
+  const plans = selectedProduct.value.plans ?? []
+  for (const plan of plans) {
+    const pp = (plan.prices ?? []).find((p) => p.currency_code === currency)
+    if (pp) return pp.amount
+  }
+  return 0
+})
+
+// Guard: can the server resolve a price for this product+currency?
+// If unitPriceKopecks is 0 for a selected product the server will 422.
+// Disable the Add button proactively with a hint instead.
+const hasPriceForCurrency = computed((): boolean => {
+  if (!selectedProduct.value) return true  // no selection yet — don't show error
+  return unitPriceKopecks.value > 0
 })
 
 // ── Auto-calculated sum ────────────────────────────────────────────────────────
@@ -301,16 +325,19 @@ const mutation = useMutation<DealProductDto>()
 const saving = computed(() => mutation.isPending.value)
 
 async function onSubmit() {
-  if (!selectedProduct.value) return
+  if (!selectedProduct.value || !hasPriceForCurrency.value) return
   errors.value = {}
 
   try {
+    // Do NOT send unit_price in the default flow — the server snapshots the
+    // catalog price authoritatively (price-tampering guard, §3). An authorized
+    // override would add override_price:true + unit_price, but that path is
+    // not exposed in this dialog.
     const product = await mutation.run(() =>
       props.onAdd(props.dealId, {
         product_id: selectedProduct.value!.id,
         plan_id: null,
         quantity: quantity.value,
-        unit_price: unitPriceKopecks.value || null,
         currency: form.value.currency || null,
       }),
     )
@@ -416,16 +443,13 @@ async function onSubmit() {
   }
 }
 
+// Picker value: semantic text token — readable in both themes, no dark override needed.
 .add-product-dialog__picker-value {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: $surface-800;
-
-  .app-dark & {
-    color: var(--p-surface-800);
-  }
+  color: var(--p-text-color);
 }
 
 .add-product-dialog__picker-chevron {

@@ -350,12 +350,10 @@ function selectDoc(doc: DocumentListItemDto) {
 // ── Templates ──────────────────────────────────────────────────────────────────
 
 const templateOptions = ref<{ label: string; value: number }[]>([])
-const loadingTemplates = ref(false)
 const generateForm = ref<{ template_id: number | null }>({ template_id: null })
 const generateErrors = ref<Record<string, string>>({})
 
 async function loadTemplates() {
-  loadingTemplates.value = true
   try {
     const templates = await templatesApi.getTemplates({ kind: 'docx' })
     templateOptions.value = templates.map((tpl) => ({
@@ -364,8 +362,6 @@ async function loadTemplates() {
     }))
   } catch {
     // non-critical
-  } finally {
-    loadingTemplates.value = false
   }
 }
 

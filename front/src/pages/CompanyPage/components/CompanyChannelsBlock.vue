@@ -110,6 +110,10 @@
             class="company-channels__value-input"
             @keyup.enter="submitAddChannel"
           />
+          <label class="company-channels__primary-check">
+            <Checkbox v-model="newChannelIsPrimary" :binary="true" />
+            <span>{{ t('crm.company.channels.setPrimary') }}</span>
+          </label>
           <div class="company-channels__add-actions">
             <Button
               :label="t('common.add')"
@@ -133,11 +137,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
@@ -187,14 +192,21 @@ function channelHref(ch: CompanyChannel): string {
   if (ch.channel_type === 'tg') return `https://t.me/${ch.value.replace('@', '')}`
   if (ch.channel_type === 'wa') return `https://wa.me/${ch.value.replace(/\D/g, '')}`
   if (ch.channel_type === 'website') {
-    const url = ch.value.startsWith('http') ? ch.value : `https://${ch.value}`
-    return url
+    return ch.value.startsWith('http') ? ch.value : `https://${ch.value}`
+  }
+  if (ch.channel_type === 'linkedin') {
+    return ch.value.startsWith('http') ? ch.value : `https://linkedin.com/in/${ch.value}`
+  }
+  if (ch.channel_type === 'instagram') {
+    return `https://instagram.com/${ch.value.replace('@', '')}`
   }
   return '#'
 }
 
 function channelLinkTag(ch: CompanyChannel): string {
-  return ['phone', 'email', 'tg', 'wa', 'website'].includes(ch.channel_type) ? 'a' : 'span'
+  return ['phone', 'email', 'tg', 'wa', 'website', 'linkedin', 'instagram'].includes(ch.channel_type)
+    ? 'a'
+    : 'span'
 }
 
 function channelLinkTarget(ch: CompanyChannel): string | undefined {
@@ -255,7 +267,17 @@ async function copyValue(value: string) {
 const addingOpen = ref(false)
 const newChannelType = ref<ChannelType | null>(null)
 const newChannelValue = ref('')
+const newChannelIsPrimary = ref(false)
 const saving = ref(false)
+
+// Auto-check «Основной» when the selected type has no existing channel of that type
+watch(newChannelType, (type) => {
+  if (!type) {
+    newChannelIsPrimary.value = false
+    return
+  }
+  newChannelIsPrimary.value = !props.channels.some((c) => c.channel_type === type)
+})
 
 const channelTypeOptions = computed(() => [
   { value: 'phone', label: t('crm.company.channels.phone') },
@@ -296,6 +318,7 @@ function cancelAdd() {
   addingOpen.value = false
   newChannelType.value = null
   newChannelValue.value = ''
+  newChannelIsPrimary.value = false
 }
 
 async function submitAddChannel() {
@@ -305,6 +328,7 @@ async function submitAddChannel() {
     const created = await companiesApi.addChannel(props.companyId, {
       channel_type: newChannelType.value,
       value: newChannelValue.value.trim(),
+      is_primary_for_channel: newChannelIsPrimary.value || undefined,
     })
     emit('updated', [...props.channels, created])
     cancelAdd()
@@ -587,6 +611,16 @@ function onDeleteChannel(ch: CompanyChannel) {
 
 .company-channels__value-input {
   width: 100%;
+}
+
+.company-channels__primary-check {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  color: var(--p-text-color);
+  user-select: none;
 }
 
 .company-channels__add-actions {

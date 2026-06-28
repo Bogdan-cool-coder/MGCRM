@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -153,6 +153,21 @@ const paidAtIso = ref<string | null>(props.deal.paid_at ?? null)
 
 const savingPayment = ref(false)
 
+// ── Re-sync local refs when the deal prop changes (e.g. switching deals) ─────
+// Guard: don't clobber an in-progress edit — only re-seed when save is idle.
+
+watch(
+  () => props.deal,
+  (next) => {
+    if (savingPayment.value) return
+    paymentAmountDisplay.value = kopecksToDisplay(next.paid_amount)
+    paymentAmountKopecks.value = next.paid_amount ?? null
+    paymentCurrency.value = next.payment_currency ?? 'RUB'
+    paidAtIso.value = next.paid_at ?? null
+  },
+  { deep: false },
+)
+
 // Allow save if either date or amount is set
 const canSave = computed(() => !!(paidAtIso.value || paymentAmountKopecks.value != null))
 
@@ -166,19 +181,24 @@ const currencyOptions = [
 ]
 
 // ── Handle save — POST /api/deals/{id}/fix-payment ───────────────────────────
+// Always send all three fields so editing one field never wipes another.
+// paid_amount: null explicitly clears a saved amount (backend: nullable integer).
+// paid_at: null explicitly clears a saved date (backend: nullable date).
+// payment_currency: only sent when there is a non-null amount to attach it to.
 
 async function handleFixPayment() {
   if (!canSave.value) return
   savingPayment.value = true
   try {
     const payload: {
-      paid_at?: string | null
-      paid_amount?: number | null
+      paid_at: string | null
+      paid_amount: number | null
       payment_currency?: string | null
-    } = {}
-    if (paidAtIso.value !== undefined) payload.paid_at = paidAtIso.value
-    if (paymentAmountKopecks.value !== null) {
-      payload.paid_amount = paymentAmountKopecks.value
+    } = {
+      paid_at: paidAtIso.value ?? null,
+      paid_amount: paymentAmountKopecks.value ?? null,
+    }
+    if (paymentAmountKopecks.value != null) {
       payload.payment_currency = paymentCurrency.value
     }
     const updated = await salesApi.fixPayment(props.deal.id, payload)

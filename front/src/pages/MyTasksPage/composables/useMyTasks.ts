@@ -1,10 +1,16 @@
 /**
  * MyTasksPage composable — presets, filters, pagination, counts.
+ *
+ * All mutations (complete / reopen / delete / pin / patch) are delegated to
+ * `useMyTasksStore` so that BOTH the list view and the kanban board stay in
+ * sync from a single reactive source. This composable owns only list-specific
+ * concerns: pagination, filtering, preset selection, and the load path.
  */
 import { ref, computed, watch } from 'vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { activityApi } from '@/api/activity'
 import { useActivityStore } from '@/stores/activityStore'
+import { useMyTasksStore } from '@/stores/myTasksStore'
 import { localDateString, todayInOperationalTz, thisWeekRangeInOperationalTz, dateInOperationalTz } from '@/utils/activity'
 import type { ActivityDto, ActivityKind, ActivityStatus, ActivityPriority } from '@/entities/activity'
 import type { ActivityPreset } from '@/api/activity'
@@ -36,16 +42,19 @@ const DEFAULT_FILTERS: TaskFilters = {
 
 export function useMyTasks() {
   const activityStore = useActivityStore()
+  const tasksStore = useMyTasksStore()
 
   const activePreset = ref<TaskPreset>('my_tasks')
   const filters = ref<TaskFilters>({ ...DEFAULT_FILTERS })
   const page = ref(1)
   const perPage = ref(25)
 
+  // Internal resource for loading + error state tracking
   const resource = useAsyncResource<ActivityDto[]>(() => [])
-  const total = ref(0)
 
-  const items = computed(() => resource.data.value)
+  // Expose list state from the store (single source of truth)
+  const items = computed(() => tasksStore.listItems)
+  const total = computed(() => tasksStore.listTotal)
   const loading = computed(() => resource.loading.value)
 
   const counts = computed(() => activityStore.countsCache)
@@ -65,7 +74,8 @@ export function useMyTasks() {
           page: page.value,
           per_page: perPage.value,
         })
-        total.value = res.meta.total
+        tasksStore.listItems = res.data
+        tasksStore.listTotal = res.meta.total
         return res.data
       })
     } else {
@@ -77,7 +87,8 @@ export function useMyTasks() {
           page: page.value,
           per_page: perPage.value,
         })
-        total.value = res.meta.total
+        tasksStore.listItems = res.data
+        tasksStore.listTotal = res.meta.total
         return res.data
       })
     }
@@ -143,13 +154,14 @@ export function useMyTasks() {
     void load()
   })
 
+  // ── Mutations — all delegate to store so the board stays in sync ───────────
+
   function removeLocal(id: number) {
-    resource.data.value = resource.data.value.filter((a) => a.id !== id)
-    total.value = Math.max(0, total.value - 1)
+    tasksStore.listRemove(id)
   }
 
   function updateLocal(updated: ActivityDto) {
-    resource.data.value = resource.data.value.map((a) => (a.id === updated.id ? updated : a))
+    tasksStore.listUpdate(updated)
   }
 
   function addLocal(activity: ActivityDto) {
@@ -158,8 +170,7 @@ export function useMyTasks() {
     // this_week, pinned) should NOT receive items that don't match — the badge
     // count is fetched separately from the API and stays correct either way.
     if (!matchesPreset(activity, activePreset.value)) return
-    resource.data.value = [activity, ...resource.data.value]
-    total.value += 1
+    tasksStore.listAdd(activity)
   }
 
   function matchesPreset(activity: ActivityDto, preset: TaskPreset): boolean {

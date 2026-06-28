@@ -121,6 +121,23 @@ export const onboardingNavGroup: NavGroup = {
   ],
 }
 
+// ─── Automation group (admin/director only) ───────────────────────────────────
+export const automationNavGroup: NavGroup = {
+  key: 'automation',
+  labelKey: 'nav.automation',
+  icon: 'pi pi-bolt',
+  adminOnly: true,
+  items: [
+    {
+      key: 'automation-runs',
+      route: '/admin/automation-runs',
+      icon: 'pi pi-clock',
+      labelKey: 'nav.automationRuns',
+      adminOnly: true,
+    },
+  ],
+}
+
 // ─── Settings entry (CommandPalette only — NOT shown in sidebar) ──────────────
 // The sidebar no longer has a Settings item. /settings redirects to /profile (hub).
 // This item is kept for CommandPalette search (adminNavItems) only.

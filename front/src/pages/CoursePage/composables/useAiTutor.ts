@@ -18,7 +18,7 @@ export function useAiTutor(lessonId: number) {
   const confirm = useConfirm()
 
   const messages = ref<ChatMessage[]>([])
-  const sessionId = ref<string | undefined>(undefined)
+  const sessionId = ref<number | undefined>(undefined)
   const isLoadingHistory = ref(false)
   const isSending = ref(false)
   const question = ref('')

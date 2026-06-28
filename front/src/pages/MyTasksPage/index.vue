@@ -134,6 +134,7 @@ import TasksKanbanBoard from './components/TasksKanbanBoard.vue'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import { activityApi } from '@/api/activity'
 import { useActivityStore } from '@/stores/activityStore'
+import { useMyTasksStore } from '@/stores/myTasksStore'
 import { useMyTasks } from './composables/useMyTasks'
 import { useTaskBoard } from './composables/useTaskBoard'
 import { getApiErrorMessage } from '@/utils/errors'
@@ -145,6 +146,7 @@ const { t } = useI18n()
 const toast = useToast()
 const confirm = useConfirm()
 const activityStore = useActivityStore()
+const myTasksStore = useMyTasksStore()
 
 // ── View ─────────────────────────────────────────────────────────────────────
 
@@ -219,7 +221,7 @@ function clearSelection() {
 }
 
 // Helper: mirrors TasksKanbanBoard.bucketsForScope (kept here for selectAll)
-const ALL_BOARD_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']
+const ALL_BOARD_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week', 'later']
 function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
   if (scope === 'day') return ['overdue', 'today', 'tomorrow']
   if (scope === 'week') return ['overdue', 'today', 'tomorrow', 'this_week']
@@ -294,13 +296,15 @@ function onEdit(activity: ActivityDto) {
 
 async function onComplete(activity: ActivityDto) {
   completingId.value = activity.id
-  removeLocal(activity.id)
+  // Remove from BOTH list and board — single source of truth cross-view sync
+  myTasksStore.removeFromBoth(activity.id)
   try {
     await activityApi.completeActivity(activity.id)
     toast.add({ severity: 'success', summary: t('activity.actions.completeSuccess'), life: 3000 })
     void refreshCounts()
   } catch (err) {
-    addLocal(activity)
+    // Rollback list (board will refresh on next kanban view entry)
+    myTasksStore.listAddBack(activity)
     const status = (err as { response?: { status?: number } })?.response?.status
     const msg =
       status === 403
@@ -314,6 +318,7 @@ async function onComplete(activity: ActivityDto) {
 
 async function onReopen(activity: ActivityDto) {
   reopeningId.value = activity.id
+  // Remove from list (completed tasks are not on the board, so only list remove needed)
   removeLocal(activity.id)
   try {
     await activityApi.reopenActivity(activity.id)
@@ -362,7 +367,8 @@ function onDelete(activity: ActivityDto) {
     accept: async () => {
       try {
         await activityApi.deleteActivity(activity.id)
-        removeLocal(activity.id)
+        // Remove from BOTH views
+        myTasksStore.removeFromBoth(activity.id)
         toast.add({ severity: 'success', summary: t('activity.actions.deleteSuccess'), life: 3000 })
         void refreshCounts()
       } catch (err) {
@@ -395,9 +401,17 @@ function onActivityPatched(activity: ActivityDto) {
   const isClosed = activity.status === 'done' || activity.status === 'rejected'
   const onOpenPreset = (OPEN_PRESETS as readonly string[]).includes(activePreset.value)
   if (isClosed && onOpenPreset) {
-    // Task was closed while viewing an open-only list — remove the row (mirror onComplete)
-    removeLocal(activity.id)
+    // Task was closed while viewing an open-only list — remove from list AND board
+    myTasksStore.removeFromBoth(activity.id)
     void refreshCounts()
+  } else if (!isClosed && onOpenPreset) {
+    // Item is open (may be a rollback from a failed close) — update or re-insert
+    if (myTasksStore.listItems.some((a) => a.id === activity.id)) {
+      updateLocal(activity)
+    } else {
+      // Rollback: row was removed optimistically, server rejected → re-insert
+      myTasksStore.listAddBack(activity)
+    }
   } else {
     updateLocal(activity)
   }

@@ -110,10 +110,11 @@ const BUCKET_COLORS: Record<MyBoardBucket, string> = {
   tomorrow: '#378ADD',
   this_week: '#7F77DD',
   next_week: '#1D9E75',
+  later: '#6B7280',
 }
 
 // ── Scope → visible buckets ────────────────────────────────────────────────────
-const ALL_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']
+const ALL_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week', 'later']
 
 function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
   if (scope === 'day') return ['overdue', 'today', 'tomorrow']
@@ -166,6 +167,9 @@ function bucketMeta(key: MyBoardBucket): string {
     const nextSun = new Date(nextMon.getTime() + 6 * 86_400_000)
     const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: OPERATIONAL_TZ }).format(d)
     return `${fmt(nextMon)} – ${fmt(nextSun)}`
+  }
+  if (key === 'later') {
+    return t('tasks.kanban.bucketMeta.later')
   }
   return ''
 }

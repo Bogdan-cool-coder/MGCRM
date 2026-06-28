@@ -43,12 +43,22 @@
         </div>
 
         <!-- Full legal form -->
-        <div class="col-12">
+        <div class="col-md-8">
           <label class="requisite-form__label">{{ t('crm.company.requisites.fields.fullLegalForm') }}</label>
           <InputText
             v-model="form.full_legal_form"
             class="w-full"
             placeholder="Общество с ограниченной ответственностью"
+          />
+        </div>
+
+        <!-- Gender ending OE (родовое окончание — «-ого»/«-ой» for contract generation) -->
+        <div class="col-md-4">
+          <label class="requisite-form__label">{{ t('crm.company.requisites.fields.genderEndingOe') }}</label>
+          <InputText
+            v-model="form.gender_ending_oe"
+            class="w-full"
+            placeholder="-ого / -ой"
           />
         </div>
 
@@ -250,6 +260,7 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useDirectoriesStore } from '@/stores/directories'
+import { localDateString, parseDateLocal } from '@/utils/activity'
 import type { CompanyRequisite, CreateRequisitePayload } from '@/entities/crm'
 
 const props = defineProps<{
@@ -281,6 +292,7 @@ interface FormState {
   legal_name: string
   legal_form: string
   full_legal_form: string
+  gender_ending_oe: string
   director_position: string
   director_short: string
   director_genitive: string
@@ -306,6 +318,7 @@ function emptyForm(): FormState {
     legal_name: '',
     legal_form: '',
     full_legal_form: '',
+    gender_ending_oe: '',
     director_position: '',
     director_short: '',
     director_genitive: '',
@@ -346,6 +359,7 @@ watch(
         legal_name: req.legal_name ?? '',
         legal_form: req.legal_form ?? '',
         full_legal_form: req.full_legal_form ?? '',
+        gender_ending_oe: req.gender_ending_oe ?? '',
         director_position: req.director_position ?? '',
         director_short: req.director_short ?? '',
         director_genitive: req.director_genitive ?? '',
@@ -358,8 +372,9 @@ watch(
         bank_code_label: req.bank_details?.bank_code_label ?? '',
         bank_code: req.bank_details?.bank_code ?? '',
         account: req.bank_details?.account ?? '',
-        valid_from_date: req.valid_from ? new Date(req.valid_from) : null,
-        valid_to_date: req.valid_to ? new Date(req.valid_to) : null,
+        // parseDateLocal avoids the UTC midnight day-shift that new Date('YYYY-MM-DD') causes
+        valid_from_date: req.valid_from ? parseDateLocal(req.valid_from) : null,
+        valid_to_date: req.valid_to ? parseDateLocal(req.valid_to) : null,
         note: req.note ?? '',
         set_as_current: false,
       }
@@ -399,6 +414,7 @@ function onSubmit() {
     legal_name: form.value.legal_name.trim() || null,
     legal_form: form.value.legal_form.trim() || null,
     full_legal_form: form.value.full_legal_form.trim() || null,
+    gender_ending_oe: form.value.gender_ending_oe.trim() || null,
     director_position: form.value.director_position.trim() || null,
     director_short: form.value.director_short.trim() || null,
     director_genitive: form.value.director_genitive.trim() || null,
@@ -408,11 +424,12 @@ function onSubmit() {
     country_code: form.value.country_code || null,
     address: form.value.address.trim() || null,
     bank_details: bankDetails,
+    // localDateString() uses local calendar date — avoids UTC midnight day-shift
     valid_from: form.value.valid_from_date
-      ? form.value.valid_from_date.toISOString().slice(0, 10)
+      ? localDateString(form.value.valid_from_date)
       : null,
     valid_to: form.value.valid_to_date
-      ? form.value.valid_to_date.toISOString().slice(0, 10)
+      ? localDateString(form.value.valid_to_date)
       : null,
     note: form.value.note.trim() || null,
   }

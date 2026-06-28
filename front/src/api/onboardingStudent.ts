@@ -64,7 +64,7 @@ export interface AiTutorMessage {
 
 export interface AiTutorAskResponse {
   answer: string
-  session_id: string
+  session_id: number
 }
 
 async function getAiTutorHistory(lessonId: number): Promise<AiTutorMessage[]> {
@@ -72,7 +72,7 @@ async function getAiTutorHistory(lessonId: number): Promise<AiTutorMessage[]> {
   return res.data.data
 }
 
-async function askAiTutor(lessonId: number, question: string, sessionId?: string): Promise<AiTutorAskResponse> {
+async function askAiTutor(lessonId: number, question: string, sessionId?: number): Promise<AiTutorAskResponse> {
   const res = await apiClient.post<{ data: AiTutorAskResponse }>(`/api/onboarding/lessons/${lessonId}/ai-tutor`, {
     question,
     session_id: sessionId,

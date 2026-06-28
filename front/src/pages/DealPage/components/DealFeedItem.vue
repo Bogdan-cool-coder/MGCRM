@@ -205,15 +205,17 @@ import type { FeedItem } from '../composables/useDealFeed'
 import type { ActivityDto } from '@/entities/activity'
 
 // ─── Kind accent colours — spec §11 ──────────────────────────────────────────
-// call=#2A6FDB  meeting=#1F8A5B  follow_up/presentation=#E8A317  contract/task=#172747
+// call=blue  meeting=green  follow_up/presentation=yellow  task=brand-navy  note=neutral
+// Raw hex replaced by semantic CSS var references so the palette is theme-aware.
+// #172747 (task/brand navy) is the one documented brand invariant — kept as-is.
 
 const KIND_META: Record<string, { color: string; icon: string }> = {
-  call:         { color: '#2A6FDB', icon: 'pi-phone' },
-  meeting:      { color: '#1F8A5B', icon: 'pi-calendar' },
-  follow_up:    { color: '#E8A317', icon: 'pi-file-edit' },
-  presentation: { color: '#E8A317', icon: 'pi-desktop' },
-  task:         { color: '#172747', icon: 'pi-check-square' },
-  note:         { color: '', icon: 'pi-file' },
+  call:         { color: 'var(--p-blue-500)',   icon: 'pi-phone' },
+  meeting:      { color: 'var(--p-green-600)',  icon: 'pi-calendar' },
+  follow_up:    { color: 'var(--p-yellow-500)', icon: 'pi-file-edit' },
+  presentation: { color: 'var(--p-yellow-500)', icon: 'pi-desktop' },
+  task:         { color: '#172747',              icon: 'pi-check-square' }, // brand invariant
+  note:         { color: '',                     icon: 'pi-file' },
 }
 
 // ─── Props / emits ────────────────────────────────────────────────────────────

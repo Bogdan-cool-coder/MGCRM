@@ -7,7 +7,7 @@
       'task-card--done': task.status === 'done',
       'task-card--selected': selected,
     }"
-    draggable="true"
+    :draggable="!selectMode"
     @click="onCardClick"
   >
     <!-- Select-mode checkbox -->
@@ -348,7 +348,8 @@ async function onComplete() {
   overflow: hidden;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    // surface-100 = #444547 (dark card bg) → invisible; use surface-800 = #F1F2F3 (near-white)
+    color: var(--p-surface-800);
   }
 
   &--done {

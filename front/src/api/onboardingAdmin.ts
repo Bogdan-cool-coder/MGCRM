@@ -197,7 +197,9 @@ async function deleteQuestion(quizId: number, questionId: number): Promise<void>
 }
 
 async function reorderQuestions(quizId: number, items: ReorderPayloadItem[]): Promise<void> {
-  await apiClient.post(`/api/admin/onboarding/quizzes/${quizId}/questions/reorder`, items)
+  await apiClient.post(`/api/admin/onboarding/quizzes/${quizId}/questions/reorder`, {
+    order: items.map((i) => ({ id: i.id })),
+  })
 }
 
 // ─── OPTIONS ─────────────────────────────────────────────────────────────────
@@ -217,7 +219,9 @@ async function deleteOption(quizId: number, questionId: number, optionId: number
 }
 
 async function reorderOptions(quizId: number, questionId: number, items: ReorderPayloadItem[]): Promise<void> {
-  await apiClient.post(`/api/admin/onboarding/quizzes/${quizId}/questions/${questionId}/options/reorder`, items)
+  await apiClient.post(`/api/admin/onboarding/quizzes/${quizId}/questions/${questionId}/options/reorder`, {
+    order: items.map((i) => ({ id: i.id })),
+  })
 }
 
 // ─── ASSIGNMENTS ─────────────────────────────────────────────────────────────

@@ -1,23 +1,23 @@
 /**
  * useTaskBoard — composable for personal task kanban in the Tasks section.
- * Loads tasks via GET /api/activities/my-board and renders the server's
- * Dubai-tz buckets directly (F4: no client-side re-bucketing in browser-local tz).
+ *
+ * Delegates all server-state to `useMyTasksStore` (single source of truth).
+ * Mutations (complete / reschedule) patch the shared store so the list view
+ * stays consistent without a remount.
  */
 import { ref, computed } from 'vue'
 import { activityApi } from '@/api/activity'
-import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { OPERATIONAL_TZ } from '@/utils/activity'
-import type { MyBoardActivityDto, MyBoardBucket } from '@/entities/activity'
+import { useMyTasksStore, ALL_BOARD_BUCKETS } from '@/stores/myTasksStore'
+import type { MyBoardBucket } from '@/entities/activity'
 
 export type TaskScope = 'day' | 'week' | 'month'
 
 export interface TaskBucket {
   key: MyBoardBucket
-  tasks: MyBoardActivityDto[]
+  tasks: import('@/entities/activity').MyBoardActivityDto[]
 }
-
-const ALL_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week']
 
 // ── Bucket → due_at computation (Dubai-tz calendar dates) ──────────────────────
 /**
@@ -57,32 +57,31 @@ export function bucketToDueDate(bucket: MyBoardBucket): string {
     return tzDate(new Date(now.getTime() + daysToNextMon * 86_400_000))
   }
 
-  // Fallback (shouldn't happen — overdue is not a valid drop target)
+  if (bucket === 'later') {
+    // "Later" = two weeks from now (next_week + 7 days)
+    const dayIdx = now.getDay()
+    const daysToNextMon = dayIdx === 0 ? 1 : 8 - dayIdx
+    return tzDate(new Date(now.getTime() + (daysToNextMon + 7) * 86_400_000))
+  }
+
+  // Fallback (overdue is not a valid drop target)
   return tzDate(now)
 }
 
 export function useTaskBoard() {
-  // Store the server's bucket map directly — keys are already Dubai-tz correct
-  const serverBuckets = ref<Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>>({})
-  const resource = useAsyncResource<MyBoardActivityDto[]>(() => [])
+  const store = useMyTasksStore()
   const completeMutation = useMutation()
   const rescheduleMutation = useMutation()
-  // scope is now controlled by the parent (TasksTopBar); keep ref for backward compat
+
+  // scope is controlled by the parent (TasksTopBar); keep ref for backward compat
   const scope = ref<TaskScope>('month')
   const searchQuery = ref('')
 
-  const allTasks = computed(() =>
-    // Flat list for allDone check (all buckets, all tasks)
-    ALL_BUCKETS.flatMap((k) => serverBuckets.value[k] ?? []),
-  )
-
-  // Returns ALL bucket data (unfiltered by scope). Scope-filtering is done in
-  // TasksKanbanBoard which receives scope as a prop from the page.
   const bucketsData = computed((): TaskBucket[] => {
     const q = searchQuery.value.toLowerCase()
 
-    return ALL_BUCKETS.map((key) => {
-      let tasks = serverBuckets.value[key] ?? []
+    return ALL_BOARD_BUCKETS.map((key) => {
+      let tasks = store.serverBuckets[key] ?? []
       if (q) {
         tasks = tasks.filter(
           (t) =>
@@ -96,55 +95,19 @@ export function useTaskBoard() {
 
   const totalVisible = computed(() => bucketsData.value.reduce((s, b) => s + b.tasks.length, 0))
 
-  const allDone = computed(
-    () => !resource.loading.value && allTasks.value.length === 0,
-  )
-
   async function load() {
-    await resource.run(
-      async () => {
-        const r = await activityApi.getMyBoard()
-        // Normalise: backend sends `responsible`, DTO also has `assigned_to` alias
-        // for backward compat with old TaskCard internals. Both fields are set.
-        const normalised = Object.fromEntries(
-          ALL_BUCKETS.map((k) => [
-            k,
-            (r.data[k] ?? []).map((t) => ({
-              ...t,
-              // Ensure assigned_to mirrors responsible so both work in components
-              assigned_to: t.responsible ?? t.assigned_to ?? null,
-            })),
-          ]),
-        ) as Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>
-        // Store server buckets directly — TZ-correct (F4)
-        serverBuckets.value = normalised
-        // Return flat list so resource.loading/error tracking works
-        return ALL_BUCKETS.flatMap((k) => normalised[k] ?? [])
-      },
-    )
+    await store.loadBoard()
   }
 
   async function completeTask(id: number) {
-    // Optimistic: remove from whichever server bucket contains this task
-    for (const key of ALL_BUCKETS) {
-      const bucket = serverBuckets.value[key]
-      if (bucket) {
-        const idx = bucket.findIndex((t) => t.id === id)
-        if (idx >= 0) {
-          serverBuckets.value = {
-            ...serverBuckets.value,
-            [key]: [...bucket.slice(0, idx), ...bucket.slice(idx + 1)],
-          }
-          break
-        }
-      }
-    }
+    // Optimistic: remove from board
+    store.boardRemove(id)
 
     try {
       await completeMutation.run(async () => { await activityApi.completeActivity(id) })
     } catch {
-      // Rollback: reload
-      await load()
+      // Rollback: reload from server
+      await store.loadBoard()
       throw new Error('complete_failed')
     }
   }
@@ -152,38 +115,15 @@ export function useTaskBoard() {
   /**
    * Reschedule a task by dragging it into a bucket.
    *
-   * Optimistically moves the card from its current bucket into targetBucket
-   * (mirroring the completeTask pattern), then calls the reschedule API.
-   * On error it rolls back by reloading from the server.
+   * Optimistically moves the card between buckets in the store, then calls
+   * the reschedule API. On error it rolls back by reloading from the server.
    */
   async function rescheduleTask(id: number, targetBucket: MyBoardBucket): Promise<void> {
     const dueAt = bucketToDueDate(targetBucket)
+    const dueAtIso = `${dueAt}T00:00:00+04:00`
 
-    // Optimistic: find the task in any bucket and splice it into targetBucket
-    let movedTask: MyBoardActivityDto | null = null
-
-    for (const key of ALL_BUCKETS) {
-      const bucket = serverBuckets.value[key]
-      if (bucket) {
-        const idx = bucket.findIndex((t) => t.id === id)
-        if (idx >= 0) {
-          movedTask = { ...(bucket[idx] as MyBoardActivityDto), due_at: `${dueAt}T00:00:00+04:00` }
-          serverBuckets.value = {
-            ...serverBuckets.value,
-            [key]: [...bucket.slice(0, idx), ...bucket.slice(idx + 1)],
-          }
-          break
-        }
-      }
-    }
-
-    if (movedTask) {
-      const target = serverBuckets.value[targetBucket] ?? []
-      serverBuckets.value = {
-        ...serverBuckets.value,
-        [targetBucket]: [...target, movedTask],
-      }
-    }
+    // Optimistic move in the shared store
+    store.boardMove(id, targetBucket, dueAtIso)
 
     try {
       await rescheduleMutation.run(async () => {
@@ -191,62 +131,34 @@ export function useTaskBoard() {
       })
     } catch {
       // Rollback
-      await load()
+      await store.loadBoard()
       throw new Error('reschedule_failed')
     }
   }
 
   /**
-   * Optimistically remove a task from any bucket by ID (used by page-level bulk actions).
+   * Optimistically remove a task from the board by ID (page-level bulk actions).
+   * Delegates to store so list view is also updated.
    */
   function removeLocalById(id: number) {
-    for (const key of ALL_BUCKETS) {
-      const bucket = serverBuckets.value[key]
-      if (bucket) {
-        const idx = bucket.findIndex((t) => t.id === id)
-        if (idx >= 0) {
-          serverBuckets.value = {
-            ...serverBuckets.value,
-            [key]: [...bucket.slice(0, idx), ...bucket.slice(idx + 1)],
-          }
-          break
-        }
-      }
-    }
+    store.boardRemove(id)
   }
 
   /**
-   * Optimistically patch specific fields of a task in any bucket by ID.
-   * Used by page-level bulk actions (e.g. pin) where the full DTO shape
-   * of the board task must be preserved.
+   * Optimistically patch specific fields of a task in the board.
+   * Delegates to store so the list view is also updated (where applicable).
    */
-  function patchLocalById(id: number, patch: Partial<MyBoardActivityDto>) {
-    for (const key of ALL_BUCKETS) {
-      const bucket = serverBuckets.value[key]
-      if (bucket) {
-        const idx = bucket.findIndex((t) => t.id === id)
-        if (idx >= 0) {
-          serverBuckets.value = {
-            ...serverBuckets.value,
-            [key]: [
-              ...bucket.slice(0, idx),
-              { ...(bucket[idx] as MyBoardActivityDto), ...patch },
-              ...bucket.slice(idx + 1),
-            ],
-          }
-          break
-        }
-      }
-    }
+  function patchLocalById(id: number, patch: Partial<import('@/entities/activity').MyBoardActivityDto>) {
+    store.boardPatch(id, patch)
   }
 
   return {
-    loading: computed(() => resource.loading.value),
-    error: computed(() => resource.error.value),
+    loading: computed(() => store.boardLoading),
+    error: computed(() => store.boardError),
     scope,
     searchQuery,
     bucketsData,
-    allDone,
+    allDone: computed(() => store.allBoardDone),
     totalVisible,
     load,
     completeTask,

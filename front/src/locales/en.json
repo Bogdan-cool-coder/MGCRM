@@ -28,6 +28,7 @@
     "onboardingAdmin": "Courses (HR)",
     "onboardingAssignments": "Assignments",
     "hrProgress": "Progress",
+    "automation": "Automation",
     "automationRuns": "Automation log",
     "acquisitionChannels": "Acquisition Channels",
     "disconnectReasons": "Disconnect Reasons",
@@ -1619,7 +1620,8 @@
             "addSuccess": "Product added",
             "updateSuccess": "Item updated",
             "removeSuccess": "Item removed",
-            "removeConfirm": "Remove item?"
+            "removeConfirm": "Remove item?",
+            "noPriceHint": "No price for the selected currency"
           }
         },
         "contacts": {
@@ -3157,6 +3159,7 @@
         "tomorrow": "Tomorrow",
         "this_week": "This week",
         "next_week": "Next week",
+        "later": "Later",
         "noDate": "No date",
         "noTasks": "No tasks"
       },
@@ -3259,7 +3262,8 @@
         "today": "",
         "tomorrow": "",
         "this_week": "",
-        "next_week": ""
+        "next_week": "",
+        "later": "in 2+ weeks"
       }
     },
     "quickCreate": {
@@ -3539,7 +3543,8 @@
           "actsBasisPlaceholder": "Charter",
           "bankCodeLabel": "Bank code type",
           "bankCode": "Bank code",
-          "validTo": "Valid until"
+          "validTo": "Valid until",
+          "genderEndingOe": "Gender ending (OE)"
         },
         "errors": {
           "legalNameRequired": "Legal name is required"

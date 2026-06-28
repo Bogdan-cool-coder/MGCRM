@@ -28,13 +28,15 @@ export type SupportedCurrency = (typeof CURRENCY_WHITELIST)[number]
  * formatCurrency(150000000, 'UZS')→ "1 500 000 сум"
  */
 export function formatCurrency(kopecks: number, currencyCode: string): string {
-  const units = kopecks / 100
+  // Round to whole monetary units first — kopecks/100 can yield fractional
+  // units (e.g. 3 550 050 → 35 500.50). Display is always whole units: «35 500 ₽».
+  const units = Math.round(kopecks / 100)
   const symbol = CURRENCY_SYMBOLS[currencyCode] ?? currencyCode
 
-  // Format with space as thousands separator
+  // Format with space as thousands separator, no fraction digits.
   const formatted = units.toLocaleString('ru-RU', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
     useGrouping: true,
   })
 

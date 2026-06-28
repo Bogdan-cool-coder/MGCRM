@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import DatePicker from 'primevue/datepicker'
+import { parseDateLocal } from '@/utils/activity'
 
 const props = withDefaults(
   defineProps<{
@@ -76,19 +77,20 @@ const isOpen = ref(false)
 
 function isoToDisplay(iso: string | null | undefined): string {
   if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
+  // parseDateLocal parses 'YYYY-MM-DD' in LOCAL time — avoids UTC midnight UTC-shift.
+  const d = parseDateLocal(iso)
+  if (!d) return ''
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const yyyy = d.getFullYear()
   return `${dd}.${mm}.${yyyy}`
 }
 
-// minDateObj — clamped at midnight for comparison (C1)
+// minDateObj — clamped at local midnight for comparison (C1)
 const minDateObj = computed((): Date | null => {
   if (!props.min) return null
-  const d = new Date(props.min)
-  return isNaN(d.getTime()) ? null : d
+  // Use local-time parse so the min boundary matches the displayed day.
+  return parseDateLocal(props.min)
 })
 
 function displayToIso(display: string): string | null {
@@ -100,8 +102,9 @@ function displayToIso(display: string): string | null {
   const year = parseInt(yyyy, 10)
   // Reject nonsense years like 1011 (C1)
   if (year < 2000 || year > 2100) return null
-  const d = new Date(`${yyyy}-${mm}-${dd}`)
-  if (isNaN(d.getTime())) return null
+  // Validate with local-time parse so the compared date is the displayed day.
+  const d = parseDateLocal(`${yyyy}-${mm}-${dd}`)
+  if (!d) return null
   // Reject past dates when min is set (C1)
   if (minDateObj.value && d < minDateObj.value) return null
   return `${yyyy}-${mm}-${dd}`
@@ -114,7 +117,8 @@ const calendarValue = computed({
   get(): Date | null {
     const iso = displayToIso(displayValue.value)
     if (!iso) return null
-    return new Date(iso)
+    // parseDateLocal avoids UTC midnight shift (ECMAScript date-only = UTC).
+    return parseDateLocal(iso)
   },
   set(d: Date | null) {
     if (!d) {

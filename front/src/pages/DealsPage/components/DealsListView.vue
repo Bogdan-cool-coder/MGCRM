@@ -69,7 +69,7 @@
         </template>
         <template #body="{ data }">
           <span class="deals-list__country">
-            {{ data.country || '—' }}
+            {{ countryName(data.country) }}
           </span>
         </template>
       </Column>
@@ -210,6 +210,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import { formatCurrency } from '@/utils/currency'
+import { useDirectoriesStore } from '@/stores/directories'
 import DealsKpiChips from './DealsKpiChips.vue'
 import type { DealDto, ActivityType, PipelineStageDto, DealKpiDto } from '@/entities/sales'
 import type { DealSortKey, DealSortState } from '../composables/useDealsList'
@@ -237,9 +238,18 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
+const directoriesStore = useDirectoriesStore()
 
 function onRowClick(event: { data: DealDto }) {
   void router.push(`/deals/${event.data.id}`)
+}
+
+// ── Country code → display name ────────────────────────────────────────────────
+// Resolves an ISO-2 country code (e.g. "kz") to a human-readable name using the
+// countries directory already loaded by the page. Falls back to uppercased code.
+function countryName(code: string | null | undefined): string {
+  if (!code) return '—'
+  return directoriesStore.getCountryName(code) || code.toUpperCase()
 }
 
 // ── Sort icon helper ────────────────────────────────────────────────────────────

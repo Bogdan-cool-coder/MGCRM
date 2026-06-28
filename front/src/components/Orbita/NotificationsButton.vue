@@ -615,7 +615,7 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 
   // Unread indicator: left accent bar
   &--unread {
-    background: rgba($primary, 0.03);
+    background: rgba($primary, 0.07);
 
     &::before {
       content: '';
@@ -627,6 +627,16 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
       height: 60%;
       background: $primary;
       border-radius: 0 $radius-2xs $radius-2xs 0;
+
+      .app-dark & {
+        // Navy $primary (#172747) is invisible on dark surface-100 (#444547);
+        // use a lighter accent that reads on dark bg.
+        background: var(--p-primary-400);
+      }
+    }
+
+    .app-dark & {
+      background: rgba(255, 255, 255, 0.05);
     }
   }
 }

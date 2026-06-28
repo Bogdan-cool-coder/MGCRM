@@ -237,7 +237,7 @@ export interface SaveMeetingReportPayload {
 
 // ─── My Board (task board view, view 3) ──────────────────────────────────────
 
-export type MyBoardBucket = 'overdue' | 'today' | 'tomorrow' | 'this_week' | 'next_week'
+export type MyBoardBucket = 'overdue' | 'today' | 'tomorrow' | 'this_week' | 'next_week' | 'later'
 
 export interface MyBoardActivityDto {
   id: number
