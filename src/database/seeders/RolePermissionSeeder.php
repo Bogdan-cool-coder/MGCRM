@@ -84,6 +84,10 @@ class RolePermissionSeeder extends Seeder
      * `$user->can('contracts.approve')` / Policy bodies resolve through it.
      *
      *   --- Contracts (legal) ---
+     *   contracts.view-all           — VISIBILITY scope (IAM-2): see ALL documents
+     *                                  in the list vs only own (author_user_id =
+     *                                  caller). DocumentService::list read-scope.
+     *                                                       admin, lawyer, director
      *   contracts.approve            — write/approve documents, manage approval
      *                                  routes, templates, template variables,
      *                                  message templates.            admin, lawyer
@@ -114,6 +118,10 @@ class RolePermissionSeeder extends Seeder
      *   --- Sales ---
      *   pipelines.manage             — mutate pipelines / lost-reasons registry.
      *                                                               admin, director
+     *   pipelines.view-all           — VISIBILITY scope (IAM-2): see ALL pipelines/
+     *                                  stages vs only those visible to the caller
+     *                                  (PipelineService::managesPipelines read-scope).
+     *                                                               admin, director
      *   manager-cabinet.view-all     — view ANOTHER user's KPI / team rollup in the
      *                                  manager cabinet.             admin, director
      *
@@ -133,11 +141,13 @@ class RolePermissionSeeder extends Seeder
         'contracts.admin',
         'contracts.licensors.view',
         'contracts.templates.use',
+        'contracts.view-all',
         'catalog.manage',
         'crm.relations.manage',
         'crm.saved-views.manage-all',
         'inbox.manage',
         'pipelines.manage',
+        'pipelines.view-all',
         'manager-cabinet.view-all',
         'onboarding.manage',
         'automation.webhook.configure',
@@ -217,7 +227,8 @@ class RolePermissionSeeder extends Seeder
             // Domain capabilities map exactly to the old inline checks director
             // passed: catalog write, pipelines, inbox, onboarding, CRM
             // relations/saved-views overrides, manager-cabinet team view, licensor
-            // read and the broad automation.manage builder. Director did NOT pass
+            // read, the broad automation.manage builder, plus the IAM-2 visibility
+            // scopes (sees all pipelines + all documents). Director did NOT pass
             // contracts.approve (admin/lawyer only), contracts.admin (admin only)
             // or automation.webhook.configure (admin only).
             Role::Director->value => [
@@ -230,10 +241,11 @@ class RolePermissionSeeder extends Seeder
                 'finance.view', 'finance.reports.management',
                 'admin-write', 'dedup-scan-all', 'view-manager-cabinet',
                 'contracts.licensors.view', 'contracts.templates.use',
+                'contracts.view-all',
                 'catalog.manage',
                 'crm.relations.manage', 'crm.saved-views.manage-all',
                 'inbox.manage',
-                'pipelines.manage', 'manager-cabinet.view-all',
+                'pipelines.manage', 'pipelines.view-all', 'manager-cabinet.view-all',
                 'onboarding.manage',
             ],
 
@@ -248,6 +260,7 @@ class RolePermissionSeeder extends Seeder
                 'analytics.view',
                 'contracts.approve',
                 'contracts.licensors.view', 'contracts.templates.use',
+                'contracts.view-all',
             ],
 
             // Sales operator (own-scope). Sees their own manager cabinet but has

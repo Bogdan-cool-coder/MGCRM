@@ -12,7 +12,6 @@ use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
@@ -20,6 +19,7 @@ use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Services\DealService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -44,10 +44,10 @@ class DocumentService
     /**
      * Paginated list with optional filters.
      *
-     * Visibility scoping (ARCHITECTURE.md §3):
-     *   - admin / lawyer  → all documents (full visibility)
-     *   - director        → all documents (oversight role)
-     *   - others          → own documents only (author_user_id = caller)
+     * Visibility scoping (ARCHITECTURE.md §3), gated by the `contracts.view-all`
+     * permission (spatie, sanctum guard — granted to admin / lawyer / director):
+     *   - has contracts.view-all → all documents (full visibility / oversight)
+     *   - otherwise              → own documents only (author_user_id = caller)
      *
      * @param  array<string, mixed>  $filters
      */
@@ -56,9 +56,11 @@ class DocumentService
         $query = Document::query()
             ->with(['author:id,full_name', 'sourceCompany:id,name', 'templateVersion.template:id,code']);
 
-        // Author-scoping: non-privileged roles see only their own documents.
-        // admin / lawyer / director see all (full oversight).
-        if ($caller !== null && ! in_array($caller->role, [Role::Admin, Role::Lawyer, Role::Director], strict: true)) {
+        // Author-scoping (IAM-2): callers without `contracts.view-all` see only
+        // their own documents. The permission is granted to admin / lawyer /
+        // director (full oversight) — identical to the prior inline role list,
+        // now resolved through spatie on the sanctum guard.
+        if ($caller !== null && ! $caller->can('contracts.view-all')) {
             $query->where('author_user_id', $caller->id);
         }
 
@@ -172,7 +174,7 @@ class DocumentService
 
         // Persist signed_at factual date (unconditional when provided in the PATCH payload).
         if ($signedAt !== false) {
-            $doc->signed_at = $signedAt !== null ? \Illuminate\Support\Carbon::parse($signedAt) : null;
+            $doc->signed_at = $signedAt !== null ? Carbon::parse($signedAt) : null;
             $doc->save();
         }
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Sales\Services;
 
 use App\Domain\Automation\Models\PipelineAutomation;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Enums\PipelineKind;
 use App\Domain\Sales\Models\Pipeline;
@@ -131,7 +130,11 @@ class PipelineService
             return true;
         }
 
-        if ($role !== null && $role !== '' && $user->role?->value === $role) {
+        // Per-pipeline role-identity match (IAM-2): the pipeline stores a role
+        // NAME string in `visible_role`; resolve the user's role through spatie
+        // (sanctum guard) rather than the enum accessor. $role is guarded non-empty
+        // here, so hasRole() is never asked about a null/blank name.
+        if ($role !== null && $role !== '' && $user->hasRole($role)) {
             return true;
         }
 
@@ -164,11 +167,14 @@ class PipelineService
     }
 
     /**
-     * Admins and directors configure and therefore always see every pipeline.
+     * Whether the user sees ALL pipelines (full visibility read-scope) vs only
+     * those visible to them. Admins/directors configure the funnels and carry
+     * `pipelines.view-all`, so they always see every pipeline. IAM-2: resolved
+     * through spatie (sanctum guard) — was an inline `users.role` list.
      */
     private function managesPipelines(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Director], true);
+        return $user->can('pipelines.view-all');
     }
 
     public function find(int $id): Pipeline
