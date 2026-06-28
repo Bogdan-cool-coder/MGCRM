@@ -362,7 +362,7 @@ trait ValidatesAutomationConfig
     private function validateWebhook(Validator $validator, array $config): void
     {
         // webhook is admin-only (it can exfiltrate deal data outbound).
-        if ($this->user()?->role !== Role::Admin) {
+        if ($this->user()?->can('automation.webhook.configure') !== true) {
             $validator->errors()->add(
                 'action_kind',
                 'The webhook action may only be configured by an administrator.',

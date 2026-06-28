@@ -52,7 +52,7 @@ class QuizQuestionController extends Controller
      * The nullable $quiz parameter absorbs the {quiz} segment on the nested route
      * without breaking the shallow route (where {quiz} is absent).
      */
-    public function update(UpdateQuizQuestionRequest $request, ?Quiz $quiz = null, QuizQuestion $question): JsonResource
+    public function update(UpdateQuizQuestionRequest $request, ?Quiz $quiz, QuizQuestion $question): JsonResource
     {
         return QuizQuestionAdminResource::make(
             $this->service->update($question, $request->validated())
@@ -63,7 +63,7 @@ class QuizQuestionController extends Controller
      * DELETE /api/admin/onboarding/quiz-questions/{question}
      * DELETE /api/admin/onboarding/quizzes/{quiz}/questions/{question}  (FE nested path)
      */
-    public function destroy(Request $request, ?Quiz $quiz = null, QuizQuestion $question): JsonResponse
+    public function destroy(Request $request, ?Quiz $quiz, QuizQuestion $question): JsonResponse
     {
         $this->authorize('delete', $question);
 

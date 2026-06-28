@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Onboarding\Policies;
 
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Onboarding\Models\Certificate;
 
@@ -48,6 +47,6 @@ class CertificatePolicy
 
     private function isAdminOrDirector(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Director], strict: true);
+        return $user->can('onboarding.manage');
     }
 }

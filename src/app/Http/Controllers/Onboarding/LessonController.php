@@ -22,6 +22,7 @@ use App\Http\Resources\Onboarding\LessonProgressResource;
 use App\Http\Resources\Onboarding\LessonResource;
 use App\Jobs\Onboarding\GenerateQuizQuestionsJob;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -175,7 +176,7 @@ class LessonController extends Controller
      * PDF lessons, so the frontend never needs to know which storage contract
      * was used. AssignmentDetailResource returns this URL as `player_src`.
      */
-    public function streamPdf(Request $request, Lesson $lesson): Response|JsonResponse|\Illuminate\Http\RedirectResponse
+    public function streamPdf(Request $request, Lesson $lesson): Response|JsonResponse|RedirectResponse
     {
         // Guard: lesson must be kind=pdf.
         if ($lesson->kind !== LessonKind::Pdf) {
@@ -184,7 +185,7 @@ class LessonController extends Controller
 
         // Ownership guard (same logic as AiTutorController).
         $user = $request->user();
-        $isAdminOrDirector = in_array($user->role, [\App\Domain\Iam\Enums\Role::Admin, \App\Domain\Iam\Enums\Role::Director], strict: true);
+        $isAdminOrDirector = $user->can('onboarding.manage');
 
         if (! $isAdminOrDirector) {
             $lesson->loadMissing('module');

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Contracts\Policies;
 
 use App\Domain\Contracts\Models\Template;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -28,7 +27,7 @@ class TemplatePolicy
 
     public function create(User $user): bool
     {
-        return $user->role === Role::Admin;
+        return $user->can('contracts.admin');
     }
 
     public function update(User $user, Template $template): bool
@@ -38,7 +37,7 @@ class TemplatePolicy
 
     public function delete(User $user, Template $template): bool
     {
-        return $user->role === Role::Admin;
+        return $user->can('contracts.admin');
     }
 
     /** POST /api/templates/{template}/upload — upload a new docx version. */
@@ -67,6 +66,6 @@ class TemplatePolicy
 
     private function canWrite(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Lawyer], strict: true);
+        return $user->can('contracts.approve');
     }
 }

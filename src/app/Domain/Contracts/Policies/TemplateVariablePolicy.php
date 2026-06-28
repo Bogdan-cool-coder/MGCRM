@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Contracts\Policies;
 
 use App\Domain\Contracts\Models\TemplateVariable;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -41,6 +40,6 @@ class TemplateVariablePolicy
 
     private function canWrite(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Lawyer], strict: true);
+        return $user->can('contracts.approve');
     }
 }

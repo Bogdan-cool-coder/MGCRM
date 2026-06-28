@@ -351,21 +351,17 @@ class ManagerKpiService
     }
 
     /**
-     * Roles that are allowed to reach the manager cabinet at all.
-     * lawyer / accountant / cfo are NOT a sales audience and get 403.
-     */
-    private const CABINET_ROLES = [Role::Admin, Role::Director, Role::Manager];
-
-    /**
-     * Role gate for the whole cabinet surface (defense-in-depth alongside the
-     * route-level role middleware). Non-sales roles (lawyer/accountant/cfo) are
-     * rejected with 403 even when they hold a valid Sanctum token + 2FA.
+     * Permission gate for the whole cabinet surface (defense-in-depth alongside
+     * the route-level `can:view-manager-cabinet` middleware). The
+     * `view-manager-cabinet` permission is granted to admin / director / manager
+     * (IAM-1); lawyer / accountant / cfo are NOT a sales audience and get 403 even
+     * when they hold a valid Sanctum token + 2FA.
      *
-     * @throws HttpResponseException 403 if the viewer's role is not a cabinet role
+     * @throws HttpResponseException 403 if the viewer cannot view the cabinet
      */
     public function assertCanViewCabinet(User $viewer): void
     {
-        if (! in_array($viewer->role, self::CABINET_ROLES, strict: true)) {
+        if (! $viewer->can('view-manager-cabinet')) {
             throw new HttpResponseException(
                 response()->json(['message' => 'Forbidden.'], 403)
             );
@@ -387,7 +383,7 @@ class ManagerKpiService
             return $viewer;
         }
 
-        $isPrivileged = in_array($viewer->role, [Role::Admin, Role::Director], strict: true);
+        $isPrivileged = $viewer->can('manager-cabinet.view-all');
 
         if (! $isPrivileged) {
             // 403 — not 404, to avoid leaking the existence of user IDs (HD5).
@@ -547,7 +543,7 @@ class ManagerKpiService
             ->get()
             ->keyBy('id');
 
-        $isPrivileged = in_array($viewer->role, [Role::Admin, Role::Director], strict: true);
+        $isPrivileged = $viewer->can('manager-cabinet.view-all');
 
         $memberPcts = array_map(
             static fn (array $row): int => $row['score_pct'],

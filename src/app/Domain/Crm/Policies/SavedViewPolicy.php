@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Crm\Policies;
 
 use App\Domain\Crm\Models\SavedView;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -69,7 +68,7 @@ class SavedViewPolicy
 
     private function canMutate(User $user, SavedView $view): bool
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], strict: true)) {
+        if ($user->can('crm.saved-views.manage-all')) {
             return true;
         }
 

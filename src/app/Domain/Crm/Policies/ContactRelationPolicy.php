@@ -6,7 +6,6 @@ namespace App\Domain\Crm\Policies;
 
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactRelation;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -29,7 +28,7 @@ class ContactRelationPolicy
 
     public function update(User $user, ContactRelation $relation): bool
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], true)) {
+        if ($user->can('crm.relations.manage')) {
             return true;
         }
 
@@ -38,7 +37,7 @@ class ContactRelationPolicy
 
     public function delete(User $user, ContactRelation $relation): bool
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], true)) {
+        if ($user->can('crm.relations.manage')) {
             return true;
         }
 
@@ -49,7 +48,7 @@ class ContactRelationPolicy
 
     private function canAccessContact(User $user, Contact $contact): bool
     {
-        if (in_array($user->role, [Role::Admin, Role::Director], true)) {
+        if ($user->can('crm.relations.manage')) {
             return true;
         }
 

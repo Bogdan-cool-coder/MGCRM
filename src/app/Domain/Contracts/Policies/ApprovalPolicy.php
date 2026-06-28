@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Contracts\Policies;
 
 use App\Domain\Contracts\Models\Approval;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -20,7 +19,7 @@ class ApprovalPolicy
      */
     public function view(User $user, Approval $approval): bool
     {
-        if (in_array($user->role, [Role::Admin, Role::Lawyer], strict: true)) {
+        if ($user->can('contracts.approve')) {
             return true;
         }
 

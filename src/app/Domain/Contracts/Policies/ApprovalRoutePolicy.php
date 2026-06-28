@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Contracts\Policies;
 
 use App\Domain\Contracts\Models\ApprovalRoute;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -29,12 +28,12 @@ class ApprovalRoutePolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Lawyer], strict: true);
+        return $user->can('contracts.approve');
     }
 
     public function update(User $user, ApprovalRoute $route): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Lawyer], strict: true);
+        return $user->can('contracts.approve');
     }
 
     /**
@@ -42,6 +41,6 @@ class ApprovalRoutePolicy
      */
     public function delete(User $user, ApprovalRoute $route): bool
     {
-        return $user->role === Role::Admin;
+        return $user->can('contracts.admin');
     }
 }

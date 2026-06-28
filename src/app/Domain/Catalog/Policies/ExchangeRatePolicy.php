@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Catalog\Policies;
 
 use App\Domain\Catalog\Models\ExchangeRate;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 class ExchangeRatePolicy
@@ -37,6 +36,6 @@ class ExchangeRatePolicy
 
     private function isAdminOrDirector(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Director], true);
+        return $user->can('catalog.manage');
     }
 }

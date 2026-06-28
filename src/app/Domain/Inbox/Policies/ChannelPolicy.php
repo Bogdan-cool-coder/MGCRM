@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Inbox\Policies;
 
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Inbox\Models\Channel;
 
@@ -48,6 +47,6 @@ class ChannelPolicy
 
     private function isManager(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Director], true);
+        return $user->can('inbox.manage');
     }
 }

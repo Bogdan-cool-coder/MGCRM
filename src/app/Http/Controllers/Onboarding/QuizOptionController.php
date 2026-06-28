@@ -28,7 +28,7 @@ class QuizOptionController extends Controller
      * GET /api/admin/onboarding/quiz-questions/{question}/options
      * GET /api/admin/onboarding/quizzes/{quiz}/questions/{question}/options (FE nested path)
      */
-    public function index(Request $request, ?Quiz $quiz = null, QuizQuestion $question): AnonymousResourceCollection
+    public function index(Request $request, ?Quiz $quiz, QuizQuestion $question): AnonymousResourceCollection
     {
         $this->authorize('viewAny', QuizOption::class);
 
@@ -41,7 +41,7 @@ class QuizOptionController extends Controller
      * POST /api/admin/onboarding/quiz-questions/{question}/options
      * POST /api/admin/onboarding/quizzes/{quiz}/questions/{question}/options (FE nested path)
      */
-    public function store(StoreQuizOptionRequest $request, ?Quiz $quiz = null, QuizQuestion $question): JsonResponse
+    public function store(StoreQuizOptionRequest $request, ?Quiz $quiz, QuizQuestion $question): JsonResponse
     {
         $option = $this->service->create($question, $request->validated());
 
@@ -52,7 +52,7 @@ class QuizOptionController extends Controller
      * PATCH /api/admin/onboarding/quiz-options/{option}
      * PATCH /api/admin/onboarding/quizzes/{quiz}/questions/{question}/options/{option} (FE nested path)
      */
-    public function update(UpdateQuizOptionRequest $request, ?Quiz $quiz = null, ?QuizQuestion $question = null, QuizOption $option): JsonResource
+    public function update(UpdateQuizOptionRequest $request, ?Quiz $quiz, ?QuizQuestion $question, QuizOption $option): JsonResource
     {
         return QuizOptionAdminResource::make(
             $this->service->update($option, $request->validated())
@@ -63,7 +63,7 @@ class QuizOptionController extends Controller
      * DELETE /api/admin/onboarding/quiz-options/{option}
      * DELETE /api/admin/onboarding/quizzes/{quiz}/questions/{question}/options/{option} (FE nested path)
      */
-    public function destroy(Request $request, ?Quiz $quiz = null, ?QuizQuestion $question = null, QuizOption $option): JsonResponse
+    public function destroy(Request $request, ?Quiz $quiz, ?QuizQuestion $question, QuizOption $option): JsonResponse
     {
         $this->authorize('delete', $option);
 
@@ -76,7 +76,7 @@ class QuizOptionController extends Controller
      * POST /api/admin/onboarding/quiz-questions/{question}/options/reorder
      * POST /api/admin/onboarding/quizzes/{quiz}/questions/{question}/options/reorder (FE nested path)
      */
-    public function reorder(ReorderRequest $request, ?Quiz $quiz = null, QuizQuestion $question): AnonymousResourceCollection
+    public function reorder(ReorderRequest $request, ?Quiz $quiz, QuizQuestion $question): AnonymousResourceCollection
     {
         $this->authorize('update', $question);
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Automation\Policies;
 
 use App\Domain\Automation\Models\PipelineAutomation;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -17,11 +16,9 @@ use App\Domain\Iam\Models\User;
  * `automation.manage` ability, which the RolePermissionSeeder grants to admin
  * and director only.
  *
- * The gate is expressed as the role-enum check those two roles carry, matching
- * every other policy in the codebase (PipelinePolicy / ApprovalRoutePolicy) and
- * keeping the test harness (factory `role` column) honest without seeding spatie
- * assignments on every request. The `automation.manage` permission is the
- * canonical name; this policy is its enforcement point.
+ * The gate is the spatie `automation.manage` permission, which the
+ * RolePermissionSeeder grants to admin and director on the sanctum guard
+ * (IAM-1). This policy is its enforcement point.
  *
  * There are no per-record nuances yet (an automation has no owner scope) so view
  * and mutate share the same gate. The runs journal is read-only and gated the
@@ -67,6 +64,6 @@ class PipelineAutomationPolicy
      */
     private function manages(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Director], strict: true);
+        return $user->can('automation.manage');
     }
 }

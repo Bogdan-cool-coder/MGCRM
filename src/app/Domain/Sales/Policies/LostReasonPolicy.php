@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Sales\Policies;
 
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\LostReason;
 
@@ -40,6 +39,6 @@ class LostReasonPolicy
 
     private function isManager(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Director], true);
+        return $user->can('pipelines.manage');
     }
 }

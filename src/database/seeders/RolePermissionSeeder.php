@@ -70,6 +70,80 @@ class RolePermissionSeeder extends Seeder
     ];
 
     /**
+     * Domain capability permissions (IAM-1, second pass).
+     *
+     * These replace the inline `$user->role === Role::X` / `in_array($user->role,
+     * [...])` checks that were scattered across domain Policies, Services and a
+     * handful of Controllers. Each permission is granted to EXACTLY the role set
+     * that passed the corresponding inline check, so authz behavior is byte-for-
+     * byte identical — the migration is mechanical, not a policy change.
+     *
+     * The grant matrix below ({@see permissionsForRole}) is the single
+     * authoritative source. spatie's PermissionRegistrar auto-registers each
+     * permission as a Gate ability on the active (sanctum) guard, so
+     * `$user->can('contracts.approve')` / Policy bodies resolve through it.
+     *
+     *   --- Contracts (legal) ---
+     *   contracts.approve            — write/approve documents, manage approval
+     *                                  routes, templates, template variables,
+     *                                  message templates.            admin, lawyer
+     *   contracts.admin              — destructive contract ops (delete document,
+     *                                  delete/create template, delete licensor,
+     *                                  delete approval route, delete message
+     *                                  template).                    admin
+     *   contracts.licensors.view     — read sensitive licensor bank/tax data.
+     *                                                       admin, lawyer, director
+     *   contracts.templates.use      — browse message templates (for sending).
+     *                                              admin, lawyer, director, manager
+     *
+     *   --- Catalog ---
+     *   catalog.manage               — write products / product groups / exchange
+     *                                  rates.                       admin, director
+     *
+     *   --- CRM ---
+     *   crm.relations.manage         — edit/delete any contact-relation (bypass the
+     *                                  creator-only rule).          admin, director
+     *   crm.saved-views.manage-all   — edit/delete any saved view (bypass the
+     *                                  owner-only rule).            admin, director
+     *
+     *   --- Inbox ---
+     *   inbox.manage                 — read inbound-message triage log; mutate
+     *                                  channels / forms; reveal channel tokens.
+     *                                                               admin, director
+     *
+     *   --- Sales ---
+     *   pipelines.manage             — mutate pipelines / lost-reasons registry.
+     *                                                               admin, director
+     *   manager-cabinet.view-all     — view ANOTHER user's KPI / team rollup in the
+     *                                  manager cabinet.             admin, director
+     *
+     *   --- Onboarding ---
+     *   onboarding.manage            — full CRUD on courses/modules/lessons/quizzes/
+     *                                  assignments/certificates + admin-bypass on
+     *                                  lesson PDF/AI-tutor access.  admin, director
+     *
+     *   --- Automation ---
+     *   automation.webhook.configure — configure an outbound-webhook automation
+     *                                  action (data-exfiltration surface). admin
+     *
+     * @var list<string>
+     */
+    private const DOMAIN_PERMISSIONS = [
+        'contracts.approve',
+        'contracts.admin',
+        'contracts.licensors.view',
+        'contracts.templates.use',
+        'catalog.manage',
+        'crm.relations.manage',
+        'crm.saved-views.manage-all',
+        'inbox.manage',
+        'pipelines.manage',
+        'manager-cabinet.view-all',
+        'onboarding.manage',
+        'automation.webhook.configure',
+    ];
+
+    /**
      * Finance permissions — split so accountant does entry/posting and cfo adds
      * period close + finance settings + management reports.
      *
@@ -97,7 +171,12 @@ class RolePermissionSeeder extends Seeder
         // to match the Bearer-authenticated principal.
         $guard = config('auth.defaults.guard', 'sanctum');
 
-        $allPermissions = [...self::BASE_PERMISSIONS, ...self::ABILITY_PERMISSIONS, ...self::FINANCE_PERMISSIONS];
+        $allPermissions = [
+            ...self::BASE_PERMISSIONS,
+            ...self::ABILITY_PERMISSIONS,
+            ...self::DOMAIN_PERMISSIONS,
+            ...self::FINANCE_PERMISSIONS,
+        ];
 
         DB::transaction(function () use ($allPermissions, $guard): void {
             foreach ($allPermissions as $name) {
@@ -122,12 +201,25 @@ class RolePermissionSeeder extends Seeder
     {
         return match ($role) {
             // Full system access — every permission including all four abilities
-            // (admin is the only role with system-reset).
-            Role::Admin->value => [...self::BASE_PERMISSIONS, ...self::ABILITY_PERMISSIONS, ...self::FINANCE_PERMISSIONS],
+            // (admin is the only role with system-reset) and every domain
+            // capability (the only role with contracts.admin / automation.webhook).
+            Role::Admin->value => [
+                ...self::BASE_PERMISSIONS,
+                ...self::ABILITY_PERMISSIONS,
+                ...self::DOMAIN_PERMISSIONS,
+                ...self::FINANCE_PERMISSIONS,
+            ],
 
             // Broad operational access without system administration. Carries the
             // shared-directory write, global dedup scan and manager cabinet
             // abilities, but NOT system-reset (admin-only).
+            //
+            // Domain capabilities map exactly to the old inline checks director
+            // passed: catalog write, pipelines, inbox, onboarding, CRM
+            // relations/saved-views overrides, manager-cabinet team view, licensor
+            // read and the broad automation.manage builder. Director did NOT pass
+            // contracts.approve (admin/lawyer only), contracts.admin (admin only)
+            // or automation.webhook.configure (admin only).
             Role::Director->value => [
                 'users.view',
                 'crm.view', 'crm.manage',
@@ -137,25 +229,36 @@ class RolePermissionSeeder extends Seeder
                 'analytics.view',
                 'finance.view', 'finance.reports.management',
                 'admin-write', 'dedup-scan-all', 'view-manager-cabinet',
+                'contracts.licensors.view', 'contracts.templates.use',
+                'catalog.manage',
+                'crm.relations.manage', 'crm.saved-views.manage-all',
+                'inbox.manage',
+                'pipelines.manage', 'manager-cabinet.view-all',
+                'onboarding.manage',
             ],
 
             // Contracts / legal, elevated read across operations. No operational
             // abilities (cannot write directories, scan dedup or see the manager
-            // cabinet) — preserves today's behavior.
+            // cabinet) — preserves today's behavior. Carries contracts.approve
+            // (write/approve documents + templates) and licensor/template read.
             Role::Lawyer->value => [
                 'crm.view',
                 'sales.view',
                 'contracts.view', 'contracts.manage',
                 'analytics.view',
+                'contracts.approve',
+                'contracts.licensors.view', 'contracts.templates.use',
             ],
 
             // Sales operator (own-scope). Sees their own manager cabinet but has
-            // no directory-write / dedup / system abilities.
+            // no directory-write / dedup / system abilities. May browse message
+            // templates (contracts.templates.use) to send them.
             Role::Manager->value => [
                 'crm.view', 'crm.manage',
                 'sales.view', 'sales.manage',
                 'contracts.view',
                 'view-manager-cabinet',
+                'contracts.templates.use',
             ],
 
             // Finance: data entry / posting / manual journals.

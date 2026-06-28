@@ -7,7 +7,6 @@ namespace App\Domain\Contracts\Policies;
 use App\Domain\Contracts\Models\Approval;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentRevision;
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 
 /**
@@ -73,7 +72,7 @@ class DocumentPolicy
      */
     public function delete(User $user, Document $document): bool
     {
-        return $user->role === Role::Admin;
+        return $user->can('contracts.admin');
     }
 
     /**
@@ -250,7 +249,7 @@ class DocumentPolicy
 
     private function isPrivileged(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::Lawyer], strict: true);
+        return $user->can('contracts.approve');
     }
 
     /**

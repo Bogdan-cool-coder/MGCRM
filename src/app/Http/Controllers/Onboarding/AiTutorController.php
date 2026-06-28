@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Onboarding;
 
-use App\Domain\Iam\Enums\Role;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Models\Lesson;
-use Illuminate\Support\Facades\Gate;
 use App\Domain\Onboarding\Services\AiTutorService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\AskTutorRequest;
 use App\Http\Resources\Onboarding\AiTutorAnswerResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -118,7 +117,7 @@ class AiTutorController extends Controller
         Gate::authorize('useTutor', $lesson);
 
         // Fast-exit for admin/director (Policy already handled them).
-        if (in_array($user->role, [Role::Admin, Role::Director], strict: true)) {
+        if ($user->can('onboarding.manage')) {
             return;
         }
 
