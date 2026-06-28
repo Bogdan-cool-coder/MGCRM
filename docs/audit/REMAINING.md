@@ -70,7 +70,7 @@
 **Inbox / Automation routes:** `/inbox` и `/automation` не на сайдбар-навигации (route-gaps), не блокеры проду, но UX пробелы.
 
 ## Крупные (требуют твоего решения)
-- **IAM-1 — миграция RBAC на spatie.** Решение «оживить spatie» принято, но сама миграция (config/sanctum.php + auth-guard + перенос Gate→permissions) — отдельный трек. Сейчас авторизация работает на role-enum Gates (безопасно, дыры закрыты), spatie-таблицы засеяны, но не подключены.
+- **IAM-1 DONE (2026-06-28).** 28 inline role-checks удалены из 22 domain-файлов; spatie работает на sanctum-guard; 12 domain-permissions в RolePermissionSeeder; 13 тестов (revocation-proof); 3315 PHPUnit зелёных. Остаток IAM-2: 2 row-scope сайта (PipelineService::managesPipelines + DocumentService::list) — data-filter, не authz; будут переведены на permission-scope при IAM-2 (Department visibility). Prod-команда: `php artisan db:seed --class=RolePermissionSeeder`.
 - **ResolveVisibility middleware** — теперь вестигиальна (scope применяется в сервисах). Либо подключить её к реальному scope, либо удалить — мелкое решение по чистоте.
 - **Department CRUD + орг-дерево + Department-visibility** — намеренный M0-скелет; это спринт M1, не баг.
 - **Invite/email-флоу для новых юзеров + password-reset** — нужна mail-инфра + публичные роуты. Сейчас админ задаёт стартовый пароль вручную (закрыто частично).

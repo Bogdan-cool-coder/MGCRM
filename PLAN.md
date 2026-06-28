@@ -121,9 +121,9 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ### 4.4 RBAC: цель vs текущее состояние (долг IAM-1)
 - **ЦЕЛЬ (canonical):** spatie/laravel-permission — 6 ролей + гранулярные права, проверка через Policy + `$user->can()` / permission-middleware на **sanctum**-guard.
-- **СЕЙЧАС (честно):** авторизация идёт через **role-enum Gates по колонке `users.role`** (`admin-write`, `dedup-scan-all`, `system-reset` + ~15 Policy + `VisibilityResolver(All|Own)`). Таблицы spatie засеяны (19 прав/53 гранта), но висят на guard `web`, а Sanctum их **не видит** → permission-слой мёртв. Это долг **IAM-1** (миграция не выполнена).
-- **ПЛАН:** подключить spatie на sanctum-guard, перевести Gate-проверки в permissions; до тех пор новый authz-код идёт **через Policy/Gate (никогда inline `if($user->role===...)`)**, целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после IAM-1.
-- Это снимает противоречие ARCHITECTURE §3↔§7: inline-проверки роли запрещены; ролевая логика живёт в Gates/Policies сегодня и станет permissions после IAM-1.
+- **СЕЙЧАС (IAM-1 second pass — 2026-06-28):** spatie работает на sanctum-guard. Domain-Policies полностью переведены на `$user->can('permission')` — 28 inline `in_array($user->role,…)`/`$user->role===` удалены из 22 файлов (Contracts 7, Catalog 3, Crm 2, Inbox 3, Sales 2 + ManagerKpiService, Automation 1 + ValidatesAutomationConfig, Onboarding 9 + LessonController + AiTutorController). Добавлено 12 domain-permissions в `RolePermissionSeeder::DOMAIN_PERMISSIONS`, каждое выдано **точно тому набору ролей**, что пропускал старый inline-чек. `PermissionAuthzOverSanctumTest` (13 тестов, включая 4 revocation-proof) подтверждает, что gate-authority — spatie, а не role-enum. 3315 PHPUnit зелёных.
+- **Что ОСТАЛОСЬ (role-enum):** 2 scope-сайта (не authz): `PipelineService::managesPipelines` (фильтрует, какие воронки видит директор в списке) + `DocumentService::list` (author-scope: нон-привилегированные видят только свои документы). Оба — row-level data filter, а не «может ли действие». Явно помечены как scope-not-auth, к удалению после IAM-2 (Department visibility + VisibilityResolver). `users.role` — переходный двойной источник, удаляется после IAM-2.
+- **Prod-команда (при выкатке):** `php artisan db:seed --class=RolePermissionSeeder` (идемпотентна: `firstOrCreate` + `syncPermissions`; пользовательские роли не трогает).
 
 ---
 
