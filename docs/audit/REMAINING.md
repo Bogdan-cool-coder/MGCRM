@@ -6,6 +6,8 @@
 
 **Волна 4 (2026-06-28) — audit-remediation security+hardening batch (uncommitted, pending commit):** закрыто ещё 12 critical/high findings из audit-репорта + task-board bulk fix. Детали — см. секцию «Волна 4» ниже.
 
+**Backlog-remediation Wave 1-3 (2026-06-28, uncommitted) — medium/low fixes:** закрыто 30+ medium/low backlog-items поверх prod HEAD 072ef7e. Полный перечень в PLAN.md §5.1 строке «Backlog-remediation Wave 1-3». 3302 PHPUnit зелёных; vue-tsc 0; lint:ds 0.
+
 Осознанно **отложено: 124** пунктов — требуют продуктовых решений, отдельной инфры или выходят за рамки точечного багфикса. Список ниже (источник — отчёты волн).
 
 ---
@@ -110,7 +112,7 @@
 
 ### catalog
 - **minor-download-template-404** (Wave 2 (major)) — GET /api/catalog/price-import/template route does not exist. Fix requires a new route in api.php (owned by single-owner rule — cannot edit). Needs needsRoutes entry: GET catalog/price-import/template → PriceImportController@template (admin-write gate, returns sample .xlsx). Severity: minor (UX gap, no security risk).
-- **minor-excel-import-amount-locale** (Wave 2 (major)) — PriceImportService reads amount via getFormattedValue()+(float) — locale-risky. Fix is internal to PriceImportService::processRow() — use getValue()/getCalculatedValue() instead. Deferred because: (a) no confirmed production incident; (b) import requires admin access. Can be done in a follow-up Catalog sprint.
+- **minor-excel-import-amount-locale** (Wave 2 (major)) — **FIXED (backlog-wave, 2026-06-28):** PriceImportService::extractRowData() now uses getValue() for the `amount` column (raw numeric), with a string-normalisation fallback that strips grouping separators and normalises comma→dot. getFormattedValue() still used for all other columns.
 
 ### sales-deals — Wave-1.5 extension (2026-06-28)
 
@@ -209,7 +211,7 @@
 - **onboarding#7-minor** (Wave 2 (major)) — deadline_days from Course not applied to due_date in bulkAssign — AssignmentService::bulkAssign ignores course.deadline_days when due_date not explicitly passed. Low harm (null due_date, no overdue enforcement until cron). Fix: read course.deadline_days in bulkAssign and set due_date = today + deadline_days when not provided.
 - **onboarding#8-minor** (Wave 2 (major)) — Certificate regenerate endpoint has no completion-guard — admin can issue a numbered cert on an incomplete assignment burning the sequence number. Fix: check assignment.status === completed in CertificateController::regenerate, return 422 otherwise.
 - **onboarding#9-minor** (Wave 2 (major)) — CourseAssigned event dispatched by AssignmentService but has no registered listener — assignment notification never sent. Needs bot-specialist/automation-specialist to add a listener; not an onboarding-specialist concern.
-- **onboarding#10-minor** (Wave 2 (major)) — AiTutorController ask/history endpoints lack authorize('view', lesson) — returns 200 empty for an unassigned lesson instead of 403. No data leak (sessions filtered by user_id) but incorrect status code.
+- **onboarding#10-minor** (Wave 2 (major)) — **FIXED (backlog-wave, 2026-06-28):** AiTutorController::authorizeAssignment now calls Gate::authorize('useTutor', $lesson) (LessonPolicy registered in AppServiceProvider); admin/director fast-path remains; non-admin still gets assignment DB check. LessonPolicy::useTutor added.
 - **onboarding#12-minor** (Wave 2 (major)) — N+1 progress calculation in MyCoursesResource and ProgressService::enrichRow — batch via grouped COUNT query when volume grows.
 
 ### notification
@@ -258,7 +260,8 @@
 - **minor-double-role-source** (Wave 3 (minor/trivial)) — CompanyPolicy/AppServiceProvider Gates read users.role column while VisibilityResolver prefers spatie getRoleNames(). This is tracked as IAM-1 (full migration to spatie-on-Sanctum). Divergence is non-exploitable in-app (UserService writes both atomically) and fixing it requires IAM-1 landing first. Not touched to avoid premature migration.
 
 ### catalog
-- **catalog-trivial-scheduler-time** (Wave 3 (minor/trivial)) — Scheduler dailyAt('03:00') in console.php vs vault docs saying 00:05 UTC. Code is already self-consistent (comment on line 28 says '03:00 UTC'). Vault is stale — update belongs to PM/docs, not a code change. No functional impact.
+- **catalog-trivial-scheduler-time** (Wave 3 (minor/trivial)) — Scheduler dailyAt('03:00') in console.php vs vault docs saying 00:05 UTC. Code is self-consistent. Vault is stale — PM/docs update only, no code impact. Deferred.
+- **minor-download-template-404** (Catalog) — **FIXED (backlog-wave, 2026-06-28 partial):** price-import template download now uses apiClient Blob/Bearer in PriceImportDialog.vue (wave note records this under Wave 4 section above). Route GET catalog/price-import/template still needs backend route — remains open in needsRoutes.
 
 ### sales-deals
 - **m7** (Wave 3 (minor/trivial)) — Saved views for deals require adding case Deal to SavedViewEntity (app/Domain/Crm/Enums/SavedViewEntity.php — crm-specialist's domain) plus a FE control. Cross-domain enum change + a new feature, not a minor in-scope fix.
