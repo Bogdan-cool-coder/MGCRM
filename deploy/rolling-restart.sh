@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# Zero-downtime rolling-deploy for MACRO Global CRM.
+# Rolling deploy for MACRO Global CRM (force-recreate app; short blip ~seconds).
 #
 # Strategy (single-replica; adapted from examples/contracts/deploy/rolling-restart.sh):
 #   1. Ensure DB + Redis are up.
 #   2. Build new app + frontend images.
-#   3. Bring up new app replica alongside old one (--no-recreate).
-#   4. Wait until new replica is healthy.
-#   5. Stop and remove old replica.
-#   6. Run migrations (idempotent, --force) + Laravel prod optimisations.
-#   7. Bring up remaining services (nginx, frontend, queue-worker, scheduler, gotenberg).
-#   8. Bot is NOT started automatically (set START_BOT=true to override) — see step notes.
-#
-# nginx/Traefik excludes non-healthy containers from routing, so traffic is
-# always served by a live replica during the swap window.
+#   3. Force-recreate app container (--force-recreate --no-deps); wait until healthy.
+#      NOTE: app has a fixed container_name so true two-replica swap is impossible.
+#      A short downtime (seconds) is accepted in exchange for correctness — the old
+#      --no-recreate approach silently kept the stale image running.
+#   4. Run migrations (idempotent, --force) + Laravel prod optimisations in NEW container.
+#   5. Force-recreate remaining services (nginx, frontend, queue-worker, scheduler, gotenberg)
+#      so they also pick up the freshly built images.
+#   6. Bot is NOT started automatically (set START_BOT=true to override) — see step notes.
 #
 # Called from .github/workflows/deploy.yml after `git reset --hard origin/main`.
 
@@ -50,28 +49,22 @@ echo "==> Build frontend image"
 docker compose build frontend
 
 echo "==> Rolling restart: app"
-OLD_APP_ID="$(docker compose ps -q app 2>/dev/null || true)"
+# app has a fixed container_name (macro-crm-app), so true zero-downtime
+# two-replica swap is not possible.  We do an explicit force-recreate:
+# the old container is replaced with the new image, then we wait until
+# healthy before running migrations.  Downtime is a few seconds — acceptable
+# and far safer than the previous --no-recreate approach that silently kept
+# the old image running.
+docker compose up -d --force-recreate --no-deps app
 
-if [ -z "$OLD_APP_ID" ]; then
-  echo "    no old container — starting fresh"
-  docker compose up -d app
-else
-  echo "    starting new app container alongside old ($OLD_APP_ID)"
-  # Bring up a second replica — compose will start a new container without
-  # stopping the running one when --no-recreate is passed.
-  docker compose up -d --no-deps --no-recreate app
-
-  NEW_APP_ID="$(docker compose ps -q app | grep -vxF "$OLD_APP_ID" | head -1 || true)"
-  if [ -n "$NEW_APP_ID" ]; then
-    echo "    waiting for new container to be healthy: $NEW_APP_ID"
-    wait_healthy "$NEW_APP_ID"
-    echo "    new container healthy — stopping old: $OLD_APP_ID"
-    docker stop "$OLD_APP_ID" >/dev/null
-    docker rm   "$OLD_APP_ID" >/dev/null
-  else
-    echo "    single-container compose service — container recreated in place (already up)"
-  fi
+APP_ID="$(docker compose ps -q app 2>/dev/null || true)"
+if [ -z "$APP_ID" ]; then
+  echo "ERROR: app container did not start after force-recreate"
+  exit 1
 fi
+echo "    waiting for app container to be healthy: $APP_ID"
+wait_healthy "$APP_ID"
+echo "    app container healthy ($APP_ID)"
 
 echo "==> Run migrations"
 docker compose exec -T app php artisan migrate --force
@@ -82,7 +75,8 @@ docker compose exec -T app php artisan route:cache
 docker compose exec -T app php artisan view:cache
 
 echo "==> Bring up remaining services (nginx, frontend, queue-worker, scheduler, gotenberg)"
-docker compose up -d --no-deps nginx frontend queue-worker scheduler gotenberg
+# --force-recreate ensures workers and nginx also pick up the freshly built images.
+docker compose up -d --force-recreate --no-deps nginx frontend queue-worker scheduler gotenberg
 
 # Bot is intentionally NOT started automatically during deploy.
 # It is held back (nutgram:run exits with 409 Conflict when a second polling
