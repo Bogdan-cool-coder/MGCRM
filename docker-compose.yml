@@ -99,6 +99,19 @@ services:
       context: .
       dockerfile: docker/frontend/Dockerfile
       target: production
+      # Non-secret Sentry build vars — safe to pass as build args.
+      # Values are sourced from secrets/sentry_frontend_build.env in rolling-restart.sh.
+      # VITE_SENTRY_DSN ends up in the public JS bundle intentionally.
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_RELEASE: ${VITE_SENTRY_RELEASE:-}
+        SENTRY_ORG: ${SENTRY_ORG:-}
+        SENTRY_PROJECT: ${SENTRY_PROJECT:-}
+        VITE_SOURCEMAP: ${VITE_SOURCEMAP:-false}
+      # SENTRY_AUTH_TOKEN is injected via BuildKit secret-mount only.
+      # It never appears in any image layer or `docker history` output.
+      secrets:
+        - sentry_auth_token
     image: macro-crm-frontend:${IMAGE_TAG:-dev-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-frontend
     restart: unless-stopped
@@ -350,3 +363,11 @@ volumes:
   storage_logs:
   bootstrap_cache:
   app_public:
+
+# BuildKit secrets — available only during `docker compose build`, never in runtime.
+# sentry_auth_token: file path is server-specific (/opt/mgcrm/secrets/sentry_auth_token).
+# On local dev the file may be absent; frontend builds without source-map upload in that case
+# (SENTRY_AUTH_TOKEN will be empty, @sentry/vite-plugin skips upload silently).
+secrets:
+  sentry_auth_token:
+    file: ${SENTRY_AUTH_TOKEN_FILE:-/opt/mgcrm/secrets/sentry_auth_token}

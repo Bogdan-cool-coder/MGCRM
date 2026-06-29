@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { persistPlugin } from '@/plugins/persist'
 import { i18n } from '@/plugins/i18n'
 import './plugins/echarts'
+import * as Sentry from '@sentry/vue'
 
 import 'bootstrap/dist/css/bootstrap-grid.min.css'
 import 'primeicons/primeicons.css'
@@ -59,6 +60,30 @@ if (themeStore.theme === 'dark') {
 }
 
 const router = createAppRouter(pinia)
+
+// Sentry: инициализировать только если DSN задан —
+// локалка и dev без VITE_SENTRY_DSN не посылают мусор и не падают.
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    app,
+    dsn: import.meta.env.VITE_SENTRY_DSN as string,
+    environment: import.meta.env.MODE,
+    release: (import.meta.env.VITE_SENTRY_RELEASE as string | undefined) ?? undefined,
+    integrations: [
+      Sentry.browserTracingIntegration({ router }),
+    ],
+    // Tracing: 10% запросов в проде; 100% на staging/preview
+    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+    // Разрешаем распространять trace-заголовки только на свой API
+    tracePropagationTargets: [
+      /^\/api\//,
+      /^https:\/\/api\.mgcrm\./,
+    ],
+    // Session Replay не включаем: в MG CRM есть PII (имена, телефоны,
+    // реквизиты компаний). Replay требует отдельного DPDP-аудита и
+    // дополнительного bundles-веса (~36KB gz). Только error+tracing.
+  })
+}
 
 configureAxiosMiddleware({
   getToken: () => userStore.getAuthCredential,

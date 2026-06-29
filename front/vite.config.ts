@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 
 // Polling is enabled when running inside Docker on macOS with virtiofs/colima
 // where inotify events from bind-mounts are unreliable.
@@ -9,9 +10,36 @@ import vue from '@vitejs/plugin-vue'
 const usePolling =
   process.env.CHOKIDAR_USEPOLLING === '1' || process.env.VITE_USE_POLLING === '1'
 
+// Sentry source-map upload: активируется только когда все три переменные заданы.
+// Без SENTRY_AUTH_TOKEN билд не падает и source-maps НЕ загружаются в Sentry.
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN
+const sentryOrg = process.env.SENTRY_ORG
+const sentryProject = process.env.SENTRY_PROJECT
+const sentryUploadEnabled = Boolean(sentryAuthToken && sentryOrg && sentryProject)
+
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    // Source-maps upload — только на прод-билде с полным набором Sentry-env.
+    // Локальный dev и билд без токена проходят без попытки загрузки.
+    ...(sentryUploadEnabled
+      ? [
+          sentryVitePlugin({
+            org: sentryOrg!,
+            project: sentryProject!,
+            authToken: sentryAuthToken!,
+            release: { name: process.env.VITE_SENTRY_RELEASE },
+            sourcemaps: {
+              // После загрузки source-maps в Sentry убираем их из публичного dist,
+              // чтобы не светить исходники пользователям.
+              filesToDeleteAfterUpload: ['./dist/**/*.map'],
+            },
+            telemetry: false,
+          }),
+        ]
+      : []),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -35,10 +63,21 @@ export default defineConfig(() => ({
     },
   },
   build: {
+    // Source-maps нужны Sentry для читаемых stack-трейсов.
+    // Генерируем всегда при сборке; если SENTRY_AUTH_TOKEN задан —
+    // sentryVitePlugin загрузит их и удалит из dist (см. выше).
+    // Если токена нет — map-файлы остаются в dist, но это ок для стейджинга;
+    // для прод-деплоя без Sentry можно форсить false через env VITE_SOURCEMAP.
+    sourcemap: process.env.VITE_SOURCEMAP !== 'false',
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return
+
+          // Sentry SDK — isolated so it doesn't bloat the app entry chunk
+          if (id.includes('/@sentry/')) {
+            return 'sentry'
+          }
 
           // PrimeVue (components + icons + utils) — typically the largest chunk
           if (

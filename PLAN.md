@@ -64,12 +64,13 @@
 | **PhpSpreadsheet** | 1.x / 5.x | Excel-экспорт. Эталона у Vizion нет — паттерн из `./examples/contracts/` (`openpyxl`) + офиц. доки |
 | **nutgram/nutgram** | — | Telegram-бот (замена aiogram). Бизнес-референс `./examples/contracts/` (`aiogram`) + офиц. доки nutgram |
 | **wapmorgan/morphos** | — | склонение RU. ⚠️ для «суммы прописью» — отдельный маленький helper |
+| **sentry/sentry-laravel** | ^4.26 | error+performance мониторинг; DSN из env; `send_default_pii=false`; `sql_bindings=false`; release = git-SHA из `rolling-restart.sh` |
 
 ### 3.2 Frontend
 
 > **Бренд-ассеты** — `brand/`. **Визуал/токены — skill `macroglobal-design`** (перебивает vault-спеку и «визуальный» Vizion). Тема: styled Aura, `definePreset`, primary `#172747`, prefix `p`, darkModeSelector `.app-dark`, cssLayer true; токены в SCSS через `var(--p-*)`.
 
-Vue **3.5** (Composition API, `<script setup>`) · TypeScript **~5.9** (strict, `noUncheckedIndexedAccess`) · Vite **7** (dev-proxy `/api`) · Pinia **3** · Vue Router **5** (guard в `policy.ts`) · **PrimeVue 4.5** · **Bootstrap 5.3 — ТОЛЬКО grid** (без utility-классов) · PrimeIcons **7** (`pi pi-*`) · **ECharts + vue-echarts** (6/8) · vue-i18n **10** (RU + EN-задел) · **vuedraggable** (Kanban, есть у Vizion) · **grid-layout-plus** (кастом-дашборды, есть у Vizion) · **@vue-flow/core** (node-полотно автоматизаций, аппрувнут) · axios (+ Sanctum Bearer).
+Vue **3.5** (Composition API, `<script setup>`) · TypeScript **~5.9** (strict, `noUncheckedIndexedAccess`) · Vite **7** (dev-proxy `/api`) · Pinia **3** · Vue Router **5** (guard в `policy.ts`) · **PrimeVue 4.5** · **Bootstrap 5.3 — ТОЛЬКО grid** (без utility-классов) · PrimeIcons **7** (`pi pi-*`) · **ECharts + vue-echarts** (6/8) · vue-i18n **10** (RU + EN-задел) · **vuedraggable** (Kanban, есть у Vizion) · **grid-layout-plus** (кастом-дашборды, есть у Vizion) · **@vue-flow/core** (node-полотно автоматизаций, аппрувнут) · axios (+ Sanctum Bearer) · **@sentry/vue + @sentry/vite-plugin** (error+tracing; Session Replay выключен — PII; sourcemaps через BuildKit secret-mount).
 
 ### 3.3 Сознательно НЕ используем
 Tailwind · Inertia · Livewire · Filament · Chart.js · Horizon · VeeValidate/Zod · spatie/laravel-data (ручные API Resources как Vizion) · Fortify · Pest (тесты на **PHPUnit**).

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # =============================================================================
 # Frontend — multi-stage Dockerfile (Vue 3 + Vite → nginx:alpine SPA)
 #
@@ -7,6 +8,11 @@
 # Stages:
 #   build      — node:22-alpine, npm ci + vite build → /app/dist
 #   production — nginx:alpine, copies dist, serves SPA + proxies /api
+#
+# Sentry source-map upload:
+#   Non-secret build vars (DSN, org, project, release) come in via ARG.
+#   SENTRY_AUTH_TOKEN is a BuildKit secret (never written to any image layer).
+#   The secret is mounted only during `npm run build` and discarded after.
 # =============================================================================
 
 # --- Stage 1: build ---
@@ -18,7 +24,28 @@ COPY front/package*.json ./
 RUN npm ci
 
 COPY front/ ./
-RUN npm run build
+
+# Non-secret Sentry build-time vars (safe to embed in build args).
+# VITE_SENTRY_DSN ends up in the public JS bundle intentionally.
+ARG VITE_SENTRY_DSN=""
+ARG VITE_SENTRY_RELEASE=""
+ARG SENTRY_ORG=""
+ARG SENTRY_PROJECT=""
+# Optional: set to "true" to emit sourcemaps (default off in local builds).
+ARG VITE_SOURCEMAP="false"
+
+ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+ENV VITE_SENTRY_RELEASE=${VITE_SENTRY_RELEASE}
+ENV VITE_SOURCEMAP=${VITE_SOURCEMAP}
+
+# SENTRY_AUTH_TOKEN is injected ONLY via BuildKit secret-mount.
+# It is NEVER declared as ARG or ENV — it never appears in any image layer.
+# The token is available to the build process through /run/secrets/sentry_auth_token
+# and is read by @sentry/vite-plugin during the build, then discarded.
+RUN --mount=type=secret,id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
+    SENTRY_ORG="${SENTRY_ORG}" \
+    SENTRY_PROJECT="${SENTRY_PROJECT}" \
+    npm run build
 
 # --- Stage 2: serve SPA ---
 FROM nginx:alpine AS production

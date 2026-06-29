@@ -21,6 +21,42 @@ cd "$(dirname "$0")/.."   # repo root (/opt/mgcrm on prod)
 
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-180}"
 
+# ---------------------------------------------------------------------------
+# Sentry release — single git SHA for both api + web.
+# Exported so it's available to: (a) docker compose build arg VITE_SENTRY_RELEASE,
+# (b) SENTRY_RELEASE env var written to src/.env for the Laravel SDK.
+# ---------------------------------------------------------------------------
+SENTRY_RELEASE="$(git rev-parse HEAD)"
+export SENTRY_RELEASE
+
+# Inject SENTRY_RELEASE into backend env (idempotent: update or append).
+ENV_FILE="src/.env"
+if grep -q "^SENTRY_RELEASE=" "$ENV_FILE" 2>/dev/null; then
+  sed -i "s|^SENTRY_RELEASE=.*|SENTRY_RELEASE=${SENTRY_RELEASE}|" "$ENV_FILE"
+else
+  printf '\nSENTRY_RELEASE=%s\n' "$SENTRY_RELEASE" >> "$ENV_FILE"
+fi
+
+# Source non-secret Sentry frontend build vars (VITE_SENTRY_DSN, SENTRY_ORG, SENTRY_PROJECT).
+# File lives outside git at /opt/mgcrm/secrets/sentry_frontend_build.env.
+# On local dev the file may be absent; build proceeds without Sentry upload.
+SENTRY_FRONTEND_BUILD_ENV="${SENTRY_AUTH_TOKEN_FILE:+$(dirname "${SENTRY_AUTH_TOKEN_FILE}")/sentry_frontend_build.env}"
+SENTRY_FRONTEND_BUILD_ENV="${SENTRY_FRONTEND_BUILD_ENV:-/opt/mgcrm/secrets/sentry_frontend_build.env}"
+if [ -f "$SENTRY_FRONTEND_BUILD_ENV" ]; then
+  # shellcheck source=/dev/null
+  . "$SENTRY_FRONTEND_BUILD_ENV"
+  export VITE_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT
+  echo "==> Sentry frontend build vars sourced from ${SENTRY_FRONTEND_BUILD_ENV}"
+else
+  echo "==> Sentry frontend build vars file not found (${SENTRY_FRONTEND_BUILD_ENV}); Sentry upload will be skipped"
+fi
+
+# Pass VITE_SENTRY_RELEASE as env var so docker-compose.yml build arg picks it up.
+export VITE_SENTRY_RELEASE="${SENTRY_RELEASE}"
+
+# Point compose to the secrets token file (used by top-level `secrets:` declaration).
+export SENTRY_AUTH_TOKEN_FILE="${SENTRY_AUTH_TOKEN_FILE:-/opt/mgcrm/secrets/sentry_auth_token}"
+
 container_health() {
   docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$1" 2>/dev/null \
     || echo missing
@@ -64,8 +100,11 @@ docker compose up -d postgres redis
 echo "==> Build app image"
 docker compose build app
 
-echo "==> Build frontend image"
-docker compose build frontend
+echo "==> Build frontend image (SENTRY_RELEASE=${SENTRY_RELEASE})"
+# Non-secret vars (VITE_SENTRY_DSN, SENTRY_ORG, SENTRY_PROJECT, VITE_SENTRY_RELEASE)
+# are exported above and picked up via docker-compose.yml build.args interpolation.
+# SENTRY_AUTH_TOKEN is injected via BuildKit secret-mount (never in image layer).
+DOCKER_BUILDKIT=1 docker compose build frontend
 
 echo "==> Rolling restart: app"
 # app has a fixed container_name (macro-crm-app), so true zero-downtime
