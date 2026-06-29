@@ -168,7 +168,7 @@ function onReprocess() {
               color $transition-fast;
 
   .app-dark & {
-    border-bottom-color: var(--p-surface-700);
+    border-bottom-color: var(--p-surface-200);
   }
 
   &:last-child {

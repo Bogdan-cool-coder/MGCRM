@@ -173,11 +173,8 @@ export const useInboxPage = () => {
       selectedMessage.value = fresh
       return fresh
     })
-
-    // Auto-mark read if unread (optimistic)
-    if (msg.read_at === null) {
-      await markRead(msg.id)
-    }
+    // Read status is changed ONLY by explicit user action (mark-read / mark-unread buttons).
+    // Spec: opening the detail view must NOT auto-mark as read.
   }
 
   function closeDetail() {

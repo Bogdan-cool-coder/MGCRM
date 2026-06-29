@@ -167,8 +167,8 @@ defineExpose({ props })
   z-index: 1;
 
   .app-dark & {
-    background-color: var(--p-surface-800);
-    border-bottom-color: var(--p-surface-700);
+    background-color: var(--p-surface-50);
+    border-bottom-color: var(--p-surface-200);
   }
 }
 
@@ -217,7 +217,7 @@ defineExpose({ props })
   border-bottom: 1px solid $surface-200;
 
   .app-dark & {
-    border-bottom-color: var(--p-surface-700);
+    border-bottom-color: var(--p-surface-200);
   }
 
   &:last-child {
@@ -272,7 +272,7 @@ defineExpose({ props })
   border-top: 1px solid $surface-200;
 
   .app-dark & {
-    border-top-color: var(--p-surface-700);
+    border-top-color: var(--p-surface-200);
   }
 }
 </style>

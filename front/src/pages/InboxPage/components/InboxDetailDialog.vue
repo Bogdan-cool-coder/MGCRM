@@ -4,6 +4,7 @@
     modal
     :draggable="false"
     dismissable-mask
+    append-to="self"
     :style="{ width: '680px', maxWidth: '95vw' }"
     @hide="emit('close')"
   >

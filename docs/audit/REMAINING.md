@@ -71,6 +71,11 @@
 
 **minor-MISSING-admin-inbox-ui / minor-MISSING-failed-routing-viewer:** **ЧАСТИЧНО ЗАКРЫТО (2026-06-28):** Инбокс-трей (список + фильтры + detail + «Переобработать» reprocess) задеплоен. Деферы phase 2: Channels admin CRUD; Forms admin + конструктор форм; публичная форма UI; manager access (отдельный permission grant).
 
+**Inbox triage UI — post-recovery QA-фиксы (2026-06-29, uncommitted):**
+- **BUG-AUTOREAD-1 CLOSED:** `openDetail()` убран авто-`markRead`; read-статус меняется только явной кнопкой в диалоге. Согласовано с юзером (backend-тест ожидал именно такое поведение). Spec строка 147 («авто-read при открытии диалога») — отменена этим решением.
+- **BUG-DARK-INBOX-SURFACES CLOSED:** неверные dark-токены `surface-800/700` заменены на `surface-50/200` в `InboxList.vue` (фон заголовка + border строк) и `InboxMessageRow.vue` (border-bottom). `InboxDetailDialog.vue`: добавлен `append-to="self"` — диалог рендерится внутри `.app-dark`-контейнера и получает корректные dark-токены.
+- QA-смоук (2026-06-29): обе темы PASS, `/deals` `/contacts` dark без регресса, console 0 / network 0. Inbox triage verified-live в обеих темах.
+
 ## Крупные (требуют твоего решения)
 - **IAM-1 DONE (2026-06-28).** 28 inline role-checks удалены из 22 domain-файлов; spatie работает на sanctum-guard; 12 domain-permissions в RolePermissionSeeder; 13 тестов (revocation-proof); 3315 PHPUnit зелёных.
 - **IAM-2 DONE (2026-06-28).** 2 visibility-scope сайта переведены на spatie-permissions: `PipelineService::managesPipelines` → `$user->can('pipelines.view-all')` (admin, director); `PipelineService::canAccess` visible_role → `$user->hasRole($role)`; `DocumentService::list` owner-scope → `$user->can('contracts.view-all')` (admin, lawyer, director). 2 новых permission в `RolePermissionSeeder::DOMAIN_PERMISSIONS`, exact role-sets — паритет со старыми inline-списками. `VisibilityScopeOverSanctumTest` (7 тестов, 2 revocation-proof). 3322 PHPUnit зелёных. **Prod-команда: `php artisan db:seed --class=RolePermissionSeeder && php artisan permission:cache-reset`** (оба обязательны; seeder идемпотентен).
