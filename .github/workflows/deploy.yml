@@ -36,6 +36,12 @@ name: Deploy
 #             every deploy — convenient but puts all secrets in GitHub).
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.claude/**'
   workflow_dispatch:
 
 concurrency:

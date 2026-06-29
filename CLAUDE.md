@@ -83,7 +83,7 @@ Strangler, вертикальными срезами, домен за домен
 
 > **Все агенты — `bypassPermissions`** (рутина — docker/artisan/npm/git/Edit/Write/MCP, включая браузерные MCP-действия qa-tester'а — выполняется молча). Единственный жёсткий ограничитель — PreToolUse-хук `guard-destructive.sh` на критичный деструктив (работает и под bypass). Поведенческие правила (`frontend-specialist` и push у `deploy-engineer` — только по явной просьбе) остаются в силе как инструкции, не как пермишен-промпты.
 
-**Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-specialist` (Laravel-ядро: auth/Sanctum/2FA, базовые модели, миграции, тесты — для всех) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**, как у Vizion) · `qa-tester` (браузерные MCP этой машины — Claude_in_Chrome / chrome-devtools / Control_Chrome / Claude_Preview; Playwright MCP на этой машине нет) · `product-manager` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — **только по явной просьбе**).
+**Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-specialist` (Laravel-ядро: auth/Sanctum/2FA, базовые модели, миграции, тесты — для всех) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**, как у Vizion) · `qa-tester` (браузерные MCP этой машины — Claude_in_Chrome / chrome-devtools / Control_Chrome / Claude_Preview; Playwright MCP на этой машине нет) · `product-manager` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — владелец деплой-конфига и git-push в `main`; push/деплой — **только по явной просьбе юзера**; после push выкатка автоматическая через GHA `deploy.yml`; изменения деплой-инфры — **только по явной просьбе**).
 
 **Доменные (10) — спринт + реальный статус, НЕ M-номер:**
 - `crm-specialist` (спринт Фундамент/Продажи: Contact/Company/Catalog/CustomFields/дедуп — построено).
@@ -106,8 +106,10 @@ Strangler, вертикальными срезами, домен за домен
 ```
 [задача] → [main определяет агента и порядок] → [рабочий агент(ы): backend→domain→frontend→qa→PM]
         → [если был UI у frontend-specialist → qa-tester] → [product-manager: саммари+ревью+verify+sync PLAN.md]
-        → [апрув юзера] → [ТОЛЬКО по явной просьбе: deploy-engineer push/deploy]
+        → [апрув юзера] → [main коммитит локально] → [deploy-engineer: git push в main по явной просьбе → авто-деплой на прод через GHA deploy.yml]
 ```
+
+> **Деплой-политика (с 2026-06-29):** push в `main` делает **`deploy-engineer` ТОЛЬКО по явной прямой просьбе юзера** (main не пушит); сам push автоматически триггерит прод-деплой через `deploy.yml` (SSH → `git reset --hard origin/main` → `deploy/rolling-restart.sh`: zero-downtime swap + `migrate --force` + health-check). **Исключение:** пуши, затрагивающие только `**.md` / `docs/**` / `.claude/**`, прод НЕ деплоят (`paths-ignore`). Ручной запуск через `workflow_dispatch` сохранён как фолбэк. CI-ключ `id_ed25519_mgcrm_deploy` на VPS; приватный — в GH-секрете `SSH_PRIVATE_KEY`. **Дисциплина:** WIP и непроверенный код в `main` не пушим — каждый code-push в `main` идёт в прод автоматически. Изменения деплой-инфры — только `deploy-engineer` по явной просьбе.
 
 > `migration-specialist` участвует только на закрывающем спринте (cutover: снос `examples/` + per-domain parity-чеклисты). Перенос данных не нужен (тестовые).
 
@@ -133,5 +135,5 @@ Strangler, вертикальными срезами, домен за домен
 - **Деструктив — только по явной просьбе + бэкап** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных). Guard-хук блокирует под bypass.
 - **Секреты не светим** — значения в `src/.env` пишет main.
 - **`docker compose`**, не `docker-compose`. PHP/composer на хосте нет — через docker (bootstrap: `docker run --rm -v "$(pwd):/app" -w /app composer:latest …`).
-- **Деплой/push — только по явной прямой просьбе** через `deploy-engineer`. Локальный rebuild — допустим.
+- **Деплой/push:** push в `main` делает `deploy-engineer` ТОЛЬКО по явной прямой просьбе; push в `main` автоматически катит прод (GHA `deploy.yml`), кроме пушей только по `**.md`/`docs/**`/`.claude/**`. main не пушит. WIP в `main` не пушим. Изменения деплой-инфры — через `deploy-engineer` по явной просьбе. Локальный rebuild допустим.
 - При расхождении PLAN.md/ARCHITECTURE.md ↔ реальность — `product-manager` обновляет документ (с аппрувом), не молчим.
