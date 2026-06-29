@@ -1,6 +1,7 @@
 <template>
-  <div class="rates-page">
+  <div class="rates-page" :class="{ 'rates-page--embedded': embedded }">
     <PageHeader
+      v-if="!embedded"
       :title="t('catalog.exchangeRates.page.title')"
       :subtitle="t('catalog.exchangeRates.page.subtitle')"
       icon="pi pi-chart-line"
@@ -206,8 +207,8 @@
       @submit="saveRate"
     />
 
-    <Toast position="top-right" />
-    <ConfirmDialog />
+    <Toast v-if="!embedded" position="top-right" />
+    <ConfirmDialog v-if="!embedded" />
   </div>
 </template>
 
@@ -235,6 +236,8 @@ import type { ExchangeRateDto } from '@/entities/catalog'
 
 const { t } = useI18n()
 const userStore = useUserStore()
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const canWrite = computed(() => {
   const role = userStore.getUserRole
@@ -303,6 +306,8 @@ function formatDate(isoOrDate: string): string {
 onMounted(() => {
   void load()
 })
+
+defineExpose({ canWrite, refreshRates, refreshing, openCreateDialog })
 </script>
 
 <style lang="scss" scoped>
@@ -311,6 +316,11 @@ onMounted(() => {
   flex-direction: column;
   height: 100%;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+
+  &--embedded {
+    margin: 0;
+    height: auto;
+  }
 }
 
 .rates-page__content {

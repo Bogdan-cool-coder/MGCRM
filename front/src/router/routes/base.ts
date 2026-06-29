@@ -56,11 +56,10 @@ export const routes: RouteRecordRaw[] = [
   },
 
   // ─── Catalog ──────────────────────────────────────────────────────────────────
+  // Phase 2: /admin/products redirects into Settings shell; product detail stays standalone.
   {
     path: '/admin/products',
-    name: 'Products',
-    component: () => import('@/pages/ProductsPage'),
-    meta: { requiresAuth: true, title: 'catalog.products.page.title' },
+    redirect: { path: '/settings', query: { section: 'catalog' } },
   },
   {
     path: '/admin/products/:id',
@@ -68,11 +67,10 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/ProductPage'),
     meta: { requiresAuth: true },
   },
+  // Phase 2: /admin/exchange-rates redirects into Settings shell.
   {
     path: '/admin/exchange-rates',
-    name: 'ExchangeRates',
-    component: () => import('@/pages/ExchangeRatesPage'),
-    meta: { requiresAuth: true, title: 'catalog.exchangeRates.page.title' },
+    redirect: { path: '/settings', query: { section: 'exchange-rates' } },
   },
 
   // ─── Sales: Deals ────────────────────────────────────────────────────────────
@@ -312,36 +310,18 @@ export const routes: RouteRecordRaw[] = [
   },
 
   // ─── Directories: Admin ──────────────────────────────────────────────────
+  // Phase 2: standalone /admin/* routes redirect into Settings shell.
   {
     path: '/admin/acquisition-channels',
-    name: 'AcquisitionChannels',
-    component: () => import('@/pages/AcquisitionChannelsPage'),
-    meta: {
-      requiresAuth: true,
-      roles: ['admin', 'director'],
-      title: 'admin.acquisitionChannels.title',
-    },
+    redirect: { path: '/settings', query: { section: 'acq-channels' } },
   },
   {
     path: '/admin/disconnect-reasons',
-    name: 'DisconnectReasons',
-    component: () => import('@/pages/DisconnectReasonsPage'),
-    meta: {
-      requiresAuth: true,
-      roles: ['admin', 'director'],
-      title: 'admin.disconnectReasons.title',
-    },
+    redirect: { path: '/settings', query: { section: 'disc-reasons' } },
   },
-
   {
     path: '/admin/countries',
-    name: 'Countries',
-    component: () => import('@/pages/CountriesPage/index.vue'),
-    meta: {
-      requiresAuth: true,
-      roles: ['admin', 'director'],
-      title: 'admin.countries.title',
-    },
+    redirect: { path: '/settings', query: { section: 'countries' } },
   },
 
   // ─── Inbox: Inbound message triage ───────────────────────────────────────

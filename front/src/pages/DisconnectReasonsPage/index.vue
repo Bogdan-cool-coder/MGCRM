@@ -1,6 +1,7 @@
 <template>
-  <div class="disconnect-reasons-page">
+  <div class="disconnect-reasons-page" :class="{ 'disconnect-reasons-page--embedded': embedded }">
     <PageHeader
+      v-if="!embedded"
       :title="t('admin.disconnectReasons.title')"
       icon="pi pi-times-circle"
     >
@@ -118,6 +119,8 @@ import { useDisconnectReasonsPage } from './composables/useDisconnectReasonsPage
 
 const { t } = useI18n()
 
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const {
   reasons,
   loading,
@@ -131,11 +134,17 @@ const {
   toggleActive,
   deleteReason,
 } = useDisconnectReasonsPage()
+
+defineExpose({ canManage, openCreate })
 </script>
 
 <style lang="scss" scoped>
 .disconnect-reasons-page {
   padding: $space-3;
+
+  &--embedded {
+    padding: 0;
+  }
 }
 
 .dir-page__empty {

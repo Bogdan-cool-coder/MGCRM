@@ -1,6 +1,7 @@
 <template>
-  <div class="acquisition-channels-page">
+  <div class="acquisition-channels-page" :class="{ 'acquisition-channels-page--embedded': embedded }">
     <PageHeader
+      v-if="!embedded"
       :title="t('admin.acquisitionChannels.title')"
       icon="pi pi-megaphone"
     >
@@ -118,6 +119,8 @@ import { useAcquisitionChannelsPage } from './composables/useAcquisitionChannels
 
 const { t } = useI18n()
 
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const {
   channels,
   loading,
@@ -131,11 +134,17 @@ const {
   toggleActive,
   deleteChannel,
 } = useAcquisitionChannelsPage()
+
+defineExpose({ canManage, openCreate })
 </script>
 
 <style lang="scss" scoped>
 .acquisition-channels-page {
   padding: $space-3;
+
+  &--embedded {
+    padding: 0;
+  }
 }
 
 .dir-page__empty {

@@ -1081,10 +1081,651 @@ nav-item паттерн (таблетки с иконкой, active-полоск
 **Осознанно отложено:**
 - `confirm-on-leave` (navigation-guard `beforeRouteLeave` + ConfirmDialog при смене раздела/навигации назад) — отдельная задача. На Ф1 save-bar + «Сохранить»/«Отменить» работают без navigation-guard. `isDirty`-сигналы от секций принимаются как no-op через provide/inject.
 
-### Фаза 2 — pending
-СПРАВОЧНИКИ (admin/director): Countries, AcqChannels, DiscReasons, Catalog, ExchangeRates, PipelineStg, DocTemplates, TplVariables, ApprovalRoutes, MsgTemplates — перенос standalone-страниц в Section*.vue внутри шелла.
+### Фаза 2 — РЕАЛИЗОВАНА (2026-06-29, незакоммичено)
+
+**Реализовано:**
+- `SectionDirectories.vue`: горизонтальные табы (PrimeVue Tabs, line-style), v-if lazy-mount, роль-гейт внутри компонента (`!isAdminOrDirector` → access-denied).
+- 5 DirTab-обёрток: `DirTabCountries.vue`, `DirTabAcqChannels.vue`, `DirTabDiscReasons.vue`, `DirTabCatalog.vue`, `DirTabExchangeRates.vue` — каждая с sub-toolbar (кнопки действий) + `<PageXxx :embedded="true">`.
+- Существующие страницы (CountriesPage, AcquisitionChannelsPage, DisconnectReasonsPage, ProductsPage, ExchangeRatesPage) получили проп `embedded?: boolean` (`v-if="!embedded"` на PageHeader + Toast + ConfirmDialog) + `defineExpose` экшенов. CRUD-логика не тронута.
+- `useSettings.ts`: расширен `VALID_KEYS` до 10 (5 Ф1 + 5 Ф2), добавлен экспорт `DIRECTORIES_KEYS`, роль-проверка в `resolveSection` (директ-линк от non-admin → 'profile').
+- `SettingsSidebar.vue`: 5 пунктов справочников переведены с `phase: 2` → `phase: 1`; остальные (pipeline-stg, doc-templates и т.д.) — `phase: 2`.
+- `SettingsPage/index.vue`: ветвь `v-else-if` для `SectionDirectories` + расширен `mobileSectionOptions` (admin/director-only).
+- Редиректы Ф2 активированы в `base.ts`: `/admin/countries`, `/admin/acquisition-channels`, `/admin/disconnect-reasons`, `/admin/products` → `/settings?section=*`. `/admin/products/:id` (ProductDetail) сохранён как самостоятельный роут.
+- i18n: `settings.directories.*` заполнен в ru.json и en.json (sectionTitle, sectionDesc, tabs × 5).
+
+**Прочие пункты группы** (PipelineStg, DocTemplates, TplVariables, ApprovalRoutes, MsgTemplates) — остаются `phase: 2`, отдельные задачи по готовности бэкенда.
 
 ### Фаза 3 — pending
 СИСТЕМА (admin/director): Users, AccessControl, AutomationRuns, SystemReset — перенос.
 
 *ТЗ для `frontend-specialist` готово. Ф1 реализована и одобрена PM.*
+
+---
+
+---
+
+## Фаза 2 — Справочники (ТЗ для `frontend-specialist`)
+
+> Автор: designer · Дата: 2026-06-29
+
+### Зачем
+
+Активировать группу СПРАВОЧНИКИ в шелле `/settings`: переселить 5 существующих
+standalone-страниц (`/admin/*`) под единый `SectionDirectories.vue` со вложенными
+под-вкладками. Логика, API-вызовы, диалоги/дроверы — **не трогаем, переиспользуем 1-в-1**.
+Только убираем дублирующий `<PageHeader>` из каждой страницы и обёртываем их в таб-навигацию.
+
+**User story:** «Я открываю `/settings?section=countries` и вижу справочник стран прямо
+внутри Настроек, переключаюсь на "Каталог" одним кликом по табу, не уходя со страницы.»
+
+---
+
+### Где в коде (новые файлы)
+
+```
+front/src/pages/SettingsPage/
+  components/
+    sections/
+      SectionDirectories.vue          ← НОВЫЙ: таб-контейнер (5 под-вкладок)
+      directories/
+        DirTabCountries.vue           ← НОВЫЙ: wraps CountriesPage без PageHeader
+        DirTabAcqChannels.vue         ← НОВЫЙ: wraps AcquisitionChannelsPage без PageHeader
+        DirTabDiscReasons.vue         ← НОВЫЙ: wraps DisconnectReasonsPage без PageHeader
+        DirTabCatalog.vue             ← НОВЫЙ: wraps ProductsPage без PageHeader
+        DirTabExchangeRates.vue       ← НОВЫЙ: wraps ExchangeRatesPage без PageHeader
+```
+
+**Существующие страницы (`CountriesPage`, `AcquisitionChannelsPage`, `DisconnectReasonsPage`,
+`ProductsPage`, `ExchangeRatesPage`) — НЕ изменяем.** Они продолжают работать как автономные
+роуты `/admin/*` до активации редиректов Ф2.
+
+---
+
+### Wireframe (ASCII)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  PageHeader «Настройки»  [pi pi-cog]              (шелл, неизменён)          │
+│  ───────────────────────────────────────────────────────────────────────────  │
+├──────────────────┬───────────────────────────────────────────────────────────┤
+│  SIDEBAR ~240px  │  DETAIL (flex:1, overflow-y:auto)                         │
+│                  │                                                           │
+│  АККАУНТ         │  ┌─────────────────────────────────────────────────────┐  │
+│  • Профиль       │  │  «Справочники»  sub-header  (dir-section__header)   │  │
+│  • Безопасность  │  │  ─────────────────────────────────────────────────  │  │
+│  • Внешний вид   │  │  [Страны] [Каналы привлечения] [Причины] [Каталог]  │  │
+│  • Язык          │  │  [Курсы валют]                                       │  │
+│                  │  │  ← горизонтальные табы PrimeVue Tabs line-style     │  │
+│  ИНТЕГРАЦИИ      │  │  ─────────────────────────────────────────────────  │  │
+│  • Каналы        │  │                                                     │  │
+│                  │  │  [sub-toolbar: кнопки действий активного таба]      │  │
+│  СПРАВОЧНИКИ     │  │  ─────────────────────────────────────────────────  │  │
+│  ►Справочники ←──│  │                                                     │  │
+│                  │  │  ┌───────────────────────────────────────────────┐  │  │
+│  СИСТЕМА (Ф3)    │  │  │  <DirTabCountries> / <DirTabCatalog> / …     │  │  │
+│  • … disabled    │  │  │  DataTable + диалоги/дроверы страницы        │  │  │
+│                  │  │  └───────────────────────────────────────────────┘  │  │
+└──────────────────┴───────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Решение 1: навигация внутри detail — горизонтальные табы vs. вторичный список
+
+**Выбор: горизонтальные табы (PrimeVue `Tabs` с `value` + `TabList` + `Tab`), стиль
+`line` (underline).**
+
+Обоснование:
+- Количество под-вкладок небольшое (5), всё помещается в одну строку на десктопе без
+  прокрутки.
+- Пользователь ориентируется «где я сейчас» — underline-индикатор даёт немедленную обратную
+  связь.
+- Вторичный sidebar-список создал бы трёхуровневую иерархию (основной sidebar →
+  вторичный список → контент) — это избыточно для 5 пунктов.
+- PrimeVue `Tabs` уже подключён в стеке, переиспользуем без новых зависимостей.
+
+Таб-бар — **не** стандартный PrimeVue card-tabs (boxed). Используем вариант `line` через
+CSS-модификатор `.dir-tabs` (см. §CSS ниже). 14px, активный — 600 вес + navy underline.
+
+---
+
+### Решение 2: deep-link схема
+
+**Схема: `?section=countries`, `?section=catalog`, `?section=exchange-rates` и т.д.**
+(каждая под-вкладка — отдельное значение `?section=`, без второго query-параметра).
+
+Обоснование:
+- Ф1 уже резервирует ключи `countries`, `acq-channels`, `disc-reasons`, `catalog`,
+  `exchange-rates` в таксономии `SettingsSidebar.vue` как отдельные `section.key`.
+- Добавление параметра `?sub=` усложняет `useSettings.ts` и логику мобильного Select.
+- Пользователь может поделиться ссылкой `/settings?section=catalog` — она работает
+  сразу без дополнительных параметров.
+- Сайдбар в Ф2 отображает каждую из 5 под-вкладок как отдельный пункт (они уже есть
+  в GROUPS disabled). После активации — пункт кликабелен и ведёт напрямую.
+
+Альтернатива `?section=directories&sub=countries` отклонена: она потребовала бы
+рефакторинга `useSettings.ts` и Sidebar, тогда как текущая схема работает «из коробки»
+после одного изменения — переключения `phase: 2` → `phase: 1` для 5 пунктов.
+
+---
+
+### Решение 3: как убрать двойной PageHeader
+
+Каждая существующая standalone-страница (`CountriesPage`, `ProductsPage` и т.д.) рендерит
+свой `<PageHeader>` в верхней части шаблона. Шелл `SettingsPage` уже имеет PageHeader
+«Настройки». Встраивание напрямую даст двойной заголовок.
+
+**Решение: DirTab-обёртки скрывают PageHeader страницы через CSS prop `headless`.**
+
+Вместо модификации исходных компонентов страниц каждый `DirTabXxx.vue` монтирует
+вложенную страницу через слот/импорт, а родительский `SectionDirectories.vue` передаёт
+`headless` CSS-класс родителю, который скрывает первый `.p-card` или `PageHeader`:
+
+```vue
+<!-- DirTabCountries.vue -->
+<template>
+  <div class="dir-tab-body">
+    <CountriesPage />
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.dir-tab-body {
+  // Скрываем встроенный PageHeader страницы
+  :deep(.countries-page > .page-header),
+  :deep(.countries-page > [class*="page-header"]) {
+    display: none;
+  }
+  // Убираем внешний padding страницы (шелл даёт свой)
+  :deep(.countries-page) {
+    padding: 0;
+    margin: 0;
+  }
+}
+</style>
+```
+
+> **Замечание:** классы `.page-header` и `.countries-page` (и аналоги для других страниц)
+> задокументированы в коде. Если PageHeader рендерится не как прямой дочерний элемент
+> корневого `.xxx-page`, а глубже — уточняется при реализации (см. открытые вопросы §ОВ-1).
+
+Действия, которые PageHeader страницы содержал (кнопки «Добавить», «Обновить» и т.д.),
+переносятся в `sub-toolbar` внутри `SectionDirectories.vue` через slot-механизм или
+напрямую (см. §Sub-toolbar ниже).
+
+---
+
+### Структура `SectionDirectories.vue`
+
+```
+SectionDirectories.vue
+  ├── .dir-section (display: flex, flex-direction: column, height: 100%)
+  │   ├── .dir-section__header  (sub-заголовок + описание раздела)
+  │   ├── .dir-tabs  (PrimeVue Tabs value="activeTab")
+  │   │     ├── TabList
+  │   │     │    ├── Tab value="countries"     «Страны»
+  │   │     │    ├── Tab value="acq-channels"  «Каналы привлечения»
+  │   │     │    ├── Tab value="disc-reasons"  «Причины отказа»
+  │   │     │    ├── Tab value="catalog"       «Каталог»
+  │   │     │    └── Tab value="exchange-rates" «Курсы валют»
+  │   └── .dir-tab-content  (TabPanels — НЕ используем, рендерим напрямую)
+  │         └── <DirTabCountries v-if="activeTab==='countries'" />
+  │             <DirTabAcqChannels v-else-if="activeTab==='acq-channels'" />
+  │             …
+```
+
+> **Рендеринг:** используем `v-if`/`v-else-if` для условного рендеринга вкладок, а НЕ
+> PrimeVue `TabPanels` с несколькими `TabPanel`. Причина: каждая страница-вкладка
+> содержит свой `onMounted` с `load()` — `v-if` гарантирует, что загрузка стартует
+> только при первом показе вкладки, не заранее для всех 5.
+
+---
+
+### Интеграция с `useSettings.ts` и Sidebar
+
+**Принципиальное изменение в `useSettings.ts`:**
+
+```ts
+// Расширяем PHASE1_KEYS, добавляя 5 новых ключей Ф2
+const VALID_KEYS = [
+  'profile', 'security', 'appearance', 'language', 'channels',
+  'countries', 'acq-channels', 'disc-reasons', 'catalog', 'exchange-rates',
+] as const
+```
+
+`resolveSection()` теперь принимает все 10 ключей. Ключи Ф2 ведут на
+`SectionDirectories.vue` — он сам читает `activeSection` и устанавливает активный таб.
+
+**Изменение в `SettingsSidebar.vue`:**
+
+Для 5 пунктов справочников меняем `phase: 2` → `phase: 1`. Больше ничего. Класс
+`settings-nav-item--disabled` убирается автоматически, тег «Скоро» пропадает.
+
+```ts
+// SettingsSidebar.vue — GROUPS, секция directories:
+{ key: 'countries',       ..., phase: 1 },  // было phase: 2
+{ key: 'acq-channels',    ..., phase: 1 },  // было phase: 2
+{ key: 'disc-reasons',    ..., phase: 1 },  // было phase: 2
+{ key: 'catalog',         ..., phase: 1 },  // было phase: 2
+{ key: 'exchange-rates',  ..., phase: 1 },  // было phase: 2
+// Остальные пункты группы (pipeline-stg, doc-templates, …) остаются phase: 2
+```
+
+**Изменение в `index.vue` (SettingsPage):**
+
+Добавляем 5 ветвей `v-else-if` для рендеринга `SectionDirectories.vue`:
+
+```vue
+<SectionDirectories
+  v-else-if="isDirectoriesSection(settings.activeSection.value)"
+  :active-tab="settings.activeSection.value"
+  @tab-change="settings.setSection($event)"
+/>
+```
+
+Хелпер:
+```ts
+const DIRECTORIES_KEYS = ['countries', 'acq-channels', 'disc-reasons', 'catalog', 'exchange-rates']
+function isDirectoriesSection(key: string) {
+  return DIRECTORIES_KEYS.includes(key)
+}
+```
+
+**Мобильный Select** в `index.vue` расширяется — добавляем 5 новых опций в
+`mobileSectionOptions`.
+
+---
+
+### Sub-toolbar (кнопки действий таба)
+
+Каждая DirTab-обёртка предоставляет слот `#toolbar` — кнопки, которые ранее были в
+PageHeader страницы. `SectionDirectories.vue` рендерит этот слот в
+`.dir-section__sub-toolbar`.
+
+**Примеры:**
+
+| Таб | Кнопки в sub-toolbar |
+|-----|----------------------|
+| Страны | `[+ Добавить страну]` (только canManage) |
+| Каналы привлечения | `[+ Добавить канал]` (только canManage) |
+| Причины отказа | `[+ Добавить причину]` (только canManage) |
+| Каталог | `[pi pi-upload Импортировать ▼]` `[+ Создать]` (только canWrite) |
+| Курсы валют | `[pi pi-refresh Обновить]` `[+ Добавить вручную]` (только canWrite) |
+
+Реализация: DirTabXxx.vue через `defineExpose` или slot раскрывает ссылки на функции
+`openCreate`, `openImportDialog` и т.д. из composable. Либо проще — DirTabXxx.vue
+содержит как кнопки (в шаблоне), так и контент. `SectionDirectories.vue` не знает о
+деталях каждого таба — кнопки — это ответственность самого DirTabXxx.
+
+**Упрощённый вариант** (рекомендован): каждый `DirTabXxx.vue` — полноценный компонент
+с собственным toolbar-рядом внутри (не через слот в SectionDirectories). Это минимальный
+рефакторинг.
+
+```
+DirTabCatalog.vue
+  ├── .dir-tab-toolbar  (display: flex, gap: $space-3, padding: $space-3 $space-4,
+  │                       border-bottom: 1px solid $surface-200, justify-content: space-between)
+  │   ├── .dir-tab-toolbar__filters  (IconField search + Select group + Select type + …)
+  │   └── .dir-tab-toolbar__actions  (Button «Импорт» + Button «Создать»)
+  └── .dir-tab-body
+      └── <DataTable …> (тело ProductsPage без PageHeader и внешних padding)
+```
+
+---
+
+### CSS — стиль табов
+
+```scss
+// SectionDirectories.vue <style scoped>
+
+.dir-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dir-section__header {
+  padding: $space-4 $space-6 $space-3;
+  border-bottom: 1px solid $surface-200;
+  background: $surface-card;
+
+  .app-dark & {
+    background: var(--p-surface-800);
+    border-bottom-color: var(--p-surface-700);
+  }
+}
+
+.dir-section__title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $surface-900;
+  margin: 0 0 $space-1;
+
+  .app-dark & { color: var(--p-surface-50); }
+}
+
+.dir-section__desc {
+  font-size: $font-size-sm;
+  color: $surface-500;
+  margin: 0;
+
+  .app-dark & { color: var(--p-surface-400); }
+}
+
+// Таб-бар line-style поверх дефолтного PrimeVue Tabs
+.dir-tabs {
+  flex-shrink: 0;
+
+  // Убираем border-bottom у TabList, рисуем свой separator через content
+  :deep(.p-tablist) {
+    padding: 0 $space-6;
+    background: $surface-card;
+    border-bottom: 1px solid $surface-200;
+
+    .app-dark & {
+      background: var(--p-surface-800);
+      border-bottom-color: var(--p-surface-700);
+    }
+  }
+
+  :deep(.p-tab) {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    padding: $space-3 $space-4;
+    color: $surface-600;
+    border-bottom: 2px solid transparent;
+    transition: color var(--app-transition-fast), border-color var(--app-transition-fast);
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      color: $surface-900;
+    }
+
+    .app-dark & {
+      color: var(--p-surface-400);
+      &:hover { color: var(--p-surface-100); }
+    }
+  }
+
+  :deep(.p-tab[data-p-active="true"]),
+  :deep(.p-tab.p-tab-active) {
+    color: $primary-900;
+    font-weight: $font-weight-semibold;
+    border-bottom-color: $primary-900;
+
+    .app-dark & {
+      color: var(--p-primary-200);
+      border-bottom-color: var(--p-primary-200);
+    }
+  }
+
+  // Скрываем стандартный active-indicator PrimeVue (он поверх нашего)
+  :deep(.p-tablist-active-bar) {
+    display: none;
+  }
+}
+
+.dir-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  background: $surface-50;
+
+  .app-dark & { background: var(--p-surface-900); }
+}
+```
+
+---
+
+### Wireframe детально — SectionDirectories с табом «Каталог»
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  «Справочники»                           dir-section__header                │
+│  Управление системными справочниками                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  [Страны] [Каналы привлечения] [Причины отказа] [Каталог▪] [Курсы валют]  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  .dir-tab-toolbar                                                           │
+│  [🔍 Поиск...]  [Группа ▼]  [Тип цены ▼]  [Статус ▼]  [Сбросить ×]       │
+│                                        [Импортировать ▼] [+ Создать]        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  DataTable (ProductsPage body без PageHeader)                               │
+│  ┌──┬─────────┬──────────────┬──────┬───────┬─────┬─────┬─────┬────┬────┐ │
+│  │  │ Код     │ Название     │Группа│ Тип   │ KZT │ RUB │ USD │    │    │ │
+│  ├──┼─────────┼──────────────┼──────┼───────┼─────┼─────┼─────┼────┼────┤ │
+│  │▶ │ PROD-01 │ Услуга А     │ …    │ fixed │ …   │ …   │ …   │ ⚡ │ ⋮  │ │
+│  └──┴─────────┴──────────────┴──────┴───────┴─────┴─────┴─────┴────┴────┘ │
+│                                                              Paginator      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Редиректы Ф2 (активировать в `base.ts`)
+
+В Ф1 эти редиректы закомментированы / отмечены `meta: { phase: 2 }`. В Ф2 —
+**раскомментировать / активировать**:
+
+| Старый путь | Новый URL |
+|-------------|-----------|
+| `/admin/countries` | `/settings?section=countries` |
+| `/admin/acquisition-channels` | `/settings?section=acq-channels` |
+| `/admin/disconnect-reasons` | `/settings?section=disc-reasons` |
+| `/admin/products` | `/settings?section=catalog` |
+| `/admin/exchange-rates` | `/settings?section=exchange-rates` |
+
+> Замечание: пункты, которые остаются `phase: 2` (pipeline-stg, doc-templates и т.д.),
+> продолжают работать как самостоятельные роуты до готовности их Section-компонентов.
+
+**Detail-роут товаров `/admin/products/:id`:**
+
+Роут `/admin/products/:id` (`ProductDetail`) **сохраняется как самостоятельный роут** —
+он не редиректится в settings и не встраивается в шелл. Ссылки из DataTable каталога
+(`<router-link :to="'/admin/products/' + id">`) продолжают открывать `ProductPage`
+на весь экран. Это корректное поведение: карточка товара — детальная страница сущности,
+не список-справочник. После активации редиректа `/admin/products` → settings ссылка на
+деталь товара остаётся `/admin/products/:id` — она не затронута.
+
+---
+
+### Состояния компонентов
+
+| Состояние | Где | Поведение |
+|-----------|-----|-----------|
+| loading | каждый DirTab | страница-вкладка сама управляет loading (Skeleton/Spinner в DataTable, унаследован от исходной страницы) |
+| empty | каждый DirTab | empty-state исходной страницы (иконка + текст + CTA), без изменений |
+| error | каждый DirTab | Toast из исходного composable, без изменений |
+| первый рендер таба | v-if mount | `onMounted → load()` вызывается при первом показе вкладки |
+| переключение таба | Tab click | `activeTab = newKey` + `setSection(newKey)` → URL обновляется |
+| deep-link `?section=catalog` | page load | `useSettings.resolveSection` распознаёт ключ → `SectionDirectories` получает `activeTab="catalog"` |
+| мобильный Select | < 768px | Select включает 5 новых опций; выбор ведёт напрямую на нужный таб |
+
+---
+
+### Роль-гейтинг
+
+Секция СПРАВОЧНИКИ уже скрыта в сайдбаре для не-admin/director через `v-if` (Ф1).
+`SectionDirectories.vue` добавляет дополнительную проверку в шаблоне:
+
+```vue
+<div v-if="!isAdminOrDirector" class="coming-soon-block">
+  <i class="pi pi-lock" />
+  <p>{{ t('common.accessDenied') }}</p>
+</div>
+<template v-else>
+  <!-- tabs + content -->
+</template>
+```
+
+Прямой deep-link `/settings?section=countries` от non-admin → `resolveSection` вернёт
+`'profile'` (дефолт) — для этого нужно добавить роль-проверку в `resolveSection`:
+
+```ts
+function resolveSection(key: string | undefined, isAdminOrDirector: boolean): string {
+  if (!key) return 'profile'
+  if (DIRECTORIES_KEYS.includes(key) && !isAdminOrDirector) return 'profile'
+  if (VALID_KEYS.includes(key as ValidKey)) return key
+  return 'profile'
+}
+```
+
+---
+
+### PrimeVue-компоненты Ф2
+
+| Компонент | Где | Props |
+|-----------|-----|-------|
+| `Tabs` | `SectionDirectories.vue` — таб-бар | `v-model:value="activeTab"` |
+| `TabList` | внутри `Tabs` | — |
+| `Tab` | 5 штук, по одному на вкладку | `value="countries"` и т.д., `pt:root={{ … }}` не нужен |
+| `Button` | sub-toolbar каждого DirTab | severity, icon, label — как в исходной странице |
+| `Menu` | `DirTabCatalog` (import-menu, row-menus) | popup — как в ProductsPage |
+| `DataTable`, `Column`, `Paginator` | все вкладки | без изменений — унаследованы |
+| `ToggleSwitch` | Страны, Каналы, Причины | без изменений |
+| `Tag` | ExchangeRates (source manual/api) | без изменений |
+| `DatePicker` | ExchangeRates (фильтры) | без изменений |
+| `ExchangeRateAgeWarning` | DirTabExchangeRates | внутри таба, как в исходной странице |
+| `Toast`, `ConfirmDialog` | все вкладки | уже глобальные в шелле |
+
+**Toast и ConfirmDialog:** исходные страницы рендерят `<Toast>` и `<ConfirmDialog>` внутри
+своего шаблона. При встраивании в шелл они будут дублироваться (шелл тоже рендерит
+`<Toast>`). Решение: в DirTab-обёртках убираем `<Toast>` и `<ConfirmDialog>` через `:deep`
+скрытие или — предпочтительнее — используем глобальный синглтон из шелла (PrimeVue
+регистрирует `Toast`/`ConfirmDialog` как глобальные сервисы, но рендерит тот, что ближе
+в DOM). Безопаснее всего — скрыть дублирующие через CSS в DirTab-обёртке:
+
+```scss
+.dir-tab-body {
+  :deep(.p-toast),
+  :deep(.p-confirmdialog) {
+    display: none; // используем глобальные из шелла
+  }
+}
+```
+
+---
+
+### i18n-ключи Ф2
+
+Добавить в `ru.json` и `en.json` в блок `settings.directories`:
+
+```json
+// ru.json
+"settings": {
+  "directories": {
+    "sectionTitle": "Справочники",
+    "sectionDesc": "Управление системными справочниками",
+    "tabs": {
+      "countries":      "Страны",
+      "acqChannels":    "Каналы привлечения",
+      "discReasons":    "Причины отказа",
+      "catalog":        "Каталог",
+      "exchangeRates":  "Курсы валют"
+    }
+  }
+}
+
+// en.json
+"settings": {
+  "directories": {
+    "sectionTitle": "Directories",
+    "sectionDesc": "Manage system directories",
+    "tabs": {
+      "countries":      "Countries",
+      "acqChannels":    "Acquisition Channels",
+      "discReasons":    "Disconnect Reasons",
+      "catalog":        "Catalog",
+      "exchangeRates":  "Exchange Rates"
+    }
+  }
+}
+```
+
+Остальные строки (таблицы, диалоги, фильтры) — без изменений, из исходных ключей
+`admin.countries.*`, `admin.acquisitionChannels.*`, `admin.disconnectReasons.*`,
+`catalog.products.*`, `catalog.exchangeRates.*`.
+
+---
+
+### Таблица Interactions (Ф2)
+
+| Элемент | Действие | Результат | Endpoint |
+|---------|----------|-----------|----------|
+| Пункт «Страны» в сайдбаре | click | `activeSection='countries'`, `?section=countries` | — |
+| Tab «Каталог» в dir-tabs | click | `activeTab='catalog'`, `setSection('catalog')`, URL | — |
+| Deep-link `?section=acq-channels` | page load | `activeSection='acq-channels'`, показывает DirTabAcqChannels | — |
+| Deep-link от non-admin | page load | resolveSection → 'profile', redirect | — |
+| «+ Добавить страну» | click | `openCreate()` → `CountryDialog` открывается | — |
+| Сохранить в CountryDialog | submit | `POST /api/directories/countries` → Toast + reload | `POST /api/directories/countries` |
+| ToggleSwitch is_active (страны) | change | `PATCH /api/directories/countries/:id` | `PATCH /api/directories/countries/:id` |
+| «Удалить» строку (страны) | click | ConfirmDialog → `DELETE /api/directories/countries/:id` | `DELETE /api/directories/countries/:id` |
+| Row-link «название товара» | click | router-push `/admin/products/:id` (ProductPage — отдельный роут) | — |
+| «Обновить» (курсы валют) | click | `refreshRates()` → `POST /api/exchange-rates/refresh` | `POST /api/exchange-rates/refresh` |
+| ExchangeRateAgeWarning banner | visible | когда isStale=true | — |
+| Мобильный Select — выбор «Каталог» | change | `setSection('catalog')` | — |
+
+---
+
+### Vizion-эталон
+
+Структура: `./examples/vizion/front/src/pages/SettingsPage/` (если есть); иначе —
+таб-паттерн из `./examples/vizion/front/src/pages/ProfilePage/` (tabs + lazy-load по
+первому показу).
+Стиль DataTable-вкладок: `./examples/vizion/front/src/pages/` — любая страница с
+DataTable + toolbar (фильтры слева, действия справа).
+
+---
+
+### Открытые вопросы (Ф2)
+
+1. **ОВ-1: Скрытие PageHeader через `:deep()`** — если `<PageHeader>` в
+   `CountriesPage/index.vue` не является прямым дочерним (обёрнут в дополнительный div),
+   CSS-селектор нужно уточнить. Frontend-specialist: проверь рендеренный DOM при встраивании
+   и скорректируй селектор. Альтернатива — выделить body-контент каждой страницы в
+   отдельный composable/slot и рендерить без PageHeader, но это больший рефакторинг.
+
+2. **ОВ-2: Toast/ConfirmDialog дублирование** — проверить в браузере (DevTools), что
+   при встраивании `ProductsPage` внутрь `DirTabCatalog` не появляется два Toast-контейнера.
+   Если появляется — применить CSS-скрытие из §PrimeVue-компоненты выше.
+
+3. **ОВ-3: Мобильный таб-бар** — если 5 табов не помещаются в одну строку на 375–768px,
+   TabList должен прокручиваться горизонтально (`overflow-x: auto; white-space: nowrap`).
+   Реализовать через `.dir-tabs :deep(.p-tablist) { overflow-x: auto; }`.
+
+4. **ОВ-4: /admin/products остаётся активным?** — Подтвердить с PM: после Ф2 редиректа
+   `/admin/products` → `/settings?section=catalog` ссылки из AppSidebar (nav.catalog) тоже
+   должны вести в `/settings?section=catalog`. Требует правки AppSidebar-пункта «Каталог».
+   Пока Ф2 — оставляем AppSidebar без изменений.
+
+---
+
+### Что переиспользуется без изменений
+
+- Composables: `useCountriesPage`, `useAcquisitionChannelsPage`, `useDisconnectReasonsPage`,
+  `useProductsPageData`, `useProductsPageActions`, `useExchangeRatesPage`, `useExchangeRatesActions` — **не трогать**.
+- Dialog/Drawer-компоненты: `CountryDialog`, `ChannelDialog`, `ReasonDialog`,
+  `ProductCreateDrawer`, `PriceImportDialog`, `ManualRateDialog` — **не трогать**.
+- SCSS-стили исходных страниц — **не трогать** (scoped, не влияют на шелл).
+- Роуты `/admin/products`, `/admin/products/:id`, `/admin/exchange-rates`,
+  `/admin/countries`, `/admin/acquisition-channels`, `/admin/disconnect-reasons` —
+  **остаются активными** до активации редиректов Ф2 (или параллельно, если решено
+  оставить оба варианта доступа).
+
+---
+
+### Порядок реализации (рекомендованные шаги)
+
+```
+Ш1. Обновить useSettings.ts — добавить 5 ключей в VALID_KEYS + роль-проверку.
+Ш2. Обновить SettingsSidebar.vue — phase: 2 → phase: 1 для 5 пунктов.
+Ш3. Создать SectionDirectories.vue — Tabs + условный рендеринг 5 DirTab-компонентов.
+Ш4. Создать DirTabCountries.vue (наипростейший) — verify скрытие PageHeader, отступы.
+Ш5. Создать остальные DirTab*.vue по аналогии с Ш4.
+Ш6. Добавить SectionDirectories в index.vue (v-else-if + mobileSectionOptions).
+Ш7. Добавить i18n-ключи settings.directories.* в ru.json и en.json.
+Ш8. Активировать 5 редиректов в base.ts (раскомментировать / убрать phase-guard).
+Ш9. QA: проверить deep-link, таб-переключение, роль-гейтинг, обе темы, < 768px.
+```

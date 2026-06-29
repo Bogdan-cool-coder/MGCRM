@@ -1,6 +1,7 @@
 <template>
-  <div class="products-page">
+  <div class="products-page" :class="{ 'products-page--embedded': embedded }">
     <PageHeader
+      v-if="!embedded"
       :title="t('catalog.products.page.title')"
       :subtitle="t('catalog.products.page.subtitle')"
       icon="pi pi-box"
@@ -292,8 +293,8 @@
       @imported="load"
     />
 
-    <Toast position="top-right" />
-    <ConfirmDialog />
+    <Toast v-if="!embedded" position="top-right" />
+    <ConfirmDialog v-if="!embedded" />
   </div>
 </template>
 
@@ -327,6 +328,8 @@ import type { ProductDto } from '@/entities/catalog'
 const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const canWrite = computed(() => {
   const role = userStore.getUserRole
@@ -450,6 +453,8 @@ onMounted(() => {
   void load()
   void loadGroups()
 })
+
+defineExpose({ canWrite, openCreateDrawer, toggleImportMenu, importMenuRef, importMenuItems })
 </script>
 
 <style lang="scss" scoped>
@@ -458,6 +463,11 @@ onMounted(() => {
   flex-direction: column;
   height: 100%;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+
+  &--embedded {
+    margin: 0;
+    height: auto;
+  }
 }
 
 .products-page__content {

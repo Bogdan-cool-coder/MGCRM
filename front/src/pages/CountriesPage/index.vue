@@ -1,6 +1,7 @@
 <template>
-  <div class="countries-page">
+  <div class="countries-page" :class="{ 'countries-page--embedded': embedded }">
     <PageHeader
+      v-if="!embedded"
       :title="t('admin.countries.title')"
       icon="pi pi-globe"
     >
@@ -129,6 +130,8 @@ import { useCountriesPage } from './composables/useCountriesPage'
 
 const { t } = useI18n()
 
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const {
   countries,
   loading,
@@ -142,11 +145,17 @@ const {
   toggleActive,
   deleteCountry,
 } = useCountriesPage()
+
+defineExpose({ canManage, openCreate })
 </script>
 
 <style lang="scss" scoped>
 .countries-page {
   padding: $space-3;
+
+  &--embedded {
+    padding: 0;
+  }
 }
 
 .countries-page__code {

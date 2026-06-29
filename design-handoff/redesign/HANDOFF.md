@@ -90,6 +90,13 @@
   Confirm-on-leave (navigation-guard) осознанно отложен: save-bar и кнопки «Сохранить/Отменить»
   работают, dirty-guard при навигации вынесен отдельной задачей. Ф2/Ф3 — pending.
 
+### Обновление 2026-06-29 — Settings Фаза 2: Справочники РЕАЛИЗОВАНА (незакоммичено)
+- **Настройки Ф2 (`Settings-spec.md` § «Фаза 2»)** — DONE: `SectionDirectories.vue` (PrimeVue Tabs
+  line-style, v-if lazy-mount, роль-гейт) + 5 DirTab-обёрток; embedded-проп на 5 standalone-страницах
+  (PageHeader/Toast/ConfirmDialog за `v-if="!embedded"`); `useSettings.ts` расширен до 10 ключей +
+  роль-проверка resolveSection; редиректы `/admin/*` → `/settings?section=*` активированы;
+  `/admin/products/:id` сохранён. PM approved. Ф3 (СИСТЕМА) — pending.
+
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,
 светлая+тёмная темы, скрытые скроллбары, поведение интерактивных элементов из §11.

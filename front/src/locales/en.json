@@ -421,6 +421,17 @@
       "message": "You have unsaved changes. Leave this section?",
       "stay": "Stay",
       "leave": "Leave"
+    },
+    "directories": {
+      "sectionTitle": "Directories",
+      "sectionDesc": "Manage system directories",
+      "tabs": {
+        "countries": "Countries",
+        "acqChannels": "Acquisition Channels",
+        "discReasons": "Disconnect Reasons",
+        "catalog": "Catalog",
+        "exchangeRates": "Exchange Rates"
+      }
     }
   },
   "admin": {

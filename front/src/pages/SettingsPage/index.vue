@@ -64,6 +64,12 @@
           :unlink-telegram="profile.unlinkTelegram"
         />
 
+        <SectionDirectories
+          v-else-if="isDirectoriesSection(settings.activeSection.value)"
+          :active-tab="settings.activeSection.value"
+          @tab-change="settings.setSection($event)"
+        />
+
         <SectionComingSoon v-else />
       </div>
     </div>
@@ -84,8 +90,9 @@ import SectionSecurity from './components/sections/SectionSecurity.vue'
 import SectionAppearance from './components/sections/SectionAppearance.vue'
 import SectionLanguage from './components/sections/SectionLanguage.vue'
 import SectionChannels from './components/sections/SectionChannels.vue'
+import SectionDirectories from './components/sections/SectionDirectories.vue'
 import SectionComingSoon from './components/sections/SectionComingSoon.vue'
-import { useSettings } from './composables/useSettings'
+import { useSettings, DIRECTORIES_KEYS } from './composables/useSettings'
 import { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
 
 const { t } = useI18n()
@@ -93,14 +100,30 @@ const { t } = useI18n()
 const settings = useSettings()
 const profile = useProfilePage()
 
-// Mobile dropdown — Ф1 sections only
-const mobileSectionOptions = computed(() => [
-  { value: 'profile',    label: t('settings.sections.profile.title') },
-  { value: 'security',   label: t('settings.sections.security.title') },
-  { value: 'appearance', label: t('settings.sections.appearance.title') },
-  { value: 'language',   label: t('settings.sections.language.title') },
-  { value: 'channels',   label: t('settings.sections.channels.title') },
-])
+function isDirectoriesSection(key: string): boolean {
+  return (DIRECTORIES_KEYS as readonly string[]).includes(key)
+}
+
+// Mobile dropdown — Ф1 + Ф2 directories sections (admin/director see directories)
+const mobileSectionOptions = computed(() => {
+  const base = [
+    { value: 'profile',    label: t('settings.sections.profile.title') },
+    { value: 'security',   label: t('settings.sections.security.title') },
+    { value: 'appearance', label: t('settings.sections.appearance.title') },
+    { value: 'language',   label: t('settings.sections.language.title') },
+    { value: 'channels',   label: t('settings.sections.channels.title') },
+  ]
+  if (settings.isAdminOrDirector.value) {
+    base.push(
+      { value: 'countries',      label: t('settings.sections.countries.title') },
+      { value: 'acq-channels',   label: t('settings.sections.acq-channels.title') },
+      { value: 'disc-reasons',   label: t('settings.sections.disc-reasons.title') },
+      { value: 'catalog',        label: t('settings.sections.catalog.title') },
+      { value: 'exchange-rates', label: t('settings.sections.exchange-rates.title') },
+    )
+  }
+  return base
+})
 </script>
 
 <style lang="scss" scoped>
