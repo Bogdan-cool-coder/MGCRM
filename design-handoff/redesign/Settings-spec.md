@@ -1095,10 +1095,24 @@ nav-item паттерн (таблетки с иконкой, active-полоск
 
 **Прочие пункты группы** (PipelineStg, DocTemplates, TplVariables, ApprovalRoutes, MsgTemplates) — остаются `phase: 2`, отдельные задачи по готовности бэкенда.
 
-### Фаза 3 — pending
-СИСТЕМА (admin/director): Users, AccessControl, AutomationRuns, SystemReset — перенос.
+### Фаза 3 — РЕАЛИЗОВАНА (2026-06-30, QA PASS, PM APPROVED)
+СИСТЕМА: 4 раздела активированы в шелле.
 
-*ТЗ для `frontend-specialist` готово. Ф1 реализована и одобрена PM.*
+- `SysTabUsers.vue` — wraps `UsersPage` (embedded=true), sub-toolbar «+ Добавить пользователя» через `defineExpose`.
+- `SysTabAccessControl.vue` — wraps `AccessControlPage` (embedded=true); internal tab state (`internalTab`) для изоляции URL-синка (ОВ-1 закрыт).
+- `SysTabAutomationRuns.vue` — wraps `AutomationRunsPage` (embedded=true).
+- `SectionSystemReset.vue` — action-based, реиспользует `useSystemReset` + `SystemResetDialog`; роль-гейт `v-if="!isAdmin"` + `resolveSection` admin-only guard.
+- Toast-дубли устранены: `<Toast v-if="!embedded" />` в DepartmentsTab / RolesPermissionsTab / VisibilityScopeTab / AutomationRunsPage; `<Toast>` удалён из `SettingsPage/index.vue`.
+- Редиректы активированы: `/admin/users`, `/admin/access-control/*`, `/admin/automation-runs` → `/settings?section=*`.
+- `PipelineSettingsPage` остаётся standalone (`/settings/pipeline`), `pipeline-stg` — `phase: 2`.
+- Открытые вопросы Ф3 закрыты: ОВ-1 (internalTab), ОВ-2 (Toast/v-if), ОВ-3 (редиректы активированы), ОВ-4 (director→'profile'), ОВ-5 (маппинг `/profile?tab=system → 'profile'` — обновление до `'system-reset'` отложено, ненагруженный маршрут).
+
+**Незакрытые хвосты (некритичные):**
+- `/profile?tab=system` маппинг: `base.ts` строка 132 возвращает `'profile'`, по ТЗ должен вернуть `'system-reset'` (только admin через `resolveSection`). Обновить при следующем проходе.
+- Dark-токен `var(--p-surface-900)` в `SectionSystemReset.vue` (строки 108, 181) — должен быть `var(--p-surface-50)` как в Ф2 `SectionDirectories.vue`; сейчас заголовки тёмные на тёмном фоне. Исправить при следующем DS-проходе.
+- `rgba(var(--p-red-500-rgb, 239 68 68), 0.08)` — fallback hex-числа; `--p-red-500-rgb` не определён в теме; предпочтительно `rgba($red-500, 0.08)` через SCSS-переменную.
+
+*ТЗ для `frontend-specialist` готово. Ф1+Ф2+Ф3 реализованы. Весь срез Настроек завершён.*
 
 ---
 
@@ -1729,3 +1743,751 @@ DataTable + toolbar (фильтры слева, действия справа).
 Ш8. Активировать 5 редиректов в base.ts (раскомментировать / убрать phase-guard).
 Ш9. QA: проверить deep-link, таб-переключение, роль-гейтинг, обе темы, < 768px.
 ```
+
+---
+
+---
+
+## Фаза 3 — Система (ТЗ для `frontend-specialist`)
+
+> Автор: designer · Дата: 2026-06-29
+
+### Зачем
+
+Активировать группу СИСТЕМА в шелле `/settings`: переселить 4 существующих
+standalone-страницы/компонента в детейл-панель шелла. Для трёх из них применяем тот
+же `embedded`-паттерн Ф2 (`embedded?: boolean`, скрытие PageHeader/Toast/ConfirmDialog,
+обнуление внешних отступов). Четвёртый (Сброс системы) — action-based: выносим контент
+в новый `SectionSystemReset.vue` (без встраивания страницы, composable подключается напрямую).
+
+**User story:** «Я открываю `/settings?section=users` и вижу список пользователей прямо
+внутри Настроек; `/settings?section=automation-runs` — журнал автоматизаций; кнопка
+"Сброс системы" — только у меня (admin) в отдельном разделе настроек, а не в "Профиле".»
+
+---
+
+### Где в коде (новые файлы)
+
+```
+front/src/pages/SettingsPage/
+  components/
+    sections/
+      SectionSystem.vue              ← НОВЫЙ: обёртка-роутер системных разделов
+                                       (v-if/v-else-if по activeSection — как index.vue)
+      system/
+        SysTabUsers.vue              ← НОВЫЙ: wraps UsersPage с embedded=true
+        SysTabAccessControl.vue      ← НОВЫЙ: wraps AccessControlPage с embedded=true
+        SysTabAutomationRuns.vue     ← НОВЫЙ: wraps AutomationRunsPage с embedded=true
+      SectionSystemReset.vue         ← НОВЫЙ: инлайн-страница сброса (без встраивания страницы)
+```
+
+**Существующие страницы изменяются минимально:**
+- `UsersPage/index.vue` — добавить `embedded?: boolean` prop
+- `AccessControlPage/index.vue` — добавить `embedded?: boolean` prop
+- `AutomationRunsPage/index.vue` — добавить `embedded?: boolean` prop
+- `ProfilePage/components/SystemResetDialog.vue` — **не трогать**
+- `ProfilePage/composables/useSystemReset.ts` — **не трогать**
+
+---
+
+### Фактический состав группы СИСТЕМА
+
+| Ключ | Страница | Роль-гейт | Действие |
+|------|----------|-----------|----------|
+| `users` | `UsersPage` (существует, `/admin/users`) | admin + director | встраиваем по Ф2-паттерну |
+| `access-control` | `AccessControlPage` (существует, `/admin/access-control/*`) | admin + director | встраиваем по Ф2-паттерну |
+| `automation-runs` | `AutomationRunsPage` (существует, `/admin/automation-runs`) | admin + director | встраиваем по Ф2-паттерну |
+| `system-reset` | `useSystemReset` + `SystemResetDialog` (существуют в ProfilePage) | **admin only** | выносим в `SectionSystemReset.vue` |
+
+**Что не переезжает в Ф3 и почему:**
+- `PipelineSettingsPage` (`/settings/pipeline`) — существует, но это canvas-приложение (vue-flow, StageNode, AnchorNode, AutomationWizardDialog, drawer). Встраивание в шелл создаст конфликт по высоте/overflow (canvas должен занимать весь экран) и не даст функционального преимущества. **Решение: оставить `/settings/pipeline` как самостоятельный роут, пункт `pipeline-stg` остаётся `phase: 2` в сайдбаре.**
+- `TemplatesPage`, `TemplateVariablesPage`, `ApprovalRoutesPage`, `MessageTemplatesPage` — уже намечены в ТЗ как `doc-templates`, `tpl-variables`, `approval-routes`, `msg-templates` в группе СПРАВОЧНИКИ (`phase: 2`). Ф3 их не трогает.
+
+---
+
+### Wireframe (ASCII)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  PageHeader «Настройки»  [pi pi-cog]              (шелл, неизменён)          │
+│  ───────────────────────────────────────────────────────────────────────────  │
+├──────────────────┬───────────────────────────────────────────────────────────┤
+│  SIDEBAR ~240px  │  DETAIL (flex:1, overflow-y:auto)                         │
+│                  │                                                           │
+│  АККАУНТ         │  ── Вариант А: section=users ──────────────────────────── │
+│  • Профиль       │  ┌─────────────────────────────────────────────────────┐  │
+│  • Безопасность  │  │  [sub-toolbar] [+ Добавить пользователя]            │  │
+│  • Внешний вид   │  │  ─────────────────────────────────────────────────  │  │
+│  • Язык          │  │  [🔍 ФИО/Email...]  [Роль ▼]  [Отдел ▼]  [Статус▼] │  │
+│                  │  │  ─────────────────────────────────────────────────  │  │
+│  ИНТЕГРАЦИИ      │  │  DataTable  (ФИО · Email · Телефон · Отдел · Роль)  │  │
+│  • Каналы        │  │  Paginator                                          │  │
+│                  │  └─────────────────────────────────────────────────────┘  │
+│  СПРАВОЧНИКИ     │                                                           │
+│  • Страны        │  ── Вариант Б: section=access-control ─────────────────── │
+│  • … (×5)        │  ┌─────────────────────────────────────────────────────┐  │
+│                  │  │  [Отделы] [Роли и права] [Видимость записей]        │  │
+│  СИСТЕМА         │  │  ← горизонтальные табы страницы (встроенные)        │  │
+│  ►Пользователи◄──│  │  ─────────────────────────────────────────────────  │  │
+│  • Доступ        │  │  <DepartmentsTab> / <RolesPermissionsTab> / …       │  │
+│  • Авт-зации     │  └─────────────────────────────────────────────────────┘  │
+│  • Сброс         │                                                           │
+│    (только admin)│  ── Вариант В: section=automation-runs ──────────────────  │
+│                  │  ┌─────────────────────────────────────────────────────┐  │
+│                  │  │  [sub-toolbar] [▶ Dry-run] (disabled если нет id)   │  │
+│                  │  │  [Автоматизация▼] [Статус▼] [Действие▼] [Период▼]  │  │
+│                  │  │  [Применить]                                        │  │
+│                  │  │  DataTable (read-only) + load-more                  │  │
+│                  │  └─────────────────────────────────────────────────────┘  │
+│                  │                                                           │
+│                  │  ── Вариант Г: section=system-reset (admin only) ──────── │
+│                  │  ┌─────────────────────────────────────────────────────┐  │
+│                  │  │  [hero-danger block]                                │  │
+│                  │  │  «Сброс системы»  Tag severity=danger «Только admin»│  │
+│                  │  │  p «Эта операция удалит…»                          │  │
+│                  │  │  [Что будет удалено]  [Что останется]              │  │
+│                  │  │  Message severity=warn «После сброса — выход»       │  │
+│                  │  │  [Выполнить сброс] → открывает SystemResetDialog    │  │
+│                  │  └─────────────────────────────────────────────────────┘  │
+└──────────────────┴───────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Раздел А: «Пользователи» (`SysTabUsers.vue`)
+
+#### embedded-паттерн (по аналогии с Ф2)
+
+Добавляем в `UsersPage/index.vue` проп `embedded?: boolean` и скрываем за `v-if="!embedded"`:
+- `<PageHeader>` — скрывается
+- Нет отдельного `<Toast>` в UsersPage (не обнаружен в шаблоне) — скрывать нечего
+- `<ConfirmDialog>` (есть ли — уточнить по коду; если есть — `v-if="!embedded"`)
+- Внешний padding — сбрасывается через `.users-page` CSS или класс-модификатор
+
+`defineExpose` в `UsersPage/index.vue`:
+```ts
+defineExpose({ openCreate, canManage })
+```
+
+Обёртка `SysTabUsers.vue`:
+```
+SysTabUsers.vue
+  ├── .sys-tab-toolbar  (аналог .dir-tab-toolbar)
+  │   ├── [spacer]
+  │   └── [+ Добавить пользователя]  ← видна только если pageRef?.canManage
+  └── .sys-tab-body
+      └── <UsersPage ref="pageRef" :embedded="true" />
+```
+
+> Кнопка «+ Добавить пользователя» переносится из PageHeader страницы в sub-toolbar обёртки через `defineExpose`. Логика (openCreate) не меняется.
+
+#### deep-link ключ: `users`
+
+#### Роль-гейт: admin + director (как в SettingsSidebar, `roles: ['admin', 'director']`)
+
+#### Состояния
+
+| Состояние | Поведение |
+|-----------|-----------|
+| loading | DataTable `:loading="true"` встроенная страница (унаследовано) |
+| empty | empty-state UsersPage (унаследовано) |
+| error | Toast из usersPage composable (унаследовано) |
+| non-admin direct link | `SectionSystem` → `resolveSection` → `'profile'` |
+
+---
+
+### Раздел Б: «Доступ и оргструктура» (`SysTabAccessControl.vue`)
+
+#### embedded-паттерн
+
+Добавляем в `AccessControlPage/index.vue` проп `embedded?: boolean`:
+- `<PageHeader>` — скрывается
+- `<Message v-if="!isAllowed">` — остаётся (внутренняя защита страницы сохраняется)
+- Внешний padding — сбрасывается
+
+Специфика: `AccessControlPage` уже содержит собственный **PrimeVue Tabs** (3 таба:
+`departments`, `roles`, `visibility`). При встраивании эти табы будут видны внутри
+detail-панели шелла — **это корректное поведение**. Не нужны дополнительные обёртки
+табов: страница сама управляет переключением своих табов через `?` query-параметр
+(или через `activeTab` ref — уточнить в коде).
+
+> Важно: у AccessControlPage есть свой URL-синк (?tab=departments и т.д.). При встраивании
+> в шелл этот синк конфликтует с `?section=access-control`. Решение: передать `embedded=true`
+> и внутри AccessControlPage при `embedded === true` управлять активным табом через
+> внутренний `ref` (не через router.push/replace). `defineExpose({ activeTab })` — опционально.
+
+`defineExpose` в `AccessControlPage/index.vue`:
+```ts
+defineExpose({ activeTab, setActiveTab })
+```
+
+Обёртка `SysTabAccessControl.vue`:
+```
+SysTabAccessControl.vue
+  └── .sys-tab-body
+      └── <AccessControlPage ref="pageRef" :embedded="true" />
+```
+
+Нет sub-toolbar (все действия внутри самих табов страницы).
+
+#### deep-link ключ: `access-control`
+
+#### Роль-гейт: admin + director
+
+---
+
+### Раздел В: «Журнал автоматизаций» (`SysTabAutomationRuns.vue`)
+
+#### embedded-паттерн
+
+Добавляем в `AutomationRunsPage/index.vue` проп `embedded?: boolean`:
+- `<PageHeader>` — скрывается: `v-if="!embedded"` на `<PageHeader>` в шаблоне
+- `<Toast />` — скрывается: `v-if="!embedded"` (шелл уже рендерит `<Toast>`)
+- `DryRunDrawer` — **остаётся** (не затронут: Drawer рендерится поверх всего, не конфликтует с шеллом)
+- Padding `.automation-runs-page__content` — обнулять не нужно (`padding: $space-6` остаётся, визуально консистентно с Ф2)
+
+`defineExpose` в `AutomationRunsPage/index.vue`:
+```ts
+// Нет экспонируемых экшенов — страница read-only
+// defineExpose не требуется
+```
+
+Обёртка `SysTabAutomationRuns.vue`:
+```
+SysTabAutomationRuns.vue
+  └── .sys-tab-body
+      └── <AutomationRunsPage :embedded="true" />
+```
+
+Нет sub-toolbar: все фильтры и кнопка «Dry-run» уже живут внутри страницы в
+`.automation-runs-page__filters`. Save-bar не нужен (read-only журнал).
+
+#### deep-link ключ: `automation-runs`
+
+#### Роль-гейт: admin + director
+
+#### Состояния
+
+| Состояние | Поведение |
+|-----------|-----------|
+| loading | DataTable `:loading` встроенная страница |
+| empty | empty-block с pi-clock (унаследовано) |
+| error | `<Message severity="error">` встроенная страница (унаследовано) |
+| «Dry-run» disabled | когда filterAutomationId не выбран (логика страницы, унаследована) |
+
+---
+
+### Раздел Г: «Сброс системы» (`SectionSystemReset.vue`)
+
+#### Концепция
+
+Не встраиваем существующую страницу — она не существует. Существует только
+`SystemResetDialog.vue` (модальное окно) + `useSystemReset.ts` (composable).
+Создаём новый `SectionSystemReset.vue` — инлайн-страница в detail-панели шелла,
+которая описывает опасность операции и содержит единственную кнопку-триггер.
+`SystemResetDialog.vue` и `useSystemReset.ts` — **не трогать**, только импортируем.
+
+#### Wireframe раздела
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  .sys-reset-section  (padding: $space-6, max-width: 640px)                   │
+│                                                                              │
+│  .sys-reset-header                                                           │
+│  [pi pi-exclamation-triangle, 32px, danger]                                  │
+│  «Сброс системы»  (h2, font-size-xl, font-weight-semibold)                  │
+│  Tag severity="danger" value="Только для администратора"  (справа)          │
+│                                                                              │
+│  p «Эта операция безвозвратно удалит все бизнес-данные из системы.»         │
+│    «Используйте только на тестовых стендах.»                                │
+│                                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                              │
+│  .sys-reset-lists  (row gap-4)                                               │
+│  col-md-6:                            col-md-6:                             │
+│  «Будет удалено»                      «Останется»                           │
+│  (pi-trash, danger-tint border)       (pi-check-circle, success-tint)       │
+│  • Сделки и активности               • Учётные записи и роли                │
+│  • Контакты и компании               • Настройки воронки                    │
+│  • Документы                         • Каталог продуктов                    │
+│  • Автоматизации                     • Маршруты согласования                │
+│  • Онбординг и прогресс              • Причины отказа                       │
+│  • Уведомления                                                              │
+│  • Кастомные поля                                                           │
+│                                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                              │
+│  Message severity="warn" :closable="false"                                  │
+│  «После сброса вы будете автоматически выведены из системы.»               │
+│                                                                              │
+│  Button severity="danger" outlined icon="pi pi-refresh"                     │
+│  label="Выполнить сброс…"                                                   │
+│  → @click="resetState.openDialog()"                                          │
+│                                                                              │
+│  <SystemResetDialog                                                          │
+│    v-model:visible="resetState.dialogVisible.value"                          │
+│    v-model:confirm-input="resetState.confirmInput.value"                     │
+│    :is-confirmed="resetState.isConfirmed.value"                              │
+│    :is-pending="resetState.isPending.value"                                  │
+│    :RESET_CONFIRM_PHRASE="resetState.RESET_CONFIRM_PHRASE"                   │
+│    @confirm="resetState.executeReset()"                                      │
+│    @cancel="resetState.closeDialog()"                                        │
+│  />                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Детали компонента
+
+```vue
+<!-- SectionSystemReset.vue — структура -->
+<script setup lang="ts">
+import { useSystemReset } from '@/pages/ProfilePage/composables/useSystemReset'
+import SystemResetDialog from '@/pages/ProfilePage/components/SystemResetDialog.vue'
+
+const resetState = useSystemReset()
+</script>
+```
+
+Save-bar — **нет**. Раздел полностью action-based (один триггер → диалог → выполнить).
+
+Toast из `useSystemReset` работает через `useToast()` — глобальный синглтон.
+ConfirmDialog здесь не используется — подтверждение происходит в `SystemResetDialog`.
+
+#### CSS
+
+```scss
+.sys-reset-section {
+  padding: $space-6;
+  max-width: 640px;
+
+  // dark-тема: весь контент через токены, нет hex-литералов
+}
+
+.sys-reset-header {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  margin-bottom: $space-4;
+
+  &__icon {
+    font-size: 2rem;            // $font-size-icon-xl
+    color: var(--p-red-500);
+    flex-shrink: 0;
+  }
+
+  &__title {
+    flex: 1;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    color: $surface-900;
+    margin: 0;
+
+    .app-dark & { color: var(--p-surface-50); }
+  }
+}
+
+.sys-reset-desc {
+  font-size: $font-size-base;
+  color: $surface-600;
+  margin: 0 0 $space-5;
+
+  .app-dark & { color: var(--p-surface-400); }
+}
+
+.sys-reset-trigger {
+  margin-top: $space-5;
+}
+```
+
+#### deep-link ключ: `system-reset`
+
+#### Роль-гейт: **только admin** (не director)
+
+В `SettingsSidebar.vue` пункт `system-reset` уже имеет `roles: ['admin']`.
+`resolveSection` должен учесть: для `system-reset` недостаточно `isAdminOrDirector` —
+нужна отдельная проверка `role === 'admin'`. При прямом deep-link от director →
+`resolveSection` возвращает `'profile'` (или вариант: `'users'` — см. Открытые вопросы).
+
+В `useSettings.ts` добавить в массив SYSTEM_ADMIN_ONLY_KEYS:
+```ts
+const SYSTEM_ADMIN_ONLY_KEYS = ['system-reset'] as const
+```
+
+И в `resolveSection`:
+```ts
+if ((SYSTEM_ADMIN_ONLY_KEYS as readonly string[]).includes(key) && role !== 'admin') {
+  return 'profile'
+}
+```
+
+---
+
+### Контейнер `SectionSystem.vue` (опционально)
+
+По аналогии с `SectionDirectories.vue` можно создать `SectionSystem.vue` —
+thin router-компонент, который рендерит нужный `SysTab*` или `SectionSystemReset` по
+`activeSection`. Либо обойтись прямыми `v-else-if` в `index.vue` (предпочтительнее,
+меньше файлов — 4 пункта, не 10).
+
+**Рекомендация: прямые `v-else-if` в `index.vue`, без `SectionSystem.vue`.**
+
+```vue
+<!-- index.vue — добавить в detail-панель после SectionDirectories -->
+
+<SysTabUsers
+  v-else-if="settings.activeSection.value === 'users'"
+/>
+
+<SysTabAccessControl
+  v-else-if="settings.activeSection.value === 'access-control'"
+/>
+
+<SysTabAutomationRuns
+  v-else-if="settings.activeSection.value === 'automation-runs'"
+/>
+
+<SectionSystemReset
+  v-else-if="settings.activeSection.value === 'system-reset'"
+/>
+```
+
+---
+
+### Обновление `useSettings.ts`
+
+```ts
+// Добавить константы
+export const SYSTEM_KEYS = ['users', 'access-control', 'automation-runs'] as const
+export const SYSTEM_ADMIN_ONLY_KEYS = ['system-reset'] as const
+
+// Обновить VALID_KEYS
+const VALID_KEYS = [
+  ...ACCOUNT_KEYS,
+  ...DIRECTORIES_KEYS,
+  ...SYSTEM_KEYS,
+  ...SYSTEM_ADMIN_ONLY_KEYS,
+] as const
+
+// Обновить resolveSection
+function resolveSection(key: string | undefined): string {
+  if (!key) return 'profile'
+  const role = userStore.getUserRole
+
+  if ((DIRECTORIES_KEYS as readonly string[]).includes(key)) {
+    if (role !== 'admin' && role !== 'director') return 'profile'
+  }
+  if ((SYSTEM_KEYS as readonly string[]).includes(key)) {
+    if (role !== 'admin' && role !== 'director') return 'profile'
+  }
+  if ((SYSTEM_ADMIN_ONLY_KEYS as readonly string[]).includes(key)) {
+    if (role !== 'admin') return 'profile'
+  }
+  if ((VALID_KEYS as readonly string[]).includes(key as ValidKey)) return key
+  return 'profile'
+}
+```
+
+---
+
+### Обновление `SettingsSidebar.vue`
+
+Для 4 пунктов группы СИСТЕМА меняем `phase: 3` → `phase: 1`:
+
+```ts
+// SettingsSidebar.vue — GROUPS, секция system:
+{ key: 'users',           ..., phase: 1, roles: ['admin', 'director'] },  // было 3
+{ key: 'access-control',  ..., phase: 1, roles: ['admin', 'director'] },  // было 3
+{ key: 'automation-runs', ..., phase: 1, roles: ['admin', 'director'] },  // было 3
+{ key: 'system-reset',    ..., phase: 1, roles: ['admin'] },              // было 3
+```
+
+Тег «Скоро» пропадает автоматически (условие `section.phase !== 1`).
+
+> `system-reset` должен рендериться только для admin, не director. Текущий `visibleGroups`
+> фильтрует только по `adminOnly` (группа целиком). Для пункта с `roles: ['admin']` нужно
+> дополнительно скрывать строку: `v-if="!section.roles || section.roles.includes(getUserRole)"`.
+> Иначе director увидит строку «Сброс системы» в сайдбаре, кликнет и попадёт на 'profile'.
+
+Добавить в шаблон `SettingsSidebar.vue`:
+```vue
+<button
+  v-for="section in group.sections"
+  v-show="!section.roles || section.roles.includes(userStore.getUserRole)"
+  ...
+>
+```
+
+(заменить `v-show` на `v-if` если хотим полностью убрать из DOM)
+
+---
+
+### Редиректы Ф3 (активировать в `base.ts`)
+
+| Старый путь | Новый URL | Текущий статус в base.ts |
+|-------------|-----------|--------------------------|
+| `/admin/users` | `/settings?section=users` | самостоятельный роут (работает) |
+| `/admin/access-control` | `/settings?section=access-control` | самостоятельный роут (redirect → /departments) |
+| `/admin/access-control/departments` | `/settings?section=access-control` | самостоятельный роут |
+| `/admin/access-control/roles` | `/settings?section=access-control` | самостоятельный роут |
+| `/admin/access-control/visibility` | `/settings?section=access-control` | самостоятельный роут |
+| `/admin/automation-runs` | `/settings?section=automation-runs` | самостоятельный роут (работает) |
+
+> Старые роуты остаются активными до активации редиректов. Активировать редиректы после
+> QA-проверки Ф3 — заменой route-definition на `{ path: '/admin/users', redirect: ... }`.
+
+**Роут `/profile?tab=system`:**
+
+В `base.ts` уже есть маппинг `system: 'profile'` — временный фолбэк (ProfilePage не содержала
+отдельной страницы, только диалог). После Ф3 можно обновить маппинг:
+```ts
+// было:
+system: 'profile',
+// станет (после Ф3):
+system: 'system-reset',  // но только для admin; resolveSection отфильтрует для director
+```
+
+---
+
+### Обновление мобильного Select в `index.vue`
+
+Добавить 4 новые опции в `mobileSectionOptions` (только для admin/director — как Ф2):
+
+```ts
+// Расширить mobileSectionOptions с учётом роли
+const mobileSectionOptions = computed(() => {
+  const base = [
+    { value: 'profile',    label: t('settings.sections.profile.title') },
+    { value: 'security',   label: t('settings.sections.security.title') },
+    { value: 'appearance', label: t('settings.sections.appearance.title') },
+    { value: 'language',   label: t('settings.sections.language.title') },
+    { value: 'channels',   label: t('settings.sections.channels.title') },
+  ]
+  const role = userStore.getUserRole
+  const isAdminOrDirector = role === 'admin' || role === 'director'
+  const isAdmin = role === 'admin'
+
+  if (isAdminOrDirector) {
+    base.push(
+      { value: 'countries',       label: t('settings.sections.countries.title') },
+      { value: 'acq-channels',    label: t('settings.sections.acq-channels.title') },
+      { value: 'disc-reasons',    label: t('settings.sections.disc-reasons.title') },
+      { value: 'catalog',         label: t('settings.sections.catalog.title') },
+      { value: 'exchange-rates',  label: t('settings.sections.exchange-rates.title') },
+      // Ф3:
+      { value: 'users',           label: t('settings.sections.users.title') },
+      { value: 'access-control',  label: t('settings.sections.access-control.title') },
+      { value: 'automation-runs', label: t('settings.sections.automation-runs.title') },
+    )
+  }
+  if (isAdmin) {
+    base.push({ value: 'system-reset', label: t('settings.sections.system-reset.title') })
+  }
+  return base
+})
+```
+
+---
+
+### PrimeVue-компоненты Ф3
+
+| Компонент | Где | Props |
+|-----------|-----|-------|
+| `Button` | sub-toolbar `SysTabUsers` | `icon="pi pi-plus"`, `label`, `v-if="pageRef?.canManage"` |
+| `Button` | `SectionSystemReset` | `severity="danger" outlined`, `icon="pi pi-refresh"` |
+| `Message` | `SectionSystemReset` | `severity="warn"`, `:closable="false"` |
+| `Tag` | `SectionSystemReset` (admin-badge) | `severity="danger"`, `value` |
+| `Dialog` (SystemResetDialog) | `SectionSystemReset` | `v-model:visible`, `modal`, `:closable="!isPending"` |
+| `InputText` | внутри SystemResetDialog | фразовое подтверждение (без изменений) |
+| `DataTable`, `Column`, `Paginator` | UsersPage (встроена) | унаследовано |
+| `Tabs`, `TabList`, `Tab`, `TabPanels`, `TabPanel` | AccessControlPage (встроена) | унаследовано |
+| `Select`, `DatePicker` | AutomationRunsPage (встроена) | унаследовано |
+| `Tag` | AutomationRunsPage (статус прогона) | унаследовано |
+| `Drawer` (DryRunDrawer) | AutomationRunsPage (встроена) | `:show-close-icon="false"`, унаследовано |
+
+**Toast и ConfirmDialog:**
+- `AutomationRunsPage` рендерит `<Toast />` → скрыть через `v-if="!embedded"` (шелл рендерит глобальный)
+- `UsersPage` — проверить наличие `<Toast>` и `<ConfirmDialog>` в шаблоне; если есть — `v-if="!embedded"` по Ф2-паттерну
+- `AccessControlPage` — аналогично
+
+---
+
+### Состояния Ф3 (полная таблица)
+
+| Элемент | Состояние | Поведение |
+|---------|-----------|-----------|
+| Все 4 раздела | loading | Встроенная страница управляет loading-state самостоятельно (унаследовано) |
+| `SysTabUsers` | empty (нет пользователей) | EmptyState с иконкой pi-users + CTA «Добавить» (унаследовано) |
+| `SysTabAutomationRuns` | empty (нет прогонов) | EmptyState с pi-clock + текст (унаследовано) |
+| `SectionSystemReset` | default | кнопка «Выполнить сброс…» активна |
+| `SectionSystemReset` | dialog open | `SystemResetDialog` visible=true; фоновый контент блокирован |
+| `SectionSystemReset` | reset pending | кнопка `:loading="true"` внутри диалога; фраза вводится |
+| `SectionSystemReset` | reset success | Toast «Сброс выполнен» + router redirect на `/login?reason=reset` |
+| `SectionSystemReset` | reset error | Toast severity="error" |
+| non-admin на `system-reset` (deep-link) | page load | `resolveSection` → `'profile'` |
+| director на `system-reset` (sидбар) | v-if | строка «Сброс системы» скрыта в sidebar |
+
+---
+
+### Interactions — таблица
+
+| Элемент | Действие | Результат | Endpoint |
+|---------|----------|-----------|----------|
+| Пункт «Пользователи» в сайдбаре | click | `activeSection='users'`, `?section=users` | — |
+| Пункт «Доступ и оргструктура» | click | `activeSection='access-control'`, `?section=access-control` | — |
+| Пункт «Журнал автоматизаций» | click | `activeSection='automation-runs'`, `?section=automation-runs` | — |
+| Пункт «Сброс системы» (только admin) | click | `activeSection='system-reset'`, `?section=system-reset` | — |
+| Sub-toolbar «+ Добавить пользователя» | click | `pageRef.openCreate()` → `CreateUserDialog` | — |
+| CreateUserDialog → сохранить | submit | `POST /api/users` → Toast + reload | `POST /api/users` |
+| Кнопка «Деактивировать» в UsersPage | click | ConfirmDialog → `PATCH /api/users/:id {is_active:false}` | `PATCH /api/users/:id` |
+| Tab «Роли и права» в AccessControl | click | `AccessControlPage.setActiveTab('roles')` | — |
+| Фильтр автоматизаций + «Применить» | click | `page.fetchRuns()` | `GET /api/automation-runs` |
+| Кнопка «Dry-run» | click | `DryRunDrawer` visible=true | — |
+| Dry-run submit | click | `POST /api/automations/:id/dry-run` | `POST /api/automations/:id/dry-run` |
+| «Выполнить сброс…» | click | `resetState.openDialog()` → `SystemResetDialog` | — |
+| SystemResetDialog: ввод фразы | input | `isConfirmed` вычисляется, кнопка активируется | — |
+| SystemResetDialog: «Выполнить» | click | `POST /api/system/reset` → Toast + logout | `POST /api/system/reset` |
+| Deep-link `/admin/users` (до редиректа Ф3) | navigate | роут работает как самостоятельный | — |
+| Deep-link `/admin/users` (после редиректа Ф3) | navigate | `→ /settings?section=users` | — |
+| Deep-link `/settings?section=system-reset` от director | page load | `resolveSection` → `'profile'` | — |
+| Мобильный Select — «Журнал автоматизаций» | change | `setSection('automation-runs')` | — |
+
+---
+
+### i18n-ключи Ф3
+
+Добавить в `ru.json` и `en.json` в блок `settings.system`:
+
+```json
+// ru.json
+"settings": {
+  "system": {
+    "sectionTitle": "Система",
+    "sectionDesc": "Управление пользователями, доступом и системными операциями",
+    "users": {
+      "subToolbarAddBtn": "Добавить пользователя"
+    },
+    "automationRuns": {
+      "subDesc": "Журнал запусков автоматизаций и диагностика"
+    },
+    "systemReset": {
+      "pageTitle": "Сброс системы",
+      "adminBadge": "Только для администратора",
+      "descPrimary": "Эта операция безвозвратно удалит все бизнес-данные из системы.",
+      "descSecondary": "Используйте только на тестовых стендах или при переходе на чистую инсталляцию.",
+      "willDeleteTitle": "Будет удалено",
+      "willKeepTitle": "Останется",
+      "triggerBtn": "Выполнить сброс…"
+    }
+  }
+}
+```
+
+```json
+// en.json
+"settings": {
+  "system": {
+    "sectionTitle": "System",
+    "sectionDesc": "Manage users, access control and system operations",
+    "users": {
+      "subToolbarAddBtn": "Add user"
+    },
+    "automationRuns": {
+      "subDesc": "Automation run history and diagnostics"
+    },
+    "systemReset": {
+      "pageTitle": "System Reset",
+      "adminBadge": "Administrators only",
+      "descPrimary": "This action will permanently delete all business data from the system.",
+      "descSecondary": "Only use on test environments or when starting fresh.",
+      "willDeleteTitle": "Will be deleted",
+      "willKeepTitle": "Will remain",
+      "triggerBtn": "Perform reset…"
+    }
+  }
+}
+```
+
+Строки для `system.reset.*` уже существуют в `ru.json`/`en.json` (ключи `system.reset.dialog_title`,
+`system.reset.will_delete.*`, `system.reset.will_keep.*` и т.д.) — переиспользуются без изменений.
+
+---
+
+### Порядок реализации (рекомендованные шаги)
+
+```
+Ш1. Обновить useSettings.ts — добавить 4 ключа в VALID_KEYS + роль-проверку для
+     system-reset (admin only) в resolveSection.
+Ш2. Обновить SettingsSidebar.vue — phase: 3 → phase: 1 для 4 пунктов;
+     добавить v-if/v-show для system-reset (только admin, не director).
+Ш3. Добавить embedded prop в UsersPage/index.vue (v-if="!embedded" на PageHeader,
+     Toast/ConfirmDialog если есть; defineExpose openCreate/canManage).
+Ш4. Создать SysTabUsers.vue — sub-toolbar + <UsersPage :embedded="true">.
+Ш5. Добавить embedded prop в AccessControlPage/index.vue (v-if="!embedded" на
+     PageHeader); при embedded=true управлять табами через internal ref, не router.
+Ш6. Создать SysTabAccessControl.vue — <AccessControlPage :embedded="true">.
+Ш7. Добавить embedded prop в AutomationRunsPage/index.vue (v-if="!embedded" на
+     PageHeader и Toast).
+Ш8. Создать SysTabAutomationRuns.vue — <AutomationRunsPage :embedded="true">.
+Ш9. Создать SectionSystemReset.vue — hero-danger block + trigger button +
+     <SystemResetDialog>; импортировать useSystemReset из ProfilePage.
+Ш10. Обновить SettingsPage/index.vue — добавить 4 v-else-if ветви + mobileSectionOptions.
+Ш11. Добавить i18n-ключи settings.system.* в ru.json и en.json.
+Ш12. Активировать редиректы Ф3 в base.ts (или оставить старые роуты активными — см. ОВ-3).
+Ш13. QA: deep-link все 4 ключа, роль-гейт (admin vs director), обе темы, < 768px,
+      SystemResetDialog (фраза, pending, success/error), DryRunDrawer встроенный.
+```
+
+---
+
+### Визуальный эталон
+
+Структура sub-toolbar (toolbar внутри встраиваемого раздела) — `SysTabUsers.vue`:
+аналогично `DirTabCountries.vue` из Ф2 (`.dir-tab-toolbar` паттерн — toolbar + spacer + actions).
+
+Стиль `SectionSystemReset.vue` — опасный action-based блок: эталон — `.system-reset-section`
+и `.system-reset-section--danger/--safe` из `SystemResetDialog.vue` (переиспользуем те же
+классы-блоки для списков «будет удалено» / «останется»).
+
+Табы `AccessControlPage` встроенные: без изменений, PrimeVue Tabs — `.p-tabs` с PrimeVue
+default styling (не line-style как в Ф2 — это внутренняя навигация страницы, не settings-tabs).
+
+---
+
+### Открытые вопросы (Ф3)
+
+1. **ОВ-1: AccessControlPage — конфликт URL-синка при embedded=true.** Текущая реализация
+   `AccessControlPage/index.vue` синхронизирует активный таб с URL (через `route.path` —
+   `/admin/access-control/departments` и т.д.). При `embedded=true` нужно отключить URL-синк
+   и управлять `activeTab` через internal ref. Требует правки `AccessControlPage/index.vue`.
+   Если это сложно (много зависимостей), альтернатива — не отключать синк, но добавить
+   условие: при `embedded=true` router.replace не вызывается.
+
+2. **ОВ-2: Toast/ConfirmDialog в UsersPage и AccessControlPage.** Проверить в коде — есть ли
+   `<Toast>` и `<ConfirmDialog>` в шаблонах (не обнаружены при беглом чтении).
+   Если есть — `v-if="!embedded"` по Ф2-паттерну. Если нет — ничего делать не нужно.
+
+3. **ОВ-3: Активация редиректов Ф3 — сроки.** `/admin/users` и `/admin/automation-runs`
+   существуют как рабочие роуты в `base.ts`. После Ф3 нужно решить: оставить оба варианта
+   доступа (старый роут + settings-шелл) или заменить на redirect. Рекомендация: заменять
+   redirect только после QA-апрува Ф3 — не в тот же PR.
+
+4. **ОВ-4: Куда редиректить director при попытке зайти на `system-reset`?** Текущее ТЗ
+   указывает `resolveSection → 'profile'`. Альтернатива: `'users'` (более логично —
+   director видит список пользователей, который ему доступен). Решение за PM.
+
+5. **ОВ-5: Редирект `/profile?tab=system` (в base.ts уже `system: 'profile'`).** После Ф3
+   можно поменять на `system: 'system-reset'`, но это даст 403 для director (resolveSection
+   вернёт profile). Безопаснее: `system: isAdmin ? 'system-reset' : 'users'` — но redirect-
+   функция в base.ts не имеет доступа к userStore. Решение: оставить `system: 'profile'`
+   или `system: 'users'` — PM решает.
+
+---
+
+### Статус реализации
+
+### Фаза 3 — pending
+
+СИСТЕМА (admin/director): Users, AccessControl, AutomationRuns, SystemReset — ТЗ готово.
+Ожидает реализации `frontend-specialist`.
+
+*ТЗ для `frontend-specialist` (Ф3) готово. Передавай `frontend-specialist`. Если есть правки — кидай мне.*

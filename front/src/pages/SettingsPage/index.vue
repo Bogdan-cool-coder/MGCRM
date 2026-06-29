@@ -70,19 +70,33 @@
           @tab-change="settings.setSection($event)"
         />
 
+        <SysTabUsers
+          v-else-if="settings.activeSection.value === 'users'"
+        />
+
+        <SysTabAccessControl
+          v-else-if="settings.activeSection.value === 'access-control'"
+        />
+
+        <SysTabAutomationRuns
+          v-else-if="settings.activeSection.value === 'automation-runs'"
+        />
+
+        <SectionSystemReset
+          v-else-if="settings.activeSection.value === 'system-reset'"
+        />
+
         <SectionComingSoon v-else />
       </div>
     </div>
   </div>
 
-  <Toast />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Select from 'primevue/select'
-import Toast from 'primevue/toast'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import SettingsSidebar from './components/SettingsSidebar.vue'
 import SectionProfile from './components/sections/SectionProfile.vue'
@@ -91,6 +105,10 @@ import SectionAppearance from './components/sections/SectionAppearance.vue'
 import SectionLanguage from './components/sections/SectionLanguage.vue'
 import SectionChannels from './components/sections/SectionChannels.vue'
 import SectionDirectories from './components/sections/SectionDirectories.vue'
+import SectionSystemReset from './components/sections/SectionSystemReset.vue'
+import SysTabUsers from './components/sections/system/SysTabUsers.vue'
+import SysTabAccessControl from './components/sections/system/SysTabAccessControl.vue'
+import SysTabAutomationRuns from './components/sections/system/SysTabAutomationRuns.vue'
 import SectionComingSoon from './components/sections/SectionComingSoon.vue'
 import { useSettings, DIRECTORIES_KEYS } from './composables/useSettings'
 import { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
@@ -120,7 +138,13 @@ const mobileSectionOptions = computed(() => {
       { value: 'disc-reasons',   label: t('settings.sections.disc-reasons.title') },
       { value: 'catalog',        label: t('settings.sections.catalog.title') },
       { value: 'exchange-rates', label: t('settings.sections.exchange-rates.title') },
+      { value: 'users',          label: t('settings.sections.users.title') },
+      { value: 'access-control', label: t('settings.sections.access-control.title') },
+      { value: 'automation-runs',label: t('settings.sections.automation-runs.title') },
     )
+    if (settings.isAdmin.value) {
+      base.push({ value: 'system-reset', label: t('settings.sections.system-reset.title') })
+    }
   }
   return base
 })

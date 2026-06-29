@@ -1,6 +1,7 @@
 <template>
-  <div class="access-control-page">
+  <div class="access-control-page" :class="{ 'access-control-page--embedded': embedded }">
     <PageHeader
+      v-if="!embedded"
       :title="t('accessControl.page.title')"
       :subtitle="t('accessControl.page.subtitle')"
       icon="pi pi-shield"
@@ -25,13 +26,13 @@
 
         <TabPanels>
           <TabPanel value="departments">
-            <DepartmentsTab />
+            <DepartmentsTab :embedded="embedded" />
           </TabPanel>
           <TabPanel value="roles">
-            <RolesPermissionsTab />
+            <RolesPermissionsTab :embedded="embedded" />
           </TabPanel>
           <TabPanel value="visibility">
-            <VisibilityScopeTab />
+            <VisibilityScopeTab :embedded="embedded" />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -40,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Tabs from 'primevue/tabs'
@@ -60,25 +61,40 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 /** Allowed roles per spec: admin, director */
 const isAllowed = computed(() => {
   const role = userStore.getUserRole
   return role === 'admin' || role === 'director'
 })
 
-/** Map route name → tab value */
+/** Map route name → tab value (used in standalone mode only) */
 const routeTabMap: Record<string, string> = {
   AccessControlDepartments: 'departments',
   AccessControlRoles: 'roles',
   AccessControlVisibility: 'visibility',
 }
 
+/**
+ * Internal tab state for embedded mode — avoids URL sync conflict with
+ * the Settings shell ?section= parameter (OV-1 resolution).
+ */
+const internalTab = ref<string>('departments')
+
 const activeTab = computed(() => {
+  if (props.embedded) return internalTab.value
   return routeTabMap[String(route.name)] ?? 'departments'
 })
 
 function onTabChange(value: string | number) {
   const tab = String(value)
+  if (props.embedded) {
+    // Embedded: switch tabs locally, no router involvement
+    internalTab.value = tab
+    return
+  }
+  // Standalone: sync to URL as before
   const routeMap: Record<string, string> = {
     departments: '/admin/access-control/departments',
     roles: '/admin/access-control/roles',
@@ -96,6 +112,11 @@ function onTabChange(value: string | number) {
   display: flex;
   flex-direction: column;
   height: 100%;
+
+  &--embedded {
+    padding: 0;
+    margin: 0;
+  }
 }
 
 .access-control-page__403 {

@@ -432,6 +432,14 @@
         "catalog": "Catalog",
         "exchangeRates": "Exchange Rates"
       }
+    },
+    "system": {
+      "sectionTitle": "System",
+      "sectionDesc": "Manage users, access control and system parameters",
+      "reset": {
+        "title": "System reset",
+        "desc": "Deletes all business data and restores the baseline state. Admin only."
+      }
     }
   },
   "admin": {

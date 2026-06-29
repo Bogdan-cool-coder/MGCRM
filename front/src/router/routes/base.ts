@@ -260,53 +260,38 @@ export const routes: RouteRecordRaw[] = [
   },
 
   // ─── Automation Runs Journal ─────────────────────────────────────────────
+  // Phase 3: /admin/automation-runs redirects into Settings shell.
   {
     path: '/admin/automation-runs',
-    name: 'AutomationRuns',
-    component: () => import('@/pages/AutomationRunsPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'automation.runs.pageTitle' },
+    redirect: { path: '/settings', query: { section: 'automation-runs' } },
   },
 
   // ─── Users: Admin ────────────────────────────────────────────────────────
+  // Phase 3: /admin/users redirects into Settings shell.
   {
     path: '/admin/users',
-    name: 'AdminUsers',
-    component: () => import('@/pages/UsersPage'),
-    meta: {
-      requiresAuth: true,
-      roles: ['admin', 'director'],
-      title: 'admin.users.title',
-    },
+    redirect: { path: '/settings', query: { section: 'users' } },
   },
 
   // ─── Access Control: Доступ и оргструктура ───────────────────────────────
-  // Settings → отделы / роли и права / видимость записей. Backend gated to
-  // admin/director via can:admin-write; mirror that at the router (fail-closed).
-  // The hub redirects to the Departments tab; tab subroutes all render the same
-  // page (URL ↔ active-tab sync lives in the page-composable).
+  // Phase 3: /admin/access-control/* redirects into Settings shell.
+  // All sub-routes (departments/roles/visibility) collapse to a single
+  // section key; internal tab switching is handled inside SysTabAccessControl.
   {
     path: '/admin/access-control',
-    name: 'AccessControl',
-    redirect: '/admin/access-control/departments',
-    meta: { requiresAuth: true, roles: ['admin', 'director'] },
+    redirect: { path: '/settings', query: { section: 'access-control' } },
   },
   {
     path: '/admin/access-control/departments',
-    name: 'AccessControlDepartments',
-    component: () => import('@/pages/AccessControlPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.accessControl' },
+    redirect: { path: '/settings', query: { section: 'access-control' } },
   },
   {
     path: '/admin/access-control/roles',
-    name: 'AccessControlRoles',
-    component: () => import('@/pages/AccessControlPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.accessControl' },
+    redirect: { path: '/settings', query: { section: 'access-control' } },
   },
   {
     path: '/admin/access-control/visibility',
-    name: 'AccessControlVisibility',
-    component: () => import('@/pages/AccessControlPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'director'], title: 'nav.accessControl' },
+    redirect: { path: '/settings', query: { section: 'access-control' } },
   },
 
   // ─── Directories: Admin ──────────────────────────────────────────────────

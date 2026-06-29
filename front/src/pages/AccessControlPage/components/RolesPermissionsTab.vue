@@ -50,7 +50,7 @@
       </div>
     </template>
 
-    <Toast />
+    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -63,6 +63,8 @@ import Skeleton from 'primevue/skeleton'
 import Toast from 'primevue/toast'
 import PermissionMatrix from './PermissionMatrix.vue'
 import { useRolesPermissions } from '../composables/useRolesPermissions'
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const { t } = useI18n()
 

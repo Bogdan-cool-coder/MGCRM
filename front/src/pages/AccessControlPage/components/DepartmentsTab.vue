@@ -143,7 +143,7 @@
     <!-- ConfirmDialog for delete -->
     <ConfirmDialog group="dept-delete" />
 
-    <Toast />
+    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -167,6 +167,8 @@ import DepartmentSidePanel from './DepartmentSidePanel.vue'
 import OrgChartView from './OrgChartView.vue'
 import { useDepartments } from '../composables/useDepartments'
 import type { DepartmentDto } from '@/entities/accessControl'
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const { t } = useI18n()
 const confirm = useConfirm()

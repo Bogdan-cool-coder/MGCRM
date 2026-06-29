@@ -97,6 +97,17 @@
   роль-проверка resolveSection; редиректы `/admin/*` → `/settings?section=*` активированы;
   `/admin/products/:id` сохранён. PM approved. Ф3 (СИСТЕМА) — pending.
 
+### Обновление 2026-06-30 — Settings Фаза 3: Система РЕАЛИЗОВАНА (QA PASS, PM APPROVED)
+- **Настройки Ф3 (`Settings-spec.md` § «Фаза 3 — Система»)** — DONE: 4 раздела группы СИСТЕМА
+  активированы в шелле: `SysTabUsers` / `SysTabAccessControl` / `SysTabAutomationRuns` (embedded-паттерн Ф2)
+  + `SectionSystemReset.vue` (action-based, `useSystemReset` + `SystemResetDialog`). Роль-гейт
+  system-reset — admin-only (`resolveSection` + sidebar-фильтр + `v-if="!isAdmin"` guard).
+  Toast-дубли устранены (`v-if="!embedded"`). Редиректы активированы. `PipelineSettingsPage`
+  остаётся standalone (canvas). Весь срез Настроек (Ф1+Ф2+Ф3) завершён.
+  Некритичные хвосты: `/profile?tab=system` → `'system-reset'` маппинг не обновлён (сейчас `'profile'`);
+  dark-заголовки SectionSystemReset: `var(--p-surface-900)` → должно быть `var(--p-surface-50)`;
+  red-fallback hex в rgba. Всё в очереди DS-прохода.
+
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,
 светлая+тёмная темы, скрытые скроллбары, поведение интерактивных элементов из §11.

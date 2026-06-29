@@ -108,10 +108,10 @@ const GROUPS: SettingsGroup[] = [
     labelKey: 'settings.groups.system',
     adminOnly: true,
     sections: [
-      { key: 'users',           labelKey: 'settings.sections.users.title',           icon: 'pi pi-users',       phase: 3, roles: ['admin', 'director'] },
-      { key: 'access-control',  labelKey: 'settings.sections.access-control.title',  icon: 'pi pi-shield',      phase: 3, roles: ['admin', 'director'] },
-      { key: 'automation-runs', labelKey: 'settings.sections.automation-runs.title', icon: 'pi pi-clock',       phase: 3, roles: ['admin', 'director'] },
-      { key: 'system-reset',    labelKey: 'settings.sections.system-reset.title',    icon: 'pi pi-refresh',     phase: 3, roles: ['admin'] },
+      { key: 'users',           labelKey: 'settings.sections.users.title',           icon: 'pi pi-users',       phase: 1, roles: ['admin', 'director'] },
+      { key: 'access-control',  labelKey: 'settings.sections.access-control.title',  icon: 'pi pi-shield',      phase: 1, roles: ['admin', 'director'] },
+      { key: 'automation-runs', labelKey: 'settings.sections.automation-runs.title', icon: 'pi pi-clock',       phase: 1, roles: ['admin', 'director'] },
+      { key: 'system-reset',    labelKey: 'settings.sections.system-reset.title',    icon: 'pi pi-refresh',     phase: 1, roles: ['admin'] },
     ],
   },
 ]
@@ -121,9 +121,24 @@ const isAdminOrDirector = computed(() => {
   return role === 'admin' || role === 'director'
 })
 
+const isAdmin = computed(() => userStore.getUserRole === 'admin')
+
 const visibleGroups = computed(() =>
   GROUPS
     .filter((g) => !g.adminOnly || isAdminOrDirector.value)
+    .map((g) => ({
+      ...g,
+      // Filter sections by role: sections with roles: ['admin'] are hidden from director
+      sections: g.sections.filter((s) => {
+        if (!s.roles) return true
+        if (s.roles.includes('admin') && !s.roles.includes('director')) {
+          // admin-only section: only show to admin
+          return isAdmin.value
+        }
+        // admin+director section: show to both
+        return isAdminOrDirector.value
+      }),
+    }))
     .map((g) => ({
       ...g,
       allDisabled: g.sections.every((s) => s.phase !== 1),

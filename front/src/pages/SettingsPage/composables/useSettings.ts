@@ -17,8 +17,19 @@ export const DIRECTORIES_KEYS = [
   'exchange-rates',
 ] as const
 
-/** Все валидные ключи разделов (Ф1 + Ф2 активные) */
-const VALID_KEYS = [...ACCOUNT_KEYS, ...DIRECTORIES_KEYS] as const
+/** Разделы Ф3 — Система (admin/director; system-reset — только admin) */
+export const SYSTEM_KEYS = [
+  'users',
+  'access-control',
+  'automation-runs',
+  'system-reset',
+] as const
+
+/** Ключи системы, доступные только admin (не director) */
+const ADMIN_ONLY_KEYS = ['system-reset'] as const
+
+/** Все валидные ключи разделов (Ф1 + Ф2 + Ф3 активные) */
+const VALID_KEYS = [...ACCOUNT_KEYS, ...DIRECTORIES_KEYS, ...SYSTEM_KEYS] as const
 type ValidKey = (typeof VALID_KEYS)[number]
 
 // No-op callbacks provided to child sections.
@@ -41,10 +52,19 @@ export function useSettings() {
   provide(SETTINGS_MARK_DIRTY_KEY, noop)
   provide(SETTINGS_MARK_CLEAN_KEY, noop)
 
+  const isAdmin = computed(() => userStore.getUserRole === 'admin')
+
   function resolveSection(key: string | undefined): string {
     if (!key) return 'profile'
-    // Directories require admin/director
+    // Directories + most System sections require admin/director
     if ((DIRECTORIES_KEYS as readonly string[]).includes(key) && !isAdminOrDirector.value) {
+      return 'profile'
+    }
+    if ((SYSTEM_KEYS as readonly string[]).includes(key) && !isAdminOrDirector.value) {
+      return 'profile'
+    }
+    // system-reset is admin-only (director redirects to 'profile' on direct deep-link)
+    if ((ADMIN_ONLY_KEYS as readonly string[]).includes(key) && !isAdmin.value) {
       return 'profile'
     }
     if ((VALID_KEYS as readonly string[]).includes(key as ValidKey)) return key
@@ -67,5 +87,6 @@ export function useSettings() {
     activeSection,
     setSection,
     isAdminOrDirector,
+    isAdmin,
   }
 }

@@ -134,6 +134,7 @@ const confirmInput = computed({
 })
 
 function onCancel() {
+  visible.value = false
   emit('cancel')
 }
 

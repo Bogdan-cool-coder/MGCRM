@@ -1,6 +1,7 @@
 <template>
-  <div class="users-page">
+  <div class="users-page" :class="{ 'users-page--embedded': embedded }">
     <PageHeader
+      v-if="!embedded"
       :title="t('admin.users.title')"
       icon="pi pi-users"
       :subtitle="t('admin.users.subtitle')"
@@ -233,6 +234,8 @@ import type { UserRole } from '@/entities/user'
 
 const { t } = useI18n()
 
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const {
   users,
   total,
@@ -265,6 +268,8 @@ function onPageChange(event: PageState) {
   currentPage.value = event.page + 1
 }
 
+defineExpose({ canManage, openCreate })
+
 function roleSeverity(role: UserRole): 'success' | 'warn' | 'info' | 'secondary' | 'danger' {
   switch (role) {
     case 'admin':
@@ -284,6 +289,11 @@ function roleSeverity(role: UserRole): 'success' | 'warn' | 'info' | 'secondary'
 <style lang="scss" scoped>
 .users-page {
   padding: 0.75rem;
+
+  &--embedded {
+    padding: 0;
+    margin: 0;
+  }
 
   &__filters {
     margin-bottom: $space-3;

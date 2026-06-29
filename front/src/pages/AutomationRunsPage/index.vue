@@ -1,6 +1,6 @@
 <template>
-  <div class="automation-runs-page">
-    <PageHeader :title="t('automation.runs.pageTitle')" icon="pi pi-clock" />
+  <div class="automation-runs-page" :class="{ 'automation-runs-page--embedded': embedded }">
+    <PageHeader v-if="!embedded" :title="t('automation.runs.pageTitle')" icon="pi pi-clock" />
 
     <div class="automation-runs-page__content">
       <!-- Filters row -->
@@ -161,7 +161,7 @@
       @ran="() => page.fetchRuns()"
     />
 
-    <Toast />
+    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -182,6 +182,8 @@ import { useAutomationRuns } from './composables/useAutomationRuns'
 import DryRunDrawer from './DryRunDrawer.vue'
 
 const { t } = useI18n()
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 // ─── Page composable (orchestrator) ──────────────────────────────────────────
 const page = useAutomationRuns()
@@ -259,6 +261,11 @@ function truncate(s: string, len: number): string {
   display: flex;
   flex-direction: column;
   height: 100%;
+
+  &--embedded {
+    padding: 0;
+    margin: 0;
+  }
 
   &__content {
     display: flex;

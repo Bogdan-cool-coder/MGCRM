@@ -76,7 +76,7 @@
       </div>
     </template>
 
-    <Toast />
+    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -93,6 +93,8 @@ import Select from 'primevue/select'
 import Toast from 'primevue/toast'
 import { useVisibilityConfig } from '../composables/useVisibilityConfig'
 import type { UserRole } from '@/entities/user'
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const { t } = useI18n()
 
