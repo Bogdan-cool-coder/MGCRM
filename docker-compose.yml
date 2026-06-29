@@ -39,6 +39,20 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # PHP-FPM healthcheck: tcp-connect to :9000 via php's built-in fsockopen.
+    # No extra packages needed (php CLI is always present in php:8.5-fpm).
+    # A successful TCP connect means php-fpm master is alive and accepting conns.
+    # start_period covers: entrypoint bootstrap (optimize:clear, package:discover)
+    # + named-volume chown pass + opcache preload (~5-10s) with extra headroom.
+    # HEALTH_TIMEOUT=180 in rolling-restart.sh > start_period + retries*interval.
+    # CMD exec-form (no shell): avoids sh $-mangling of PHP variables entirely.
+    # errno/errstr args to fsockopen are optional — no PHP variables needed.
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1',9000)?0:1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   # ---------------------------------------------------------------------------
   # nginx — serves Laravel public/ static assets + proxies PHP-FPM (app:9000).
@@ -61,6 +75,16 @@ services:
       - macro-crm-network
     depends_on:
       - app
+    # nginx:alpine ships busybox wget — no extra packages needed.
+    # Probes the Laravel /up endpoint (HTTP 200 = app + DB connection healthy).
+    # start_period covers nginx boot + dependency on app container becoming ready.
+    # Use 127.0.0.1 — busybox wget in alpine does not resolve "localhost" reliably.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ---------------------------------------------------------------------------
   # frontend — nginx:alpine serving the compiled Vue 3 SPA.
@@ -85,6 +109,15 @@ services:
       - proxy
     depends_on:
       - nginx
+    # nginx:alpine ships busybox wget — no extra packages needed.
+    # Probes the SPA root (HTTP 200 = nginx serving dist/index.html).
+    # Use 127.0.0.1 — busybox wget in alpine does not resolve "localhost" reliably.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.macro-crm.rule=Host(`${APP_DOMAIN:-mgcrm.macroglobal.tech}`)"
