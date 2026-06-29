@@ -295,23 +295,25 @@ export const useProfilePage = () => {
   // ─── Profile edit (full_name) ─────────────────────────────────────────────────
   const savingProfile = ref(false)
 
-  async function saveFullName(fullName: string) {
+  async function saveFullName(fullName: string): Promise<boolean> {
     const trimmed = fullName.trim()
     if (!trimmed) {
       toast.add({ severity: 'warn', summary: t('common.required'), life: 2500 })
-      return
+      return false
     }
     savingProfile.value = true
     try {
       const res = await profileApi.updateProfile({ full_name: trimmed })
       userStore.setCurrentUser(res.data)
-      toast.add({ severity: 'success', summary: t('common.saved', 'Сохранено'), life: 2000 })
+      toast.add({ severity: 'success', summary: t('settings.profile.saved', 'Профиль сохранён'), life: 2000 })
+      return true
     } catch (error) {
       toast.add({
         severity: 'error',
         summary: getApiErrorMessage(error, t('errors.unknown', 'Ошибка')),
         life: 3000,
       })
+      return false
     } finally {
       savingProfile.value = false
     }

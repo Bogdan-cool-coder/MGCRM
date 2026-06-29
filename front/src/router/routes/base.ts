@@ -27,12 +27,7 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/DashboardPage'),
     meta: { requiresAuth: true, title: 'nav.dashboard' },
   },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/pages/ProfilePage'),
-    meta: { requiresAuth: true, title: 'nav.profile' },
-  },
+  // /profile is now handled by the redirect route in the Settings section below.
   // ─── CRM: Contacts / Companies ───────────────────────────────────────────
   {
     path: '/contacts',
@@ -114,11 +109,37 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, roles: ['admin', 'director', 'manager'], title: 'nav.managerCabinet' },
   },
 
-  // ─── Settings ────────────────────────────────────────────────────────────────
-  // /settings → hub (ProfilePage with no ?tab)
+  // ─── Settings (master-detail shell) ─────────────────────────────────────────
+  // /settings?section=<key> is the canonical URL for all account/integration settings.
+  // /profile and /profile?tab=* are redirected here (Phase 1 compatibility shim).
   {
     path: '/settings',
-    redirect: '/profile',
+    name: 'Settings',
+    component: () => import('@/pages/SettingsPage'),
+    meta: { requiresAuth: true, title: 'nav.settings' },
+  },
+  // Phase 1: redirect /profile and /profile?tab=* to /settings?section=…
+  // ProfilePage component stays in repo until Phase 2.
+  {
+    path: '/profile',
+    redirect: (to) => {
+      const tab = to.query['tab'] as string | undefined
+      const sectionMap: Record<string, string> = {
+        profile: 'profile',
+        security: 'security',
+        appearance: 'appearance',
+        quickActions: 'appearance',
+        telegram: 'channels',
+        locale: 'language',
+        system: 'profile',
+        notifications: 'profile',
+        calendar: 'profile',
+        signature: 'profile',
+        segments: 'profile',
+      }
+      const section = (tab && sectionMap[tab]) ?? 'profile'
+      return { path: '/settings', query: { section } }
+    },
   },
   {
     path: '/settings/pipeline',

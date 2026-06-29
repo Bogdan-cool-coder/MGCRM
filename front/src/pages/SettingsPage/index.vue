@@ -1,120 +1,106 @@
 <template>
   <div class="settings-page">
     <PageHeader
-      :title="t('settings.title')"
       icon="pi pi-cog"
-      :subtitle="t('settings.subtitle')"
+      :title="t('settings.pageTitle')"
     />
 
+    <!-- Mobile section select (<768px) -->
+    <div class="settings-page__detail-mobile-select">
+      <Select
+        :model-value="settings.activeSection.value"
+        :options="mobileSectionOptions"
+        option-label="label"
+        option-value="value"
+        class="w-100"
+        @update:model-value="settings.setSection($event as string)"
+      />
+    </div>
+
     <div class="settings-page__body">
-      <div class="row g-4">
-        <div
-          v-for="section in sections"
-          :key="section.key"
-          class="col-md-6 col-lg-4"
-        >
-          <router-link :to="section.route" class="settings-card" tabindex="0">
-            <div class="settings-card__icon-wrap">
-              <i :class="['settings-card__icon', section.icon]" />
-            </div>
-            <div class="settings-card__body">
-              <h3 class="settings-card__title">{{ t(section.titleKey) }}</h3>
-              <p class="settings-card__desc">{{ t(section.descKey) }}</p>
-            </div>
-            <i class="pi pi-chevron-right settings-card__arrow" />
-          </router-link>
-        </div>
+      <!-- Sidebar (desktop ≥768px) -->
+      <div class="settings-page__sidebar">
+        <SettingsSidebar
+          :active-section="settings.activeSection.value"
+          @select="settings.setSection($event)"
+        />
+      </div>
+
+      <!-- Detail panel -->
+      <div class="settings-page__detail">
+        <SectionProfile
+          v-if="settings.activeSection.value === 'profile'"
+          :user="profile.user.value"
+          :avatar-path="profile.avatarPath.value"
+          :avatar-uploading="profile.avatarUploading.value"
+          :saving-profile="profile.savingProfile.value"
+          :save-full-name="profile.saveFullName"
+          :upload-avatar="profile.uploadAvatar"
+          :remove-avatar="profile.removeAvatar"
+        />
+
+        <SectionSecurity
+          v-else-if="settings.activeSection.value === 'security'"
+          :profile="profile"
+        />
+
+        <SectionAppearance
+          v-else-if="settings.activeSection.value === 'appearance'"
+        />
+
+        <SectionLanguage
+          v-else-if="settings.activeSection.value === 'language'"
+          :saving-locale="profile.savingLocale.value"
+          :change-locale="profile.changeLocale"
+        />
+
+        <SectionChannels
+          v-else-if="settings.activeSection.value === 'channels'"
+          :telegram-linked="profile.telegramLinked.value"
+          :telegram-username="profile.telegramUsername.value"
+          :telegram-linking="profile.telegramLinking.value"
+          :telegram-unlinking="profile.telegramUnlinking.value"
+          :link-telegram="profile.linkTelegram"
+          :unlink-telegram="profile.unlinkTelegram"
+        />
+
+        <SectionComingSoon v-else />
       </div>
     </div>
   </div>
+
+  <Toast />
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Select from 'primevue/select'
+import Toast from 'primevue/toast'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
+import SettingsSidebar from './components/SettingsSidebar.vue'
+import SectionProfile from './components/sections/SectionProfile.vue'
+import SectionSecurity from './components/sections/SectionSecurity.vue'
+import SectionAppearance from './components/sections/SectionAppearance.vue'
+import SectionLanguage from './components/sections/SectionLanguage.vue'
+import SectionChannels from './components/sections/SectionChannels.vue'
+import SectionComingSoon from './components/sections/SectionComingSoon.vue'
+import { useSettings } from './composables/useSettings'
+import { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
 
 const { t } = useI18n()
 
-interface SettingsSection {
-  key: string
-  route: string
-  icon: string
-  titleKey: string
-  descKey: string
-}
+const settings = useSettings()
+const profile = useProfilePage()
 
-const sections: SettingsSection[] = [
-  {
-    key: 'pipeline',
-    route: '/settings/pipeline',
-    icon: 'pi pi-sliders-h',
-    titleKey: 'settings.sections.pipeline.title',
-    descKey: 'settings.sections.pipeline.desc',
-  },
-  {
-    key: 'templates',
-    route: '/admin/templates',
-    icon: 'pi pi-file-edit',
-    titleKey: 'settings.sections.templates.title',
-    descKey: 'settings.sections.templates.desc',
-  },
-  {
-    key: 'template-variables',
-    route: '/admin/template-variables',
-    icon: 'pi pi-list',
-    titleKey: 'settings.sections.templateVariables.title',
-    descKey: 'settings.sections.templateVariables.desc',
-  },
-  {
-    key: 'approval-routes',
-    route: '/admin/approval-routes',
-    icon: 'pi pi-sitemap',
-    titleKey: 'settings.sections.approvalRoutes.title',
-    descKey: 'settings.sections.approvalRoutes.desc',
-  },
-  {
-    key: 'message-templates',
-    route: '/admin/message-templates',
-    icon: 'pi pi-envelope',
-    titleKey: 'settings.sections.messageTemplates.title',
-    descKey: 'settings.sections.messageTemplates.desc',
-  },
-  {
-    key: 'automation-runs',
-    route: '/admin/automation-runs',
-    icon: 'pi pi-clock',
-    titleKey: 'settings.sections.automationRuns.title',
-    descKey: 'settings.sections.automationRuns.desc',
-  },
-  {
-    key: 'meeting-report-questions',
-    route: '/admin/meeting-report-questions',
-    icon: 'pi pi-comments',
-    titleKey: 'settings.sections.meetingReportQuestions.title',
-    descKey: 'settings.sections.meetingReportQuestions.desc',
-  },
-  {
-    key: 'acquisition-channels',
-    route: '/admin/acquisition-channels',
-    icon: 'pi pi-megaphone',
-    titleKey: 'settings.sections.acquisitionChannels.title',
-    descKey: 'settings.sections.acquisitionChannels.desc',
-  },
-  {
-    key: 'disconnect-reasons',
-    route: '/admin/disconnect-reasons',
-    icon: 'pi pi-times-circle',
-    titleKey: 'settings.sections.disconnectReasons.title',
-    descKey: 'settings.sections.disconnectReasons.desc',
-  },
-  {
-    key: 'access-control',
-    route: '/admin/access-control',
-    icon: 'pi pi-shield',
-    titleKey: 'settings.sections.accessControl.title',
-    descKey: 'settings.sections.accessControl.desc',
-  },
-]
+// Mobile dropdown — Ф1 sections only
+const mobileSectionOptions = computed(() => [
+  { value: 'profile',    label: t('settings.sections.profile.title') },
+  { value: 'security',   label: t('settings.sections.security.title') },
+  { value: 'appearance', label: t('settings.sections.appearance.title') },
+  { value: 'language',   label: t('settings.sections.language.title') },
+  { value: 'channels',   label: t('settings.sections.channels.title') },
+])
 </script>
 
 <style lang="scss" scoped>
@@ -122,99 +108,58 @@ const sections: SettingsSection[] = [
   display: flex;
   flex-direction: column;
   height: 100%;
+  // Compensates AppShell outer padding (same as ProfilePage)
+  margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
 }
 
 .settings-page__body {
+  display: flex;
   flex: 1;
-  padding: $space-6;
+  overflow: hidden;
+}
+
+.settings-page__sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid $surface-200;
   overflow-y: auto;
-}
+  background: $surface-card;
 
-// ─── Settings card ────────────────────────────────────────────────────────────
-.settings-card {
-  display: flex;
-  align-items: center;
-  gap: $space-4;
-  padding: $space-4 $space-5;
-  background-color: $surface-card;
-  border: 1px solid $surface-200;
-  border-radius: $radius-lg;
-  text-decoration: none;
-  color: inherit;
-  transition:
-    border-color var(--app-transition-fast),
-    box-shadow var(--app-transition-fast),
-    background-color var(--app-transition-fast);
-  cursor: pointer;
-  height: 100%;
-  min-height: 80px;
-
-  &:hover {
-    border-color: var(--p-primary-300);
-    box-shadow: $shadow-card-hover;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--p-primary-500);
-    outline-offset: 2px;
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-right-color: var(--p-surface-200);
   }
 }
 
-.settings-card__icon-wrap {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: $radius-md;
-  background-color: var(--p-primary-50);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  :global(.app-dark) & {
-    background-color: rgba($primary-900, 0.3);
-  }
-}
-
-.settings-card__icon {
-  font-size: $font-size-xl;
-  color: var(--p-primary-600);
-}
-
-.settings-card__body {
+.settings-page__detail {
   flex: 1;
-  min-width: 0;
+  overflow-y: auto;
+  background: $surface-50;
+
+  .app-dark & {
+    background: var(--p-surface-50);
+  }
 }
 
-.settings-card__title {
-  font-size: $font-size-base;
-  font-weight: $font-weight-semibold;
-  color: $surface-900;
-  margin: 0 0 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.settings-page__detail-mobile-select {
+  display: none;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $surface-200;
+  background: $surface-card;
+
+  .app-dark & {
+    background: var(--p-surface-100);
+    border-bottom-color: var(--p-surface-200);
+  }
 }
 
-.settings-card__desc {
-  font-size: $font-size-sm;
-  color: $surface-600;
-  margin: 0;
-  line-height: $line-height-normal;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+@media (max-width: 767px) {
+  .settings-page__sidebar {
+    display: none;
+  }
 
-.settings-card__arrow {
-  font-size: $font-size-xs;
-  color: $surface-400;
-  flex-shrink: 0;
-  transition: color var(--app-transition-fast), transform var(--app-transition-fast);
-
-  .settings-card:hover & {
-    color: var(--p-primary-500);
-    transform: translateX(2px);
+  .settings-page__detail-mobile-select {
+    display: block;
   }
 }
 </style>

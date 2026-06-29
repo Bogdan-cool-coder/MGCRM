@@ -249,8 +249,14 @@
   },
   "settings": {
     "title": "Settings",
+    "pageTitle": "Settings",
     "subtitle": "Manage system configuration",
+    "save": "Save",
+    "discard": "Cancel",
+    "comingSoon": "This section is under development",
     "groups": {
+      "account": "Account",
+      "integrations": "Integrations",
       "directories": "Directories",
       "catalog": "Catalog",
       "sales": "Sales",
@@ -258,6 +264,82 @@
       "system": "System"
     },
     "sections": {
+      "profile": {
+        "title": "Profile",
+        "desc": "Name, photo, contact details"
+      },
+      "security": {
+        "title": "Security",
+        "desc": "Two-factor authentication"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "desc": "Theme, navigation, quick actions"
+      },
+      "language": {
+        "title": "Language",
+        "desc": "Interface language"
+      },
+      "channels": {
+        "title": "Channels",
+        "desc": "Telegram, Email, WhatsApp"
+      },
+      "countries": {
+        "title": "Countries",
+        "desc": "Country and phone prefix reference"
+      },
+      "acq-channels": {
+        "title": "Acquisition channels",
+        "desc": "Lead source dictionary"
+      },
+      "disc-reasons": {
+        "title": "Disconnect reasons",
+        "desc": "Client churn reason dictionary"
+      },
+      "catalog": {
+        "title": "Product catalog",
+        "desc": "Products, plans and pricing"
+      },
+      "exchange-rates": {
+        "title": "Exchange rates",
+        "desc": "Rates for multi-currency deals"
+      },
+      "pipeline-stg": {
+        "title": "Sales pipeline",
+        "desc": "Stages and pipeline settings"
+      },
+      "doc-templates": {
+        "title": "Document templates",
+        "desc": "Document and contract templates"
+      },
+      "tpl-variables": {
+        "title": "Template variables",
+        "desc": "Variables and labels for template substitution"
+      },
+      "approval-routes": {
+        "title": "Approval routes",
+        "desc": "Configure document approval workflows"
+      },
+      "msg-templates": {
+        "title": "Message templates",
+        "desc": "Message templates for notifications and mailings"
+      },
+      "users": {
+        "title": "Users",
+        "desc": "Manage employee accounts"
+      },
+      "access-control": {
+        "title": "Access & Org Structure",
+        "desc": "Departments, roles, permissions and record visibility policies"
+      },
+      "automation-runs": {
+        "title": "Automation log",
+        "desc": "Run history and results of automated scenarios"
+      },
+      "system-reset": {
+        "title": "System reset",
+        "desc": "Admin only"
+      },
       "pipeline": {
         "title": "Pipeline settings",
         "desc": "Deal stages, sales funnels and deal automation"
@@ -286,14 +368,6 @@
         "title": "Meeting report questions",
         "desc": "Registry of meeting-report constructor questions"
       },
-      "users": {
-        "title": "Users",
-        "desc": "Manage employee accounts"
-      },
-      "catalog": {
-        "title": "Product catalog",
-        "desc": "Products, plans and pricing"
-      },
       "exchangeRates": {
         "title": "Exchange rates",
         "desc": "Rates for multi-currency deals"
@@ -306,14 +380,47 @@
         "title": "Disconnect reasons",
         "desc": "Client churn reason dictionary"
       },
-      "countries": {
-        "title": "Countries",
-        "desc": "Country and phone prefix reference"
-      },
       "accessControl": {
         "title": "Access & Org Structure",
         "desc": "Departments, roles, permissions and record visibility policies"
       }
+    },
+    "profile": {
+      "saved": "Profile saved"
+    },
+    "appearance": {
+      "saved": "Appearance settings saved",
+      "quickActionsOrbitHint": "These actions will appear in the Orbit panel",
+      "quickActionsNonOrbitHint": "Quick actions are only available in Orbit navigation mode"
+    },
+    "language": {
+      "saved": "Language changed",
+      "hint": "Select interface language"
+    },
+    "channels": {
+      "sectionTitle": "Connected channels",
+      "telegram": {
+        "name": "Telegram",
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "connectBtn": "Connect",
+        "disconnectBtn": "Disconnect",
+        "disconnectConfirm": "Disconnect Telegram?",
+        "connectSuccess": "Telegram connected",
+        "disconnectSuccess": "Telegram disconnected"
+      },
+      "email": {
+        "name": "Email"
+      },
+      "whatsapp": {
+        "name": "WhatsApp"
+      }
+    },
+    "dirtyGuard": {
+      "title": "Unsaved changes",
+      "message": "You have unsaved changes. Leave this section?",
+      "stay": "Stay",
+      "leave": "Leave"
     }
   },
   "admin": {

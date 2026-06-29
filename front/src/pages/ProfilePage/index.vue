@@ -1,3 +1,10 @@
+<!--
+  ProfilePage — thin redirect shim (Фаза 1).
+  This component is intentionally left as a redirect shim.
+  The actual Settings UI lives in SettingsPage (master-detail shell).
+  Redirect is handled at router level (routes/base.ts).
+  This file will be removed in Phase 2.
+-->
 <template>
   <div class="profile-page">
     <!-- ─── HUB MODE: card grid ─────────────────────────────────────────────── -->

@@ -85,6 +85,19 @@ const toast = useToast()
 const userStore = useUserStore()
 const primevue = usePrimeVue()
 
+/**
+ * draftMode=true: dialog emits 'update:draft' with key[] on save instead of persisting to API.
+ * Used by SectionAppearance to integrate quick-actions into the section save flow.
+ */
+const props = defineProps<{
+  draftMode?: boolean
+  draftKeys?: string[]
+}>()
+
+const emit = defineEmits<{
+  'update:draft': [keys: string[]]
+}>()
+
 // Sync PrimeVue emptyMessage locale with vue-i18n so PickList shows translated "no items" text
 watch(
   locale,
@@ -111,7 +124,11 @@ const visible = computed({
 const lists = ref<[QuickActionDef[], QuickActionDef[]]>([[], []])
 
 function buildLists(): [QuickActionDef[], QuickActionDef[]] {
-  const selected = resolveQuickActions(userStore.getNavQuickActions)
+  // In draftMode, initialise from draftKeys prop; otherwise from user store
+  const sourceKeys = props.draftMode && props.draftKeys != null
+    ? props.draftKeys
+    : userStore.getNavQuickActions
+  const selected = resolveQuickActions(sourceKeys)
   const selectedKeys = new Set(selected.map((a) => a.key))
   const available = QUICK_ACTION_CATALOGUE.filter((a) => !selectedKeys.has(a.key))
   return [available, selected]
@@ -148,9 +165,20 @@ const isSaving = computed(() => saveMutation.isPending.value)
 async function save() {
   if (validationError.value) return
 
+  const keys = lists.value[1].map((a) => a.key)
+
+  if (props.draftMode) {
+    // Draft mode: emit keys to parent section; parent persists on its own "Save"
+    emit('update:draft', keys)
+    // Close after emit so parent receives the draft before the dialog unmounts
+    modelVisible.value = false
+    return
+  }
+
+  // Non-draft: persist to API; close on success, keep open on error (let user retry)
+  let succeeded = false
   await saveMutation.run(
     async () => {
-      const keys = lists.value[1].map((a) => a.key)
       const response = await profileApi.updateProfile({ nav_quick_actions: keys })
       userStore.setCurrentUser(mapUser(response.data))
       toast.add({
@@ -158,7 +186,7 @@ async function save() {
         summary: t('quickActions.saved'),
         life: 2500,
       })
-      visible.value = false
+      succeeded = true
       return response
     },
     {
@@ -171,6 +199,9 @@ async function save() {
       },
     },
   )
+  if (succeeded) {
+    modelVisible.value = false
+  }
 }
 
 function onHide() {
