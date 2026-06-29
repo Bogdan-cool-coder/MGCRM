@@ -63,6 +63,7 @@
 - Per-run Retry endpoint (needsRoutes, api.php).
 
 **Onboarding:**
+- **TEST-ISOLATION-GOTENBERG CLOSED (2026-06-29):** 13 PHPUnit-тестов Onboarding падали с `Could not resolve host: gotenberg` — `GenerateCertificateJob` диспатчился синхронно при завершении урока/квиза и напрямую звонил в живой `GotenbergClient`. Фикс (только `tests/`): новый `Tests\Fakes\FakeGotenbergClient` (расширяет реальный, нулевой сетевой I/O, возвращает детерминированные PDF-байты >1KB); `TestCase::fakeGotenbergByDefault()` биндит фейк в `setUp()` для всего suite; `TemplateCheckServiceTest::makeService()` переведён на `new GotenbergClient` (как `ContractGenerationServiceTest`), чтобы его per-test `Http::fake()` не перекрывался базовым биндом. Suite: 3338 passed / 0 failed, зелёный при остановленном gotenberg (офлайн-доказательство изоляции). Прод-код не тронут.
 - deadline_days не применяется в bulkAssign (#7-minor).
 - Certificate regenerate без completion-guard (#8-minor).
 - AiTutorController ask/history без authorize('view', lesson) (#10-minor).

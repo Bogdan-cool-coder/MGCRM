@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Services\Documents\GotenbergClient;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
+use Tests\Fakes\FakeGotenbergClient;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -92,7 +94,39 @@ abstract class TestCase extends BaseTestCase
             );
         }
 
+        $this->fakeGotenbergByDefault();
         $this->seedRolesAndPermissions();
+    }
+
+    /**
+     * Swap the real GotenbergClient for an in-memory fake in the test container
+     * so NO test ever opens a socket to the live gotenberg service.
+     *
+     * Why this exists: certificate/contract PDF generation fires as a *side
+     * effect* of unrelated flows — completing a course/quiz/lesson dispatches
+     * GenerateCertificateJob synchronously (QUEUE_CONNECTION=sync in tests),
+     * which calls GotenbergClient->officeToPdf over Http::. Tests whose subject
+     * is the lesson/quiz never thought to fake Gotenberg, so they punched
+     * through to http://gotenberg:3000 and died with "Could not resolve host:
+     * gotenberg" (cURL 6) — a live-service dependency that violates the
+     * isolation rule (tests NEVER hit live services).
+     *
+     * Why a container bind and NOT a base Http::fake(): Laravel's Http::fake()
+     * MERGES stubs (first-registered wins for a matching URL). A default stub
+     * in setUp() would therefore SHADOW per-test Http::fake([...forms...]) calls
+     * that need a specific PDF body or a 5xx error — exactly the Contracts
+     * TemplateCheck/ContractGeneration suites. Binding the fake client instead
+     * leaves those tests untouched: they explicitly construct/resolve the REAL
+     * GotenbergClient (via the GotenbergClient::class container key after their
+     * own Http::fake, or `new TemplateCheckService(..., new GotenbergClient)`),
+     * so they exercise the real HTTP layer while side-effect paths get the fake.
+     *
+     * Subclasses that DO want the real client back (none today) can rebind it in
+     * their own setUp() after parent::setUp().
+     */
+    protected function fakeGotenbergByDefault(): void
+    {
+        $this->app->instance(GotenbergClient::class, new FakeGotenbergClient);
     }
 
     /**

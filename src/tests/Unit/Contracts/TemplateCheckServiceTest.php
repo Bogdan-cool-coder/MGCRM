@@ -99,9 +99,13 @@ class TemplateCheckServiceTest extends TestCase
 
     private function makeService(): TemplateCheckService
     {
+        // Use the REAL GotenbergClient (not the container default fake bound in
+        // TestCase) so these tests exercise its actual HTTP layer against the
+        // per-test Http::fake() stubs — pdf_ok size checks, 5xx conversion
+        // errors, etc. Mirrors ContractGenerationServiceTest's `new GotenbergClient`.
         return new TemplateCheckService(
             $this->app->make(AiRetryService::class),
-            $this->app->make(GotenbergClient::class),
+            new GotenbergClient,
         );
     }
 
