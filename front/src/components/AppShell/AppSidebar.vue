@@ -223,6 +223,7 @@ import type { NavItemBadge } from '@/shared/nav/navItems'
 import AccountMenu from './AccountMenu.vue'
 import SidebarNotifications from './SidebarNotifications.vue'
 import { useNotificationsStore } from '@/stores/notificationsStore'
+import { useInboxStore } from '@/stores/inboxStore'
 import { useNavPrefetch } from '@/components/Orbita/composables/useNavPrefetch'
 
 defineProps<{
@@ -239,6 +240,7 @@ const activityStore = useActivityStore()
 const approvalsStore = useApprovalsStore()
 const onboardingStore = useOnboardingStore()
 const notificationsStore = useNotificationsStore()
+const inboxStore = useInboxStore()
 
 const accountMenuRef = ref<InstanceType<typeof AccountMenu> | null>(null)
 
@@ -274,6 +276,8 @@ function getBadgeCount(source: NavItemBadge['source']): number {
       return approvalsStore.pendingCount ?? 0
     case 'onboardingStore.overdueCount':
       return onboardingStore.overdueCount ?? 0
+    case 'inboxStore.unreadCount':
+      return inboxStore.unreadCount ?? 0
     default:
       return 0
   }
@@ -313,10 +317,17 @@ onMounted(() => {
   }
   // Keep the notifications badge fresh in sidebar mode (parity with Orbita).
   notificationsStore.startPolling()
+  // Keep the inbox unread badge fresh for roles that have inbox.manage access
+  // (admin + director only — manager gets 403 on /api/inbox/unread-count).
+  const userRole = userStore.getUserRole
+  if (userRole === 'admin' || userRole === 'director') {
+    inboxStore.startPolling()
+  }
 })
 
 onUnmounted(() => {
   notificationsStore.stopPolling()
+  inboxStore.stopPolling()
 })
 </script>
 

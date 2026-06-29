@@ -37,7 +37,8 @@
       "learning": "Обучение"
     },
     "licensors": "Лицензиары",
-    "accessControl": "Доступ и оргструктура"
+    "accessControl": "Доступ и оргструктура",
+    "inbox": "Входящие"
   },
   "auth": {
     "brand_panel": {
@@ -3860,6 +3861,93 @@
     "employees": "Сотрудников"
   },
   "inbox": {
+    "page": {
+      "title": "Входящие",
+      "refresh": "Обновить"
+    },
+    "filters": {
+      "unreadOnly": "Непрочитанные",
+      "all": "Все",
+      "failedQuick": "Не разобрано",
+      "channel": "Канал",
+      "allChannels": "Все каналы",
+      "routingStatus": "Статус маршрутизации",
+      "allStatuses": "Все статусы",
+      "dateRange": "Дата получения",
+      "search": "Поиск",
+      "searchPlaceholder": "имя, почта, телефон, тема, текст…",
+      "reset": "Сбросить фильтры"
+    },
+    "columns": {
+      "when": "Когда",
+      "channel": "Канал",
+      "from": "От кого",
+      "subject": "Тема / Текст",
+      "deal": "Сделка"
+    },
+    "routingStatus": {
+      "routed": "Направлено",
+      "dedup": "Дедуп",
+      "failed": "Не разобрано"
+    },
+    "channelKind": {
+      "tg": "Telegram",
+      "wa": "WhatsApp",
+      "email": "Email",
+      "web_form": "Форма",
+      "api": "API"
+    },
+    "dealChip": {
+      "created": "Создана этим сообщением",
+      "linked": "Привязана",
+      "none": "не привязана"
+    },
+    "empty": {
+      "title": "Входящих нет",
+      "body": "Сообщения появятся здесь, как только поступят через подключённые каналы",
+      "failedTitle": "Все входящие разобраны",
+      "failedBody": "Сообщений без сделки не найдено"
+    },
+    "error": {
+      "loadFailed": "Не удалось загрузить входящие.",
+      "retry": "Попробовать снова"
+    },
+    "detail": {
+      "title": "Сообщение",
+      "meta": {
+        "channel": "Канал",
+        "received": "Получено",
+        "fromName": "От (имя)",
+        "fromIdent": "От (идентификатор)",
+        "routingStatus": "Статус маршрутизации",
+        "deal": "Сделка"
+      },
+      "failedAlert": "Сообщение не было разобрано автоматически. Нажмите «Переобработать», чтобы система попыталась создать сделку снова.",
+      "subjectLabel": "Тема",
+      "bodyLabel": "Текст сообщения",
+      "bodyEmpty": "(пусто)",
+      "rawPayload": "Raw payload",
+      "markRead": "Прочитано",
+      "markUnread": "Непрочитано",
+      "close": "Закрыть",
+      "loadError": "Не удалось загрузить сообщение. Попробуйте закрыть и открыть снова."
+    },
+    "reprocess": {
+      "button": "Переобработать",
+      "confirmTitle": "Переобработать сообщение?",
+      "confirmBody": "Система попытается заново разобрать это сообщение и создать сделку. Продолжить?",
+      "confirmAccept": "Да, переобработать",
+      "confirmReject": "Отмена",
+      "successToast": "Сообщение разобрано. Сделка #{dealId} {action}.",
+      "successCreated": "создана",
+      "successLinked": "привязана",
+      "errorToast": "Не удалось разобрать сообщение. Попробуйте позже или обратитесь к администратору.",
+      "rowTooltip": "Переобработать"
+    },
+    "unread": {
+      "badgeLabel": "{count} непрочитанных",
+      "badgeLabelOver": "99+"
+    },
     "publicForm": {
       "title": "Форма заявки",
       "submit": "Отправить",

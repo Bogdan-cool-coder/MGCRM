@@ -41,6 +41,7 @@ class InboundMessage extends Model
         'target_deal_id',
         'target_deal_created',
         'routing_status',
+        'read_at',
         'received_at',
     ];
 
@@ -50,6 +51,7 @@ class InboundMessage extends Model
             'raw_payload' => 'array',
             'target_deal_created' => 'boolean',
             'routing_status' => RoutingStatus::class,
+            'read_at' => 'datetime',
             'received_at' => 'datetime',
         ];
     }

@@ -8,7 +8,7 @@
   `contacts.html` (список), `sales-funnel.html` (воронка), `tasks.html` (задачник) + `styles.css`,
   `tweaks-panel.jsx`.
 - **ТЗ (источник правды):** `DealCard-spec.md`, `EntityCard-spec.md`, `Contacts-spec.md`,
-  `SalesFunnel-spec.md`, `Tasks-spec.md`.
+  `SalesFunnel-spec.md`, `Tasks-spec.md`, `Inbox-spec.md`.
 
 ## Что нового в этой версии
 - Карточка сделки доведена: лента только со свершившимися действиями, системка одной строкой,

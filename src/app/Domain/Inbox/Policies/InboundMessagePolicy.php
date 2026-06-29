@@ -23,6 +23,16 @@ class InboundMessagePolicy
         return $this->isManager($user);
     }
 
+    /**
+     * Mutating triage actions: mark read/unread + reprocess («Переобработать»).
+     * Same gate as viewing the log — anyone who can see the shared Inbox can act
+     * on it (read state is shared, not per-user).
+     */
+    public function manage(User $user, InboundMessage $message): bool
+    {
+        return $this->isManager($user);
+    }
+
     private function isManager(User $user): bool
     {
         return $user->can('inbox.manage');

@@ -323,6 +323,22 @@ export const routes: RouteRecordRaw[] = [
     },
   },
 
+  // ─── Inbox: Inbound message triage ───────────────────────────────────────
+  // inbox.manage permission is granted to admin + director only (backend).
+  // Manager gets 403 on all /api/inbox* endpoints — fail-closed at the router.
+  // If inbox.manage is later extended to managers in RolePermissionSeeder, add
+  // 'manager' back here in sync with that backend change.
+  {
+    path: '/inbox',
+    name: 'Inbox',
+    component: () => import('@/pages/InboxPage'),
+    meta: {
+      requiresAuth: true,
+      roles: ['admin', 'director'],
+      title: 'inbox.page.title',
+    },
+  },
+
   // ─── Public (anonymous) lead form ────────────────────────────────────────
   // Inbox S1.9: anonymous intake surface for GET/POST /api/forms/public/{slug}.
   // No requiresAuth/roles → the navigation guard passes it through for visitors

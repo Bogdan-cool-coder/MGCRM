@@ -700,7 +700,13 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::apiResource('forms', FormController::class);
 
     Route::get('inbox', [InboundMessageController::class, 'index'])->name('inbox.index');
+    // Static segments MUST precede the {inboundMessage} route so they are not
+    // swallowed as a message id.
+    Route::get('inbox/unread-count', [InboundMessageController::class, 'unreadCount'])->name('inbox.unread-count');
     Route::get('inbox/{inboundMessage}', [InboundMessageController::class, 'show'])->name('inbox.show');
+    Route::post('inbox/{inboundMessage}/read', [InboundMessageController::class, 'read'])->name('inbox.read');
+    Route::post('inbox/{inboundMessage}/unread', [InboundMessageController::class, 'unread'])->name('inbox.unread');
+    Route::post('inbox/{inboundMessage}/reroute', [InboundMessageController::class, 'reroute'])->name('inbox.reroute');
 
     // =========================================================================
     // Contracts — S2.1: Licensors, Templates, Template Variables

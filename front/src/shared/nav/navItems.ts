@@ -20,6 +20,7 @@ export interface NavItemBadge {
     | 'activityStore.myOpenCount'
     | 'approvalsStore.pendingCount'
     | 'onboardingStore.overdueCount'
+    | 'inboxStore.unreadCount'
   variant: 'warning' | 'danger'
 }
 
@@ -87,6 +88,15 @@ export const prototypeNavItems: NavItem[] = [
     // Sales-only surface: every /api/me/* call 403s for lawyer/accountant/cfo,
     // so the menu entry must be hidden from them too (mirrors the route meta).
     roles: ['admin', 'director', 'manager'],
+  },
+  {
+    key: 'inbox',
+    route: '/inbox',
+    icon: 'pi pi-inbox',
+    labelKey: 'nav.inbox',
+    badge: { source: 'inboxStore.unreadCount', variant: 'danger' },
+    // inbox.manage = admin + director only (backend). Manager gets 403.
+    adminOnly: true,
   },
 ]
 
@@ -190,6 +200,14 @@ export const allNavItems: NavItem[] = [
     // Sales-only surface: every /api/me/* call 403s for lawyer/accountant/cfo,
     // so the menu entry must be hidden from them too (mirrors the route meta).
     roles: ['admin', 'director', 'manager'],
+  },
+  {
+    key: 'inbox',
+    route: '/inbox',
+    icon: 'pi pi-inbox',
+    labelKey: 'nav.inbox',
+    badge: { source: 'inboxStore.unreadCount', variant: 'danger' },
+    adminOnly: true,
   },
   {
     key: 'products',

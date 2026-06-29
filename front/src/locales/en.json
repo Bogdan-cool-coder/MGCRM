@@ -37,7 +37,8 @@
       "learning": "Learning"
     },
     "licensors": "Licensors",
-    "accessControl": "Access & Org Structure"
+    "accessControl": "Access & Org Structure",
+    "inbox": "Inbox"
   },
   "auth": {
     "brand_panel": {
@@ -3860,6 +3861,93 @@
     "employees": "Employees"
   },
   "inbox": {
+    "page": {
+      "title": "Inbox",
+      "refresh": "Refresh"
+    },
+    "filters": {
+      "unreadOnly": "Unread",
+      "all": "All",
+      "failedQuick": "Unrouted",
+      "channel": "Channel",
+      "allChannels": "All channels",
+      "routingStatus": "Routing status",
+      "allStatuses": "All statuses",
+      "dateRange": "Received date",
+      "search": "Search",
+      "searchPlaceholder": "name, email, phone, subject, text…",
+      "reset": "Clear filters"
+    },
+    "columns": {
+      "when": "When",
+      "channel": "Channel",
+      "from": "From",
+      "subject": "Subject / Preview",
+      "deal": "Deal"
+    },
+    "routingStatus": {
+      "routed": "Routed",
+      "dedup": "Dedup",
+      "failed": "Unrouted"
+    },
+    "channelKind": {
+      "tg": "Telegram",
+      "wa": "WhatsApp",
+      "email": "Email",
+      "web_form": "Web Form",
+      "api": "API"
+    },
+    "dealChip": {
+      "created": "Created by this message",
+      "linked": "Linked",
+      "none": "not linked"
+    },
+    "empty": {
+      "title": "No messages",
+      "body": "Messages will appear here once they arrive via connected channels",
+      "failedTitle": "All messages routed",
+      "failedBody": "No unrouted messages found"
+    },
+    "error": {
+      "loadFailed": "Could not load messages.",
+      "retry": "Try again"
+    },
+    "detail": {
+      "title": "Message",
+      "meta": {
+        "channel": "Channel",
+        "received": "Received",
+        "fromName": "From (name)",
+        "fromIdent": "From (identifier)",
+        "routingStatus": "Routing status",
+        "deal": "Deal"
+      },
+      "failedAlert": "This message was not routed automatically. Click Reprocess to try again.",
+      "subjectLabel": "Subject",
+      "bodyLabel": "Message body",
+      "bodyEmpty": "(empty)",
+      "rawPayload": "Raw payload",
+      "markRead": "Mark as read",
+      "markUnread": "Mark as unread",
+      "close": "Close",
+      "loadError": "Could not load message. Try closing and reopening."
+    },
+    "reprocess": {
+      "button": "Reprocess",
+      "confirmTitle": "Reprocess message?",
+      "confirmBody": "The system will attempt to re-route this message and create a deal. Continue?",
+      "confirmAccept": "Yes, reprocess",
+      "confirmReject": "Cancel",
+      "successToast": "Message routed. Deal #{dealId} {action}.",
+      "successCreated": "created",
+      "successLinked": "linked",
+      "errorToast": "Failed to reprocess. Try again later or contact your administrator.",
+      "rowTooltip": "Reprocess"
+    },
+    "unread": {
+      "badgeLabel": "{count} unread",
+      "badgeLabelOver": "99+"
+    },
     "publicForm": {
       "title": "Application form",
       "submit": "Submit",

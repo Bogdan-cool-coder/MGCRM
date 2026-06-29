@@ -67,7 +67,9 @@
 - Certificate regenerate без completion-guard (#8-minor).
 - AiTutorController ask/history без authorize('view', lesson) (#10-minor).
 
-**Inbox / Automation routes:** `/inbox` и `/automation` не на сайдбар-навигации (route-gaps), не блокеры проду, но UX пробелы.
+**Inbox / Automation routes:** `/inbox` — **DONE (2026-06-28, uncommitted):** /inbox добавлен в nav (adminOnly, badge=unreadCount); InboxPage, inboxStore, sidebar badge polling. `/automation` — всё ещё не на сайдбар-навигации (route-gap, остаётся открытым).
+
+**minor-MISSING-admin-inbox-ui / minor-MISSING-failed-routing-viewer:** **ЧАСТИЧНО ЗАКРЫТО (2026-06-28):** Инбокс-трей (список + фильтры + detail + «Переобработать» reprocess) задеплоен. Деферы phase 2: Channels admin CRUD; Forms admin + конструктор форм; публичная форма UI; manager access (отдельный permission grant).
 
 ## Крупные (требуют твоего решения)
 - **IAM-1 DONE (2026-06-28).** 28 inline role-checks удалены из 22 domain-файлов; spatie работает на sanctum-guard; 12 domain-permissions в RolePermissionSeeder; 13 тестов (revocation-proof); 3315 PHPUnit зелёных.
