@@ -4,7 +4,7 @@
 # Strategy (single-replica; adapted from examples/contracts/deploy/rolling-restart.sh):
 #   1. Ensure DB + Redis are up.
 #   2. Build new app + frontend images.
-#   3. Force-recreate app container (--force-recreate --no-deps); wait until healthy.
+#   3. Force-recreate app container (--force-recreate --no-deps); wait until healthy/running.
 #      NOTE: app has a fixed container_name so true two-replica swap is impossible.
 #      A short downtime (seconds) is accepted in exchange for correctness — the old
 #      --no-recreate approach silently kept the stale image running.
@@ -29,7 +29,26 @@ container_health() {
 wait_healthy() {
   local id="$1"
   local deadline=$(( SECONDS + HEALTH_TIMEOUT ))
-  until [ "$(container_health "$id")" = "healthy" ]; do
+  while true; do
+    local status
+    status="$(container_health "$id")"
+    case "$status" in
+      healthy)
+        return 0 ;;
+      none)
+        # No healthcheck configured — container is running, treat as ready.
+        echo "    (no healthcheck on container; skipping health-wait)"
+        return 0 ;;
+      missing)
+        echo "ERROR: container $id not found"
+        return 1 ;;
+      starting)
+        : ;;  # still initialising, keep waiting
+      unhealthy)
+        echo "ERROR: container $id is unhealthy. Logs:"
+        docker logs --tail=60 "$id" || true
+        return 1 ;;
+    esac
     if [ "$SECONDS" -gt "$deadline" ]; then
       echo "ERROR: container $id did not become healthy within ${HEALTH_TIMEOUT}s. Logs:"
       docker logs --tail=60 "$id" || true
