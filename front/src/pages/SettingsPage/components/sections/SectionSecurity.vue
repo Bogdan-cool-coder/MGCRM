@@ -126,6 +126,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Смена пароля — отделена от 2FA-блока горизонтальным разделителем -->
+    <hr class="security-divider" />
+    <div class="profile-section">
+      <h3 class="profile-section__title">{{ t('settings.security.password.sectionTitle') }}</h3>
+      <ChangePasswordForm />
+    </div>
   </div>
 </template>
 
@@ -136,6 +143,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 import { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
+import ChangePasswordForm from './profile/ChangePasswordForm.vue'
 
 const { t } = useI18n()
 
@@ -185,8 +193,18 @@ const confirmRegenerateCodes = props.profile.confirmRegenerateCodes
   border-bottom: 1px solid $surface-200;
 
   .app-dark & {
-    color: var(--p-surface-50);
+    color: var(--p-surface-900);
     border-bottom-color: var(--p-surface-700);
+  }
+}
+
+.security-divider {
+  border: none;
+  border-top: 1px solid $surface-200;
+  margin: $space-6 0;
+
+  .app-dark & {
+    border-top-color: var(--p-surface-700);
   }
 }
 

@@ -386,7 +386,22 @@
       }
     },
     "profile": {
-      "saved": "Profile saved"
+      "saved": "Profile saved",
+      "tabs": {
+        "profile":    "Profile",
+        "security":   "Security",
+        "appearance": "Appearance",
+        "language":   "Language"
+      },
+      "avatarCrop": {
+        "title":         "Upload photo",
+        "hint":          "Drag and scroll to zoom",
+        "saveBtn":       "Save photo",
+        "cancelBtn":     "Cancel",
+        "invalidType":   "Allowed formats: JPEG, PNG, WebP",
+        "fileTooLarge":  "File too large (max 20 MB)",
+        "uploadSuccess": "Photo updated"
+      }
     },
     "appearance": {
       "saved": "Appearance settings saved",
@@ -414,6 +429,20 @@
       },
       "whatsapp": {
         "name": "WhatsApp"
+      }
+    },
+    "security": {
+      "password": {
+        "sectionTitle": "Change password",
+        "currentLabel": "Current password",
+        "newLabel":     "New password",
+        "confirmLabel": "Confirm new password",
+        "hint":         "At least 8 characters",
+        "submitBtn":    "Change password",
+        "tooShort":     "Password must be at least 8 characters",
+        "mismatch":     "Passwords do not match",
+        "wrongCurrent": "Current password is incorrect",
+        "successToast": "Password changed successfully"
       }
     },
     "dirtyGuard": {

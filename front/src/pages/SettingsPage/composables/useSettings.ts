@@ -8,6 +8,15 @@ export const SETTINGS_MARK_CLEAN_KEY = 'settingsMarkClean'
 /** Разделы Ф1 (аккаунт + интеграции) */
 const ACCOUNT_KEYS = ['profile', 'security', 'appearance', 'language', 'channels'] as const
 
+/** Под-вкладки группы «Профиль» (Ф5): один пункт в сайдбаре, 4 таба внутри */
+export const PROFILE_TAB_KEYS = ['profile', 'security', 'appearance', 'language'] as const
+export type ProfileTabKey = (typeof PROFILE_TAB_KEYS)[number]
+
+/** Проверяет, является ли ключ одной из под-вкладок блока «Профиль» */
+export function isProfileSection(key: string): key is ProfileTabKey {
+  return (PROFILE_TAB_KEYS as readonly string[]).includes(key)
+}
+
 /** Разделы Ф2 — Справочники (admin/director only) */
 export const DIRECTORIES_KEYS = [
   'countries',

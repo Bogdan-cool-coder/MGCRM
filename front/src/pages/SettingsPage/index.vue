@@ -36,8 +36,10 @@
 
       <!-- Detail panel -->
       <div class="settings-page__detail">
-        <SectionProfile
-          v-if="settings.activeSection.value === 'profile'"
+        <!-- Ф5: группа АККАУНТ → один пункт «Профиль» с под-вкладками -->
+        <SectionProfileTabs
+          v-if="isProfileTabSection(settings.activeSection.value)"
+          :active-tab="settings.activeSection.value as ProfileTabKey"
           :user="profile.user.value"
           :avatar-path="profile.avatarPath.value"
           :avatar-uploading="profile.avatarUploading.value"
@@ -45,21 +47,10 @@
           :save-full-name="profile.saveFullName"
           :upload-avatar="profile.uploadAvatar"
           :remove-avatar="profile.removeAvatar"
-        />
-
-        <SectionSecurity
-          v-else-if="settings.activeSection.value === 'security'"
-          :profile="profile"
-        />
-
-        <SectionAppearance
-          v-else-if="settings.activeSection.value === 'appearance'"
-        />
-
-        <SectionLanguage
-          v-else-if="settings.activeSection.value === 'language'"
+          :profile-composable="profile"
           :saving-locale="profile.savingLocale.value"
           :change-locale="profile.changeLocale"
+          @tab-change="settings.setSection($event)"
         />
 
         <SectionChannels
@@ -108,10 +99,7 @@ import { useUserStore } from '@/stores/user'
 import Select from 'primevue/select'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import SettingsSidebar from './components/SettingsSidebar.vue'
-import SectionProfile from './components/sections/SectionProfile.vue'
-import SectionSecurity from './components/sections/SectionSecurity.vue'
-import SectionAppearance from './components/sections/SectionAppearance.vue'
-import SectionLanguage from './components/sections/SectionLanguage.vue'
+import SectionProfileTabs from './components/sections/SectionProfileTabs.vue'
 import SectionChannels from './components/sections/SectionChannels.vue'
 import SectionDirectories from './components/sections/SectionDirectories.vue'
 import SectionSystemReset from './components/sections/SectionSystemReset.vue'
@@ -120,7 +108,13 @@ import SysTabAccessControl from './components/sections/system/SysTabAccessContro
 import SysTabAutomationRuns from './components/sections/system/SysTabAutomationRuns.vue'
 import SectionComingSoon from './components/sections/SectionComingSoon.vue'
 import UnsavedChangesDialog from './components/UnsavedChangesDialog.vue'
-import { useSettings, DIRECTORIES_KEYS, DOCUMENTS_KEYS } from './composables/useSettings'
+import {
+  useSettings,
+  DIRECTORIES_KEYS,
+  DOCUMENTS_KEYS,
+  isProfileSection,
+  type ProfileTabKey,
+} from './composables/useSettings'
 import { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
 
 const { t } = useI18n()
@@ -134,6 +128,11 @@ function isDirectoriesSection(key: string): boolean {
     (DIRECTORIES_KEYS as readonly string[]).includes(key) ||
     (DOCUMENTS_KEYS as readonly string[]).includes(key)
   )
+}
+
+/** Ф5: любой из profile-tab-ключей → SectionProfileTabs */
+function isProfileTabSection(key: string): key is ProfileTabKey {
+  return isProfileSection(key)
 }
 
 // Mobile dropdown — Ф1 + per-role Ф2/Ф3 sections

@@ -270,7 +270,7 @@ const currentQuickActions = computed(() =>
   border-bottom: 1px solid $surface-200;
 
   .app-dark & {
-    color: var(--p-surface-50);
+    color: var(--p-surface-900);
     border-bottom-color: var(--p-surface-700);
   }
 }

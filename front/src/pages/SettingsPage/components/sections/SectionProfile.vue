@@ -11,12 +11,13 @@
         />
         <CrmAvatar v-else :name="user.full_name" :size="72" />
         <div class="profile-avatar-row__actions">
+          <!-- Скрытый file-input; открывается через avatarInput.click() -->
           <input
             ref="avatarInput"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             class="d-none"
-            @change="onAvatarSelected"
+            @change="onAvatarFileSelected"
           />
           <Button
             icon="pi pi-upload"
@@ -40,6 +41,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Кроп-модал (монтируется в body через append-to) -->
+    <AvatarCropModal
+      v-model:visible="cropModalVisible"
+      :image-src="cropImageSrc"
+      :on-upload="props.uploadAvatar"
+    />
 
     <!-- Fields -->
     <div v-if="user" class="row g-4">
@@ -90,13 +98,16 @@
 <script setup lang="ts">
 import { ref, computed, watch, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useToast } from 'primevue/usetoast'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import CrmAvatar from '@/components/ui/CrmAvatar.vue'
+import AvatarCropModal from './profile/AvatarCropModal.vue'
 import { SETTINGS_MARK_DIRTY_KEY, SETTINGS_MARK_CLEAN_KEY } from '../../composables/useSettings'
 import type { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
 
 const { t } = useI18n()
+const toast = useToast()
 
 // Injected dirty/clean callbacks from useSettings
 const markDirty = inject<() => void>(SETTINGS_MARK_DIRTY_KEY, () => {})
@@ -115,6 +126,10 @@ const props = defineProps<{
 }>()
 
 const avatarInput = ref<HTMLInputElement | null>(null)
+
+// ─── Аватар-кроп ─────────────────────────────────────────────────────────────
+const cropModalVisible = ref(false)
+const cropImageSrc = ref('')
 
 // ─── Full name draft ─────────────────────────────────────────────────────────
 const fullNameDraft = ref(props.user?.full_name ?? '')
@@ -150,14 +165,47 @@ async function onSaveProfile() {
 }
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
-function onAvatarSelected(event: Event) {
+// При закрытии кроп-модала — очищаем cropImageSrc (objectURL уже ревокирован в модале)
+watch(cropModalVisible, (visible) => {
+  if (!visible) {
+    cropImageSrc.value = ''
+  }
+})
+
+/** Открывает кроп-модал после валидации типа/размера файла */
+function onAvatarFileSelected(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  if (file) {
-    void props.uploadAvatar(file)
+  target.value = '' // сброс value — чтобы повторный выбор того же файла работал
+
+  if (!file) return
+
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
+  if (!ALLOWED.includes(file.type)) {
+    toast.add({
+      severity: 'error',
+      summary: t('settings.profile.avatarCrop.invalidType'),
+      life: 4000,
+    })
+    return
   }
-  target.value = ''
+  if (file.size > 20 * 1024 * 1024) {
+    toast.add({
+      severity: 'error',
+      summary: t('settings.profile.avatarCrop.fileTooLarge'),
+      life: 4000,
+    })
+    return
+  }
+
+  // Создаём objectURL и открываем кроп
+  if (cropImageSrc.value) {
+    URL.revokeObjectURL(cropImageSrc.value)
+  }
+  cropImageSrc.value = URL.createObjectURL(file)
+  cropModalVisible.value = true
 }
+
 </script>
 
 <style lang="scss" scoped>
@@ -206,7 +254,7 @@ function onAvatarSelected(event: Event) {
     color: $surface-900;
 
     .app-dark & {
-      color: var(--p-surface-200);
+      color: var(--p-surface-700);
     }
   }
 }

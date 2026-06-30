@@ -1,6 +1,12 @@
 import { apiClient } from '@/api/client'
 import type { MeResponse, UserData } from '@/api/types/auth'
 
+export interface ChangePasswordRequest {
+  current_password: string
+  password: string
+  password_confirmation: string
+}
+
 export interface UpdateProfileRequest {
   /** PATCH /api/me/profile — display name */
   full_name?: string
@@ -46,5 +52,13 @@ export const profileApi = {
   async removeAvatar(): Promise<{ data: UserData }> {
     const response = await apiClient.delete<{ data: UserData }>('/api/profile/avatar')
     return response.data
+  },
+
+  /**
+   * POST /api/me/password — сменить пароль текущего пользователя.
+   * 200 (пустое тело) при успехе; 422 { errors: { current_password: [...] } } при неверном пароле.
+   */
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    await apiClient.post('/api/me/password', data)
   },
 }

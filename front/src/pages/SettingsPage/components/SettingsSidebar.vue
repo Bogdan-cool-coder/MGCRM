@@ -14,7 +14,7 @@
         type="button"
         class="settings-nav-item"
         :class="{
-          'settings-nav-item--active': activeSection === section.key && section.phase === 1 && !section.linkOut,
+          'settings-nav-item--active': isSectionActive(section) && section.phase === 1 && !section.linkOut,
           'settings-nav-item--disabled': section.phase !== 1,
         }"
         :disabled="section.phase !== 1"
@@ -40,11 +40,12 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Tag from 'primevue/tag'
 import { useUserStore } from '@/stores/user'
+import { isProfileSection } from '../composables/useSettings'
 
 const { t } = useI18n()
 const userStore = useUserStore()
 
-defineProps<{
+const props = defineProps<{
   activeSection: string
 }>()
 
@@ -78,10 +79,8 @@ const GROUPS: SettingsGroup[] = [
     labelKey: 'settings.groups.account',
     adminOnly: false,
     sections: [
-      { key: 'profile',    labelKey: 'settings.sections.profile.title',    icon: 'pi pi-user',      phase: 1 },
-      { key: 'security',   labelKey: 'settings.sections.security.title',   icon: 'pi pi-lock',      phase: 1 },
-      { key: 'appearance', labelKey: 'settings.sections.appearance.title', icon: 'pi pi-sliders-h', phase: 1 },
-      { key: 'language',   labelKey: 'settings.sections.language.title',   icon: 'pi pi-globe',     phase: 1 },
+      // ОВ-3 (Ф5): 4 пункта схлопнуты в один «Профиль»; активен при любом PROFILE_TAB_KEY
+      { key: 'profile', labelKey: 'settings.sections.profile.title', icon: 'pi pi-user', phase: 1 },
     ],
   },
   {
@@ -154,6 +153,17 @@ const visibleGroups = computed(() =>
       allDisabled: g.sections.every((s) => s.phase !== 1),
     })),
 )
+
+/**
+ * Пункт «Профиль» активен при любом из PROFILE_TAB_KEYS
+ * (profile / security / appearance / language).
+ */
+function isSectionActive(section: SettingsSection): boolean {
+  if (section.key === 'profile') {
+    return isProfileSection(props.activeSection)
+  }
+  return props.activeSection === section.key
+}
 
 function onSectionClick(section: SettingsSection) {
   if (section.phase !== 1) return

@@ -108,6 +108,18 @@
   dark-заголовки SectionSystemReset: `var(--p-surface-900)` → должно быть `var(--p-surface-50)`;
   red-fallback hex в rgba. Всё в очереди DS-прохода.
 
+### Обновление 2026-06-30 — Settings Фаза 5: Профиль 2.0 (РЕАЛИЗОВАНА, QA PASS, PM APPROVED, незакоммичено)
+- **Настройки Ф5 (`Settings-spec.md` § «Фаза 5»)** — ТЗ написано: (A) reorg АККАУНТ в
+  один пункт «Профиль» с горизонтальными под-вкладками (`SectionProfileTabs.vue`, Tabs
+  line-underline, deep-link через существующие `?section=`-ключи без рефакторинга
+  `useSettings`); (B) аватар-кроп — новый пакет `vue-advanced-cropper` (явно запрошен),
+  `AvatarCropModal.vue` (Dialog + CircleStencil 1:1, downscale ≤1024px + quality 0.85,
+  клиентская валидация типа/размера до кропа, `URL.revokeObjectURL` при закрытии);
+  (C) смена пароля — `ChangePasswordForm.vue` (action-based, PrimeVue `Password`,
+  inline 422-ошибка под «Текущий пароль», `POST /api/me/password` — backend-блокер);
+  (D) набросок админ-сброса пароля в «Пользователи» (разовый показ, Copy-кнопка).
+  Pending: ОВ-3 (1 пункт vs 4 в сайдбаре — апрув PM) + ОВ-1 (backend POST /api/me/password).
+
 ### Обновление 2026-06-30 — Settings dirty-guard РЕАЛИЗОВАН (QA PASS 5 сценариев, PM APPROVED)
 - **Confirm-on-leave** — полностью реализован кастомным диалогом. Причина phantom'а: `ConfirmService` держал глобальный реактивный стейт и переотрисовывался на destination-компоненте во время async-навигации. Заменено на `UnsavedChangesDialog.vue` (PrimeVue `<Dialog>`, не `useConfirm`) + Promise-based guard в `useSettings.ts`. Один `onBeforeRouteLeave` (return-форма); `setSection()` перехватывает грязность до `router.replace`; `dialogVisible` закрывается явно до `resolve()`. `markDirty`/`markClean` восстановлены как реальные сеттеры. QA PASS: 5 сценариев, обе темы, DOM-счётчик 1 диалог. Незакоммичено.
 

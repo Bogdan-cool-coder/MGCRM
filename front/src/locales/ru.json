@@ -386,7 +386,22 @@
       }
     },
     "profile": {
-      "saved": "Профиль сохранён"
+      "saved": "Профиль сохранён",
+      "tabs": {
+        "profile":    "Профиль",
+        "security":   "Безопасность",
+        "appearance": "Внешний вид",
+        "language":   "Язык"
+      },
+      "avatarCrop": {
+        "title":         "Загрузить фото",
+        "hint":          "Перетащите и прокрутите колесо для масштабирования",
+        "saveBtn":       "Сохранить фото",
+        "cancelBtn":     "Отмена",
+        "invalidType":   "Допустимые форматы: JPEG, PNG, WebP",
+        "fileTooLarge":  "Файл слишком большой (макс. 20 МБ)",
+        "uploadSuccess": "Фото обновлено"
+      }
     },
     "appearance": {
       "saved": "Настройки внешнего вида сохранены",
@@ -414,6 +429,20 @@
       },
       "whatsapp": {
         "name": "WhatsApp"
+      }
+    },
+    "security": {
+      "password": {
+        "sectionTitle":  "Смена пароля",
+        "currentLabel":  "Текущий пароль",
+        "newLabel":      "Новый пароль",
+        "confirmLabel":  "Повторите новый пароль",
+        "hint":          "Минимум 8 символов",
+        "submitBtn":     "Сменить пароль",
+        "tooShort":      "Пароль должен содержать минимум 8 символов",
+        "mismatch":      "Пароли не совпадают",
+        "wrongCurrent":  "Неверный текущий пароль",
+        "successToast":  "Пароль успешно изменён"
       }
     },
     "dirtyGuard": {
