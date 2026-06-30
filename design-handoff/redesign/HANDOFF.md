@@ -111,6 +111,9 @@
 ### Обновление 2026-06-30 — Settings dirty-guard РЕАЛИЗОВАН (QA PASS 5 сценариев, PM APPROVED)
 - **Confirm-on-leave** — полностью реализован кастомным диалогом. Причина phantom'а: `ConfirmService` держал глобальный реактивный стейт и переотрисовывался на destination-компоненте во время async-навигации. Заменено на `UnsavedChangesDialog.vue` (PrimeVue `<Dialog>`, не `useConfirm`) + Promise-based guard в `useSettings.ts`. Один `onBeforeRouteLeave` (return-форма); `setSection()` перехватывает грязность до `router.replace`; `dialogVisible` закрывается явно до `resolve()`. `markDirty`/`markClean` восстановлены как реальные сеттеры. QA PASS: 5 сценариев, обе темы, DOM-счётчик 1 диалог. Незакоммичено.
 
+### Обновление 2026-06-30 — Settings Фаза 4: Документы + link-out + dirty-fix (QA PASS, PM APPROVED)
+- **Настройки Ф4 (`Settings-spec.md` § «Фаза 4»)** — DONE: 4 новых DirTab-обёртки (DocTemplates/TplVariables/ApprovalRoutes/MsgTemplates, паттерн Ф2); пер-итемная роль-логика (lawyer/director/manager видят соответствующие вкладки); pipeline-stg переведён в phase:1 как link-out на /settings/pipeline; дубль automation-runs убран из AppSidebar; редиректы /admin/templates|template-variables|approval-routes|message-templates активированы; dirty-guard regression fix (navigateOutOf + instant-leave CSS). Незакоммичено.
+
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,
 светлая+тёмная темы, скрытые скроллбары, поведение интерактивных элементов из §11.

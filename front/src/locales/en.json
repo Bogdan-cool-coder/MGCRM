@@ -430,7 +430,11 @@
         "acqChannels": "Acquisition Channels",
         "discReasons": "Disconnect Reasons",
         "catalog": "Catalog",
-        "exchangeRates": "Exchange Rates"
+        "exchangeRates": "Exchange Rates",
+        "docTemplates": "Document Templates",
+        "tplVariables": "Template Variables",
+        "approvalRoutes": "Approval Routes",
+        "msgTemplates": "Message Templates"
       }
     },
     "system": {

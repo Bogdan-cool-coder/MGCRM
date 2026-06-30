@@ -161,11 +161,10 @@ export const routes: RouteRecordRaw[] = [
   },
 
   // ─── Documents: Admin ────────────────────────────────────────────────────
+  // Phase 2: /admin/templates redirects into Settings shell (Справочники → doc-templates tab).
   {
     path: '/admin/templates',
-    name: 'Templates',
-    component: () => import('@/pages/TemplatesPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director'], title: 'nav.templates' },
+    redirect: { path: '/settings', query: { section: 'doc-templates' } },
   },
   {
     path: '/admin/templates/:id',
@@ -173,29 +172,20 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/TemplatePage'),
     meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director'] },
   },
+  // Phase 2: /admin/template-variables redirects into Settings shell.
   {
     path: '/admin/template-variables',
-    name: 'TemplateVariables',
-    component: () => import('@/pages/TemplateVariablesPage'),
-    meta: {
-      requiresAuth: true,
-      roles: ['admin', 'lawyer', 'director'],
-      title: 'nav.templateVariables',
-    },
+    redirect: { path: '/settings', query: { section: 'tpl-variables' } },
   },
+  // Phase 2: /admin/approval-routes redirects into Settings shell.
   {
     path: '/admin/approval-routes',
-    name: 'ApprovalRoutes',
-    component: () => import('@/pages/ApprovalRoutesPage'),
-    meta: { requiresAuth: true, roles: ['admin', 'lawyer'], title: 'nav.approvalRoutes' },
+    redirect: { path: '/settings', query: { section: 'approval-routes' } },
   },
+  // Phase 2: /admin/message-templates redirects into Settings shell.
   {
     path: '/admin/message-templates',
-    name: 'MessageTemplates',
-    component: () => import('@/pages/MessageTemplatesPage'),
-    // BE MessageTemplatePolicy.viewAny allows admin/lawyer/director/manager for reading;
-    // CRUD actions are separately guarded by the policy (admin/lawyer only).
-    meta: { requiresAuth: true, roles: ['admin', 'lawyer', 'director', 'manager'], title: 'nav.messageTemplates' },
+    redirect: { path: '/settings', query: { section: 'msg-templates' } },
   },
   {
     path: '/admin/licensor-entities',

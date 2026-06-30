@@ -8,6 +8,10 @@
     :style="{ width: '380px' }"
     append-to="body"
     class="unsaved-changes-dialog"
+    :pt="{
+      transition: { leaveActiveClass: 'unsaved-dialog--instant-leave' },
+      mask: { class: 'unsaved-dialog-mask' },
+    }"
   >
     <p class="unsaved-changes-dialog__message">{{ t('settings.dirtyGuard.message') }}</p>
     <template #footer>

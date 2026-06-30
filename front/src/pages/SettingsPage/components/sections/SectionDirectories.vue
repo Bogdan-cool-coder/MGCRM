@@ -1,7 +1,7 @@
 <template>
   <div class="dir-section">
-    <!-- Access denied for non-admin/director on direct deep-link -->
-    <div v-if="!isAdminOrDirector" class="dir-section__access-denied">
+    <!-- Access denied: user has no access to any directories section -->
+    <div v-if="!hasAnyAccess" class="dir-section__access-denied">
       <i class="pi pi-lock dir-section__lock-icon" />
       <p>{{ t('common.access_denied') }}</p>
     </div>
@@ -17,22 +17,30 @@
       <div class="dir-tabs">
         <Tabs :value="activeTab" @update:value="onTabChange">
           <TabList>
-            <Tab value="countries">{{ t('settings.directories.tabs.countries') }}</Tab>
-            <Tab value="acq-channels">{{ t('settings.directories.tabs.acqChannels') }}</Tab>
-            <Tab value="disc-reasons">{{ t('settings.directories.tabs.discReasons') }}</Tab>
-            <Tab value="catalog">{{ t('settings.directories.tabs.catalog') }}</Tab>
-            <Tab value="exchange-rates">{{ t('settings.directories.tabs.exchangeRates') }}</Tab>
+            <Tab v-if="isAdminOrDirector" value="countries">{{ t('settings.directories.tabs.countries') }}</Tab>
+            <Tab v-if="isAdminOrDirector" value="acq-channels">{{ t('settings.directories.tabs.acqChannels') }}</Tab>
+            <Tab v-if="isAdminOrDirector" value="disc-reasons">{{ t('settings.directories.tabs.discReasons') }}</Tab>
+            <Tab v-if="isAdminOrDirector" value="catalog">{{ t('settings.directories.tabs.catalog') }}</Tab>
+            <Tab v-if="isAdminOrDirector" value="exchange-rates">{{ t('settings.directories.tabs.exchangeRates') }}</Tab>
+            <Tab v-if="canSeeDocTemplates" value="doc-templates">{{ t('settings.directories.tabs.docTemplates') }}</Tab>
+            <Tab v-if="canSeeTplVariables" value="tpl-variables">{{ t('settings.directories.tabs.tplVariables') }}</Tab>
+            <Tab v-if="canSeeApprovalRoutes" value="approval-routes">{{ t('settings.directories.tabs.approvalRoutes') }}</Tab>
+            <Tab v-if="canSeeMsgTemplates" value="msg-templates">{{ t('settings.directories.tabs.msgTemplates') }}</Tab>
           </TabList>
         </Tabs>
       </div>
 
       <!-- Tab content — v-if for lazy load (each mounts on first show) -->
       <div class="dir-tab-content">
-        <DirTabCountries v-if="activeTab === 'countries'" />
-        <DirTabAcqChannels v-else-if="activeTab === 'acq-channels'" />
-        <DirTabDiscReasons v-else-if="activeTab === 'disc-reasons'" />
-        <DirTabCatalog v-else-if="activeTab === 'catalog'" />
-        <DirTabExchangeRates v-else-if="activeTab === 'exchange-rates'" />
+        <DirTabCountries v-if="activeTab === 'countries' && isAdminOrDirector" />
+        <DirTabAcqChannels v-else-if="activeTab === 'acq-channels' && isAdminOrDirector" />
+        <DirTabDiscReasons v-else-if="activeTab === 'disc-reasons' && isAdminOrDirector" />
+        <DirTabCatalog v-else-if="activeTab === 'catalog' && isAdminOrDirector" />
+        <DirTabExchangeRates v-else-if="activeTab === 'exchange-rates' && isAdminOrDirector" />
+        <DirTabDocTemplates v-else-if="activeTab === 'doc-templates' && canSeeDocTemplates" />
+        <DirTabTplVariables v-else-if="activeTab === 'tpl-variables' && canSeeTplVariables" />
+        <DirTabApprovalRoutes v-else-if="activeTab === 'approval-routes' && canSeeApprovalRoutes" />
+        <DirTabMsgTemplates v-else-if="activeTab === 'msg-templates' && canSeeMsgTemplates" />
       </div>
     </template>
   </div>
@@ -50,6 +58,10 @@ import DirTabAcqChannels from './directories/DirTabAcqChannels.vue'
 import DirTabDiscReasons from './directories/DirTabDiscReasons.vue'
 import DirTabCatalog from './directories/DirTabCatalog.vue'
 import DirTabExchangeRates from './directories/DirTabExchangeRates.vue'
+import DirTabDocTemplates from './directories/DirTabDocTemplates.vue'
+import DirTabTplVariables from './directories/DirTabTplVariables.vue'
+import DirTabApprovalRoutes from './directories/DirTabApprovalRoutes.vue'
+import DirTabMsgTemplates from './directories/DirTabMsgTemplates.vue'
 
 const { t } = useI18n()
 const userStore = useUserStore()
@@ -62,10 +74,33 @@ const emit = defineEmits<{
   tabChange: [key: string]
 }>()
 
-const isAdminOrDirector = computed(() => {
-  const role = userStore.getUserRole
-  return role === 'admin' || role === 'director'
-})
+const userRole = computed(() => userStore.getUserRole ?? '')
+
+const isAdminOrDirector = computed(() =>
+  userRole.value === 'admin' || userRole.value === 'director',
+)
+
+const canSeeDocTemplates = computed(() =>
+  ['admin', 'lawyer', 'director'].includes(userRole.value),
+)
+const canSeeTplVariables = computed(() =>
+  ['admin', 'lawyer', 'director'].includes(userRole.value),
+)
+const canSeeApprovalRoutes = computed(() =>
+  ['admin', 'lawyer'].includes(userRole.value),
+)
+const canSeeMsgTemplates = computed(() =>
+  ['admin', 'lawyer', 'director', 'manager'].includes(userRole.value),
+)
+
+/** True if the current user can see at least one tab in this section */
+const hasAnyAccess = computed(() =>
+  isAdminOrDirector.value ||
+  canSeeDocTemplates.value ||
+  canSeeTplVariables.value ||
+  canSeeApprovalRoutes.value ||
+  canSeeMsgTemplates.value,
+)
 
 function onTabChange(value: string | number) {
   emit('tabChange', String(value))

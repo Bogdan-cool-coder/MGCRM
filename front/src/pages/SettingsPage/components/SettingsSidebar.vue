@@ -14,15 +14,16 @@
         type="button"
         class="settings-nav-item"
         :class="{
-          'settings-nav-item--active': activeSection === section.key && section.phase === 1,
+          'settings-nav-item--active': activeSection === section.key && section.phase === 1 && !section.linkOut,
           'settings-nav-item--disabled': section.phase !== 1,
         }"
         :disabled="section.phase !== 1"
         :aria-current="activeSection === section.key ? 'page' : undefined"
-        @click="section.phase === 1 ? $emit('select', section.key) : undefined"
+        @click="onSectionClick(section)"
       >
         <i :class="[section.icon, 'settings-nav-item__icon']" aria-hidden="true" />
         <span class="settings-nav-item__label">{{ t(section.labelKey) }}</span>
+        <i v-if="section.linkOut && section.phase === 1" class="pi pi-external-link settings-nav-item__link-icon" aria-hidden="true" />
         <Tag
           v-if="section.phase !== 1"
           :value="t('common.coming_soon')"
@@ -47,8 +48,10 @@ defineProps<{
   activeSection: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   select: [key: string]
+  /** linkOut-навигация: родитель проверяет dirty перед router.push */
+  linkOut: [path: string]
 }>()
 
 interface SettingsSection {
@@ -56,7 +59,10 @@ interface SettingsSection {
   labelKey: string
   icon: string
   phase: 1 | 2 | 3
+  /** Per-item role restriction. If absent — inherits group.adminOnly logic */
   roles?: string[]
+  /** If set — item navigates to this route instead of switching section panel */
+  linkOut?: string
 }
 
 interface SettingsGroup {
@@ -89,18 +95,19 @@ const GROUPS: SettingsGroup[] = [
   {
     key: 'directories',
     labelKey: 'settings.groups.directories',
-    adminOnly: true,
+    adminOnly: false, // group visibility now driven by per-item role filter below
     sections: [
       { key: 'countries',       labelKey: 'settings.sections.countries.title',       icon: 'pi pi-globe',       phase: 1, roles: ['admin', 'director'] },
       { key: 'acq-channels',    labelKey: 'settings.sections.acq-channels.title',    icon: 'pi pi-megaphone',   phase: 1, roles: ['admin', 'director'] },
       { key: 'disc-reasons',    labelKey: 'settings.sections.disc-reasons.title',    icon: 'pi pi-ban',         phase: 1, roles: ['admin', 'director'] },
       { key: 'catalog',         labelKey: 'settings.sections.catalog.title',         icon: 'pi pi-box',         phase: 1, roles: ['admin', 'director'] },
       { key: 'exchange-rates',  labelKey: 'settings.sections.exchange-rates.title',  icon: 'pi pi-dollar',      phase: 1, roles: ['admin', 'director'] },
-      { key: 'pipeline-stg',    labelKey: 'settings.sections.pipeline-stg.title',    icon: 'pi pi-sliders-h',   phase: 2, roles: ['admin', 'director'] },
-      { key: 'doc-templates',   labelKey: 'settings.sections.doc-templates.title',   icon: 'pi pi-file-edit',   phase: 2, roles: ['admin', 'director'] },
-      { key: 'tpl-variables',   labelKey: 'settings.sections.tpl-variables.title',   icon: 'pi pi-list',        phase: 2, roles: ['admin', 'director'] },
-      { key: 'approval-routes', labelKey: 'settings.sections.approval-routes.title', icon: 'pi pi-sitemap',     phase: 2, roles: ['admin', 'director'] },
-      { key: 'msg-templates',   labelKey: 'settings.sections.msg-templates.title',   icon: 'pi pi-envelope',    phase: 2, roles: ['admin', 'director'] },
+      // link-out: navigates to standalone PipelineSettingsPage instead of embedding
+      { key: 'pipeline-stg',    labelKey: 'settings.sections.pipeline-stg.title',    icon: 'pi pi-sliders-h',   phase: 1, roles: ['admin', 'director'], linkOut: '/settings/pipeline' },
+      { key: 'doc-templates',   labelKey: 'settings.sections.doc-templates.title',   icon: 'pi pi-file-edit',   phase: 1, roles: ['admin', 'lawyer', 'director'] },
+      { key: 'tpl-variables',   labelKey: 'settings.sections.tpl-variables.title',   icon: 'pi pi-list',        phase: 1, roles: ['admin', 'lawyer', 'director'] },
+      { key: 'approval-routes', labelKey: 'settings.sections.approval-routes.title', icon: 'pi pi-sitemap',     phase: 1, roles: ['admin', 'lawyer'] },
+      { key: 'msg-templates',   labelKey: 'settings.sections.msg-templates.title',   icon: 'pi pi-envelope',    phase: 1, roles: ['admin', 'lawyer', 'director', 'manager'] },
     ],
   },
   {
@@ -116,34 +123,48 @@ const GROUPS: SettingsGroup[] = [
   },
 ]
 
-const isAdminOrDirector = computed(() => {
-  const role = userStore.getUserRole
-  return role === 'admin' || role === 'director'
-})
+const userRole = computed(() => userStore.getUserRole ?? '')
+const isAdminOrDirector = computed(() => userRole.value === 'admin' || userRole.value === 'director')
+const isAdmin = computed(() => userRole.value === 'admin')
 
-const isAdmin = computed(() => userStore.getUserRole === 'admin')
+/** Check if a section is accessible for the current user role */
+function isSectionVisible(s: SettingsSection): boolean {
+  if (!s.roles) return true
+  // admin-only (not director): only show to admin
+  if (s.roles.includes('admin') && !s.roles.includes('director') && !s.roles.includes('lawyer') && !s.roles.includes('manager')) {
+    return isAdmin.value
+  }
+  return s.roles.includes(userRole.value)
+}
 
 const visibleGroups = computed(() =>
   GROUPS
-    .filter((g) => !g.adminOnly || isAdminOrDirector.value)
     .map((g) => ({
       ...g,
-      // Filter sections by role: sections with roles: ['admin'] are hidden from director
       sections: g.sections.filter((s) => {
-        if (!s.roles) return true
-        if (s.roles.includes('admin') && !s.roles.includes('director')) {
-          // admin-only section: only show to admin
-          return isAdmin.value
-        }
-        // admin+director section: show to both
-        return isAdminOrDirector.value
+        // For groups with adminOnly=true, first check admin/director gate
+        if (g.adminOnly && !isAdminOrDirector.value) return false
+        return isSectionVisible(s)
       }),
     }))
+    // Hide groups with no visible sections
+    .filter((g) => g.sections.length > 0)
     .map((g) => ({
       ...g,
       allDisabled: g.sections.every((s) => s.phase !== 1),
     })),
 )
+
+function onSectionClick(section: SettingsSection) {
+  if (section.phase !== 1) return
+  if (section.linkOut) {
+    // Делегируем родителю — он проверит dirty-state перед router.push,
+    // чтобы не полагаться на async onBeforeRouteLeave тайминг Vue Router.
+    emit('linkOut', section.linkOut)
+    return
+  }
+  emit('select', section.key)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -250,6 +271,13 @@ const visibleGroups = computed(() =>
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  &__link-icon {
+    font-size: $font-size-xs;
+    color: inherit;
+    opacity: 0.5;
+    flex-shrink: 0;
   }
 
   &__soon-tag {

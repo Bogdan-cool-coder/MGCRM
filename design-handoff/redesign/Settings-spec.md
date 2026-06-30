@@ -1105,7 +1105,7 @@ nav-item паттерн (таблетки с иконкой, active-полоск
 - Редиректы Ф2 активированы в `base.ts`: `/admin/countries`, `/admin/acquisition-channels`, `/admin/disconnect-reasons`, `/admin/products` → `/settings?section=*`. `/admin/products/:id` (ProductDetail) сохранён как самостоятельный роут.
 - i18n: `settings.directories.*` заполнен в ru.json и en.json (sectionTitle, sectionDesc, tabs × 5).
 
-**Прочие пункты группы** (PipelineStg, DocTemplates, TplVariables, ApprovalRoutes, MsgTemplates) — остаются `phase: 2`, отдельные задачи по готовности бэкенда.
+**Прочие пункты группы** (PipelineStg) — остаётся `phase: 2` (link-out на standalone /settings/pipeline). DocTemplates, TplVariables, ApprovalRoutes, MsgTemplates — активированы в Ф4 (см. ниже).
 
 ### Фаза 3 — РЕАЛИЗОВАНА (2026-06-30, QA PASS, PM APPROVED)
 СИСТЕМА: 4 раздела активированы в шелле.
@@ -1119,12 +1119,27 @@ nav-item паттерн (таблетки с иконкой, active-полоск
 - `PipelineSettingsPage` остаётся standalone (`/settings/pipeline`), `pipeline-stg` — `phase: 2`.
 - Открытые вопросы Ф3 закрыты: ОВ-1 (internalTab), ОВ-2 (Toast/v-if), ОВ-3 (редиректы активированы), ОВ-4 (director→'profile'), ОВ-5 (маппинг `/profile?tab=system → 'profile'` — обновление до `'system-reset'` отложено, ненагруженный маршрут).
 
-**Незакрытые хвосты (некритичные):**
+**Незакрытые хвосты (некритичные, из Ф3):**
 - `/profile?tab=system` маппинг: `base.ts` строка 132 возвращает `'profile'`, по ТЗ должен вернуть `'system-reset'` (только admin через `resolveSection`). Обновить при следующем проходе.
 - Dark-токен `var(--p-surface-900)` в `SectionSystemReset.vue` (строки 108, 181) — должен быть `var(--p-surface-50)` как в Ф2 `SectionDirectories.vue`; сейчас заголовки тёмные на тёмном фоне. Исправить при следующем DS-проходе.
 - `rgba(var(--p-red-500-rgb, 239 68 68), 0.08)` — fallback hex-числа; `--p-red-500-rgb` не определён в теме; предпочтительно `rgba($red-500, 0.08)` через SCSS-переменную.
 
-*ТЗ для `frontend-specialist` готово. Ф1+Ф2+Ф3 реализованы. Весь срез Настроек завершён.*
+### Фаза 4 — РЕАЛИЗОВАНА (2026-06-30, QA PASS, PM APPROVED, незакоммичено)
+
+**Что сделано:**
+- **4 новых DirTab-обёртки** (паттерн Ф2): `DirTabDocTemplates.vue`, `DirTabTplVariables.vue`, `DirTabApprovalRoutes.vue`, `DirTabMsgTemplates.vue` — каждая с sub-toolbar (кнопка «+ Добавить» через `pageRef?.openDrawer/openCreate`) и встроенной страницей `embedded=true`.
+- **4 standalone-страницы обновлены** (TemplatesPage, TemplateVariablesPage, ApprovalRoutesPage, MessageTemplatesPage): добавлен проп `embedded?: boolean`, `v-if="!embedded"` на PageHeader + `defineExpose` экшенов. CRUD-логика не тронута.
+- **Пер-итемная роль-логика СПРАВОЧНИКОВ**: `DOCUMENTS_KEYS` + `DOCUMENT_SECTION_ROLES` в `useSettings.ts`; `resolveSection` фаллбэкит на `'profile'` при чужом deep-link; `SettingsSidebar.vue` — группа `directories.adminOnly:false`, per-item `roles`, группа рендерится если есть хотя бы один доступный пункт; `SectionDirectories.vue` — `canSee*` computed + `hasAnyAccess`.
+- **Роли по пунктам:** `doc-templates`/`tpl-variables` = admin+lawyer+director; `approval-routes` = admin+lawyer; `msg-templates` = admin+lawyer+director+manager; `pipeline-stg` = admin+director (link-out).
+- **Воронка продаж (link-out):** `pipeline-stg` переведён с `phase:2` в `phase:1` с `linkOut:'/settings/pipeline'`; `SettingsSidebar.vue` emit `linkOut`, `index.vue` слушает `@link-out="settings.navigateOutOf"`.
+- **Дубль automation-runs убран из AppSidebar:** `navItems.ts` — `automationNavGroup.items` очищен (пустой экспорт); блок группы из `AppSidebar.vue` удалён.
+- **Редиректы активированы** в `base.ts`: `/admin/templates` → `?section=doc-templates`; `/admin/template-variables` → `?section=tpl-variables`; `/admin/approval-routes` → `?section=approval-routes`; `/admin/message-templates` → `?section=msg-templates`. `/admin/templates/:id` (TemplateDetail) сохранён как самостоятельный роут.
+- **Dirty-guard regression fix:** `navigateOutOf` проверяет dirty явно + сбрасывает `isDirty=false` до `router.push`; `UnsavedChangesDialog.vue` — `:pt` instant-leave; `base.scss` — 2 правила 0ms только для `unsaved-dialog--instant-leave` и `unsaved-dialog-mask`.
+- **i18n:** `settings.directories.tabs.{docTemplates,tplVariables,approvalRoutes,msgTemplates}` в ru.json + en.json.
+
+**Незакоммичено — ждёт коммита от main.**
+
+*ТЗ для `frontend-specialist` готово. Ф1+Ф2+Ф3+Ф4 реализованы. Весь срез Настроек завершён.*
 
 ---
 

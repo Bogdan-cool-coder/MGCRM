@@ -30,6 +30,7 @@
         <SettingsSidebar
           :active-section="settings.activeSection.value"
           @select="settings.setSection($event)"
+          @link-out="settings.navigateOutOf($event)"
         />
       </div>
 
@@ -103,6 +104,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '@/stores/user'
 import Select from 'primevue/select'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import SettingsSidebar from './components/SettingsSidebar.vue'
@@ -118,39 +120,62 @@ import SysTabAccessControl from './components/sections/system/SysTabAccessContro
 import SysTabAutomationRuns from './components/sections/system/SysTabAutomationRuns.vue'
 import SectionComingSoon from './components/sections/SectionComingSoon.vue'
 import UnsavedChangesDialog from './components/UnsavedChangesDialog.vue'
-import { useSettings, DIRECTORIES_KEYS } from './composables/useSettings'
+import { useSettings, DIRECTORIES_KEYS, DOCUMENTS_KEYS } from './composables/useSettings'
 import { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
 
 const { t } = useI18n()
 
 const settings = useSettings()
 const profile = useProfilePage()
+const userStore = useUserStore()
 
 function isDirectoriesSection(key: string): boolean {
-  return (DIRECTORIES_KEYS as readonly string[]).includes(key)
+  return (
+    (DIRECTORIES_KEYS as readonly string[]).includes(key) ||
+    (DOCUMENTS_KEYS as readonly string[]).includes(key)
+  )
 }
 
-// Mobile dropdown — Ф1 + Ф2 directories sections (admin/director see directories)
+// Mobile dropdown — Ф1 + per-role Ф2/Ф3 sections
 const mobileSectionOptions = computed(() => {
-  const base = [
+  const isAdminOrDirector = settings.isAdminOrDirector.value
+  const isAdmin = settings.isAdmin.value
+  const role = userStore.getUserRole ?? ''
+
+  const base: { value: string; label: string }[] = [
     { value: 'profile',    label: t('settings.sections.profile.title') },
     { value: 'security',   label: t('settings.sections.security.title') },
     { value: 'appearance', label: t('settings.sections.appearance.title') },
     { value: 'language',   label: t('settings.sections.language.title') },
     { value: 'channels',   label: t('settings.sections.channels.title') },
   ]
-  if (settings.isAdminOrDirector.value) {
+  if (isAdminOrDirector) {
     base.push(
-      { value: 'countries',      label: t('settings.sections.countries.title') },
-      { value: 'acq-channels',   label: t('settings.sections.acq-channels.title') },
-      { value: 'disc-reasons',   label: t('settings.sections.disc-reasons.title') },
-      { value: 'catalog',        label: t('settings.sections.catalog.title') },
-      { value: 'exchange-rates', label: t('settings.sections.exchange-rates.title') },
-      { value: 'users',          label: t('settings.sections.users.title') },
-      { value: 'access-control', label: t('settings.sections.access-control.title') },
-      { value: 'automation-runs',label: t('settings.sections.automation-runs.title') },
+      { value: 'countries',       label: t('settings.sections.countries.title') },
+      { value: 'acq-channels',    label: t('settings.sections.acq-channels.title') },
+      { value: 'disc-reasons',    label: t('settings.sections.disc-reasons.title') },
+      { value: 'catalog',         label: t('settings.sections.catalog.title') },
+      { value: 'exchange-rates',  label: t('settings.sections.exchange-rates.title') },
     )
-    if (settings.isAdmin.value) {
+  }
+  // Per-item document-registry sections (lawyer/manager can also see)
+  if (['admin', 'lawyer', 'director'].includes(role)) {
+    base.push({ value: 'doc-templates',   label: t('settings.sections.doc-templates.title') })
+    base.push({ value: 'tpl-variables',   label: t('settings.sections.tpl-variables.title') })
+  }
+  if (['admin', 'lawyer'].includes(role)) {
+    base.push({ value: 'approval-routes', label: t('settings.sections.approval-routes.title') })
+  }
+  if (['admin', 'lawyer', 'director', 'manager'].includes(role)) {
+    base.push({ value: 'msg-templates',   label: t('settings.sections.msg-templates.title') })
+  }
+  if (isAdminOrDirector) {
+    base.push(
+      { value: 'users',           label: t('settings.sections.users.title') },
+      { value: 'access-control',  label: t('settings.sections.access-control.title') },
+      { value: 'automation-runs', label: t('settings.sections.automation-runs.title') },
+    )
+    if (isAdmin) {
       base.push({ value: 'system-reset', label: t('settings.sections.system-reset.title') })
     }
   }

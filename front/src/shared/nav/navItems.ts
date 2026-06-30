@@ -131,21 +131,15 @@ export const onboardingNavGroup: NavGroup = {
   ],
 }
 
-// ─── Automation group (admin/director only) ───────────────────────────────────
+// ─── Automation group removed: automation-runs is now inside Settings → System.
+// automationNavGroup export kept for backward-compat imports but items is empty
+// so AppSidebar renders no section. It will be cleaned up on the cutover sprint.
 export const automationNavGroup: NavGroup = {
   key: 'automation',
   labelKey: 'nav.automation',
   icon: 'pi pi-bolt',
   adminOnly: true,
-  items: [
-    {
-      key: 'automation-runs',
-      route: '/admin/automation-runs',
-      icon: 'pi pi-clock',
-      labelKey: 'nav.automationRuns',
-      adminOnly: true,
-    },
-  ],
+  items: [],
 }
 
 // ─── Settings entry (CommandPalette only — NOT shown in sidebar) ──────────────
@@ -313,13 +307,6 @@ export const adminNavItems: NavItem[] = [
     route: '/admin/onboarding/progress',
     icon: 'pi pi-chart-bar',
     labelKey: 'nav.hrProgress',
-    adminOnly: true,
-  },
-  {
-    key: 'automation-runs',
-    route: '/admin/automation-runs',
-    icon: 'pi pi-clock',
-    labelKey: 'nav.automationRuns',
     adminOnly: true,
   },
   {

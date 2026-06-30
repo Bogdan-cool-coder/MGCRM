@@ -1,6 +1,6 @@
 <template>
-  <div class="approval-routes-page">
-    <PageHeader :title="t('approvalRoutes.title')" icon="pi pi-sitemap">
+  <div class="approval-routes-page" :class="{ 'approval-routes-page--embedded': embedded }">
+    <PageHeader v-if="!embedded" :title="t('approvalRoutes.title')" icon="pi pi-sitemap">
       <template #actions>
         <Button icon="pi pi-plus" :label="t('approvalRoutes.create')" @click="openDrawer(null)" />
       </template>
@@ -66,6 +66,8 @@ import ApprovalRouteEditDrawer from './components/ApprovalRouteEditDrawer.vue'
 
 const { t } = useI18n()
 
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const resource = useAsyncResource<ApprovalRouteListItemDto[]>(() => [])
 const routes = computed(() => resource.data.value)
 const loading = computed(() => resource.loading.value)
@@ -83,18 +85,24 @@ function openDrawer(id: number | null) {
   editingId.value = id
   drawerVisible.value = true
 }
+
+defineExpose({ openDrawer })
 </script>
 
 <style lang="scss" scoped>
 .approval-routes-page {
-  padding: 0.75rem;
+  padding: $space-3;
+
+  &--embedded {
+    padding: 0;
+  }
 
   &__empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 2rem;
+    gap: $space-2;
+    padding: $space-8;
     color: var(--p-text-muted-color);
   }
 }

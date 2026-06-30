@@ -1,6 +1,6 @@
 <template>
-  <div class="variables-page">
-    <PageHeader :title="t('templateVariables.title')" icon="pi pi-list">
+  <div class="variables-page" :class="{ 'variables-page--embedded': embedded }">
+    <PageHeader v-if="!embedded" :title="t('templateVariables.title')" icon="pi pi-list">
       <template #actions>
         <Button
           v-if="canManage"
@@ -165,6 +165,9 @@ import VariableDialog from './components/VariableDialog.vue'
 import { useTemplateVariablesPage } from './composables/useTemplateVariablesPage'
 
 const { t } = useI18n()
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const {
   searchFilter,
   typeFilter,
@@ -184,6 +187,8 @@ const {
   typeOptions,
 } = useTemplateVariablesPage()
 
+defineExpose({ canManage, openCreate })
+
 function formatKey(key: string): string {
   return '{{' + key + '}}'
 }
@@ -192,6 +197,10 @@ function formatKey(key: string): string {
 <style lang="scss" scoped>
 .variables-page {
   padding: $space-3;
+
+  &--embedded {
+    padding: 0;
+  }
 
   &__label {
     font-size: $font-size-sm;

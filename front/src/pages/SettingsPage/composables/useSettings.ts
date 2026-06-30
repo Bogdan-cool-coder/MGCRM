@@ -17,6 +17,25 @@ export const DIRECTORIES_KEYS = [
   'exchange-rates',
 ] as const
 
+/** Разделы Ф2 — дополнительные Справочники с ПОШАГОВЫМИ правами доступа (lawyer/manager могут видеть) */
+export const DOCUMENTS_KEYS = [
+  'doc-templates',
+  'tpl-variables',
+  'approval-routes',
+  'msg-templates',
+] as const
+
+/**
+ * Пер-итемные роли для разделов DOCUMENTS_KEYS.
+ * Разделы с менее строгими ограничениями, чем admin/director.
+ */
+const DOCUMENT_SECTION_ROLES: Record<string, string[]> = {
+  'doc-templates':   ['admin', 'lawyer', 'director'],
+  'tpl-variables':   ['admin', 'lawyer', 'director'],
+  'approval-routes': ['admin', 'lawyer'],
+  'msg-templates':   ['admin', 'lawyer', 'director', 'manager'],
+}
+
 /** Разделы Ф3 — Система (admin/director; system-reset — только admin) */
 export const SYSTEM_KEYS = [
   'users',
@@ -28,8 +47,8 @@ export const SYSTEM_KEYS = [
 /** Ключи системы, доступные только admin (не director) */
 const ADMIN_ONLY_KEYS = ['system-reset'] as const
 
-/** Все валидные ключи разделов (Ф1 + Ф2 + Ф3 активные) */
-const VALID_KEYS = [...ACCOUNT_KEYS, ...DIRECTORIES_KEYS, ...SYSTEM_KEYS] as const
+/** Все валидные ключи разделов (Ф1 + Ф2 + Ф2-docs + Ф3 активные) */
+const VALID_KEYS = [...ACCOUNT_KEYS, ...DIRECTORIES_KEYS, ...DOCUMENTS_KEYS, ...SYSTEM_KEYS] as const
 type ValidKey = (typeof VALID_KEYS)[number]
 
 /**
@@ -125,12 +144,22 @@ export function useSettings() {
 
   function resolveSection(key: string | undefined): string {
     if (!key) return 'profile'
+    const role = userStore.getUserRole ?? ''
+
+    // Directories (admin/director only)
     if ((DIRECTORIES_KEYS as readonly string[]).includes(key) && !isAdminOrDirector.value) {
       return 'profile'
     }
+    // Document-registry sections (per-item roles — lawyer/manager may be allowed)
+    if ((DOCUMENTS_KEYS as readonly string[]).includes(key)) {
+      const allowed = DOCUMENT_SECTION_ROLES[key] ?? []
+      if (!allowed.includes(role)) return 'profile'
+    }
+    // System sections (admin/director)
     if ((SYSTEM_KEYS as readonly string[]).includes(key) && !isAdminOrDirector.value) {
       return 'profile'
     }
+    // Admin-only within system
     if ((ADMIN_ONLY_KEYS as readonly string[]).includes(key) && !isAdmin.value) {
       return 'profile'
     }
@@ -157,13 +186,32 @@ export function useSettings() {
     }
 
     activeSection.value = key
-    void router.replace({ path: '/settings', query: { section: key } })
+    await router.replace({ path: '/settings', query: { section: key } })
   }
 
   /**
-   * onBeforeRouteLeave — guard для ухода со страницы /settings целиком.
+   * Внешняя навигация из linkOut-пунктов сайдбара (например pipeline-stg).
+   * Проверяем dirty явно здесь — не полагаясь на onBeforeRouteLeave,
+   * чтобы избежать зависимости от async-guard тайминга Vue Router.
+   * При «Покинуть» выполняем router.push; onBeforeRouteLeave при этом
+   * вызывается с isDirty=false и пропускает навигацию без повторного диалога.
+   */
+  async function navigateOutOf(path: string) {
+    if (isDirty.value) {
+      const confirmed = await askUserToConfirmLeave()
+      if (!confirmed) return
+      // isDirty уже false (onDialogLeave сбросил)
+    }
+    await router.push(path)
+  }
+
+  /**
+   * onBeforeRouteLeave — фолбэк-guard для ухода со страницы /settings целиком
+   * (например клик по nav-sidebar на /deals, /contacts и т.д.).
    * Смена раздела внутри страницы перехватывается setSection() выше,
    * router.replace() не триггерит onBeforeRouteLeave (та же страница).
+   * linkOut-переходы перехватываются navigateOutOf() выше — к моменту
+   * вызова onBeforeRouteLeave isDirty уже false, guard пропускает без диалога.
    */
   onBeforeRouteLeave(async () => {
     if (!isDirty.value) return true
@@ -176,6 +224,7 @@ export function useSettings() {
   return {
     activeSection,
     setSection,
+    navigateOutOf,
     isAdminOrDirector,
     isAdmin,
     // Dirty guard — пробрасываем в index.vue для монтирования диалога

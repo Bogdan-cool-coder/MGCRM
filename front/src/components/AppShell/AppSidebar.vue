@@ -125,32 +125,8 @@
           </li>
         </template>
 
-        <!-- Automation group (admin/director only) -->
-        <template v-if="isAdminOrDirector">
-          <li v-if="!collapsed" class="app-sidebar__group-label" role="presentation">
-            <span class="app-sidebar__group-label-text">{{ t('nav.automation') }}</span>
-          </li>
-          <li
-            v-for="item in automationItems"
-            :key="item.key"
-            class="app-sidebar__nav-item"
-          >
-            <router-link
-              :to="item.route"
-              class="app-sidebar__nav-link"
-              active-class="app-sidebar__nav-link--active"
-              :aria-label="t(item.labelKey)"
-              :title="collapsed ? t(item.labelKey) : undefined"
-              @mouseenter="prefetch(item.route)"
-              @focus="prefetch(item.route)"
-            >
-              <i :class="['app-sidebar__nav-icon', item.icon]" />
-              <span v-if="!collapsed" class="app-sidebar__nav-label">
-                {{ t(item.labelKey) }}
-              </span>
-            </router-link>
-          </li>
-        </template>
+        <!-- Automation group removed: automation-runs lives in Settings → System.
+             automationItems is intentionally empty; the template renders nothing. -->
       </ul>
     </nav>
 
@@ -216,7 +192,6 @@ import { useOnboardingStore } from '@/stores/onboardingStore'
 import {
   prototypeNavItems,
   onboardingNavGroup,
-  automationNavGroup,
   filterNavByRole,
 } from '@/shared/nav/navItems'
 import type { NavItemBadge } from '@/shared/nav/navItems'
@@ -260,11 +235,6 @@ const isAdminOrDirector = computed<boolean>(() => {
 // ─── Onboarding group items ───────────────────────────────────────────────────
 const onboardingItems = computed(() =>
   filterNavByRole(onboardingNavGroup.items, userStore.getUserRole ?? null),
-)
-
-// ─── Automation group items ───────────────────────────────────────────────────
-const automationItems = computed(() =>
-  filterNavByRole(automationNavGroup.items, userStore.getUserRole ?? null),
 )
 
 // ─── Badge counts ──────────────────────────────────────────────────────────────

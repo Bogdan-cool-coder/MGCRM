@@ -430,7 +430,11 @@
         "acqChannels": "Каналы привлечения",
         "discReasons": "Причины отказа",
         "catalog": "Каталог",
-        "exchangeRates": "Курсы валют"
+        "exchangeRates": "Курсы валют",
+        "docTemplates": "Шаблоны документов",
+        "tplVariables": "Переменные шаблонов",
+        "approvalRoutes": "Маршруты согласования",
+        "msgTemplates": "Шаблоны сообщений"
       }
     },
     "system": {

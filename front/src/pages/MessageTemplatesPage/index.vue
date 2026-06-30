@@ -1,6 +1,6 @@
 <template>
-  <div class="msg-templates-page">
-    <PageHeader :title="t('messageTemplates.title')" icon="pi pi-envelope">
+  <div class="msg-templates-page" :class="{ 'msg-templates-page--embedded': embedded }">
+    <PageHeader v-if="!embedded" :title="t('messageTemplates.title')" icon="pi pi-envelope">
       <template #actions>
         <Button icon="pi pi-plus" :label="t('messageTemplates.create')" @click="openDrawer(null)" />
       </template>
@@ -58,6 +58,8 @@ import type { MessageTemplateListItemDto } from '@/entities/messageTemplate'
 
 const { t } = useI18n()
 
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const resource = useAsyncResource<MessageTemplateListItemDto[]>(() => [])
 const templates = computed(() => resource.data.value)
 const loading = computed(() => resource.loading.value)
@@ -77,18 +79,24 @@ function openDrawer(id: number | null) {
 function onSaved() {
   void resource.run(() => messageTemplatesApi.getMessageTemplates())
 }
+
+defineExpose({ openDrawer })
 </script>
 
 <style lang="scss" scoped>
 .msg-templates-page {
-  padding: 0.75rem;
+  padding: $space-3;
+
+  &--embedded {
+    padding: 0;
+  }
 
   &__empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 2rem;
+    gap: $space-2;
+    padding: $space-8;
     color: var(--p-text-muted-color);
   }
 }

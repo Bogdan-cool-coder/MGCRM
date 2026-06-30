@@ -1,6 +1,6 @@
 <template>
-  <div class="templates-page">
-    <PageHeader :title="t('templates.list.title')" icon="pi pi-file-edit" />
+  <div class="templates-page" :class="{ 'templates-page--embedded': embedded }">
+    <PageHeader v-if="!embedded" :title="t('templates.list.title')" icon="pi pi-file-edit" />
 
     <!-- Filters -->
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
@@ -96,6 +96,9 @@ import { useTemplatesPage } from './composables/useTemplatesPage'
 type TagSeverity = 'secondary' | 'info' | 'success' | 'warn' | 'danger' | 'contrast'
 
 const { t } = useI18n()
+
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const { kindFilter, searchFilter, templates, loading, goToTemplate, kindOptions } = useTemplatesPage()
 
 function aiStatusSeverity(status: AiCheckStatus): TagSeverity {
@@ -111,7 +114,11 @@ function aiStatusSeverity(status: AiCheckStatus): TagSeverity {
 
 <style lang="scss" scoped>
 .templates-page {
-  padding: 0.75rem;
+  padding: $space-3;
+
+  &--embedded {
+    padding: 0;
+  }
 
   &__filter {
     width: 160px;
@@ -121,8 +128,8 @@ function aiStatusSeverity(status: AiCheckStatus): TagSeverity {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 2rem;
+    gap: $space-2;
+    padding: $space-8;
     color: var(--p-text-muted-color);
   }
 }

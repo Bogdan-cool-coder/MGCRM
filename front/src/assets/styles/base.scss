@@ -53,6 +53,17 @@ a {
   pointer-events: none;
 }
 
+// FIX-GUARD-GHOST: Settings dirty-guard dialog — instant leave (no ~300ms ghost overlay
+// when switching sections internally). PT overrides leaveActiveClass on <Transition>
+// and adds unsaved-dialog-mask on mask element. Both animations are zeroed so the
+// dialog disappears synchronously with the section navigation.
+.unsaved-dialog--instant-leave {
+  animation-duration: 0ms !important;
+}
+.unsaved-dialog-mask.p-overlay-mask-leave-active {
+  animation-duration: 0ms !important;
+}
+
 // S1.3 DealsListView DataTable dark mode — BUG-1 pattern from S1.1
 // DataTable body backgrounds are not toggled by PrimeVue's colorScheme in all versions:
 // we target the component CSS variables in the .app-dark scope.
