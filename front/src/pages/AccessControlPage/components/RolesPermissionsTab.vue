@@ -1,10 +1,5 @@
 <template>
   <div class="roles-tab">
-    <!-- Admin note -->
-    <Message severity="info" class="roles-tab__note">
-      {{ t('accessControl.roles.adminNote') }}
-    </Message>
-
     <!-- Error state -->
     <div v-if="resource.error.value && !resource.loading.value" class="roles-tab__error">
       <i class="pi pi-exclamation-circle roles-tab__error-icon" />
@@ -57,7 +52,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Message from 'primevue/message'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Toast from 'primevue/toast'
@@ -87,10 +81,6 @@ onMounted(() => loadPermissions())
   display: flex;
   flex-direction: column;
   gap: $space-4;
-}
-
-.roles-tab__note {
-  margin: 0;
 }
 
 .roles-tab__actions {

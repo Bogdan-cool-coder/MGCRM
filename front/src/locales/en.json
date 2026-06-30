@@ -388,18 +388,18 @@
     "profile": {
       "saved": "Profile saved",
       "tabs": {
-        "profile":    "Profile",
-        "security":   "Security",
+        "profile": "Profile",
+        "security": "Security",
         "appearance": "Appearance",
-        "language":   "Language"
+        "language": "Language"
       },
       "avatarCrop": {
-        "title":         "Upload photo",
-        "hint":          "Drag and scroll to zoom",
-        "saveBtn":       "Save photo",
-        "cancelBtn":     "Cancel",
-        "invalidType":   "Allowed formats: JPEG, PNG, WebP",
-        "fileTooLarge":  "File too large (max 20 MB)",
+        "title": "Upload photo",
+        "hint": "Drag and scroll to zoom",
+        "saveBtn": "Save photo",
+        "cancelBtn": "Cancel",
+        "invalidType": "Allowed formats: JPEG, PNG, WebP",
+        "fileTooLarge": "File too large (max 20 MB)",
         "uploadSuccess": "Photo updated"
       }
     },
@@ -435,12 +435,12 @@
       "password": {
         "sectionTitle": "Change password",
         "currentLabel": "Current password",
-        "newLabel":     "New password",
+        "newLabel": "New password",
         "confirmLabel": "Confirm new password",
-        "hint":         "At least 8 characters",
-        "submitBtn":    "Change password",
-        "tooShort":     "Password must be at least 8 characters",
-        "mismatch":     "Passwords do not match",
+        "hint": "At least 8 characters",
+        "submitBtn": "Change password",
+        "tooShort": "Password must be at least 8 characters",
+        "mismatch": "Passwords do not match",
         "wrongCurrent": "Current password is incorrect",
         "successToast": "Password changed successfully"
       }
@@ -690,7 +690,8 @@
     "role": "Role",
     "noData": "No data",
     "accessDenied": "Access denied",
-    "errorLoad": "Failed to load data"
+    "errorLoad": "Failed to load data",
+    "email": "Email"
   },
   "contacts": {
     "page": {
@@ -4152,7 +4153,8 @@
       "deleteSuccess": "Department deleted",
       "errorLoad": "Failed to load departments",
       "errorSave": "Failed to save department",
-      "errorDelete": "Failed to delete department"
+      "errorDelete": "Failed to delete department",
+      "noMembers": "No members"
     },
     "roles": {
       "title": "Permissions matrix",
@@ -4186,6 +4188,45 @@
       "saveSuccess": "Visibility settings saved",
       "errorLoad": "Failed to load visibility config",
       "errorSave": "Failed to save visibility settings"
+    },
+    "permissions": {
+      "crm_view": "CRM — view",
+      "crm_manage": "CRM — manage",
+      "crm_relations_manage": "CRM — contact/company relations",
+      "crm_saved_views_manage_all": "CRM — shared saved views",
+      "sales_view": "Sales — view",
+      "sales_manage": "Sales — manage",
+      "pipelines_manage": "Pipelines — manage",
+      "pipelines_view_all": "Pipelines — view all",
+      "manager_cabinet_view_all": "Manager cabinet — view all",
+      "view_manager_cabinet": "Manager cabinet — access",
+      "contracts_view": "Contracts — view",
+      "contracts_manage": "Contracts — manage",
+      "contracts_approve": "Contracts — approve",
+      "contracts_admin": "Contracts — admin/templates",
+      "contracts_licensors_view": "Contracts — licensors",
+      "contracts_templates_use": "Contracts — use templates",
+      "contracts_view_all": "Contracts — view all",
+      "users_view": "Users — view",
+      "users_manage": "Users — manage",
+      "catalog_manage": "Catalog — manage",
+      "finance_view": "Finance — view",
+      "finance_entry": "Finance — entry",
+      "finance_posting": "Finance — posting",
+      "finance_journals_manual": "Finance — manual journals",
+      "finance_payments_approve": "Finance — approve payments",
+      "finance_period_close": "Finance — close period",
+      "finance_settings_manage": "Finance — settings",
+      "finance_reports_management": "Finance — management reports",
+      "automation_manage": "Automation — manage",
+      "automation_webhook_configure": "Automation — webhooks",
+      "analytics_view": "Analytics — view",
+      "settings_manage": "System settings — manage",
+      "inbox_manage": "Inbox — manage",
+      "admin_write": "System changes (admin)",
+      "dedup_scan_all": "Deduplication — full scan",
+      "system_reset": "System reset",
+      "onboarding_manage": "Onboarding — manage"
     }
   },
   "licensors": {

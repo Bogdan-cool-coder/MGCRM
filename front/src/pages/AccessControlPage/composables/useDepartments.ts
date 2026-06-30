@@ -28,6 +28,13 @@ export interface DeptPanelState {
   members: DepartmentMemberDto[]
 }
 
+export interface DeptDetailState {
+  dept: DepartmentDto | null
+  members: DepartmentMemberDto[]
+  loading: boolean
+  error: boolean
+}
+
 export function useDepartments() {
   const { t } = useI18n()
   const toast = useToast()
@@ -55,6 +62,14 @@ export function useDepartments() {
   // pending member selections (MultiSelect)
   const memberPickerVisible = ref(false)
   const selectedMemberIds = ref<number[]>([])
+
+  // ─── selected dept detail (tree click without opening edit panel) ───────────
+  const deptDetail = ref<DeptDetailState>({
+    dept: null,
+    members: [],
+    loading: false,
+    error: false,
+  })
 
   // ─── computed ──────────────────────────────────────────────────────────────
   const treeNodes = computed<DeptTreeNode[]>(() => buildDeptTree(depts.data.value))
@@ -113,6 +128,19 @@ export function useDepartments() {
 
   async function loadMembers(deptId: number) {
     await membersResource.run(() => accessControlApi.getDepartmentMembers(deptId))
+  }
+
+  // ─── select dept (tree node click — show members without opening edit panel) ─
+  async function selectDept(dept: DepartmentDto) {
+    deptDetail.value = { dept, members: [], loading: true, error: false }
+    try {
+      const members = await accessControlApi.getDepartmentMembers(dept.id)
+      deptDetail.value.members = members
+    } catch {
+      deptDetail.value.error = true
+    } finally {
+      deptDetail.value.loading = false
+    }
   }
 
   // ─── panel open ────────────────────────────────────────────────────────────
@@ -239,6 +267,7 @@ export function useDepartments() {
     searchQuery,
     viewMode,
     panel,
+    deptDetail,
     formName,
     formParentId,
     formManagerId,
@@ -257,6 +286,7 @@ export function useDepartments() {
     // actions
     loadDepartments,
     loadUsers,
+    selectDept,
     openCreate,
     openEdit,
     closePanel,

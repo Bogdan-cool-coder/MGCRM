@@ -60,15 +60,78 @@
     <div v-else class="departments-tab__content">
       <!-- Tree view -->
       <template v-if="viewMode === 'tree'">
-        <div class="departments-tab__tree-wrap">
-          <DepartmentTree
-            :nodes="filteredTreeNodes"
-            :loading="depts.loading.value"
-            @select="(d) => openEdit(d)"
-            @edit="(d) => openEdit(d)"
-            @delete="confirmDelete"
-            @add-dept="openCreate"
-          />
+        <div class="departments-tab__tree-layout">
+          <div class="departments-tab__tree-wrap">
+            <DepartmentTree
+              :nodes="filteredTreeNodes"
+              :loading="depts.loading.value"
+              @select="(d) => selectDept(d)"
+              @edit="(d) => openEdit(d)"
+              @delete="confirmDelete"
+              @add-dept="openCreate"
+            />
+          </div>
+
+          <!-- Department members detail panel -->
+          <div
+            v-if="deptDetail.dept"
+            class="departments-tab__detail"
+          >
+            <div class="departments-tab__detail-header">
+              <span class="departments-tab__detail-title">{{ deptDetail.dept.name }}</span>
+              <Button
+                icon="pi pi-pencil"
+                text
+                severity="secondary"
+                size="small"
+                :title="t('common.edit')"
+                @click="openEdit(deptDetail.dept!)"
+              />
+            </div>
+
+            <!-- Loading -->
+            <div v-if="deptDetail.loading" class="departments-tab__detail-body">
+              <Skeleton v-for="i in 3" :key="i" height="36px" class="mb-1" />
+            </div>
+
+            <!-- Error -->
+            <div v-else-if="deptDetail.error" class="departments-tab__detail-error">
+              <i class="pi pi-exclamation-circle" />
+              <span>{{ t('common.errorLoad') }}</span>
+            </div>
+
+            <!-- Members list -->
+            <DataTable
+              v-else
+              :value="deptDetail.members"
+              size="small"
+              class="departments-tab__detail-table"
+            >
+              <Column :header="t('common.name')">
+                <template #body="{ data }">{{ data.full_name }}</template>
+              </Column>
+              <Column :header="t('common.email')" style="width: 160px">
+                <template #body="{ data }">
+                  <span class="departments-tab__detail-email">{{ data.email }}</span>
+                </template>
+              </Column>
+              <Column :header="t('common.role')" style="width: 110px">
+                <template #body="{ data }">
+                  <Tag
+                    v-if="data.role"
+                    :value="t(`roles.${data.role}`)"
+                    :severity="roleSeverity(data.role)"
+                    size="small"
+                  />
+                </template>
+              </Column>
+              <template #empty>
+                <span class="departments-tab__detail-empty">
+                  {{ t('accessControl.departments.noMembers') }}
+                </span>
+              </template>
+            </DataTable>
+          </div>
         </div>
       </template>
 
@@ -161,12 +224,16 @@ import Dialog from 'primevue/dialog'
 import MultiSelect from 'primevue/multiselect'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Tag from 'primevue/tag'
 
 import DepartmentTree from './DepartmentTree.vue'
 import DepartmentSidePanel from './DepartmentSidePanel.vue'
 import OrgChartView from './OrgChartView.vue'
 import { useDepartments } from '../composables/useDepartments'
 import type { DepartmentDto } from '@/entities/accessControl'
+import type { UserRole } from '@/entities/user'
 
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
@@ -178,6 +245,7 @@ const {
   searchQuery,
   viewMode,
   panel,
+  deptDetail,
   formName,
   formParentId,
   formManagerId,
@@ -191,6 +259,7 @@ const {
   saveMutation,
   membersMutation,
   loadDepartments,
+  selectDept,
   openCreate,
   openEdit,
   closePanel,
@@ -199,6 +268,18 @@ const {
   addMembers,
   removeMember,
 } = useDepartments()
+
+function roleSeverity(role: UserRole): 'info' | 'success' | 'warn' | 'danger' | 'secondary' {
+  const map: Record<UserRole, 'info' | 'success' | 'warn' | 'danger' | 'secondary'> = {
+    admin: 'danger',
+    director: 'warn',
+    lawyer: 'info',
+    manager: 'success',
+    accountant: 'secondary',
+    cfo: 'secondary',
+  }
+  return map[role] ?? 'secondary'
+}
 
 onMounted(() => loadDepartments())
 
@@ -259,8 +340,87 @@ function confirmDelete(dept: DepartmentDto) {
   overflow: auto;
 }
 
+.departments-tab__tree-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: $space-4;
+  height: 100%;
+  min-height: 0;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .departments-tab__tree-wrap {
   height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.departments-tab__detail {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  background-color: var(--p-surface-50);
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
+  padding: $space-3;
+  min-height: 120px;
+  overflow: auto;
+
+  .app-dark & {
+    background-color: var(--p-surface-50);
+    border-color: var(--p-surface-200);
+  }
+}
+
+.departments-tab__detail-header {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  justify-content: space-between;
+}
+
+.departments-tab__detail-title {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: var(--p-text-color);
+}
+
+.departments-tab__detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.departments-tab__detail-error {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-sm;
+  color: var(--p-red-400);
+  padding: $space-2;
+}
+
+.departments-tab__detail-table {
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-sm;
+}
+
+.departments-tab__detail-email {
+  font-size: $font-size-xs;
+  color: var(--p-text-muted-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 150px;
+}
+
+.departments-tab__detail-empty {
+  font-size: $font-size-sm;
+  color: var(--p-text-muted-color);
 }
 
 .departments-tab__error {

@@ -388,18 +388,18 @@
     "profile": {
       "saved": "Профиль сохранён",
       "tabs": {
-        "profile":    "Профиль",
-        "security":   "Безопасность",
+        "profile": "Профиль",
+        "security": "Безопасность",
         "appearance": "Внешний вид",
-        "language":   "Язык"
+        "language": "Язык"
       },
       "avatarCrop": {
-        "title":         "Загрузить фото",
-        "hint":          "Перетащите и прокрутите колесо для масштабирования",
-        "saveBtn":       "Сохранить фото",
-        "cancelBtn":     "Отмена",
-        "invalidType":   "Допустимые форматы: JPEG, PNG, WebP",
-        "fileTooLarge":  "Файл слишком большой (макс. 20 МБ)",
+        "title": "Загрузить фото",
+        "hint": "Перетащите и прокрутите колесо для масштабирования",
+        "saveBtn": "Сохранить фото",
+        "cancelBtn": "Отмена",
+        "invalidType": "Допустимые форматы: JPEG, PNG, WebP",
+        "fileTooLarge": "Файл слишком большой (макс. 20 МБ)",
         "uploadSuccess": "Фото обновлено"
       }
     },
@@ -433,16 +433,16 @@
     },
     "security": {
       "password": {
-        "sectionTitle":  "Смена пароля",
-        "currentLabel":  "Текущий пароль",
-        "newLabel":      "Новый пароль",
-        "confirmLabel":  "Повторите новый пароль",
-        "hint":          "Минимум 8 символов",
-        "submitBtn":     "Сменить пароль",
-        "tooShort":      "Пароль должен содержать минимум 8 символов",
-        "mismatch":      "Пароли не совпадают",
-        "wrongCurrent":  "Неверный текущий пароль",
-        "successToast":  "Пароль успешно изменён"
+        "sectionTitle": "Смена пароля",
+        "currentLabel": "Текущий пароль",
+        "newLabel": "Новый пароль",
+        "confirmLabel": "Повторите новый пароль",
+        "hint": "Минимум 8 символов",
+        "submitBtn": "Сменить пароль",
+        "tooShort": "Пароль должен содержать минимум 8 символов",
+        "mismatch": "Пароли не совпадают",
+        "wrongCurrent": "Неверный текущий пароль",
+        "successToast": "Пароль успешно изменён"
       }
     },
     "dirtyGuard": {
@@ -690,7 +690,8 @@
     "role": "Роль",
     "noData": "Нет данных",
     "accessDenied": "Доступ запрещён",
-    "errorLoad": "Не удалось загрузить данные"
+    "errorLoad": "Не удалось загрузить данные",
+    "email": "Email"
   },
   "contacts": {
     "page": {
@@ -4152,7 +4153,8 @@
       "deleteSuccess": "Отдел удалён",
       "errorLoad": "Не удалось загрузить отделы",
       "errorSave": "Ошибка сохранения отдела",
-      "errorDelete": "Ошибка удаления отдела"
+      "errorDelete": "Ошибка удаления отдела",
+      "noMembers": "Нет участников"
     },
     "roles": {
       "title": "Матрица прав",
@@ -4186,6 +4188,45 @@
       "saveSuccess": "Настройки видимости сохранены",
       "errorLoad": "Не удалось загрузить конфигурацию видимости",
       "errorSave": "Ошибка сохранения настроек видимости"
+    },
+    "permissions": {
+      "crm_view": "CRM — просмотр",
+      "crm_manage": "CRM — управление",
+      "crm_relations_manage": "CRM — связи контактов/компаний",
+      "crm_saved_views_manage_all": "CRM — общие сохранённые виды",
+      "sales_view": "Продажи — просмотр",
+      "sales_manage": "Продажи — управление",
+      "pipelines_manage": "Воронки — управление",
+      "pipelines_view_all": "Воронки — видеть все",
+      "manager_cabinet_view_all": "Кабинет менеджера — видеть все",
+      "view_manager_cabinet": "Кабинет менеджера — доступ",
+      "contracts_view": "Договоры — просмотр",
+      "contracts_manage": "Договоры — управление",
+      "contracts_approve": "Договоры — согласование",
+      "contracts_admin": "Договоры — админ/шаблоны",
+      "contracts_licensors_view": "Договоры — лицензиары",
+      "contracts_templates_use": "Договоры — использование шаблонов",
+      "contracts_view_all": "Договоры — видеть все",
+      "users_view": "Пользователи — просмотр",
+      "users_manage": "Пользователи — управление",
+      "catalog_manage": "Каталог — управление",
+      "finance_view": "Финансы — просмотр",
+      "finance_entry": "Финансы — ввод операций",
+      "finance_posting": "Финансы — проводки",
+      "finance_journals_manual": "Финансы — ручные журналы",
+      "finance_payments_approve": "Финансы — согласование платежей",
+      "finance_period_close": "Финансы — закрытие периода",
+      "finance_settings_manage": "Финансы — настройки",
+      "finance_reports_management": "Финансы — управленческие отчёты",
+      "automation_manage": "Автоматизации — управление",
+      "automation_webhook_configure": "Автоматизации — вебхуки",
+      "analytics_view": "Аналитика — просмотр",
+      "settings_manage": "Настройки системы — управление",
+      "inbox_manage": "Входящие — управление",
+      "admin_write": "Системные изменения (админ)",
+      "dedup_scan_all": "Дедупликация — полное сканирование",
+      "system_reset": "Сброс системы",
+      "onboarding_manage": "Онбординг — управление"
     }
   },
   "licensors": {

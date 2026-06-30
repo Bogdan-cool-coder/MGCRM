@@ -17,9 +17,14 @@
           class="perm-matrix__table"
         >
           <!-- Permission name -->
-          <Column :header="t('accessControl.roles.permissionLabel')" style="min-width: 200px">
+          <Column :header="t('accessControl.roles.permissionLabel')" style="min-width: 220px">
             <template #body="{ data }">
-              <code class="perm-matrix__perm-name">{{ data.permission }}</code>
+              <div class="perm-matrix__perm-cell">
+                <span class="perm-matrix__perm-label">
+                  {{ t(`accessControl.permissions.${data.permission.replace(/[.\-]/g, '_')}`, data.permission) }}
+                </span>
+                <code class="perm-matrix__perm-name">{{ data.permission }}</code>
+              </div>
             </template>
           </Column>
 
@@ -78,12 +83,26 @@ const ALL_ROLES = USER_ROLES
   // each group has its own Panel
 }
 
+.perm-matrix__perm-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perm-matrix__perm-label {
+  font-size: $font-size-sm;
+  color: var(--p-text-color);
+  line-height: $line-height-tight;
+}
+
 .perm-matrix__perm-name {
   font-family: $font-family-mono;
   font-size: $font-size-xs;
+  color: var(--p-text-muted-color);
   background-color: var(--p-surface-100);
   padding: 2px $space-1;
   border-radius: $radius-sm;
+  align-self: flex-start;
 
   .app-dark & {
     background-color: var(--p-surface-200);
