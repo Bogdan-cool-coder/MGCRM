@@ -1078,8 +1078,20 @@ nav-item паттерн (таблетки с иконкой, active-полоск
 - i18n: `settings.*` блок полностью заполнен в ru.json и en.json.
 - ProfilePage оставлен как redirect-shim (не удалён — Ф2).
 
-**Осознанно отложено:**
-- `confirm-on-leave` (navigation-guard `beforeRouteLeave` + ConfirmDialog при смене раздела/навигации назад) — отдельная задача. На Ф1 save-bar + «Сохранить»/«Отменить» работают без navigation-guard. `isDirty`-сигналы от секций принимаются как no-op через provide/inject.
+**Осознанно отложено (было):**
+- `confirm-on-leave` (navigation-guard) — вынесен отдельной задачей; `markDirty`/`markClean` на Ф1 были no-op заглушками.
+
+**Dirty-guard — РЕАЛИЗОВАН (2026-06-30, QA PASS 5 сценариев, PM APPROVED):**
+- Причина phantom'а на Ф1: PrimeVue `ConfirmService` держит глобальное реактивное состояние — единственный `<ConfirmDialog>` переотрисовывался в новой destination во время async-навигации. Ни удаление дублей, ни `appendTo="body"` не помогали.
+- Решение: кастомный `UnsavedChangesDialog.vue` (PrimeVue `<Dialog>`, НЕ `useConfirm`/`ConfirmService`) + Promise-based guard в `useSettings.ts`.
+- `markDirty()`/`markClean()` восстановлены как реальные сеттеры `isDirty.value` (были no-op).
+- Единственный `onBeforeRouteLeave` в `useSettings.ts` — return-форма (без `next()`), ловит уход со страницы `/settings` целиком.
+- Смена раздела внутри `/settings` перехватывается `setSection()` через `askUserToConfirmLeave()` (Promise); `router.replace()` не триггерит `onBeforeRouteLeave` (та же страница).
+- `dialogVisible` закрывается явно ДО `resolve()` в `onDialogLeave`/`onDialogStay` — исключает re-trigger guard при `router.replace`.
+- `onDialogLeave` дополнительно сбрасывает `isDirty.value = false` до резолва — `setSection` не видит грязного состояния при замене URL.
+- `UnsavedChangesDialog.vue` монтируется единожды в `SettingsPage/index.vue` (`v-model:visible` + `@leave`/`@stay`).
+- i18n: `settings.dirtyGuard.{title,message,stay,leave}` добавлены в ru.json + en.json.
+- QA PASS: внешняя навигация (Покинуть/Остаться) + смена раздела (Покинуть/Остаться) + нет-dirty (нет диалога) + обе темы + DOM-счётчик ровно 1 диалог на вызов.
 
 ### Фаза 2 — РЕАЛИЗОВАНА (2026-06-29, незакоммичено)
 

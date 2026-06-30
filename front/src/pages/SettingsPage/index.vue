@@ -5,6 +5,13 @@
       :title="t('settings.pageTitle')"
     />
 
+    <!-- Единственный экземпляр диалога «Несохранённые изменения» -->
+    <UnsavedChangesDialog
+      v-model:visible="settings.dialogVisible.value"
+      @leave="settings.onDialogLeave"
+      @stay="settings.onDialogStay"
+    />
+
     <!-- Mobile section select (<768px) -->
     <div class="settings-page__detail-mobile-select">
       <Select
@@ -110,6 +117,7 @@ import SysTabUsers from './components/sections/system/SysTabUsers.vue'
 import SysTabAccessControl from './components/sections/system/SysTabAccessControl.vue'
 import SysTabAutomationRuns from './components/sections/system/SysTabAutomationRuns.vue'
 import SectionComingSoon from './components/sections/SectionComingSoon.vue'
+import UnsavedChangesDialog from './components/UnsavedChangesDialog.vue'
 import { useSettings, DIRECTORIES_KEYS } from './composables/useSettings'
 import { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
 
