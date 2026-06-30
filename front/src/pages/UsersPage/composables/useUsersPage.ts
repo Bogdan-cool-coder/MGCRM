@@ -167,6 +167,40 @@ export const useUsersPage = () => {
     )
   }
 
+  // ─── Reset password ───────────────────────────────────────────────────────────
+  const resetPasswordDialogVisible = ref(false)
+  const resetPasswordValue = ref('')
+
+  function confirmResetPassword(user: AdminUserDto) {
+    confirm.require({
+      message: t('admin.users.resetPassword.confirm', { name: user.full_name }),
+      header: t('admin.users.resetPassword.title'),
+      icon: 'pi pi-key',
+      acceptProps: { severity: 'warn', label: t('admin.users.resetPassword.action') },
+      rejectProps: { severity: 'secondary', outlined: true, label: t('common.cancel') },
+      accept: async () => {
+        try {
+          const result = await adminUsersApi.resetUserPassword(user.id)
+          // Store generated password locally — shown once, never logged, not persisted
+          resetPasswordValue.value = result.password
+          resetPasswordDialogVisible.value = true
+        } catch (err) {
+          const status = (err as { response?: { status?: number } })?.response?.status
+          const summary =
+            status === 422
+              ? t('admin.users.resetPassword.cannotReset')
+              : t('errors.unknown')
+          toast.add({ severity: 'error', summary, life: 4000 })
+        }
+      },
+    })
+  }
+
+  function onResetPasswordDialogHide() {
+    // Wipe password from memory when dialog closes
+    resetPasswordValue.value = ''
+  }
+
   // ─── Deactivate / reactivate ───────────────────────────────────────────────────
   function confirmDeactivate(user: AdminUserDto) {
     confirm.require({
@@ -245,6 +279,11 @@ export const useUsersPage = () => {
     // Row actions
     confirmDeactivate,
     reactivate,
+    confirmResetPassword,
+    // Reset password result dialog
+    resetPasswordDialogVisible,
+    resetPasswordValue,
+    onResetPasswordDialogHide,
     // Options
     roleOptions,
     isActiveOptions,

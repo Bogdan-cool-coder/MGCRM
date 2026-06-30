@@ -490,6 +490,16 @@
       "activate": "Activate",
       "activated": "User activated",
       "cannotDeactivateSelf": "You cannot deactivate your own account",
+      "resetPassword": {
+        "action": "Reset password",
+        "title": "Reset password",
+        "confirm": "Reset password for user \"{name}\"? The current password will stop working and a new one will be generated.",
+        "resultTitle": "New password generated",
+        "oneTimeWarning": "Save this password — it is shown only once. Share it with the user via a secure channel.",
+        "newPassword": "New password",
+        "copy": "Copy password",
+        "cannotReset": "Cannot reset password for this account"
+      },
       "empty": "No users found",
       "active": "Active",
       "inactive": "Inactive",

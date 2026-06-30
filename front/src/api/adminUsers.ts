@@ -55,4 +55,16 @@ export const adminUsersApi = {
     const res = await apiClient.get<{ data: DepartmentOption[] }>('/api/admin/departments')
     return res.data.data ?? []
   },
+
+  /**
+   * Generate and return a new password for the user.
+   * The plaintext password is returned ONCE — not stored server-side.
+   * Gate: admin-write. Cannot reset own account or service accounts (→ 422).
+   */
+  async resetUserPassword(userId: number): Promise<{ user_id: number; password: string }> {
+    const res = await apiClient.post<{ data: { user_id: number; password: string } }>(
+      `/api/admin/users/${userId}/reset-password`,
+    )
+    return res.data.data
+  },
 }

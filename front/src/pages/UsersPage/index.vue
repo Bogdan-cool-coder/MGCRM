@@ -127,7 +127,7 @@
           </Column>
 
           <!-- Actions -->
-          <Column v-if="canManage" :header="t('admin.users.columns.actions')" style="width: 120px">
+          <Column v-if="canManage" :header="t('admin.users.columns.actions')" style="width: 150px">
             <template #body="{ data }">
               <div class="d-flex gap-1 justify-content-end">
                 <Button
@@ -139,6 +139,18 @@
                   :aria-label="t('common.edit')"
                   v-tooltip.top="t('common.edit')"
                   @click="openEdit(data)"
+                />
+                <!-- Reset password: hide for self (backend also guards, but UX clarity) -->
+                <Button
+                  v-if="data.id !== userStore.getUser?.id"
+                  icon="pi pi-key"
+                  severity="secondary"
+                  text
+                  rounded
+                  size="small"
+                  :aria-label="t('admin.users.resetPassword.action')"
+                  v-tooltip.top="t('admin.users.resetPassword.action')"
+                  @click="confirmResetPassword(data)"
                 />
                 <Button
                   v-if="data.is_active"
@@ -211,6 +223,13 @@
       @create="createUser"
       @update="updateUser"
     />
+
+    <!-- Reset password result — shown once, password cleared on hide -->
+    <ResetPasswordResultDialog
+      v-model="resetPasswordDialogVisible"
+      :password="resetPasswordValue"
+      @hide="onResetPasswordDialogHide"
+    />
   </div>
 </template>
 
@@ -229,10 +248,14 @@ import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
 import type { PageState } from 'primevue/paginator'
 import CreateUserDialog from './components/CreateUserDialog.vue'
+import ResetPasswordResultDialog from './components/ResetPasswordResultDialog.vue'
 import { useUsersPage } from './composables/useUsersPage'
 import type { UserRole } from '@/entities/user'
 
+import { useUserStore } from '@/stores/user'
+
 const { t } = useI18n()
+const userStore = useUserStore()
 
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
@@ -260,6 +283,10 @@ const {
   createMutation,
   confirmDeactivate,
   reactivate,
+  confirmResetPassword,
+  resetPasswordDialogVisible,
+  resetPasswordValue,
+  onResetPasswordDialogHide,
   roleOptions,
   isActiveOptions,
 } = useUsersPage()
