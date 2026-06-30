@@ -55,16 +55,16 @@
 
     <!-- Right group: More + Create -->
     <div class="contacts-toolbar__actions">
-      <!-- More menu -->
-      <Button
-        ref="moreBtn"
-        icon="pi pi-ellipsis-h"
-        outlined
-        severity="secondary"
+      <!-- More menu — vertical ⋮, same pattern as DealsToolbar -->
+      <button
+        ref="moreBtnEl"
+        type="button"
         class="contacts-toolbar__more-btn"
         :title="t('contacts.page.menu.more', 'Ещё')"
         @click="moreMenu?.toggle($event)"
-      />
+      >
+        <i class="pi pi-ellipsis-v" />
+      </button>
       <Menu ref="moreMenu" :model="moreMenuItems" popup />
 
       <!-- Create button -->
@@ -114,6 +114,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const moreMenu = ref<InstanceType<typeof Menu> | null>(null)
+const moreBtnEl = ref<HTMLElement | null>(null)
 
 const typeOptions = computed(() => [
   { label: t('contacts.page.header.switchCompany'), value: 'company' as EntityType },
@@ -313,10 +314,41 @@ const moreMenuItems = computed(() => {
   flex-shrink: 0;
 }
 
+// More button — same design token set as DealsToolbar's more-btn
 .contacts-toolbar__more-btn {
   height: 31px;
-  padding: 0 $space-2;
-  box-sizing: border-box;
+  width: 31px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $surface-200;
+  background: transparent;
+  border-radius: $radius-sm;
+  color: $surface-500;
+  cursor: pointer;
+  transition: background var(--app-transition-fast), color var(--app-transition-fast), border-color var(--app-transition-fast);
+  flex-shrink: 0;
+
+  i {
+    font-size: $font-size-sm;
+  }
+
+  &:hover {
+    background: var(--p-surface-50);
+    border-color: $surface-300;
+    color: $surface-700;
+  }
+
+  .app-dark & {
+    border-color: var(--p-surface-600);
+    color: var(--p-surface-400);
+
+    &:hover {
+      background: var(--p-surface-100);
+      border-color: var(--p-surface-300);
+      color: var(--p-surface-50);
+    }
+  }
 }
 
 .contacts-toolbar__create-btn {

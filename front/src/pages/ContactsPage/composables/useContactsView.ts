@@ -26,8 +26,9 @@ function loadDensity(): ContactsDensity {
 }
 
 // Columns removed from spec that must not persist from old localStorage cache
-const COMPANY_REMOVED_COLS = new Set(['id', 'company_type'])
-const CONTACT_REMOVED_COLS = new Set(['id'])
+// 'tags' removed: tags are now shown as chips inside the name cell (1.2)
+const COMPANY_REMOVED_COLS = new Set(['id', 'company_type', 'tags'])
+const CONTACT_REMOVED_COLS = new Set(['id', 'tags'])
 
 function loadVisibleFields(entityType: EntityType): string[] | null {
   try {
@@ -42,25 +43,26 @@ function loadVisibleFields(entityType: EntityType): string[] | null {
   }
 }
 
-// Per §5 spec: contacts = ФИО/Компания/Телефон/Посл.контакт/Теги/Автор
-// companies = Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный/Теги
+// Per §5 spec: contacts = ФИО/Компания/Телефон/Посл.контакт/Автор
+// companies = Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный
 // NOTE: 'id' (#) and 'company_type' columns are NOT in default company view (D1 fix)
-const DEFAULT_CONTACT_FIELDS = ['full_name', 'company', 'phone', 'last_activity_at', 'tags', 'owner']
-const DEFAULT_COMPANY_FIELDS = ['name', 'category_code', 'country_code', 'open_deals_count', 'last_activity_at', 'engagement_tier', 'owner', 'tags']
+// 'tags' column removed — tags shown as chips inside the name cell (1.2)
+const DEFAULT_CONTACT_FIELDS = ['full_name', 'company', 'phone', 'last_activity_at', 'owner']
+const DEFAULT_COMPANY_FIELDS = ['name', 'category_code', 'country_code', 'open_deals_count', 'last_activity_at', 'engagement_tier', 'owner']
 
 export function useContactsView(entityType: { value: EntityType }) {
   const { t } = useI18n()
 
   const density = ref<ContactsDensity>(loadDensity())
 
-  // Translated column defs — §5.2 contacts: ФИО/Компания/Телефон/Посл.контакт/Теги/Автор
+  // Translated column defs — §5.2 contacts: ФИО/Компания/Телефон/Посл.контакт/Автор
   // 'id' (#) removed — not in §5.2 spec; all sortable cols per CONTACT_SORT_MAP
+  // 'tags' removed from column list — rendered as chips inside the name cell (1.2)
   const contactColumnDefs = computed<ContactColumnDef[]>(() => [
     { field: 'full_name', header: t('contacts.page.columns.name'), required: true, sortable: true },
     { field: 'company', header: t('contacts.page.columns.company'), sortable: true },
     { field: 'phone', header: t('contacts.page.columns.phone'), sortable: true },
     { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
-    { field: 'tags', header: t('contacts.page.columns.tags'), sortable: false },
     { field: 'owner', header: t('contacts.page.columns.author'), sortable: true },
     // Available but hidden by default:
     { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: false, width: 100 },
@@ -68,8 +70,9 @@ export function useContactsView(entityType: { value: EntityType }) {
     { field: 'open_deals_count', header: t('crm.contacts_page.columns.openDeals'), sortable: true, width: 120 },
   ])
 
-  // §5.1 companies: Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный/Теги
+  // §5.1 companies: Название/Категория/Страна/Сделки/Посл.контакт/Вовлечённость/Ответственный
   // 'id' (#) and 'company_type' (Тип компании) are removed per spec §5.1 (D1 fix)
+  // 'tags' removed from column list — rendered as chips inside the name cell (1.2)
   const companyColumnDefs = computed<ContactColumnDef[]>(() => [
     { field: 'name', header: t('company.page.fields.name'), required: true, sortable: true },
     { field: 'category_code', header: t('company.page.fields.category', 'Категория'), sortable: true },
@@ -78,7 +81,6 @@ export function useContactsView(entityType: { value: EntityType }) {
     { field: 'last_activity_at', header: t('crm.contacts_page.columns.lastTouch'), sortable: true },
     { field: 'engagement_tier', header: t('crm.contacts_page.columns.engagement'), sortable: true },
     { field: 'owner', header: t('contacts.page.columns.responsible'), sortable: true },
-    { field: 'tags', header: t('contacts.page.columns.tags'), sortable: false },
     // Available but hidden by default (extra columns for column chooser):
     { field: 'employees_count', header: t('contacts_company.employees', 'Сотрудников'), sortable: false, width: 110 },
   ])

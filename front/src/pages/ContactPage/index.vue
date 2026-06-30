@@ -338,8 +338,65 @@
       @added="loadDeals()"
     />
 
+    <!-- Delete contact confirm dialog (local — avoids ConfirmService phantom on /contacts after redirect) -->
+    <Dialog
+      v-model:visible="deleteContactDialogOpen"
+      :header="t('common.confirm')"
+      modal
+      :draggable="false"
+      :style="{ width: '28rem' }"
+    >
+      <div class="contact-page-v2__confirm-body">
+        <i class="pi pi-exclamation-triangle contact-page-v2__confirm-icon" />
+        <p class="contact-page-v2__confirm-message">{{ t('crm.contact.deleteConfirm') }}</p>
+      </div>
+      <template #footer>
+        <Button
+          :label="t('common.cancel')"
+          severity="secondary"
+          text
+          :disabled="deleteContactLoading"
+          @click="deleteContactDialogOpen = false"
+        />
+        <Button
+          :label="t('common.delete')"
+          severity="danger"
+          :loading="deleteContactLoading"
+          @click="executeDeleteContact"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Detach company confirm dialog (local — avoids ConfirmService phantom) -->
+    <Dialog
+      v-model:visible="detachCompanyDialogOpen"
+      :header="t('common.confirm')"
+      modal
+      :draggable="false"
+      :style="{ width: '28rem' }"
+    >
+      <div class="contact-page-v2__confirm-body">
+        <i class="pi pi-exclamation-triangle contact-page-v2__confirm-icon" />
+        <p class="contact-page-v2__confirm-message">{{ t('contact.page.companies.unlinkConfirm') }}</p>
+      </div>
+      <template #footer>
+        <Button
+          :label="t('common.cancel')"
+          severity="secondary"
+          text
+          :disabled="detachCompanyLoading"
+          @click="detachCompanyDialogOpen = false"
+        />
+        <Button
+          :label="t('common.delete')"
+          severity="danger"
+          :loading="detachCompanyLoading"
+          @click="executeDetachCompany"
+        />
+      </template>
+    </Dialog>
+
     <Toast position="top-right" />
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -358,7 +415,6 @@ import TabPanel from 'primevue/tabpanel'
 import Skeleton from 'primevue/skeleton'
 import Select from 'primevue/select'
 import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
@@ -441,10 +497,16 @@ const {
   onAttachCompanySelect,
   submitAttachCompany,
   setPrimaryCompany,
+  detachCompanyDialogOpen,
+  detachCompanyLoading,
   confirmDetachCompany,
+  executeDetachCompany,
+  deleteContactDialogOpen,
+  deleteContactLoading,
+  confirmDeleteContact,
+  executeDeleteContact,
   onChannelsUpdated,
   onRelationsUpdated,
-  confirmDeleteContact,
   copyLink,
 } = useContactPageActions({ contactId, contact, companies, relations, loadCompanies, loadRelations })
 
@@ -900,5 +962,27 @@ void attachCompanyStatus
 
 .ms-1 {
   margin-left: $space-1;
+}
+
+// ── Confirm dialogs (delete contact / detach company) ────────────────────────
+
+.contact-page-v2__confirm-body {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+}
+
+.contact-page-v2__confirm-icon {
+  font-size: $font-size-icon-sm;
+  color: $color-danger;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.contact-page-v2__confirm-message {
+  font-size: $font-size-sm;
+  color: var(--p-text-color);
+  margin: 0;
+  line-height: 1.5;
 }
 </style>

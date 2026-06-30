@@ -53,6 +53,36 @@
       </button>
     </template>
 
+    <!-- Delete relation confirm dialog (local, NOT ConfirmService — avoids phantom on route leave) -->
+    <Dialog
+      v-model:visible="deleteDialogOpen"
+      :header="t('common.confirm')"
+      modal
+      :draggable="false"
+      :style="{ width: '28rem' }"
+      class="contact-relations__delete-dialog"
+    >
+      <div class="contact-relations__delete-body">
+        <i class="pi pi-exclamation-triangle contact-relations__delete-icon" />
+        <p class="contact-relations__delete-message">{{ t('crm.contact.relations.deleteConfirm') }}</p>
+      </div>
+      <template #footer>
+        <Button
+          :label="t('common.cancel')"
+          severity="secondary"
+          text
+          :disabled="deleteDialogLoading"
+          @click="deleteDialogOpen = false"
+        />
+        <Button
+          :label="t('common.delete')"
+          severity="danger"
+          :loading="deleteDialogLoading"
+          @click="executeDelete"
+        />
+      </template>
+    </Dialog>
+
     <!-- Add relation dialog -->
     <Dialog
       v-model:visible="openDialog"
@@ -114,11 +144,11 @@ import { ref, reactive, computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
-import { useConfirm } from 'primevue/useconfirm'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import AutoComplete from 'primevue/autocomplete'
 import InputText from 'primevue/inputtext'
+import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
@@ -139,7 +169,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
-const confirm = useConfirm()
 
 defineExpose({ openAdd: () => { openDialog.value = true } })
 
@@ -284,28 +313,37 @@ async function submitAdd() {
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
+// Uses a local Dialog (NOT useConfirm/ConfirmDialog) to avoid PrimeVue
+// ConfirmService phantom-dialog on route-leave.
+
+const deleteDialogOpen = ref(false)
+const deleteDialogLoading = ref(false)
+const relToDelete = ref<ContactRelation | null>(null)
 
 function onDelete(rel: ContactRelation) {
-  confirm.require({
-    message: t('crm.contact.relations.deleteConfirm'),
-    header: t('common.confirm'),
-    icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    accept: async () => {
-      try {
-        await contactsApi.deleteRelation(props.contactId, rel.id)
-        emit('updated', props.relations.filter((r) => r.id !== rel.id))
-        toast.add({ severity: 'success', summary: t('crm.contact.relations.deleted'), life: 2500 })
-      } catch (err) {
-        toast.add({
-          severity: 'error',
-          summary: t('errors.server_error'),
-          detail: getApiErrorMessage(err, t('errors.server_error')),
-          life: 4000,
-        })
-      }
-    },
-  })
+  relToDelete.value = rel
+  deleteDialogOpen.value = true
+}
+
+async function executeDelete() {
+  if (!relToDelete.value) return
+  deleteDialogLoading.value = true
+  try {
+    await contactsApi.deleteRelation(props.contactId, relToDelete.value.id)
+    emit('updated', props.relations.filter((r) => r.id !== relToDelete.value!.id))
+    deleteDialogOpen.value = false
+    toast.add({ severity: 'success', summary: t('crm.contact.relations.deleted'), life: 2500 })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: t('errors.server_error'),
+      detail: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    deleteDialogLoading.value = false
+    relToDelete.value = null
+  }
 }
 </script>
 
@@ -380,6 +418,26 @@ function onDelete(rel: ContactRelation) {
       opacity: 1;
     }
   }
+}
+
+.contact-relations__delete-body {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+}
+
+.contact-relations__delete-icon {
+  font-size: $font-size-icon-sm;
+  color: $color-danger;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.contact-relations__delete-message {
+  font-size: $font-size-sm;
+  color: var(--p-text-color);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .contact-relations__dialog-form {

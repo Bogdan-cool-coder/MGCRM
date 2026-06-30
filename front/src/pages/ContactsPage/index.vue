@@ -142,11 +142,11 @@
 
             <!-- Render visible columns dynamically -->
             <template v-for="col in visibleColumnDefs" :key="col.field">
-              <!-- Company name -->
+              <!-- Company name (with tag chips) -->
               <Column
                 v-if="col.field === 'name'"
                 field="name"
-                style="min-width: 200px"
+                style="min-width: 220px"
               >
                 <template #header>
                   <span
@@ -167,22 +167,39 @@
                       :size="32"
                       square
                     />
-                    <RouterLink
-                      :to="`/companies/${data.id}`"
-                      class="contacts-page__name-link"
-                      @click.stop
-                    >
-                      {{ (data as Company).name }}
-                    </RouterLink>
+                    <div class="contacts-page__name-cell-text">
+                      <RouterLink
+                        :to="`/companies/${data.id}`"
+                        class="contacts-page__name-link"
+                        @click.stop
+                      >
+                        {{ (data as Company).name }}
+                      </RouterLink>
+                      <!-- Tag chips under company name -->
+                      <div
+                        v-if="(data.tags ?? []).length > 0"
+                        class="contacts-page__name-tags"
+                      >
+                        <span
+                          v-for="tag in (data.tags ?? []).slice(0, 2)"
+                          :key="tag"
+                          class="contacts-page__tag-chip"
+                        >#{{ tag }}</span>
+                        <span
+                          v-if="(data.tags ?? []).length > 2"
+                          class="contacts-page__tags-more"
+                        >+{{ (data.tags ?? []).length - 2 }}</span>
+                      </div>
+                    </div>
                   </div>
                 </template>
               </Column>
 
-              <!-- Contact full_name (2-line: name + position) -->
+              <!-- Contact full_name (name + position + tag chips) -->
               <Column
                 v-else-if="col.field === 'full_name'"
                 field="full_name"
-                style="min-width: 200px"
+                style="min-width: 220px"
               >
                 <template #header>
                   <span
@@ -215,6 +232,21 @@
                         v-if="(data as Contact).position"
                         class="contacts-page__name-position"
                       >{{ (data as Contact).position }}</span>
+                      <!-- Tag chips below name/position -->
+                      <div
+                        v-if="(data.tags ?? []).length > 0"
+                        class="contacts-page__name-tags"
+                      >
+                        <span
+                          v-for="tag in (data.tags ?? []).slice(0, 2)"
+                          :key="tag"
+                          class="contacts-page__tag-chip"
+                        >#{{ tag }}</span>
+                        <span
+                          v-if="(data.tags ?? []).length > 2"
+                          class="contacts-page__tags-more"
+                        >+{{ (data.tags ?? []).length - 2 }}</span>
+                      </div>
                     </div>
                   </div>
                 </template>
@@ -462,31 +494,6 @@
                 </template>
               </Column>
 
-              <!-- Tags -->
-              <Column
-                v-else-if="col.field === 'tags'"
-              >
-                <template #header>
-                  <span class="contacts-page__th">{{ col.header }}</span>
-                </template>
-                <template #body="{ data }">
-                  <span class="contacts-page__tags">
-                    <Tag
-                      v-for="tag in (data.tags ?? []).slice(0, 2)"
-                      :key="tag"
-                      :value="tag"
-                      severity="secondary"
-                      size="small"
-                    />
-                    <span
-                      v-if="(data.tags ?? []).length > 2"
-                      class="contacts-page__tags-more"
-                    >+{{ data.tags.length - 2 }}</span>
-                    <span v-if="!(data.tags ?? []).length" class="contacts-page__na">—</span>
-                  </span>
-                </template>
-              </Column>
-
               <!-- Employees count (company) -->
               <Column
                 v-else-if="col.field === 'employees_count'"
@@ -717,8 +724,25 @@
       @apply="view.setVisibleFields($event)"
     />
 
+    <!-- ── Delete dialogs (custom — NOT ConfirmDialog, avoids phantom-on-route-leave) -->
+    <!-- Single-item delete -->
+    <ContactsDeleteDialog
+      v-model="deleteOpen"
+      :header="deleteHeader"
+      :message="deleteMessage"
+      :loading="deleteLoading"
+      @confirm="executeDelete"
+    />
+    <!-- Bulk delete -->
+    <ContactsDeleteDialog
+      v-model="bulk.bulkDeleteOpen.value"
+      :header="t('contacts.page.delete.confirm')"
+      :message="t('contacts.page.delete.bulkDetail', { count: bulk.selectedCount.value })"
+      :loading="bulk.bulkDeleteLoading.value"
+      @confirm="bulk.executeBulkDelete()"
+    />
+
     <Toast position="top-right" />
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -735,7 +759,6 @@ import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Drawer from 'primevue/drawer'
 import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import Message from 'primevue/message'
 
 import MergeDialog from '@/components/crm/dedup/MergeDialog.vue'
@@ -760,6 +783,7 @@ import ContactsActiveFiltersBar from './components/ContactsActiveFiltersBar.vue'
 import ContactsColumnChooser from './components/ContactsColumnChooser.vue'
 import ContactsAssignOwnerDialog from './components/ContactsAssignOwnerDialog.vue'
 import ContactsAddTagDialog from './components/ContactsAddTagDialog.vue'
+import ContactsDeleteDialog from './components/ContactsDeleteDialog.vue'
 import ContactsKpiBar from './components/ContactsKpiBar.vue'
 import ContactsPaginator from './components/ContactsPaginator.vue'
 import type { KpiStats } from './components/ContactsKpiBar.vue'
@@ -915,11 +939,16 @@ const {
   formErrors,
   dedupOpen,
   isCreating,
+  deleteOpen,
+  deleteLoading,
+  deleteHeader,
+  deleteMessage,
   openQuickCreate,
   closeQuickCreate,
   openDedup,
   submitQuickCreate,
   openCard,
+  executeDelete,
 } = useContactsPageActions({ reload: load, entityType })
 
 const typeOptions = computed(() => [
@@ -1078,6 +1107,7 @@ onMounted(() => {
   background: $surface-card;
   border: 1px solid $surface-200;
   border-radius: $radius-lg;
+  box-shadow: $shadow-card;
   overflow: hidden;
 
   .app-dark & {
@@ -1341,11 +1371,32 @@ onMounted(() => {
   }
 }
 
-.contacts-page__tags {
+// Tag chips inside the name cell (1.2)
+.contacts-page__name-tags {
   display: flex;
   gap: $space-1;
   flex-wrap: nowrap;
   align-items: center;
+  margin-top: 2px;
+}
+
+.contacts-page__tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 $space-1;
+  height: 18px;
+  border-radius: $radius-sm;
+  background: $surface-100;
+  color: $surface-500;
+  font-size: $font-size-3xs;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  line-height: 1;
+
+  .app-dark & {
+    background: var(--p-surface-200);
+    color: var(--p-surface-400);
+  }
 }
 
 .contacts-page__tags-more {

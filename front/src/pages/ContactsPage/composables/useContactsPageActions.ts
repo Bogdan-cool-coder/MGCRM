@@ -2,7 +2,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
-import { useConfirm } from 'primevue/useconfirm'
 import { useMutation } from '@/composables/async/useMutation'
 import { contactsApi, type CreateContactPayload } from '@/api/crm/contacts'
 import { companiesApi, type CreateCompanyPayload } from '@/api/crm/companies'
@@ -52,7 +51,6 @@ export const useContactsPageActions = (opts: {
 }) => {
   const { t } = useI18n()
   const toast = useToast()
-  const confirm = useConfirm()
   const router = useRouter()
 
   // Quick-create drawer
@@ -64,6 +62,55 @@ export const useContactsPageActions = (opts: {
 
   // Dedup dialog
   const dedupOpen = ref(false)
+
+  // ── Single-item delete dialog (NOT useConfirm — phantom-on-route-leave bug) ──
+  const deleteOpen = ref(false)
+  const deleteLoading = ref(false)
+  const deleteTarget = ref<{ id: number; type: EntityType; label: string } | null>(null)
+
+  const deleteHeader = ref('')
+  const deleteMessage = ref('')
+
+  function confirmDelete(item: { id: number; name?: string; full_name?: string }, type: EntityType) {
+    const name = item.full_name ?? item.name ?? ''
+    deleteTarget.value = { id: item.id, type, label: name }
+    deleteHeader.value = t('contacts.page.delete.confirm') + (name ? ` "${name}"` : '')
+    deleteMessage.value = t('contacts.page.delete.detail')
+    deleteOpen.value = true
+  }
+
+  async function executeDelete() {
+    if (!deleteTarget.value) return
+    deleteLoading.value = true
+    try {
+      if (deleteTarget.value.type === 'company') {
+        await companiesApi.remove(deleteTarget.value.id)
+      } else {
+        await contactsApi.remove(deleteTarget.value.id)
+      }
+      toast.add({
+        severity: 'success',
+        summary: t('contacts.page.delete.success'),
+        life: 4000,
+      })
+      deleteTarget.value = null
+      void opts.reload()
+    } catch (err) {
+      toast.add({
+        severity: 'error',
+        summary: t('contacts.page.errors.delete'),
+        detail: getApiErrorMessage(err, t('errors.server_error')),
+        life: 4000,
+      })
+    } finally {
+      // Always close the dialog and reset loading — regardless of success or error.
+      // Closing in finally (not try) guarantees the dialog dismisses even when the
+      // API call throws. Loading is reset AFTER the close flag so PrimeVue Dialog
+      // starts its leave-transition without a spinner-flash on the next frame.
+      deleteOpen.value = false
+      deleteLoading.value = false
+    }
+  }
 
   const createMutation = useMutation<Contact | Company>()
 
@@ -172,40 +219,6 @@ export const useContactsPageActions = (opts: {
     }
   }
 
-  function confirmDelete(item: { id: number; name?: string; full_name?: string }, type: EntityType) {
-    const name = item.full_name ?? item.name ?? ''
-    confirm.require({
-      message: t('contacts.page.delete.detail'),
-      header: t('contacts.page.delete.confirm') + (name ? ` "${name}"` : ''),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: t('contacts.page.delete.accept'),
-      rejectLabel: t('contacts.page.delete.reject'),
-      acceptClass: 'p-button-danger',
-      accept: async () => {
-        try {
-          if (type === 'company') {
-            await companiesApi.remove(item.id)
-          } else {
-            await contactsApi.remove(item.id)
-          }
-          toast.add({
-            severity: 'success',
-            summary: t('contacts.page.delete.success'),
-            life: 4000,
-          })
-          void opts.reload()
-        } catch (err) {
-          toast.add({
-            severity: 'error',
-            summary: t('contacts.page.errors.delete'),
-            detail: getApiErrorMessage(err, t('errors.server_error')),
-            life: 4000,
-          })
-        }
-      },
-    })
-  }
-
   return {
     quickCreateOpen,
     quickCreateType,
@@ -214,11 +227,17 @@ export const useContactsPageActions = (opts: {
     formErrors,
     dedupOpen,
     isCreating: createMutation.isPending,
+    // single-item delete dialog
+    deleteOpen,
+    deleteLoading,
+    deleteHeader,
+    deleteMessage,
     openQuickCreate,
     closeQuickCreate,
     openDedup,
     submitQuickCreate,
     openCard,
     confirmDelete,
+    executeDelete,
   }
 }

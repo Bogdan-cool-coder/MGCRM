@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
-import { useConfirm } from 'primevue/useconfirm'
 import { useRouter } from 'vue-router'
 import { useMutation } from '@/composables/async/useMutation'
 import { contactsApi } from '@/api/crm/contacts'
@@ -19,7 +18,6 @@ export const useContactPageActions = (opts: {
 }) => {
   const { t } = useI18n()
   const toast = useToast()
-  const confirm = useConfirm()
   const router = useRouter()
 
   const patchMutation = useMutation<ContactExtended>()
@@ -138,18 +136,36 @@ export const useContactPageActions = (opts: {
     toast.add({ severity: 'success', summary: t('contact.page.companies.actions.setPrimary'), life: 3000 })
   }
 
+  // ── Detach company — local dialog (NOT ConfirmService) ───────────────────
+  // Reason: ConfirmService leaves phantom dialogs on route-leave (PrimeVue bug).
+  const detachCompanyDialogOpen = ref(false)
+  const detachCompanyLoading = ref(false)
+  const pendingDetachCompanyId = ref<number | null>(null)
+
   function confirmDetachCompany(companyId: number) {
-    confirm.require({
-      message: t('contact.page.companies.unlinkConfirm'),
-      header: t('common.confirm'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptClass: 'p-button-danger',
-      accept: async () => {
-        await contactsApi.detachCompany(opts.contactId.value, companyId)
-        opts.companies.value = opts.companies.value.filter((c) => c.company_id !== companyId)
-        toast.add({ severity: 'success', summary: t('contacts.page.delete.success'), life: 3000 })
-      },
-    })
+    pendingDetachCompanyId.value = companyId
+    detachCompanyDialogOpen.value = true
+  }
+
+  async function executeDetachCompany() {
+    if (!pendingDetachCompanyId.value) return
+    detachCompanyLoading.value = true
+    try {
+      await contactsApi.detachCompany(opts.contactId.value, pendingDetachCompanyId.value)
+      opts.companies.value = opts.companies.value.filter((c) => c.company_id !== pendingDetachCompanyId.value)
+      detachCompanyDialogOpen.value = false
+      toast.add({ severity: 'success', summary: t('contacts.page.delete.success'), life: 3000 })
+    } catch (err) {
+      toast.add({
+        severity: 'error',
+        summary: t('errors.server_error'),
+        detail: getApiErrorMessage(err, t('errors.server_error')),
+        life: 4000,
+      })
+    } finally {
+      detachCompanyLoading.value = false
+      pendingDetachCompanyId.value = null
+    }
   }
 
   // ── Channels (inline mutations from child component) ──────────────────────
@@ -166,29 +182,34 @@ export const useContactPageActions = (opts: {
     opts.relations.value = updated
   }
 
-  // ── Delete contact ────────────────────────────────────────────────────────
+  // ── Delete contact — local dialog (NOT ConfirmService) ───────────────────
+  // ConfirmService persists its reactive state across navigation: the confirm
+  // popup would appear as a phantom on the /contacts list after redirect.
+  const deleteContactDialogOpen = ref(false)
+  const deleteContactLoading = ref(false)
 
   function confirmDeleteContact() {
-    confirm.require({
-      message: t('crm.contact.deleteConfirm'),
-      header: t('common.confirm'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptClass: 'p-button-danger',
-      accept: async () => {
-        try {
-          await contactsApi.remove(opts.contactId.value)
-          toast.add({ severity: 'success', summary: t('crm.contact.deleted'), life: 3000 })
-          void router.push('/contacts')
-        } catch (err) {
-          toast.add({
-            severity: 'error',
-            summary: t('errors.server_error'),
-            detail: getApiErrorMessage(err, t('errors.server_error')),
-            life: 4000,
-          })
-        }
-      },
-    })
+    deleteContactDialogOpen.value = true
+  }
+
+  async function executeDeleteContact() {
+    deleteContactLoading.value = true
+    try {
+      await contactsApi.remove(opts.contactId.value)
+      // Close dialog first, then navigate — no phantom on destination.
+      deleteContactDialogOpen.value = false
+      toast.add({ severity: 'success', summary: t('crm.contact.deleted'), life: 3000 })
+      void router.push('/contacts')
+    } catch (err) {
+      toast.add({
+        severity: 'error',
+        summary: t('errors.server_error'),
+        detail: getApiErrorMessage(err, t('errors.server_error')),
+        life: 4000,
+      })
+    } finally {
+      deleteContactLoading.value = false
+    }
   }
 
   // ── Copy link ─────────────────────────────────────────────────────────────
@@ -216,10 +237,18 @@ export const useContactPageActions = (opts: {
     onAttachCompanySelect,
     submitAttachCompany,
     setPrimaryCompany,
+    // Detach company dialog state
+    detachCompanyDialogOpen,
+    detachCompanyLoading,
     confirmDetachCompany,
+    executeDetachCompany,
+    // Delete contact dialog state
+    deleteContactDialogOpen,
+    deleteContactLoading,
+    confirmDeleteContact,
+    executeDeleteContact,
     onChannelsUpdated,
     onRelationsUpdated,
-    confirmDeleteContact,
     copyLink,
   }
 }

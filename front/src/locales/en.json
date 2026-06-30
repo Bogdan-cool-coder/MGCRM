@@ -784,6 +784,7 @@
       "delete": {
         "confirm": "Delete record?",
         "detail": "This action cannot be undone.",
+        "bulkDetail": "{count} records will be deleted. This action cannot be undone.",
         "accept": "Delete",
         "reject": "Cancel",
         "success": "Record deleted"
@@ -4051,7 +4052,8 @@
   },
   "contacts_columns": {
     "title": "Column chooser",
-    "required": "Required"
+    "required": "Required",
+    "dragHint": "Drag rows to reorder columns"
   },
   "contacts_company": {
     "employees": "Employees"

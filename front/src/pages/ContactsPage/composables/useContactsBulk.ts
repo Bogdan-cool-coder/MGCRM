@@ -1,11 +1,13 @@
 /**
  * Bulk selection + operations for ContactsPage.
  * Supports contacts and companies via separate API endpoints.
+ *
+ * NOTE: delete confirmation uses a custom reactive Dialog (not useConfirm/ConfirmDialog)
+ * to avoid the PrimeVue ConfirmService phantom-on-route-leave bug.
  */
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
-import { useConfirm } from 'primevue/useconfirm'
 import { contactsApi } from '@/api/crm/contacts'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
@@ -18,7 +20,6 @@ export function useContactsBulk(opts: {
 }) {
   const { t } = useI18n()
   const toast = useToast()
-  const confirm = useConfirm()
 
   const bulkMode = ref(false)
   const selectedIds = ref<Set<number>>(new Set())
@@ -171,39 +172,50 @@ export function useContactsBulk(opts: {
     }
   }
 
-  // ── Bulk delete ─────────────────────────────────────────────────────────────
+  // ── Bulk delete — custom dialog (NOT useConfirm/ConfirmDialog) ───────────────
+  // Reason: PrimeVue ConfirmService leaves a phantom dialog open on route-leave.
+  const bulkDeleteOpen = ref(false)
+  const bulkDeleteLoading = ref(false)
+
   function confirmBulkDelete() {
-    confirm.require({
-      message: t('contacts.page.delete.detail'),
-      header: t('contacts.page.delete.confirm'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: t('contacts.page.delete.accept'),
-      rejectLabel: t('contacts.page.delete.reject'),
-      acceptClass: 'p-button-danger',
-      accept: async () => {
-        try {
-          if (opts.entityType.value === 'contact') {
-            await contactsApi.bulkDelete(selectedIdsList.value)
-          } else {
-            await companiesApi.bulkDelete(selectedIdsList.value)
-          }
-          toast.add({
-            severity: 'success',
-            summary: t('contacts.page.delete.success'),
-            life: 4000,
-          })
-          clearSelection()
-          await opts.reload()
-        } catch (err) {
-          toast.add({
-            severity: 'error',
-            summary: t('contacts.page.errors.delete'),
-            detail: getApiErrorMessage(err, t('errors.server_error')),
-            life: 4000,
-          })
-        }
-      },
-    })
+    bulkDeleteOpen.value = true
+  }
+
+  async function executeBulkDelete() {
+    bulkDeleteLoading.value = true
+    try {
+      if (opts.entityType.value === 'contact') {
+        await contactsApi.bulkDelete(selectedIdsList.value)
+      } else {
+        await companiesApi.bulkDelete(selectedIdsList.value)
+      }
+      // Close immediately after DELETE resolves — before reload — so the dialog
+      // disappears instantly and the user does not watch a 3-second spinner while
+      // the list re-fetches.
+      bulkDeleteOpen.value = false
+      bulkDeleteLoading.value = false
+      toast.add({
+        severity: 'success',
+        summary: t('contacts.page.delete.success'),
+        life: 4000,
+      })
+      clearSelection()
+      exitBulk()
+      // Fire reload in the background — the dialog is already gone.
+      void opts.reload()
+    } catch (err) {
+      toast.add({
+        severity: 'error',
+        summary: t('contacts.page.errors.delete'),
+        detail: getApiErrorMessage(err, t('errors.server_error')),
+        life: 4000,
+      })
+    } finally {
+      // Failsafe: ensure dialog/loading reset even if error threw before our
+      // early-close block above (e.g. network error before the close lines).
+      bulkDeleteOpen.value = false
+      bulkDeleteLoading.value = false
+    }
   }
 
   return {
@@ -217,6 +229,8 @@ export function useContactsBulk(opts: {
     assignOwnerLoading,
     addTagOpen,
     addTagLoading,
+    bulkDeleteOpen,
+    bulkDeleteLoading,
     enterBulk,
     exitBulk,
     toggleItem,
@@ -228,5 +242,6 @@ export function useContactsBulk(opts: {
     openAddTag,
     submitAddTag,
     confirmBulkDelete,
+    executeBulkDelete,
   }
 }
