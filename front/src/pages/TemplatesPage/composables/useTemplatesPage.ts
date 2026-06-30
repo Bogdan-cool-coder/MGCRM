@@ -46,5 +46,6 @@ export const useTemplatesPage = () => {
     loading,
     goToTemplate,
     kindOptions,
+    fetchTemplates,
   }
 }

@@ -2,16 +2,30 @@
   <div class="dir-tab-doc-templates">
     <div class="dir-tab-toolbar">
       <div class="dir-tab-toolbar__spacer" />
+      <div class="dir-tab-toolbar__actions">
+        <Button
+          v-if="pageRef?.canManage"
+          icon="pi pi-plus"
+          :label="t('templates.list.create')"
+          @click="pageRef?.openCreate()"
+        />
+      </div>
     </div>
 
     <div class="dir-tab-body">
-      <TemplatesPage :embedded="true" />
+      <TemplatesPage ref="pageRef" :embedded="true" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import Button from 'primevue/button'
 import TemplatesPage from '@/pages/TemplatesPage/index.vue'
+
+const { t } = useI18n()
+const pageRef = ref<InstanceType<typeof TemplatesPage> | null>(null)
 </script>
 
 <style lang="scss" scoped>

@@ -8,11 +8,17 @@ import type {
   TemplateVersionDto,
   TemplateListParams,
   PatchTemplatePayload,
+  CreateTemplatePayload,
   TemplateKind,
 } from '@/entities/template'
 
 // Re-export for convenience
-export type { TemplateKind }
+export type { TemplateKind, CreateTemplatePayload }
+
+export async function createTemplate(payload: CreateTemplatePayload): Promise<TemplateDto> {
+  const response = await apiClient.post<{ data: TemplateDto }>('/api/templates', payload)
+  return response.data.data
+}
 
 export async function getTemplates(params?: TemplateListParams): Promise<TemplateListItemDto[]> {
   const response = await apiClient.get<{ data: TemplateListItemDto[] }>('/api/templates', { params })
@@ -81,6 +87,7 @@ export async function overrideTemplateVersion(
 }
 
 export const templatesApi = {
+  createTemplate,
   getTemplates,
   getTemplate,
   patchTemplate,

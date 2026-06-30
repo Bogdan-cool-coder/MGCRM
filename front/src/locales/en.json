@@ -2338,7 +2338,8 @@
       "reconciliation": "Reconciliation",
       "termination_agreement": "Termination Agreement",
       "yaml": "YAML",
-      "docx": "DOCX"
+      "docx": "DOCX",
+      "text": "Text"
     },
     "create": {
       "title": "Create document",
@@ -2467,9 +2468,34 @@
       "create": "Create template",
       "empty": "No templates"
     },
+    "create": {
+      "title": "New document template",
+      "hint": "After creation you will be taken to the template page where you can upload a version file (.docx) and edit metadata.",
+      "submit": "Create",
+      "successToast": "Template created",
+      "fields": {
+        "code": "Key (code)",
+        "codePlaceholder": "country_kz",
+        "codeHint": "Lowercase Latin letters, digits and _ only. Must start with a letter. Example: country_kz, main_contract. The key cannot be changed after creation.",
+        "kind": "Type",
+        "kindPlaceholder": "Select type…",
+        "title": "Name"
+      },
+      "validation": {
+        "codeRequired": "Template key is required",
+        "codeFormat": "Only lowercase Latin letters, digits and _. Must start with a letter.",
+        "kindRequired": "Select template type",
+        "titleRequired": "Name is required"
+      }
+    },
     "card": {
       "back": "Back",
-      "edit": "Edit",
+      "edit": {
+        "title": "Edit",
+        "codesHint": "Comma-separated codes, e.g. macrocrm, macrosales",
+        "placeholderCodes": "macrocrm, macrosales …",
+        "codeDuplicate": "A template with this key already exists"
+      },
       "notFound": "Template not found",
       "upload": {
         "title": "Upload .docx version",

@@ -33,7 +33,7 @@
           />
           <Button
             icon="pi pi-pencil"
-            :label="t('templates.card.edit')"
+            :label="t('templates.card.edit.title')"
             severity="secondary"
             outlined
             @click="editDialogVisible = true"

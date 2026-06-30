@@ -1,7 +1,7 @@
 <template>
   <Dialog
     v-model:visible="visible"
-    :header="t('templates.card.edit')"
+    :header="t('templates.card.edit.title')"
     :style="{ width: '460px' }"
     modal
     :draggable="false"

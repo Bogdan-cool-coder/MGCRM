@@ -2338,7 +2338,8 @@
       "reconciliation": "Сверка",
       "termination_agreement": "Соглашение о расторжении",
       "yaml": "YAML",
-      "docx": "DOCX"
+      "docx": "DOCX",
+      "text": "Текст"
     },
     "create": {
       "title": "Создать документ",
@@ -2467,9 +2468,34 @@
       "create": "Создать шаблон",
       "empty": "Нет шаблонов"
     },
+    "create": {
+      "title": "Новый шаблон документа",
+      "hint": "После создания вы сразу перейдёте на страницу шаблона — там можно загрузить файл версии (.docx) и отредактировать метаданные.",
+      "submit": "Создать",
+      "successToast": "Шаблон создан",
+      "fields": {
+        "code": "Ключ (code)",
+        "codePlaceholder": "country_kz",
+        "codeHint": "Латиница в нижнем регистре, snake_case. Например: country_kz, main_contract. Ключ нельзя изменить после создания.",
+        "kind": "Тип",
+        "kindPlaceholder": "Выберите тип…",
+        "title": "Название"
+      },
+      "validation": {
+        "codeRequired": "Укажите ключ шаблона",
+        "codeFormat": "Только строчные латинские буквы, цифры и _. Начало — буква.",
+        "kindRequired": "Выберите тип шаблона",
+        "titleRequired": "Укажите название"
+      }
+    },
     "card": {
       "back": "Назад",
-      "edit": "Редактировать",
+      "edit": {
+        "title": "Редактировать",
+        "codesHint": "Коды через запятую, напр. macrocrm, macrosales",
+        "placeholderCodes": "macrocrm, macrosales …",
+        "codeDuplicate": "Шаблон с таким ключом уже существует"
+      },
       "notFound": "Шаблон не найден",
       "upload": {
         "title": "Загрузить версию .docx",

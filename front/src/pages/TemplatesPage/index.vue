@@ -1,6 +1,15 @@
 <template>
   <div class="templates-page" :class="{ 'templates-page--embedded': embedded }">
-    <PageHeader v-if="!embedded" :title="t('templates.list.title')" icon="pi pi-file-edit" />
+    <PageHeader v-if="!embedded" :title="t('templates.list.title')" icon="pi pi-file-edit">
+      <template #actions>
+        <Button
+          v-if="canManage"
+          icon="pi pi-plus"
+          :label="t('templates.list.create')"
+          @click="createDialogRef?.open()"
+        />
+      </template>
+    </PageHeader>
 
     <!-- Filters -->
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
@@ -71,15 +80,27 @@
             <div class="templates-page__empty">
               <i class="pi pi-file-edit" />
               <span>{{ t('templates.list.empty') }}</span>
+              <Button
+                v-if="canManage"
+                :label="t('templates.list.create')"
+                icon="pi pi-plus"
+                size="small"
+                text
+                severity="secondary"
+                @click="createDialogRef?.open()"
+              />
             </div>
           </template>
         </DataTable>
       </template>
     </Card>
+
+    <CreateTemplateDialog ref="createDialogRef" @created="onCreated" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Card from 'primevue/card'
@@ -90,8 +111,11 @@ import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Tag from 'primevue/tag'
+import Button from 'primevue/button'
+import CreateTemplateDialog from './components/CreateTemplateDialog.vue'
 import type { TemplateListItemDto, AiCheckStatus } from '@/entities/template'
 import { useTemplatesPage } from './composables/useTemplatesPage'
+import { useUserStore } from '@/stores/user'
 
 type TagSeverity = 'secondary' | 'info' | 'success' | 'warn' | 'danger' | 'contrast'
 
@@ -99,7 +123,27 @@ const { t } = useI18n()
 
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
-const { kindFilter, searchFilter, templates, loading, goToTemplate, kindOptions } = useTemplatesPage()
+const userStore = useUserStore()
+const canManage = (() => {
+  const role = userStore.getUserRole
+  return role === 'admin'
+})()
+
+const { kindFilter, searchFilter, templates, loading, goToTemplate, kindOptions, fetchTemplates } =
+  useTemplatesPage()
+
+const createDialogRef = ref<InstanceType<typeof CreateTemplateDialog> | null>(null)
+
+function openCreate() {
+  createDialogRef.value?.open()
+}
+
+function onCreated() {
+  // router.push already handled inside the dialog; refresh list in background
+  void fetchTemplates()
+}
+
+defineExpose({ canManage, openCreate })
 
 function aiStatusSeverity(status: AiCheckStatus): TagSeverity {
   const map: Record<AiCheckStatus, TagSeverity> = {

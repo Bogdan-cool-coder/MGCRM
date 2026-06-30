@@ -74,3 +74,14 @@ export interface PatchTemplatePayload {
   country_codes?: string[]
   client_category_codes?: string[]
 }
+
+export interface CreateTemplatePayload {
+  code: string
+  kind: TemplateKind
+  title: string
+  category?: string | null
+  product_codes?: string[]
+  country_codes?: string[]
+  client_category_codes?: string[]
+  department_ids?: number[]
+}
