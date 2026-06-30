@@ -299,7 +299,9 @@ class DedupService
                 $raw[] = ['key' => 'name:'.$key, 'ids' => $g->pluck('id')->all()];
             });
 
-        return $this->mergeOverlappingGroups($raw, $byId);
+        $dismissed = $this->dismissedPairsForScope('contact', $byId->keys()->all());
+
+        return $this->mergeOverlappingGroups($raw, $byId, $dismissed);
     }
 
     /**
@@ -361,27 +363,57 @@ class DedupService
                 $raw[] = ['key' => 'name:'.$key, 'ids' => $g->pluck('id')->all()];
             });
 
-        return $this->mergeOverlappingGroups($raw, $byId);
+        $dismissed = $this->dismissedPairsForScope('company', $byId->keys()->all());
+
+        return $this->mergeOverlappingGroups($raw, $byId, $dismissed);
     }
 
     /**
-     * Union-find: merge raw per-criterion groups whose entity-ID sets overlap.
+     * Union-find: merge raw per-criterion groups whose entity-ID sets overlap,
+     * filtering out dismissed pairs so they never end up in the same component.
      *
      * Input $raw is an array of ['key'=>string, 'ids'=>int[]] tuples.
-     * Any two groups sharing at least one ID are collapsed into a single
-     * output group; their keys are concatenated with '|'.
+     * Each tuple represents a set of IDs that share a single criterion value.
+     * The union-find runs over individual entity IDs (not group indices):
+     * for every pair (a, b) within a raw group, if that pair is NOT dismissed,
+     * we union a and b.  Dismissed edges are simply skipped — this prevents
+     * two dismissed IDs from being placed in the same component unless a
+     * THIRD entity connects them through a separate, non-dismissed edge.
      *
-     * This guarantees each entity ID appears in exactly one output group.
+     * After union-find we emit one output group per connected component that
+     * has ≥ 2 members.  A component that contains only one entity (because all
+     * its edges were dismissed) is silently dropped.
      *
      * @param  array<int, array{key: string, ids: int[]}>  $raw
      * @param  SupportCollection<int, Model>  $byId
+     * @param  array<string, true>  $dismissed  Keys: "min_id|max_id" for every dismissed pair
      * @return SupportCollection<int, array{key: string, entities: Collection<int, Model>}>
      */
-    private function mergeOverlappingGroups(array $raw, SupportCollection $byId): SupportCollection
+    private function mergeOverlappingGroups(array $raw, SupportCollection $byId, array $dismissed = []): SupportCollection
     {
-        // parent[i] = representative index for group i
-        $n = count($raw);
-        $parent = range(0, $n - 1);
+        // Collect all unique entity IDs across all raw groups.
+        $allIds = [];
+        foreach ($raw as $group) {
+            foreach ($group['ids'] as $id) {
+                $allIds[$id] = true;
+            }
+        }
+        $allIds = array_keys($allIds); // int[]
+
+        if ($allIds === []) {
+            return collect();
+        }
+
+        // Build integer index: id → idx and idx → id
+        $idToIdx = [];
+        $idxToId = [];
+        foreach ($allIds as $idx => $id) {
+            $idToIdx[$id] = $idx;
+            $idxToId[$idx] = $id;
+        }
+
+        $m = count($allIds);
+        $parent = range(0, $m - 1);
 
         $find = function (int $x) use (&$parent, &$find): int {
             if ($parent[$x] !== $x) {
@@ -399,51 +431,81 @@ class DedupService
             }
         };
 
-        // For each entity ID track which group indices contain it
-        // so we can union groups that share an ID.
-        $idToGroups = [];
-        for ($i = 0; $i < $n; $i++) {
-            foreach ($raw[$i]['ids'] as $id) {
-                $idToGroups[$id][] = $i;
+        // Track which raw-group keys contribute to a given component root.
+        // We add a key contribution when we process a raw group (even if only
+        // some of its edges are dismissed — the criterion key still labels the group).
+        // We record key-per-pair-root as we go.
+        $rootToKeys = []; // root-idx → string[]
+        $rootToIds = [];  // root-idx → id-set (assembled after union)
+
+        // Process every raw group: union all non-dismissed pairs within it.
+        foreach ($raw as $group) {
+            $ids = $group['ids'];
+            $key = $group['key'];
+            $count = count($ids);
+
+            for ($i = 0; $i < $count; $i++) {
+                for ($j = $i + 1; $j < $count; $j++) {
+                    $a = $ids[$i];
+                    $b = $ids[$j];
+
+                    // Normalize pair key: smaller id first.
+                    $pairKey = min($a, $b).'|'.max($a, $b);
+                    if (isset($dismissed[$pairKey])) {
+                        continue; // dismissed — do not connect these two
+                    }
+
+                    $union($idToIdx[$a], $idToIdx[$b]);
+                }
+            }
+
+            // Record the criterion key against every ID in this group.
+            // We will re-map to root after all unions are done.
+            foreach ($ids as $id) {
+                $idxForId = $idToIdx[$id];
+                $rootToKeys[$idxForId][] = $key;
             }
         }
 
-        // Union all groups that share an ID
-        foreach ($idToGroups as $groupIndices) {
-            $first = $groupIndices[0];
-            for ($j = 1; $j < count($groupIndices); $j++) {
-                $union($first, $groupIndices[$j]);
+        // Now assemble output: group IDs by their component root.
+        foreach ($allIds as $idx => $id) {
+            $root = $find($idx);
+            $rootToIds[$root][$id] = true;
+        }
+
+        // Collect criterion keys per component root (using post-union roots).
+        $componentKeys = [];
+        foreach ($rootToKeys as $beforeRoot => $keys) {
+            $afterRoot = $find($beforeRoot);
+            foreach ($keys as $key) {
+                $componentKeys[$afterRoot][] = $key;
             }
         }
 
-        // Aggregate: root → merged group data
-        $merged = [];
-        for ($i = 0; $i < $n; $i++) {
-            $root = $find($i);
-            if (! isset($merged[$root])) {
-                $merged[$root] = ['keys' => [], 'ids' => []];
+        $result = [];
+        foreach ($rootToIds as $root => $idsMap) {
+            if (count($idsMap) < 2) {
+                continue; // single-entity component — not a duplicate group
             }
 
-            $merged[$root]['keys'][] = $raw[$i]['key'];
-            foreach ($raw[$i]['ids'] as $id) {
-                $merged[$root]['ids'][$id] = true; // use map to deduplicate IDs
+            $ids = array_keys($idsMap);
+            $entities = collect($ids)
+                ->map(fn (int $id) => $byId->get($id))
+                ->filter()
+                ->values();
+
+            if ($entities->isEmpty()) {
+                continue;
             }
+
+            $keys = array_unique($componentKeys[$root] ?? []);
+            $result[] = [
+                'key' => implode('|', $keys),
+                'entities' => $entities,
+            ];
         }
 
-        return collect(array_values($merged))
-            ->map(function (array $group) use ($byId): array {
-                $ids = array_keys($group['ids']);
-                $entities = collect($ids)
-                    ->map(fn (int $id) => $byId->get($id))
-                    ->filter()
-                    ->values();
-
-                return [
-                    'key' => implode('|', $group['keys']),
-                    'entities' => $entities,
-                ];
-            })
-            ->values();
+        return collect(array_values($result));
     }
 
     /**
@@ -488,7 +550,31 @@ class DedupService
             ->where('contact_id', $dupId)
             ->delete();
 
-        // 3. Contact channels: re-parent all.
+        // 3. Contact channels: append without collisions.
+        //    The table has UNIQUE(contact_id, channel_type, value).
+        //    If the master already owns a channel with the same (channel_type, value),
+        //    a blind UPDATE would cause a unique-violation and roll back the transaction.
+        //    Strategy: delete from the dup those channels whose (channel_type, value)
+        //    the master already owns, then re-parent the remainder.
+        $masterChannelKeys = DB::table('contact_channels')
+            ->where('contact_id', $masterId)
+            ->get(['channel_type', 'value'])
+            ->map(fn ($row): string => $row->channel_type."\x00".$row->value)
+            ->all();
+
+        if ($masterChannelKeys !== []) {
+            // Delete dup's channels that would collide with master's channels.
+            DB::table('contact_channels')
+                ->where('contact_id', $dupId)
+                ->get(['id', 'channel_type', 'value'])
+                ->each(function ($row) use ($masterChannelKeys): void {
+                    if (in_array($row->channel_type."\x00".$row->value, $masterChannelKeys, true)) {
+                        DB::table('contact_channels')->where('id', $row->id)->delete();
+                    }
+                });
+        }
+
+        // Re-parent the non-colliding remainder.
         DB::table('contact_channels')
             ->where('contact_id', $dupId)
             ->update(['contact_id' => $masterId]);
@@ -600,7 +686,28 @@ class DedupService
                 ->update(['is_current' => false]);
         }
 
-        // 5. Company channels: re-parent company_channels.company_id.
+        // 5. Company channels: append without collisions.
+        //    The table has UNIQUE(company_id, channel_type, value).
+        //    Delete from dup those channels whose (channel_type, value) already exist
+        //    on the master, then re-parent the remainder.
+        $masterCompanyChannelKeys = DB::table('company_channels')
+            ->where('company_id', $masterId)
+            ->get(['channel_type', 'value'])
+            ->map(fn ($row): string => $row->channel_type."\x00".$row->value)
+            ->all();
+
+        if ($masterCompanyChannelKeys !== []) {
+            DB::table('company_channels')
+                ->where('company_id', $dupId)
+                ->get(['id', 'channel_type', 'value'])
+                ->each(function ($row) use ($masterCompanyChannelKeys): void {
+                    if (in_array($row->channel_type."\x00".$row->value, $masterCompanyChannelKeys, true)) {
+                        DB::table('company_channels')->where('id', $row->id)->delete();
+                    }
+                });
+        }
+
+        // Re-parent the non-colliding remainder.
         DB::table('company_channels')
             ->where('company_id', $dupId)
             ->update(['company_id' => $masterId]);
@@ -623,6 +730,37 @@ class DedupService
 
         // Finally: soft-delete the now-orphan-free duplicate.
         Company::where('id', $dupId)->delete();
+    }
+
+    /**
+     * Load all dismissed pairs for a given scope where at least one side is in $entityIds.
+     * Returns a set keyed by "min_id|max_id" for O(1) lookup during union-find.
+     *
+     * @param  int[]  $entityIds
+     * @return array<string, true>
+     */
+    private function dismissedPairsForScope(string $scope, array $entityIds): array
+    {
+        if ($entityIds === []) {
+            return [];
+        }
+
+        $pairs = DismissedDuplicate::where('entity_type', $scope)
+            ->where(function ($q) use ($entityIds): void {
+                $q->whereIn('entity_a_id', $entityIds)
+                    ->orWhereIn('entity_b_id', $entityIds);
+            })
+            ->get(['entity_a_id', 'entity_b_id']);
+
+        $set = [];
+        foreach ($pairs as $pair) {
+            // entity_a_id is always the smaller (normalized on insert), but be defensive.
+            $a = min($pair->entity_a_id, $pair->entity_b_id);
+            $b = max($pair->entity_a_id, $pair->entity_b_id);
+            $set["{$a}|{$b}"] = true;
+        }
+
+        return $set;
     }
 
     /**

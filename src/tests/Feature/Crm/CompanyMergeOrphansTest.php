@@ -152,6 +152,107 @@ class CompanyMergeOrphansTest extends TestCase
         ]);
     }
 
+    /**
+     * BUG-1: merge must NOT 500 when master and dup share the same channel.
+     * Collision channel is dropped from dup; unique dup channels are transferred.
+     */
+    public function test_merge_company_channel_collision_does_not_500(): void
+    {
+        $master = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $dup = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+
+        $sharedPhone = '+77009876543';
+
+        DB::table('company_channels')->insert([
+            'company_id' => $master->id,
+            'channel_type' => 'phone',
+            'value' => $sharedPhone,
+            'is_primary_for_channel' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('company_channels')->insert([
+            'company_id' => $dup->id,
+            'channel_type' => 'phone',
+            'value' => $sharedPhone,
+            'is_primary_for_channel' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $uniqueChanId = DB::table('company_channels')->insertGetId([
+            'company_id' => $dup->id,
+            'channel_type' => 'email',
+            'value' => 'dup-company@example.com',
+            'is_primary_for_channel' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'company',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        $this->assertSoftDeleted('crm_companies', ['id' => $dup->id]);
+
+        // Master retains shared phone — exactly once.
+        $this->assertSame(1, DB::table('company_channels')
+            ->where('company_id', $master->id)
+            ->where('channel_type', 'phone')
+            ->where('value', $sharedPhone)
+            ->count());
+
+        // Dup's unique email transferred to master.
+        $this->assertDatabaseHas('company_channels', [
+            'id' => $uniqueChanId,
+            'company_id' => $master->id,
+        ]);
+
+        // No channels still reference the dup.
+        $this->assertDatabaseMissing('company_channels', ['company_id' => $dup->id]);
+    }
+
+    /**
+     * BUG-1 (different channels): master and dup have different channels;
+     * after merge master owns both.
+     */
+    public function test_merge_company_different_channels_both_transferred(): void
+    {
+        $master = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $dup = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+
+        $masterChanId = DB::table('company_channels')->insertGetId([
+            'company_id' => $master->id,
+            'channel_type' => 'phone',
+            'value' => '+77000000001',
+            'is_primary_for_channel' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $dupChanId = DB::table('company_channels')->insertGetId([
+            'company_id' => $dup->id,
+            'channel_type' => 'phone',
+            'value' => '+77000000002',
+            'is_primary_for_channel' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'company',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        $this->assertSoftDeleted('crm_companies', ['id' => $dup->id]);
+
+        $this->assertDatabaseHas('company_channels', ['id' => $masterChanId, 'company_id' => $master->id]);
+        $this->assertDatabaseHas('company_channels', ['id' => $dupChanId, 'company_id' => $master->id]);
+        $this->assertSame(2, DB::table('company_channels')->where('company_id', $master->id)->count());
+    }
+
     // -----------------------------------------------------------------------
     // Client status log
     // -----------------------------------------------------------------------

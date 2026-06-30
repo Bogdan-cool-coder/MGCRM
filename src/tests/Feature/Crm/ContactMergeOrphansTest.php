@@ -179,6 +179,120 @@ class ContactMergeOrphansTest extends TestCase
         ]);
     }
 
+    /**
+     * BUG-1: merge must NOT 500 when master and dup share the same channel.
+     * The duplicate channel must be dropped (master keeps its own copy);
+     * unique channels on the dup must be transferred to master.
+     */
+    public function test_merge_contact_channel_collision_does_not_500(): void
+    {
+        $master = Contact::factory()->create(['owner_id' => $this->admin->id]);
+        $dup = Contact::factory()->create(['owner_id' => $this->admin->id]);
+
+        $sharedPhone = '+77001234567';
+
+        // Both contacts have the same phone channel.
+        DB::table('contact_channels')->insert([
+            'contact_id' => $master->id,
+            'channel_type' => 'phone',
+            'value' => $sharedPhone,
+            'is_primary_for_channel' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('contact_channels')->insert([
+            'contact_id' => $dup->id,
+            'channel_type' => 'phone',
+            'value' => $sharedPhone,
+            'is_primary_for_channel' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Dup also has a unique channel not on master.
+        $uniqueChanId = DB::table('contact_channels')->insertGetId([
+            'contact_id' => $dup->id,
+            'channel_type' => 'email',
+            'value' => 'dup-only@example.com',
+            'is_primary_for_channel' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Must not 500.
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'contact',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        $this->assertSoftDeleted('crm_contacts', ['id' => $dup->id]);
+
+        // Master still has the shared phone (its own copy).
+        $this->assertDatabaseHas('contact_channels', [
+            'contact_id' => $master->id,
+            'channel_type' => 'phone',
+            'value' => $sharedPhone,
+        ]);
+
+        // Exactly one phone row for master (no duplicate added).
+        $this->assertSame(1, DB::table('contact_channels')
+            ->where('contact_id', $master->id)
+            ->where('channel_type', 'phone')
+            ->where('value', $sharedPhone)
+            ->count());
+
+        // Dup's unique channel transferred to master.
+        $this->assertDatabaseHas('contact_channels', [
+            'id' => $uniqueChanId,
+            'contact_id' => $master->id,
+        ]);
+
+        // No channels still reference the dup.
+        $this->assertDatabaseMissing('contact_channels', ['contact_id' => $dup->id]);
+    }
+
+    /**
+     * BUG-1 (different channels): master and dup have DIFFERENT channels;
+     * after merge master owns both.
+     */
+    public function test_merge_contact_different_channels_both_transferred(): void
+    {
+        $master = Contact::factory()->create(['owner_id' => $this->admin->id]);
+        $dup = Contact::factory()->create(['owner_id' => $this->admin->id]);
+
+        $masterChanId = DB::table('contact_channels')->insertGetId([
+            'contact_id' => $master->id,
+            'channel_type' => 'phone',
+            'value' => '+77000000001',
+            'is_primary_for_channel' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $dupChanId = DB::table('contact_channels')->insertGetId([
+            'contact_id' => $dup->id,
+            'channel_type' => 'phone',
+            'value' => '+77000000002',
+            'is_primary_for_channel' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'contact',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        $this->assertSoftDeleted('crm_contacts', ['id' => $dup->id]);
+
+        // Master keeps its original channel.
+        $this->assertDatabaseHas('contact_channels', ['id' => $masterChanId, 'contact_id' => $master->id]);
+        // Dup's channel transferred to master.
+        $this->assertDatabaseHas('contact_channels', ['id' => $dupChanId, 'contact_id' => $master->id]);
+        $this->assertSame(2, DB::table('contact_channels')->where('contact_id', $master->id)->count());
+    }
+
     // -----------------------------------------------------------------------
     // Activities (polymorphic target)
     // -----------------------------------------------------------------------

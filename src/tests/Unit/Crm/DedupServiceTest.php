@@ -234,6 +234,132 @@ class DedupServiceTest extends TestCase
         );
     }
 
+    // =========================================================================
+    // BUG-2: scanAll must filter dismissed pairs from union-find edges
+    // =========================================================================
+
+    /**
+     * Dismiss pair A-B; global scan must NOT place A and B in the same group
+     * when there is no third record connecting them.
+     */
+    public function test_scan_all_contacts_dismissed_pair_not_grouped(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $a = Contact::factory()->create([
+            'email' => 'shared-bug2@example.com',
+            'owner_id' => $admin->id,
+        ]);
+        $b = Contact::factory()->create([
+            'email' => 'shared-bug2@example.com',
+            'owner_id' => $admin->id,
+        ]);
+
+        // Dismiss A-B.
+        $this->service->dismiss('contact', $a->id, $b->id, $admin);
+
+        $groups = $this->service->scanAll('contact', $admin);
+
+        // The dismissed pair is the only potential group — the scan must return nothing.
+        // Alternatively, if somehow groups are returned, A and B must not be together.
+        $aAndBInSameGroup = false;
+        foreach ($groups as $group) {
+            $ids = collect($group['entities'])->pluck('id')->all();
+            if (in_array($a->id, $ids, true) && in_array($b->id, $ids, true)) {
+                $aAndBInSameGroup = true;
+                break;
+            }
+        }
+
+        $this->assertFalse($aAndBInSameGroup, 'Dismissed pair A-B must not appear in the same group');
+    }
+
+    /**
+     * Dismiss A-B; if a third contact C connects to both A and B through a
+     * SEPARATE non-dismissed criterion, A and C (or B and C) may still form
+     * a group — but A and B must NOT be the sole reason they are grouped.
+     * Specifically: if C shares email with A but NOT with B, and C shares
+     * phone with B but NOT with A, and A-B is dismissed:
+     * - A↔C are connected via email (not dismissed).
+     * - B↔C are connected via phone (not dismissed).
+     * - A↔B is dismissed — this edge is removed.
+     * Because A-C and B-C are non-dismissed, A, B, C all end up in one
+     * component via C (the transitivity is through C, not through the dismissed edge).
+     * This is CORRECT: the dismissed-pair record only blocks the direct A-B edge.
+     */
+    public function test_scan_all_contacts_dismissed_pair_still_in_group_via_third(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $a = Contact::factory()->create([
+            'email' => 'abc-email-A@example.com',
+            'phone' => '+77001110001',
+            'full_name' => 'Person A Bug2',
+            'owner_id' => $admin->id,
+        ]);
+        $b = Contact::factory()->create([
+            'email' => 'abc-email-B@example.com',
+            'phone' => '+77001110002',
+            'full_name' => 'Person B Bug2',
+            'owner_id' => $admin->id,
+        ]);
+        // C shares email with A AND phone with B.
+        $c = Contact::factory()->create([
+            'email' => 'abc-email-A@example.com', // same email as A
+            'phone' => '+77001110002',             // same phone as B
+            'full_name' => 'Person C Bug2',
+            'owner_id' => $admin->id,
+        ]);
+
+        // Dismiss A-B directly.
+        $this->service->dismiss('contact', $a->id, $b->id, $admin);
+
+        $groups = $this->service->scanAll('contact', $admin);
+
+        // All three are still reachable from each other via C (A↔C via email, B↔C via phone).
+        // So they must be in one group.
+        $this->assertCount(1, $groups, 'A, B, C must still form one component when connected via C');
+
+        $groupIds = collect($groups->first()['entities'])->pluck('id')->sort()->values()->all();
+        $expectedIds = collect([$a->id, $b->id, $c->id])->sort()->values()->all();
+        $this->assertSame($expectedIds, $groupIds);
+    }
+
+    /**
+     * Dismiss A-B for companies; global scan must not group them together
+     * when no third company connects them.
+     */
+    public function test_scan_all_companies_dismissed_pair_not_grouped(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $a = Company::factory()->create([
+            'tax_id' => '555444333bug2',
+            'name' => 'Company Alpha Bug2',
+            'owner_user_id' => $admin->id,
+        ]);
+        $b = Company::factory()->create([
+            'tax_id' => '555444333bug2',
+            'name' => 'Company Beta Bug2',
+            'owner_user_id' => $admin->id,
+        ]);
+
+        $this->service->dismiss('company', $a->id, $b->id, $admin);
+
+        $groups = $this->service->scanAll('company', $admin);
+
+        $aAndBInSameGroup = false;
+        foreach ($groups as $group) {
+            $ids = collect($group['entities'])->pluck('id')->all();
+            if (in_array($a->id, $ids, true) && in_array($b->id, $ids, true)) {
+                $aAndBInSameGroup = true;
+                break;
+            }
+        }
+
+        $this->assertFalse($aAndBInSameGroup, 'Dismissed company pair must not appear in the same group');
+    }
+
     /** Helper: checks whether any group in $allGroupIds contains exactly the $ids. */
     private function groupContainsIds(array $allGroupIds, array $ids): bool
     {
