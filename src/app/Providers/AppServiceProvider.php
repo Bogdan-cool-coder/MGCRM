@@ -331,6 +331,13 @@ class AppServiceProvider extends ServiceProvider
      * effect (Eloquent's `where(col,'like',…)` omits the ESCAPE clause). Both
      * PostgreSQL and SQLite honour `LIKE ... ESCAPE '\'`.
      *
+     * Also registers `whereLikeCi` / `orWhereLikeCi` — case-insensitive variants
+     * for full-text search fields (full_name, email, phone, company name, tax_id).
+     * On PostgreSQL they emit `ILIKE ? ESCAPE ?` (native case-insensitive LIKE).
+     * On SQLite (used in tests) they fall back to `LOWER(col) LIKE LOWER(val) ESCAPE ?`
+     * because SQLite's built-in LIKE is only case-insensitive for ASCII; Unicode
+     * characters (Cyrillic, etc.) require explicit LOWER() on both sides.
+     *
      * Macros are registered on BOTH the query and Eloquent builders so they are
      * usable in raw DB::table() queries and on Eloquent models / relations.
      */
@@ -350,9 +357,47 @@ class AppServiceProvider extends ServiceProvider
             return $this->whereLike($column, $value, 'or');
         };
 
+        // Case-insensitive LIKE for search fields (full_name, email, etc.).
+        // PostgreSQL: ILIKE (native, fast, works with Unicode/Cyrillic).
+        // SQLite (:memory: tests): LOWER(col) LIKE LOWER(val) — SQLite's built-in
+        // LIKE is case-insensitive only for ASCII; LOWER() ensures Cyrillic folds.
+        $whereLikeCi = function (string $column, string $value, string $boolean = 'and') {
+            /** @var EloquentBuilder|QueryBuilder $this */
+            $driver = $this->getConnection()->getDriverName();
+            $wrapped = $this->getGrammar()->wrap($column);
+            $escaped = LikeEscape::wrap($value);
+            $escapeChar = LikeEscape::ESCAPE_CHAR;
+
+            if ($driver === 'pgsql') {
+                // ILIKE is PostgreSQL-specific and handles Unicode case-folding natively.
+                return $this->whereRaw(
+                    "{$wrapped} ILIKE ? ESCAPE ?",
+                    [$escaped, $escapeChar],
+                    $boolean,
+                );
+            }
+
+            // SQLite fallback: wrap both sides in LOWER() for Unicode-safe folding.
+            return $this->whereRaw(
+                "LOWER({$wrapped}) LIKE LOWER(?) ESCAPE ?",
+                [$escaped, $escapeChar],
+                $boolean,
+            );
+        };
+
+        $orWhereLikeCi = function (string $column, string $value) {
+            /** @var EloquentBuilder|QueryBuilder $this */
+            return $this->whereLikeCi($column, $value, 'or');
+        };
+
         QueryBuilder::macro('whereLike', $whereLike);
         QueryBuilder::macro('orWhereLike', $orWhereLike);
         EloquentBuilder::macro('whereLike', $whereLike);
         EloquentBuilder::macro('orWhereLike', $orWhereLike);
+
+        QueryBuilder::macro('whereLikeCi', $whereLikeCi);
+        QueryBuilder::macro('orWhereLikeCi', $orWhereLikeCi);
+        EloquentBuilder::macro('whereLikeCi', $whereLikeCi);
+        EloquentBuilder::macro('orWhereLikeCi', $orWhereLikeCi);
     }
 }

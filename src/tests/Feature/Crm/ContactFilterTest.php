@@ -451,6 +451,89 @@ class ContactFilterTest extends TestCase
     }
 
     // =========================================================================
+    // BUG-2.2: author_ids filter — contacts where created_by_id IS NULL must
+    // not appear when filtering by a specific author (CRM-2.2).
+    // Also confirms AND-semantics when combining author + owner filters.
+    // =========================================================================
+
+    public function test_author_filter_does_not_return_contacts_with_null_created_by(): void
+    {
+        $author = User::factory()->create(['role' => Role::Manager]);
+
+        // Two contacts: one with the author set, one with created_by_id=NULL (legacy).
+        $withAuthor = Contact::factory()->create(['created_by_id' => $author->id]);
+        Contact::factory()->create(['created_by_id' => null]);
+
+        $response = $this->getJson('/api/contacts?author_ids[]='.$author->id)->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+        $this->assertContains($withAuthor->id, $ids);
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_author_and_owner_combined_filters_use_and_logic(): void
+    {
+        $author = User::factory()->create(['role' => Role::Manager]);
+        $owner = User::factory()->create(['role' => Role::Manager]);
+        $other = User::factory()->create(['role' => Role::Manager]);
+
+        // Only this contact satisfies BOTH author AND owner conditions.
+        $both = Contact::factory()->create([
+            'created_by_id' => $author->id,
+            'owner_id' => $owner->id,
+        ]);
+        // Created by author but owned by someone else.
+        Contact::factory()->create([
+            'created_by_id' => $author->id,
+            'owner_id' => $other->id,
+        ]);
+        // Owned by owner but created by someone else.
+        Contact::factory()->create([
+            'created_by_id' => $other->id,
+            'owner_id' => $owner->id,
+        ]);
+
+        $response = $this->getJson(
+            "/api/contacts?author_ids[]={$author->id}&owner_ids[]={$owner->id}"
+        )->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+        $this->assertContains($both->id, $ids);
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_source_and_owner_combined_filters_use_and_logic(): void
+    {
+        $owner = User::factory()->create(['role' => Role::Manager]);
+        $other = User::factory()->create(['role' => Role::Manager]);
+
+        $both = Contact::factory()->create(['source' => 'referral', 'owner_id' => $owner->id]);
+        Contact::factory()->create(['source' => 'referral', 'owner_id' => $other->id]);
+        Contact::factory()->create(['source' => 'cold_call', 'owner_id' => $owner->id]);
+
+        $response = $this->getJson(
+            "/api/contacts?sources[]=referral&owner_ids[]={$owner->id}"
+        )->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+        $this->assertContains($both->id, $ids);
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_tags_and_source_combined_filters_use_and_logic(): void
+    {
+        $both = Contact::factory()->create(['source' => 'referral', 'tags' => ['vip', 'partner']]);
+        Contact::factory()->create(['source' => 'referral', 'tags' => ['cold']]);
+        Contact::factory()->create(['source' => 'cold_call', 'tags' => ['vip']]);
+
+        $response = $this->getJson('/api/contacts?sources[]=referral&tags[]=vip')->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+        $this->assertContains($both->id, $ids);
+        $this->assertCount(1, $ids);
+    }
+
+    // =========================================================================
     // D-4 backend: POST /contacts/{contact}/companies with is_primary
     // (already implemented — confirm via integration test)
     // =========================================================================

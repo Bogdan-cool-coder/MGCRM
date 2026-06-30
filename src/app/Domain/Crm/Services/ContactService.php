@@ -83,12 +83,14 @@ class ContactService
             $actor,
             ['owner_id'],
         )
-            ->when(isset($filters['search']), function (Builder $q) use ($filters): void {
+            ->when(! empty($filters['search']), function (Builder $q) use ($filters): void {
                 $term = (string) $filters['search'];
+                // Case-insensitive search: ILIKE on PG, LOWER() LIKE on SQLite.
+                // Covers Unicode / Cyrillic — critical for Russian names.
                 $q->where(function (Builder $inner) use ($term): void {
-                    $inner->whereLike('full_name', $term)
-                        ->orWhereLike('email', $term)
-                        ->orWhereLike('phone', $term);
+                    $inner->whereLikeCi('full_name', $term)
+                        ->orWhereLikeCi('email', $term)
+                        ->orWhereLikeCi('phone', $term);
                 });
             })
             ->when(isset($filters['status']), function (Builder $q) use ($filters): void {

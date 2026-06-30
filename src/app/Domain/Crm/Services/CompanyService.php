@@ -79,14 +79,16 @@ class CompanyService
             $actor,
             ['owner_user_id', 'responsible_user_id'],
         )
-            ->when(isset($filters['search']), function (Builder $q) use ($filters): void {
+            ->when(! empty($filters['search']), function (Builder $q) use ($filters): void {
                 $term = (string) $filters['search'];
+                // Case-insensitive search: ILIKE on PG, LOWER() LIKE on SQLite.
+                // Covers Unicode / Cyrillic — critical for Russian company names.
                 $q->where(function (Builder $inner) use ($term): void {
-                    $inner->whereLike('name', $term)
-                        ->orWhereLike('legal_name', $term)
-                        ->orWhereLike('tax_id', $term)
-                        ->orWhereLike('email', $term)
-                        ->orWhereLike('phone', $term);
+                    $inner->whereLikeCi('name', $term)
+                        ->orWhereLikeCi('legal_name', $term)
+                        ->orWhereLikeCi('tax_id', $term)
+                        ->orWhereLikeCi('email', $term)
+                        ->orWhereLikeCi('phone', $term);
                 });
             })
             // company_type_ids[]: multi (scalar company_type_id alias).

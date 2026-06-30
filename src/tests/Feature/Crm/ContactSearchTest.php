@@ -81,4 +81,78 @@ class ContactSearchTest extends TestCase
 
         $this->assertCount(0, $response->json('data'));
     }
+
+    // =========================================================================
+    // BUG-2.1: Case-insensitive search (CRM-2.1)
+    // In PostgreSQL, LIKE is case-sensitive. The fix uses ILIKE on PG and
+    // LOWER() LIKE on SQLite.
+    //
+    // NOTE on SQLite + Cyrillic: SQLite's LOWER() is only case-aware for
+    // ASCII characters. Cyrillic case-folding (е→Е) is not supported in
+    // SQLite without ICU extension. Therefore case-insensitive Cyrillic tests
+    // run correctly ONLY in the production PostgreSQL (via ILIKE).
+    // The tests below use ASCII strings to exercise the SQLite-compatible path
+    // and same-case Cyrillic to confirm the search pipeline is wired correctly.
+    // The PostgreSQL ILIKE behaviour is validated by AppServiceProviderTest.
+    // =========================================================================
+
+    public function test_search_full_name_finds_by_complete_name_with_spaces(): void
+    {
+        // Regression: full ФИО with spaces must find the exact record.
+        $match = Contact::factory()->create([
+            'full_name' => 'Петрова Анна Михайловна',
+            'owner_id' => $this->user->id,
+        ]);
+        Contact::factory()->create(['full_name' => 'Иванов Иван', 'owner_id' => $this->user->id]);
+
+        $response = $this->getJson('/api/contacts?search='.urlencode('Петрова Анна Михайловна'))->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+        $this->assertContains($match->id, $ids);
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_search_by_email_case_insensitive_ascii(): void
+    {
+        // ASCII email — LOWER() LIKE works on SQLite for ASCII.
+        $match = Contact::factory()->create([
+            'email' => 'Ivan.Petrov@Example.com',
+            'owner_id' => $this->user->id,
+        ]);
+        Contact::factory()->create(['email' => 'other@test.com', 'owner_id' => $this->user->id]);
+
+        // Lowercase email query must match mixed-case stored value via LOWER()/ILIKE.
+        $response = $this->getJson('/api/contacts?search=ivan.petrov')->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+        $this->assertContains($match->id, $ids);
+    }
+
+    public function test_search_partial_ascii_case_insensitive(): void
+    {
+        // ASCII name — LOWER() LIKE works on SQLite for ASCII chars.
+        $match = Contact::factory()->create([
+            'full_name' => 'John Smith',
+            'owner_id' => $this->user->id,
+        ]);
+        Contact::factory()->create(['full_name' => 'Jane Doe', 'owner_id' => $this->user->id]);
+
+        // Lowercase fragment — finds via LOWER()/ILIKE.
+        $response = $this->getJson('/api/contacts?search=john')->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+        $this->assertContains($match->id, $ids);
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_empty_search_string_returns_all_contacts(): void
+    {
+        // BUG fix: isset($filters['search']) was true for '' — fixed to !empty().
+        // Passing search='' must be a no-op (return all visible contacts).
+        Contact::factory()->count(3)->create(['owner_id' => $this->user->id]);
+
+        $response = $this->getJson('/api/contacts?search=')->assertOk();
+
+        $this->assertCount(3, $response->json('data'));
+    }
 }
