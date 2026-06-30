@@ -474,7 +474,7 @@ class DealService
             // ----- title search -----
             ->when(
                 $this->nonEmptyString($filters['q'] ?? null),
-                fn (Builder $q) => $q->whereLike('title', (string) $filters['q']),
+                fn (Builder $q) => $q->whereLikeCi('title', (string) $filters['q']),
             )
 
             // ----- status (open|won|lost) → stage flags -----
@@ -501,7 +501,7 @@ class DealService
                 $this->nonEmptyString($filters['product_q'] ?? null),
                 fn (Builder $q) => $q->whereHas(
                     'products.product',
-                    fn (Builder $p) => $p->whereLike('catalog_products.name', (string) $filters['product_q']),
+                    fn (Builder $p) => $p->whereLikeCi('catalog_products.name', (string) $filters['product_q']),
                 ),
             )
 
@@ -527,7 +527,7 @@ class DealService
                 $this->nonEmptyString($filters['city'] ?? null),
                 fn (Builder $q) => $q->whereHas(
                     'company',
-                    fn (Builder $c) => $c->whereLike('city', (string) $filters['city']),
+                    fn (Builder $c) => $c->whereLikeCi('city', (string) $filters['city']),
                 ),
             )
 

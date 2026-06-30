@@ -269,6 +269,94 @@ class DealListFiltersTest extends TestCase
         $this->assertSame([$almaty->id], $this->listIds('?city=Almaty'));
     }
 
+    // ----------------------------------------------- case-insensitive text search
+    //
+    // The three text filters (q→title, product_q→product name, city) use the
+    // `whereLikeCi` macro (PG ILIKE / SQLite LOWER LIKE). Plain LIKE is
+    // case-sensitive on PostgreSQL, so a lowercase fragment must still match a
+    // capitalised value. ASCII proves the fold; same-case Cyrillic proves the
+    // value flows through the pipeline unscathed (SQLite's LOWER() does not fold
+    // Cyrillic without ICU, mirroring ContactSearchTest / ActivityTaskSearchTest).
+
+    public function test_q_is_case_insensitive(): void
+    {
+        $match = $this->dealOn('new', null, ['title' => 'Enterprise Rollout']);
+        $this->dealOn('new', null, ['title' => 'Small Pilot']);
+
+        // lowercase fragment must match the capitalised title.
+        $this->assertSame([$match->id], $this->listIds('?q=enterprise'));
+    }
+
+    public function test_city_is_case_insensitive(): void
+    {
+        $match = $this->dealOn('new', Company::factory()->create(['city' => 'Almaty']));
+        $this->dealOn('new', Company::factory()->create(['city' => 'Astana']));
+
+        $this->assertSame([$match->id], $this->listIds('?city=almaty'));
+    }
+
+    public function test_product_q_is_case_insensitive(): void
+    {
+        $widget = Product::factory()->create(['name' => 'Super Widget Pro']);
+        $gadget = Product::factory()->create(['name' => 'Plain Gadget']);
+
+        $match = $this->dealOn('new');
+        DealProduct::factory()->create(['deal_id' => $match->id, 'product_id' => $widget->id]);
+
+        $other = $this->dealOn('new');
+        DealProduct::factory()->create(['deal_id' => $other->id, 'product_id' => $gadget->id]);
+
+        // lowercase fragment must match the capitalised product name.
+        $this->assertSame([$match->id], $this->listIds('?product_q=widget'));
+    }
+
+    public function test_q_matches_cyrillic_title(): void
+    {
+        $match = $this->dealOn('new', null, ['title' => 'Поставка оборудования']);
+        $this->dealOn('new', null, ['title' => 'Аренда сервера']);
+
+        // Same-case Cyrillic fragment — proves the value reaches the query intact.
+        $this->assertSame([$match->id], $this->listIds('?q='.rawurlencode('Поставка')));
+    }
+
+    public function test_city_matches_cyrillic_city(): void
+    {
+        $match = $this->dealOn('new', Company::factory()->create(['city' => 'Москва']));
+        $this->dealOn('new', Company::factory()->create(['city' => 'Казань']));
+
+        $this->assertSame([$match->id], $this->listIds('?city='.rawurlencode('Москва')));
+    }
+
+    public function test_product_q_matches_cyrillic_product_name(): void
+    {
+        $valid = Product::factory()->create(['name' => 'Лицензия Профи']);
+        $invalid = Product::factory()->create(['name' => 'Поддержка Базовая']);
+
+        $match = $this->dealOn('new');
+        DealProduct::factory()->create(['deal_id' => $match->id, 'product_id' => $valid->id]);
+
+        $other = $this->dealOn('new');
+        DealProduct::factory()->create(['deal_id' => $other->id, 'product_id' => $invalid->id]);
+
+        $this->assertSame([$match->id], $this->listIds('?product_q='.rawurlencode('Лицензия')));
+    }
+
+    public function test_two_filters_intersect_with_and_logic(): void
+    {
+        // Text search + country must intersect (AND), not union.
+        $ru = Company::factory()->create(['country_code' => 'ru', 'city' => 'Moscow']);
+        $kz = Company::factory()->create(['country_code' => 'kz', 'city' => 'Moscow']);
+
+        // Both deals match the text search; only the ru one also matches country.
+        $target = $this->dealOn('new', $ru, ['title' => 'Pipeline Deal']);
+        $this->dealOn('new', $kz, ['title' => 'Pipeline Deal']);
+
+        // Third deal matches country but not the text search — also excluded.
+        $this->dealOn('new', Company::factory()->create(['country_code' => 'ru']), ['title' => 'Other']);
+
+        $this->assertSame([$target->id], $this->listIds('?q=pipeline&country=ru'));
+    }
+
     // -------------------------------------------------------------- budget range
 
     public function test_budget_from_and_to_bound_the_amount(): void

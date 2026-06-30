@@ -1158,9 +1158,13 @@ class ActivityService
             })
             ->when(
                 $search !== null && $search !== '',
+                // Case-insensitive search (whereLikeCi → ILIKE on PG / LOWER() on
+                // SQLite): a Cyrillic «Звонок» must match the stored «звонок» on the
+                // board exactly as it does in the flat task list. The macro wraps the
+                // term in %...% itself, so no manual wildcards here.
                 fn (Builder $q) => $q->where(function (Builder $inner) use ($search): void {
-                    $inner->where('title', 'like', '%'.$search.'%')
-                        ->orWhere('body', 'like', '%'.$search.'%');
+                    $inner->whereLikeCi('title', $search)
+                        ->orWhereLikeCi('body', $search);
                 }),
             )
             ->orderByRaw('due_at is null')
@@ -1380,9 +1384,13 @@ class ActivityService
             ->when(isset($filters['due_to']), fn (Builder $q) => $q->where('due_at', '<=', $filters['due_to']))
             ->when(
                 isset($filters['q']) && $filters['q'] !== '',
+                // Case-insensitive (whereLikeCi): PostgreSQL LIKE is case-sensitive,
+                // so a Cyrillic «звонок» typed as «Звонок» never matched the stored
+                // value under a plain LIKE. whereLikeCi → ILIKE on PG / LOWER() on
+                // SQLite, and wraps the term in %...% itself (no manual wildcards).
                 fn (Builder $q) => $q->where(function (Builder $inner) use ($filters): void {
-                    $inner->where('title', 'like', '%'.$filters['q'].'%')
-                        ->orWhere('body', 'like', '%'.$filters['q'].'%');
+                    $inner->whereLikeCi('title', (string) $filters['q'])
+                        ->orWhereLikeCi('body', (string) $filters['q']);
                 }),
             );
     }
