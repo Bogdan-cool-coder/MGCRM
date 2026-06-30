@@ -6,6 +6,11 @@ return [
     'users' => [
         'cannot_deactivate_self' => 'You cannot deactivate your own account.',
     ],
+    'password' => [
+        'changed' => 'Password changed.',
+        'cannot_reset_self' => 'Reset your own password via the profile password change.',
+        'cannot_reset_service' => 'A service account password cannot be reset.',
+    ],
     'departments' => [
         'parent_self' => 'A department cannot be its own parent.',
         'parent_descendant' => 'A descendant department cannot be set as the parent — this would create a cycle.',

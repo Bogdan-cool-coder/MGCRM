@@ -64,6 +64,7 @@ use App\Http\Controllers\Iam\Admin\RolePermissionController;
 use App\Http\Controllers\Iam\Admin\UserManagementController;
 use App\Http\Controllers\Iam\Admin\VisibilityConfigController;
 use App\Http\Controllers\Iam\AvatarController;
+use App\Http\Controllers\Iam\PasswordController;
 use App\Http\Controllers\Iam\ProfileController;
 use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Inbox\ChannelController;
@@ -163,6 +164,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::patch('/me/profile', [ProfileController::class, 'update'])->name('me.profile.update');
+    // Self-service password change (current-password proof, no email round-trip).
+    Route::post('/me/password', [PasswordController::class, 'update'])->name('me.password.update');
 
     // Avatar upload / removal (MAJOR-4). Stored under config('crm.storage.avatars').
     Route::post('/profile/avatar', [AvatarController::class, 'store'])->name('profile.avatar.store');
@@ -440,9 +443,15 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         // MAJOR-2: edit user + soft-deactivate (destroy blocks self-deactivation 422).
         Route::patch('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+        // SECURITY: generate (or set) a new password for a user and return the
+        // plaintext ONCE. Passwords are stored as an irreversible hash — there is
+        // no endpoint that reads back an existing password.
+        Route::post('users/{user}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset-password');
 
         // Department directory (read-only) — feeds the add-user form Select.
         Route::get('departments', [DepartmentController::class, 'index'])->name('departments.index');
+        // Members of a single department (Access Control "Состав отдела" panel).
+        Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('departments.members.index');
 
         // =====================================================================
         // Access Control — Org structure (Departments CRUD + members)
@@ -727,8 +736,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::post('licensor-entities/{licensorEntity}/bank-accounts', [LicensorBankAccountController::class, 'store'])->name('licensor-entities.bank-accounts.store');
     });
 
-    // Templates (no store/destroy via API — seeder only in S2.1).
-    // S2.3: docx upload + AI-check lifecycle endpoints.
+    // Templates — create via API supported from S2.9 (UI-driven template management).
+    // destroy is still seeder-only (no delete route).
     // Action routes MUST be declared BEFORE parameterised sub-resource routes to
     // avoid routing clashes (e.g., /upload must not match as /{version}).
     Route::post('templates/{template}/upload', [TemplateVersionController::class, 'upload'])->name('templates.versions.upload');
@@ -739,6 +748,7 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::get('templates/{template}/versions', [TemplateVersionController::class, 'index'])->name('templates.versions.index');
     Route::get('templates/{template}/versions/{version}', [TemplateVersionController::class, 'show'])->name('templates.versions.show');
 
+    Route::post('templates', [TemplateController::class, 'store'])->name('templates.store');
     Route::get('templates', [TemplateController::class, 'index'])->name('templates.index');
     Route::get('templates/{template}', [TemplateController::class, 'show'])->name('templates.show');
     Route::patch('templates/{template}', [TemplateController::class, 'update'])->name('templates.update');

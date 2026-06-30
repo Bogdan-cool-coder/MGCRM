@@ -7,8 +7,10 @@ namespace App\Http\Controllers\Contracts;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Services\TemplateService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Contracts\StoreTemplateRequest;
 use App\Http\Requests\Contracts\UpdateTemplateRequest;
 use App\Http\Resources\Contracts\TemplateResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -39,6 +41,18 @@ class TemplateController extends Controller
         $this->authorize('view', $template);
 
         return TemplateResource::make($template->load('currentVersion'));
+    }
+
+    public function store(StoreTemplateRequest $request): JsonResponse
+    {
+        $template = $this->service->create(
+            $request->validated(),
+            $request->user()->id,
+        );
+
+        return TemplateResource::make($template)
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function update(UpdateTemplateRequest $request, Template $template): JsonResource

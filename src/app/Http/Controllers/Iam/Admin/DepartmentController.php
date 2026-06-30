@@ -12,6 +12,7 @@ use App\Http\Requests\Iam\AddDepartmentMembersRequest;
 use App\Http\Requests\Iam\StoreDepartmentRequest;
 use App\Http\Requests\Iam\UpdateDepartmentRequest;
 use App\Http\Resources\Iam\DepartmentResource;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
@@ -39,6 +40,25 @@ class DepartmentController extends Controller
             ->get();
 
         return DepartmentResource::collection($departments);
+    }
+
+    /**
+     * GET /api/admin/departments/{department}/members — users in this department.
+     *
+     * Feeds the Access Control "Состав отдела" panel (the member-count badge links
+     * here). Returns the department's members (users.department_id = id) via the
+     * shared UserResource, ordered by name. An empty department yields an empty
+     * data array. Same admin gate (`admin-write`) as the sibling write verbs.
+     */
+    public function members(Department $department): AnonymousResourceCollection
+    {
+        $this->authorize('admin-write');
+
+        $members = $department->members()
+            ->orderBy('full_name')
+            ->get();
+
+        return UserResource::collection($members);
     }
 
     public function store(StoreDepartmentRequest $request, DepartmentService $service): JsonResource

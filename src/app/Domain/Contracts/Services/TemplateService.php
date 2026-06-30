@@ -60,6 +60,33 @@ class TemplateService
     }
 
     /**
+     * Create a new template (code/kind/title/scopes).
+     * The template is created without a docx version (version=0, current_version_id=null).
+     * Upload a docx version separately via POST /api/templates/{id}/upload.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function create(array $data, ?int $userId = null): Template
+    {
+        $template = Template::create([
+            'code' => $data['code'],
+            'kind' => $data['kind'],
+            'title' => $data['title'],
+            'content' => '',
+            'version' => 0,
+            'current_version_id' => null,
+            'category' => $data['category'] ?? null,
+            'product_codes' => $data['product_codes'] ?? [],
+            'country_codes' => $data['country_codes'] ?? [],
+            'client_category_codes' => $data['client_category_codes'] ?? [],
+            'department_ids' => $data['department_ids'] ?? [],
+            'updated_by_user_id' => $userId,
+        ]);
+
+        return $template->load('currentVersion');
+    }
+
+    /**
      * Update template metadata (YAML content, title, category, scopes).
      * Increments version on every save. Sets updated_by_user_id.
      *

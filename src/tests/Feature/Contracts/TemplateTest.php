@@ -168,4 +168,122 @@ class TemplateTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.version', 2);
     }
+
+    // ---- store ----
+
+    public function test_admin_can_create_template(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->postJson('/api/templates', [
+            'code' => 'my_new_template',
+            'kind' => 'docx',
+            'title' => 'My New Template',
+        ])->assertCreated()
+          ->assertJsonStructure(['data' => ['id', 'code', 'kind', 'title', 'version', 'current_version']]);
+
+        $this->assertSame('my_new_template', $response->json('data.code'));
+        $this->assertSame('docx', $response->json('data.kind'));
+        $this->assertSame(0, $response->json('data.version'));
+        $this->assertNull($response->json('data.current_version'));
+
+        $this->assertDatabaseHas('templates', ['code' => 'my_new_template']);
+    }
+
+    public function test_created_template_appears_in_list(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/templates', [
+            'code' => 'listed_template',
+            'kind' => 'yaml',
+            'title' => 'Listed Template',
+        ])->assertCreated();
+
+        $response = $this->getJson('/api/templates')->assertOk();
+        $codes = array_column($response->json('data'), 'code');
+        $this->assertContains('listed_template', $codes);
+    }
+
+    public function test_create_template_with_scopes(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->postJson('/api/templates', [
+            'code' => 'scoped_template',
+            'kind' => 'docx',
+            'title' => 'Scoped Template',
+            'category' => 'addendum',
+            'product_codes' => ['macrocrm'],
+            'country_codes' => ['kz', 'uz'],
+        ])->assertCreated();
+
+        $this->assertSame('addendum', $response->json('data.category'));
+        $this->assertSame(['macrocrm'], $response->json('data.product_codes'));
+        $this->assertSame(['kz', 'uz'], $response->json('data.country_codes'));
+    }
+
+    public function test_duplicate_code_returns_422(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Template::factory()->create(['code' => 'existing_code']);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/templates', [
+            'code' => 'existing_code',
+            'kind' => 'docx',
+            'title' => 'Dupe',
+        ])->assertUnprocessable()
+          ->assertJsonValidationErrors(['code']);
+    }
+
+    public function test_invalid_kind_returns_422(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/templates', [
+            'code' => 'bad_kind_template',
+            'kind' => 'pdf',
+            'title' => 'Bad Kind',
+        ])->assertUnprocessable()
+          ->assertJsonValidationErrors(['kind']);
+    }
+
+    public function test_invalid_code_format_returns_422(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/templates', [
+            'code' => 'Has Spaces',
+            'kind' => 'docx',
+            'title' => 'Bad Code',
+        ])->assertUnprocessable()
+          ->assertJsonValidationErrors(['code']);
+    }
+
+    public function test_manager_cannot_create_template(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/templates', [
+            'code' => 'manager_template',
+            'kind' => 'docx',
+            'title' => 'Manager Template',
+        ])->assertForbidden();
+    }
+
+    public function test_unauthenticated_cannot_create_template(): void
+    {
+        $this->postJson('/api/templates', [
+            'code' => 'anon_template',
+            'kind' => 'docx',
+            'title' => 'Anon Template',
+        ])->assertUnauthorized();
+    }
 }

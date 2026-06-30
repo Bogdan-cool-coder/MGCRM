@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Iam\Admin;
 
 use App\Domain\Iam\Models\User;
+use App\Domain\Iam\Services\PasswordService;
 use App\Domain\Iam\Services\UserService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Iam\AdminUserIndexRequest;
+use App\Http\Requests\Iam\ResetUserPasswordRequest;
 use App\Http\Requests\Iam\StoreUserRequest;
 use App\Http\Requests\Iam\UpdateUserRequest;
 use App\Http\Resources\Iam\AdminUserResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Symfony\Component\HttpFoundation\Response;
@@ -98,5 +101,51 @@ class UserManagementController extends Controller
         $user = $service->deactivate($user);
 
         return AdminUserResource::make($user->load('department'));
+    }
+
+    /**
+     * Reset a user's password and return the NEW plaintext exactly once.
+     *
+     * Security (task #4): credentials are stored only as an irreversible hash, so
+     * existing passwords can never be read back — the admin flow is GENERATE +
+     * one-time-display, not "show password". When the body omits `password` a
+     * strong random password is generated; an admin-supplied value (validated
+     * min 8) may override it. The plaintext is hashed on save (the User `hashed`
+     * cast) and surfaced here a single time so the admin can hand it to the user;
+     * nothing persists the plaintext. There is deliberately NO endpoint that
+     * lists or returns existing user passwords.
+     *
+     * Cannot target service accounts (they have no human login) or the admin's
+     * own account (use the self-service POST /api/me/password instead).
+     */
+    public function resetPassword(
+        ResetUserPasswordRequest $request,
+        User $user,
+        PasswordService $passwords,
+    ): JsonResponse {
+        $this->authorize('admin-write');
+
+        abort_if(
+            $user->is_service,
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            __('admin.password.cannot_reset_service'),
+        );
+
+        abort_if(
+            $user->id === $request->user()?->id,
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            __('admin.password.cannot_reset_self'),
+        );
+
+        $plain = $passwords->resetByAdmin($user, $request->validated('password'));
+
+        return response()->json([
+            'data' => [
+                'user_id' => $user->id,
+                // One-time display only — NOT stored anywhere. The admin must
+                // copy it now; a re-fetch will never return a password again.
+                'password' => $plain,
+            ],
+        ]);
     }
 }
