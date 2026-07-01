@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Activity;
 
+use App\Domain\Activity\Enums\ActivityPriority;
 use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
@@ -148,9 +149,9 @@ class ActivityTaskListTest extends TestCase
         $manager = $this->manager();
 
         $high = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
-            ->create(['priority' => \App\Domain\Activity\Enums\ActivityPriority::High->value]);
+            ->create(['priority' => ActivityPriority::High->value]);
         Activity::factory()->responsibleOf($manager)->createdByUser($manager)
-            ->create(['priority' => \App\Domain\Activity\Enums\ActivityPriority::Low->value]);
+            ->create(['priority' => ActivityPriority::Low->value]);
 
         Sanctum::actingAs($manager, ['*']);
 

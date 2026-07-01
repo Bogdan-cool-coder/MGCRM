@@ -17,7 +17,7 @@ use App\Domain\Onboarding\Models\QuizOption;
 use App\Domain\Onboarding\Models\QuizQuestion;
 use App\Domain\Onboarding\Services\QuizService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Prism\Prism\Facades\Prism;
@@ -44,18 +44,18 @@ class BacklogFixesTest extends TestCase
     private function makePdfCourse(string $contentKey, string $contentValue): array
     {
         $student = User::factory()->create(['role' => Role::Manager]);
-        $course  = Course::factory()->create(['is_published' => true]);
-        $module  = CourseModule::factory()->create(['course_id' => $course->id]);
-        $lesson  = Lesson::factory()->create([
-            'module_id'  => $module->id,
-            'kind'       => LessonKind::Pdf,
-            'content'    => [$contentKey => $contentValue],
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => LessonKind::Pdf,
+            'content' => [$contentKey => $contentValue],
             'is_published' => true,
         ]);
         $assignment = CourseAssignment::factory()->create([
             'course_id' => $course->id,
-            'user_id'   => $student->id,
-            'status'    => AssignmentStatus::InProgress,
+            'user_id' => $student->id,
+            'status' => AssignmentStatus::InProgress,
         ]);
 
         return [$student, $assignment, $lesson];
@@ -100,17 +100,17 @@ class BacklogFixesTest extends TestCase
     public function test_non_pdf_lessons_have_null_player_src(): void
     {
         $student = User::factory()->create(['role' => Role::Manager]);
-        $course  = Course::factory()->create(['is_published' => true]);
-        $module  = CourseModule::factory()->create(['course_id' => $course->id]);
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
         Lesson::factory()->create([
-            'module_id'    => $module->id,
-            'kind'         => LessonKind::Text,
-            'content'      => ['markdown' => '# Hello'],
+            'module_id' => $module->id,
+            'kind' => LessonKind::Text,
+            'content' => ['markdown' => '# Hello'],
             'is_published' => true,
         ]);
         $assignment = CourseAssignment::factory()->create([
             'course_id' => $course->id,
-            'user_id'   => $student->id,
+            'user_id' => $student->id,
         ]);
 
         Sanctum::actingAs($student, ['*']);
@@ -130,18 +130,18 @@ class BacklogFixesTest extends TestCase
         Storage::disk('documents')->put('onboarding/lessons/99/test.pdf', '%PDF-stub');
 
         $student = User::factory()->create(['role' => Role::Manager]);
-        $course  = Course::factory()->create(['is_published' => true]);
-        $module  = CourseModule::factory()->create(['course_id' => $course->id]);
-        $lesson  = Lesson::factory()->create([
-            'module_id'    => $module->id,
-            'kind'         => LessonKind::Pdf,
-            'content'      => ['path' => 'onboarding/lessons/99/test.pdf'],
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => LessonKind::Pdf,
+            'content' => ['path' => 'onboarding/lessons/99/test.pdf'],
             'is_published' => true,
         ]);
         CourseAssignment::factory()->create([
             'course_id' => $course->id,
-            'user_id'   => $student->id,
-            'status'    => AssignmentStatus::InProgress,
+            'user_id' => $student->id,
+            'status' => AssignmentStatus::InProgress,
         ]);
 
         Sanctum::actingAs($student, ['*']);
@@ -154,18 +154,18 @@ class BacklogFixesTest extends TestCase
     public function test_pdf_stream_route_redirects_for_url_configured_pdf(): void
     {
         $student = User::factory()->create(['role' => Role::Manager]);
-        $course  = Course::factory()->create(['is_published' => true]);
-        $module  = CourseModule::factory()->create(['course_id' => $course->id]);
-        $lesson  = Lesson::factory()->create([
-            'module_id'    => $module->id,
-            'kind'         => LessonKind::Pdf,
-            'content'      => ['url' => 'https://example.com/guide.pdf'],
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => LessonKind::Pdf,
+            'content' => ['url' => 'https://example.com/guide.pdf'],
             'is_published' => true,
         ]);
         CourseAssignment::factory()->create([
             'course_id' => $course->id,
-            'user_id'   => $student->id,
-            'status'    => AssignmentStatus::InProgress,
+            'user_id' => $student->id,
+            'status' => AssignmentStatus::InProgress,
         ]);
 
         Sanctum::actingAs($student, ['*']);
@@ -177,12 +177,12 @@ class BacklogFixesTest extends TestCase
     public function test_pdf_stream_route_returns_403_for_unassigned_student(): void
     {
         $student = User::factory()->create(['role' => Role::Manager]);
-        $course  = Course::factory()->create(['is_published' => true]);
-        $module  = CourseModule::factory()->create(['course_id' => $course->id]);
-        $lesson  = Lesson::factory()->create([
-            'module_id'    => $module->id,
-            'kind'         => LessonKind::Pdf,
-            'content'      => ['url' => 'https://example.com/guide.pdf'],
+        $course = Course::factory()->create(['is_published' => true]);
+        $module = CourseModule::factory()->create(['course_id' => $course->id]);
+        $lesson = Lesson::factory()->create([
+            'module_id' => $module->id,
+            'kind' => LessonKind::Pdf,
+            'content' => ['url' => 'https://example.com/guide.pdf'],
             'is_published' => true,
         ]);
         // No assignment for $student
@@ -198,13 +198,13 @@ class BacklogFixesTest extends TestCase
         Storage::fake('documents');
         Storage::disk('documents')->put('onboarding/lessons/88/doc.pdf', '%PDF-stub');
 
-        $admin  = User::factory()->create(['role' => Role::Admin]);
+        $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create(['is_published' => true]);
         $module = CourseModule::factory()->create(['course_id' => $course->id]);
         $lesson = Lesson::factory()->create([
-            'module_id'    => $module->id,
-            'kind'         => LessonKind::Pdf,
-            'content'      => ['path' => 'onboarding/lessons/88/doc.pdf'],
+            'module_id' => $module->id,
+            'kind' => LessonKind::Pdf,
+            'content' => ['path' => 'onboarding/lessons/88/doc.pdf'],
             'is_published' => true,
         ]);
         // No assignment for admin — should still be allowed.
@@ -218,13 +218,13 @@ class BacklogFixesTest extends TestCase
 
     public function test_pdf_stream_route_returns_422_for_non_pdf_lesson(): void
     {
-        $admin  = User::factory()->create(['role' => Role::Admin]);
+        $admin = User::factory()->create(['role' => Role::Admin]);
         $course = Course::factory()->create(['is_published' => true]);
         $module = CourseModule::factory()->create(['course_id' => $course->id]);
         $lesson = Lesson::factory()->create([
-            'module_id'    => $module->id,
-            'kind'         => LessonKind::Text,
-            'content'      => ['markdown' => '# Hello'],
+            'module_id' => $module->id,
+            'kind' => LessonKind::Text,
+            'content' => ['markdown' => '# Hello'],
             'is_published' => true,
         ]);
 
@@ -248,8 +248,8 @@ class BacklogFixesTest extends TestCase
         for ($i = 0; $i < 3; $i++) {
             $lesson = Lesson::factory()->create([
                 'module_id' => $module->id,
-                'kind'      => LessonKind::Quiz,
-                'content'   => ['quiz_id' => null, 'ai_generation_status' => 'idle'],
+                'kind' => LessonKind::Quiz,
+                'content' => ['quiz_id' => null, 'ai_generation_status' => 'idle'],
                 'is_published' => false,
             ]);
             Quiz::factory()->create(['lesson_id' => $lesson->id]);
@@ -259,7 +259,7 @@ class BacklogFixesTest extends TestCase
 
         // Count queries. The lesson relation must be in ONE batch query (not 3 per-row).
         $queryCount = 0;
-        \Illuminate\Support\Facades\DB::listen(function ($q) use (&$queryCount): void {
+        DB::listen(function ($q) use (&$queryCount): void {
             // Only track queries against the lessons table.
             if (str_contains((string) $q->sql, 'lessons')) {
                 $queryCount++;
@@ -318,7 +318,7 @@ class BacklogFixesTest extends TestCase
         ]);
 
         $questions = collect([$q1, $q2]);
-        $answers   = [
+        $answers = [
             ['question_id' => 1, 'selected_option_ids' => [1]], // correct
             ['question_id' => 2, 'selected_option_ids' => [4]], // wrong
         ];
@@ -345,7 +345,7 @@ class BacklogFixesTest extends TestCase
         ]);
 
         $questions = collect([$q1, $q2]);
-        $answers   = [
+        $answers = [
             ['question_id' => 1, 'selected_option_ids' => [1]], // correct
             ['question_id' => 2, 'selected_option_ids' => [4]], // wrong → 80/100
         ];
@@ -373,9 +373,9 @@ class BacklogFixesTest extends TestCase
         $course = Course::factory()->create(['is_published' => true]);
         $module = CourseModule::factory()->create(['course_id' => $course->id]);
         $lesson = Lesson::factory()->create([
-            'module_id'    => $module->id,
-            'kind'         => LessonKind::Text,
-            'content'      => ['markdown' => 'Content.'],
+            'module_id' => $module->id,
+            'kind' => LessonKind::Text,
+            'content' => ['markdown' => 'Content.'],
             'is_published' => true,
         ]);
 
@@ -413,12 +413,12 @@ class BacklogFixesTest extends TestCase
     {
         Prism::fake([TextResponseFake::make()->withText('Answer.')]);
 
-        $student         = User::factory()->create(['role' => Role::Manager]);
+        $student = User::factory()->create(['role' => Role::Manager]);
         [$course, $lesson] = $this->makeAiTutorLesson();
         CourseAssignment::factory()->create([
             'course_id' => $course->id,
-            'user_id'   => $student->id,
-            'status'    => AssignmentStatus::InProgress,
+            'user_id' => $student->id,
+            'status' => AssignmentStatus::InProgress,
         ]);
 
         Sanctum::actingAs($student, ['*']);
@@ -429,7 +429,7 @@ class BacklogFixesTest extends TestCase
 
     public function test_ai_tutor_unassigned_student_gets_403(): void
     {
-        $student         = User::factory()->create(['role' => Role::Manager]);
+        $student = User::factory()->create(['role' => Role::Manager]);
         [, $lesson] = $this->makeAiTutorLesson();
         // No assignment.
 
@@ -441,7 +441,7 @@ class BacklogFixesTest extends TestCase
 
     public function test_ai_tutor_history_admin_passes_via_policy(): void
     {
-        $admin  = User::factory()->create(['role' => Role::Admin]);
+        $admin = User::factory()->create(['role' => Role::Admin]);
         [, $lesson] = $this->makeAiTutorLesson();
 
         Sanctum::actingAs($admin, ['*']);

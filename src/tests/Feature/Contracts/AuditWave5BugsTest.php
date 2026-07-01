@@ -12,12 +12,14 @@ use App\Domain\Contracts\Models\Approval;
 use App\Domain\Contracts\Models\ApprovalRoute;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentAttachment;
+use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Models\TemplateVersion;
+use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Models\Deal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -283,8 +285,8 @@ class AuditWave5BugsTest extends TestCase
         ]);
         $altTemplate->update(['current_version_id' => $altVersion->id]);
 
-        $company = \App\Domain\Crm\Models\Company::factory()->create();
-        $deal = \App\Domain\Sales\Models\Deal::factory()->create([
+        $company = Company::factory()->create();
+        $deal = Deal::factory()->create([
             'company_id' => $company->id,
             'owner_user_id' => $this->admin->id,
         ]);
@@ -439,7 +441,7 @@ class AuditWave5BugsTest extends TestCase
         ]);
 
         // Create a revision so currentAttempt() returns 1.
-        \App\Domain\Contracts\Models\DocumentRevision::factory()->create([
+        DocumentRevision::factory()->create([
             'document_id' => $doc->id,
             'version_number' => 1,
             'attempt' => 1,
@@ -473,7 +475,7 @@ class AuditWave5BugsTest extends TestCase
             'decision' => ApprovalDecision::Pending,
         ]);
 
-        \App\Domain\Contracts\Models\DocumentRevision::factory()->create([
+        DocumentRevision::factory()->create([
             'document_id' => $doc->id,
             'version_number' => 1,
             'attempt' => 1,

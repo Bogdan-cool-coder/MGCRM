@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Crm;
 
+use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\BulkCompanyService;
 use App\Domain\Crm\Services\CompanyExportService;
 use App\Http\Controllers\Controller;
@@ -67,7 +68,7 @@ class CompanyBulkController extends Controller
     {
         // Require viewAny authorization — without this any authenticated user
         // could dump the full companies table regardless of role (CRM-B1).
-        $this->authorize('viewAny', \App\Domain\Crm\Models\Company::class);
+        $this->authorize('viewAny', Company::class);
 
         $request->validate([
             'company_ids' => ['sometimes', 'array'],

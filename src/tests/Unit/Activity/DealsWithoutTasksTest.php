@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Activity;
 
+use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Crm\Models\Company;
@@ -243,7 +244,7 @@ class DealsWithoutTasksTest extends TestCase
         $deal = $this->dealFor($admin, $pipeline, $stage);
         Activity::factory()->task()->forDeal($deal)->create([
             'is_closed' => false,
-            'status' => \App\Domain\Activity\Enums\ActivityStatus::Done->value,
+            'status' => ActivityStatus::Done->value,
         ]);
 
         $service = app(ActivityService::class);

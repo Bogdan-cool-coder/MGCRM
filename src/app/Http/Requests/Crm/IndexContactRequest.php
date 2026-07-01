@@ -99,20 +99,20 @@ class IndexContactRequest extends FormRequest
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
 
             // ----- list sorting (header arrows). Whitelisted column + direction. -----
-            'sort_by'  => ['sometimes', 'string', Rule::in(self::SORTABLE_COLUMNS)],
+            'sort_by' => ['sometimes', 'string', Rule::in(self::SORTABLE_COLUMNS)],
             'sort_dir' => ['sometimes', 'string', Rule::in(['asc', 'desc'])],
 
             // ----- search / text -----
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
 
             // ----- multi-value filters -----
-            'owner_ids'   => ['sometimes', 'array'],
+            'owner_ids' => ['sometimes', 'array'],
             'owner_ids.*' => ['integer'],
-            'author_ids'   => ['sometimes', 'array'],
+            'author_ids' => ['sometimes', 'array'],
             'author_ids.*' => ['integer'],
-            'sources'   => ['sometimes', 'array'],
+            'sources' => ['sometimes', 'array'],
             'sources.*' => ['string', 'max:64'],
-            'tags'   => ['sometimes', 'array'],
+            'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'max:64'],
 
             // ----- scalar alias filters (backward compat) -----
@@ -120,28 +120,28 @@ class IndexContactRequest extends FormRequest
             'owner_id' => ['sometimes', 'integer'],
 
             // ----- single-value filters -----
-            'status'             => ['sometimes', 'nullable', 'string'],
-            'source'             => ['sometimes', 'nullable', 'string'],
-            'company_id'         => ['sometimes', 'integer'],
-            'position'           => ['sometimes', 'nullable', 'string', 'max:255'],
-            'engagement_tier'    => ['sometimes', 'nullable', 'string'],
+            'status' => ['sometimes', 'nullable', 'string'],
+            'source' => ['sometimes', 'nullable', 'string'],
+            'company_id' => ['sometimes', 'integer'],
+            'position' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'engagement_tier' => ['sometimes', 'nullable', 'string'],
             'acquisition_channel_id' => ['sometimes', 'integer'],
 
             // ----- date ranges -----
-            'created_from'    => ['sometimes', 'date'],
-            'created_to'      => ['sometimes', 'date'],
+            'created_from' => ['sometimes', 'date'],
+            'created_to' => ['sometimes', 'date'],
             'last_touch_from' => ['sometimes', 'date'],
-            'last_touch_to'   => ['sometimes', 'date'],
+            'last_touch_to' => ['sometimes', 'date'],
 
             // ----- open deals range -----
             'open_deals_min' => ['sometimes', 'integer', 'min:0'],
             'open_deals_max' => ['sometimes', 'integer', 'min:0'],
 
             // ----- boolean presets -----
-            'only_mine'       => ['sometimes', 'boolean'],
-            'only_active'     => ['sometimes', 'boolean'],
+            'only_mine' => ['sometimes', 'boolean'],
+            'only_active' => ['sometimes', 'boolean'],
             'only_with_deals' => ['sometimes', 'boolean'],
-            'only_no_task'    => ['sometimes', 'boolean'],
+            'only_no_task' => ['sometimes', 'boolean'],
         ];
     }
 }

@@ -35,8 +35,8 @@ class CrmFolder extends Model
     protected function casts(): array
     {
         return [
-            'is_system'   => 'boolean',
-            'sort_order'  => 'integer',
+            'is_system' => 'boolean',
+            'sort_order' => 'integer',
         ];
     }
 

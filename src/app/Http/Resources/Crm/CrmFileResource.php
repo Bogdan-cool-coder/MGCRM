@@ -14,18 +14,18 @@ class CrmFileResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'            => $this->id,
-            'folder_id'     => $this->folder_id,
+            'id' => $this->id,
+            'folder_id' => $this->folder_id,
             'original_name' => $this->original_name,
-            'mime_type'     => $this->mime_type,
-            'file_size'     => $this->file_size,
-            'disk'          => $this->disk,
-            'uploaded_by'   => $this->whenLoaded('uploadedBy', fn () => [
-                'id'   => $this->uploadedBy->id,
+            'mime_type' => $this->mime_type,
+            'file_size' => $this->file_size,
+            'disk' => $this->disk,
+            'uploaded_by' => $this->whenLoaded('uploadedBy', fn () => [
+                'id' => $this->uploadedBy->id,
                 'name' => $this->uploadedBy->full_name,
             ]),
-            'created_at'    => $this->created_at?->toIso8601String(),
-            'download_url'  => $this->downloadUrl($request),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'download_url' => $this->downloadUrl($request),
         ];
     }
 

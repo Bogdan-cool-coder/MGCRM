@@ -23,9 +23,9 @@ class UpdateEmployeeLinkRequest extends FormRequest
     {
         return [
             'employment_status' => ['required', Rule::enum(EmploymentStatus::class)],
-            'position'          => ['sometimes', 'nullable', 'string', 'max:128'],
-            'position_id'       => ['sometimes', 'nullable', 'integer', 'exists:crm_contact_positions,id'],
-            'is_primary'        => ['sometimes', 'nullable', 'boolean'],
+            'position' => ['sometimes', 'nullable', 'string', 'max:128'],
+            'position_id' => ['sometimes', 'nullable', 'integer', 'exists:crm_contact_positions,id'],
+            'is_primary' => ['sometimes', 'nullable', 'boolean'],
         ];
     }
 }

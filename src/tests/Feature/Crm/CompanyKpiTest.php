@@ -50,7 +50,7 @@ class CompanyKpiTest extends TestCase
         Deal::factory()->inStage($openStage)->create(['company_id' => $company->id, 'closed_at' => null]);
 
         // Won/lost stage deals — excluded by stage flags (is_won/is_lost), not by closed_at
-        $wonStage  = PipelineStage::factory()->create(['is_won' => true,  'is_lost' => false]);
+        $wonStage = PipelineStage::factory()->create(['is_won' => true,  'is_lost' => false]);
         $lostStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => true]);
         Deal::factory()->inStage($wonStage)->create(['company_id' => $company->id]);
         Deal::factory()->inStage($lostStage)->create(['company_id' => $company->id]);
@@ -68,7 +68,7 @@ class CompanyKpiTest extends TestCase
      */
     public function test_kpi_open_deals_counts_deal_with_stale_closed_at_on_open_stage(): void
     {
-        $user    = $this->actingAsManager();
+        $user = $this->actingAsManager();
         $company = Company::factory()->create(['owner_user_id' => $user->id]);
 
         $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
@@ -76,9 +76,9 @@ class CompanyKpiTest extends TestCase
         // AMO edge-case: non-terminal stage but closed_at is populated (stale migration artifact)
         Deal::factory()->inStage($openStage)->create([
             'company_id' => $company->id,
-            'amount'     => 300_000, // 3000 RUB in kopecks
-            'currency'   => 'RUB',
-            'closed_at'  => now()->subDay(), // stale — should NOT exclude from KPI
+            'amount' => 300_000, // 3000 RUB in kopecks
+            'currency' => 'RUB',
+            'closed_at' => now()->subDay(), // stale — should NOT exclude from KPI
         ]);
 
         $response = $this->getJson("/api/companies/{$company->id}")->assertOk();

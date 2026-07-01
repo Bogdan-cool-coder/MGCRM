@@ -25,14 +25,14 @@ return new class extends Migration
 
         foreach ($rows as $row) {
             DB::table('crm_countries')->insertOrIgnore([
-                'code'         => $row['code'],
-                'name'         => $row['name'],
-                'name_en'      => $row['name_en'],
+                'code' => $row['code'],
+                'name' => $row['name'],
+                'name_en' => $row['name_en'],
                 'phone_prefix' => $row['phone_prefix'],
-                'sort_order'   => $row['sort_order'],
-                'is_active'    => true,
-                'created_at'   => now(),
-                'updated_at'   => now(),
+                'sort_order' => $row['sort_order'],
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

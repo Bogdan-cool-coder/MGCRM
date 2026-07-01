@@ -7,6 +7,7 @@ namespace Tests\Unit\Catalog;
 use App\Domain\Catalog\Jobs\UpdateExchangeRatesJob;
 use App\Domain\Catalog\Services\ExchangeRateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -198,7 +199,7 @@ class UpdateExchangeRatesJobTest extends TestCase
         // Verify the request was made to /latest and does NOT use the legacy
         // 'access_key' param (exchangerate.host); fxratesapi uses 'api_key'
         // (only sent when the key is non-empty — no key in tests is expected).
-        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+        Http::assertSent(function (Request $request) {
             return str_contains($request->url(), '/latest')
                 && ! array_key_exists('access_key', $request->data());
         });

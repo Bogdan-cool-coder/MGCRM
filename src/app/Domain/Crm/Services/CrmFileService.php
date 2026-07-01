@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * CrmFileService — folders and files on CRM entity cards (contacts + companies).
@@ -86,10 +87,10 @@ class CrmFileService
 
         return CrmFolder::create([
             'owner_entity_type' => $this->entityType($entity),
-            'owner_entity_id'   => $entity->id,
-            'name'              => $data['name'],
-            'is_system'         => false,
-            'sort_order'        => (int) $maxOrder + 1,
+            'owner_entity_id' => $entity->id,
+            'name' => $data['name'],
+            'is_system' => false,
+            'sort_order' => (int) $maxOrder + 1,
         ]);
     }
 
@@ -149,21 +150,21 @@ class CrmFileService
             ])->status(422);
         }
 
-        $ext      = $file->getClientOriginalExtension();
-        $uuid     = Str::uuid()->toString();
-        $path     = "crm/{$folder->owner_entity_type}/{$folder->owner_entity_id}/{$folder->id}/{$uuid}.{$ext}";
+        $ext = $file->getClientOriginalExtension();
+        $uuid = Str::uuid()->toString();
+        $path = "crm/{$folder->owner_entity_type}/{$folder->owner_entity_id}/{$folder->id}/{$uuid}.{$ext}";
 
         Storage::disk(self::DISK)->put($path, $file->get());
 
         return CrmFile::create([
-            'folder_id'           => $folder->id,
-            'disk'                => self::DISK,
-            'owner_entity_type'   => $folder->owner_entity_type,
-            'owner_entity_id'     => $folder->owner_entity_id,
-            'file_path'           => $path,
-            'original_name'       => $file->getClientOriginalName(),
-            'file_size'           => $file->getSize(),
-            'mime_type'           => $file->getMimeType(),
+            'folder_id' => $folder->id,
+            'disk' => self::DISK,
+            'owner_entity_type' => $folder->owner_entity_type,
+            'owner_entity_id' => $folder->owner_entity_id,
+            'file_path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+            'mime_type' => $file->getMimeType(),
             'uploaded_by_user_id' => $uploader->id,
         ]);
     }
@@ -172,7 +173,7 @@ class CrmFileService
      * Stream a file for download.
      * Uses the disk stored on the CrmFile record for future S3 compatibility.
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+     * @throws NotFoundHttpException
      */
     public function download(CrmFile $file): StreamedResponse
     {
@@ -201,7 +202,7 @@ class CrmFileService
      */
     private function ensureSystemFolders(Company|Contact $entity): void
     {
-        $type  = $this->entityType($entity);
+        $type = $this->entityType($entity);
         $names = $this->systemFolderNames($entity);
 
         $existing = CrmFolder::query()
@@ -218,10 +219,10 @@ class CrmFileService
 
             CrmFolder::create([
                 'owner_entity_type' => $type,
-                'owner_entity_id'   => $entity->id,
-                'name'              => $name,
-                'is_system'         => true,
-                'sort_order'        => $order,
+                'owner_entity_id' => $entity->id,
+                'name' => $name,
+                'is_system' => true,
+                'sort_order' => $order,
             ]);
         }
     }
@@ -247,11 +248,11 @@ class CrmFileService
 
         return $documents->map(function (Document $doc): array {
             // Prefer PDF path if available, else docx path.
-            $hasPdf   = (bool) $doc->pdf_path;
-            $hasDocx  = (bool) $doc->docx_path;
-            $path     = $doc->pdf_path ?: $doc->docx_path;
+            $hasPdf = (bool) $doc->pdf_path;
+            $hasDocx = (bool) $doc->docx_path;
+            $path = $doc->pdf_path ?: $doc->docx_path;
             $mimeType = $hasPdf ? 'application/pdf' : ($hasDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : null);
-            $name     = ($doc->number ? "[{$doc->number}] " : '')
+            $name = ($doc->number ? "[{$doc->number}] " : '')
                        .($doc->title ?: 'Document #'.$doc->id);
 
             // Attempt to get file size from documents disk.
@@ -265,16 +266,16 @@ class CrmFileService
                 : null;
 
             return [
-                'id'              => 'doc_'.$doc->id,   // prefixed to distinguish from CrmFile IDs
-                'source'          => 'document',
-                'document_id'     => $doc->id,
-                'original_name'   => $name.($hasPdf ? '.pdf' : ($hasDocx ? '.docx' : '')),
-                'mime_type'       => $mimeType,
-                'file_size'       => $size,
-                'status'          => $doc->status?->value,
-                'uploaded_by'     => $doc->author ? ['id' => $doc->author->id, 'name' => $doc->author->full_name] : null,
-                'created_at'      => $doc->created_at?->toIso8601String(),
-                'download_url'    => $downloadUrl,
+                'id' => 'doc_'.$doc->id,   // prefixed to distinguish from CrmFile IDs
+                'source' => 'document',
+                'document_id' => $doc->id,
+                'original_name' => $name.($hasPdf ? '.pdf' : ($hasDocx ? '.docx' : '')),
+                'mime_type' => $mimeType,
+                'file_size' => $size,
+                'status' => $doc->status?->value,
+                'uploaded_by' => $doc->author ? ['id' => $doc->author->id, 'name' => $doc->author->full_name] : null,
+                'created_at' => $doc->created_at?->toIso8601String(),
+                'download_url' => $downloadUrl,
             ];
         })->values()->all();
     }

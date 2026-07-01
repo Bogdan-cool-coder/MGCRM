@@ -121,7 +121,7 @@ class DocumentServiceTest extends TestCase
     }
 
     /**
-     * @param array<string,mixed> $overrides
+     * @param  array<string,mixed>  $overrides
      */
     private function dealWithContract(ContractStatus $status, array $overrides = []): Deal
     {

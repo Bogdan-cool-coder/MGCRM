@@ -102,48 +102,48 @@ class IndexCompanyRequest extends FormRequest
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
 
             // ----- list sorting (header arrows). Whitelisted column + direction. -----
-            'sort_by'  => ['sometimes', 'string', Rule::in(self::SORTABLE_COLUMNS)],
+            'sort_by' => ['sometimes', 'string', Rule::in(self::SORTABLE_COLUMNS)],
             'sort_dir' => ['sometimes', 'string', Rule::in(['asc', 'desc'])],
 
             // ----- search / text -----
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
 
             // ----- multi-value filters -----
-            'owner_ids'        => ['sometimes', 'array'],
-            'owner_ids.*'      => ['integer'],
-            'company_type_ids'   => ['sometimes', 'array'],
+            'owner_ids' => ['sometimes', 'array'],
+            'owner_ids.*' => ['integer'],
+            'company_type_ids' => ['sometimes', 'array'],
             'company_type_ids.*' => ['integer'],
-            'category_code'   => ['sometimes', 'array'],
+            'category_code' => ['sometimes', 'array'],
             'category_code.*' => ['string', 'max:8'],
-            'sources'   => ['sometimes', 'array'],
+            'sources' => ['sometimes', 'array'],
             'sources.*' => ['string', 'max:64'],
-            'tags'   => ['sometimes', 'array'],
+            'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'max:64'],
 
             // ----- scalar alias filters (backward compat) -----
             // These are accepted alongside or instead of their multi-value counterparts.
             // resolveIds/resolveStrings in CompanyService handles the alias lookup.
-            'owner_user_id'   => ['sometimes', 'integer'],
+            'owner_user_id' => ['sometimes', 'integer'],
             'company_type_id' => ['sometimes', 'integer'],
 
             // ----- single-value filters -----
-            'source'                 => ['sometimes', 'nullable', 'string'],
-            'country_code'           => ['sometimes', 'nullable', 'string', 'max:8'],
-            'city'                   => ['sometimes', 'nullable', 'string', 'max:128'],
-            'specialization'         => ['sometimes', 'nullable', 'string'],
+            'source' => ['sometimes', 'nullable', 'string'],
+            'country_code' => ['sometimes', 'nullable', 'string', 'max:8'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:128'],
+            'specialization' => ['sometimes', 'nullable', 'string'],
             'acquisition_channel_id' => ['sometimes', 'integer'],
-            'responsible_user_id'    => ['sometimes', 'integer'],
-            'engagement_tier'        => ['sometimes', 'nullable', 'string'],
+            'responsible_user_id' => ['sometimes', 'integer'],
+            'engagement_tier' => ['sometimes', 'nullable', 'string'],
 
             // ----- date ranges -----
             'created_from' => ['sometimes', 'date'],
-            'created_to'   => ['sometimes', 'date'],
+            'created_to' => ['sometimes', 'date'],
 
             // ----- boolean presets -----
-            'only_mine'       => ['sometimes', 'boolean'],
-            'only_active'     => ['sometimes', 'boolean'],
+            'only_mine' => ['sometimes', 'boolean'],
+            'only_active' => ['sometimes', 'boolean'],
             'only_with_deals' => ['sometimes', 'boolean'],
-            'only_no_task'    => ['sometimes', 'boolean'],
+            'only_no_task' => ['sometimes', 'boolean'],
         ];
     }
 }

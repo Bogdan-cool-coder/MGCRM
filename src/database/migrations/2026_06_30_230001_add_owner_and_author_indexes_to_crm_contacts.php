@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -39,13 +40,13 @@ return new class extends Migration
     private function indexExists(string $tableName, string $indexName): bool
     {
         try {
-            $indexes = \Illuminate\Support\Facades\DB::select(
-                "SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?",
+            $indexes = DB::select(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
                 [$tableName, $indexName],
             );
 
             return ! empty($indexes);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // SQLite :memory: — proceed without guard, Blueprint handles it.
             return false;
         }

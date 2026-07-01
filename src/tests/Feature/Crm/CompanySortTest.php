@@ -65,7 +65,7 @@ class CompanySortTest extends TestCase
         // Must be A, M, Z — would fail if sort is not applied
         $this->assertSame('Alpha Corp', $names[0]);
         $this->assertSame('Mango Corp', $names[1]);
-        $this->assertSame('Zeta Corp',  $names[2]);
+        $this->assertSame('Zeta Corp', $names[2]);
     }
 
     public function test_sort_by_name_desc_returns_companies_reverse_alphabetically(): void
@@ -81,7 +81,7 @@ class CompanySortTest extends TestCase
         $names = array_column($response->json('data'), 'name');
 
         // Must be Z, M, A — would fail if sort is not applied (gives M, Z, A by desc created_at)
-        $this->assertSame('Zeta Corp',  $names[0]);
+        $this->assertSame('Zeta Corp', $names[0]);
         $this->assertSame('Mango Corp', $names[1]);
         $this->assertSame('Alpha Corp', $names[2]);
     }
@@ -103,8 +103,8 @@ class CompanySortTest extends TestCase
         $codes = array_column($response->json('data'), 'category_code');
 
         // Alphabetical: L, M, S2
-        $this->assertSame('L',  $codes[0]);
-        $this->assertSame('M',  $codes[1]);
+        $this->assertSame('L', $codes[0]);
+        $this->assertSame('M', $codes[1]);
         $this->assertSame('S2', $codes[2]);
     }
 
@@ -152,8 +152,8 @@ class CompanySortTest extends TestCase
     public function test_sort_by_last_contact_desc_puts_most_recently_active_first(): void
     {
         // Insert never, old, recent — ensures default wouldn't match (desc created_at = recent,old,never)
-        $never  = Company::factory()->create(['name' => 'Never',  'last_activity_at' => null,              'owner_user_id' => $this->admin->id]);
-        $old    = Company::factory()->create(['name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_user_id' => $this->admin->id]);
+        $never = Company::factory()->create(['name' => 'Never',  'last_activity_at' => null,              'owner_user_id' => $this->admin->id]);
+        $old = Company::factory()->create(['name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_user_id' => $this->admin->id]);
         $recent = Company::factory()->create(['name' => 'Recent', 'last_activity_at' => now()->subDay(),   'owner_user_id' => $this->admin->id]);
 
         $response = $this->getJson('/api/companies?sort_by=last_contact&sort_dir=desc&per_page=10')
@@ -165,15 +165,15 @@ class CompanySortTest extends TestCase
         // BUT insertion order is never,old,recent which would give recent,old,never by desc created_at
         // We verify exact positions to confirm sort is applied and correct.
         $this->assertSame($recent->id, $ids[0]);
-        $this->assertSame($old->id,    $ids[1]);
-        $this->assertSame($never->id,  $ids[2]);
+        $this->assertSame($old->id, $ids[1]);
+        $this->assertSame($never->id, $ids[2]);
     }
 
     public function test_sort_by_last_contact_asc_puts_oldest_first(): void
     {
         // Insert in recent, old order — asc would flip them
         $recent = Company::factory()->create(['name' => 'Recent', 'last_activity_at' => now()->subDay(),   'owner_user_id' => $this->admin->id]);
-        $old    = Company::factory()->create(['name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_user_id' => $this->admin->id]);
+        $old = Company::factory()->create(['name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_user_id' => $this->admin->id]);
 
         $response = $this->getJson('/api/companies?sort_by=last_contact&sort_dir=asc&per_page=10')
             ->assertOk();
@@ -194,9 +194,9 @@ class CompanySortTest extends TestCase
 
     public function test_sort_by_owner_asc_orders_by_owner_full_name(): void
     {
-        $zara  = User::factory()->create(['full_name' => 'Zara Manager',  'role' => Role::Manager]);
+        $zara = User::factory()->create(['full_name' => 'Zara Manager',  'role' => Role::Manager]);
         $alice = User::factory()->create(['full_name' => 'Alice Manager', 'role' => Role::Manager]);
-        $mia   = User::factory()->create(['full_name' => 'Mia Manager',   'role' => Role::Manager]);
+        $mia = User::factory()->create(['full_name' => 'Mia Manager',   'role' => Role::Manager]);
 
         // Insert in Z, A, M order so default (desc created_at) gives: Co Mia, Co Alice, Co Zara
         Company::factory()->create(['name' => 'Co Zara',  'owner_user_id' => $zara->id]);
@@ -210,14 +210,14 @@ class CompanySortTest extends TestCase
 
         // Alice, Mia, Zara — would fail if unwired (gives Co Mia, Co Alice, Co Zara by desc created_at)
         $this->assertSame('Co Alice', $names[0]);
-        $this->assertSame('Co Mia',   $names[1]);
-        $this->assertSame('Co Zara',  $names[2]);
+        $this->assertSame('Co Mia', $names[1]);
+        $this->assertSame('Co Zara', $names[2]);
     }
 
     public function test_sort_by_owner_desc_orders_by_owner_full_name_reversed(): void
     {
         $alice = User::factory()->create(['full_name' => 'Alice Manager', 'role' => Role::Manager]);
-        $zara  = User::factory()->create(['full_name' => 'Zara Manager',  'role' => Role::Manager]);
+        $zara = User::factory()->create(['full_name' => 'Zara Manager',  'role' => Role::Manager]);
 
         Company::factory()->create(['name' => 'Co Alice', 'owner_user_id' => $alice->id]);
         Company::factory()->create(['name' => 'Co Zara',  'owner_user_id' => $zara->id]);
@@ -228,7 +228,7 @@ class CompanySortTest extends TestCase
         $names = array_column($response->json('data'), 'name');
 
         // Zara before Alice in desc
-        $this->assertSame('Co Zara',  $names[0]);
+        $this->assertSame('Co Zara', $names[0]);
         $this->assertSame('Co Alice', $names[1]);
     }
 
@@ -240,8 +240,8 @@ class CompanySortTest extends TestCase
     public function test_sort_by_deals_desc_puts_most_open_deals_first(): void
     {
         // Insert in ascending deal-count order (0, 1, 3) so default doesn't accidentally match
-        $noDeals   = Company::factory()->create(['name' => 'No Deals',   'owner_user_id' => $this->admin->id]);
-        $oneDeals  = Company::factory()->create(['name' => 'One Deal',   'owner_user_id' => $this->admin->id]);
+        $noDeals = Company::factory()->create(['name' => 'No Deals',   'owner_user_id' => $this->admin->id]);
+        $oneDeals = Company::factory()->create(['name' => 'One Deal',   'owner_user_id' => $this->admin->id]);
         $manyDeals = Company::factory()->create(['name' => 'Many Deals', 'owner_user_id' => $this->admin->id]);
 
         $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
@@ -258,18 +258,18 @@ class CompanySortTest extends TestCase
         $ids = array_column($response->json('data'), 'id');
 
         $posMany = array_search($manyDeals->id, $ids, true);
-        $posOne  = array_search($oneDeals->id, $ids, true);
+        $posOne = array_search($oneDeals->id, $ids, true);
         $posNone = array_search($noDeals->id, $ids, true);
 
         // many(3) → one(1) → none(0) — would fail if sort not wired (default gives many,one,no by desc created_at)
-        $this->assertLessThan($posOne,  $posMany, 'Company with 3 deals should sort before 1 deal');
-        $this->assertLessThan($posNone, $posOne,  'Company with 1 deal should sort before 0 deals');
+        $this->assertLessThan($posOne, $posMany, 'Company with 3 deals should sort before 1 deal');
+        $this->assertLessThan($posNone, $posOne, 'Company with 1 deal should sort before 0 deals');
     }
 
     public function test_sort_by_deals_asc_puts_fewest_first(): void
     {
         $manyDeals = Company::factory()->create(['name' => 'Many Deals', 'owner_user_id' => $this->admin->id]);
-        $noDeals   = Company::factory()->create(['name' => 'No Deals',   'owner_user_id' => $this->admin->id]);
+        $noDeals = Company::factory()->create(['name' => 'No Deals',   'owner_user_id' => $this->admin->id]);
 
         $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
         Deal::factory()->inStage($openStage)->count(3)->create(['company_id' => $manyDeals->id]);
@@ -289,10 +289,10 @@ class CompanySortTest extends TestCase
     public function test_sort_by_deals_excludes_won_and_lost_stages(): void
     {
         $company = Company::factory()->create(['name' => 'Test Co',  'owner_user_id' => $this->admin->id]);
-        $empty   = Company::factory()->create(['name' => 'Empty Co', 'owner_user_id' => $this->admin->id]);
+        $empty = Company::factory()->create(['name' => 'Empty Co', 'owner_user_id' => $this->admin->id]);
 
         $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
-        $wonStage  = PipelineStage::factory()->create(['is_won' => true,  'is_lost' => false]);
+        $wonStage = PipelineStage::factory()->create(['is_won' => true,  'is_lost' => false]);
         $lostStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => true]);
 
         // 1 open + 1 won + 1 lost = only 1 should be counted

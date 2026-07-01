@@ -6,6 +6,8 @@ namespace Tests\Feature\Activity;
 
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Activity\Services\ActivityService;
+use App\Domain\Org\Models\Department;
 use App\Domain\Sales\Models\PipelineStage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -205,8 +207,8 @@ class ActivityCrudTest extends TestCase
         // Audit MINOR-10 (data-integrity half): handing a task to a user in a
         // different department must re-stamp the denormalised department_id from
         // the new responsible so department-scoped visibility follows the owner.
-        $deptA = \App\Domain\Org\Models\Department::factory()->create();
-        $deptB = \App\Domain\Org\Models\Department::factory()->create();
+        $deptA = Department::factory()->create();
+        $deptB = Department::factory()->create();
 
         $director = $this->director(); // All-scope → may reassign freely
         $newResponsible = $this->manager($deptB->id);
@@ -231,8 +233,8 @@ class ActivityCrudTest extends TestCase
         // responsible re-sync never overrides a caller-set department. (department_id
         // is not part of the public PATCH contract, so this exercises the service
         // directly to cover the guard for internal callers.)
-        $deptB = \App\Domain\Org\Models\Department::factory()->create();
-        $deptC = \App\Domain\Org\Models\Department::factory()->create();
+        $deptB = Department::factory()->create();
+        $deptC = Department::factory()->create();
 
         $director = $this->director();
         $newResponsible = $this->manager($deptB->id);
@@ -242,7 +244,7 @@ class ActivityCrudTest extends TestCase
             ->createdByUser($director)
             ->create(['department_id' => null]);
 
-        $service = app(\App\Domain\Activity\Services\ActivityService::class);
+        $service = app(ActivityService::class);
         $updated = $service->update($activity, [
             'responsible_id' => $newResponsible->id,
             'department_id' => $deptC->id,
@@ -255,7 +257,7 @@ class ActivityCrudTest extends TestCase
     {
         // Reassigning to a user with no department leaves the existing department_id
         // untouched (no owner department to derive from).
-        $deptA = \App\Domain\Org\Models\Department::factory()->create();
+        $deptA = Department::factory()->create();
         $director = $this->director();
         $deptlessResponsible = $this->manager(null);
 
@@ -264,7 +266,7 @@ class ActivityCrudTest extends TestCase
             ->createdByUser($director)
             ->create(['department_id' => $deptA->id]);
 
-        $service = app(\App\Domain\Activity\Services\ActivityService::class);
+        $service = app(ActivityService::class);
         $updated = $service->update($activity, ['responsible_id' => $deptlessResponsible->id]);
 
         $this->assertSame($deptA->id, $updated->department_id);
@@ -295,7 +297,7 @@ class ActivityCrudTest extends TestCase
             ->createdByUser($manager)
             ->create(['is_closed' => false]);
 
-        $service = app(\App\Domain\Activity\Services\ActivityService::class);
+        $service = app(ActivityService::class);
         $updated = $service->update($activity, [
             'title' => 'Renamed',
             'is_closed' => true,
@@ -312,8 +314,8 @@ class ActivityCrudTest extends TestCase
         // responsible_id reassignment must stay bounded by the actor's visibility:
         // an Own-scope manager cannot push a task to a user in a department they
         // cannot see.
-        $deptA = \App\Domain\Org\Models\Department::factory()->create();
-        $deptB = \App\Domain\Org\Models\Department::factory()->create();
+        $deptA = Department::factory()->create();
+        $deptB = Department::factory()->create();
 
         $manager = $this->manager($deptA->id);
         $foreign = $this->manager($deptB->id);
@@ -333,7 +335,7 @@ class ActivityCrudTest extends TestCase
     public function test_all_scope_actor_can_reassign_to_any_user(): void
     {
         // An All-scope actor (director) may reassign freely across departments.
-        $deptB = \App\Domain\Org\Models\Department::factory()->create();
+        $deptB = Department::factory()->create();
         $director = $this->director();
         $foreign = $this->manager($deptB->id);
 

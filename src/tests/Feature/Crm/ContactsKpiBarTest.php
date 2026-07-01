@@ -557,7 +557,7 @@ class ContactsKpiBarTest extends TestCase
         // All other Schema calls pass through to the real implementation
         Schema::shouldReceive('hasColumn')
             ->withAnyArgs()
-            ->andReturnUsing(fn (string $table, string $col): bool => \Illuminate\Support\Facades\Schema::getFacadeRoot()->hasColumn($table, $col));
+            ->andReturnUsing(fn (string $table, string $col): bool => Schema::getFacadeRoot()->hasColumn($table, $col));
 
         $this->getJson('/api/contacts/kpi?entity=company')
             ->assertOk()

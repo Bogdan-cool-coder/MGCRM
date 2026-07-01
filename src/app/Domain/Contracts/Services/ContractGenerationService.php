@@ -56,7 +56,6 @@ class ContractGenerationService
      * @param  int|null  $templateId  Optional explicit Template ID from the UI picker.
      *                                When provided, the chosen template is used instead
      *                                of the kind-based fallback to master_skeleton.
-     *
      * @return array{document: Document, warnings: list<string>}
      *
      * @throws ValidationException 422 on business rule violations

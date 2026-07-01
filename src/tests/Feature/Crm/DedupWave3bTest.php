@@ -349,6 +349,7 @@ class DedupWave3bTest extends TestCase
         // Find the group that contains both co1 and co2
         $group = collect($groups)->first(function ($g) use ($co1, $co2) {
             $ids = collect($g['entities'])->pluck('id');
+
             return $ids->contains($co1->id) && $ids->contains($co2->id);
         });
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Activity;
 
 use App\Domain\Activity\Enums\ActivityStatus;
-use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Activity\Services\ActivityService;
 use App\Domain\Iam\Enums\VisibilityScope;

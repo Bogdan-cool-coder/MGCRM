@@ -76,9 +76,9 @@ return [
         */
         'crm_files' => [
             'driver' => env('CRM_FILES_DISK_DRIVER', 'local'),
-            'root'   => storage_path('app/private/crm_files'),
-            'serve'  => false,
-            'throw'  => false,
+            'root' => storage_path('app/private/crm_files'),
+            'serve' => false,
+            'throw' => false,
         ],
 
         's3' => [

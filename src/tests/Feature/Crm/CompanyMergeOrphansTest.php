@@ -392,7 +392,7 @@ class CompanyMergeOrphansTest extends TestCase
         $this->assertDatabaseHas('company_requisites', ['id' => $dupReq->id, 'company_id' => $master->id]);
 
         // Exactly one must be is_current=true
-        $currentCount = \Illuminate\Support\Facades\DB::table('company_requisites')
+        $currentCount = DB::table('company_requisites')
             ->where('company_id', $master->id)
             ->where('is_current', true)
             ->count();
@@ -419,7 +419,7 @@ class CompanyMergeOrphansTest extends TestCase
         $this->assertDatabaseHas('company_requisites', ['id' => $masterReq->id, 'is_current' => true]);
         $this->assertDatabaseHas('company_requisites', ['id' => $dupReq->id, 'is_current' => false]);
 
-        $currentCount = \Illuminate\Support\Facades\DB::table('company_requisites')
+        $currentCount = DB::table('company_requisites')
             ->where('company_id', $master->id)
             ->where('is_current', true)
             ->count();

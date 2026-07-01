@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Crm;
 
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\BulkContactService;
 use App\Domain\Crm\Services\ContactExportService;
 use App\Http\Controllers\Controller;
@@ -68,7 +69,7 @@ class ContactBulkController extends Controller
     {
         // Require viewAny authorization — without this any authenticated user
         // could dump the full contacts table regardless of role (CRM-B2).
-        $this->authorize('viewAny', \App\Domain\Crm\Models\Contact::class);
+        $this->authorize('viewAny', Contact::class);
 
         $request->validate([
             'contact_ids' => ['sometimes', 'array'],

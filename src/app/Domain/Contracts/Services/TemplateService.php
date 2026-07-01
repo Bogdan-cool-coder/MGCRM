@@ -46,7 +46,7 @@ class TemplateService
                 fn ($q) => $q->where(function ($inner) use ($search) {
                     $pattern = '%'.mb_strtolower(trim($search)).'%';
                     $inner->whereRaw('LOWER(code) LIKE ?', [$pattern])
-                          ->orWhereRaw('LOWER(title) LIKE ?', [$pattern]);
+                        ->orWhereRaw('LOWER(title) LIKE ?', [$pattern]);
                 }),
             )
             ->with('currentVersion')

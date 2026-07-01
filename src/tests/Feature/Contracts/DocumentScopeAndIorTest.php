@@ -7,6 +7,7 @@ namespace Tests\Feature\Contracts;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
 use App\Domain\Contracts\Models\DocumentRemark;
+use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -207,8 +208,8 @@ class DocumentScopeAndIorTest extends TestCase
         $manager = User::factory()->create(['role' => Role::Manager]);
         $otherManager = User::factory()->create(['role' => Role::Manager]);
 
-        /** @var \App\Domain\Crm\Models\Company $company */
-        $company = \App\Domain\Crm\Models\Company::factory()->create();
+        /** @var Company $company */
+        $company = Company::factory()->create();
 
         Document::factory()->create(['author_user_id' => $manager->id, 'source_company_id' => $company->id]);
         Document::factory()->create(['author_user_id' => $manager->id, 'source_company_id' => $company->id]);

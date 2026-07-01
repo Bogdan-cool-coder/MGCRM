@@ -11,6 +11,7 @@ use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Org\Models\Department;
 use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Services\DealKpiService;
 use App\Domain\Sales\Services\DealService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +36,7 @@ class DealKpiTest extends TestCase
     use RefreshDatabase;
     use SalesTestHelpers;
 
-    private \App\Domain\Sales\Models\Pipeline $pipeline;
+    private Pipeline $pipeline;
 
     private User $director;
 

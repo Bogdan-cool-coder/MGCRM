@@ -7,6 +7,7 @@ namespace App\Http\Resources\Contracts;
 use App\Domain\Contracts\Models\Approval;
 use App\Domain\Contracts\Models\ApprovalRoute;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
 
@@ -32,7 +33,7 @@ class MyApprovalResource extends JsonResource
     /** Cached stage-name map shared across the collection: [stage_order => name]. */
     private static ?Collection $routeStagesCache = null;
 
-    public static function collection($resource): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public static function collection($resource): AnonymousResourceCollection
     {
         // Pre-warm the route stage cache once per collection render.
         static::$routeStagesCache = null;

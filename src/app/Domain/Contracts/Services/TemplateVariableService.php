@@ -38,7 +38,7 @@ class TemplateVariableService
                 fn ($q) => $q->where(function ($inner) use ($search) {
                     $pattern = '%'.mb_strtolower(trim($search)).'%';
                     $inner->whereRaw('LOWER("key") LIKE ?', [$pattern])
-                          ->orWhereRaw('LOWER(label) LIKE ?', [$pattern]);
+                        ->orWhereRaw('LOWER(label) LIKE ?', [$pattern]);
                 }),
             )
             ->orderBy('sort_order')

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Activity;
 
+use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Models\Activity;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -231,7 +232,7 @@ class ActivityPresetsTest extends TestCase
         // Done, rejected (closed but not done) and a plain is_closed task all count.
         Activity::factory()->responsibleOf($manager)->createdByUser($manager)->completed($manager)->create();
         Activity::factory()->responsibleOf($manager)->createdByUser($manager)
-            ->create(['status' => \App\Domain\Activity\Enums\ActivityStatus::Rejected->value, 'is_closed' => true]);
+            ->create(['status' => ActivityStatus::Rejected->value, 'is_closed' => true]);
         // Two OPEN tasks that must NOT appear.
         Activity::factory()->responsibleOf($manager)->createdByUser($manager)->count(2)->create();
 

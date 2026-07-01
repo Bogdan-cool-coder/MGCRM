@@ -85,11 +85,11 @@ class ContractContextBuilder
             $bankAccount = $this->licensorService->primaryAccountForCurrency($licensorEntity, $currency);
             if ($bankAccount !== null) {
                 // Override bank fields with per-currency account data.
-                $licensor['bank']            = $bankAccount->bank ?? ($licensor['bank'] ?? '');
+                $licensor['bank'] = $bankAccount->bank ?? ($licensor['bank'] ?? '');
                 $licensor['bank_code_label'] = $bankAccount->bank_code_label ?? ($licensor['bank_code_label'] ?? '');
-                $licensor['bank_code']       = $bankAccount->bank_code ?? ($licensor['bank_code'] ?? '');
-                $licensor['account']         = $bankAccount->account ?? ($licensor['account'] ?? '');
-                $licensor['swift']           = $bankAccount->swift ?? ($licensor['swift'] ?? '');
+                $licensor['bank_code'] = $bankAccount->bank_code ?? ($licensor['bank_code'] ?? '');
+                $licensor['account'] = $bankAccount->account ?? ($licensor['account'] ?? '');
+                $licensor['swift'] = $bankAccount->swift ?? ($licensor['swift'] ?? '');
             }
         }
 

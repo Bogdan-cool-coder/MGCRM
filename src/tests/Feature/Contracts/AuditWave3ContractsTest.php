@@ -128,7 +128,7 @@ class AuditWave3ContractsTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         $approval = new Approval(['user_id' => $user->id]);
 
-        $policy = new ApprovalPolicy();
+        $policy = new ApprovalPolicy;
         $this->assertTrue($policy->view($user, $approval));
     }
 
@@ -139,7 +139,7 @@ class AuditWave3ContractsTest extends TestCase
         $otherUser = User::factory()->create(['role' => Role::Manager]);
         $approval = new Approval(['user_id' => $otherUser->id]);
 
-        $policy = new ApprovalPolicy();
+        $policy = new ApprovalPolicy;
         $this->assertFalse($policy->view($user, $approval));
     }
 
@@ -149,7 +149,7 @@ class AuditWave3ContractsTest extends TestCase
         $otherUser = User::factory()->create(['role' => Role::Manager]);
         $approval = new Approval(['user_id' => $otherUser->id]);
 
-        $policy = new ApprovalPolicy();
+        $policy = new ApprovalPolicy;
         $this->assertTrue($policy->view($admin, $approval));
     }
 

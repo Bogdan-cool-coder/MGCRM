@@ -42,10 +42,10 @@ class CompanyEmployeeUpdateTest extends TestCase
     private function makeLink(Company $company, Contact $contact, array $attrs = []): ContactCompanyLink
     {
         return ContactCompanyLink::create(array_merge([
-            'company_id'        => $company->id,
-            'contact_id'        => $contact->id,
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
             'employment_status' => EmploymentStatus::Works->value,
-            'is_primary'        => false,
+            'is_primary' => false,
         ], $attrs));
     }
 
@@ -67,8 +67,8 @@ class CompanyEmployeeUpdateTest extends TestCase
             ->assertJsonPath('data.company_id', $company->id);
 
         $this->assertDatabaseHas('crm_contact_company_links', [
-            'company_id'        => $company->id,
-            'contact_id'        => $contact->id,
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
             'employment_status' => 'left',
         ]);
     }
@@ -96,7 +96,7 @@ class CompanyEmployeeUpdateTest extends TestCase
 
         $this->patchJson("/api/companies/{$company->id}/employees/{$contact->id}", [
             'employment_status' => 'works',
-            'position'          => 'Senior Engineer',
+            'position' => 'Senior Engineer',
         ])
             ->assertOk()
             ->assertJsonPath('data.position', 'Senior Engineer');
@@ -104,7 +104,7 @@ class CompanyEmployeeUpdateTest extends TestCase
         $this->assertDatabaseHas('crm_contact_company_links', [
             'company_id' => $company->id,
             'contact_id' => $contact->id,
-            'position'   => 'Senior Engineer',
+            'position' => 'Senior Engineer',
         ]);
     }
 
@@ -123,9 +123,9 @@ class CompanyEmployeeUpdateTest extends TestCase
         // Update companyB link to is_primary = true
         $this->patchJson("/api/companies/{$companyB->id}/employees/{$contact->id}", [
             'employment_status' => 'works',
-            'is_primary'        => true,
+            'is_primary' => true,
         ])->assertOk()
-          ->assertJsonPath('data.is_primary', true);
+            ->assertJsonPath('data.is_primary', true);
 
         // companyA must no longer be primary
         $this->assertDatabaseHas('crm_contact_company_links', [

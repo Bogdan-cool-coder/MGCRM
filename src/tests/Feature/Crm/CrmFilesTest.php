@@ -7,7 +7,6 @@ namespace Tests\Feature\Crm;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
-use App\Domain\Crm\Models\CrmFile;
 use App\Domain\Crm\Models\CrmFolder;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -56,7 +55,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -87,7 +86,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -107,7 +106,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $contact = $this->makeContact($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -128,7 +127,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -141,10 +140,10 @@ class CrmFilesTest extends TestCase
         $response->assertJsonFragment(['name' => 'Мои документы', 'is_system' => false]);
 
         $this->assertDatabaseHas('crm_folders', [
-            'name'              => 'Мои документы',
-            'is_system'         => false,
+            'name' => 'Мои документы',
+            'is_system' => false,
             'owner_entity_type' => 'company',
-            'owner_entity_id'   => $company->id,
+            'owner_entity_id' => $company->id,
         ]);
     }
 
@@ -152,7 +151,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $contact = $this->makeContact($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -171,7 +170,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -194,17 +193,17 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
 
         $folder = CrmFolder::create([
             'owner_entity_type' => 'company',
-            'owner_entity_id'   => $company->id,
-            'name'              => 'Temp folder',
-            'is_system'         => false,
-            'sort_order'        => 99,
+            'owner_entity_id' => $company->id,
+            'name' => 'Temp folder',
+            'is_system' => false,
+            'sort_order' => 99,
         ]);
 
         $response = $this->deleteJson("/api/companies/{$company->id}/folders/{$folder->id}");
@@ -218,7 +217,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -244,11 +243,11 @@ class CrmFilesTest extends TestCase
         $this->assertNotNull($fileId);
 
         $this->assertDatabaseHas('crm_files', [
-            'id'                => $fileId,
-            'folder_id'         => $managerFolder->id,
+            'id' => $fileId,
+            'folder_id' => $managerFolder->id,
             'owner_entity_type' => 'company',
-            'owner_entity_id'   => $company->id,
-            'original_name'     => 'contract.pdf',
+            'owner_entity_id' => $company->id,
+            'original_name' => 'contract.pdf',
         ]);
 
         // List files in folder
@@ -272,7 +271,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -280,9 +279,9 @@ class CrmFilesTest extends TestCase
         // Create a document linked to the company.
         $doc = Document::factory()->create([
             'source_company_id' => $company->id,
-            'archived_at'       => null,
-            'title'             => 'Test Contract',
-            'author_user_id'    => $owner->id,
+            'archived_at' => null,
+            'title' => 'Test Contract',
+            'author_user_id' => $owner->id,
         ]);
 
         // Seed folders
@@ -308,7 +307,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);
@@ -338,7 +337,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner    = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company1 = $this->makeCompany($owner);
         $company2 = $this->makeCompany($owner);
 
@@ -360,7 +359,7 @@ class CrmFilesTest extends TestCase
     {
         Storage::fake('crm_files');
 
-        $owner   = $this->makeOwner();
+        $owner = $this->makeOwner();
         $company = $this->makeCompany($owner);
 
         Sanctum::actingAs($owner, ['*']);

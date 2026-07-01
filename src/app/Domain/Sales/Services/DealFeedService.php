@@ -14,6 +14,7 @@ use App\Domain\Log\Models\EntityLog;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealAudit;
 use App\Domain\Sales\Models\DealStageHistory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
@@ -125,7 +126,7 @@ class DealFeedService
      * Per-source row count, clamped to MAX_SOURCE_ROWS so `total` mirrors the old
      * "sum of min(source_count, 500)" merged-size exactly.
      */
-    private function cappedCount(\Illuminate\Database\Eloquent\Builder $query): int
+    private function cappedCount(Builder $query): int
     {
         return min($query->count(), self::MAX_SOURCE_ROWS);
     }
@@ -159,9 +160,9 @@ class DealFeedService
      * a second, redundant "deal created"/empty-from stage_change next to it (#4).
      * This mirrors how stage analytics already drop the genesis row.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<DealStageHistory>
+     * @return Builder<DealStageHistory>
      */
-    private function stageQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
+    private function stageQuery(Deal $deal): Builder
     {
         return DealStageHistory::query()
             ->where('deal_id', $deal->id)
@@ -214,9 +215,9 @@ class DealFeedService
      * Falls back to created_at when there is no completion stamp (open tasks,
      * rejected tasks with no completed_at), exactly as the occurred_at mapping does.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<Activity>
+     * @return Builder<Activity>
      */
-    private function activityQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
+    private function activityQuery(Deal $deal): Builder
     {
         return Activity::query()
             ->where('target_type', ActivityTargetType::Deal->value)
@@ -306,9 +307,9 @@ class DealFeedService
      * Base query for the field-change source — single source of the WHERE/ORDER
      * for fetch + count.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<DealAudit>
+     * @return Builder<DealAudit>
      */
-    private function fieldChangeQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
+    private function fieldChangeQuery(Deal $deal): Builder
     {
         return DealAudit::query()
             ->where('deal_id', $deal->id)
@@ -344,9 +345,9 @@ class DealFeedService
      * the log vocabulary is intentionally excluded). Single source of the
      * WHERE/ORDER for fetch + count.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<EntityLog>
+     * @return Builder<EntityLog>
      */
-    private function paymentFixedQuery(Deal $deal): \Illuminate\Database\Eloquent\Builder
+    private function paymentFixedQuery(Deal $deal): Builder
     {
         return EntityLog::query()
             ->where('subject_type', LogSubjectType::Deal->value)

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Sales;
 
+use App\Domain\Activity\Enums\ActivityStatus;
+use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
@@ -396,7 +398,7 @@ class DealFeedServiceTest extends TestCase
                 'id' => "stage_{$r->id}", 'at' => $r->created_at?->toIso8601String(),
             ]);
         $activity = Activity::query()
-            ->where('target_type', \App\Domain\Activity\Enums\ActivityTargetType::Deal->value)
+            ->where('target_type', ActivityTargetType::Deal->value)
             ->where('target_id', $deal->id)
             ->orderByDesc('created_at')->orderByDesc('id')->limit($cap)->get()
             ->map(fn (Activity $r): array => [
@@ -549,7 +551,7 @@ class DealFeedServiceTest extends TestCase
         // and SQL branches.
         $activity = Activity::factory()->forDeal($deal)->create([
             'created_at' => $createdAt,
-            'status' => \App\Domain\Activity\Enums\ActivityStatus::Rejected->value,
+            'status' => ActivityStatus::Rejected->value,
             'is_closed' => true,
             'completed_at' => null,
         ]);

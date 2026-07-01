@@ -65,8 +65,8 @@ class ContactSortTest extends TestCase
         $names = array_column($response->json('data'), 'full_name');
 
         // Must be A, B, C — would fail if sort is not applied (would give B, A, C)
-        $this->assertSame('Alice Smith',   $names[0]);
-        $this->assertSame('Bob Jones',     $names[1]);
+        $this->assertSame('Alice Smith', $names[0]);
+        $this->assertSame('Bob Jones', $names[1]);
         $this->assertSame('Charlie Brown', $names[2]);
     }
 
@@ -84,8 +84,8 @@ class ContactSortTest extends TestCase
 
         // Must be C, B, A — would fail if sort is not applied (would give A, C, B by desc created_at)
         $this->assertSame('Charlie Brown', $names[0]);
-        $this->assertSame('Bob Jones',     $names[1]);
-        $this->assertSame('Alice Smith',   $names[2]);
+        $this->assertSame('Bob Jones', $names[1]);
+        $this->assertSame('Alice Smith', $names[2]);
     }
 
     // =========================================================================
@@ -116,8 +116,8 @@ class ContactSortTest extends TestCase
     public function test_sort_by_last_contact_desc_puts_most_recent_first(): void
     {
         // Insert: never, old, recent — default insertion order would return newest-created last
-        $never  = Contact::factory()->create(['full_name' => 'Never',  'last_activity_at' => null,             'owner_id' => $this->admin->id]);
-        $old    = Contact::factory()->create(['full_name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_id' => $this->admin->id]);
+        $never = Contact::factory()->create(['full_name' => 'Never',  'last_activity_at' => null,             'owner_id' => $this->admin->id]);
+        $old = Contact::factory()->create(['full_name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_id' => $this->admin->id]);
         $recent = Contact::factory()->create(['full_name' => 'Recent', 'last_activity_at' => now()->subDay(),  'owner_id' => $this->admin->id]);
 
         $response = $this->getJson('/api/contacts?sort_by=last_contact&sort_dir=desc&per_page=10')
@@ -127,15 +127,15 @@ class ContactSortTest extends TestCase
 
         // recent → old → never. Would fail if sort is not applied (default: newest-by-created_at = recent,old,never which accidentally matches — so we verify positions explicitly)
         $this->assertSame($recent->id, $ids[0]);
-        $this->assertSame($old->id,    $ids[1]);
-        $this->assertSame($never->id,  $ids[2]);
+        $this->assertSame($old->id, $ids[1]);
+        $this->assertSame($never->id, $ids[2]);
     }
 
     public function test_sort_by_last_contact_asc_puts_oldest_first(): void
     {
         // Insert in desc activity order so default would break asc
         $recent = Contact::factory()->create(['full_name' => 'Recent', 'last_activity_at' => now()->subDay(),   'owner_id' => $this->admin->id]);
-        $old    = Contact::factory()->create(['full_name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_id' => $this->admin->id]);
+        $old = Contact::factory()->create(['full_name' => 'Old',    'last_activity_at' => now()->subMonth(), 'owner_id' => $this->admin->id]);
 
         $response = $this->getJson('/api/contacts?sort_by=last_contact&sort_dir=asc&per_page=10')
             ->assertOk();
@@ -191,9 +191,9 @@ class ContactSortTest extends TestCase
 
     public function test_sort_by_author_asc_orders_by_creator_full_name(): void
     {
-        $zara  = User::factory()->create(['full_name' => 'Zara Creator', 'role' => Role::Manager]);
+        $zara = User::factory()->create(['full_name' => 'Zara Creator', 'role' => Role::Manager]);
         $alice = User::factory()->create(['full_name' => 'Alice Creator', 'role' => Role::Manager]);
-        $mia   = User::factory()->create(['full_name' => 'Mia Creator',  'role' => Role::Manager]);
+        $mia = User::factory()->create(['full_name' => 'Mia Creator',  'role' => Role::Manager]);
 
         // Insert in Z, A, M order so default (newest-first by created_at) would not give A,M,Z
         Contact::factory()->create(['full_name' => 'Con Z', 'created_by_id' => $zara->id,  'owner_id' => $this->admin->id]);
@@ -274,7 +274,7 @@ class ContactSortTest extends TestCase
     public function test_sort_by_open_deals_desc_puts_most_deals_first(): void
     {
         // Insert in ascending deal-count order so default wouldn't accidentally pass
-        $noDeals   = Contact::factory()->create(['full_name' => 'Zero Deals', 'owner_id' => $this->admin->id]);
+        $noDeals = Contact::factory()->create(['full_name' => 'Zero Deals', 'owner_id' => $this->admin->id]);
         $oneContact = Contact::factory()->create(['full_name' => 'One Deal',  'owner_id' => $this->admin->id]);
         $manyDeals = Contact::factory()->create(['full_name' => 'Many Deals', 'owner_id' => $this->admin->id]);
 
@@ -296,18 +296,18 @@ class ContactSortTest extends TestCase
         $ids = array_column($response->json('data'), 'id');
 
         $posMany = array_search($manyDeals->id, $ids, true);
-        $posOne  = array_search($oneContact->id, $ids, true);
+        $posOne = array_search($oneContact->id, $ids, true);
         $posNone = array_search($noDeals->id, $ids, true);
 
         // many(3) → one(1) → none(0)
-        $this->assertLessThan($posOne,  $posMany, 'Contact with 3 deals should sort before 1 deal');
-        $this->assertLessThan($posNone, $posOne,  'Contact with 1 deal should sort before 0 deals');
+        $this->assertLessThan($posOne, $posMany, 'Contact with 3 deals should sort before 1 deal');
+        $this->assertLessThan($posNone, $posOne, 'Contact with 1 deal should sort before 0 deals');
     }
 
     public function test_sort_by_open_deals_asc_puts_fewest_first(): void
     {
         $manyDeals = Contact::factory()->create(['full_name' => 'Many Deals', 'owner_id' => $this->admin->id]);
-        $noDeals   = Contact::factory()->create(['full_name' => 'Zero Deals', 'owner_id' => $this->admin->id]);
+        $noDeals = Contact::factory()->create(['full_name' => 'Zero Deals', 'owner_id' => $this->admin->id]);
 
         $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
 
@@ -331,15 +331,15 @@ class ContactSortTest extends TestCase
     public function test_open_deals_sort_excludes_won_and_lost(): void
     {
         $contact = Contact::factory()->create(['full_name' => 'Mixed Deals', 'owner_id' => $this->admin->id]);
-        $empty   = Contact::factory()->create(['full_name' => 'Zero Deals',  'owner_id' => $this->admin->id]);
+        $empty = Contact::factory()->create(['full_name' => 'Zero Deals',  'owner_id' => $this->admin->id]);
 
         $openStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => false]);
-        $wonStage  = PipelineStage::factory()->create(['is_won' => true,  'is_lost' => false]);
+        $wonStage = PipelineStage::factory()->create(['is_won' => true,  'is_lost' => false]);
         $lostStage = PipelineStage::factory()->create(['is_won' => false, 'is_lost' => true]);
 
         // 1 open + 1 won + 1 lost = only 1 should count
         $dOpen = Deal::factory()->inStage($openStage)->create();
-        $dWon  = Deal::factory()->inStage($wonStage)->create();
+        $dWon = Deal::factory()->inStage($wonStage)->create();
         $dLost = Deal::factory()->inStage($lostStage)->create();
 
         DB::table('deal_contacts')->insert(['deal_id' => $dOpen->id, 'contact_id' => $contact->id]);

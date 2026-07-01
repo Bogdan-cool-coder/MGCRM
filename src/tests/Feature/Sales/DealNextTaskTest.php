@@ -6,9 +6,11 @@ namespace Tests\Feature\Sales;
 
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Catalog\Models\Product;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Models\DealProduct;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Feature\Activity\ActivityTestHelpers;
@@ -84,8 +86,8 @@ class DealNextTaskTest extends TestCase
         $task = Activity::factory()->call()->forDeal($deal)
             ->create(['due_at' => now()->addDay(), 'title' => 'Перезвонить ЛПР']);
 
-        $product = \App\Domain\Catalog\Models\Product::factory()->create(['name' => 'Enterprise Plus']);
-        \App\Domain\Sales\Models\DealProduct::factory()->create([
+        $product = Product::factory()->create(['name' => 'Enterprise Plus']);
+        DealProduct::factory()->create([
             'deal_id' => $deal->id,
             'product_id' => $product->id,
             'sort_order' => 1,
@@ -116,8 +118,8 @@ class DealNextTaskTest extends TestCase
             'pipeline_id' => $pipeline->id,
             'stage_id' => $this->stage($pipeline, 'new')->id,
         ]);
-        $product = \App\Domain\Catalog\Models\Product::factory()->create(['name' => 'Enterprise Plus']);
-        \App\Domain\Sales\Models\DealProduct::factory()->create([
+        $product = Product::factory()->create(['name' => 'Enterprise Plus']);
+        DealProduct::factory()->create([
             'deal_id' => $deal->id,
             'product_id' => $product->id,
             'sort_order' => 1,

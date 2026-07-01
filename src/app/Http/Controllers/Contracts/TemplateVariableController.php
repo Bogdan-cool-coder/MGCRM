@@ -40,9 +40,9 @@ class TemplateVariableController extends Controller
             } else {
                 $activeOnly = (bool) $request->query('active_only', true);
             }
-            $group   = $request->query('group');
+            $group = $request->query('group');
             $varType = $request->query('var_type');
-            $search  = $request->query('search');
+            $search = $request->query('search');
             $variables = $this->service->list($activeOnly, $group, $varType, $search);
         }
 

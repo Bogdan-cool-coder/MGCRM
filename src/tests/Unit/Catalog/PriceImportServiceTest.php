@@ -8,6 +8,7 @@ use App\Domain\Catalog\Services\PriceImportService;
 use App\Domain\Catalog\Services\ProductGroupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
@@ -113,7 +114,7 @@ class PriceImportServiceTest extends TestCase
         $sheet->setCellValueExplicit(
             'D2',
             1200.5,
-            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC,
+            DataType::TYPE_NUMERIC,
         );
 
         $path = sys_get_temp_dir().'/unit_numeric_'.uniqid().'.xlsx';
@@ -159,7 +160,7 @@ class PriceImportServiceTest extends TestCase
         $sheet->setCellValueExplicit(
             'D2',
             '1 500',
-            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING,
+            DataType::TYPE_STRING,
         );
 
         $path = sys_get_temp_dir().'/unit_fmt_'.uniqid().'.xlsx';

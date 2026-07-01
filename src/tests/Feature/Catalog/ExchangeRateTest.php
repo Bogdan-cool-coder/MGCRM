@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Catalog;
 
+use App\Domain\Catalog\Jobs\UpdateExchangeRatesJob;
 use App\Domain\Catalog\Models\ExchangeRate;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -12,7 +13,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
-use App\Domain\Catalog\Jobs\UpdateExchangeRatesJob;
 
 class ExchangeRateTest extends TestCase
 {

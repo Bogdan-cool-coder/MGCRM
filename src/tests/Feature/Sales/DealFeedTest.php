@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sales;
 
+use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
@@ -136,7 +138,7 @@ class DealFeedTest extends TestCase
         // surface in the feed, so the deal's creation isn't rendered twice (#4):
         // a brand-new deal has zero stage_change events in its timeline.
         $pipeline = $this->seedSalesPipeline();
-        $company = \App\Domain\Crm\Models\Company::factory()->create();
+        $company = Company::factory()->create();
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
@@ -167,13 +169,13 @@ class DealFeedTest extends TestCase
         // "rejected", not as a green "done" reconstructed from is_closed alone.
         Activity::factory()->forDeal($deal)->create([
             'title' => 'Rejected follow-up',
-            'status' => \App\Domain\Activity\Enums\ActivityStatus::Rejected->value,
+            'status' => ActivityStatus::Rejected->value,
             'is_closed' => true,
         ]);
         // An in_progress task is open — it must read "in_progress", not "new".
         Activity::factory()->forDeal($deal)->create([
             'title' => 'Working call',
-            'status' => \App\Domain\Activity\Enums\ActivityStatus::InProgress->value,
+            'status' => ActivityStatus::InProgress->value,
             'is_closed' => false,
             'created_at' => now()->subMinute(),
         ]);

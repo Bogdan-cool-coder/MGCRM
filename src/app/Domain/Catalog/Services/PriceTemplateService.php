@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Catalog\Services;
 
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -97,7 +98,7 @@ class PriceTemplateService
 
         // Header row (row 1).
         foreach (self::$headers as $col => $header) {
-            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1);
+            $colLetter = Coordinate::stringFromColumnIndex($col + 1);
             $cell = $sheet->getCell($colLetter.'1');
             $cell->setValue($header);
             // Bold + light-blue background.
@@ -113,7 +114,7 @@ class PriceTemplateService
 
         // Example data row (row 2).
         foreach (self::$exampleRow as $col => $value) {
-            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1);
+            $colLetter = Coordinate::stringFromColumnIndex($col + 1);
             $sheet->getCell($colLetter.'2')->setValue($value);
         }
 

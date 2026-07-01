@@ -181,7 +181,7 @@ class TemplateTest extends TestCase
             'kind' => 'docx',
             'title' => 'My New Template',
         ])->assertCreated()
-          ->assertJsonStructure(['data' => ['id', 'code', 'kind', 'title', 'version', 'current_version']]);
+            ->assertJsonStructure(['data' => ['id', 'code', 'kind', 'title', 'version', 'current_version']]);
 
         $this->assertSame('my_new_template', $response->json('data.code'));
         $this->assertSame('docx', $response->json('data.kind'));
@@ -237,7 +237,7 @@ class TemplateTest extends TestCase
             'kind' => 'docx',
             'title' => 'Dupe',
         ])->assertUnprocessable()
-          ->assertJsonValidationErrors(['code']);
+            ->assertJsonValidationErrors(['code']);
     }
 
     public function test_invalid_kind_returns_422(): void
@@ -250,7 +250,7 @@ class TemplateTest extends TestCase
             'kind' => 'pdf',
             'title' => 'Bad Kind',
         ])->assertUnprocessable()
-          ->assertJsonValidationErrors(['kind']);
+            ->assertJsonValidationErrors(['kind']);
     }
 
     public function test_invalid_code_format_returns_422(): void
@@ -263,7 +263,7 @@ class TemplateTest extends TestCase
             'kind' => 'docx',
             'title' => 'Bad Code',
         ])->assertUnprocessable()
-          ->assertJsonValidationErrors(['code']);
+            ->assertJsonValidationErrors(['code']);
     }
 
     public function test_manager_cannot_create_template(): void

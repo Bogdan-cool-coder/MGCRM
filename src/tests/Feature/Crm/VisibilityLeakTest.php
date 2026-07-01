@@ -6,7 +6,6 @@ namespace Tests\Feature\Crm;
 
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
-use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
