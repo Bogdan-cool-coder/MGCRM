@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Card from 'primevue/card'
@@ -124,10 +124,9 @@ const { t } = useI18n()
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const userStore = useUserStore()
-const canManage = (() => {
-  const role = userStore.getUserRole
-  return role === 'admin'
-})()
+// TemplatePolicy::create requires contracts.admin permission (admin only).
+// IAM-1 debt: switch to can('contracts.admin') once permissions are exposed on /me.
+const canManage = computed(() => userStore.getUserRole === 'admin')
 
 const { kindFilter, searchFilter, templates, loading, goToTemplate, kindOptions, fetchTemplates } =
   useTemplatesPage()

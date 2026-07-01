@@ -32,6 +32,7 @@
             @click="router.back()"
           />
           <Button
+            v-if="canWrite"
             icon="pi pi-pencil"
             :label="t('templates.card.edit.title')"
             severity="secondary"
@@ -46,6 +47,7 @@
           <TemplateUploadCard
             :current-version="template.current_version"
             :uploading="uploading"
+            :readonly="!canWrite"
             class="mb-3"
             @upload="uploadVersion"
           />
@@ -54,6 +56,7 @@
             :version="latestVersion"
             :rechecking="rechecking"
             :overriding="overrideMutation.isPending.value"
+            :readonly="!canWrite"
             @recheck="recheckVersion"
             @override="confirmOverride"
           />
@@ -83,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Button from 'primevue/button'
@@ -94,8 +98,20 @@ import TemplateVersionsCard from './components/TemplateVersionsCard.vue'
 import TemplateMetaCard from './components/TemplateMetaCard.vue'
 import TemplateEditDialog from './components/TemplateEditDialog.vue'
 import { useTemplatePage } from './composables/useTemplatePage'
+import { useUserStore } from '@/stores/user'
 
 const { t } = useI18n()
+const userStore = useUserStore()
+
+// TemplatePolicy::update/uploadVersion/checkVersion/overrideVersion require
+// contracts.approve permission (admin + lawyer).
+// TemplatePolicy::create/delete require contracts.admin (admin only) — handled in TemplatesPage.
+// IAM-1 debt: switch to can('contracts.approve') once permissions are exposed on /me.
+const canWrite = computed(() => {
+  const role = userStore.getUserRole
+  return role === 'admin' || role === 'lawyer'
+})
+
 const {
   router,
   template,

@@ -62,8 +62,8 @@
           {{ t('templates.card.aiCheck.noRemarks') }}
         </div>
 
-        <!-- Actions -->
-        <div class="d-flex gap-2 flex-wrap">
+        <!-- Actions — hidden for read-only roles (TemplatePolicy::checkVersion/overrideVersion = contracts.approve) -->
+        <div v-if="!readonly" class="d-flex gap-2 flex-wrap">
           <Button
             v-if="version.ai_check_status === 'checked' || version.ai_check_status === 'failed'"
             icon="pi pi-refresh"
@@ -105,6 +105,7 @@ const props = defineProps<{
   version: TemplateVersionDto | null
   rechecking?: boolean
   overriding?: boolean
+  readonly?: boolean
 }>()
 
 defineEmits<{

@@ -501,10 +501,16 @@ const { users: ownerUsers, load: loadOwnerUsers } = useUsersCache()
 // ── Create mode ───────────────────────────────────────────────────────────────
 const isCreateMode = computed(() => route.name === 'ContactCreate')
 
-// Role gate: contact delete allowed for admin/director (BE also checks owner)
+// Auth gate: ContactPolicy::delete — All-scope (admin/director/lawyer) may delete
+// any contact; managers may only delete contacts they own (owner_id check enforced
+// server-side). We show the action to All-scope roles unconditionally; for managers
+// we show it only when they are the owner (contact.owner_id === me).
+// IAM-1 debt: switch to abilities/can() once permissions are exposed on /me.
 const canDeleteContact = computed(() => {
   const role = userStore.getUserRole
-  return role === 'admin' || role === 'director' || role === 'manager'
+  if (role === 'admin' || role === 'director' || role === 'lawyer') return true
+  // Manager sees delete only when they own the contact
+  return role === 'manager' && !!contact.value && contact.value.owner_id === userStore.getUser?.id
 })
 
 const activeTab = ref('overview')

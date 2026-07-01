@@ -5,7 +5,9 @@
       <p v-if="currentVersion != null" class="text-secondary mb-3">
         {{ t('templates.card.upload.current', { v: `v${currentVersion.version_number}` }) }}
       </p>
+      <!-- Upload button hidden for read-only roles (TemplatePolicy::uploadVersion = contracts.approve) -->
       <FileUpload
+        v-if="!readonly"
         mode="basic"
         accept=".docx"
         :max-file-size="20 * 1024 * 1024"
@@ -15,8 +17,11 @@
         :disabled="uploading"
         @select="onSelect"
       />
-      <p class="text-secondary mt-2 mb-0 template-upload-card__hint">
+      <p v-if="!readonly" class="text-secondary mt-2 mb-0 template-upload-card__hint">
         {{ t('templates.card.upload.limit') }}
+      </p>
+      <p v-if="readonly && currentVersion == null" class="text-secondary mb-0 template-upload-card__hint">
+        {{ t('templates.card.upload.noVersion', '—') }}
       </p>
     </template>
   </Card>
@@ -28,10 +33,11 @@ import Card from 'primevue/card'
 import FileUpload from 'primevue/fileupload'
 import type { TemplateVersionDto } from '@/entities/template'
 
-defineProps<{
+withDefaults(defineProps<{
   currentVersion: TemplateVersionDto | null
   uploading: boolean
-}>()
+  readonly?: boolean
+}>(), { readonly: false })
 
 const emit = defineEmits<{
   upload: [file: File]

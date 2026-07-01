@@ -484,6 +484,34 @@
       @company-updated="onCompanyUpdatedFromTermination"
     />
 
+    <!-- Delete company confirm dialog (local — avoids ConfirmService phantom on redirect) -->
+    <Dialog
+      v-model:visible="deleteCompanyDialogOpen"
+      :header="t('common.confirm')"
+      modal
+      :draggable="false"
+      :style="{ width: '28rem' }"
+    >
+      <div class="company-page-v2__confirm-body">
+        <i class="pi pi-exclamation-triangle company-page-v2__confirm-icon" />
+        <p class="company-page-v2__confirm-message">{{ t('company.page.menu.deleteConfirm') }}</p>
+      </div>
+      <template #footer>
+        <Button
+          :label="t('common.cancel')"
+          severity="secondary"
+          text
+          :disabled="deleteCompanyLoading"
+          @click="deleteCompanyDialogOpen = false"
+        />
+        <Button
+          :label="t('common.delete')"
+          severity="danger"
+          :loading="deleteCompanyLoading"
+          @click="executeDeleteCompany"
+        />
+      </template>
+    </Dialog>
 
   </div>
 </template>
@@ -534,13 +562,13 @@ import { getApiErrorMessage } from '@/utils/errors'
 import type { CompanyExtended, EmploymentStatus, Company, Contact, CompanyChannel } from '@/entities/crm'
 import type { DocumentDto } from '@/entities/document'
 import type { MenuItem } from 'primevue/menuitem'
-import { useConfirm } from 'primevue/useconfirm'
+import { useUserStore } from '@/stores/user'
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
-const confirm = useConfirm()
+const userStore = useUserStore()
 
 // ── Create mode ───────────────────────────────────────────────────────────────
 const isCreateMode = computed(() => route.name === 'CompanyCreate')
@@ -552,6 +580,24 @@ const { isTablet, isMobile } = useBreakpoints()
 const disconnectDialogOpen = ref(false)
 const terminationDrawerOpen = ref(false)
 const terminationDoc = ref<DocumentDto | null>(null)
+
+// ── Delete confirm dialog state ────────────────────────────────────────────────
+const deleteCompanyDialogOpen = ref(false)
+const deleteCompanyLoading = ref(false)
+
+// ── Auth gate: who can delete a company ───────────────────────────────────────
+// CompanyPolicy::delete: All-scope roles (admin/director/lawyer) may delete any
+// company. Managers may only delete companies they own (owner_user_id check
+// requires server-side enforcement). On the frontend we show the action to
+// All-scope roles unconditionally; for managers we show it only when they are
+// the owner. This mirrors the backend policy exactly.
+// IAM-1 debt: switch to abilities/can() once permissions are exposed on /me.
+const canDeleteCompany = computed(() => {
+  const role = userStore.getUserRole
+  if (role === 'admin' || role === 'director' || role === 'lawyer') return true
+  // Manager sees delete only when they own the company
+  return role === 'manager' && !!company.value && company.value.owner_user_id === userStore.getUser?.id
+})
 
 const activeTab = ref('overview')
 const employeeSearch = ref('')
@@ -763,8 +809,7 @@ const filteredEmployees = computed(() => {
 // ── Menu items ─────────────────────────────────────────────────────────────────
 
 const menuItems = computed((): MenuItem[] => {
-  // spec §1: menu = 5 items only: Добавить заметку · Добавить связь · Скопировать ссылку · — · Удалить
-  return [
+  const items: MenuItem[] = [
     {
       label: t('company.page.menu.addNote'),
       icon: 'pi pi-comment',
@@ -774,11 +819,6 @@ const menuItems = computed((): MenuItem[] => {
       },
     },
     {
-      label: t('crm.contact.menu.addRelation'),
-      icon: 'pi pi-link',
-      command: () => { goToTab('overview') },
-    },
-    {
       label: t('company.page.menu.copyLink'),
       icon: 'pi pi-copy',
       command: () => {
@@ -786,13 +826,19 @@ const menuItems = computed((): MenuItem[] => {
         toast.add({ severity: 'success', summary: t('common.copied'), life: 2000 })
       },
     },
-    { separator: true },
-    {
-      label: t('common.delete'),
-      icon: 'pi pi-trash',
-      command: onDeleteCompany,
-    },
   ]
+  // CompanyPolicy::delete — All-scope (admin/director/lawyer) or owner-manager only
+  if (canDeleteCompany.value) {
+    items.push(
+      { separator: true },
+      {
+        label: t('common.delete'),
+        icon: 'pi pi-trash',
+        command: () => { deleteCompanyDialogOpen.value = true },
+      },
+    )
+  }
+  return items
 })
 
 // ── Tab navigation options (mobile Select) ─────────────────────────────────────
@@ -854,30 +900,23 @@ async function onCompanyUpdatedFromTermination() {
   }
 }
 
-function onDeleteCompany() {
+async function executeDeleteCompany() {
   if (!company.value) return
-  confirm.require({
-    message: t('company.page.menu.deleteConfirm'),
-    header: t('common.delete'),
-    icon: 'pi pi-trash',
-    acceptLabel: t('common.confirm', 'Подтвердить'),
-    rejectLabel: t('common.cancel'),
-    acceptClass: 'p-button-danger',
-    accept: async () => {
-      if (!company.value) return
-      try {
-        await companiesApi.remove(company.value.id)
-        toast.add({ severity: 'success', summary: t('company.page.menu.deleteSuccess'), life: 3000 })
-        void router.push('/contacts')
-      } catch (err) {
-        toast.add({
-          severity: 'error',
-          summary: getApiErrorMessage(err, t('errors.server_error')),
-          life: 4000,
-        })
-      }
-    },
-  })
+  deleteCompanyLoading.value = true
+  try {
+    await companiesApi.remove(company.value.id)
+    deleteCompanyDialogOpen.value = false
+    toast.add({ severity: 'success', summary: t('company.page.menu.deleteSuccess'), life: 3000 })
+    void router.push('/contacts')
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: getApiErrorMessage(err, t('errors.server_error')),
+      life: 4000,
+    })
+  } finally {
+    deleteCompanyLoading.value = false
+  }
 }
 
 async function saveCustomField(code: string, value: unknown) {
@@ -1338,6 +1377,31 @@ watch(
 // ── Holding tab wrapper ────────────────────────────────────────────────────────
 .company-page-v2__holding-tab-wrapper {
   max-width: 600px;
+}
+
+// ── Delete confirm dialog ──────────────────────────────────────────────────────
+.company-page-v2__confirm-body {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+  padding: $space-2 0;
+}
+
+.company-page-v2__confirm-icon {
+  font-size: $font-size-xl;
+  color: $color-warning;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.company-page-v2__confirm-message {
+  font-size: $font-size-sm;
+  color: $surface-700;
+  margin: 0;
+
+  .app-dark & {
+    color: $surface-300;
+  }
 }
 
 // ── Dialog form ────────────────────────────────────────────────────────────────
