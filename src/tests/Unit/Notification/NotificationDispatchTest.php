@@ -53,6 +53,51 @@ class NotificationDispatchTest extends TestCase
         $this->assertSame($activity->id, $notification->data['activity_id']);
     }
 
+    public function test_contact_targeted_task_deep_links_to_the_contact(): void
+    {
+        $creator = User::factory()->create();
+        $responsible = User::factory()->create();
+
+        $activity = Activity::factory()->create([
+            'kind' => ActivityType::Task->value,
+            'created_by_id' => $creator->id,
+            'responsible_id' => $responsible->id,
+            'target_type' => 'contact',
+            'target_id' => 8,
+        ]);
+
+        $this->listener()->handle(new ActivityAssigned($activity, null));
+
+        $notification = Notification::query()->where('user_id', $responsible->id)->sole();
+
+        // Previously a contact target fell through to the broken `/tasks`
+        // default — it must now deep-link straight to the live contact route.
+        $this->assertSame('/contacts/8', $notification->deep_link);
+    }
+
+    public function test_standalone_task_deep_links_to_my_tasks_not_legacy_tasks(): void
+    {
+        $creator = User::factory()->create();
+        $responsible = User::factory()->create();
+
+        $activity = Activity::factory()->create([
+            'kind' => ActivityType::Task->value,
+            'created_by_id' => $creator->id,
+            'responsible_id' => $responsible->id,
+            'target_type' => null,
+            'target_id' => null,
+        ]);
+
+        $this->listener()->handle(new ActivityAssigned($activity, null));
+
+        $notification = Notification::query()->where('user_id', $responsible->id)->sole();
+
+        // A target-less task must land on the live /my-tasks board — the old
+        // default emitted the dead /tasks route.
+        $this->assertSame('/my-tasks', $notification->deep_link);
+        $this->assertNotSame('/tasks', $notification->deep_link);
+    }
+
     public function test_self_assigned_task_does_not_notify(): void
     {
         $user = User::factory()->create();

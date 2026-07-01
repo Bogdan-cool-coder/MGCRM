@@ -9,6 +9,7 @@ use App\Domain\Activity\Events\ActivityAssigned;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Notification\Enums\NotificationCategory;
 use App\Domain\Notification\Services\NotificationService;
+use App\Domain\Notification\Support\NotificationDeepLink;
 
 /**
  * NotifyActivityAssigneeListener (task #9) — on ActivityAssigned, push an IN-APP
@@ -88,15 +89,16 @@ class NotifyActivityAssigneeListener
     }
 
     /**
-     * Deep link into the responsible user's task board. Targeted activities
-     * (deal/company) link to the target; standalone tasks link to the board.
+     * Deep link into the responsible user's work. Targeted activities
+     * (deal/company/contact) link straight to the target entity; a standalone
+     * task links to the task board. Centralised in NotificationDeepLink so the
+     * path is always a live front route (never the legacy `/tasks`).
      */
     private function deepLink(Activity $activity): string
     {
-        return match ($activity->target_type) {
-            'deal' => '/deals/'.$activity->target_id,
-            'company' => '/companies/'.$activity->target_id,
-            default => '/tasks',
-        };
+        return NotificationDeepLink::forActivity(
+            $activity->target_type,
+            $activity->target_id,
+        );
     }
 }

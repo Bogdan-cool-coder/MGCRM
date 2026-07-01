@@ -58,6 +58,41 @@ class ChangePasswordTest extends TestCase
         $this->assertSame($original, $user->fresh()->password);
     }
 
+    public function test_wrong_current_password_message_is_localized_to_ru(): void
+    {
+        // SetLocale reads the user's stored `locale`; the factory defaults to 'ru'.
+        $user = User::factory()->create([
+            'password' => Hash::make('correct-current'),
+            'locale' => 'ru',
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/me/password', [
+            'current_password' => 'wrong-current',
+            'password' => 'brand-new-password-456',
+            'password_confirmation' => 'brand-new-password-456',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.current_password.0', 'Указан неверный текущий пароль.');
+    }
+
+    public function test_wrong_current_password_message_is_localized_to_en(): void
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('correct-current'),
+            'locale' => 'en',
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/me/password', [
+            'current_password' => 'wrong-current',
+            'password' => 'brand-new-password-456',
+            'password_confirmation' => 'brand-new-password-456',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.current_password.0', 'The current password is incorrect.');
+    }
+
     public function test_short_new_password_is_rejected(): void
     {
         $user = User::factory()->create(['password' => Hash::make('old-password-123')]);

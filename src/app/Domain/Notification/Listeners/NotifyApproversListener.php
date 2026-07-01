@@ -7,6 +7,7 @@ namespace App\Domain\Notification\Listeners;
 use App\Domain\Contracts\Events\DocumentSubmittedForApproval;
 use App\Domain\Notification\Enums\NotificationCategory;
 use App\Domain\Notification\Services\NotificationService;
+use App\Domain\Notification\Support\NotificationDeepLink;
 
 /**
  * NotifyApproversListener (task #9) — on DocumentSubmittedForApproval, push an
@@ -55,7 +56,7 @@ class NotifyApproversListener
                 body: $body,
                 isActionable: true,
                 actionLabel: 'Согласовать',
-                deepLink: '/documents/'.$document->id,
+                deepLink: NotificationDeepLink::document((int) $document->id),
                 data: [
                     'document_id' => (int) $document->id,
                     'stage_order' => (int) ($event->stage['order'] ?? 1),

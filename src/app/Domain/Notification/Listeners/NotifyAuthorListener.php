@@ -10,6 +10,7 @@ use App\Domain\Notification\Enums\NotificationCategory;
 use App\Domain\Notification\Jobs\SendTelegramDmJob;
 use App\Domain\Notification\Models\Notification;
 use App\Domain\Notification\Services\NotificationService;
+use App\Domain\Notification\Support\NotificationDeepLink;
 use App\Domain\Notification\Telegram\AuthorVerdictText;
 
 /**
@@ -105,7 +106,7 @@ class NotifyAuthorListener
             title: $title,
             body: $comment !== '' ? $comment : $document->title,
             isActionable: false,
-            deepLink: '/documents/'.$documentId,
+            deepLink: NotificationDeepLink::document($documentId),
             data: [
                 'document_id' => $documentId,
                 'verdict' => $verdict,
