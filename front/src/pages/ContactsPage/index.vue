@@ -33,7 +33,7 @@
         @open-filter="filterOverlayOpen = !filterOverlayOpen"
         @open-columns="columnChooserOpen = true"
         @set-density="view.setDensity($event)"
-        @create="openQuickCreate"
+        @create="onCreateEntity"
         @export="bulk.exportXlsx()"
         @open-dedup="openDedup"
         @enter-bulk="bulk.enterBulk()"
@@ -91,7 +91,7 @@
           <Button
             icon="pi pi-plus"
             :label="t('contacts.page.create')"
-            @click="openQuickCreate"
+            @click="onCreateEntity"
           />
         </div>
 
@@ -540,166 +540,6 @@
       </div>
     </div>
 
-    <!-- ── Quick-create Drawer ─────────────────────────────────────────────── -->
-    <Drawer
-      v-model:visible="quickCreateOpen"
-      position="right"
-      style="width: 420px"
-      :show-close-icon="false"
-    >
-      <template #header>
-        <div class="contacts-page__drawer-header">
-          <span class="contacts-page__drawer-header-title">
-            {{ t('contacts.page.quickCreate.title') }}
-          </span>
-          <Button
-            icon="pi pi-times"
-            severity="secondary"
-            text
-            rounded
-            :disabled="isCreating"
-            :aria-label="t('common.close')"
-            @click="closeQuickCreate"
-          />
-        </div>
-      </template>
-      <div class="contacts-page__drawer">
-        <SelectButton
-          v-model="quickCreateType"
-          :options="typeOptions"
-          option-label="label"
-          option-value="value"
-          class="contacts-page__drawer-type"
-        />
-
-        <!-- Contact form -->
-        <template v-if="quickCreateType === 'contact'">
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">
-              {{ t('contact.page.fields.fullName') }} <span class="req">*</span>
-            </label>
-            <InputText
-              v-model="contactForm.full_name"
-              :placeholder="t('contact.page.fields.fullName')"
-              class="w-full"
-              :class="{ 'p-invalid': formErrors['full_name'] }"
-            />
-            <small v-if="formErrors['full_name']" class="p-error">{{ formErrors['full_name'] }}</small>
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('contact.page.fields.phone') }}</label>
-            <InputText v-model="contactForm.phone" placeholder="+7 777 000 00 00" class="w-full" />
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('contact.page.fields.email') }}</label>
-            <InputText v-model="contactForm.email" placeholder="email@example.com" class="w-full" />
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('contact.page.fields.source') }}</label>
-            <Select
-              v-model="contactForm.source"
-              :options="directoriesStore.activeSources"
-              option-label="name"
-              option-value="code"
-              :placeholder="t('contacts.page.filters.source')"
-              show-clear
-              class="w-full"
-            />
-          </div>
-          <!-- Dedup hint -->
-          <Message
-            v-if="hasDuplicateHint"
-            severity="warn"
-            class="contacts-page__dedup-hint"
-          >
-            {{ t('contacts_create.dedupHint', 'Найдены похожие записи') }}
-            <Button
-              :label="t('contacts_create.dedupSee', 'Посмотреть')"
-              text
-              size="small"
-              @click="openDedup"
-            />
-          </Message>
-        </template>
-
-        <!-- Company form -->
-        <template v-else>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">
-              {{ t('company.page.fields.name') }} <span class="req">*</span>
-            </label>
-            <InputText
-              v-model="companyForm.name"
-              :placeholder="t('company.page.fields.name')"
-              class="w-full"
-              :class="{ 'p-invalid': formErrors['name'] }"
-            />
-            <small v-if="formErrors['name']" class="p-error">{{ formErrors['name'] }}</small>
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('company.page.fields.legalForm') }}</label>
-            <InputText v-model="companyForm.legal_form" placeholder="ТОО / ООО / ИП" class="w-full" />
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('company.page.fields.taxId') }}</label>
-            <InputText v-model="companyForm.tax_id" placeholder="БИН / ИНН" class="w-full" />
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('company.page.fields.companyType') }}</label>
-            <Select
-              v-model="companyForm.company_type_id"
-              :options="directoriesStore.activeCompanyTypes"
-              option-label="name"
-              option-value="id"
-              :placeholder="t('contacts.page.filters.companyType')"
-              show-clear
-              class="w-full"
-            />
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('company.page.fields.country') }}</label>
-            <Select
-              v-model="companyForm.country_code"
-              :options="directoriesStore.activeCountries"
-              option-label="name"
-              option-value="code"
-              :placeholder="t('contacts.page.filters.country')"
-              show-clear
-              class="w-full"
-            />
-          </div>
-          <div class="contacts-page__field">
-            <label class="contacts-page__label">{{ t('company.page.fields.source') }}</label>
-            <Select
-              v-model="companyForm.source"
-              :options="directoriesStore.activeSources"
-              option-label="name"
-              option-value="code"
-              :placeholder="t('contacts.page.filters.source')"
-              show-clear
-              class="w-full"
-            />
-          </div>
-        </template>
-      </div>
-
-      <template #footer>
-        <div class="contacts-page__drawer-footer">
-          <Button
-            :label="t('contacts.page.quickCreate.cancel')"
-            severity="secondary"
-            text
-            @click="closeQuickCreate"
-          />
-          <Button
-            :label="t('contacts.page.quickCreate.submit')"
-            :loading="isCreating"
-            @click="submitQuickCreate"
-          />
-        </div>
-      </template>
-    </Drawer>
-
     <!-- ── Dedup dialog ────────────────────────────────────────────────────── -->
     <MergeDialog v-model:visible="dedupOpen" mode="dedup" @merged="load" />
     <!-- ── Bulk merge dialog ─────────────────────────────────────────────── -->
@@ -755,25 +595,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import Button from 'primevue/button'
-import SelectButton from 'primevue/selectbutton'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
-import Select from 'primevue/select'
-import InputText from 'primevue/inputtext'
-import Drawer from 'primevue/drawer'
 import Toast from 'primevue/toast'
-import Message from 'primevue/message'
 
 import MergeDialog from '@/components/crm/dedup/MergeDialog.vue'
 import CrmAvatar from '@/components/ui/CrmAvatar.vue'
 
 import { useDirectoriesStore } from '@/stores/directories'
-import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { useUserStore } from '@/stores/user'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
@@ -822,8 +656,8 @@ function touchColor(iso: string | null): string {
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const directoriesStore = useDirectoriesStore()
-const uiTriggers = useUiTriggersStore()
 const userStore = useUserStore()
 const { users: usersCache, load: loadUsers } = useUsersCache()
 
@@ -940,35 +774,24 @@ function onResetOverlay() {
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 const {
-  quickCreateOpen,
-  quickCreateType,
-  contactForm,
-  companyForm,
-  formErrors,
   dedupOpen,
-  isCreating,
   deleteOpen,
   deleteLoading,
   deleteHeader,
   deleteMessage,
-  openQuickCreate,
-  closeQuickCreate,
   openDedup,
-  submitQuickCreate,
   openCard,
   executeDelete,
 } = useContactsPageActions({ reload: load, entityType })
 
-const typeOptions = computed(() => [
-  { label: t('contacts.page.typeSwitch.contact'), value: 'contact' as EntityType },
-  { label: t('contacts.page.typeSwitch.company'), value: 'company' as EntityType },
-])
-
-// ── Dedup hint on quick-create ─────────────────────────────────────────────
-
-const hasDuplicateHint = computed(
-  () => activeView.value === 'duplicates',
-)
+// ── Create navigation ─────────────────────────────────────────────────────────
+function onCreateEntity() {
+  if (entityType.value === 'company') {
+    void router.push('/companies/new')
+  } else {
+    void router.push('/contacts/new')
+  }
+}
 
 // ── Merge (dedup segment) ─────────────────────────────────────────────────────
 
@@ -1088,23 +911,6 @@ const availableTags = computed<string[]>(() => {
     for (const tag of item.tags ?? []) tags.add(tag)
   }
   return Array.from(tags)
-})
-
-// ── Global UI trigger ─────────────────────────────────────────────────────────
-
-const stopDrawerTrigger = watch(
-  () => uiTriggers.pendingDrawer,
-  (trigger) => {
-    if (trigger === 'contact_create') {
-      openQuickCreate()
-      uiTriggers.clearDrawer()
-    }
-  },
-  { immediate: true },
-)
-
-onUnmounted(() => {
-  stopDrawerTrigger()
 })
 
 onMounted(() => {
@@ -1469,65 +1275,6 @@ onMounted(() => {
   .app-dark & {
     color: var(--p-surface-200);
   }
-}
-
-// Quick-create drawer
-.contacts-page__drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: $space-2;
-}
-
-.contacts-page__drawer-header-title {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: var(--p-text-color);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.contacts-page__drawer {
-  display: flex;
-  flex-direction: column;
-  gap: $space-4;
-  padding: $space-2 0;
-}
-
-.contacts-page__drawer-type {
-  margin-bottom: $space-2;
-}
-
-.contacts-page__field {
-  display: flex;
-  flex-direction: column;
-  gap: $space-1;
-}
-
-.contacts-page__label {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: $surface-700;
-}
-
-.req {
-  color: $red-500;
-}
-
-.contacts-page__drawer-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-2;
-  padding-top: $space-4;
-  border-top: 1px solid $surface-200;
-}
-
-.contacts-page__dedup-hint {
-  margin-top: $space-2;
 }
 
 .w-full {

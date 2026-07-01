@@ -916,7 +916,8 @@
         "directorShort": "Name (short)",
         "actsBasis": "Acts on basis of",
         "source": "Source",
-        "category": "Category"
+        "category": "Category",
+        "responsibleUser": "Responsible"
       },
       "rail": {
         "responsible": "Responsible",
@@ -1023,6 +1024,23 @@
         "contacts": "Contacts & Segmentation",
         "classification": "Classification"
       }
+    },
+    "create": {
+      "title": "New Company",
+      "sections": {
+        "required": "Basic Information",
+        "requisites": "Requisites",
+        "classification": "Classification",
+        "responsibility": "Responsible"
+      },
+      "cancelBtn": "Cancel",
+      "saveBtn": "Create Company",
+      "saving": "Saving...",
+      "success": "Company created",
+      "errors": {
+        "nameRequired": "Company name is required",
+        "serverError": "Failed to create company"
+      }
     }
   },
   "contact": {
@@ -1082,6 +1100,22 @@
       "errors": {
         "notFound": "Contact not found",
         "load": "Failed to load"
+      }
+    },
+    "create": {
+      "title": "New Contact",
+      "sections": {
+        "required": "Basic Information",
+        "contacts": "Contact Details",
+        "additional": "Additional"
+      },
+      "cancelBtn": "Cancel",
+      "saveBtn": "Create Contact",
+      "saving": "Saving...",
+      "success": "Contact created",
+      "errors": {
+        "fullNameRequired": "Full name is required",
+        "serverError": "Failed to create contact"
       }
     }
   },
@@ -1625,6 +1659,7 @@
           "hiddenStages": "Hidden",
           "daysInStage": "{n}d",
           "addDeal": "Add deal",
+          "createInStage": "Create deal in stage",
           "colTotal": "≈ {sum}"
         },
         "card": {
@@ -2099,6 +2134,41 @@
       "license": {
         "subscription": "Subscription",
         "perpetual": "Perpetual"
+      },
+      "create": {
+        "title": "New Deal",
+        "sections": {
+          "required": "Basic Information",
+          "additional": "Additional"
+        },
+        "fields": {
+          "company": "Company",
+          "title": "Deal Title",
+          "pipeline": "Pipeline",
+          "currency": "Currency",
+          "stage": "Stage",
+          "owner": "Owner",
+          "expectedCloseDate": "Expected Close Date"
+        },
+        "stageAutoNote": "If not selected — will be placed in the first pipeline stage",
+        "cancelBtn": "Cancel",
+        "saveBtn": "Create Deal",
+        "saving": "Saving...",
+        "success": "Deal created",
+        "pendingHint": "Save the deal to unlock the activity feed and interaction history.",
+        "hint": {
+          "title": "Tip",
+          "tip1": "After creation you can add contacts, documents and tasks",
+          "tip2": "Stage will be automatically set to the first in the pipeline if not selected",
+          "tip3": "Currency and pipeline can be changed after creation"
+        },
+        "errors": {
+          "companyRequired": "Select a company",
+          "titleRequired": "Enter deal title (at least 2 characters)",
+          "pipelineRequired": "Select a pipeline",
+          "currencyRequired": "Select a currency",
+          "serverError": "Failed to create deal"
+        }
       }
     },
     "move": {

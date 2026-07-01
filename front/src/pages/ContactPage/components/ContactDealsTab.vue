@@ -3,17 +3,11 @@
     <!-- TabHead — spec §6: «Создать сделку» primary button pi-plus -->
     <div class="contact-deals-tab__head">
       <span class="contact-deals-tab__head-title">{{ t('contact.page.tabs.deals') }}</span>
-      <!--
-        TODO B-CONTACT-DEAL-CREATE: «Создать сделку» — MISSING backend.
-        POST /api/deals endpoint exists but no in-card DealCreateDrawer is mounted here.
-        Button is inert until DealCreateDrawer is wired on ContactPage.
-      -->
       <Button
         icon="pi pi-plus"
-        :label="t('crm.contact.deals.create', 'Создать сделку')"
+        :label="t('crm.contact.deals.create')"
         size="small"
-        disabled
-        :title="t('crm.contact.deals.addComingSoon')"
+        @click="onCreateDeal"
       />
     </div>
 
@@ -94,7 +88,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Skeleton from 'primevue/skeleton'
@@ -102,7 +96,8 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import type { DealDto } from '@/entities/sales'
 
-defineProps<{
+const props = defineProps<{
+  contactId: number
   deals: DealDto[]
   loading?: boolean
   loadingMore?: boolean
@@ -114,6 +109,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const router = useRouter()
+
+function onCreateDeal(): void {
+  void router.push({ path: '/deals/new', query: { contact_id: String(props.contactId) } })
+}
 
 function formatKopecks(kopecks: number, currency: string): string {
   const units = Math.round(kopecks / 100)

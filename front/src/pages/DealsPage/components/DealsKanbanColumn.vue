@@ -5,7 +5,7 @@
       class="kanban-col__header"
       :style="headerStyle"
     >
-      <!-- Title row: count pill (left) · stage name (centre) · spacer (right) -->
+      <!-- Title row: count pill (left) · stage name (centre) · create btn (right) -->
       <div class="kanban-col__title-row">
         <span class="kanban-col__count">
           {{ column.total }}
@@ -13,7 +13,14 @@
         <span class="kanban-col__name">
           {{ column.stage.name }}
         </span>
-        <span />
+        <button
+          type="button"
+          class="kanban-col__create-btn"
+          :title="t('sales.deals.page.kanban.createInStage')"
+          @click="emit('createInStage', column.stage.id)"
+        >
+          <i class="pi pi-plus" />
+        </button>
       </div>
       <!-- Sum row: centred -->
       <div class="kanban-col__sum-row">
@@ -122,6 +129,7 @@ const emit = defineEmits<{
   drop: [card: DealCardDto, fromStageId: number, toStageId: number]
   titleChange: [cardId: number, title: string]
   loadMore: [stageId: number]
+  createInStage: [stageId: number]
 }>()
 
 const { t } = useI18n()
@@ -282,6 +290,40 @@ function hidePopover() {
   grid-template-columns: 34px 1fr 34px;
   align-items: center;
   margin-bottom: $space-1;
+}
+
+// Create-in-stage button (top-right of column header)
+.kanban-col__create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  color: $surface-500;
+  justify-self: end;
+  transition: background var(--app-transition-fast), color var(--app-transition-fast);
+
+  i {
+    font-size: $font-size-xs;
+  }
+
+  &:hover {
+    background: $primary-100;
+    color: var(--p-primary-color);
+  }
+
+  .app-dark & {
+    color: var(--p-surface-400);
+
+    &:hover {
+      background: var(--p-primary-900);
+      color: var(--p-primary-300);
+    }
+  }
 }
 
 .kanban-col__count {

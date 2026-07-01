@@ -36,7 +36,6 @@ import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { useLayoutStore } from '@/stores/layout'
-import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { resolveQuickActions, type QuickActionDef } from '@/shared/nav/quickActionRegistry'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
 import type { OrbitaOrientation } from './types'
@@ -56,27 +55,28 @@ const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const layoutStore = useLayoutStore()
-const uiTriggers = useUiTriggersStore()
 
 const resolvedActions = computed<QuickActionDef[]>(() =>
   resolveQuickActions(userStore.getNavQuickActions),
 )
 
-/** Map drawer keys to their owning route so we navigate there first */
-const DRAWER_ROUTES: Record<string, string> = {
-  deal_create: '/deals',
-  contact_create: '/contacts',
+/**
+ * Map drawer action keys to full-card create routes.
+ * Wave 4: creation goes through full cards, not drawers.
+ */
+const DRAWER_KEY_ROUTES: Record<string, string> = {
+  deal_create: '/deals/new',
+  contact_create: '/contacts/new',
 }
 
 function execute(action: QuickActionDef): void {
   switch (action.actionType) {
     case 'drawer':
       if (action.drawerKey) {
-        const route = DRAWER_ROUTES[action.drawerKey]
+        const route = DRAWER_KEY_ROUTES[action.drawerKey]
         if (route) {
           void router.push(route)
         }
-        uiTriggers.triggerDrawer(action.drawerKey)
       }
       break
     case 'inline':

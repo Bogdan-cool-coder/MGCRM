@@ -6,8 +6,25 @@
       'contact-page-v2--tablet': isTablet,
     }"
   >
+    <!-- ── Create mode ─────────────────────────────────────────────────────────── -->
+    <template v-if="isCreateMode">
+      <!-- Brand header (no menu, no KPI) -->
+      <EntityInfoHeader
+        :entity-id="0"
+        :title="t('contact.create.title')"
+        :menu-items="[]"
+        @back="router.push('/contacts')"
+      />
+      <div class="contact-page-v2__body">
+        <ContactCreateForm
+          @saved="onContactSaved"
+          @cancel="router.push('/contacts')"
+        />
+      </div>
+    </template>
+
     <!-- ── Loading skeleton ───────────────────────────────────────────────────── -->
-    <template v-if="contactLoading">
+    <template v-else-if="contactLoading">
       <Skeleton height="140px" class="contact-page-v2__header-skeleton" />
       <div class="contact-page-v2__body">
         <div class="row g-3">
@@ -19,7 +36,7 @@
     </template>
 
     <!-- ── Error ─────────────────────────────────────────────────────────────── -->
-    <template v-else-if="contactError || !contact">
+    <template v-else-if="!isCreateMode && (contactError || !contact)">
       <div class="contact-page-v2__error">
         <i
           class="contact-page-v2__error-icon"
@@ -39,7 +56,7 @@
     </template>
 
     <!-- ── Main content ───────────────────────────────────────────────────────── -->
-    <template v-else>
+    <template v-else-if="contact">
       <!-- Dark brand header -->
       <EntityInfoHeader
         :entity-id="contact.id"
@@ -269,6 +286,7 @@
             <TabPanel value="deals">
               <div class="contact-page-v2__tab-body contact-page-v2__tab-body--no-pad">
                 <ContactDealsTab
+                  :contact-id="contactId"
                   :deals="deals"
                   :loading="dealsLoading"
                   :loading-more="dealsLoadingMore"
@@ -401,9 +419,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { getApiErrorStatus } from '@/utils/errors'
 import Button from 'primevue/button'
 import Badge from 'primevue/badge'
@@ -434,6 +452,7 @@ import ContactDealsPanel from './components/ContactDealsPanel.vue'
 import ContactDealsTab from './components/ContactDealsTab.vue'
 import ContactFilesTab from './components/ContactFilesTab.vue'
 import AddContactToDealDialog from './components/AddContactToDealDialog.vue'
+import ContactCreateForm from './components/ContactCreateForm.vue'
 import { useContactPageData } from './composables/useContactPageData'
 import { useContactPageActions } from './composables/useContactPageActions'
 import { useDirectoriesStore } from '@/stores/directories'
@@ -443,9 +462,13 @@ import type { MenuItem } from 'primevue/menuitem'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const directoriesStore = useDirectoriesStore()
 const userStore = useUserStore()
 const { isMobile, isTablet } = useBreakpoints()
+
+// ── Create mode ───────────────────────────────────────────────────────────────
+const isCreateMode = computed(() => route.name === 'ContactCreate')
 
 // Role gate: contact delete allowed for admin/director (BE also checks owner)
 const canDeleteContact = computed(() => {
@@ -729,13 +752,39 @@ function goToActivityTab() {
   activeTab.value = 'activity'
 }
 
+// ── Create mode save ─────────────────────────────────────────────────────────
+
+function onContactSaved(created: import('@/entities/crm').Contact) {
+  void router.replace(`/contacts/${created.id}`)
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
+  if (isCreateMode.value) {
+    // In create mode we don't need to load an existing contact
+    if (!directoriesStore.loaded) void directoriesStore.fetchAll()
+    return
+  }
   if (!directoriesStore.loaded) void directoriesStore.fetchAll()
   await loadAll()
   if (contactId.value) void contactLog.load()
 })
+
+// ── Watch for SPA navigation: create → detail (same component instance reused)
+// When router.replace('/contacts/:id') fires after creation, onMounted does NOT
+// re-run. This watcher detects the param change and triggers the real fetch.
+watch(
+  () => route.params['id'],
+  async (id, prevId) => {
+    // Only react when transitioning FROM 'new' to a numeric ID
+    if (!id || id === 'new') return
+    if (prevId === id) return
+    if (!directoriesStore.loaded) void directoriesStore.fetchAll()
+    await loadAll()
+    if (contactId.value) void contactLog.load()
+  },
+)
 
 // suppress unused warning — isSaving passed via InlineEditableField, attachCompanyStatus unused but kept in composable
 void isSaving

@@ -6,8 +6,24 @@
       'company-page-v2--tablet': isTablet,
     }"
   >
+    <!-- ── Create mode ─────────────────────────────────────────────────────── -->
+    <template v-if="isCreateMode">
+      <EntityInfoHeader
+        :entity-id="0"
+        :title="t('company.create.title')"
+        :menu-items="[]"
+        @back="router.push('/companies')"
+      />
+      <div class="company-page-v2__body">
+        <CompanyCreateForm
+          @saved="onCompanySaved"
+          @cancel="router.push('/companies')"
+        />
+      </div>
+    </template>
+
     <!-- ── Loading skeleton ─────────────────────────────────────────────────── -->
-    <template v-if="companyLoading">
+    <template v-else-if="companyLoading">
       <Skeleton height="180px" class="company-page-v2__header-skeleton" />
       <div class="company-page-v2__body">
         <div class="row g-0">
@@ -25,7 +41,7 @@
     </template>
 
     <!-- ── Error ────────────────────────────────────────────────────────────── -->
-    <template v-else-if="companyError || !company">
+    <template v-else-if="!isCreateMode && (companyError || !company)">
       <div class="company-page-v2__error">
         <i class="pi pi-exclamation-triangle company-page-v2__error-icon" />
         <p class="company-page-v2__error-title">{{ t('company.page.errors.load') }}</p>
@@ -40,7 +56,7 @@
     </template>
 
     <!-- ── Main content ──────────────────────────────────────────────────────── -->
-    <template v-else>
+    <template v-else-if="company">
       <!-- EntityInfoHeader (dark brand header) -->
       <EntityInfoHeader
         :entity-id="company.id"
@@ -468,25 +484,14 @@
       @company-updated="onCompanyUpdatedFromTermination"
     />
 
-    <!--
-      spec §11: DealCreateDrawer right-500 pre-filled with company.
-      EXISTS_NOT_WIRED → now wired: prefill company; on @created refresh deal list.
-    -->
-    <DealCreateDrawer
-      v-if="dealCreatePipelines.length > 0"
-      v-model="dealCreateOpen"
-      :pipelines="dealCreatePipelines"
-      :initial-company="company ? { id: company.id, name: company.name } : undefined"
-      @created="onDealCreated"
-    />
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import Badge from 'primevue/badge'
 import Tabs from 'primevue/tabs'
@@ -500,8 +505,7 @@ import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
 import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
-import DealCreateDrawer from '@/pages/DealsPage/components/DealCreateDrawer.vue'
-import { salesApi } from '@/api/sales'
+import CompanyCreateForm from './components/CompanyCreateForm.vue'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
 import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
 import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
@@ -534,8 +538,12 @@ import { useConfirm } from 'primevue/useconfirm'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 const confirm = useConfirm()
+
+// ── Create mode ───────────────────────────────────────────────────────────────
+const isCreateMode = computed(() => route.name === 'CompanyCreate')
 
 const { isTablet, isMobile } = useBreakpoints()
 
@@ -550,9 +558,7 @@ const employeeSearch = ref('')
 const showAttachHolding = ref(false)
 const companyActivitiesTabRef = ref<{ focusNote: () => void; focusTask: () => void } | null>(null)
 
-// ── DealCreateDrawer state ─────────────────────────────────────────────────────
-const dealCreateOpen = ref(false)
-const dealCreatePipelines = ref<import('@/entities/sales').PipelineDto[]>([])
+
 
 
 // Inline contact creation (from employee autocomplete)
@@ -599,7 +605,6 @@ const {
   loadCompany,
   loadEmployees,
   loadHolding,
-  loadDeals,
   directoriesStore,
 } = useCompanyPageData()
 
@@ -810,25 +815,15 @@ function goToTab(tab: string) {
   activeTab.value = tab
 }
 
-async function onCreateDeal() {
+function onCreateDeal() {
   if (!company.value) return
-  // spec §11: open DealCreateDrawer (right 500px) pre-filled with company
-  if (dealCreatePipelines.value.length === 0) {
-    try {
-      dealCreatePipelines.value = await salesApi.getPipelines()
-    } catch {
-      // fall back to redirect if pipelines fail to load
-      void router.push(`/deals?company_id=${company.value.id}&create=1`)
-      return
-    }
-  }
-  dealCreateOpen.value = true
-}
-
-function onDealCreated() {
-  dealCreateOpen.value = false
-  void loadDeals()
-  toast.add({ severity: 'success', summary: t('sales.deals.form.createSuccess'), life: 3000 })
+  void router.push({
+    path: '/deals/new',
+    query: {
+      company_id: String(company.value.id),
+      company_name: company.value.name,
+    },
+  })
 }
 
 // ── Disconnect / Reconnect ────────────────────────────────────────────────────
@@ -1014,9 +1009,19 @@ function onSubmitEmployee() {
   }
 }
 
+// ── Create mode save ─────────────────────────────────────────────────────────
+
+function onCompanySaved(created: import('@/entities/crm').Company) {
+  void router.replace(`/companies/${created.id}`)
+}
+
 // ── Lifecycle ──────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
+  if (isCreateMode.value) {
+    if (!directoriesStore.loaded) void directoriesStore.fetchAll()
+    return
+  }
   if (!directoriesStore.loaded) void directoriesStore.fetchAll()
   await loadAll()
   // Load entity log (company may now be loaded)
@@ -1030,6 +1035,26 @@ onMounted(async () => {
     }
   }
 })
+
+// ── Watch for SPA navigation: create → detail (same component instance reused)
+// router.replace('/companies/:id') after creation doesn't re-trigger onMounted.
+watch(
+  () => route.params['id'],
+  async (id, prevId) => {
+    if (!id || id === 'new') return
+    if (prevId === id) return
+    if (!directoriesStore.loaded) void directoriesStore.fetchAll()
+    await loadAll()
+    if (companyId.value) void companyLog.load()
+    if (companyId.value) {
+      try {
+        companyChannels.value = await companiesApi.getChannels(companyId.value)
+      } catch {
+        // non-critical
+      }
+    }
+  },
+)
 </script>
 
 <style lang="scss" scoped>

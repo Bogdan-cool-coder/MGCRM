@@ -120,6 +120,19 @@
   (D) набросок админ-сброса пароля в «Пользователи» (разовый показ, Copy-кнопка).
   Pending: ОВ-3 (1 пункт vs 4 в сайдбаре — апрув PM) + ОВ-1 (backend POST /api/me/password).
 
+### Обновление 2026-07-01 — Создание через полную карточку (РЕАЛИЗОВАНО, QA PASS, PM APPROVED, незакоммичено)
+- **EntityCreate (`EntityCreate-spec.md`)** — замена мини-drawer'ов полноценными create-страницами. Реализовано:
+  три роута `/contacts/new`, `/companies/new`, `/deals/new` зарегистрированы перед `:id`-роутами;
+  `ContactCreateForm.vue` / `CompanyCreateForm.vue` / `DealCreateForm.vue` — новые компоненты с инлайн-валидацией, blur-гарды, 422-обработка;
+  `isCreateMode` в каждом Page-компоненте; P0-фикс `watch(route.params.id)` — save-in-place через `router.replace`;
+  `DealCreateDrawer.vue` удалён; quick-create `<Drawer>` из ContactsPage удалён;
+  `useContactsPageActions.ts` очищен от `openQuickCreate`/`submitQuickCreate`/`pendingDrawer`-watcher;
+  `uiTriggers.ts` — `DrawerTrigger = null`, `triggerDrawer` no-op;
+  все 7 межмодульных точек входа (ContactsPage, DealsPage toolbar+kanban+list, CompanyPage, ContactDealsTab, CommandPalette, QuickActionsCluster) мигрированы на `router.push('/...new')`;
+  prefill-параметры `company_id/company_name/pipeline_id/stage_id/contact_id` по spec;
+  i18n RU+EN: `contact.create.*`, `company.create.*`, `sales.deal.create.*`;
+  QA PASS: 3 create-флоу грузят созданную карточку (POST 201 + GET /:id), обе темы, регресс.
+
 ### Обновление 2026-07-01 — Единое окно объединения MergeDialog 2.0 (ТЗ готово, в очереди)
 - **MergeDialog 2.0 (`Dedup-Merge-spec.md`)** — ТЗ написано. Два режима одного компонента:
   `mode='dedup'` (скан → группы → merge) и `mode='bulk'` (сразу merge из выбранных N записей).

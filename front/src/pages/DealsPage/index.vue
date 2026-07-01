@@ -33,7 +33,7 @@
       @close-pipeline-menu="pipelineMenuOpen = false"
       @set-pipeline="onSetPipeline"
       @set-view="onSetView"
-      @create="createDrawerOpen = true"
+      @create="onCreateDeal()"
       @export="onExport"
       @enter-bulk="salesStore.enterBulkMode()"
     />
@@ -60,7 +60,8 @@
         @drop="onBoardDrop"
         @title-change="onCardTitleChange"
         @load-more="onLoadMore"
-        @create="createDrawerOpen = true"
+        @create="onCreateDeal()"
+        @create-in-stage="onCreateDeal($event)"
       />
     </div>
 
@@ -78,20 +79,12 @@
         :sort-state="sortState"
         @page-change="onPageChange"
         @reset-filters="resetFilters"
-        @create="createDrawerOpen = true"
+        @create="onCreateDeal()"
         @change-stage="openMoveDialog"
         @delete="confirmDelete"
         @sort="onSort"
       />
     </div>
-
-    <!-- Create deal drawer -->
-    <DealCreateDrawer
-      v-model="createDrawerOpen"
-      :pipelines="pipelines"
-      :initial-stage-id="createDrawerStageId"
-      @created="onDealCreated"
-    />
 
     <!-- Bulk dialogs -->
     <BulkAssignDialog
@@ -137,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
@@ -149,7 +142,6 @@ import DealsListView from './components/DealsListView.vue'
 import DealsToolbar from './components/DealsToolbar.vue'
 import DealsBulkToolbar from './components/DealsBulkToolbar.vue'
 import DealsFilterOverlay from './components/DealsFilterOverlay.vue'
-import DealCreateDrawer from './components/DealCreateDrawer.vue'
 import MoveDealDialog from './components/MoveDealDialog.vue'
 import BulkAssignDialog from './components/BulkAssignDialog.vue'
 import BulkMoveStageDialog from './components/BulkMoveStageDialog.vue'
@@ -161,7 +153,6 @@ import { useDealsBoard } from './composables/useDealsBoard'
 import { useDealsList } from './composables/useDealsList'
 import { useDealsKpi } from './composables/useDealsKpi'
 import { useSalesStore } from '@/stores/salesStore'
-import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { useDirectoriesStore } from '@/stores/directories'
 import { salesApi } from '@/api/sales'
 import { usersApi } from '@/api/users'
@@ -179,7 +170,6 @@ const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const salesStore = useSalesStore()
-const uiTriggers = useUiTriggersStore()
 const directoriesStore = useDirectoriesStore()
 
 // ── Filter overlay ─────────────────────────────────────────────────────────────
@@ -428,14 +418,13 @@ const {
 const kpiComposable = useDealsKpi(filters, () => currentPipelineId.value)
 const { kpi, loading: kpiLoading } = kpiComposable
 
-// ── Create drawer ───────────────────────────────────────────────────────────────
+// ── Create deal — route to full card ───────────────────────────────────────────
 
-const createDrawerOpen = ref(false)
-const createDrawerStageId = ref<number | null>(null)
-
-function onDealCreated() {
-  createDrawerStageId.value = null
-  void reload()
+function onCreateDeal(stageId?: number) {
+  const query: Record<string, string> = {}
+  if (currentPipelineId.value) query.pipeline_id = String(currentPipelineId.value)
+  if (stageId) query.stage_id = String(stageId)
+  void router.push({ path: '/deals/new', query })
 }
 
 // ── Move dialog ─────────────────────────────────────────────────────────────────
@@ -658,23 +647,6 @@ async function onExport() {
     })
   }
 }
-
-// ── Global UI-trigger: open create drawer from QuickActionsCluster ─────────────
-
-const stopDrawerTrigger = watch(
-  () => uiTriggers.pendingDrawer,
-  (trigger) => {
-    if (trigger === 'deal_create') {
-      createDrawerOpen.value = true
-      uiTriggers.clearDrawer()
-    }
-  },
-  { immediate: true },
-)
-
-onUnmounted(() => {
-  stopDrawerTrigger()
-})
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 

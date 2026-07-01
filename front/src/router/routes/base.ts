@@ -35,6 +35,13 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/ContactsPage'),
     meta: { requiresAuth: true, title: 'nav.contacts' },
   },
+  // Create routes MUST be before :id so Vue Router doesn't parse 'new' as an id
+  {
+    path: '/contacts/new',
+    name: 'ContactCreate',
+    component: () => import('@/pages/ContactPage'),
+    meta: { requiresAuth: true },
+  },
   {
     path: '/contacts/:id',
     name: 'ContactDetail',
@@ -47,6 +54,12 @@ export const routes: RouteRecordRaw[] = [
     // Shared list view — same as contacts page, type pre-set to company
     component: () => import('@/pages/ContactsPage'),
     meta: { requiresAuth: true, title: 'nav.companies' },
+  },
+  {
+    path: '/companies/new',
+    name: 'CompanyCreate',
+    component: () => import('@/pages/CompanyPage'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/companies/:id',
@@ -79,6 +92,13 @@ export const routes: RouteRecordRaw[] = [
     name: 'Deals',
     component: () => import('@/pages/DealsPage'),
     meta: { requiresAuth: true, title: 'sales.deals.page.title' },
+  },
+  // Create route MUST be before :id so Vue Router doesn't parse 'new' as an id
+  {
+    path: '/deals/new',
+    name: 'DealCreate',
+    component: () => import('@/pages/DealPage'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/deals/:id',

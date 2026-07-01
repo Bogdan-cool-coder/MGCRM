@@ -174,14 +174,14 @@ const builtinActions = computed<PaletteItem[]>(() => [
     label: t('sales.deal.actions.create', 'Создать сделку'),
     icon: 'pi pi-plus',
     type: 'action' as const,
-    action: () => router.push('/deals'),
+    action: () => router.push('/deals/new'),
   },
   {
     id: 'action:new-contact',
     label: t('contacts.actions.create', 'Создать контакт'),
     icon: 'pi pi-plus',
     type: 'action' as const,
-    action: () => router.push('/contacts'),
+    action: () => router.push('/contacts/new'),
   },
   {
     id: 'action:toggle-theme',

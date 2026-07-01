@@ -41,6 +41,7 @@
         @drop="onDrop"
         @title-change="(cid: number, title: string) => emit('titleChange', cid, title)"
         @load-more="emit('loadMore', $event)"
+        @create-in-stage="emit('createInStage', $event)"
       />
     </template>
   </div>
@@ -63,6 +64,7 @@ const emit = defineEmits<{
   titleChange: [cardId: number, title: string]
   loadMore: [stageId: number]
   create: []
+  createInStage: [stageId: number]
 }>()
 
 const { t } = useI18n()

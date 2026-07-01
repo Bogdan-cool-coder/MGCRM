@@ -6,8 +6,34 @@
       'deal-page-v2--tablet': isTablet,
     }"
   >
+    <!-- ── Create mode ──────────────────────────────────────────────────── -->
+    <template v-if="isCreateMode">
+      <!-- Left panel only — form, no feed/tabs -->
+      <div class="deal-page-v2__create-wrap">
+        <div class="deal-page-v2__create-header">
+          <Button icon="pi pi-arrow-left" text :aria-label="t('common.back')" @click="router.back()" />
+          <span class="deal-page-v2__create-title">{{ t('sales.deal.create.title') }}</span>
+        </div>
+        <div class="deal-page-v2__create-body">
+          <DealCreateForm
+            :initial-company-id="createInitialCompanyId"
+            :initial-company-name="createInitialCompanyName"
+            :initial-pipeline-id="createInitialPipelineId"
+            :initial-stage-id="createInitialStageId"
+            @saved="onDealSaved"
+            @cancel="router.back()"
+          />
+          <!-- Right: pending hint (desktop only) -->
+          <div class="deal-page-v2__create-hint">
+            <i class="pi pi-info-circle deal-page-v2__create-hint-icon" />
+            <p class="deal-page-v2__create-hint-text">{{ t('sales.deal.create.pendingHint') }}</p>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <!-- ── Loading skeleton ──────────────────────────────────────────────── -->
-    <template v-if="loading">
+    <template v-else-if="loading">
       <div class="deal-page-v2__left">
         <Skeleton height="180px" />
         <div class="p-3">
@@ -28,7 +54,7 @@
     </template>
 
     <!-- ── Error / Not Found ─────────────────────────────────────────────── -->
-    <template v-else-if="error || !deal">
+    <template v-else-if="!isCreateMode && (error || !deal)">
       <div class="deal-page-v2__error">
         <i class="pi pi-exclamation-triangle deal-page-v2__error-icon" />
         <p class="deal-page-v2__error-title">{{ t('sales.deal.page.errors.notFound') }}</p>
@@ -44,7 +70,7 @@
     </template>
 
     <!-- ── Main content ──────────────────────────────────────────────────── -->
-    <template v-else>
+    <template v-else-if="deal">
       <!-- Mobile top bar (< 768px) -->
       <div v-if="isMobile" class="deal-page-v2__mobile-bar">
         <Button icon="pi pi-arrow-left" text @click="router.back()" />
@@ -258,9 +284,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -273,6 +299,7 @@ import DealAddProductDialog from './components/DealAddProductDialog.vue'
 import DealAddContactDialog from './components/DealAddContactDialog.vue'
 import MoveDealDialog from './components/MoveDealDialog.vue'
 import OpenTasksList from '@/components/crm/entity/OpenTasksList.vue'
+import DealCreateForm from './components/DealCreateForm.vue'
 import { useDealPage } from './composables/useDealPage'
 import { useDealProducts } from './composables/useDealProducts'
 import { useDealContacts } from './composables/useDealContacts'
@@ -290,8 +317,37 @@ import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 const salesStore = useSalesStore()
+
+// ── Create mode ───────────────────────────────────────────────────────────────
+const isCreateMode = computed(() => route.name === 'DealCreate')
+
+const createInitialCompanyId = computed(() =>
+  isCreateMode.value && route.query.company_id
+    ? Number(route.query.company_id)
+    : null,
+)
+const createInitialCompanyName = computed(() =>
+  isCreateMode.value && typeof route.query.company_name === 'string'
+    ? route.query.company_name
+    : null,
+)
+const createInitialPipelineId = computed(() =>
+  isCreateMode.value && route.query.pipeline_id
+    ? Number(route.query.pipeline_id)
+    : null,
+)
+const createInitialStageId = computed(() =>
+  isCreateMode.value && route.query.stage_id
+    ? Number(route.query.stage_id)
+    : null,
+)
+
+function onDealSaved(created: import('@/entities/sales').DealDto) {
+  void router.replace(`/deals/${created.id}`)
+}
 
 // ── Breakpoints ────────────────────────────────────────────────────────────────
 
@@ -515,7 +571,9 @@ function addContactProxy(
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────────
 
-onMounted(async () => {
+/** Loads all deal sub-resources. Extracted so it can be called from both
+ *  onMounted and the route-param watcher (SPA create→detail navigation). */
+async function bootstrapDeal() {
   if (salesStore.lostReasonsCache.length === 0) {
     try {
       const reasons = await salesApi.getLostReasons()
@@ -525,11 +583,6 @@ onMounted(async () => {
     }
   }
 
-  // The deal load rethrows on 403/404 (foreign or missing deal). The resource
-  // already records error.value (the "Сделка не найдена / Нет доступа" screen
-  // renders from it), so swallow the rejection here — otherwise it surfaces as an
-  // "Unhandled error during execution of mounted hook" and trips error monitoring
-  // with false positives (audit N2).
   try {
     await load()
   } catch {
@@ -567,6 +620,26 @@ onMounted(async () => {
       // non-critical
     }
   }
+}
+
+// ── Watch for SPA navigation: create → detail (same component instance reused)
+watch(
+  () => route.params['id'],
+  async (id, prevId) => {
+    if (!id || id === 'new') return
+    if (prevId === id) return
+    await bootstrapDeal()
+  },
+)
+
+onMounted(async () => {
+  // In create mode we don't need to load an existing deal
+  if (isCreateMode.value) return
+  // bootstrapDeal handles lost-reasons, deal load, stages, sub-resources.
+  // The deal load rethrows on 403/404 (foreign or missing deal). bootstrapDeal
+  // swallows it — error.value drives the error template, preventing false-positive
+  // Sentry events (audit N2).
+  await bootstrapDeal()
 })
 </script>
 
@@ -581,6 +654,69 @@ onMounted(async () => {
     height: 0;
     display: none;
   }
+}
+
+// ── Create mode layout ────────────────────────────────────────────────────────
+
+.deal-page-v2__create-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.deal-page-v2__create-header {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-4 $space-5;
+  border-bottom: 1px solid $surface-200;
+  background: $primary-900;
+  flex-shrink: 0;
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-200);
+  }
+}
+
+.deal-page-v2__create-title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $surface-0;
+}
+
+.deal-page-v2__create-body {
+  display: flex;
+  flex: 1;
+  gap: $space-6;
+  padding: $space-4;
+}
+
+.deal-page-v2__create-hint {
+  flex: 1;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  gap: $space-3;
+  padding: $space-8;
+  color: $surface-400;
+
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+}
+
+.deal-page-v2__create-hint-icon {
+  font-size: $font-size-xl;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.deal-page-v2__create-hint-text {
+  font-size: $font-size-sm;
+  line-height: $line-height-relaxed;
+  max-width: 280px;
 }
 
 .deal-page-v2 {
