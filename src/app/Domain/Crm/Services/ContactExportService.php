@@ -35,6 +35,7 @@ class ContactExportService
         'Position',
         'Company (primary)',
         'Owner',
+        'Author',
         'Status',
         'Tags',
         'Last Activity',
@@ -71,7 +72,7 @@ class ContactExportService
             ['owner_id'],
         )
             ->when($contactIds !== [], static fn ($q) => $q->whereIn('id', $contactIds))
-            ->with(['owner', 'companyLinks' => static fn ($q) => $q->where('is_primary', true)->with('company')])
+            ->with(['owner', 'creator', 'companyLinks' => static fn ($q) => $q->where('is_primary', true)->with('company')])
             ->orderBy('id')
             ->chunkById(self::CHUNK, function ($contacts) use ($sheet, &$row): void {
                 foreach ($contacts as $contact) {
@@ -100,6 +101,7 @@ class ContactExportService
             $contact->position,
             $primaryLink?->company?->name,
             $contact->owner?->full_name,
+            $contact->creator?->full_name,    // Author column (immutable creator)
             $contact->status?->value,
             implode(', ', $contact->tags ?? []),
             $contact->last_activity_at?->toDateTimeString(),

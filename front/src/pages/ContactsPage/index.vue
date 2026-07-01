@@ -482,13 +482,13 @@
                   </span>
                 </template>
                 <template #body="{ data }">
-                  <div v-if="getOwner(data)" class="contacts-page__owner-cell">
+                  <div v-if="getOwnerColumnUser(data)" class="contacts-page__owner-cell">
                     <CrmAvatar
-                      :name="getOwner(data)!.full_name"
+                      :name="getOwnerColumnUser(data)!.full_name"
                       :size="22"
                       :square="false"
                     />
-                    <span class="contacts-page__owner-name">{{ getOwner(data)!.full_name }}</span>
+                    <span class="contacts-page__owner-name">{{ getOwnerColumnUser(data)!.full_name }}</span>
                   </div>
                   <span v-else class="contacts-page__na">—</span>
                 </template>
@@ -851,11 +851,16 @@ function getPrimaryCompanyLink(contact: Contact) {
   return links.find((l) => l.is_primary) ?? links[0]
 }
 
-function getOwner(data: Contact | Company): { id: number; full_name: string } | null {
+/**
+ * Returns the user to display in the "owner" column:
+ * - contacts → author (created_by, immutable)
+ * - companies → responsible_user (assignee, mutable)
+ */
+function getOwnerColumnUser(data: Contact | Company): { id: number; full_name: string } | null {
   if (entityType.value === 'contact') {
-    return (data as Contact).owner ?? null
+    return (data as Contact).author ?? null
   }
-  return (data as Company).responsible_user ?? (data as Company).owner_user ?? null
+  return (data as Company).responsible_user ?? null
 }
 
 function rowClass(data: Contact | Company): string {

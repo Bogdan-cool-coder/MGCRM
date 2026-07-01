@@ -79,7 +79,7 @@ class ContactService
         // contacts; Manager/Accountant/CFO see only contacts they own (owner_id).
         // This is the canonical scope — only_mine is an additive opt-in on top.
         $query = $this->visibility->applyScope(
-            Contact::query()->with(['owner', 'companyLinks.company']),
+            Contact::query()->with(['owner', 'creator', 'companyLinks.company']),
             $actor,
             ['owner_id'],
         )
@@ -278,6 +278,12 @@ class ContactService
         // false = not present in payload (don't touch), null/array = clear or write.
         $extraFields = array_key_exists('extra_fields', $data) ? $data['extra_fields'] : false;
         unset($data['extra_fields']);
+
+        // created_by_id is immutable — the author of a card never changes.
+        // Strip it from update payloads defensively so no update path (direct or via
+        // BulkContactService) can overwrite the original creator even if the field
+        // somehow appears in $data (e.g. a future FormRequest change).
+        unset($data['created_by_id']);
 
         // Keep phone_normalized in sync with phone (indexed column for dedup scan).
         if (array_key_exists('phone', $data)) {

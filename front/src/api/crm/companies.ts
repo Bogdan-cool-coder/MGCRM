@@ -18,8 +18,9 @@ export interface CompanyListParams {
   page?: number
   per_page?: number
   search?: string
-  // multi-value filters (arrays sent as owner_ids[], company_type_ids[], etc.)
+  // multi-value filters (arrays sent as owner_ids[], author_ids[], company_type_ids[], etc.)
   owner_ids?: number[]
+  author_ids?: number[]
   company_type_ids?: number[]
   category_code?: string[]
   sources?: string[]
@@ -90,7 +91,7 @@ export const companiesApi = {
   async list(params: CompanyListParams = {}): Promise<PaginatedResponse<Company>> {
     const searchParams: Record<string, unknown> = { ...params }
     // Serialize array params to bracket notation for Laravel
-    const arrayKeys: Array<keyof CompanyListParams> = ['owner_ids', 'company_type_ids', 'category_code', 'sources', 'tags']
+    const arrayKeys: Array<keyof CompanyListParams> = ['owner_ids', 'author_ids', 'company_type_ids', 'category_code', 'sources', 'tags']
     for (const key of arrayKeys) {
       const val = params[key] as unknown[] | undefined
       if (val?.length) {

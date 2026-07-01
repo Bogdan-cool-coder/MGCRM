@@ -3652,6 +3652,7 @@
     },
     "entity": {
       "author": "Автор",
+      "responsible": "Ответственный",
       "worksWithCompany": "Работает с компанией",
       "engagement": {
         "fresh": "Свежий",
@@ -3886,6 +3887,7 @@
         "log": "Лог"
       },
       "sections": {
+        "responsible": "Ответственный и автор",
         "channels": "Каналы связи",
         "relations": "Связи",
         "companies": "Компании",

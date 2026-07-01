@@ -89,7 +89,20 @@ const chips = computed((): FilterChip[] => {
   for (const ownerId of props.filters.owner_ids) {
     const user = props.users.find((u) => u.id === ownerId)
     if (user) {
-      result.push({ key: `owner_${ownerId}`, label: user.full_name })
+      result.push({
+        key: `owner_${ownerId}`,
+        label: `${t('contacts.filter.field.owner')}: ${user.full_name}`,
+      })
+    }
+  }
+
+  for (const authorId of props.filters.author_ids) {
+    const user = props.users.find((u) => u.id === authorId)
+    if (user) {
+      result.push({
+        key: `author_${authorId}`,
+        label: `${t('contacts.filter.field.author')}: ${user.full_name}`,
+      })
     }
   }
 

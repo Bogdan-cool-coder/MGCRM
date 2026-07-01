@@ -53,6 +53,7 @@ class IndexCompanyRequest extends FormRequest
     /** Multi-value filters that must end up as arrays. */
     private const ARRAY_FILTERS = [
         'owner_ids',
+        'author_ids',
         'company_type_ids',
         'category_code',
         'sources',
@@ -111,6 +112,8 @@ class IndexCompanyRequest extends FormRequest
             // ----- multi-value filters -----
             'owner_ids' => ['sometimes', 'array'],
             'owner_ids.*' => ['integer'],
+            'author_ids' => ['sometimes', 'array'],
+            'author_ids.*' => ['integer'],
             'company_type_ids' => ['sometimes', 'array'],
             'company_type_ids.*' => ['integer'],
             'category_code' => ['sometimes', 'array'],

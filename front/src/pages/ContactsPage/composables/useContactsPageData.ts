@@ -195,6 +195,7 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
       sort_dir: sortByCompany.value ? sortDir.value : undefined,
       // Multi-value
       owner_ids: f.owner_ids.length ? f.owner_ids : undefined,
+      author_ids: f.author_ids.length ? f.author_ids : undefined,
       company_type_ids: f.company_type_ids.length ? f.company_type_ids : undefined,
       category_code: f.categories.length ? f.categories : undefined,
       sources: f.sources.length ? f.sources : undefined,
@@ -283,6 +284,9 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     else if (key.startsWith('owner_')) {
       const id = parseInt(key.slice(6))
       f.owner_ids = f.owner_ids.filter((x) => x !== id)
+    } else if (key.startsWith('author_')) {
+      const id = parseInt(key.slice(7))
+      f.author_ids = f.author_ids.filter((x) => x !== id)
     } else if (key.startsWith('tag_')) {
       const tag = key.slice(4)
       f.tags = f.tags.filter((x) => x !== tag)

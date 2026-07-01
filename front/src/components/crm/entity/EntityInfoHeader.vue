@@ -49,6 +49,11 @@
             <span class="entity-header__meta-label">{{ t('crm.entity.author') }}:</span>
             <span class="entity-header__meta-value">{{ authorName || '—' }}</span>
           </span>
+          <!-- Responsible person (contact or company) -->
+          <span v-if="responsibleName !== undefined" class="entity-header__meta-item">
+            <span class="entity-header__meta-label">{{ t('crm.entity.responsible') }}:</span>
+            <span class="entity-header__meta-value">{{ responsibleName || '—' }}</span>
+          </span>
           <!-- Company name (contact only) or Responsible (company only) -->
           <span v-if="companyName !== undefined" class="entity-header__meta-item">
             <span class="entity-header__meta-label">{{ t('crm.entity.primaryCompany') }}:</span>
@@ -132,8 +137,10 @@ const props = withDefaults(
     authorName?: string | null
     /** Primary company name (contact only) */
     companyName?: string
-    /** Responsible person's name (company only) */
+    /** Responsible person's name (company only, legacy) */
     worksWithName?: string
+    /** Responsible person name — shown with "Ответственный:" label (contact or company) */
+    responsibleName?: string
     /** Category code (company only) */
     categoryCode?: CategoryCode | null
     /** Engagement tier from API */
@@ -156,6 +163,7 @@ const props = withDefaults(
     authorName: null,
     companyName: undefined,
     worksWithName: undefined,
+    responsibleName: undefined,
     categoryCode: null,
     engagementTier: null,
     lastActivityAt: null,

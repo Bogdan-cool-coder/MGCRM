@@ -129,6 +129,29 @@
               />
             </div>
           </div>
+          <!-- Responsible (responsible_user_id) — editable -->
+          <div class="col-md-6">
+            <div class="company-overview__field">
+              <label class="company-overview__label">{{ t('crm.entity.responsible') }}</label>
+              <InlineEditableField
+                :model-value="company.responsible_user_id"
+                field-key="responsible_user_id"
+                field-type="select"
+                :options="users"
+                option-label="full_name"
+                option-value="id"
+                :saving="isSaving"
+                @save="onSave"
+              />
+            </div>
+          </div>
+          <!-- Author (created_by) — read-only -->
+          <div class="col-md-6">
+            <div class="company-overview__field">
+              <label class="company-overview__label">{{ t('crm.entity.author') }}</label>
+              <span class="company-overview__readonly">{{ company.author?.full_name || '—' }}</span>
+            </div>
+          </div>
         </div>
       </template>
     </Card>
@@ -288,10 +311,12 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import InlineEditableField from '@/components/crm/InlineEditableField.vue'
 import { useDirectoriesStore } from '@/stores/directories'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import type { Company } from '@/entities/crm'
 
 defineProps<{
@@ -305,10 +330,15 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const directoriesStore = useDirectoriesStore()
+const { users, load: loadUsers } = useUsersCache()
 
 function onSave(fieldKey: string, value: string | number | null) {
   emit('save', fieldKey, value)
 }
+
+onMounted(() => {
+  void loadUsers()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -336,5 +366,14 @@ function onSave(fieldKey: string, value: string | number | null) {
   color: $surface-600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.company-overview__readonly {
+  font-size: $font-size-sm;
+  color: $surface-500;
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
 }
 </style>

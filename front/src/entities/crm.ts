@@ -64,6 +64,8 @@ export interface Contact {
   extra_fields: Record<string, unknown>
   owner_id: number | null
   owner?: { id: number; full_name: string } | null
+  /** Author = who created this contact (immutable) */
+  author?: { id: number; full_name: string } | null
   created_by_id?: number | null
   company_links?: ContactCompanyLink[]
   // Acquisition channel (N1)
@@ -127,6 +129,8 @@ export interface Company {
   department_id: number | null
   responsible_user?: { id: number; full_name: string } | null
   owner_user?: { id: number; full_name: string } | null
+  /** Author = who created this company (immutable) */
+  author?: { id: number; full_name: string } | null
 
   // Tags & custom fields
   tags: string[]

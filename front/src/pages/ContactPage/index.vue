@@ -62,7 +62,8 @@
         :entity-id="contact.id"
         :title="contact.full_name"
         :subtitle="contact.position ?? undefined"
-        :author-name="contact.owner?.full_name"
+        :author-name="contact.author?.full_name ?? undefined"
+        :responsible-name="contact.owner?.full_name ?? undefined"
         :company-name="primaryCompanyName"
         :source-label="contactSourceLabel"
         :created-at="contact.created_at"
@@ -117,6 +118,34 @@
                 <div class="row g-0">
                   <div class="col-12">
                     <div class="contact-page-v2__panels">
+
+                      <!-- 0. Ответственный / Автор -->
+                      <InfoPanel
+                        :title="t('crm.contact.sections.responsible')"
+                        icon="pi-user"
+                        panel-key="contact-responsible"
+                        :default-collapsed="false"
+                      >
+                        <div class="contact-page-v2__responsible-grid">
+                          <div class="contact-page-v2__responsible-field">
+                            <span class="contact-page-v2__responsible-label">{{ t('crm.entity.responsible') }}</span>
+                            <InlineEditableField
+                              :model-value="contact.owner_id"
+                              field-key="owner_id"
+                              field-type="select"
+                              :options="ownerUsers"
+                              option-label="full_name"
+                              option-value="id"
+                              :saving="isSaving"
+                              @save="patchField"
+                            />
+                          </div>
+                          <div class="contact-page-v2__responsible-field">
+                            <span class="contact-page-v2__responsible-label">{{ t('crm.entity.author') }}</span>
+                            <span class="contact-page-v2__responsible-readonly">{{ contact.author?.full_name || '—' }}</span>
+                          </div>
+                        </div>
+                      </InfoPanel>
 
                       <!-- 1. Каналы связи -->
                       <InfoPanel
@@ -458,6 +487,7 @@ import { useContactPageActions } from './composables/useContactPageActions'
 import { useDirectoriesStore } from '@/stores/directories'
 import { useUserStore } from '@/stores/user'
 import { useBreakpoints } from '@/composables/useBreakpoints'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import type { MenuItem } from 'primevue/menuitem'
 
 const { t } = useI18n()
@@ -466,6 +496,7 @@ const route = useRoute()
 const directoriesStore = useDirectoriesStore()
 const userStore = useUserStore()
 const { isMobile, isTablet } = useBreakpoints()
+const { users: ownerUsers, load: loadOwnerUsers } = useUsersCache()
 
 // ── Create mode ───────────────────────────────────────────────────────────────
 const isCreateMode = computed(() => route.name === 'ContactCreate')
@@ -761,6 +792,7 @@ function onContactSaved(created: import('@/entities/crm').Contact) {
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
+  void loadOwnerUsers()
   if (isCreateMode.value) {
     // In create mode we don't need to load an existing contact
     if (!directoriesStore.loaded) void directoriesStore.fetchAll()
@@ -916,6 +948,43 @@ void attachCompanyStatus
   border: 1px solid var(--p-surface-200);
   box-shadow: $shadow-card;
   overflow: hidden;
+}
+
+// ── Responsible / Author fields ───────────────────────────────────────────────
+
+.contact-page-v2__responsible-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-4;
+  padding: $space-1 0;
+
+  @media (max-width: 575px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.contact-page-v2__responsible-field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.contact-page-v2__responsible-label {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $surface-600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+}
+
+.contact-page-v2__responsible-readonly {
+  font-size: $font-size-sm;
+  color: var(--p-text-color);
+  padding-top: $space-1;
 }
 
 // ── Notes field ───────────────────────────────────────────────────────────────

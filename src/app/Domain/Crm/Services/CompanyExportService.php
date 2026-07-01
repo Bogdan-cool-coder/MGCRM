@@ -38,6 +38,7 @@ class CompanyExportService
         'Category',
         'Owner',
         'Responsible',
+        'Author',
         'Tags',
         'Last Activity',
         'Created At',
@@ -73,7 +74,7 @@ class CompanyExportService
             ['owner_user_id', 'responsible_user_id'],
         )
             ->when($companyIds !== [], static fn ($q) => $q->whereIn('id', $companyIds))
-            ->with(['companyType', 'ownerUser', 'responsibleUser'])
+            ->with(['companyType', 'ownerUser', 'responsibleUser', 'creator'])
             ->orderBy('id')
             ->chunkById(self::CHUNK, function ($companies) use ($sheet, &$row): void {
                 foreach ($companies as $company) {
@@ -103,6 +104,7 @@ class CompanyExportService
             $company->category_code?->value,
             $company->ownerUser?->full_name,
             $company->responsibleUser?->full_name,
+            $company->creator?->full_name,    // Author column (immutable creator)
             implode(', ', $company->tags ?? []),
             $company->last_activity_at?->toDateTimeString(),
             $company->created_at?->toDateTimeString(),

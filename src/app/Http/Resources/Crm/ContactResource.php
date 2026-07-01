@@ -29,6 +29,23 @@ class ContactResource extends JsonResource
             'owner_id' => $this->owner_id,
             'created_by_id' => $this->created_by_id,
 
+            // Responsible user object (owner — who is currently working with this contact).
+            // Key: 'owner' (loaded via ->with('owner')).
+            // Used by the front to display the "Ответственный" column.
+            'owner' => $this->whenLoaded('owner', fn () => $this->owner ? [
+                'id' => $this->owner->id,
+                'full_name' => $this->owner->full_name,
+            ] : null),
+
+            // Author (creator) user object — who originally created the card.
+            // Immutable: never changes after creation.
+            // Key: 'author' (loaded via ->with('creator')).
+            // Used by the front to display the "Автор" column.
+            'author' => $this->whenLoaded('creator', fn () => $this->creator ? [
+                'id' => $this->creator->id,
+                'full_name' => $this->creator->full_name,
+            ] : null),
+
             // Marketing — acquisition channel
             'acquisition_channel_id' => $this->acquisition_channel_id,
             'acquisition_channel' => $this->whenLoaded(
@@ -41,12 +58,6 @@ class ContactResource extends JsonResource
             // Engagement (B2)
             'last_activity_at' => $this->last_activity_at?->toIso8601String(),
             'engagement_tier' => $this->computeEngagementTier()->value,
-
-            // User (when loaded)
-            'owner' => $this->whenLoaded('owner', fn () => [
-                'id' => $this->owner->id,
-                'full_name' => $this->owner->full_name,
-            ]),
 
             // Channels (when loaded — only in show(), not index()) — B3
             'channels' => $this->whenLoaded('channels', fn () => ContactChannelResource::collection($this->channels)),

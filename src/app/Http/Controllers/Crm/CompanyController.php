@@ -49,7 +49,7 @@ class CompanyController extends Controller
     {
         $company = $this->service->create($request->validated(), $request->user());
 
-        return CompanyResource::make($company->load(['companyType', 'responsibleUser', 'ownerUser']));
+        return CompanyResource::make($company->load(['companyType', 'responsibleUser', 'ownerUser', 'creator']));
     }
 
     public function show(Request $request, Company $company): JsonResource
@@ -78,7 +78,7 @@ class CompanyController extends Controller
             ->count();
 
         return CompanyResource::make(
-            $company->load(['companyType', 'responsibleUser', 'ownerUser', 'contactLinks.contact', 'channels'])
+            $company->load(['companyType', 'responsibleUser', 'ownerUser', 'creator', 'contactLinks.contact', 'channels'])
         )->additional([
             'deal_totals' => $dealTotals->toArray(),
             'kpi' => [
@@ -100,7 +100,7 @@ class CompanyController extends Controller
 
         $updated = $this->service->update($company, $request->validated(), $request->user());
 
-        return CompanyResource::make($updated->load(['companyType', 'responsibleUser', 'ownerUser']));
+        return CompanyResource::make($updated->load(['companyType', 'responsibleUser', 'ownerUser', 'creator']));
     }
 
     public function destroy(Request $request, Company $company): JsonResponse

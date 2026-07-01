@@ -68,20 +68,36 @@ class CompanyResource extends JsonResource
             'holding_id' => $this->holding_id,
             'holding_role' => $this->holding_role?->value,
 
-            // Ownership
+            // Ownership & authorship
+            //   owner_user_id      — primary owner (used for row-level visibility scope)
+            //   responsible_user_id — the person currently responsible for this account
+            //   created_by_id      — original creator of the card (immutable)
             'responsible_user_id' => $this->responsible_user_id,
             'owner_user_id' => $this->owner_user_id,
+            'created_by_id' => $this->created_by_id,
             'department_id' => $this->department_id,
 
-            // User objects (when loaded)
-            'responsible_user' => $this->whenLoaded('responsibleUser', fn () => [
+            // Responsible user object (loaded via ->with('responsibleUser')).
+            // Displayed in the "Ответственный" column in company lists.
+            'responsible_user' => $this->whenLoaded('responsibleUser', fn () => $this->responsibleUser ? [
                 'id' => $this->responsibleUser->id,
                 'full_name' => $this->responsibleUser->full_name,
-            ]),
-            'owner_user' => $this->whenLoaded('ownerUser', fn () => [
+            ] : null),
+
+            // Owner user object (loaded via ->with('ownerUser')).
+            'owner_user' => $this->whenLoaded('ownerUser', fn () => $this->ownerUser ? [
                 'id' => $this->ownerUser->id,
                 'full_name' => $this->ownerUser->full_name,
-            ]),
+            ] : null),
+
+            // Author (creator) user object — who originally created the card.
+            // Immutable: never changes after creation.
+            // Key: 'author' (loaded via ->with('creator')).
+            // Used by the front to display the "Автор" column.
+            'author' => $this->whenLoaded('creator', fn () => $this->creator ? [
+                'id' => $this->creator->id,
+                'full_name' => $this->creator->full_name,
+            ] : null),
 
             // Tags & Custom fields
             'tags' => $this->tags ?? [],

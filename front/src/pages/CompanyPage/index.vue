@@ -61,8 +61,8 @@
       <EntityInfoHeader
         :entity-id="company.id"
         :title="company.name"
-        :author-name="company.owner_user?.full_name"
-        :works-with-name="company.responsible_user?.full_name"
+        :author-name="company.author?.full_name ?? company.owner_user?.full_name ?? undefined"
+        :responsible-name="company.responsible_user?.full_name ?? undefined"
         :category-code="company.category_code"
         :engagement-tier="(company as CompanyExtended).engagement_tier ?? undefined"
         :last-activity-at="(company as CompanyExtended).last_activity_at"

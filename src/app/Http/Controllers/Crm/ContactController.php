@@ -51,7 +51,7 @@ class ContactController extends Controller
     {
         $contact = $this->service->create($request->validated(), $request->user());
 
-        return ContactResource::make($contact->load(['owner', 'companyLinks.company']));
+        return ContactResource::make($contact->load(['owner', 'creator', 'companyLinks.company']));
     }
 
     public function show(Request $request, Contact $contact): JsonResource
@@ -84,7 +84,7 @@ class ContactController extends Controller
             ->count();
 
         return ContactResource::make(
-            $contact->load(['owner', 'companyLinks.company', 'channels'])
+            $contact->load(['owner', 'creator', 'companyLinks.company', 'channels'])
         )->additional([
             'kpi' => [
                 'deals_count' => $dealsCount,
@@ -102,7 +102,7 @@ class ContactController extends Controller
     {
         $updated = $this->service->update($contact, $request->validated(), $request->user());
 
-        return ContactResource::make($updated->load(['owner', 'companyLinks.company']));
+        return ContactResource::make($updated->load(['owner', 'creator', 'companyLinks.company']));
     }
 
     public function destroy(Request $request, Contact $contact): JsonResponse

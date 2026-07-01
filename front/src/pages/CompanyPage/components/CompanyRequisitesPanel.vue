@@ -25,6 +25,23 @@
           </template>
         </InlineEditableField>
       </KeyFactsItem>
+      <!-- Responsible (responsible_user_id) — editable -->
+      <KeyFactsItem :label="t('crm.entity.responsible')">
+        <InlineEditableField
+          :model-value="company.responsible_user_id"
+          field-key="responsible_user_id"
+          field-type="select"
+          :options="users"
+          option-label="full_name"
+          option-value="id"
+          :saving="isSaving"
+          @save="onSave"
+        />
+      </KeyFactsItem>
+      <!-- Author (created_by) — read-only -->
+      <KeyFactsItem :label="t('crm.entity.author')">
+        <span class="requisites-panel__readonly">{{ company.author?.full_name || '—' }}</span>
+      </KeyFactsItem>
     </KeyFactsBlock>
   </InfoPanel>
 
@@ -116,6 +133,7 @@ import RequisiteCard from './RequisiteCard.vue'
 import RequisiteFormDialog from './RequisiteFormDialog.vue'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import type { Company, CompanyRequisite, CreateRequisitePayload } from '@/entities/crm'
 
 const props = defineProps<{
@@ -129,6 +147,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
+const { users, load: loadUsers } = useUsersCache()
 
 // ── Specialization enum (FE-A.1, N1) ─────────────────────────────────────────
 
@@ -297,6 +316,7 @@ async function onDelete(requisiteId: number) {
 
 onMounted(() => {
   void load()
+  void loadUsers()
 })
 </script>
 
@@ -366,6 +386,15 @@ onMounted(() => {
 
   i {
     font-size: $font-size-xs;
+  }
+}
+
+.requisites-panel__readonly {
+  font-size: $font-size-sm;
+  color: $surface-500;
+
+  .app-dark & {
+    color: var(--p-surface-300);
   }
 }
 </style>

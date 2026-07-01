@@ -67,6 +67,7 @@ class CompanyService
     {
         // Resolve multi-value filters (array or scalar alias).
         $ownerIds = $this->resolveIds($filters, 'owner_ids', 'owner_user_id');
+        $authorIds = $this->resolveIds($filters, 'author_ids');
         $companyTypeIds = $this->resolveIds($filters, 'company_type_ids', 'company_type_id');
         $categoryCodes = $this->resolveStrings($filters, 'category_code');  // scalar already; also accept array
         $tags = $this->resolveStrings($filters, 'tags');
@@ -75,7 +76,7 @@ class CompanyService
         // Apply mandatory row-level visibility scope. Admin/Director/Lawyer see all;
         // Manager/Accountant/CFO see only companies they own OR are responsible for.
         $query = $this->visibility->applyScope(
-            Company::query()->with(['companyType', 'responsibleUser', 'ownerUser']),
+            Company::query()->with(['companyType', 'responsibleUser', 'ownerUser', 'creator']),
             $actor,
             ['owner_user_id', 'responsible_user_id'],
         )
@@ -121,6 +122,10 @@ class CompanyService
             // owner_ids[]: multi-owner (scalar owner_user_id alias).
             ->when($ownerIds !== [], function (Builder $q) use ($ownerIds): void {
                 $q->whereIn('owner_user_id', $ownerIds);
+            })
+            // author_ids[]: filter by the creating user (created_by_id). AND-logic with other filters.
+            ->when($authorIds !== [], function (Builder $q) use ($authorIds): void {
+                $q->whereIn('crm_companies.created_by_id', $authorIds);
             })
             // tags[]: any-match via JSON LIKE (portable PG+SQLite). The tag value is
             // escaped (%, _, \) and the LIKE carries ESCAPE '\' via the whereLike
@@ -200,9 +205,12 @@ class CompanyService
      */
     public function create(array $data, User $creator): Company
     {
-        // Auto-assign owner and department from creator if not provided
+        // Auto-assign owner and department from creator if not provided.
         $data['owner_user_id'] ??= $creator->id;
         $data['department_id'] ??= $creator->department_id;
+        // Track creator so author-filter and author-display work correctly.
+        // Mirrors ContactService::create — immutable after initial set.
+        $data['created_by_id'] ??= $creator->id;
 
         // Separate extra_fields from core data so we can validate/coerce via CustomFieldService.
         $extraFields = $data['extra_fields'] ?? null;
@@ -240,6 +248,12 @@ class CompanyService
         // Separate extra_fields before the main update — validate/coerce via CustomFieldService.
         $extraFields = array_key_exists('extra_fields', $data) ? $data['extra_fields'] : false;
         unset($data['extra_fields']);
+
+        // created_by_id is immutable — the author of a card never changes.
+        // Strip it from update payloads defensively so no update path (direct or via
+        // BulkCompanyService) can overwrite the original creator even if the field
+        // somehow appears in $data (e.g. a future FormRequest change).
+        unset($data['created_by_id']);
 
         // Keep phone_normalized in sync with phone (indexed column for dedup scan).
         if (array_key_exists('phone', $data)) {

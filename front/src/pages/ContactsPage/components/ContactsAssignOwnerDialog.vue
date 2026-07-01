@@ -6,7 +6,7 @@
     :style="{ width: '360px' }"
   >
     <div class="assign-dialog__field">
-      <label class="assign-dialog__label">{{ t('crm.entity.author') }}</label>
+      <label class="assign-dialog__label">{{ t('crm.entity.responsible') }}</label>
       <Select
         v-model="selectedUserId"
         :options="users"
@@ -15,7 +15,7 @@
         filter
         show-clear
         class="w-full"
-        :placeholder="t('crm.entity.author')"
+        :placeholder="t('crm.entity.responsible')"
       />
     </div>
     <template #footer>

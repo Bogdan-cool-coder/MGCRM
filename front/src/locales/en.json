@@ -3652,6 +3652,7 @@
     },
     "entity": {
       "author": "Created by",
+      "responsible": "Responsible",
       "worksWithCompany": "Account owner",
       "engagement": {
         "fresh": "Fresh",
@@ -3886,6 +3887,7 @@
         "log": "Log"
       },
       "sections": {
+        "responsible": "Responsible & Author",
         "channels": "Channels",
         "relations": "Relations",
         "companies": "Companies",
