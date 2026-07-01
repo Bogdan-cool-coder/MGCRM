@@ -51,6 +51,7 @@ use App\Domain\Contracts\Policies\MessageTemplatePolicy;
 use App\Domain\Contracts\Policies\TemplatePolicy;
 use App\Domain\Contracts\Policies\TemplateVariablePolicy;
 use App\Domain\Crm\Listeners\DisconnectCompanyOnTerminationSigned;
+use App\Domain\Crm\Listeners\SyncOwnerOnTaskAssigned;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactRelation;
@@ -293,6 +294,13 @@ class AppServiceProvider extends ServiceProvider
         //   - ActivityAssigned          → "task assigned" (responsible)
         //   - DocumentSubmittedForApproval → "approval requested" (each approver)
         Event::listen(ActivityAssigned::class, NotifyActivityAssigneeListener::class);
+
+        // 6.1 — Sync the CRM target's "owner" field when a task is assigned.
+        // ActivityAssigned fires on both create (with a responsible) and every
+        // responsible_id change in update(). The listener checks kind/target and
+        // issues a no-op when the owner already matches (idempotent). Synchronous
+        // and DB-only — never blocks the web request.
+        Event::listen(ActivityAssigned::class, SyncOwnerOnTaskAssigned::class);
         Event::listen(DocumentSubmittedForApproval::class, NotifyApproversListener::class);
 
         // Activity action-journal (C8). The note_added / task_completed /

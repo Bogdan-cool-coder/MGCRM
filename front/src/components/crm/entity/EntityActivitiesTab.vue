@@ -224,6 +224,7 @@
       ref="composerRef"
       :entity-type="entityType"
       :entity-id="entityId"
+      :users-list="usersList"
       @created="onActivityCreated"
     />
   </div>
@@ -240,6 +241,7 @@ import Tag from 'primevue/tag'
 import EntityComposer from './EntityComposer.vue'
 import OpenTasksList from './OpenTasksList.vue'
 import { useEntityFeed } from './composables/useEntityFeed'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { kindIcon, kindColor, statusSeverity } from '@/utils/activity'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
 
@@ -268,6 +270,9 @@ const feed = useEntityFeed(
   () => props.entityType,
   () => props.entityId,
 )
+
+const { users: usersRaw, load: loadUsers } = useUsersCache()
+const usersList = computed(() => usersRaw.value.map((u) => ({ id: u.id, name: u.full_name })))
 
 const groups = computed(() => feed.groups.value)
 const loading = computed(() => feed.loading.value)
@@ -401,6 +406,7 @@ function formatGroupDate(dateStr: string): string {
 
 onMounted(() => {
   void feed.load()
+  void loadUsers()
 })
 
 defineExpose({
