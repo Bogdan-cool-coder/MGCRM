@@ -99,21 +99,25 @@
                 class="nf__item"
                 :class="{ 'nf__item--unread': !item.is_read }"
               >
+                <!-- Body click: markRead + navigate only when there is no separate
+                     CTA button (to avoid duplicate markRead when user clicks CTA). -->
                 <button
                   class="nf__item-body"
-                  @click="markRead(item)"
+                  @click="onItemBodyClick(item)"
                 >
                   <span class="nf__item-title">{{ item.title }}</span>
                   <span v-if="item.body" class="nf__item-body-text">{{ item.body }}</span>
                   <span class="nf__item-time">{{ formatTime(item.created_at) }}</span>
                 </button>
+                <!-- CTA button: markRead + navigate + close flyout.
+                     @click.stop prevents bubbling to the body button above. -->
                 <Button
                   v-if="item.action_label && item.deep_link"
                   size="small"
                   outlined
                   :label="item.action_label"
                   class="nf__item-action-btn"
-                  @click="markRead(item)"
+                  @click.stop="onCtaClick(item)"
                 />
               </li>
             </ul>
@@ -169,6 +173,7 @@ import { useNotificationsStore } from '@/stores/notificationsStore'
 import { useNotificationsFlyout } from './composables/useNotificationsFlyout'
 import type { OrbitaTooltipOptions } from './composables/useOrbitaTooltip'
 import type { OrbitaOverlayControl, OrbitaOrientation } from './types'
+import type { NotificationDto } from '@/entities/notification'
 
 interface Props {
   tooltipOptions: (value: string) => OrbitaTooltipOptions
@@ -284,6 +289,29 @@ function formatTime(iso: string): string {
   if (diffD < 7) return t('orbita.timeDays', { n: diffD })
 
   return d.toLocaleDateString()
+}
+
+// ─── Notification item click handlers ─────────────────────────────────────
+/**
+ * Body click: mark as read. Navigate only when there is no separate CTA
+ * button — if a CTA exists the user should click it explicitly.
+ */
+async function onItemBodyClick(item: NotificationDto): Promise<void> {
+  await markRead(item)
+  if (!item.action_label || !item.deep_link) {
+    // No CTA: markRead already navigated (deep_link handled inside markRead).
+    // Close the flyout after navigation.
+    popoverRef.value?.hide()
+  }
+}
+
+/**
+ * CTA button click: single markRead + navigate + close flyout.
+ * @click.stop prevents bubbling to the body button (which would call markRead again).
+ */
+async function onCtaClick(item: NotificationDto): Promise<void> {
+  await markRead(item)
+  popoverRef.value?.hide()
 }
 
 // ─── OrbitaOverlayControl interface ──────────────────────────────────────

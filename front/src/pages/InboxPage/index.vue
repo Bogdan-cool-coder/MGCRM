@@ -41,6 +41,7 @@
         :total-records="totalRecords"
         :per-page="perPage"
         :is-failed-filter="filters.failedQuick"
+        :active-reprocess-id="currentReprocessId"
         @open="openDetail"
         @reprocess="onRowReprocess"
         @page="onPageChange"
@@ -102,6 +103,7 @@ const {
   markUnread,
   markReadPending,
   reprocessMutation,
+  currentReprocessId,
   confirmReprocess,
   reprocess,
   onPageChange,

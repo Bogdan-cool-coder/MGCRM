@@ -2847,6 +2847,7 @@
         "generateAi": "Generate from lesson",
         "generating": "Generating...",
         "generatingHint": "AI is creating draft questions — this may take a few seconds",
+        "generateTimeout": "Generation took too long. Please try again.",
         "draftQuestions": "AI suggested questions (drafts)",
         "draftHint": "Review and add the ones you need",
         "draftAdd": "Add to quiz",

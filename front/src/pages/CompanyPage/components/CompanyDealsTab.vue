@@ -49,11 +49,13 @@
       <Column :header="t('sales.deal.list.columns.stage')" style="width: 180px">
         <template #body="{ data }">
           <Tag
+            v-if="data.stage"
             :value="data.stage.name"
             severity="secondary"
             size="small"
             :style="data.stage.color ? { background: data.stage.color + '22', color: data.stage.color } : {}"
           />
+          <span v-else class="company-deals-tab__stage-empty">—</span>
         </template>
       </Column>
 
@@ -233,6 +235,11 @@ function formatDate(iso: string | null | undefined): string {
 .company-deals-tab__date {
   font-size: $font-size-sm;
   color: $surface-500;
+}
+
+.company-deals-tab__stage-empty {
+  font-size: $font-size-sm;
+  color: $surface-400;
 }
 
 .company-deals-tab__load-more {

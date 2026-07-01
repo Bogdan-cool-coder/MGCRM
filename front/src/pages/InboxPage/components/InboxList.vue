@@ -68,7 +68,7 @@
           v-for="msg in messages"
           :key="msg.id"
           :msg="msg"
-          :reprocess-pending="reprocessingId === msg.id"
+          :reprocess-pending="activeReprocessId === msg.id"
           @open="emit('open', $event)"
           @reprocess="onReprocessRow"
         />
@@ -89,7 +89,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
@@ -99,13 +98,16 @@ import Paginator from 'primevue/paginator'
 import InboxMessageRow from './InboxMessageRow.vue'
 import type { InboundMessage } from '@/api/inbox'
 
-const props = defineProps<{
+defineProps<{
   messages: InboundMessage[]
   loading: boolean
   error: unknown
   totalRecords: number
   perPage: number
   isFailedFilter: boolean
+  /** ID of the row currently being reprocessed; spinner shows on that row only.
+   *  Managed by the parent and cleared when the mutation settles (not via a timer). */
+  activeReprocessId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -117,19 +119,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const reprocessingId = ref<number | null>(null)
-
-async function onReprocessRow(id: number) {
-  reprocessingId.value = id
+function onReprocessRow(id: number) {
   emit('reprocess', id)
-  // Parent handles the actual call; reset after a short delay
-  setTimeout(() => {
-    if (reprocessingId.value === id) reprocessingId.value = null
-  }, 3000)
 }
-
-// Expose reprocessingId setter so parent can clear it on completion
-defineExpose({ props })
 </script>
 
 <style lang="scss" scoped>

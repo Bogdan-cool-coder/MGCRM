@@ -26,9 +26,11 @@
         </div>
       </template>
 
-      <!-- Chart -->
+      <!-- Chart — :key forces full remount on theme switch so ECharts
+           re-registers the registered theme colours (axes, grid, tooltip). -->
       <template v-else>
         <VChart
+          :key="themeStore.theme"
           theme="macro-crm"
           :option="barOption"
           autoresize

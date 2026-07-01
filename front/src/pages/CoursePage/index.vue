@@ -115,14 +115,17 @@
               :disabled="nextDisabled"
               @click="navigateNext"
             />
-            <!-- Last lesson: show complete button (BUG-NEXT-LESSON-DEAD) -->
+            <!-- Last lesson: show complete button.
+                 Disabled until ALL lessons (not just the current one) are completed.
+                 For quiz lessons: @quiz-passed → handleCompleteLesson populates
+                 completedLessonIds; canFinishCourse becomes true automatically. -->
             <Button
               v-else-if="currentLesson && isOwner && assignment?.status !== 'completed'"
               :label="t('onboarding.coursePage.completeBtn')"
               icon="pi pi-check-circle"
               severity="success"
               :loading="completingLesson"
-              :disabled="!isLessonCompleted(currentLesson.id)"
+              :disabled="!canFinishCourse"
               @click="handleCompleteLesson"
             />
           </div>
@@ -176,6 +179,7 @@ const {
   modules,
   currentLesson,
   currentLessonId,
+  allLessons,
   hasPrev,
   hasNext,
   isOwner,
@@ -194,6 +198,17 @@ const {
 } = useCoursePage(assignmentId)
 
 const showAiTutor = ref(false)
+
+// "Finish course" button: active when every lesson in the course is completed.
+// Checking only the current lesson was the BUG-NEXT-LESSON-DEAD: on the last
+// lesson a user could never click "Complete course" if any prior lesson was
+// missing from completedLessonIds (e.g. skipped non-required lessons).
+// For quiz lessons the set is populated via the @quiz-passed → handleCompleteLesson
+// chain, so this computed stays in sync automatically.
+const canFinishCourse = computed(() => {
+  if (allLessons.value.length === 0) return false
+  return allLessons.value.every((l) => isLessonCompleted(l.id))
+})
 
 // Next disabled if soft_gate and lesson not completed (non-quiz) or quiz not passed
 const nextDisabled = computed(() => {

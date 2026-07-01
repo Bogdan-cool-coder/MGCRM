@@ -227,6 +227,8 @@ export const useInboxPage = () => {
 
   // ─── Reprocess (reroute failed message) ───────────────────────────────────────
   const reprocessMutation = useMutation<InboundMessage>()
+  // Tracks which row's spinner is active — cleared when the mutation settles.
+  const currentReprocessId = ref<number | null>(null)
 
   function confirmReprocess(id: number, onConfirm: () => void) {
     confirm.require({
@@ -240,6 +242,7 @@ export const useInboxPage = () => {
   }
 
   async function reprocess(id: number) {
+    currentReprocessId.value = id
     try {
       const updated = await reprocessMutation.run(() => inboxApi.reroute(id))
       _updateRowInList(id, updated)
@@ -271,6 +274,8 @@ export const useInboxPage = () => {
         summary: t('inbox.reprocess.errorToast'),
         life: 5000,
       })
+    } finally {
+      currentReprocessId.value = null
     }
   }
 
@@ -312,6 +317,7 @@ export const useInboxPage = () => {
 
     // Reprocess
     reprocessMutation,
+    currentReprocessId,
     confirmReprocess,
     reprocess,
 

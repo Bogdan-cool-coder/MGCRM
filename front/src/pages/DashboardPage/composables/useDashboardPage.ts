@@ -40,6 +40,10 @@ export const useDashboardPage = () => {
 
   // ─── Main data resource ─────────────────────────────────────────────────────
   const dashboardResource = useAsyncResource<DashboardResponse | null>(() => null)
+  // Prevent empty-state flash before the very first load completes.
+  // useAsyncResource starts with loading=false; widgets render empty immediately.
+  // dataReady flips to true after the first successful (or failed) fetch.
+  const dataReady = ref(false)
 
   const reload = async (): Promise<void> => {
     try {
@@ -52,6 +56,8 @@ export const useDashboardPage = () => {
         detail: msg,
         life: 5000,
       })
+    } finally {
+      dataReady.value = true
     }
   }
 
@@ -162,6 +168,10 @@ export const useDashboardPage = () => {
     initialized.value = true
   })
 
+  // loading = true until the first fetch completes OR while re-fetching.
+  // Widgets show skeleton in both cases — no empty-state flash on initial mount.
+  const loading = computed(() => !dataReady.value || dashboardResource.loading.value)
+
   return {
     filters,
     pipelines,
@@ -169,7 +179,7 @@ export const useDashboardPage = () => {
     pipelinesLoading,
     canSeeAllManagers,
     data: dashboardResource.data,
-    loading: dashboardResource.loading,
+    loading,
     setFilter,
     reload,
     exportXlsx,

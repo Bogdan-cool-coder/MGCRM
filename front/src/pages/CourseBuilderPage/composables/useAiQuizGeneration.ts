@@ -40,23 +40,44 @@ export function useAiQuizGeneration() {
       return null
     }
 
+    // Poll for up to 90 seconds (30 attempts × 3 s). If the backend hasn't
+    // responded by then we unlock the button and surface an error so the user
+    // isn't left waiting indefinitely.
+    const MAX_ATTEMPTS = 30
+    let attempts = 0
+
     return new Promise((resolve) => {
       pollInterval.value = setInterval(async () => {
+        attempts++
         try {
           const quiz = await onboardingAdminApi.getQuiz(quizId)
           if (quiz.ai_generation_status === 'completed') {
             stopPolling()
             generating.value = false
             resolve(quiz)
+            return
           } else if (quiz.ai_generation_status === 'failed') {
             stopPolling()
             generating.value = false
             toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
             resolve(null)
+            return
           }
         } catch {
           stopPolling()
           generating.value = false
+          resolve(null)
+          return
+        }
+
+        if (attempts >= MAX_ATTEMPTS) {
+          stopPolling()
+          generating.value = false
+          toast.add({
+            severity: 'warn',
+            summary: t('onboarding.builder.quiz.generateTimeout'),
+            life: 6000,
+          })
           resolve(null)
         }
       }, 3000)
