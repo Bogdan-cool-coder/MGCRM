@@ -11,6 +11,7 @@ use App\Domain\Crm\Models\DismissedDuplicate;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
+use App\Http\Requests\Crm\MergeDedupRequest;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection as SupportCollection;
@@ -88,8 +89,13 @@ class DedupService
      * (hooked via observer or called explicitly in S1.3+).
      *
      * @param  int[]  $duplicateIds
+     * @param  array<string, int>  $fieldOverrides  Optional per-field source overrides.
+     *                                              Key = field name (must be in the whitelist); value = source entity ID (master or a dup).
+     *                                              After all child data has been re-parented, the master is patched with values
+     *                                              taken from the indicated source records.
+     *                                              If a field is NOT in $fieldOverrides, the master's existing value is kept as-is.
      */
-    public function merge(string $scope, int $masterId, array $duplicateIds, User $actor): void
+    public function merge(string $scope, int $masterId, array $duplicateIds, User $actor, array $fieldOverrides = []): void
     {
         $this->assertScope($scope);
 
@@ -97,7 +103,12 @@ class DedupService
             throw new InvalidArgumentException('Master ID must not appear in duplicate IDs.');
         }
 
-        DB::transaction(function () use ($scope, $masterId, $duplicateIds): void {
+        // Validate field override keys against whitelist
+        if ($fieldOverrides !== []) {
+            $this->assertFieldOverrides($scope, $masterId, $duplicateIds, $fieldOverrides);
+        }
+
+        DB::transaction(function () use ($scope, $masterId, $duplicateIds, $fieldOverrides): void {
             foreach ($duplicateIds as $dupId) {
                 if ($scope === 'contact') {
                     $this->mergeContact($masterId, $dupId);
@@ -111,6 +122,12 @@ class DedupService
                         $q->where('entity_a_id', $dupId)
                             ->orWhere('entity_b_id', $dupId);
                     })->delete();
+            }
+
+            // Apply per-field overrides AFTER all child data has been re-parented.
+            // Each override specifies which source entity's value should win for that field.
+            if ($fieldOverrides !== []) {
+                $this->applyFieldOverrides($scope, $masterId, $duplicateIds, $fieldOverrides);
             }
         });
     }
@@ -193,7 +210,7 @@ class DedupService
     /** @return Collection<int, Company> */
     private function scanCompany(int $companyId): Collection
     {
-        $company = Company::findOrFail($companyId);
+        $company = Company::with('currentRequisite')->findOrFail($companyId);
 
         $dismissed = $this->dismissedIds('company', $companyId);
 
@@ -202,8 +219,10 @@ class DedupService
         //   - LOWER(TRIM(email)): functional pass-through (email indexed on raw column)
         //   - TRIM(tax_id): tax_id indexed on raw column; TRIM is safe for small result sets
         //   - LOWER(TRIM(name)): name indexed on raw column; functional pass-through
+        //   - Requisite account: join company_requisites where is_current=true
 
         return Company::query()
+            ->with('currentRequisite')
             ->where('id', '!=', $companyId)
             ->whereNotIn('id', $dismissed)
             ->whereNull('deleted_at')
@@ -236,6 +255,19 @@ class DedupService
                     $hasCondition = true;
                 }
 
+                // Requisite account: match companies sharing the same current bank account
+                // number (bank_details->>'account') as the source company.
+                $reqAccount = $this->extractRequisiteAccount($company);
+                if ($reqAccount !== null) {
+                    $q->orWhereHas('currentRequisite', function ($rq) use ($reqAccount): void {
+                        $rq->whereRaw(
+                            "LOWER(TRIM(COALESCE(bank_details->>'account', ''))) = ?",
+                            [mb_strtolower(trim($reqAccount))]
+                        );
+                    });
+                    $hasCondition = true;
+                }
+
                 // No match criteria → return nothing.
                 if (! $hasCondition) {
                     $q->whereRaw('1 = 0');
@@ -256,7 +288,11 @@ class DedupService
      */
     private function scanAllContacts(User $user): SupportCollection
     {
-        $base = Contact::query()->whereNull('deleted_at');
+        $base = Contact::query()
+            ->whereNull('deleted_at')
+            ->withCount([
+                'companyLinks as company_links_count',
+            ]);
 
         if ($this->visibility->resolve($user) !== VisibilityScope::All) {
             $base->where('owner_id', $user->id);
@@ -264,6 +300,34 @@ class DedupService
 
         /** @var Collection<int, Contact> $all */
         $all = $base->get();
+
+        // Attach activities_count and open_deals_count via separate aggregates.
+        // Use selectRaw with an explicit alias so the query is portable across
+        // PostgreSQL (returns "count") and SQLite (returns "COUNT(*)").
+        // pluck(DB::raw('COUNT(*)'), ...) triggers E_WARNING on PostgreSQL because
+        // the unnamed column becomes "count" on stdClass, not "COUNT(*)".
+        $ids = $all->pluck('id')->all();
+        if ($ids !== []) {
+            $activityCounts = DB::table('activities')
+                ->where('target_type', 'contact')
+                ->whereIn('target_id', $ids)
+                ->groupBy('target_id')
+                ->selectRaw('target_id, COUNT(*) as cnt')
+                ->pluck('cnt', 'target_id');
+
+            $dealCounts = DB::table('deal_contacts')
+                ->join('deals', 'deals.id', '=', 'deal_contacts.deal_id')
+                ->whereIn('deal_contacts.contact_id', $ids)
+                ->whereNull('deals.closed_at')
+                ->groupBy('deal_contacts.contact_id')
+                ->selectRaw('deal_contacts.contact_id, COUNT(*) as cnt')
+                ->pluck('cnt', 'contact_id');
+
+            foreach ($all as $contact) {
+                $contact->activities_count = (int) ($activityCounts[$contact->id] ?? 0);
+                $contact->open_deals_count = (int) ($dealCounts[$contact->id] ?? 0);
+            }
+        }
 
         // Build keyed map: id → model for fast lookup
         $byId = $all->keyBy('id');
@@ -305,13 +369,19 @@ class DedupService
     }
 
     /**
-     * Global company scan: groups companies by shared normalized email / phone / tax_id / name.
+     * Global company scan: groups companies by shared normalized email / phone / tax_id / name
+     * and current requisite account number.
      *
      * @return SupportCollection<int, array{key: string, entities: Collection<int, Company>}>
      */
     private function scanAllCompanies(User $user): SupportCollection
     {
-        $base = Company::query()->whereNull('deleted_at');
+        $base = Company::query()
+            ->whereNull('deleted_at')
+            ->with('currentRequisite')
+            ->withCount([
+                'contactLinks as company_links_count',
+            ]);
 
         if ($this->visibility->resolve($user) !== VisibilityScope::All) {
             $base->where(function ($q) use ($user): void {
@@ -322,6 +392,31 @@ class DedupService
 
         /** @var Collection<int, Company> $all */
         $all = $base->get();
+
+        // Attach activities_count and open_deals_count via separate aggregates to avoid
+        // cross-join cardinality issues with withCount on multiple hasMany relations.
+        // Use selectRaw with an explicit alias — see scanAllContacts for the full rationale.
+        $ids = $all->pluck('id')->all();
+        if ($ids !== []) {
+            $activityCounts = DB::table('activities')
+                ->where('target_type', 'company')
+                ->whereIn('target_id', $ids)
+                ->groupBy('target_id')
+                ->selectRaw('target_id, COUNT(*) as cnt')
+                ->pluck('cnt', 'target_id');
+
+            $dealCounts = DB::table('deals')
+                ->whereIn('company_id', $ids)
+                ->whereNull('closed_at')
+                ->groupBy('company_id')
+                ->selectRaw('company_id, COUNT(*) as cnt')
+                ->pluck('cnt', 'company_id');
+
+            foreach ($all as $company) {
+                $company->activities_count = (int) ($activityCounts[$company->id] ?? 0);
+                $company->open_deals_count = (int) ($dealCounts[$company->id] ?? 0);
+            }
+        }
 
         $byId = $all->keyBy('id');
 
@@ -361,6 +456,15 @@ class DedupService
             ->filter(fn ($g): bool => $g->count() > 1)
             ->each(function ($g, string $key) use (&$raw): void {
                 $raw[] = ['key' => 'name:'.$key, 'ids' => $g->pluck('id')->all()];
+            });
+
+        // Group by current requisite account number (bank_details->>'account')
+        // Companies sharing the same bank account are likely duplicates.
+        $all->filter(fn (Company $c): bool => $this->extractRequisiteAccount($c) !== null)
+            ->groupBy(fn (Company $c): string => mb_strtolower(trim((string) $this->extractRequisiteAccount($c))))
+            ->filter(fn ($g, string $k): bool => $g->count() > 1 && $k !== '')
+            ->each(function ($g, string $key) use (&$raw): void {
+                $raw[] = ['key' => 'requisite_account:'.$key, 'ids' => $g->pluck('id')->all()];
             });
 
         $dismissed = $this->dismissedPairsForScope('company', $byId->keys()->all());
@@ -792,6 +896,110 @@ class DedupService
     private function normalizeName(string $name): string
     {
         return mb_strtolower(trim($name));
+    }
+
+    /**
+     * Extract the bank account number from a company's current requisite.
+     * Returns null if the company has no current requisite or no account number.
+     */
+    private function extractRequisiteAccount(Company $company): ?string
+    {
+        $req = $company->currentRequisite;
+        if ($req === null) {
+            return null;
+        }
+
+        $bankDetails = $req->bank_details;
+        if (! is_array($bankDetails)) {
+            return null;
+        }
+
+        $account = $bankDetails['account'] ?? null;
+
+        return (is_string($account) && trim($account) !== '') ? trim($account) : null;
+    }
+
+    /**
+     * Validate field_overrides: keys must be in the whitelist for the scope,
+     * values must be one of master_id or duplicate_ids.
+     *
+     * @param  int[]  $duplicateIds
+     * @param  array<string, int>  $fieldOverrides
+     */
+    private function assertFieldOverrides(string $scope, int $masterId, array $duplicateIds, array $fieldOverrides): void
+    {
+        $whitelist = match ($scope) {
+            'contact' => MergeDedupRequest::CONTACT_OVERRIDABLE_FIELDS,
+            'company' => MergeDedupRequest::COMPANY_OVERRIDABLE_FIELDS,
+            default => [],
+        };
+
+        $allIds = array_merge([$masterId], $duplicateIds);
+
+        foreach ($fieldOverrides as $key => $sourceId) {
+            if (! in_array($key, $whitelist, true)) {
+                throw new InvalidArgumentException(
+                    "Field '{$key}' is not overridable for scope '{$scope}'."
+                );
+            }
+            if (! in_array((int) $sourceId, $allIds, true)) {
+                throw new InvalidArgumentException(
+                    "field_overrides source ID {$sourceId} for field '{$key}' is not one of the participating entities."
+                );
+            }
+        }
+    }
+
+    /**
+     * Apply per-field overrides to the master record AFTER all child data has
+     * been transferred. For each entry in $fieldOverrides, load the indicated
+     * source entity (master or a now-soft-deleted dup) and copy that field's
+     * value onto the master.
+     *
+     * Note: dup records have been soft-deleted by mergeContact/mergeCompany at this
+     * point, so we use withTrashed() to still read their field values.
+     *
+     * @param  int[]  $duplicateIds
+     * @param  array<string, int>  $fieldOverrides
+     */
+    private function applyFieldOverrides(string $scope, int $masterId, array $duplicateIds, array $fieldOverrides): void
+    {
+        if ($fieldOverrides === []) {
+            return;
+        }
+
+        // Build a map: entity_id → model (withTrashed for dups that were just soft-deleted)
+        $allIds = array_unique(array_merge([$masterId], $duplicateIds));
+
+        /** @var Collection<int, Model> $sources */
+        $sources = match ($scope) {
+            'contact' => Contact::withTrashed()->whereIn('id', $allIds)->get()->keyBy('id'),
+            'company' => Company::withTrashed()->whereIn('id', $allIds)->get()->keyBy('id'),
+        };
+
+        $master = $sources->get($masterId);
+        if ($master === null) {
+            return;
+        }
+
+        $updates = [];
+        foreach ($fieldOverrides as $field => $sourceId) {
+            $source = $sources->get((int) $sourceId);
+            if ($source === null) {
+                continue;
+            }
+
+            // Only update if the source has a non-null, non-empty value for this field.
+            // This prevents overwriting a master's populated field with an empty one.
+            $value = $source->getAttribute($field);
+            if ($value !== null && $value !== '') {
+                $updates[$field] = $value;
+            }
+        }
+
+        if ($updates !== []) {
+            $master->update($updates);
+        }
     }
 
     private function assertScope(string $scope): void

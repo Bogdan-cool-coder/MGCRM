@@ -1318,45 +1318,57 @@
   "dedup": {
     "dialog": {
       "title": "Deduplication",
-      "titleWithCount": "Deduplication — {count} duplicate groups",
+      "titleWithCount": "Groups found: {count}",
       "scan": {
         "title": "Find duplicates",
         "type": {
           "company": "Companies",
           "contact": "Individuals"
         },
-        "button": "Scan for duplicates",
-        "scanning": "Scanning...",
+        "button": "Scan",
+        "scanning": "Searching for duplicates…",
         "empty": "No duplicates found",
-        "emptySubtitle": "Your database is clean",
+        "emptySubtitle": "All records are unique",
         "error": "Scan error"
       },
       "candidates": {
-        "group": "Group {n}: {name} ({count} records)",
+        "group": "Group {n} — \"{name}\" ({count} records)",
         "merge": "Merge",
         "notDuplicate": "Not a duplicate",
+        "notDuplicatePairs": "Not a duplicate — select pair",
         "columns": {
           "id": "ID",
           "name": "Name",
-          "key": "Tax ID / Email",
+          "key": "Key",
           "createdAt": "Created"
         }
       },
       "merge": {
         "title": "Merge records",
-        "masterLabel": "Select the master record (ID will be kept, others will be deleted):",
-        "wholeRecordNote": "Merge is whole-record — all data comes from the master record.",
-        "goldenLabel": "Select the golden record (this ID will be kept):",
-        "fieldsLabel": "Field preview:",
-        "warning": "After merging, records ID {id} will be deleted",
+        "titleBulk": "Merge {count} records",
+        "back": "← Back",
+        "masterLabel": "Select master record",
+        "fieldsLabel": "Select source for each field",
+        "appendLabel": "Will be added to master",
+        "deleteLabel": "Will be deleted after merge",
+        "appendChannelsDupNote": "Channels that duplicate existing ones will be skipped",
+        "deleteWarning": "These records will be permanently deleted after merge.",
+        "phones": "Phones",
+        "emails": "Emails",
+        "dealLinks": "Deal links",
+        "companyLinks": "Company links",
+        "activities": "Activities / event feed",
+        "uniqueOf": "{unique} unique ({skipped} skipped)",
+        "submit": "Merge",
+        "success": "Records merged",
+        "error": "Merge error",
+        "warning": "Will delete records: ID {id}",
+        "wholeRecordNote": "Choose source for each field or keep master values",
+        "dismissSuccess": "Pair marked as not a duplicate",
+        "openCard": "Open card",
         "columns": {
           "field": "Field"
-        },
-        "back": "Back",
-        "submit": "Merge records",
-        "success": "Records merged successfully",
-        "dismissSuccess": "Group marked as not duplicate",
-        "error": "Merge error"
+        }
       }
     }
   },
@@ -4305,5 +4317,9 @@
       "account": "Fallback account",
       "defaultBank": "Fallback account (no per-currency)"
     }
+  },
+  "contacts_bulk": {
+    "mergeHint": "Select 2 or more records",
+    "mergeHintMax": "Recommended: up to 5 records"
   }
 }

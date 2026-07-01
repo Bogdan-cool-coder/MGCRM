@@ -50,15 +50,15 @@
       @click="emit('addTag')"
     />
 
-    <!-- Merge — active only when exactly 2 selected -->
+    <!-- Merge — active when 2 or more selected (bulk supports N records) -->
     <Button
       icon="pi pi-copy"
       :label="t('crm.contacts_page.bulk.merge')"
       severity="secondary"
       outlined
       size="small"
-      :disabled="selectedCount !== 2"
-      :title="selectedCount !== 2 ? t('contacts_bulk.mergeHint', 'Выберите ровно 2 записи') : ''"
+      :disabled="selectedCount < 2"
+      :title="selectedCount < 2 ? t('contacts_bulk.mergeHint') : selectedCount > 5 ? t('contacts_bulk.mergeHintMax') : ''"
       @click="emit('merge')"
     />
 

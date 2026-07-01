@@ -102,6 +102,7 @@ class DedupController extends Controller
             $data['master_id'],
             $data['duplicate_ids'],
             $request->user(),
+            $data['field_overrides'] ?? [],
         );
 
         return response()->json(['message' => 'Merge completed.']);

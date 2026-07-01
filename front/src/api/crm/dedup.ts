@@ -14,6 +14,8 @@ export interface DedupMergePayload {
   scope: DedupScope
   master_id: number
   duplicate_ids: number[]
+  /** Per-field source selection: { fieldKey: sourceEntityId } */
+  field_overrides?: Record<string, number>
 }
 
 export interface DedupDismissPayload {

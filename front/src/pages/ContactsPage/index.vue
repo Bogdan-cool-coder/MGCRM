@@ -701,7 +701,15 @@
     </Drawer>
 
     <!-- ── Dedup dialog ────────────────────────────────────────────────────── -->
-    <MergeDialog v-model:visible="dedupOpen" @merged="load" />
+    <MergeDialog v-model:visible="dedupOpen" mode="dedup" @merged="load" />
+    <!-- ── Bulk merge dialog ─────────────────────────────────────────────── -->
+    <MergeDialog
+      v-model:visible="bulkMergeOpen"
+      mode="bulk"
+      :bulk-entities="bulkMergeEntities"
+      :entity-type="entityType"
+      @merged="onBulkMerged"
+    />
 
     <!-- ── Bulk dialogs ────────────────────────────────────────────────────── -->
     <ContactsAssignOwnerDialog
@@ -964,9 +972,25 @@ const hasDuplicateHint = computed(
 
 // ── Merge (dedup segment) ─────────────────────────────────────────────────────
 
+// Bulk-merge: entries are the selected contacts/companies cast as DedupCandidate
+const bulkMergeOpen = ref(false)
+const bulkMergeEntities = ref<import('@/entities/crm').DedupCandidate[]>([])
+
 function onMergeClick() {
-  if (bulk.selectedCount.value !== 2) return
-  openDedup()
+  if (bulk.selectedCount.value < 2) return
+  // Cast selected items to DedupCandidate shape (they have id, name/full_name, email, phone)
+  bulkMergeEntities.value = items.value
+    .filter((i) => bulk.selectedIds.value.has(i.id))
+    .map((i) => ({
+      ...i,
+      type: entityType.value,
+    })) as import('@/entities/crm').DedupCandidate[]
+  bulkMergeOpen.value = true
+}
+
+function onBulkMerged() {
+  bulk.exitBulk()
+  void load()
 }
 
 // ── Paginator callbacks ───────────────────────────────────────────────────────

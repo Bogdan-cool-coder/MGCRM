@@ -177,20 +177,43 @@ export interface ContactCompanyLink {
 
 export type DedupScope = 'company' | 'contact'
 
+export interface DedupChannel {
+  type: string
+  value: string
+}
+
 export interface DedupCandidate {
   id: number
   type: DedupScope
+  created_at: string | null
+  // Aggregate counters (from global scan, 0 for per-entity)
+  open_deals_count?: number
+  company_links_count?: number
+  activities_count?: number
+  // Channel list
+  channels?: DedupChannel[]
   // Contact fields
   full_name?: string
   email?: string | null
   phone?: string | null
+  tg_username?: string | null
   source?: string | null
   status?: string | null
+  notes?: string | null
+  position?: string | null
   // Company fields
   name?: string
   legal_name?: string | null
+  short_name?: string | null
   tax_id?: string | null
-  created_at: string | null
+  city?: string | null
+  address?: string | null
+  website?: string | null
+  // Company requisite (from scan)
+  requisite_account?: string | null
+  requisite_bank_code?: string | null
+  requisite_bank_name?: string | null
+  requisite_label?: string | null
 }
 
 export interface DedupGroup {

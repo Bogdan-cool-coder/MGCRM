@@ -120,6 +120,16 @@
   (D) набросок админ-сброса пароля в «Пользователи» (разовый показ, Copy-кнопка).
   Pending: ОВ-3 (1 пункт vs 4 в сайдбаре — апрув PM) + ОВ-1 (backend POST /api/me/password).
 
+### Обновление 2026-07-01 — Единое окно объединения MergeDialog 2.0 (ТЗ готово, в очереди)
+- **MergeDialog 2.0 (`Dedup-Merge-spec.md`)** — ТЗ написано. Два режима одного компонента:
+  `mode='dedup'` (скан → группы → merge) и `mode='bulk'` (сразу merge из выбранных N записей).
+  Ключевые изменения vs текущего: per-field RadioButton в таблице полей (`fieldOverrides`),
+  append-блок дочерних коллекций (всегда, без выбора), delete-блок с перечнем удаляемых,
+  drill-in в карточку (`target="_blank"`) из любого шага, per-pair «Не дубль» с Popover для
+  групп 3+. Bulk-вход снимает ограничение `selectedCount === 2` → `>= 2`. 3 backend-блокера
+  (aggregates в scan, `field_overrides` в merge endpoint, per-pair dismiss). Диалог расширен
+  до 860px. Незакоммичено, ждёт backend-блокеров B-1/B-2.
+
 ### Обновление 2026-06-30 — Settings dirty-guard РЕАЛИЗОВАН (QA PASS 5 сценариев, PM APPROVED)
 - **Confirm-on-leave** — полностью реализован кастомным диалогом. Причина phantom'а: `ConfirmService` держал глобальный реактивный стейт и переотрисовывался на destination-компоненте во время async-навигации. Заменено на `UnsavedChangesDialog.vue` (PrimeVue `<Dialog>`, не `useConfirm`) + Promise-based guard в `useSettings.ts`. Один `onBeforeRouteLeave` (return-форма); `setSection()` перехватывает грязность до `router.replace`; `dialogVisible` закрывается явно до `resolve()`. `markDirty`/`markClean` восстановлены как реальные сеттеры. QA PASS: 5 сценариев, обе темы, DOM-счётчик 1 диалог. Незакоммичено.
 
