@@ -168,6 +168,26 @@ class SalesPulseDemoSeederTest extends TestCase
         $this->assertSame($historyAfterFirst, DealStageHistory::query()->count());
     }
 
+    public function test_seeder_is_idempotent_across_calendar_days_and_boundary(): void
+    {
+        // Boundary "now" where today-3h lands on the previous calendar day.
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-02 01:00:00', 'Asia/Dubai'));
+        $this->seedAll();
+        $first = DealStageHistory::query()->count();
+        $this->assertSame(30, $first);
+
+        // Same-day re-run.
+        $this->seed(SalesPulseDemoSeeder::class);
+        $this->assertSame($first, DealStageHistory::query()->count());
+
+        // Next-day re-run — the original failure mode.
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-03 12:00:00', 'Asia/Dubai'));
+        $this->seed(SalesPulseDemoSeeder::class);
+        $this->assertSame($first, DealStageHistory::query()->count());
+
+        CarbonImmutable::setTestNow();
+    }
+
     public function test_no_op_when_amo_funnels_absent(): void
     {
         // Only roles seeded — no AMO funnels. The seeder must return cleanly.

@@ -39,7 +39,8 @@ use Illuminate\Support\Facades\Hash;
  * the day window the bot collects.
  *
  * Idempotency: deals keyed by stable title, activities by (title, target, manager),
- * stage-history by (deal, to_stage, day). Re-running does not duplicate. Depends on
+ * stage-history by the STABLE (deal, to_stage) pair — day-independent so re-running
+ * on any later calendar day does not duplicate. Depends on
  * AmoPipelineSeeder (funnels + stages). Managers are reused from ManagerKpiSeeder
  * by email, or created here if that seeder has not run.
  *
@@ -222,7 +223,7 @@ class SalesPulseDemoSeeder extends Seeder
     /**
      * Today's stage transitions for the announcer / metrics: forward moves on open
      * deals, a downgrade into cold, a move into lost, a move into won. Keyed by
-     * (deal, to_stage, today) so re-running does not duplicate.
+     * the stable (deal, to_stage) pair so re-running on any day does not duplicate.
      */
     private function seedStageHistory(Deal $deal, PipelineStage $stage, User $manager, array $stagesByCode, CarbonImmutable $today): void
     {
@@ -231,10 +232,19 @@ class SalesPulseDemoSeeder extends Seeder
         // stages we use a one-step-earlier stage when available.
         $from = $this->priorStage($stage, $stagesByCode);
 
+        // Idempotency key is the STABLE (deal, to_stage) pair — NOT scoped to the
+        // seed day. The row is written with created_at = today − 3h, so a day-scoped
+        // guard misses its own prior row on a next-day re-run and duplicates. Deals
+        // are keyed by a stable title (created once), so one transition per
+        // (deal, to_stage) is the correct invariant across any number of re-runs.
+        // Idempotency key is the STABLE (deal, to_stage) pair — NOT scoped to the
+        // seed day. The row is written with created_at = today − 3h, so a day-scoped
+        // guard misses its own prior row on a next-day re-run and duplicates. Deals
+        // are keyed by a stable title (created once), so one transition per
+        // (deal, to_stage) is the correct invariant across any number of re-runs.
         $exists = DealStageHistory::query()
             ->where('deal_id', $deal->id)
             ->where('to_stage_id', $stage->id)
-            ->whereBetween('created_at', [$today->startOfDay(), $today->endOfDay()])
             ->exists();
 
         if ($exists) {
