@@ -295,6 +295,10 @@ async function copySecret(): Promise<void> {
 .login-field__error {
   font-size: $font-size-xs;
   color: $red-700;
+
+  .app-dark & {
+    color: var(--p-red-400);
+  }
 }
 
 .totp-manage-confirm {

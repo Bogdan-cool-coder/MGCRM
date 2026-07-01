@@ -407,11 +407,14 @@ const currentQuickActions = computed(() =>
   }
 }
 
-// Theme SelectButton dark override — must use .app-dark & idiom (not :global)
-.app-dark & :deep(.theme-selectbtn .p-togglebutton.p-togglebutton-checked) {
-  background: var(--p-primary-color);
-  color: var(--p-primary-contrast-color);
-  border-color: var(--p-primary-color);
+// Theme SelectButton dark override — scoped under .section-appearance so Vue
+// can attach the scope attribute correctly
+.section-appearance {
+  .app-dark & :deep(.theme-selectbtn .p-togglebutton.p-togglebutton-checked) {
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    border-color: var(--p-primary-color);
+  }
 }
 
 // Save bar

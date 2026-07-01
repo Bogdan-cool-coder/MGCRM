@@ -76,7 +76,7 @@
         <!-- Sending indicator -->
         <div v-if="isSending" class="d-flex align-items-center gap-2 mt-2">
           <ProgressSpinner style="width: 24px; height: 24px" strokeWidth="4" />
-          <span class="text-muted ai-tutor-drawer__thinking-text">Думаю...</span>
+          <span class="text-muted ai-tutor-drawer__thinking-text">{{ t('onboarding.coursePage.aiTutor.thinking') }}</span>
         </div>
       </template>
     </div>

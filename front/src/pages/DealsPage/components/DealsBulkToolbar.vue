@@ -129,8 +129,9 @@ function onSelectAllChange() {
   flex-wrap: wrap;
 
   .app-dark & {
-    background: rgba(23, 39, 71, 0.25);
-    border-bottom-color: rgba(23, 39, 71, 0.5);
+    // brand primary tint on dark surface — use color-mix instead of raw rgba
+    background: color-mix(in srgb, var(--p-primary-900) 20%, var(--p-surface-100));
+    border-bottom-color: color-mix(in srgb, var(--p-primary-900) 40%, var(--p-surface-200));
   }
 }
 

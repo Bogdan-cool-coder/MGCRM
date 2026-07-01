@@ -704,7 +704,8 @@
     "noData": "No data",
     "accessDenied": "Access denied",
     "errorLoad": "Failed to load data",
-    "email": "Email"
+    "email": "Email",
+    "locale": "en-US"
   },
   "contacts": {
     "page": {
@@ -1931,7 +1932,8 @@
           "daysInWork": "Days in progress",
           "plannedContract": "Planned contract",
           "plannedPayment": "Planned payment",
-          "changeCompany": "Change company"
+          "changeCompany": "Change company",
+          "companyDeleted": "Company deleted"
         },
         "groups": {
           "products": "Products",
@@ -2882,7 +2884,8 @@
         "title": "Assignments",
         "count": "{n} employees",
         "assign": "+ Assign employees",
-        "empty": "Not assigned to anyone"
+        "empty": "Not assigned to anyone",
+        "more": "... {n} more"
       },
       "metaCard": {
         "created": "Created",
@@ -3029,8 +3032,10 @@
         "emptyHistory": "History is empty",
         "unavailable": "AI is temporarily unavailable",
         "unavailableDetail": "Please try again in a few seconds.",
-        "adminViewOnly": "You are viewing someone else's assignment"
-      }
+        "adminViewOnly": "You are viewing someone else's assignment",
+        "thinking": "Thinking..."
+      },
+      "selectLesson": "Select a lesson from the list on the left"
     },
     "certificates": {
       "title": "My certificates",
@@ -3523,7 +3528,8 @@
         "calendarSync": "Sync with calendar",
         "exportCsv": "Export to CSV",
         "comingSoon": "Coming soon"
-      }
+      },
+      "overdueLabel": "{n} overdue"
     },
     "bulk": {
       "cancel": "Cancel",
@@ -3548,7 +3554,8 @@
         "tomorrow": "",
         "this_week": "",
         "next_week": "",
-        "later": "in 2+ weeks"
+        "later": "in 2+ weeks",
+        "until": "until {date}"
       }
     },
     "quickCreate": {

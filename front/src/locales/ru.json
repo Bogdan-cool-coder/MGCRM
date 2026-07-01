@@ -704,7 +704,8 @@
     "noData": "Нет данных",
     "accessDenied": "Доступ запрещён",
     "errorLoad": "Не удалось загрузить данные",
-    "email": "Email"
+    "email": "Email",
+    "locale": "ru-RU"
   },
   "contacts": {
     "page": {
@@ -1931,7 +1932,8 @@
           "daysInWork": "Дней в работе",
           "plannedContract": "План договора",
           "plannedPayment": "План оплаты",
-          "changeCompany": "Изменить компанию"
+          "changeCompany": "Изменить компанию",
+          "companyDeleted": "Компания удалена"
         },
         "groups": {
           "products": "Продукты",
@@ -2882,7 +2884,8 @@
         "title": "Назначения",
         "count": "{n} сотрудников",
         "assign": "+ Назначить сотрудников",
-        "empty": "Никому не назначен"
+        "empty": "Никому не назначен",
+        "more": "... ещё {n}"
       },
       "metaCard": {
         "created": "Создан",
@@ -3029,8 +3032,10 @@
         "emptyHistory": "История пуста",
         "unavailable": "AI временно недоступен",
         "unavailableDetail": "Попробуйте через несколько секунд.",
-        "adminViewOnly": "Вы просматриваете чужое назначение"
-      }
+        "adminViewOnly": "Вы просматриваете чужое назначение",
+        "thinking": "Думаю..."
+      },
+      "selectLesson": "Выберите урок из списка слева"
     },
     "certificates": {
       "title": "Мои сертификаты",
@@ -3523,7 +3528,8 @@
         "calendarSync": "Синхронизация с календарём",
         "exportCsv": "Экспорт в CSV",
         "comingSoon": "Скоро"
-      }
+      },
+      "overdueLabel": "{n} просрочено"
     },
     "bulk": {
       "cancel": "Отмена",
@@ -3548,7 +3554,8 @@
         "tomorrow": "",
         "this_week": "",
         "next_week": "",
-        "later": "через 2+ недели"
+        "later": "через 2+ недели",
+        "until": "до {date}"
       }
     },
     "quickCreate": {

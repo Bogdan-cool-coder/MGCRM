@@ -246,6 +246,8 @@ import { kindIcon, todayInOperationalTz, dateInOperationalTz } from '@/utils/act
 import { activityApi, type ReschedulePreset } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityTargetType } from '@/entities/activity'
 import TaskExpandedPanel from '@/components/crm/activity/TaskExpandedPanel.vue'
+import { taskKindChipStyle, TASK_KIND_COLORS } from '@/shared/taskKindColors'
+import { useThemeStore } from '@/stores/theme'
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
@@ -267,6 +269,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.theme === 'dark')
 
 const rootEl = ref<HTMLElement | null>(null)
 const expandedId = ref<number | null>(null)
@@ -466,32 +470,15 @@ function kindLabel(kind: ActivityKind): string {
   return t(keyMap[kind] ?? 'activity.kinds.task')
 }
 
-// Type chip style — background tint of kind color (DealCard §11)
-const KIND_COLORS: Partial<Record<ActivityKind, string>> = {
-  call: '#2A6FDB',
-  meeting: '#1F8A5B',
-  follow_up: '#E8A317',
-  presentation: '#E8A317',
-  task: '#172747',
-}
-
+// Type chip style — delegates to shared taskKindChipStyle (единый источник)
 function typeChipStyle(kind: ActivityKind): Record<string, string> {
-  const color = KIND_COLORS[kind]
-  if (!color) {
-    return {
-      background: 'var(--p-surface-100)',
-      color: 'var(--p-surface-500)',
-    }
-  }
-  return {
-    background: `color-mix(in srgb, ${color} 14%, var(--p-surface-50))`,
-    color: color,
-  }
+  return taskKindChipStyle(kind, isDark.value)
 }
 
 function formatDueDateShort(dateStr: string): string {
   const d = new Date(dateStr)
-  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const locale = t('common.locale')
+  return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 // ─── Overdue check (BUG B fix) ───────────────────────────────────────────────
@@ -514,7 +501,7 @@ function isTaskOverdue(task: ActivityDto): boolean {
 // ─── Task row border style (tinted to task type per spec §11) ────────────────
 
 function taskRowStyle(task: ActivityDto): Record<string, string> {
-  const color = KIND_COLORS[task.kind]
+  const color = TASK_KIND_COLORS[task.kind]
   const isExpanded = expandedId.value === task.id
   if (!color) {
     return {

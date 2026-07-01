@@ -80,7 +80,7 @@ defineEmits<{
 .org-node__name {
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
-  color: $surface-900;
+  color: var(--p-text-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -92,7 +92,7 @@ defineEmits<{
   align-items: center;
   gap: $space-1;
   font-size: $font-size-xs;
-  color: $surface-600;
+  color: var(--p-text-muted-color);
 
   i {
     font-size: $font-size-xs;

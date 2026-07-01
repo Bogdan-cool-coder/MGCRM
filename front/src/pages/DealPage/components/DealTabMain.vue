@@ -52,9 +52,10 @@
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.company') }}</span>
         <div class="deal-tab-main__quick-value deal-tab-main__quick-value--company" @click.stop>
           <div class="deal-tab-main__company-row">
-            <RouterLink :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
+            <RouterLink v-if="deal.company" :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
               {{ deal.company.name }}
             </RouterLink>
+            <span v-else class="deal-tab-main__company-deleted">{{ t('sales.deal.info.fields.companyDeleted') }}</span>
             <button
               class="deal-tab-main__company-edit-btn"
               type="button"
@@ -91,10 +92,10 @@
                   v-for="c in companyOptions"
                   :key="c.id"
                   class="deal-tab-main__owner-option"
-                  :class="{ 'deal-tab-main__owner-option--active': c.id === deal.company.id }"
+                  :class="{ 'deal-tab-main__owner-option--active': c.id === deal.company?.id }"
                   @click="selectCompany(c)"
                 >
-                  <i v-if="c.id === deal.company.id" class="pi pi-check deal-tab-main__owner-check" />
+                  <i v-if="c.id === deal.company?.id" class="pi pi-check deal-tab-main__owner-check" />
                   <span class="deal-tab-main__owner-option-name">{{ c.name }}</span>
                 </div>
                 <div v-if="!companySearching && companyOptions.length === 0" class="deal-tab-main__owner-empty">
@@ -396,7 +397,7 @@ function onCompanyQueryInput() {
 }
 
 async function selectCompany(c: { id: number; name: string }) {
-  if (c.id === props.deal.company.id) {
+  if (c.id === props.deal.company?.id) {
     companyPickerOpen.value = false
     return
   }
@@ -494,6 +495,7 @@ function onContactsUpdated(contacts: DealContactDto[]) {
 const companyFull = ref<Company | null>(null)
 
 async function loadCompanyFull() {
+  if (!props.deal.company) return
   try {
     companyFull.value = await companiesApi.get(props.deal.company.id)
   } catch {
@@ -581,8 +583,8 @@ onMounted(async () => {
   ])
 })
 
-watch(() => props.deal.company.id, (newId, oldId) => {
-  if (newId !== oldId) {
+watch(() => props.deal.company?.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
     void loadCompanyFull()
   }
 })
@@ -822,6 +824,17 @@ watch(() => props.deal.company.id, (newId, oldId) => {
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.deal-tab-main__company-deleted {
+  font-size: $font-size-sm;
+  color: $surface-400;
+  font-style: italic;
+  padding: $space-1 $space-2;
+
+  .app-dark & {
+    color: var(--p-surface-500);
   }
 }
 

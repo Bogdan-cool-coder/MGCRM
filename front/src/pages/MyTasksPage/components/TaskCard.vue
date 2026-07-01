@@ -408,26 +408,59 @@ function onCompleteBtn() {
   &--call {
     background: $task-tag-call-bg;
     color: $task-tag-call-text;
+
+    .app-dark & {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: color-mix(in srgb, #2A6FDB 18%, #444547);
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: color-mix(in srgb, white 55%, #2A6FDB);
+    }
   }
 
   &--meeting {
     background: $task-tag-meeting-bg;
     color: $task-tag-meeting-text;
+
+    .app-dark & {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: color-mix(in srgb, #1F8A5B 18%, #444547);
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: color-mix(in srgb, white 55%, #1F8A5B);
+    }
   }
 
   &--note {
     background: $task-tag-note-bg;
     color: $task-tag-note-text;
+
+    .app-dark & {
+      background: var(--p-surface-200);
+      color: var(--p-surface-400);
+    }
   }
 
   &--follow_up {
     background: $task-tag-follow-up-bg;
     color: $task-tag-follow-up-text;
+
+    .app-dark & {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: color-mix(in srgb, #E8A317 18%, #444547);
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: color-mix(in srgb, white 55%, #E8A317);
+    }
   }
 
   &--presentation {
     background: $task-tag-follow-up-bg;
     color: $task-tag-follow-up-text;
+
+    .app-dark & {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      background: color-mix(in srgb, #E8A317 18%, #444547);
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: color-mix(in srgb, white 55%, #E8A317);
+    }
   }
 }
 

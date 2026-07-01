@@ -244,6 +244,8 @@ import { RouterLink } from 'vue-router'
 import { kindIcon, todayInOperationalTz, dateInOperationalTz } from '@/utils/activity'
 import { activityApi } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityStatus, MyBoardActivityDto } from '@/entities/activity'
+import { taskKindChipStyle } from '@/shared/taskKindColors'
+import { useThemeStore } from '@/stores/theme'
 
 // ─── Props / emits ─────────────────────────────────────────────────────────────
 
@@ -265,6 +267,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.theme === 'dark')
 
 // dialog visibility (mode=dialog only) — keeps Dialog visible when parent controls it
 const dialogVisible = ref(true)
@@ -316,27 +320,7 @@ function resolveKindIcon(kind: ActivityKind | null | undefined): string {
 
 const resolvedKindIcon = computed(() => resolveKindIcon(props.task.kind))
 
-const KIND_COLORS: Partial<Record<ActivityKind, string>> = {
-  call: '#2A6FDB',
-  meeting: '#1F8A5B',
-  follow_up: '#E8A317',
-  presentation: '#E8A317',
-  task: '#172747',
-}
-
-const typeChipStyle = computed((): Record<string, string> => {
-  const color = KIND_COLORS[props.task.kind]
-  if (!color) {
-    return {
-      background: 'var(--p-surface-100)',
-      color: 'var(--p-surface-500)',
-    }
-  }
-  return {
-    background: `color-mix(in srgb, ${color} 14%, var(--p-surface-50))`,
-    color: color,
-  }
-})
+const typeChipStyle = computed((): Record<string, string> => taskKindChipStyle(props.task.kind, isDark.value))
 
 const kindLabel = computed((): string => {
   const kind = props.task.kind

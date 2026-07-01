@@ -80,7 +80,7 @@
 
           <div v-else class="p-4 text-muted text-center">
             <i class="pi pi-book-open course-page__empty-icon" />
-            <p class="mt-2">Выберите урок из списка слева</p>
+            <p class="mt-2">{{ t('onboarding.coursePage.selectLesson') }}</p>
           </div>
 
           <!-- AI tutor button (owner only, non-quiz lessons) -->

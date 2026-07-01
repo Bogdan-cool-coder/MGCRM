@@ -12,7 +12,7 @@
         MACRO Global ·
         <span>{{ totalCount }} {{ t('activity.myTasksPage.title').toLowerCase() }}</span>
         <template v-if="overdueCount > 0">
-          · <span class="tasks-top-bar__overdue-count">{{ overdueCount }} просрочено</span>
+          · <span class="tasks-top-bar__overdue-count">{{ t('tasks.topbar.overdueLabel', { n: overdueCount }) }}</span>
         </template>
       </p>
     </div>

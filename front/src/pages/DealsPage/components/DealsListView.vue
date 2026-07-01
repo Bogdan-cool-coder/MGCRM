@@ -542,7 +542,8 @@ function taskDateShort(dueAt: string | null): string {
     color: var(--p-red-700);
 
     .app-dark & {
-      background: rgba(200, 50, 50, 0.2);
+      // surface-100 in dark = #444547 (dark card) — tint with red via mix
+      background: color-mix(in srgb, var(--p-red-500) 18%, var(--p-surface-100));
       color: var(--p-red-300);
     }
   }
@@ -552,7 +553,7 @@ function taskDateShort(dueAt: string | null): string {
     color: var(--p-orange-900);
 
     .app-dark & {
-      background: rgba(200, 120, 30, 0.2);
+      background: color-mix(in srgb, var(--p-orange-500) 18%, var(--p-surface-100));
       color: var(--p-orange-300);
     }
   }

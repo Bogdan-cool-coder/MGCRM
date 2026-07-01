@@ -28,7 +28,7 @@
             <span class="assignment-row__pct">{{ a.progress_pct }}%</span>
           </div>
           <div v-if="assignments.length > 3" class="assignments-card__more">
-            <span class="text-muted">... ещё {{ assignments.length - 3 }}</span>
+            <span class="text-muted">{{ t('onboarding.builder.assignmentsCard.more', { n: assignments.length - 3 }) }}</span>
           </div>
         </div>
 

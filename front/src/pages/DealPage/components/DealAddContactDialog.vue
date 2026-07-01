@@ -107,7 +107,7 @@ interface ContactOption {
 const props = defineProps<{
   modelValue: boolean
   dealId: number
-  companyId: number
+  companyId: number | null
   onAdd: (dealId: number, payload: { contact_id: number; is_primary: boolean }) => Promise<DealContactDto>
 }>()
 
@@ -164,7 +164,7 @@ async function onComplete(query: string) {
     const result = await contactsApi.list({
       search: query,
       per_page: 15,
-      company_id: props.companyId,
+      company_id: props.companyId ?? undefined,
     })
     contactSuggestions.value = result.data as ContactOption[]
   } catch {

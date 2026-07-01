@@ -111,7 +111,7 @@ function onSelect(node: TreeNode) {
 .dept-tree__node-label {
   flex: 1;
   font-size: $font-size-sm;
-  color: $surface-900;
+  color: var(--p-text-color);
 }
 
 .dept-tree__node-meta {
@@ -119,7 +119,7 @@ function onSelect(node: TreeNode) {
   align-items: center;
   gap: $space-1;
   font-size: $font-size-xs;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
 
   i {
     font-size: $font-size-xs;
@@ -174,18 +174,18 @@ function onSelect(node: TreeNode) {
 .dept-tree__empty-icon {
   font-size: $font-size-3xl;
   opacity: 0.3;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
 }
 
 .dept-tree__empty-title {
   font-size: $font-size-base;
   font-weight: $font-weight-medium;
-  color: $surface-700;
+  color: var(--p-text-color);
 }
 
 .dept-tree__empty-hint {
   font-size: $font-size-sm;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
   max-width: 260px;
 }
 </style>

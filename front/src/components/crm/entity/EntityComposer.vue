@@ -145,6 +145,7 @@ import { useMutation } from '@/composables/async/useMutation'
 import SearchPicker from '@/components/crm/SearchPicker.vue'
 import DateField from '@/components/crm/DateField.vue'
 import type { ActivityDto, ActivityKind, ActivityPriority, CreateActivityPayload } from '@/entities/activity'
+import { taskKindColor } from '@/shared/taskKindColors'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -185,10 +186,10 @@ const errors = ref<{ title?: string; body?: string }>({})
 // ── Subtype options with colored icons ────────────────────────────────────────
 
 const taskSubtypeOptions = computed((): SubtypeOption[] => [
-  { value: 'task', label: t('sales.deal.composer.subtypes.task'), icon: 'pi-check-square', color: '#172747' },
-  { value: 'call', label: t('sales.deal.composer.subtypes.call'), icon: 'pi-phone', color: '#2A6FDB' },
-  { value: 'meeting', label: t('sales.deal.composer.subtypes.meeting'), icon: 'pi-calendar', color: '#1F8A5B' },
-  { value: 'follow_up', label: t('sales.deal.composer.subtypes.follow_up'), icon: 'pi-replay', color: '#E8A317' },
+  { value: 'task', label: t('sales.deal.composer.subtypes.task'), icon: 'pi-check-square', color: taskKindColor('task') },
+  { value: 'call', label: t('sales.deal.composer.subtypes.call'), icon: 'pi-phone', color: taskKindColor('call') },
+  { value: 'meeting', label: t('sales.deal.composer.subtypes.meeting'), icon: 'pi-calendar', color: taskKindColor('meeting') },
+  { value: 'follow_up', label: t('sales.deal.composer.subtypes.follow_up'), icon: 'pi-replay', color: taskKindColor('follow_up') },
 ])
 
 const currentSubtype = computed(() =>
@@ -196,7 +197,7 @@ const currentSubtype = computed(() =>
 )
 const currentSubtypeLabel = computed(() => currentSubtype.value?.label ?? '')
 const currentSubtypeIcon = computed(() => currentSubtype.value?.icon ?? '')
-const currentSubtypeColor = computed(() => currentSubtype.value?.color ?? '#172747')
+const currentSubtypeColor = computed(() => currentSubtype.value?.color ?? taskKindColor('task'))
 
 const resolvedUsersList = computed(() => props.usersList ?? [])
 

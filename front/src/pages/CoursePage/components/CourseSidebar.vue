@@ -54,7 +54,7 @@ const { t } = useI18n()
 function lessonStatusIcon(lesson: Lesson): string {
   if (props.completedIds.has(lesson.id)) return 'pi pi-check-circle text-success'
   if (lesson.id === props.currentLessonId) return 'pi pi-play text-primary'
-  return 'pi pi-circle text-surface-400'
+  return 'pi pi-circle course-sidebar__lesson-status--pending'
 }
 
 const KIND_ICONS: Record<LessonKind, string> = {
@@ -123,6 +123,10 @@ function kindIcon(kind: LessonKind): string {
   &__lesson-status {
     font-size: $font-size-sm;
     flex-shrink: 0;
+
+    &--pending {
+      color: var(--p-surface-400);
+    }
   }
 
   &__lesson-kind {

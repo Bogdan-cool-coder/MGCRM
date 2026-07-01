@@ -228,7 +228,7 @@ function roleSeverity(role: UserRole): 'info' | 'success' | 'warn' | 'danger' | 
 .dept-panel__title {
   font-size: $font-size-base;
   font-weight: $font-weight-semibold;
-  color: $surface-900;
+  color: var(--p-text-color);
 }
 
 .dept-panel__body {

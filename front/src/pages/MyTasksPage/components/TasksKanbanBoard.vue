@@ -105,6 +105,7 @@ import type { TaskScope, TaskBucket } from '../composables/useTaskBoard'
 import { OPERATIONAL_TZ } from '@/utils/activity'
 import type { MyBoardBucket, MyBoardActivityDto } from '@/entities/activity'
 import type { ActivityDto } from '@/entities/activity'
+import { TASK_BUCKET_COLORS } from '@/shared/taskKindColors'
 
 const props = defineProps<{
   scope: TaskScope
@@ -132,15 +133,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-// ── Bucket colors (spec §0) ────────────────────────────────────────────────────
-const BUCKET_COLORS: Record<MyBoardBucket, string> = {
-  overdue: '#FF5A44',
-  today: '#EF9F27',
-  tomorrow: '#378ADD',
-  this_week: '#7F77DD',
-  next_week: '#1D9E75',
-  later: '#6B7280',
-}
+// ── Bucket colors (из shared/taskKindColors — единый источник) ─────────────────
+const BUCKET_COLORS = TASK_BUCKET_COLORS
 
 // ── Scope → visible buckets ────────────────────────────────────────────────────
 const ALL_BUCKETS: MyBoardBucket[] = ['overdue', 'today', 'tomorrow', 'this_week', 'next_week', 'later']
@@ -169,9 +163,11 @@ const visibleBuckets = computed(() => {
 // ── Meta line (spec §5.1) ──────────────────────────────────────────────────────
 function bucketMeta(key: MyBoardBucket): string {
   if (key === 'overdue') return t('tasks.kanban.bucketMeta.overdue')
+  if (key === 'later') return t('tasks.kanban.bucketMeta.later')
 
+  // Use locale from i18n so bucket meta is locale-aware (не захардкожено ru-RU)
+  const locale = t('common.locale')
   const now = new Date()
-  const locale = 'ru-RU'
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'short', timeZone: OPERATIONAL_TZ }
 
   if (key === 'today') {
@@ -182,12 +178,11 @@ function bucketMeta(key: MyBoardBucket): string {
     return new Intl.DateTimeFormat(locale, opts).format(d)
   }
   if (key === 'this_week') {
-    // "до {end of week}"
     const dayIdx = now.getDay() // 0=Sun
     const daysToSunday = dayIdx === 0 ? 0 : 7 - dayIdx
     const sun = new Date(now.getTime() + daysToSunday * 86_400_000)
     const d = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: OPERATIONAL_TZ }).format(sun)
-    return `до ${d}`
+    return t('tasks.kanban.bucketMeta.until', { date: d })
   }
   if (key === 'next_week') {
     const dayIdx = now.getDay()
@@ -196,9 +191,6 @@ function bucketMeta(key: MyBoardBucket): string {
     const nextSun = new Date(nextMon.getTime() + 6 * 86_400_000)
     const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: OPERATIONAL_TZ }).format(d)
     return `${fmt(nextMon)} – ${fmt(nextSun)}`
-  }
-  if (key === 'later') {
-    return t('tasks.kanban.bucketMeta.later')
   }
   return ''
 }

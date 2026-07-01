@@ -140,6 +140,11 @@ const subLine = computed(() => {
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
+
+  .app-dark & {
+    // navy primary is invisible on dark surfaces — use light primary-300
+    color: var(--p-primary-300);
+  }
 }
 
 .deal-product-row__amount-original {

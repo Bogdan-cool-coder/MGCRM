@@ -275,7 +275,7 @@
       v-if="deal"
       v-model="addContactDialogOpen"
       :deal-id="deal.id"
-      :company-id="deal.company.id"
+      :company-id="deal.company?.id ?? null"
       :on-add="addContactProxy"
       @added="onContactAdded"
     />
