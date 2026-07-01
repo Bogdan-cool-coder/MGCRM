@@ -40,6 +40,7 @@ use App\Http\Controllers\Crm\Admin\ContactPositionController;
 use App\Http\Controllers\Crm\Admin\CountryController;
 use App\Http\Controllers\Crm\Admin\DisconnectReasonController;
 use App\Http\Controllers\Crm\Admin\SourceController;
+use App\Http\Controllers\Crm\Admin\TagController;
 use App\Http\Controllers\Crm\CompanyBulkController;
 use App\Http\Controllers\Crm\CompanyChannelController;
 use App\Http\Controllers\Crm\CompanyClientStatusController;
@@ -432,6 +433,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::get('acquisition-channels/{acquisitionChannel}', [AcquisitionChannelController::class, 'show'])->name('acquisition-channels.show');
         Route::get('disconnect-reasons', [DisconnectReasonController::class, 'index'])->name('disconnect-reasons.index');
         Route::get('disconnect-reasons/{disconnectReason}', [DisconnectReasonController::class, 'show'])->name('disconnect-reasons.show');
+        Route::get('tags', [TagController::class, 'index'])->name('tags.index');
+        Route::get('tags/{tag}', [TagController::class, 'show'])->name('tags.show');
     });
 
     Route::prefix('admin')->middleware('can:admin-write')->name('admin.')->group(function (): void {
@@ -503,6 +506,8 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::apiResource('disconnect-reasons', DisconnectReasonController::class)
             ->only(['store', 'update', 'destroy'])
             ->parameter('disconnect-reasons', 'disconnectReason');
+        Route::apiResource('tags', TagController::class)
+            ->only(['store', 'update', 'destroy']);
     });
 
     // =========================================================================

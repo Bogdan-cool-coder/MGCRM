@@ -291,6 +291,10 @@
         "title": "Countries",
         "desc": "Country and phone prefix reference"
       },
+      "tags": {
+        "title": "Tags",
+        "desc": "Tag dictionary for deals, contacts and companies"
+      },
       "acq-channels": {
         "title": "Acquisition channels",
         "desc": "Lead source dictionary"
@@ -459,6 +463,7 @@
       "sectionDesc": "Manage system directories",
       "tabs": {
         "countries": "Countries",
+        "tags": "Tags",
         "acqChannels": "Acquisition Channels",
         "discReasons": "Disconnect Reasons",
         "catalog": "Catalog",
@@ -641,6 +646,41 @@
       },
       "errors": {
         "codeRequired": "Enter ISO code (2 letters)"
+      }
+    },
+    "tags": {
+      "title": "Tags",
+      "add": "Add tag",
+      "edit": "Edit tag",
+      "empty": "No tags added",
+      "deleteConfirm": "Delete tag \"{name}\"?",
+      "deleteBlockedTitle": "Cannot delete",
+      "deleteBlockedDetail": "This tag is used in deals, contacts or companies. Deactivate it instead of deleting.",
+      "columns": {
+        "name": "Name",
+        "color": "Color",
+        "scope": "Scope",
+        "sortOrder": "Order",
+        "isActive": "Active"
+      },
+      "fields": {
+        "name": "Name *",
+        "color": "Color (HEX)",
+        "colorNone": "No color",
+        "colorClear": "Clear color",
+        "scope": "Scope",
+        "scopePlaceholder": "Universal (all)",
+        "sortOrder": "Sort order",
+        "isActive": "Active"
+      },
+      "scopes": {
+        "all": "Universal",
+        "deal": "Deals",
+        "contact": "Contacts",
+        "company": "Companies"
+      },
+      "errors": {
+        "colorFormat": "Enter color in #RRGGBB format"
       }
     }
   },

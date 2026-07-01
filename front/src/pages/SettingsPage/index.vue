@@ -151,6 +151,7 @@ const mobileSectionOptions = computed(() => {
   if (isAdminOrDirector) {
     base.push(
       { value: 'countries',       label: t('settings.sections.countries.title') },
+      { value: 'tags',            label: t('settings.sections.tags.title') },
       { value: 'acq-channels',    label: t('settings.sections.acq-channels.title') },
       { value: 'disc-reasons',    label: t('settings.sections.disc-reasons.title') },
       { value: 'catalog',         label: t('settings.sections.catalog.title') },

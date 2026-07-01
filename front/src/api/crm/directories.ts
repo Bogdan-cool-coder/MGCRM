@@ -7,6 +7,8 @@ import type {
   ContactPosition,
   AcquisitionChannel,
   DisconnectReason,
+  Tag,
+  TagScope,
 } from '@/entities/crm'
 
 export const directoriesApi = {
@@ -123,5 +125,36 @@ export const directoriesApi = {
 
   async deleteDisconnectReason(id: number): Promise<void> {
     await apiClient.delete(`/api/admin/disconnect-reasons/${id}`)
+  },
+
+  // ── Tags ──────────────────────────────────────────────────────────────────────
+
+  async getTags(params: { active_only?: boolean; scope?: TagScope; q?: string } = {}): Promise<Tag[]> {
+    const res = await apiClient.get<{ data: Tag[] }>('/api/admin/tags', { params })
+    return res.data.data ?? []
+  },
+
+  async getTag(id: number): Promise<Tag> {
+    const res = await apiClient.get<{ data: Tag }>(`/api/admin/tags/${id}`)
+    return res.data.data
+  },
+
+  async createTag(
+    data: { name: string; color?: string | null; scope?: TagScope | null; sort_order?: number; is_active?: boolean },
+  ): Promise<Tag> {
+    const res = await apiClient.post<{ data: Tag }>('/api/admin/tags', data)
+    return res.data.data
+  },
+
+  async updateTag(
+    id: number,
+    data: Partial<{ name: string; color: string | null; scope: TagScope | null; sort_order: number; is_active: boolean }>,
+  ): Promise<Tag> {
+    const res = await apiClient.patch<{ data: Tag }>(`/api/admin/tags/${id}`, data)
+    return res.data.data
+  },
+
+  async deleteTag(id: number): Promise<void> {
+    await apiClient.delete(`/api/admin/tags/${id}`)
   },
 }

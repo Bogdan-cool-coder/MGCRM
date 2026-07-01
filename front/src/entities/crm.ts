@@ -5,6 +5,17 @@
 
 // ─── Directory types ──────────────────────────────────────────────────────────
 
+export type TagScope = 'deal' | 'contact' | 'company'
+
+export interface Tag {
+  id: number
+  name: string
+  color: string | null
+  scope: TagScope | null
+  sort_order: number
+  is_active: boolean
+}
+
 export interface CompanyType {
   id: number
   name: string

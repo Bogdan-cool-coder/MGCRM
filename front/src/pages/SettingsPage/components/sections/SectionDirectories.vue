@@ -18,6 +18,7 @@
         <Tabs :value="activeTab" @update:value="onTabChange">
           <TabList>
             <Tab v-if="isAdminOrDirector" value="countries">{{ t('settings.directories.tabs.countries') }}</Tab>
+            <Tab v-if="isAdminOrDirector" value="tags">{{ t('settings.directories.tabs.tags') }}</Tab>
             <Tab v-if="isAdminOrDirector" value="acq-channels">{{ t('settings.directories.tabs.acqChannels') }}</Tab>
             <Tab v-if="isAdminOrDirector" value="disc-reasons">{{ t('settings.directories.tabs.discReasons') }}</Tab>
             <Tab v-if="isAdminOrDirector" value="catalog">{{ t('settings.directories.tabs.catalog') }}</Tab>
@@ -33,6 +34,7 @@
       <!-- Tab content — v-if for lazy load (each mounts on first show) -->
       <div class="dir-tab-content">
         <DirTabCountries v-if="activeTab === 'countries' && isAdminOrDirector" />
+        <DirTabTags v-else-if="activeTab === 'tags' && isAdminOrDirector" />
         <DirTabAcqChannels v-else-if="activeTab === 'acq-channels' && isAdminOrDirector" />
         <DirTabDiscReasons v-else-if="activeTab === 'disc-reasons' && isAdminOrDirector" />
         <DirTabCatalog v-else-if="activeTab === 'catalog' && isAdminOrDirector" />
@@ -54,6 +56,7 @@ import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import { useUserStore } from '@/stores/user'
 import DirTabCountries from './directories/DirTabCountries.vue'
+import DirTabTags from './directories/DirTabTags.vue'
 import DirTabAcqChannels from './directories/DirTabAcqChannels.vue'
 import DirTabDiscReasons from './directories/DirTabDiscReasons.vue'
 import DirTabCatalog from './directories/DirTabCatalog.vue'

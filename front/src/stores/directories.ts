@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { CompanyType, Source, Country, City, ContactPosition, AcquisitionChannel, DisconnectReason } from '@/entities/crm'
+import type { CompanyType, Source, Country, City, ContactPosition, AcquisitionChannel, DisconnectReason, Tag, TagScope } from '@/entities/crm'
 import { directoriesApi } from '@/api/crm/directories'
 
 export const useDirectoriesStore = defineStore('directories', () => {
@@ -12,6 +12,7 @@ export const useDirectoriesStore = defineStore('directories', () => {
   const contactPositions = ref<ContactPosition[]>([])
   const acquisitionChannels = ref<AcquisitionChannel[]>([])
   const disconnectReasons = ref<DisconnectReason[]>([])
+  const tags = ref<Tag[]>([])
   const loaded = ref(false)
   const loading = ref(false)
 
@@ -54,6 +55,14 @@ export const useDirectoriesStore = defineStore('directories', () => {
   const activeContactPositions = computed(() => contactPositions.value.filter((p) => p.is_active))
   const activeAcquisitionChannels = computed(() => acquisitionChannels.value.filter((c) => c.is_active))
   const activeDisconnectReasons = computed(() => disconnectReasons.value.filter((r) => r.is_active))
+  const activeTags = computed(() => tags.value.filter((t) => t.is_active))
+
+  /** Filter active tags by scope: returns scoped tags + universal (scope=null) */
+  const getTagsForScope = computed(
+    () =>
+      (scope: TagScope): Tag[] =>
+        activeTags.value.filter((t) => t.scope === null || t.scope === scope),
+  )
 
   const getAcquisitionChannelName = computed(
     () =>
@@ -68,7 +77,7 @@ export const useDirectoriesStore = defineStore('directories', () => {
     if (loaded.value || loading.value) return
     loading.value = true
     try {
-      const [ct, src, cnt, cty, pos, acq, dr] = await Promise.all([
+      const [ct, src, cnt, cty, pos, acq, dr, tg] = await Promise.all([
         directoriesApi.getCompanyTypes(),
         directoriesApi.getSources(),
         directoriesApi.getCountries(),
@@ -76,6 +85,7 @@ export const useDirectoriesStore = defineStore('directories', () => {
         directoriesApi.getContactPositions(),
         directoriesApi.getAcquisitionChannels({ active_only: true }),
         directoriesApi.getDisconnectReasons({ active_only: true }),
+        directoriesApi.getTags({ active_only: true }),
       ])
       companyTypes.value = ct
       sources.value = src
@@ -84,6 +94,7 @@ export const useDirectoriesStore = defineStore('directories', () => {
       contactPositions.value = pos
       acquisitionChannels.value = acq
       disconnectReasons.value = dr
+      tags.value = tg
       loaded.value = true
     } finally {
       loading.value = false
@@ -107,6 +118,7 @@ export const useDirectoriesStore = defineStore('directories', () => {
     contactPositions,
     acquisitionChannels,
     disconnectReasons,
+    tags,
     loaded,
     loading,
     // Getters
@@ -120,6 +132,8 @@ export const useDirectoriesStore = defineStore('directories', () => {
     activeContactPositions,
     activeAcquisitionChannels,
     activeDisconnectReasons,
+    activeTags,
+    getTagsForScope,
     getAcquisitionChannelName,
     // Actions
     fetchAll,

@@ -7,19 +7,22 @@
   >
     <div class="tag-dialog__field">
       <label class="tag-dialog__label">{{ t('contacts.page.columns.tags') }}</label>
-      <InputText
+      <AutoComplete
         v-model="tagValue"
-        class="w-full"
+        :suggestions="tagSuggestions"
+        class="tag-dialog__autocomplete"
         :placeholder="t('contacts.page.columns.tags')"
         autofocus
+        @complete="onSearchTags"
         @keydown.enter="onApply"
+        @item-select="onApply"
       />
     </div>
     <template #footer>
       <Button :label="t('common.cancel')" severity="secondary" text @click="visible = false" />
       <Button
         :label="t('common.apply')"
-        :disabled="!tagValue.trim()"
+        :disabled="!tagValue || !String(tagValue).trim()"
         :loading="loading"
         @click="onApply"
       />
@@ -31,8 +34,9 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
+import AutoComplete from 'primevue/autocomplete'
 import Button from 'primevue/button'
+import { useDirectoriesStore } from '@/stores/directories'
 
 const props = defineProps<{
   modelValue: boolean
@@ -45,15 +49,26 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const directoriesStore = useDirectoriesStore()
 const visible = ref(props.modelValue)
-const tagValue = ref('')
+const tagValue = ref<string>('')
+const tagSuggestions = ref<string[]>([])
 
 watch(() => props.modelValue, (v) => { visible.value = v; if (v) tagValue.value = '' })
 watch(visible, (v) => emit('update:modelValue', v))
 
+function onSearchTags(event: { query: string }) {
+  const q = event.query.toLowerCase()
+  const contactTags = directoriesStore.getTagsForScope('contact')
+  tagSuggestions.value = contactTags
+    .map((t) => t.name)
+    .filter((name) => name.toLowerCase().includes(q))
+}
+
 function onApply() {
-  if (!tagValue.value.trim()) return
-  emit('apply', tagValue.value.trim())
+  const val = String(tagValue.value ?? '').trim()
+  if (!val) return
+  emit('apply', val)
 }
 </script>
 
@@ -63,9 +78,21 @@ function onApply() {
   flex-direction: column;
   gap: $space-1;
 }
+
 .tag-dialog__label {
   font-size: $font-size-sm;
   color: $surface-600;
 }
-.w-full { width: 100%; }
+
+.tag-dialog__autocomplete {
+  width: 100%;
+
+  :deep(.p-autocomplete) {
+    width: 100%;
+  }
+
+  :deep(.p-autocomplete-input) {
+    width: 100%;
+  }
+}
 </style>

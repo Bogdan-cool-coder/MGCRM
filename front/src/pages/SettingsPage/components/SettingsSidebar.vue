@@ -97,6 +97,7 @@ const GROUPS: SettingsGroup[] = [
     adminOnly: false, // group visibility now driven by per-item role filter below
     sections: [
       { key: 'countries',       labelKey: 'settings.sections.countries.title',       icon: 'pi pi-globe',       phase: 1, roles: ['admin', 'director'] },
+      { key: 'tags',            labelKey: 'settings.sections.tags.title',            icon: 'pi pi-tags',        phase: 1, roles: ['admin', 'director'] },
       { key: 'acq-channels',    labelKey: 'settings.sections.acq-channels.title',    icon: 'pi pi-megaphone',   phase: 1, roles: ['admin', 'director'] },
       { key: 'disc-reasons',    labelKey: 'settings.sections.disc-reasons.title',    icon: 'pi pi-ban',         phase: 1, roles: ['admin', 'director'] },
       { key: 'catalog',         labelKey: 'settings.sections.catalog.title',         icon: 'pi pi-box',         phase: 1, roles: ['admin', 'director'] },

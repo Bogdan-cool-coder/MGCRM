@@ -20,6 +20,7 @@ export function isProfileSection(key: string): key is ProfileTabKey {
 /** Разделы Ф2 — Справочники (admin/director only) */
 export const DIRECTORIES_KEYS = [
   'countries',
+  'tags',
   'acq-channels',
   'disc-reasons',
   'catalog',

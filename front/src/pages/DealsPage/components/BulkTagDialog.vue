@@ -57,6 +57,7 @@ import Button from 'primevue/button'
 import AutoComplete from 'primevue/autocomplete'
 import { useMutation } from '@/composables/async/useMutation'
 import { salesApi } from '@/api/sales'
+import { useDirectoriesStore } from '@/stores/directories'
 
 const props = defineProps<{
   modelValue: boolean
@@ -70,6 +71,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const directoriesStore = useDirectoriesStore()
 
 const visible = computed({
   get: () => props.modelValue,
@@ -93,7 +95,10 @@ watch(
 
 function onSearchTags(event: { query: string }) {
   const q = event.query.toLowerCase()
-  tagSuggestions.value = (props.existingTags ?? []).filter(
+  // Merge directory tags (deal scope + universal) with existing tags from the current deal selection
+  const directoryTagNames = directoriesStore.getTagsForScope('deal').map((t) => t.name)
+  const allTagNames = Array.from(new Set([...(props.existingTags ?? []), ...directoryTagNames]))
+  tagSuggestions.value = allTagNames.filter(
     (tag) => tag.toLowerCase().includes(q) && !tags.value.includes(tag),
   )
 }

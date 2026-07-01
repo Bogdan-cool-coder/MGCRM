@@ -132,10 +132,10 @@
         <AutoComplete
           v-model="tagsForm.tags"
           multiple
-          :suggestions="[]"
+          :suggestions="tagSuggestions"
           fluid
           :placeholder="t('sales.deal.page.menu.editTags')"
-          @complete="() => {}"
+          @complete="onSearchDealTags"
         />
       </div>
       <template #footer>
@@ -167,6 +167,7 @@ import DealHealthChip from './DealHealthChip.vue'
 import { useMutation } from '@/composables/async/useMutation'
 import { salesApi } from '@/api/sales'
 import { getApiErrorMessage } from '@/utils/errors'
+import { useDirectoriesStore } from '@/stores/directories'
 import type { DealDto, PipelineStageDto, NextTaskDto, KeyActionType } from '@/entities/sales'
 
 const vTooltip = Tooltip
@@ -200,6 +201,7 @@ const { t } = useI18n()
 const toast = useToast()
 const confirm = useConfirm()
 const router = useRouter()
+const directoriesStore = useDirectoriesStore()
 
 // ── Category badge ───────────────────────────────────────────────────────────────
 
@@ -314,6 +316,15 @@ const tagsDialogVisible = ref(false)
 const tagsForm = ref<{ tags: string[] }>({ tags: [] })
 const tagsMutation = useMutation<DealDto>()
 const tagsSaving = computed(() => tagsMutation.isPending.value)
+const tagSuggestions = ref<string[]>([])
+
+function onSearchDealTags(event: { query: string }) {
+  const q = event.query.toLowerCase()
+  const dealTags = directoriesStore.getTagsForScope('deal')
+  tagSuggestions.value = dealTags
+    .map((t) => t.name)
+    .filter((name) => name.toLowerCase().includes(q) && !tagsForm.value.tags.includes(name))
+}
 
 async function submitTags() {
   try {
