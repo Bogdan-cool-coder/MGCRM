@@ -41,9 +41,9 @@ class CompanyAuthorFilterTest extends TestCase
     public function test_author_ids_filters_single_author(): void
     {
         $author = User::factory()->create(['role' => Role::Manager]);
-        $other  = User::factory()->create(['role' => Role::Manager]);
+        $other = User::factory()->create(['role' => Role::Manager]);
 
-        $match   = Company::factory()->create(['created_by_id' => $author->id]);
+        $match = Company::factory()->create(['created_by_id' => $author->id]);
         $noMatch = Company::factory()->create(['created_by_id' => $other->id]);
 
         $response = $this->getJson('/api/companies?author_ids[]='.$author->id)->assertOk();
@@ -60,12 +60,12 @@ class CompanyAuthorFilterTest extends TestCase
 
     public function test_author_ids_filters_multiple_authors(): void
     {
-        $a1    = User::factory()->create(['role' => Role::Manager]);
-        $a2    = User::factory()->create(['role' => Role::Manager]);
+        $a1 = User::factory()->create(['role' => Role::Manager]);
+        $a2 = User::factory()->create(['role' => Role::Manager]);
         $other = User::factory()->create(['role' => Role::Manager]);
 
-        $c1      = Company::factory()->create(['created_by_id' => $a1->id]);
-        $c2      = Company::factory()->create(['created_by_id' => $a2->id]);
+        $c1 = Company::factory()->create(['created_by_id' => $a1->id]);
+        $c2 = Company::factory()->create(['created_by_id' => $a2->id]);
         $noMatch = Company::factory()->create(['created_by_id' => $other->id]);
 
         $response = $this->getJson("/api/companies?author_ids[]={$a1->id}&author_ids[]={$a2->id}")->assertOk();
@@ -84,8 +84,8 @@ class CompanyAuthorFilterTest extends TestCase
     public function test_author_ids_combined_with_owner_ids_is_and_intersection(): void
     {
         $author = User::factory()->create(['role' => Role::Manager]);
-        $owner  = User::factory()->create(['role' => Role::Manager]);
-        $other  = User::factory()->create(['role' => Role::Manager]);
+        $owner = User::factory()->create(['role' => Role::Manager]);
+        $other = User::factory()->create(['role' => Role::Manager]);
 
         // This company matches both author_ids AND owner_ids — should appear.
         $match = Company::factory()->create([
