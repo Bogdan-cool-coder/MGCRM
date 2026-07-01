@@ -38,6 +38,7 @@ class BulkAssignTest extends TestCase
         ]);
 
         $response->assertCreated()
+            ->assertJsonPath('data.assigned', 3)
             ->assertJsonPath('data.created', 3)
             ->assertJsonPath('data.skipped', 0);
 
@@ -70,6 +71,7 @@ class BulkAssignTest extends TestCase
         ]);
 
         $response->assertCreated()
+            ->assertJsonPath('data.assigned', 0)
             ->assertJsonPath('data.created', 0)
             ->assertJsonPath('data.skipped', 1);
 
@@ -105,6 +107,7 @@ class BulkAssignTest extends TestCase
         ]);
 
         $response->assertCreated()
+            ->assertJsonPath('data.assigned', 2)
             ->assertJsonPath('data.created', 2)
             ->assertJsonPath('data.skipped', 1);
     }

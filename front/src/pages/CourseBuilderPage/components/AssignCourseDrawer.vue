@@ -20,7 +20,7 @@
           icon="pi pi-send"
           size="small"
           :loading="saving"
-          :disabled="selectedUsers.length === 0"
+          :disabled="!canSubmit"
           @click="submit"
         />
         <Button
@@ -35,8 +35,24 @@
     </template>
 
     <div class="assign-drawer-body">
-      <!-- Course info -->
-      <div class="mb-4 d-flex align-items-center gap-2">
+      <!-- Course picker — global mode (no courseId prop) -->
+      <div v-if="isGlobalMode" class="mb-4">
+        <label class="form-label required">{{ t('onboarding.assignments.drawer.course') }}</label>
+        <Select
+          v-model="selectedCourseId"
+          :options="courseOptions"
+          option-label="label"
+          option-value="id"
+          :placeholder="t('onboarding.assignments.drawer.coursePlaceholder')"
+          filter
+          class="w-100"
+          :loading="loadingCourses"
+          @change="onCourseChange"
+        />
+      </div>
+
+      <!-- Course info — fixed mode (courseId prop passed) -->
+      <div v-else class="mb-4 d-flex align-items-center gap-2">
         <span class="text-muted">{{ t('onboarding.assignments.columns.course') }}:</span>
         <Tag severity="info" :value="courseName" />
       </div>
@@ -72,17 +88,18 @@
           :min-date="today"
           class="w-100"
         />
-        <small class="text-muted">{{ t('onboarding.assignments.drawer.deadlineHint', { n: deadlineDays ?? '—' }) }}</small>
+        <small class="text-muted">{{ t('onboarding.assignments.drawer.deadlineHint', { n: effectiveDeadlineDays ?? '—' }) }}</small>
       </div>
     </div>
   </Drawer>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Drawer from 'primevue/drawer'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import MultiSelect from 'primevue/multiselect'
 import DatePicker from 'primevue/datepicker'
 import Tag from 'primevue/tag'
@@ -91,11 +108,12 @@ import { useToast } from 'primevue/usetoast'
 import { apiClient } from '@/api/client'
 import { onboardingAdminApi } from '@/api/onboardingAdmin'
 import type { BulkAssignResult } from '@/entities/assignment'
+import type { Course } from '@/entities/course'
 
 const props = defineProps<{
-  courseId: number
-  courseName: string
-  deadlineDays: number | null
+  courseId?: number
+  courseName?: string
+  deadlineDays?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -106,19 +124,58 @@ const { t } = useI18n()
 const toast = useToast()
 const visible = defineModel<boolean>('visible', { default: false })
 
+/** True when the drawer is opened without a pre-selected course (global assignments page). */
+const isGlobalMode = computed(() => props.courseId === undefined)
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
 const saving = ref(false)
 const loadingUsers = ref(false)
+const loadingCourses = ref(false)
+
 const selectedUsers = ref<number[]>([])
 const deadline = ref<Date | null>(null)
 
+/** Selected course in global mode */
+const selectedCourseId = ref<number | null>(null)
+/** Full course object for deadline_days hint in global mode */
+const selectedCourse = ref<Course | null>(null)
+
 const today = new Date()
+
+// ─── Options ──────────────────────────────────────────────────────────────────
 
 interface UserOption {
   id: number
   label: string
 }
 
+interface CourseOption {
+  id: number
+  label: string
+  course: Course
+}
+
 const userOptions = ref<UserOption[]>([])
+const courseOptions = ref<CourseOption[]>([])
+
+// ─── Effective values (resolve fixed vs global mode) ─────────────────────────
+
+const effectiveCourseId = computed<number | null>(() => {
+  if (!isGlobalMode.value) return props.courseId ?? null
+  return selectedCourseId.value
+})
+
+const effectiveDeadlineDays = computed<number | null>(() => {
+  if (!isGlobalMode.value) return props.deadlineDays ?? null
+  return selectedCourse.value?.deadline_days ?? null
+})
+
+const canSubmit = computed(
+  () => effectiveCourseId.value !== null && selectedUsers.value.length > 0,
+)
+
+// ─── Data loading ─────────────────────────────────────────────────────────────
 
 async function loadUsers(): Promise<void> {
   loadingUsers.value = true
@@ -129,23 +186,60 @@ async function loadUsers(): Promise<void> {
       label: `${u.full_name} (${u.email})`,
     }))
   } catch {
-    // ignore
+    // ignore — user can retry by reopening
   } finally {
     loadingUsers.value = false
   }
 }
 
-onMounted(() => {
-  void loadUsers()
+async function loadCourses(): Promise<void> {
+  if (courseOptions.value.length > 0) return // already loaded
+  loadingCourses.value = true
+  try {
+    const res = await onboardingAdminApi.getCourses({ status: 'published', per_page: 200 })
+    courseOptions.value = res.data.map((c) => ({
+      id: c.id,
+      label: c.title,
+      course: c,
+    }))
+  } catch {
+    // ignore
+  } finally {
+    loadingCourses.value = false
+  }
+}
+
+function onCourseChange(): void {
+  const opt = courseOptions.value.find((c) => c.id === selectedCourseId.value) ?? null
+  selectedCourse.value = opt?.course ?? null
+}
+
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
+
+watch(visible, (open) => {
+  if (open) {
+    // Reset form state on every open
+    selectedUsers.value = []
+    deadline.value = null
+    selectedCourseId.value = null
+    selectedCourse.value = null
+
+    void loadUsers()
+    if (isGlobalMode.value) {
+      void loadCourses()
+    }
+  }
 })
 
+// ─── Submit ───────────────────────────────────────────────────────────────────
+
 async function submit(): Promise<void> {
-  if (selectedUsers.value.length === 0) return
+  if (!canSubmit.value) return
   saving.value = true
   try {
     const result = await onboardingAdminApi.createAssignments({
       user_ids: selectedUsers.value,
-      course_id: props.courseId,
+      course_id: effectiveCourseId.value as number,
       due_date: deadline.value ? deadline.value.toISOString().slice(0, 10) : null,
     })
     toast.add({
@@ -162,8 +256,6 @@ async function submit(): Promise<void> {
     }
     emit('assigned', result)
     visible.value = false
-    selectedUsers.value = []
-    deadline.value = null
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), life: 4000 })
   } finally {
@@ -187,6 +279,10 @@ async function submit(): Promise<void> {
   &.required::after {
     content: ' *';
     color: var(--p-red-500);
+  }
+
+  .app-dark & {
+    color: $surface-300;
   }
 }
 

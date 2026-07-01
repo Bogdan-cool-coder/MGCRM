@@ -119,10 +119,10 @@
       @save="saveDeadline"
     />
 
-    <!-- Assign drawer (reuse from builder) -->
-    <AssignCourseDrawerStub
+    <!-- Assign drawer — global mode (no courseId: shows course picker first) -->
+    <AssignCourseDrawer
       v-model:visible="showAssignDrawer"
-      @assigned="loadAssignments"
+      @assigned="onAssigned"
     />
 
     <ConfirmDialog />
@@ -141,17 +141,8 @@ import PageHeader from '@/components/AppShell/PageHeader.vue'
 import AssignmentStatusTag from '@/components/shared/AssignmentStatusTag.vue'
 import AssignmentsFilterPanel from './components/AssignmentsFilterPanel.vue'
 import EditDeadlineDialog from './components/EditDeadlineDialog.vue'
+import AssignCourseDrawer from '@/pages/CourseBuilderPage/components/AssignCourseDrawer.vue'
 import { useAssignmentsPage } from './composables/useAssignmentsPage'
-
-// Inline stub component for the global assign (no specific course, implemented in Phase 2)
-const AssignCourseDrawerStub = {
-  name: 'AssignCourseDrawerStub',
-  props: ['visible'],
-  emits: ['update:visible', 'assigned'],
-  setup() {
-    return () => null
-  },
-}
 
 const { t, locale } = useI18n()
 
@@ -172,6 +163,12 @@ const {
   archiveAssignment,
   deleteAssignmentConfirm,
 } = useAssignmentsPage()
+
+// Drawer emits 'assigned' after successful bulk-assign (toasts handled inside drawer).
+// Here we just refresh the list.
+function onAssigned(): void {
+  void loadAssignments()
+}
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString(locale.value, {

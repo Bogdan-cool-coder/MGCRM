@@ -2917,6 +2917,8 @@
       "deleteConfirm": "Удалить назначение? (только если нет прогресса)",
       "drawer": {
         "title": "Назначить курс",
+        "course": "Курс",
+        "coursePlaceholder": "Выберите курс...",
         "employees": "Сотрудники",
         "employeesPlaceholder": "Выберите сотрудников...",
         "deadline": "Дедлайн",

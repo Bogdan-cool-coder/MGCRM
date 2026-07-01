@@ -2917,6 +2917,8 @@
       "deleteConfirm": "Delete assignment? (only if no progress)",
       "drawer": {
         "title": "Assign course",
+        "course": "Course",
+        "coursePlaceholder": "Select course...",
         "employees": "Employees",
         "employeesPlaceholder": "Select employees...",
         "deadline": "Deadline",
