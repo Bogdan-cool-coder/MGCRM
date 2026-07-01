@@ -91,6 +91,144 @@ class ActivityTaskListTest extends TestCase
         $this->assertLessThanOrEqual(12, $queries, "Too many queries ({$queries}) — deal context is N+1.");
     }
 
+    // ---- 10.4: contact / company target context on the task card ----
+
+    public function test_list_returns_contact_target_context(): void
+    {
+        // A contact-targeted task must carry a mini target context {type,id,label}
+        // so the card can link the parent contact — not just deals (10.4).
+        $manager = $this->manager();
+        $contact = $this->contactFor($manager);
+
+        $activity = Activity::factory()
+            ->forContact($contact)
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $activity->id)
+            ->assertJsonPath('data.0.target.type', 'contact')
+            ->assertJsonPath('data.0.target.id', $contact->id)
+            ->assertJsonPath('data.0.target.label', $contact->full_name)
+            // A contact target carries no deal context.
+            ->assertJsonPath('data.0.deal', null);
+    }
+
+    public function test_list_returns_company_target_context(): void
+    {
+        $manager = $this->manager();
+        $company = $this->companyFor($manager);
+
+        $activity = Activity::factory()
+            ->forCompany($company)
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $activity->id)
+            ->assertJsonPath('data.0.target.type', 'company')
+            ->assertJsonPath('data.0.target.id', $company->id)
+            ->assertJsonPath('data.0.target.label', $company->name)
+            ->assertJsonPath('data.0.deal', null);
+    }
+
+    public function test_list_deal_target_has_deal_context_but_no_target_context(): void
+    {
+        // A deal-targeted task uses the richer `deal` context; `target` stays null
+        // (the card reads `deal` for deals, `target` for contact/company).
+        $pipeline = $this->seedSalesPipeline();
+        $manager = $this->manager();
+        $deal = $this->dealFor($manager, $pipeline);
+
+        Activity::factory()->forDeal($deal)->responsibleOf($manager)->createdByUser($manager)->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities')
+            ->assertOk()
+            ->assertJsonPath('data.0.deal.id', $deal->id)
+            ->assertJsonPath('data.0.target', null);
+    }
+
+    public function test_list_standalone_task_has_null_target_context(): void
+    {
+        $manager = $this->manager();
+        Activity::factory()->standalone()->responsibleOf($manager)->createdByUser($manager)->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/activities')
+            ->assertOk()
+            ->assertJsonPath('data.0.deal', null)
+            ->assertJsonPath('data.0.target', null);
+    }
+
+    public function test_list_does_not_n_plus_one_on_contact_company_target_context(): void
+    {
+        // 10.4: the contact/company target context resolves in a BOUNDED number of
+        // queries (one whereIn per target kind) regardless of how many activities
+        // point at the same entity — no per-row lookup.
+        $manager = $this->manager();
+
+        $contactA = $this->contactFor($manager);
+        $contactB = $this->contactFor($manager);
+        $company = $this->companyFor($manager);
+
+        // Five activities across two contacts + one company (repeats share a lookup).
+        Activity::factory()->forContact($contactA)->responsibleOf($manager)->createdByUser($manager)->create();
+        Activity::factory()->forContact($contactA)->responsibleOf($manager)->createdByUser($manager)->create();
+        Activity::factory()->forContact($contactB)->responsibleOf($manager)->createdByUser($manager)->create();
+        Activity::factory()->forCompany($company)->responsibleOf($manager)->createdByUser($manager)->create();
+        Activity::factory()->forCompany($company)->responsibleOf($manager)->createdByUser($manager)->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $queries = 0;
+        \DB::listen(static function () use (&$queries): void {
+            $queries++;
+        });
+
+        $this->getJson('/api/activities')->assertOk()->assertJsonCount(5, 'data');
+
+        // Two whereIn lookups (contacts + companies) regardless of row count — never
+        // a per-activity target query.
+        $this->assertLessThanOrEqual(12, $queries, "Too many queries ({$queries}) — target context is N+1.");
+    }
+
+    public function test_contact_target_context_is_scoped_out_for_foreign_manager(): void
+    {
+        // Mirrors the deal_context E18 rationale: a task may legitimately be visible
+        // to its owner, but if its target contact belongs to someone else the label
+        // must not leak — the target context resolves to null.
+        $alice = $this->manager();
+        $bob = $this->manager();
+
+        // Bob's contact; the activity is created by alice AND responsible = alice, so
+        // it is HER activity (visible), but the contact is foreign to her scope.
+        $bobContact = $this->contactFor($bob);
+
+        Activity::factory()
+            ->forContact($bobContact)
+            ->responsibleOf($alice)
+            ->createdByUser($alice)
+            ->create();
+
+        Sanctum::actingAs($alice, ['*']);
+
+        $this->getJson('/api/activities')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.target', null);
+    }
+
     // ---- D2: GET /api/activities honours the FilterPanel query params ----
 
     public function test_list_filters_by_responsible_id_within_scope(): void
@@ -292,7 +430,7 @@ class ActivityTaskListTest extends TestCase
             ->assertJsonPath('data.status', 'done');
     }
 
-    public function test_reschedule_tomorrow_moves_due_to_day_after_existing_due(): void
+    public function test_reschedule_tomorrow_moves_due_to_day_after_existing_due_keeping_time(): void
     {
         // Freeze the clock so the service and the test resolve the operational day
         // start from the same instant (the boundary math is otherwise racy at a
@@ -313,16 +451,51 @@ class ActivityTaskListTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        // Start of the day AFTER the existing due day, in the operational timezone.
-        $tz = config('salespulse.timezone', 'Asia/Dubai');
-        $expected = $existingDue->copy()->setTimezone($tz)->startOfDay()->addDay()->utc();
+        // The day AFTER the existing due day, KEEPING its time-of-day (10.3): +1d on
+        // a task due 14:00 Dubai stays due at 14:00 Dubai the next day, not midnight.
+        $expected = $existingDue->copy()->addDay();
 
         $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
             ->assertOk();
 
         $this->assertTrue(
             Carbon::parse($res->json('data.due_at'))->equalTo($expected),
-            'reschedule tomorrow should land on the start of the day after the existing due date',
+            'reschedule tomorrow should keep the time-of-day and move to the next day',
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_reschedule_preset_preserves_time_of_day(): void
+    {
+        // 10.3 core: a task due 2026-07-01 15:30 shifted +1d lands 2026-07-02 15:30
+        // (not 00:00); +1w lands 2026-07-08 15:30. The wall-clock deadline survives.
+        Carbon::setTestNow(Carbon::parse('2026-07-01 08:00:00', 'UTC'));
+
+        $manager = $this->manager();
+
+        $existingDue = Carbon::parse('2026-07-01 15:30:00', 'UTC');
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $plus1d = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
+            ->assertOk();
+        $this->assertTrue(
+            Carbon::parse($plus1d->json('data.due_at'))->equalTo(Carbon::parse('2026-07-02 15:30:00', 'UTC')),
+            '+1d must keep 15:30, not reset to midnight',
+        );
+
+        // Re-anchor: the due day is now 2026-07-02 15:30; +1w keeps 15:30.
+        $plus1w = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1w'])
+            ->assertOk();
+        $this->assertTrue(
+            Carbon::parse($plus1w->json('data.due_at'))->equalTo(Carbon::parse('2026-07-09 15:30:00', 'UTC')),
+            '+1w must keep 15:30, not reset to midnight',
         );
 
         Carbon::setTestNow();
@@ -337,9 +510,9 @@ class ActivityTaskListTest extends TestCase
 
         $manager = $this->manager();
 
-        // Due 2026-06-26 04:00 Dubai = 2026-06-26 00:00 UTC — a future deadline.
-        $tz = config('salespulse.timezone', 'Asia/Dubai');
-        $existingDue = Carbon::parse('2026-06-26 04:00:00', $tz);
+        // A future deadline at 04:00 (stored as a UTC instant). The stored due_at
+        // is the anchor for the shift.
+        $existingDue = Carbon::parse('2026-06-26 04:00:00', 'UTC');
         $activity = Activity::factory()
             ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
             ->responsibleOf($manager)
@@ -348,9 +521,12 @@ class ActivityTaskListTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        // +1d must move to start of 2026-06-27 in the operational timezone, NOT
-        // back to start of today (2026-06-25).
-        $expected = Carbon::parse('2026-06-27 00:00:00', $tz)->utc();
+        $stored = $activity->fresh()->due_at;
+
+        // +1d must move to the day after the deadline, KEEPING the 04:00 time-of-day
+        // — NOT back to start of today (2026-06-25). No DST in the operational
+        // timezone, so the shift preserves the stored wall-clock instant + 1 day.
+        $expected = $stored->copy()->addDay();
 
         $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
             ->assertOk();
@@ -359,10 +535,11 @@ class ActivityTaskListTest extends TestCase
 
         $this->assertTrue(
             $due->equalTo($expected),
-            '+1d on a future task must move forward to the day after its due date, not backward to today',
+            '+1d on a future task must move forward to the day after its due date, keeping the time',
         );
+        $this->assertSame(4, $due->hour, '+1d must keep the 04:00 hour-of-day');
         $this->assertTrue(
-            $due->greaterThan($existingDue),
+            $due->greaterThan($stored),
             '+1d must never produce a due_at earlier than the existing one',
         );
 
@@ -377,9 +554,9 @@ class ActivityTaskListTest extends TestCase
 
         $manager = $this->manager();
 
-        // Anchor on a known existing due day (2026-03-17 14:00 Dubai) so the shift
-        // is measured from the deadline, not from the clock.
-        $existingDue = Carbon::parse('2026-03-17 14:00:00', $tz);
+        // Anchor on a known existing due instant (14:00) so the shift is measured
+        // from the deadline, not from the clock.
+        $existingDue = Carbon::parse('2026-03-17 14:00:00', 'UTC');
         $activity = Activity::factory()
             ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
             ->responsibleOf($manager)
@@ -388,17 +565,20 @@ class ActivityTaskListTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        $anchorDayStart = $existingDue->copy()->setTimezone($tz)->startOfDay();
+        // The service reads the stored instant, shifts in the operational timezone
+        // (no DST → wall-clock preserved) and returns UTC. Mirror that here from the
+        // persisted value so the expectation tracks the real storage convention.
+        $anchor = $activity->fresh()->due_at->copy()->setTimezone($tz);
 
         $week = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_week'])
             ->assertOk();
         $this->assertTrue(
-            Carbon::parse($week->json('data.due_at'))->equalTo($anchorDayStart->copy()->addWeek()->utc()),
+            Carbon::parse($week->json('data.due_at'))->equalTo($anchor->copy()->addWeek()->utc()),
         );
 
-        // After the next_week shift the activity's due day is now one week later;
-        // next_month anchors on THAT new due day.
-        $newAnchor = $anchorDayStart->copy()->addWeek();
+        // After the next_week shift the activity's due instant is now one week later;
+        // next_month anchors on THAT new due instant (time preserved).
+        $newAnchor = $anchor->copy()->addWeek();
         $month = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_month'])
             ->assertOk();
         $this->assertTrue(
@@ -416,9 +596,8 @@ class ActivityTaskListTest extends TestCase
 
         $manager = $this->manager();
 
-        // Existing due 2026-03-17 (a Tuesday) 14:00 Dubai — the anchor for all
-        // shortcuts.
-        $existingDue = Carbon::parse('2026-03-17 14:00:00', $tz);
+        // Existing due 2026-03-17 (a Tuesday) 14:00 — the anchor for all shortcuts.
+        $existingDue = Carbon::parse('2026-03-17 14:00:00', 'UTC');
         $activity = Activity::factory()
             ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
             ->responsibleOf($manager)
@@ -427,33 +606,38 @@ class ActivityTaskListTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        $anchorDayStart = $existingDue->copy()->setTimezone($tz)->startOfDay();
+        // The anchor keeps its 14:00 time-of-day across every shift (10.3). Read from
+        // the persisted value so it tracks the app's storage convention exactly.
+        $anchor = $activity->fresh()->due_at->copy()->setTimezone($tz);
 
         $plus1d = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
             ->assertOk();
         $this->assertTrue(
-            Carbon::parse($plus1d->json('data.due_at'))->equalTo($anchorDayStart->copy()->addDay()->utc()),
-            '+1d should add a day to the existing due day',
+            Carbon::parse($plus1d->json('data.due_at'))->equalTo($anchor->copy()->addDay()->utc()),
+            '+1d should add a day to the existing due instant, keeping the time',
         );
 
-        // Re-anchor: the due day is now 2026-03-18; +1w from there.
-        $afterPlus1d = $anchorDayStart->copy()->addDay();
+        // Re-anchor: the due instant is now 2026-03-18 14:00 Dubai; +1w from there.
+        $afterPlus1d = $anchor->copy()->addDay();
         $plus1w = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1w'])
             ->assertOk();
         $this->assertTrue(
             Carbon::parse($plus1w->json('data.due_at'))->equalTo($afterPlus1d->copy()->addWeek()->utc()),
-            '+1w should be one week from the existing due day',
+            '+1w should be one week from the existing due instant, keeping the time',
         );
 
-        // Re-anchor: the due day is now 2026-03-25 (a Wednesday); next Monday
-        // strictly after it is 2026-03-30.
+        // Re-anchor: the due instant is now 2026-03-25 14:00 (a Wednesday); next
+        // Monday strictly after it is 2026-03-30, KEEPING the 14:00 time-of-day.
         $afterPlus1w = $afterPlus1d->copy()->addWeek();
         $nextMon = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'next_monday'])
             ->assertOk();
-        $expectedMon = $afterPlus1w->copy()->next(CarbonInterface::MONDAY)->utc();
+        $expectedMon = $afterPlus1w->copy()
+            ->next(CarbonInterface::MONDAY)
+            ->setTime($afterPlus1w->hour, $afterPlus1w->minute, $afterPlus1w->second, $afterPlus1w->microsecond)
+            ->utc();
         $this->assertTrue(
             Carbon::parse($nextMon->json('data.due_at'))->equalTo($expectedMon),
-            'next_monday should land on the next Monday after the existing due day',
+            'next_monday should land on the next Monday after the existing due day, keeping the time',
         );
 
         Carbon::setTestNow();

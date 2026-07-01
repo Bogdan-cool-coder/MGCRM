@@ -41,6 +41,11 @@ class ActivityCardResource extends JsonResource
             // targets a deal — batch-stamped by ActivityService (myBoard/list). null
             // for company/contact/standalone targets.
             'deal' => $this->dealContext(),
+            // Parent contact/company context ({type,id,label}) when the task targets
+            // a contact or company directly — batch-stamped by ActivityService so the
+            // card links the parent entity for those targets too (10.4). null for
+            // deal (use `deal`) and standalone targets.
+            'target' => $this->targetContext(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
@@ -54,6 +59,20 @@ class ActivityCardResource extends JsonResource
     private function dealContext(): ?array
     {
         $context = $this->resource->getAttribute('deal_context');
+
+        return is_array($context) ? $context : null;
+    }
+
+    /**
+     * The batched contact/company target-context attribute stamped by
+     * ActivityService. Returns null when not resolved or when the target is a deal
+     * (deal context is exposed via `deal`) / standalone.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function targetContext(): ?array
+    {
+        $context = $this->resource->getAttribute('target_context');
 
         return is_array($context) ? $context : null;
     }

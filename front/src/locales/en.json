@@ -3585,6 +3585,29 @@
       "done": "Completed",
       "overdue": "Overdue: {when}",
       "complete": "Complete"
+    },
+    "window": {
+      "title": "Task",
+      "fields": {
+        "responsible": "Assignee",
+        "kind": "Task type",
+        "dueAt": "Due date",
+        "status": "Status",
+        "description": "Task description",
+        "result": "Completion result",
+        "resultPlaceholder": "Describe the completion result...",
+        "resultRequired": "Please fill in the completion result"
+      },
+      "actions": {
+        "complete": "Complete",
+        "cancel": "Cancel",
+        "delete": "Delete"
+      },
+      "relatedEntity": {
+        "deal": "Deal",
+        "contact": "Contact",
+        "company": "Company"
+      }
     }
   },
   "system": {

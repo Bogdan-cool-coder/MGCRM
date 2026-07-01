@@ -62,6 +62,8 @@
         @error="onKanbanError"
         @toggle-select="toggleSelectItem"
         @complete="onKanbanComplete"
+        @task-deleted="onKanbanTaskDeleted"
+        @task-completed-dialog="onKanbanTaskCompletedDialog"
         @reschedule="onKanbanReschedule"
       />
     </div>
@@ -99,9 +101,30 @@
           @toggle-select="toggleSelectItem"
           @select-all="selectAllList"
           @clear-selection="clearSelection"
+          @open-task="onListOpenTask"
         />
       </div>
     </div>
+
+    <!-- Task expand dialog (list view row click / context menu) -->
+    <Dialog
+      v-model:visible="listTaskDialogVisible"
+      :style="{ width: '540px' }"
+      :modal="true"
+      :draggable="false"
+      :show-header="false"
+      class="task-window-dialog"
+      @hide="listTaskDialogVisible = false"
+    >
+      <TaskExpandedPanel
+        v-if="listActiveTask"
+        :task="listActiveTask"
+        mode="dialog"
+        @completed="onListTaskCompleted"
+        @deleted="onListTaskDeleted"
+        @close="listTaskDialogVisible = false"
+      />
+    </Dialog>
 
     <!-- Activity form dialog -->
     <ActivityFormDialog
@@ -124,6 +147,8 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Dialog from 'primevue/dialog'
+import TaskExpandedPanel from '@/components/crm/activity/TaskExpandedPanel.vue'
 import TasksTopBar from './components/TasksTopBar.vue'
 import TasksQuickCreate from './components/TasksQuickCreate.vue'
 import TasksBulkBar from './components/TasksBulkBar.vue'
@@ -281,6 +306,28 @@ const formDialogOpen = ref(false)
 const editingActivityId = ref<number | null>(null)
 const completingId = ref<number | null>(null)
 const reopeningId = ref<number | null>(null)
+
+// ── List task expand dialog ───────────────────────────────────────────────────
+const listTaskDialogVisible = ref(false)
+const listActiveTask = ref<ActivityDto | null>(null)
+
+function onListOpenTask(activity: ActivityDto) {
+  listActiveTask.value = activity
+  listTaskDialogVisible.value = true
+}
+
+function onListTaskCompleted(activity: ActivityDto) {
+  // API already called by panel, toast already shown
+  listTaskDialogVisible.value = false
+  removeLocal(activity.id)
+  void refreshCounts()
+}
+
+function onListTaskDeleted(id: number) {
+  listTaskDialogVisible.value = false
+  removeLocal(id)
+  void refreshCounts()
+}
 
 function onCreateTask() {
   editingActivityId.value = null
@@ -541,6 +588,22 @@ async function onKanbanComplete(id: number) {
   } catch {
     onKanbanError(t('tasks.board.card.completed'))
   }
+}
+
+/**
+ * Task deleted from the board dialog (API already called by TaskExpandedPanel).
+ */
+function onKanbanTaskDeleted(id: number) {
+  taskBoard.removeLocalById(id)
+  void refreshCounts()
+}
+
+/**
+ * Task completed from the board dialog (API already called by TaskExpandedPanel, toast already shown).
+ */
+function onKanbanTaskCompletedDialog(id: number) {
+  taskBoard.removeLocalById(id)
+  void refreshCounts()
 }
 
 /**

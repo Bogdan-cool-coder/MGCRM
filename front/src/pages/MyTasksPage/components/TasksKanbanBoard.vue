@@ -1,5 +1,26 @@
 <template>
   <div class="task-board">
+    <!-- Task expanded dialog — one instance outside columns, for all cards -->
+    <Dialog
+      v-model:visible="taskDialogVisible"
+      :style="{ width: '540px' }"
+      :modal="true"
+      :draggable="false"
+      :show-header="false"
+      class="task-window-dialog"
+      @hide="closeTaskDialog"
+    >
+      <TaskExpandedPanel
+        v-if="activeTask"
+        :task="activeTask"
+        mode="dialog"
+        :focus-result="dialogFocusResult"
+        @completed="onTaskCompleted"
+        @deleted="onTaskDeleted"
+        @close="closeTaskDialog"
+      />
+    </Dialog>
+
     <!-- Loading skeleton -->
     <template v-if="loading">
       <div class="task-board__columns">
@@ -59,6 +80,8 @@
             class="task-board__card"
             @complete="onComplete"
             @toggle-select="emit('toggleSelect', $event)"
+            @open="openTaskDialog(bucket.tasks.find(t => t.id === $event) ?? null, false)"
+            @open-for-complete="openTaskDialog(bucket.tasks.find(t => t.id === $event) ?? null, true)"
             @dragstart="onCardDragStart($event, task.id, bucket.key)"
             @dragend="onCardDragEnd"
           />
@@ -75,10 +98,12 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Skeleton from 'primevue/skeleton'
+import Dialog from 'primevue/dialog'
 import TaskCard from './TaskCard.vue'
+import TaskExpandedPanel from '@/components/crm/activity/TaskExpandedPanel.vue'
 import type { TaskScope, TaskBucket } from '../composables/useTaskBoard'
 import { OPERATIONAL_TZ } from '@/utils/activity'
-import type { MyBoardBucket } from '@/entities/activity'
+import type { MyBoardBucket, MyBoardActivityDto } from '@/entities/activity'
 import type { ActivityDto } from '@/entities/activity'
 
 const props = defineProps<{
@@ -98,6 +123,10 @@ const emit = defineEmits<{
   toggleSelect: [id: number]
   taskRescheduled: []
   complete: [id: number]
+  /** Task was deleted from within the board dialog (already removed from server) */
+  taskDeleted: [id: number]
+  /** Task was completed from within the board dialog (API already called by panel) */
+  taskCompletedDialog: [id: number]
   reschedule: [taskId: number, targetBucket: MyBoardBucket]
 }>()
 
@@ -129,9 +158,9 @@ const visibleBuckets = computed(() => {
     .filter((b) => {
       // Always scope-filter
       if (!scopeBuckets.includes(b.key)) return false
-      // Auto-hide overdue when no non-done tasks (spec §5)
+      // 10.1: Show overdue column when count > 0 (even if all tasks are done)
       if (b.key === 'overdue') {
-        return b.tasks.some((t) => t.status !== 'done')
+        return b.tasks.length > 0
       }
       return true
     })
@@ -177,6 +206,36 @@ function bucketMeta(key: MyBoardBucket): string {
 // ── Actions ────────────────────────────────────────────────────────────────────
 function onComplete(id: number) {
   emit('complete', id)
+}
+
+// ── Task expand dialog ────────────────────────────────────────────────────────
+
+const taskDialogVisible = ref(false)
+const activeTask = ref<MyBoardActivityDto | null>(null)
+const dialogFocusResult = ref(false)
+
+function openTaskDialog(task: MyBoardActivityDto | null, focusResult: boolean) {
+  if (!task) return
+  activeTask.value = task
+  dialogFocusResult.value = focusResult
+  taskDialogVisible.value = true
+}
+
+function closeTaskDialog() {
+  taskDialogVisible.value = false
+  dialogFocusResult.value = false
+  activeTask.value = null
+}
+
+function onTaskCompleted(activity: ActivityDto) {
+  // Task was completed inside the dialog — just remove from board (API already called by panel)
+  emit('taskCompletedDialog', activity.id)
+  closeTaskDialog()
+}
+
+function onTaskDeleted(id: number) {
+  emit('taskDeleted', id)
+  closeTaskDialog()
 }
 
 // ── Drag-and-drop ─────────────────────────────────────────────────────────────

@@ -3585,6 +3585,29 @@
       "done": "Выполнено",
       "overdue": "Просрочено: {when}",
       "complete": "Выполнить"
+    },
+    "window": {
+      "title": "Задача",
+      "fields": {
+        "responsible": "Ответственный",
+        "kind": "Тип задачи",
+        "dueAt": "Срок выполнения",
+        "status": "Статус",
+        "description": "Текст задачи",
+        "result": "Итог выполнения",
+        "resultPlaceholder": "Опишите результат выполнения...",
+        "resultRequired": "Заполните итог выполнения"
+      },
+      "actions": {
+        "complete": "Выполнить",
+        "cancel": "Отмена",
+        "delete": "Удалить"
+      },
+      "relatedEntity": {
+        "deal": "Сделка",
+        "contact": "Контакт",
+        "company": "Компания"
+      }
     }
   },
   "system": {

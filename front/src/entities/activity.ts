@@ -85,6 +85,9 @@ export interface ActivityDto {
   creator: ActivityUserRefDto | null
   // Deal context (batch-stamped by ActivityService on list responses; absent on timeline/show)
   deal?: ActivityDealContextDto | null
+  // Direct contact/company target context (batch-stamped on list/board responses;
+  // absent on timeline/show). null for deal (use `deal`) and standalone targets.
+  target?: ActivityTargetContextDto | null
   // Meeting fields
   is_first_time_meeting: boolean
   ftm_decision_maker_attended: boolean
@@ -252,10 +255,25 @@ export interface MyBoardActivityDto {
   is_closed: boolean
   is_pinned: boolean
   deal: { id: number; title: string } | null
+  // Direct contact/company target context ({type,id,label}) when the task targets a
+  // contact or company (not a deal) — batch-stamped by ActivityService so the card
+  // can link the parent entity. null for deal (use `deal`) and standalone targets.
+  target: ActivityTargetContextDto | null
   // The backend uses `responsible` (ActivityCardResource) not `assigned_to` — keep
   // `assigned_to` as an alias for backward compat with useTaskBoard internals.
   assigned_to: { id: number; full_name: string } | null
   responsible: { id: number; full_name: string } | null
+}
+
+/**
+ * Batched target context stamped by ActivityService::stampTargetContext for a task
+ * whose polymorphic target is a contact or a company (mirrors `deal` context, which
+ * carries the richer deal shape). `label` is the contact full_name / company name.
+ */
+export interface ActivityTargetContextDto {
+  type: 'contact' | 'company'
+  id: number
+  label: string
 }
 
 export interface MyBoardResponse {

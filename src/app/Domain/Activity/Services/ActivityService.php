@@ -401,11 +401,15 @@ class ActivityService
      * calendar day in the operational timezone), NOT on "today": "+1d" on a task
      * due tomorrow means the day AFTER tomorrow, not a reset to today+1 (BUG: a
      * future task's +1d jumped backwards to start-of-today). A task with no due
-     * date falls back to anchoring on today. The result is the start of the target
-     * day in the operational timezone (no client +4h hack).
+     * date falls back to anchoring on today.
      *
-     * Presets (start of the target day, operational TZ, anchored on the existing
-     * due day or today when unset):
+     * The existing TIME-OF-DAY is PRESERVED (10.3): shifting a task due 2026-07-01
+     * 15:30 by +1d lands on 2026-07-02 15:30, not midnight — only the calendar day
+     * changes, the wall-clock deadline stays. A deadline-less task falls back to the
+     * start of the target day in the operational timezone (there is no time to keep).
+     *
+     * Presets (operational TZ, anchored on the existing due day or today when unset;
+     * time-of-day preserved from the existing due_at, else start of day):
      *   tomorrow     → anchor day + 1 day
      *   +1d          → alias of tomorrow (anchor day + 1 day)
      *   +1w          → anchor day + 1 week
@@ -428,33 +432,50 @@ class ActivityService
     }
 
     /**
-     * Map a quick-reschedule preset to an absolute due_at instant, anchored to the
-     * start of the TARGET day in the operational timezone (returned in UTC). The
-     * anchor is the existing due date's local day (so the shortcut shifts the real
-     * deadline forward), falling back to today's local day when the task has no due
-     * date yet.
+     * Map a quick-reschedule preset to an absolute due_at instant (returned in UTC).
+     *
+     * The math runs on the existing due date's day in the operational timezone (so
+     * the shortcut shifts the REAL deadline forward, never resetting to today), and
+     * the existing TIME-OF-DAY is carried onto the new calendar day (10.3): a task
+     * due 15:30 that is bumped +1d stays due at 15:30 the next day, not midnight.
+     *
+     * When the task has no deadline yet there is no time to preserve, so the anchor
+     * is today's operational start-of-day and the result lands at 00:00 of the
+     * target day (the previous behaviour for a deadline-less task).
      */
     private function resolveReschedulePreset(string $preset, ?CarbonInterface $currentDue): Carbon
     {
-        // Anchor on the existing due date's operational-day start, or today's when
-        // the task has no deadline yet. Converting the stored UTC instant into the
-        // operational timezone before startOfDay() keeps the calendar day correct
-        // for a Dubai-evening deadline that is still "the next day" in UTC.
         $tz = $this->operationalTimezone();
 
-        $anchorLocalDayStart = $currentDue !== null
-            ? Carbon::instance($currentDue)->setTimezone($tz)->startOfDay()
+        // Anchor on the existing due date in the operational timezone — KEEPING its
+        // wall-clock time so the deadline's time-of-day survives the shift. A
+        // deadline-less task falls back to today's operational start-of-day (00:00),
+        // there being no existing time to preserve.
+        $anchor = $currentDue !== null
+            ? Carbon::instance($currentDue)->setTimezone($tz)
             : $this->operationalLocalDayStart();
 
         return match ($preset) {
-            'tomorrow', '+1d' => $anchorLocalDayStart->copy()->addDay()->utc(),
-            '+1w', 'next_week' => $anchorLocalDayStart->copy()->addWeek()->utc(),
-            'next_monday' => $anchorLocalDayStart->copy()->next(CarbonInterface::MONDAY)->utc(),
-            'next_month' => $anchorLocalDayStart->copy()->addMonthNoOverflow()->utc(),
+            'tomorrow', '+1d' => $anchor->copy()->addDay()->utc(),
+            '+1w', 'next_week' => $anchor->copy()->addWeek()->utc(),
+            'next_monday' => $this->nextMondayKeepingTime($anchor)->utc(),
+            'next_month' => $anchor->copy()->addMonthNoOverflow()->utc(),
             default => throw ValidationException::withMessages([
                 'preset' => "Unknown reschedule preset: {$preset}.",
             ]),
         };
+    }
+
+    /**
+     * The next Monday strictly after the anchor's calendar day, preserving the
+     * anchor's time-of-day. Carbon::next(MONDAY) resets the clock to 00:00, so we
+     * re-stamp the original hour/minute/second onto the resulting Monday.
+     */
+    private function nextMondayKeepingTime(Carbon $anchor): Carbon
+    {
+        return $anchor->copy()
+            ->next(CarbonInterface::MONDAY)
+            ->setTime($anchor->hour, $anchor->minute, $anchor->second, $anchor->microsecond);
     }
 
     /**
@@ -1339,6 +1360,107 @@ class ActivityService
 
             $activity->setAttribute('deal_context', $context);
         }
+
+        // The task card also links directly-targeted contacts/companies (not just
+        // deals) — stamp their mini-context in the same enrichment pass (10.4).
+        $this->stampTargetContext($activities, $user, $scope);
+    }
+
+    /**
+     * Stamp a lightweight, batched target context onto every CONTACT- or
+     * COMPANY-targeted activity in a set, so the task card can render a link to the
+     * parent entity for those targets too — not just deals (10.4). Mutates the
+     * collection in place; deal/standalone targets get a null target_context (a
+     * deal-targeted card already carries the richer deal_context stamped above).
+     *
+     * Each contact/company-targeted activity gets a `target_context` attribute:
+     *   { type: 'contact'|'company', id, label }
+     * where label is the contact's full_name / the company's name.
+     *
+     * Resolved in at most TWO queries (one whereIn per target kind) regardless of
+     * how many activities point at the same entity — no per-row lookup, preserving
+     * the board/list no-N+1 guarantee. Both lookups are visibility-scoped (mirroring
+     * the deal_context E18 rationale): a user may OWN an activity on a contact/company
+     * that later moved out of their scope, but they must not read the now-foreign
+     * entity's name through the card. Filtering each lookup through the SAME scope
+     * as the owning Crm surface makes a now-foreign target resolve to null context —
+     * without dropping the user's own activity row. Contact scopes on owner_id;
+     * Company on owner_user_id/responsible_user_id + its department subtree.
+     *
+     * @param  Collection<int, Activity>  $activities
+     */
+    private function stampTargetContext(Collection $activities, User $user, ?VisibilityScope $scope = null): void
+    {
+        $contactIds = $this->targetIdsOfType($activities, ActivityTargetType::Contact);
+        $companyIds = $this->targetIdsOfType($activities, ActivityTargetType::Company);
+
+        /** @var Collection<int, Contact> $contacts */
+        $contacts = $contactIds === []
+            ? collect()
+            : $this->visibility->applyScope(
+                Contact::query()->whereIn('id', $contactIds),
+                $user,
+                ['owner_id'],
+                null,
+                $scope,
+            )->get(['id', 'full_name'])->keyBy('id');
+
+        /** @var Collection<int, Company> $companies */
+        $companies = $companyIds === []
+            ? collect()
+            : $this->visibility->applyScope(
+                Company::query()->whereIn('id', $companyIds),
+                $user,
+                ['owner_user_id', 'responsible_user_id'],
+                'department_id',
+                $scope,
+            )->get(['id', 'name'])->keyBy('id');
+
+        foreach ($activities as $activity) {
+            $context = null;
+            $targetId = $activity->target_id !== null ? (int) $activity->target_id : null;
+
+            if ($targetId !== null && $activity->target_type === ActivityTargetType::Contact->value) {
+                $contact = $contacts->get($targetId);
+
+                if ($contact !== null) {
+                    $context = [
+                        'type' => ActivityTargetType::Contact->value,
+                        'id' => (int) $contact->id,
+                        'label' => $contact->full_name,
+                    ];
+                }
+            } elseif ($targetId !== null && $activity->target_type === ActivityTargetType::Company->value) {
+                $company = $companies->get($targetId);
+
+                if ($company !== null) {
+                    $context = [
+                        'type' => ActivityTargetType::Company->value,
+                        'id' => (int) $company->id,
+                        'label' => $company->name,
+                    ];
+                }
+            }
+
+            $activity->setAttribute('target_context', $context);
+        }
+    }
+
+    /**
+     * The distinct integer target ids in a collection for a given target type.
+     *
+     * @param  Collection<int, Activity>  $activities
+     * @return list<int>
+     */
+    private function targetIdsOfType(Collection $activities, ActivityTargetType $type): array
+    {
+        return $activities
+            ->filter(static fn (Activity $a): bool => $a->target_type === $type->value && $a->target_id !== null)
+            ->pluck('target_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
@@ -1405,7 +1527,6 @@ class ActivityService
      */
     private function applyPreset(Builder $query, string $preset, User $user): void
     {
-        $now = now();
         $todayStart = $this->operationalTodayStart();
         $todayEnd = $todayStart->copy()->addDay();
         $weekEnd = $todayStart->copy()->addWeek();
@@ -1427,8 +1548,18 @@ class ActivityService
             'pinned' => $query
                 ->where('is_pinned', true)
                 ->where('responsible_id', $user->id),
+            // Overdue is single-sourced with the kanban board's overdue COLUMN
+            // (myBoard) so the «N просрочено» chip can never disagree with the
+            // column count (10.1). The board's overdue bucket holds the user's OPEN,
+            // TASK-LIKE activities whose due_at is BEFORE the start of today in the
+            // operational timezone. The chip must count exactly those three
+            // predicates — not "due before now" (which mis-counted a task due
+            // earlier today as overdue), and not any kind (a note is never a board
+            // card). Aligning all three (task-like kinds + scopeOpen + due <
+            // operationalTodayStart) makes the chip number equal the column count.
             'overdue' => $query
-                ->where('due_at', '<', $now)
+                ->whereIn('kind', ActivityType::taskLikeValues())
+                ->where('due_at', '<', $todayStart)
                 ->where(fn (Builder $q) => $this->scopeOpen($q))
                 ->where($mineClause),
             'today' => $query

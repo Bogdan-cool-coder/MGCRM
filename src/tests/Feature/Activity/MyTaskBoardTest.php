@@ -200,6 +200,43 @@ class MyTaskBoardTest extends TestCase
             ->assertJsonStructure(['data' => ['overdue', 'today', 'tomorrow', 'this_week', 'next_week', 'later']]);
     }
 
+    public function test_overdue_chip_matches_overdue_board_column(): void
+    {
+        // 10.1: the «N просрочено» chip (counts-by-preset.overdue) and the kanban
+        // OVERDUE column (my-board.overdue) must agree — both key on the SAME
+        // predicate (open, task-like, due before the start of today). Previously the
+        // chip used "due < now" and the column "due < start-of-today", so a task due
+        // earlier today counted in the chip but had no column.
+        $manager = $this->manager();
+
+        // Due earlier TODAY (03:00 Dubai on the 16th = 2026-03-15 23:00 UTC, which is
+        // < now = 2026-03-16 08:00 UTC but >= the start of the Dubai "today"). Under
+        // the old "due < now" chip this inflated the chip; it belongs to TODAY, not
+        // overdue, so it must appear in NEITHER the chip nor the column.
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->create(['due_at' => Carbon::parse('2026-03-15 23:00:00', 'UTC')]);
+
+        // A genuinely overdue task (yesterday) — belongs to BOTH.
+        $overdue = Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->overdue()->create();
+
+        // A completed overdue task — belongs to NEITHER (not open).
+        Activity::factory()->responsibleOf($manager)->createdByUser($manager)
+            ->overdue()->create(['status' => ActivityStatus::Done->value, 'is_closed' => true, 'completed_at' => now()]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $columnCount = $this->getJson('/api/activities/my-board')
+            ->assertOk()
+            ->json('data.overdue');
+        $chip = $this->getJson('/api/activities/counts-by-preset')->assertOk()->json('data.overdue');
+
+        $this->assertCount(1, $columnCount, 'the overdue column holds exactly the one genuinely-overdue open task');
+        $this->assertSame($overdue->id, $columnCount[0]['id']);
+        $this->assertSame(count($columnCount), $chip, 'the chip count must equal the overdue column count (10.1)');
+        $this->assertSame(1, $chip);
+    }
+
     public function test_my_board_day_buckets_use_operational_timezone(): void
     {
         // MINOR-8: at 21:00 UTC it is already 01:00 of the NEXT day in Asia/Dubai,

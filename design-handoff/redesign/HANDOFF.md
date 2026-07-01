@@ -149,6 +149,16 @@
 ### Обновление 2026-06-30 — Settings Фаза 4: Документы + link-out + dirty-fix (QA PASS, PM APPROVED)
 - **Настройки Ф4 (`Settings-spec.md` § «Фаза 4»)** — DONE: 4 новых DirTab-обёртки (DocTemplates/TplVariables/ApprovalRoutes/MsgTemplates, паттерн Ф2); пер-итемная роль-логика (lawyer/director/manager видят соответствующие вкладки); pipeline-stg переведён в phase:1 как link-out на /settings/pipeline; дубль automation-runs убран из AppSidebar; редиректы /admin/templates|template-variables|approval-routes|message-templates активированы; dirty-guard regression fix (navigateOutOf + instant-leave CSS). Незакоммичено.
 
+### Обновление 2026-07-01 — Волна 6 РЕАЛИЗОВАНА (QA PASS 10 сценариев + dark-контраст, PM APPROVED, незакоммичено)
+- **TaskWindow + Канбан (пп. 10.1–10.5)** — DONE:
+  - 10.1: overdue-колонка видима когда count>0; chip `countsByPreset.overdue` выровнен с колонкой (task-like + scopeOpen + due < operationalTodayStart)
+  - 10.2: drag-and-drop цел; overdue заблокирован как drop-target; перенос вызывает reschedule
+  - 10.3: reschedule сохраняет time-of-day (h/m/s из исходного due_at); `nextMondayKeepingTime` отдельный helper
+  - 10.4: `stampTargetContext` — batch contact/company lookup ≤2 запроса, visibility-scoped; target {type,id,label} в обоих Resources + entities/activity.ts; TaskCard рендерит RouterLink (@click.stop) для deal/contact/company
+  - 10.5: `TaskExpandedPanel.vue` (mode=dialog/inline) — единый компонент: OpenTasksList (CRM-карточки) использует mode=inline, kanban/список используют mode=dialog 540px; гейт «нельзя выполнить без итога» только фронт (server complete без result — допустимо по risk-note); 3-step delete; related entity RouterLink
+  - QA: 10 функциональных сценариев PASS (регресс 3 CRM-карточек чист) + dark-контраст PASS
+  - 3439 PHPUnit зелёных
+
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,
 светлая+тёмная темы, скрытые скроллбары, поведение интерактивных элементов из §11.

@@ -33,6 +33,20 @@
         </RouterLink>
       </div>
 
+      <!-- Contact / Company target link (when task has no deal) -->
+      <div v-else-if="task.target" class="task-card__deal">
+        <i
+          :class="['pi', task.target.type === 'contact' ? 'pi-user' : 'pi-building', 'task-card__deal-icon']"
+        />
+        <RouterLink
+          :to="task.target.type === 'contact' ? `/contacts/${task.target.id}` : `/companies/${task.target.id}`"
+          class="task-card__deal-link"
+          @click.stop
+        >
+          {{ task.target.label }}
+        </RouterLink>
+      </div>
+
       <!-- Task title -->
       <p
         class="task-card__title"
@@ -66,18 +80,16 @@
     </div>
 
     <!-- Health strip -->
-    <div class="task-card__health" :class="healthClass">
+    <div class="task-card__health" :class="healthClass" @click.stop>
       <i :class="healthIcon" class="task-card__health-icon" />
       <span class="task-card__health-text">{{ healthText }}</span>
       <button
         v-if="task.status !== 'done' && task.status !== 'rejected'"
         type="button"
         class="task-card__complete-btn"
-        :disabled="completing"
-        @click.stop="onComplete"
+        @click.stop="onCompleteBtn"
       >
-        <i v-if="completing" class="pi pi-spin pi-spinner" />
-        <i v-else class="pi pi-check" />
+        <i class="pi pi-check" />
         {{ t('tasks.health.complete') }}
       </button>
     </div>
@@ -85,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { kindIcon as kindIconFn, formatDueDateOperational } from '@/utils/activity'
@@ -101,10 +113,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   complete: [id: number]
   toggleSelect: [id: number]
+  /** Emit to open the task expanded dialog */
+  open: [id: number]
+  /** Emit to open the task dialog with result textarea focused (from health strip "Выполнить") */
+  openForComplete: [id: number]
 }>()
 
 const { t } = useI18n()
-const completing = ref(false)
 
 // ── Kind label ─────────────────────────────────────────────────────────────────
 function kindLabelFn(kind: ActivityKind | null | undefined): string {
@@ -172,19 +187,18 @@ const healthText = computed(() => {
 })
 
 // ── Actions ────────────────────────────────────────────────────────────────────
+
 function onCardClick() {
   if (props.selectMode) {
     emit('toggleSelect', props.task.id)
+  } else {
+    emit('open', props.task.id)
   }
 }
 
-async function onComplete() {
-  completing.value = true
-  try {
-    emit('complete', props.task.id)
-  } finally {
-    completing.value = false
-  }
+/** Health strip "Выполнить" → open dialog with result textarea focused */
+function onCompleteBtn() {
+  emit('openForComplete', props.task.id)
 }
 </script>
 

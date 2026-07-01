@@ -43,8 +43,10 @@
       class="activity-table"
       :row-class="(data: ActivityDto) => ({
         'activity-table__row--selected': selectMode && selectedIds?.has(data.id),
+        'activity-table__row--clickable': !selectMode && !editingCell,
       })"
       @page="(e: DataTablePageEvent) => $emit('page', e)"
+      @row-click="onRowClick"
     >
       <!-- Select-mode checkbox column (visible only in selectMode) -->
       <Column v-if="selectMode" header="" style="width: 44px; flex-shrink: 0">
@@ -408,6 +410,8 @@ const emit = defineEmits<{
   'toggleSelect': [id: number]
   'selectAll': []
   'clearSelection': []
+  /** Open the task expanded dialog for a specific task */
+  'openTask': [activity: ActivityDto]
 }>()
 
 const { t } = useI18n()
@@ -608,6 +612,14 @@ function statusOptionsFor(current: ActivityStatus): Array<{ label: string; value
   return targets.map((s) => ({ label: t(`activity.statuses.${s}`), value: s }))
 }
 
+// ── Row click → open task dialog ──────────────────────────────────────────────────
+
+function onRowClick(event: { data: ActivityDto }) {
+  // Don't open dialog if we're in selectMode or editing a cell
+  if (props.selectMode || editingCell.value) return
+  emit('openTask', event.data)
+}
+
 // ── Context menu ──────────────────────────────────────────────────────────────────
 
 const menuRef = ref<InstanceType<typeof Menu> | null>(null)
@@ -617,6 +629,11 @@ const menuItems = computed(() => {
   const a = menuActivity.value
   if (!a) return []
   const items = [
+    {
+      label: t('tasks.window.title'),
+      icon: 'pi pi-expand',
+      command: () => emit('openTask', a),
+    },
     {
       label: t('activity.actions.edit'),
       icon: 'pi pi-pencil',

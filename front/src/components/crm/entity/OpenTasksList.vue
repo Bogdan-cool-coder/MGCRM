@@ -219,88 +219,18 @@
           </div>
         </div>
 
-        <!-- ─── Expanded view ────────────────────────────────────────────────── -->
+        <!-- ─── Expanded view (delegated to TaskExpandedPanel) ──────────────── -->
         <Transition name="tqf-slide">
-          <div
+          <TaskExpandedPanel
             v-if="expandedId === task.id"
-            class="open-tasks__expanded-wrap"
-            @click.stop
-          >
-            <!-- Result textarea + Выполнить in expanded mode -->
-            <div class="open-tasks__expanded-header">
-              <!-- Task title (read-only) -->
-              <p class="open-tasks__expanded-title">{{ task.title }}</p>
-              <!-- Always-visible actions in expanded mode -->
-              <div class="open-tasks__expanded-actions">
-                <button
-                  type="button"
-                  class="open-tasks__complete-btn"
-                  :disabled="completingId === task.id"
-                  @click.stop="onCompleteSubmit(task)"
-                >
-                  <i class="pi pi-check" />
-                  <span class="open-tasks__complete-label">{{ t('activity.actions.complete') }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="open-tasks__delete-btn"
-                  :class="{
-                    'open-tasks__delete-btn--warn': (deleteClickCounts[task.id] ?? 0) === 1,
-                    'open-tasks__delete-btn--danger': (deleteClickCounts[task.id] ?? 0) >= 2,
-                  }"
-                  :title="deleteTooltip(task.id)"
-                  @click="handleDeleteClick(task)"
-                >
-                  <i class="pi pi-times" />
-                </button>
-                <!-- Close / collapse back to compact -->
-                <button
-                  type="button"
-                  class="open-tasks__collapse-btn"
-                  :title="t('common.close')"
-                  @click.stop="expandedId = null"
-                >
-                  <i class="pi pi-times" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Meta row also visible in expanded state (overdue date stays red) -->
-            <div class="open-tasks__meta open-tasks__meta--expanded">
-              <span class="open-tasks__type-chip open-tasks__type-chip--static" :style="typeChipStyle(task.kind)">
-                <i :class="['pi', resolvedKindIcon(task.kind)]" />
-                {{ kindLabel(task.kind) }}
-              </span>
-              <span
-                class="open-tasks__due"
-                :class="{ 'open-tasks__due--overdue': isTaskOverdue(task) }"
-              >
-                <i class="pi pi-clock open-tasks__meta-icon" />
-                {{ task.due_at ? formatDueDateShort(task.due_at) : t('activity.fields.dueAt') }}
-              </span>
-              <span v-if="task.responsible" class="open-tasks__responsible open-tasks__responsible--static">
-                <i class="pi pi-user open-tasks__meta-icon" />
-                {{ task.responsible.full_name }}
-              </span>
-            </div>
-
-            <!-- Result textarea (required field — highlighted when Выполнить clicked without value) -->
-            <div class="open-tasks__result-wrap">
-              <textarea
-                :ref="(el) => registerResultRef(task.id, el as HTMLTextAreaElement | null)"
-                v-model="taskResultDrafts[task.id]"
-                class="open-tasks__result-input"
-                :class="{ 'open-tasks__result-input--required': resultRequired === task.id }"
-                :placeholder="t('activity.fields.resultPlaceholder')"
-                rows="2"
-                @click.stop
-                @input="() => { if (resultRequired === task.id && taskResultDrafts[task.id]?.trim()) resultRequired = null }"
-              />
-              <p v-if="resultRequired === task.id" class="open-tasks__result-error">
-                {{ t('activity.fields.resultRequired') }}
-              </p>
-            </div>
-          </div>
+            :task="task"
+            mode="inline"
+            :focus-result="focusResultId === task.id"
+            @completed="onPanelCompleted"
+            @deleted="onPanelDeleted"
+            @updated="onPanelUpdated"
+            @close="expandedId = null"
+          />
         </Transition>
       </div>
     </div>
@@ -315,6 +245,7 @@ import DatePicker from 'primevue/datepicker'
 import { kindIcon, todayInOperationalTz, dateInOperationalTz } from '@/utils/activity'
 import { activityApi, type ReschedulePreset } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityTargetType } from '@/entities/activity'
+import TaskExpandedPanel from '@/components/crm/activity/TaskExpandedPanel.vue'
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
@@ -347,23 +278,11 @@ function registerRowRef(id: number, el: HTMLElement | null) {
   rowRefs[id] = el
 }
 
-// Map task id → result textarea element (for focus-on-required)
-const resultRefs = reactive<Record<number, HTMLTextAreaElement | null>>({})
-function registerResultRef(id: number, el: HTMLTextAreaElement | null) {
-  resultRefs[id] = el
-}
-
-// 3-step delete counter per task id
+// 3-step delete counter per task id (for compact card ✕ button)
 const deleteClickCounts = reactive<Record<number, number>>({})
 
-// Result text drafts per task id
-const taskResultDrafts = reactive<Record<number, string>>({})
-
-// Which expanded task has the result field highlighted as required
-const resultRequired = ref<number | null>(null)
-
-// Which task is currently being completed (pending API call)
-const completingId = ref<number | null>(null)
+// When set to a task id, the expanded TaskExpandedPanel for that task will auto-focus the result textarea
+const focusResultId = ref<number | null>(null)
 
 // ─── Click-outside (BUG C fix) ───────────────────────────────────────────────
 // Problem: when the user clicks to expand a task, Vue re-renders synchronously,
@@ -624,7 +543,8 @@ function expandTask(id: number) {
   typePickerOpenId.value = null
   datePickerOpenId.value = null
   responsiblePickerOpenId.value = null
-  resultRequired.value = null
+  // Clear focus signal (will be re-set if coming from onCompleteClick)
+  focusResultId.value = null
   expandedId.value = id
 }
 
@@ -633,7 +553,7 @@ function collapseAll() {
   typePickerOpenId.value = null
   datePickerOpenId.value = null
   responsiblePickerOpenId.value = null
-  resultRequired.value = null
+  focusResultId.value = null
 }
 
 // ─── Expand-and-open picker helpers (meta row clicks in compact mode) ─────────
@@ -663,52 +583,36 @@ function expandAndToggleResponsiblePicker(taskId: number) {
   toggleResponsiblePicker(taskId)
 }
 
-// ─── «Выполнить» flow (BUG A fix) ────────────────────────────────────────────
-// Spec §11:
-//   • Compact (collapsed) card: Выполнить → expand card + highlight result field as required.
-//   • Expanded card: Выполнить → if result is empty, highlight field (red border) + do NOT complete;
-//     if result is filled, call complete endpoint, remove task from list, refresh feed.
-//   • Clicking Выполнить must NEVER just collapse the card.
+// ─── «Выполнить» flow ─────────────────────────────────────────────────────────
+// Compact card "Выполнить" → expand card + signal TaskExpandedPanel to focus result textarea.
+// The actual complete logic lives inside TaskExpandedPanel.
 
 function onCompleteClick(task: ActivityDto) {
-  // In compact mode: expand + mark result as required to draw attention
   expandTask(task.id)
-  // After DOM update, mark result as required and focus the textarea
+  // Signal panel to focus result after DOM update
   nextTick(() => {
-    resultRequired.value = task.id
-    const el = resultRefs[task.id]
-    if (el) el.focus()
+    focusResultId.value = task.id
   })
 }
 
-async function onCompleteSubmit(task: ActivityDto) {
-  const resultText = taskResultDrafts[task.id]?.trim() ?? ''
-  // If result is empty, highlight the field and do NOT complete
-  if (!resultText) {
-    resultRequired.value = task.id
-    await nextTick()
-    const el = resultRefs[task.id]
-    if (el) el.focus()
-    return
-  }
-  // Call complete endpoint
-  if (completingId.value !== null) return
-  completingId.value = task.id
-  try {
-    const updated = await activityApi.completeActivity(task.id, resultText)
-    // Clear local draft + prune all per-task map entries (F25)
-    pruneTaskMaps(task.id)
-    resultRequired.value = null
-    expandedId.value = null
-    // Emit so parent (DealPage/index.vue) updates feedComposable → openTasks drops this task
-    // and the feed shows the completed task
-    emit('completed', updated)
-    toast.add({ severity: 'success', summary: t('tasks.board.card.completed'), life: 2000 })
-  } catch {
-    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
-  } finally {
-    completingId.value = null
-  }
+// ─── Panel event handlers ──────────────────────────────────────────────────────
+
+function onPanelCompleted(activity: ActivityDto) {
+  pruneTaskMaps(activity.id)
+  expandedId.value = null
+  focusResultId.value = null
+  emit('completed', activity)
+}
+
+function onPanelDeleted(id: number) {
+  pruneTaskMaps(id)
+  expandedId.value = null
+  focusResultId.value = null
+  emit('deleted', id)
+}
+
+function onPanelUpdated(activity: ActivityDto) {
+  emit('updated', activity)
 }
 
 // ─── 3-step delete (DealCard §11) ─────────────────────────────────────────────
@@ -740,20 +644,25 @@ function handleDeleteClick(task: ActivityDto) {
 // so the reactive maps don't grow unbounded.
 
 function pruneTaskMaps(id: number) {
-  delete taskResultDrafts[id]
   delete deleteClickCounts[id]
   delete rowRefs[id]
-  delete resultRefs[id]
   delete taskTitleDraft[id]
   delete taskDueDrafts[id]
 }
 
-// ─── Handlers ─────────────────────────────────────────────────────────────────
+// ─── Compact card delete handler (delegates to API via TaskExpandedPanel style) ──
 
-function onDelete(id: number) {
-  pruneTaskMaps(id)
-  expandedId.value = null
-  emit('deleted', id)
+async function onDelete(id: number) {
+  try {
+    await activityApi.deleteActivity(id)
+    pruneTaskMaps(id)
+    expandedId.value = null
+    focusResultId.value = null
+    emit('deleted', id)
+    toast.add({ severity: 'success', summary: t('activity.actions.delete'), life: 2000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.server_error'), life: 3000 })
+  }
 }
 </script>
 

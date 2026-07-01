@@ -115,19 +115,41 @@ export function useTaskBoard() {
   /**
    * Reschedule a task by dragging it into a bucket.
    *
+   * 10.3: Preserves the task's original TIME-OF-DAY when moving to a new day.
+   * Sends a full ISO datetime (new date + original time) to avoid resetting
+   * the time to 00:00 on the server.
+   *
    * Optimistically moves the card between buckets in the store, then calls
    * the reschedule API. On error it rolls back by reloading from the server.
    */
   async function rescheduleTask(id: number, targetBucket: MyBoardBucket): Promise<void> {
-    const dueAt = bucketToDueDate(targetBucket)
-    const dueAtIso = `${dueAt}T00:00:00+04:00`
+    const newDateStr = bucketToDueDate(targetBucket) // YYYY-MM-DD in operational TZ
+
+    // Find the task in the store to preserve its original time component
+    let dueAtIso: string
+    const existingTask = Object.values(store.serverBuckets)
+      .flat()
+      .find((t) => t.id === id)
+
+    if (existingTask?.due_at) {
+      // Extract time component from original due_at and combine with new date
+      const origDate = new Date(existingTask.due_at)
+      const hours = String(origDate.getUTCHours()).padStart(2, '0')
+      const minutes = String(origDate.getUTCMinutes()).padStart(2, '0')
+      const seconds = String(origDate.getUTCSeconds()).padStart(2, '0')
+      // Use operational TZ offset (+04:00) — keep original UTC time → combine with new date in +04:00
+      dueAtIso = `${newDateStr}T${hours}:${minutes}:${seconds}+04:00`
+    } else {
+      // No original time — use start of day in operational TZ
+      dueAtIso = `${newDateStr}T09:00:00+04:00`
+    }
 
     // Optimistic move in the shared store
     store.boardMove(id, targetBucket, dueAtIso)
 
     try {
       await rescheduleMutation.run(async () => {
-        await activityApi.rescheduleActivity(id, { dueAt })
+        await activityApi.rescheduleActivity(id, { dueAt: dueAtIso })
       })
     } catch {
       // Rollback
