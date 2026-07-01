@@ -67,7 +67,6 @@ import type { OrbitaOrientation } from './types'
 
 interface Props {
   icon:           string
-  moveLabel:      string
   toggleLabel:    string
   orientation:    OrbitaOrientation
   tooltipOptions: (value: string) => OrbitaTooltipOptions

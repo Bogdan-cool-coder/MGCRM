@@ -57,7 +57,6 @@
     <!-- Rendered AFTER panel so it sits at the far right (H) or bottom (V) -->
     <OrbitaToggle
       :icon="collapseToggleIcon"
-      :move-label="t('orbita.drag')"
       :toggle-label="layoutStore.orbitCollapsed ? t('orbita.expand') : t('orbita.collapse')"
       :orientation="layoutStore.orbitOrientation"
       :tooltip-options="tooltipOptions"
