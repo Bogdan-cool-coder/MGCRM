@@ -348,7 +348,8 @@ export interface ContactRefDto {
 
 export interface DealContactDto {
   id: number
-  contact: ContactRefDto
+  /** null when the contact was deleted but the pivot row was not cleaned up (orphaned FK) */
+  contact: ContactRefDto | null
   is_primary: boolean
 }
 

@@ -20,8 +20,16 @@
         :key="link.id"
         class="deal-contacts-group__item"
       >
+        <!-- ── Orphaned link (contact was deleted) ────────────────────────────── -->
+        <template v-if="!link.contact">
+          <div class="deal-contacts-group__orphan">
+            <i class="pi pi-user-minus deal-contacts-group__orphan-icon" />
+            <span class="deal-contacts-group__orphan-text">{{ t('sales.deal.page.contacts.deleted') }}</span>
+          </div>
+        </template>
+
         <!-- ── View mode ──────────────────────────────────────────────────────── -->
-        <template v-if="editingContactId !== link.contact.id">
+        <template v-else-if="editingContactId !== link.contact.id">
           <div class="deal-contacts-group__item-header">
             <div class="deal-contacts-group__item-name-row">
               <RouterLink
@@ -172,7 +180,7 @@
         </template>
 
         <!-- ── Edit mode ──────────────────────────────────────────────────────── -->
-        <template v-else>
+        <template v-else-if="link.contact">
           <div class="deal-contacts-group__edit-form">
             <!-- Имя -->
             <div class="deal-contacts-group__edit-field">
@@ -332,13 +340,13 @@ function getChannels(contactId: number): ContactChannel[] {
 
 onMounted(() => {
   for (const link of props.contacts) {
-    void loadChannels(link.contact.id)
+    if (link.contact) void loadChannels(link.contact.id)
   }
 })
 
 const _prevContactIds = ref<number[]>([])
 watch(
-  () => props.contacts.map((c) => c.contact.id),
+  () => props.contacts.flatMap((c) => (c.contact ? [c.contact.id] : [])),
   (ids) => {
     for (const id of ids) {
       if (!_prevContactIds.value.includes(id)) {
@@ -420,7 +428,7 @@ onUnmounted(() => {
 const settingPrimaryId = ref<number | null>(null)
 
 async function doSetPrimary(link: DealContactDto): Promise<void> {
-  if (link.is_primary || settingPrimaryId.value !== null) return
+  if (!link.contact || link.is_primary || settingPrimaryId.value !== null) return
   settingPrimaryId.value = link.contact.id
   try {
     const updatedContacts = await salesApi.updateDealContact(
@@ -461,6 +469,7 @@ const editNewChValue = ref('')
 const editSaving = ref(false)
 
 function startEdit(link: DealContactDto) {
+  if (!link.contact) return
   openMenuId.value = null
   editingContactId.value = link.contact.id
   editForm.value = {
@@ -530,7 +539,7 @@ async function submitEdit(contactId: number) {
     }
 
     // ── is_primary toggle via PATCH /api/deals/{deal}/contacts/{pivot} ───────
-    const link = props.contacts.find((c) => c.contact.id === contactId)
+    const link = props.contacts.find((c) => c.contact?.id === contactId)
     if (link && editForm.value.is_primary !== link.is_primary) {
       const updatedContacts = await salesApi.updateDealContact(
         props.dealId,
@@ -1076,6 +1085,30 @@ async function submitAddChannel(contactId: number) {
   display: flex;
   gap: $space-2;
   justify-content: flex-end;
+}
+
+// ── Orphaned contact (deleted) ────────────────────────────────────────────────
+
+.deal-contacts-group__orphan {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 0;
+  color: $surface-400;
+  font-size: $font-size-xs;
+
+  .app-dark & {
+    color: var(--p-surface-500);
+  }
+}
+
+.deal-contacts-group__orphan-icon {
+  font-size: $font-size-xs;
+  flex-shrink: 0;
+}
+
+.deal-contacts-group__orphan-text {
+  font-style: italic;
 }
 
 // ── Footer ────────────────────────────────────────────────────────────────────

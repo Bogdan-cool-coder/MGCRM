@@ -33,7 +33,7 @@ export function useDealContacts(dealId: () => number) {
     removingId.value = contactId
     try {
       await removeMutation.run(() => salesApi.removeDealContact(dealId(), contactId))
-      resource.data.value = resource.data.value.filter((c) => c.contact.id !== contactId)
+      resource.data.value = resource.data.value.filter((c) => c.contact?.id !== contactId)
     } finally {
       removingId.value = null
     }

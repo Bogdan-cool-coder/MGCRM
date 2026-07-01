@@ -1849,6 +1849,7 @@
           "primary": "Primary",
           "setPrimary": "Set as primary",
           "setPrimarySuccess": "Primary contact updated",
+          "deleted": "Contact deleted",
           "empty": {
             "title": "No contacts linked",
             "subtitle": "Add responsible persons for this deal"
