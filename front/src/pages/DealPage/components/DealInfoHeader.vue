@@ -88,10 +88,6 @@
             <i class="pi pi-arrows-v deal-header__menu-icon" />
             {{ t('sales.deal.page.menu.expandAll') }}
           </button>
-          <button class="deal-header__menu-item" role="menuitem" @click="goCustomizeFields">
-            <i class="pi pi-cog deal-header__menu-icon" />
-            {{ t('sales.deal.page.menu.customizeFields') }}
-          </button>
           <div class="deal-header__menu-sep" />
           <button class="deal-header__menu-item deal-header__menu-item--danger" role="menuitem" @click="confirmDelete">
             <i class="pi pi-trash deal-header__menu-icon" />
@@ -283,11 +279,6 @@ function onCollapseAll() {
 
 function onExpandAll() {
   emit('expandAllGroups')
-  menuOpen.value = false
-}
-
-function goCustomizeFields() {
-  void router.push('/admin/custom-fields?scope=deal')
   menuOpen.value = false
 }
 

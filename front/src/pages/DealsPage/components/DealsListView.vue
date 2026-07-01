@@ -231,8 +231,6 @@ const emit = defineEmits<{
   pageChange: [event: { page: number; rows: number }]
   resetFilters: []
   create: []
-  changeStage: [deal: DealDto]
-  delete: [deal: DealDto]
   sort: [key: DealSortKey]
 }>()
 

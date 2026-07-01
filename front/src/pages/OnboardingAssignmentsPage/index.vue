@@ -25,6 +25,7 @@
       lazy
       paginator
       :rows-per-page-options="[25, 50, 100]"
+      @page="onPage"
     >
       <template #empty>
         <div class="assignments-page__empty">
@@ -163,6 +164,7 @@ const {
   deadlineDialogVisible,
   editingAssignment,
   loadAssignments,
+  onPage,
   applyFilters,
   resetFilters,
   openEditDeadline,

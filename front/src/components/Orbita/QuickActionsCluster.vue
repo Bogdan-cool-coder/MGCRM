@@ -60,25 +60,8 @@ const resolvedActions = computed<QuickActionDef[]>(() =>
   resolveQuickActions(userStore.getNavQuickActions),
 )
 
-/**
- * Map drawer action keys to full-card create routes.
- * Wave 4: creation goes through full cards, not drawers.
- */
-const DRAWER_KEY_ROUTES: Record<string, string> = {
-  deal_create: '/deals/new',
-  contact_create: '/contacts/new',
-}
-
 function execute(action: QuickActionDef): void {
   switch (action.actionType) {
-    case 'drawer':
-      if (action.drawerKey) {
-        const route = DRAWER_KEY_ROUTES[action.drawerKey]
-        if (route) {
-          void router.push(route)
-        }
-      }
-      break
     case 'inline':
       if (action.key === 'toggle_theme') {
         themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light')
@@ -86,6 +69,9 @@ function execute(action: QuickActionDef): void {
         layoutStore.openCommandPalette()
       }
       break
+    // 'drawer' type is deprecated (Wave 4). All creation actions in the registry
+    // now use actionType: 'route' with an explicit route — they fall through to
+    // the default branch. The 'drawer' branch is intentionally removed.
     case 'route':
     default:
       if (action.route) {

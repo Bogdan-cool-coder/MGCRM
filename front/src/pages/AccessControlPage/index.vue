@@ -42,7 +42,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -57,11 +56,12 @@ import RolesPermissionsTab from './components/RolesPermissionsTab.vue'
 import VisibilityScopeTab from './components/VisibilityScopeTab.vue'
 
 const { t } = useI18n()
-const route = useRoute()
-const router = useRouter()
 const userStore = useUserStore()
 
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+// This page is always rendered embedded inside the Settings shell.
+// The standalone /admin/access-control/* paths redirect to /settings?section=access-control
+// (see router/routes/base.ts). Tab state is managed locally.
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 /** Allowed roles per spec: admin, director */
 const isAllowed = computed(() => {
@@ -69,41 +69,10 @@ const isAllowed = computed(() => {
   return role === 'admin' || role === 'director'
 })
 
-/** Map route name → tab value (used in standalone mode only) */
-const routeTabMap: Record<string, string> = {
-  AccessControlDepartments: 'departments',
-  AccessControlRoles: 'roles',
-  AccessControlVisibility: 'visibility',
-}
-
-/**
- * Internal tab state for embedded mode — avoids URL sync conflict with
- * the Settings shell ?section= parameter (OV-1 resolution).
- */
-const internalTab = ref<string>('departments')
-
-const activeTab = computed(() => {
-  if (props.embedded) return internalTab.value
-  return routeTabMap[String(route.name)] ?? 'departments'
-})
+const activeTab = ref<string>('departments')
 
 function onTabChange(value: string | number) {
-  const tab = String(value)
-  if (props.embedded) {
-    // Embedded: switch tabs locally, no router involvement
-    internalTab.value = tab
-    return
-  }
-  // Standalone: sync to URL as before
-  const routeMap: Record<string, string> = {
-    departments: '/admin/access-control/departments',
-    roles: '/admin/access-control/roles',
-    visibility: '/admin/access-control/visibility',
-  }
-  const target = routeMap[tab]
-  if (target && route.path !== target) {
-    router.push(target)
-  }
+  activeTab.value = String(value)
 }
 </script>
 

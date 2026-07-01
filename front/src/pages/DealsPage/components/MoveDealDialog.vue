@@ -182,23 +182,16 @@ async function onSubmit() {
       }),
     )
 
-    if ((response as unknown as { won_gate_warning?: boolean }).won_gate_warning) {
-      toast.add({
-        severity: 'warn',
-        summary: t('sales.move.dialog.wonGateWarningToast'),
-        life: 5000,
-      })
-    } else {
-      toast.add({
-        severity: 'success',
-        summary: t('sales.move.dialog.successToast', {
-          stage: selectedStage.value?.name ?? '',
-        }),
-        life: 3000,
-      })
-    }
-
+    // Close the dialog immediately on success, before any async side-effects
     visible.value = false
+
+    const stageName = selectedStage.value?.name ?? ''
+    toast.add({
+      severity: 'success',
+      summary: t('sales.move.dialog.successToast', { stage: stageName }),
+      life: 3000,
+    })
+
     emit('moved', (response as unknown as { data: DealDto }).data)
   } catch (err) {
     const status = getApiErrorStatus(err)

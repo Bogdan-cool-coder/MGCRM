@@ -80,8 +80,6 @@
         @page-change="onPageChange"
         @reset-filters="resetFilters"
         @create="onCreateDeal()"
-        @change-stage="openMoveDialog"
-        @delete="confirmDelete"
         @sort="onSort"
       />
     </div>
@@ -505,33 +503,7 @@ async function onLoadMore(stageId: number) {
   }
 }
 
-// ── Delete ─────────────────────────────────────────────────────────────────────
-
-const deleteMutation = useMutation()
-
-function confirmDelete(deal: DealDto) {
-  confirm.require({
-    header: t('sales.deals.page.actions.deleteConfirm'),
-    message: t('sales.deals.page.actions.deleteDetail'),
-    acceptLabel: t('sales.deals.page.actions.deleteAccept'),
-    rejectLabel: t('sales.deals.page.actions.deleteReject'),
-    acceptClass: 'p-button-danger',
-    accept: async () => {
-      try {
-        await deleteMutation.run(() => salesApi.deleteDeal(deal.id))
-        toast.add({ severity: 'success', summary: t('sales.deals.page.actions.deleteSuccess'), life: 3000 })
-        void reload()
-      } catch (err) {
-        toast.add({
-          severity: 'error',
-          summary: t('errors.server_error'),
-          detail: getApiErrorMessage(err, t('errors.server_error')),
-          life: 4000,
-        })
-      }
-    },
-  })
-}
+// ── Delete: individual deal deletion is handled from DealPage (detail view) ───────
 
 // ── Bulk dialogs visibility ────────────────────────────────────────────────────
 

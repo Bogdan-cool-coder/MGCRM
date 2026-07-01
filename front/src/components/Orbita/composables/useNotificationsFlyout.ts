@@ -102,9 +102,14 @@ export function useNotificationsFlyout() {
       await notificationsApi.markRead(item.id)
     })
 
-    // Navigate to deep link if present
+    // Navigate to deep link if present and the route actually exists.
+    // router.resolve() returns { matched: [] } for unknown paths; we guard
+    // against silent catchall redirects to /dashboard.
     if (item.deep_link) {
-      void router.push(item.deep_link)
+      const resolved = router.resolve(item.deep_link)
+      if (resolved.matched.length > 0) {
+        void router.push(item.deep_link)
+      }
     }
   }
 
