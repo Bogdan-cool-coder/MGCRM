@@ -79,9 +79,27 @@
         <h4 class="mb-3">{{ t('profile.security.totp_setup_title') }}</h4>
         <p class="mb-3">{{ t('profile.security.totp_scan_qr') }}</p>
 
-        <div class="totp-qr-placeholder mb-4">
-          <p class="totp-qr-placeholder__text">{{ totpSetupSecret }}</p>
-          <p class="text-muted totp-uri-text">{{ totpSetupUri }}</p>
+        <!-- QR code block: always white background so camera can read it in both themes -->
+        <div class="totp-qr-block mb-4">
+          <div class="totp-qr-canvas-wrapper">
+            <canvas ref="qrCanvas" class="totp-qr-canvas" />
+          </div>
+
+          <!-- Fallback: manual secret entry -->
+          <div class="totp-qr-manual mt-3">
+            <p class="totp-qr-manual__label">{{ t('profile.security.totp_manual_key') }}</p>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <code class="totp-qr-secret">{{ totpSetupSecret }}</code>
+              <Button
+                :label="keyCopied ? t('profile.security.totp_key_copied') : t('profile.security.totp_copy_key')"
+                :icon="keyCopied ? 'pi pi-check' : 'pi pi-copy'"
+                severity="secondary"
+                outlined
+                size="small"
+                @click="copySecret"
+              />
+            </div>
+          </div>
         </div>
 
         <p class="mb-3">{{ t('profile.security.totp_enter_code') }}</p>
@@ -137,7 +155,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import QRCode from 'qrcode'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
@@ -173,6 +193,62 @@ const startTotpManage = props.profile.startTotpManage
 const cancelTotpManage = props.profile.cancelTotpManage
 const confirmDisableTotp = props.profile.confirmDisableTotp
 const confirmRegenerateCodes = props.profile.confirmRegenerateCodes
+
+// QR canvas ref
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
+
+// Key copied state for copy button feedback
+const keyCopied = ref(false)
+let keyCopiedTimer: ReturnType<typeof setTimeout> | null = null
+
+async function renderQr(uri: string): Promise<void> {
+  await nextTick()
+  if (!qrCanvas.value || !uri) return
+  await QRCode.toCanvas(qrCanvas.value, uri, {
+    width: 200,
+    margin: 2,
+    color: {
+      dark: '#000000',  // dark modules always black
+      light: '#ffffff', // white background always — camera requires this
+    },
+  })
+}
+
+// Watch: when setup starts and URI becomes available, render QR
+watch(
+  () => totpSetupUri.value,
+  (uri) => {
+    if (uri) {
+      renderQr(uri)
+    }
+  },
+  { immediate: true },
+)
+
+// Also re-render when isTotpSetupStarted flips to true (canvas mounts)
+watch(
+  () => isTotpSetupStarted.value,
+  (started) => {
+    if (started && totpSetupUri.value) {
+      renderQr(totpSetupUri.value)
+    }
+  },
+)
+
+async function copySecret(): Promise<void> {
+  const secret = totpSetupSecret.value
+  if (!secret) return
+  try {
+    await navigator.clipboard.writeText(secret)
+    keyCopied.value = true
+    if (keyCopiedTimer !== null) clearTimeout(keyCopiedTimer)
+    keyCopiedTimer = setTimeout(() => {
+      keyCopied.value = false
+    }, 2000)
+  } catch {
+    // silently ignore — clipboard may be blocked in some contexts
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -228,42 +304,72 @@ const confirmRegenerateCodes = props.profile.confirmRegenerateCodes
   border-radius: $radius-md;
 
   .app-dark & {
-    // BUG-2: surface-900 in dark = #F9FAFB (nearly white); use surface-50
     background: var(--p-surface-50);
     border-color: var(--p-surface-200);
   }
 }
 
-.totp-qr-placeholder {
+// QR container: neutral surface card wrapper
+.totp-qr-block {
+  display: inline-block;
   padding: $space-4;
-  background-color: $surface-100;
+  background-color: $surface-50;
   border: 1px solid $surface-200;
   border-radius: $radius-md;
-  display: inline-block;
-  font-family: $font-family-mono;
 
   .app-dark & {
-    // BUG-2: surface-800 in dark = #F1F2F3; use surface-100
-    background-color: var(--p-surface-100);
+    background-color: var(--p-surface-50);
     border-color: var(--p-surface-200);
   }
+}
 
-  &__text {
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    letter-spacing: 0.1em;
-    color: $surface-900;
+// The canvas wrapper provides a mandatory white background so the QR code
+// remains scannable regardless of app theme. Camera sensors require dark
+// modules on a white (not theme-surface) background — this is a technical
+// constraint, not a design choice, hence the literal white value.
+.totp-qr-canvas-wrapper {
+  display: inline-block;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: #ffffff;
+  padding: $space-2;
+  border-radius: $radius-sm;
+  line-height: 0; // remove inline gap below canvas
+}
+
+.totp-qr-canvas {
+  display: block;
+}
+
+// Manual fallback section
+.totp-qr-manual {
+  &__label {
+    font-size: $font-size-sm;
+    color: $surface-600;
     margin: 0 0 $space-2;
 
     .app-dark & {
-      color: var(--p-surface-50);
+      color: var(--p-surface-400);
     }
   }
 }
 
-.totp-uri-text {
-  font-size: $font-size-xs;
-  word-break: break-all;
+.totp-qr-secret {
+  display: inline-block;
+  padding: $space-1 $space-3;
+  background-color: $surface-100;
+  border: 1px solid $surface-200;
+  border-radius: $radius-sm;
+  font-family: $font-family-mono;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 0.08em;
+  color: $surface-900;
+
+  .app-dark & {
+    background-color: var(--p-surface-100);
+    border-color: var(--p-surface-200);
+    color: var(--p-surface-900);
+  }
 }
 
 .totp-backup-codes {
@@ -284,7 +390,6 @@ const confirmRegenerateCodes = props.profile.confirmRegenerateCodes
   text-align: center;
 
   .app-dark & {
-    // BUG-2: surface-800 in dark = #F1F2F3; use surface-100
     background-color: var(--p-surface-100);
     border-color: var(--p-surface-200);
     color: var(--p-surface-50);
