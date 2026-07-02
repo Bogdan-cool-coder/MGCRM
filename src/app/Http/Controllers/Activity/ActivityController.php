@@ -253,8 +253,11 @@ class ActivityController extends Controller
      * to the authenticated manager's DEPARTMENT subtree instead of "my work" — a
      * director/manager sees the open tasks of every user under them. Gated to
      * admin/director/manager via ActivityPolicy::viewTeamBoard (others 403). The
-     * department is inferred from the caller, never passed in. Optional
-     * ?responsible_id= narrows to one team member and ?q= searches title/body.
+     * department is inferred from the caller, never passed in. The board accepts
+     * the SAME filter params as the personal my-board / flat list
+     * (ActivityService::applyListFilters): responsible_id, q, kind, status,
+     * priority and the due_from/due_to range — each narrows WITHIN the department
+     * subtree so «Команда» filters exactly like «Мои задачи».
      */
     public function teamBoard(Request $request): JsonResponse
     {
@@ -262,7 +265,7 @@ class ActivityController extends Controller
 
         $buckets = $this->service->teamBoard(
             $request->user(),
-            $request->only(['responsible_id', 'q']),
+            $request->only(['responsible_id', 'q', 'kind', 'status', 'priority', 'due_from', 'due_to']),
         );
 
         $payload = [];

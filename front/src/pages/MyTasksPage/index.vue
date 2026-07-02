@@ -15,16 +15,6 @@
       @enter-select-mode="enterSelectMode"
     />
 
-    <!-- Team filter bar — shown in team mode kanban only (list view in team mode
-         falls back to personal list, so the team filter bar is not relevant there) -->
-    <Transition name="tasks-panel-slide">
-      <TeamTasksFilterBar
-        v-if="taskMode === 'team' && activeView === 'kanban'"
-        v-model:q="teamQ"
-        v-model:responsible-id="teamResponsibleId"
-      />
-    </Transition>
-
     <!-- QuickCreate panel — only in my-tasks mode -->
     <Transition name="tasks-panel-slide">
       <TasksQuickCreate
@@ -34,12 +24,13 @@
       />
     </Transition>
 
-    <!-- FilterPanel — shown in both kanban and list views for «Мои» mode.
-         In kanban: q reloads board from server; other filters applied client-side.
+    <!-- FilterPanel — shown in both kanban and list views for both «Мои» and «Команда».
+         In «Мои» kanban: filters applied client-side on the loaded board snapshot.
+         In «Команда» kanban: all filters sent to server on reload.
          In list: all filters go to server as before. -->
     <Transition name="tasks-panel-slide">
       <MyTasksFilterPanel
-        v-if="filterOpen && taskMode === 'my'"
+        v-if="filterOpen"
         v-model="filters"
         @reset="onResetFilters"
         @close="filterOpen = false"
@@ -166,13 +157,13 @@ import TaskExpandedPanel from '@/components/crm/activity/TaskExpandedPanel.vue'
 import TasksTopBar from './components/TasksTopBar.vue'
 import TasksQuickCreate from './components/TasksQuickCreate.vue'
 import TasksBulkBar from './components/TasksBulkBar.vue'
-import TeamTasksFilterBar from './components/TeamTasksFilterBar.vue'
 import MyTasksPresetTabs from './components/MyTasksPresetTabs.vue'
 import MyTasksFilterPanel from './components/MyTasksFilterPanel.vue'
 import MyTasksTable from './components/MyTasksTable.vue'
 import TasksKanbanBoard from './components/TasksKanbanBoard.vue'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import { activityApi } from '@/api/activity'
+import { localDateString } from '@/utils/activity'
 import { useActivityStore } from '@/stores/activityStore'
 import { useMyTasksStore } from '@/stores/myTasksStore'
 import { useUserStore } from '@/stores/user'
@@ -224,10 +215,7 @@ watch(activeView, (view) => {
   if (taskMode.value === 'team') {
     // In team mode: only the kanban board is active (list falls back to personal)
     if (view === 'kanban') {
-      void teamBoard.load({
-        q: teamQ.value || undefined,
-        responsible_id: teamResponsibleId.value ?? undefined,
-      })
+      void teamBoard.load(buildTeamBoardParams())
     } else {
       // List view in team mode falls through to personal list (same preset tabs)
       void Promise.all([load(), refreshCounts()])
@@ -327,26 +315,38 @@ const taskBoard = useTaskBoard()
 // ── Team board ────────────────────────────────────────────────────────────────
 const teamBoard = useTeamBoard()
 
-// Team filter state
-const teamQ = ref('')
-const teamResponsibleId = ref<number | null>(null)
+/**
+ * Build the full set of params for GET /api/activities/team-board
+ * from the unified filters ref. Date objects are serialised to ISO date
+ * strings (localDateString) the same way the list view does.
+ */
+function buildTeamBoardParams() {
+  const f = filters.value
+  return {
+    q: f.q || undefined,
+    responsible_id: f.responsible_id ?? undefined,
+    kind: f.kind ?? undefined,
+    status: f.status ?? undefined,
+    priority: f.priority ?? undefined,
+    due_from: f.due_from ? localDateString(f.due_from) : undefined,
+    due_to: f.due_to ? localDateString(f.due_to) : undefined,
+  }
+}
 
-// Reload team board when filter params change (debounced by TeamTasksFilterBar for q)
-watch([teamQ, teamResponsibleId], () => {
-  if (taskMode.value !== 'team') return
-  void teamBoard.load({
-    q: teamQ.value || undefined,
-    responsible_id: teamResponsibleId.value ?? undefined,
-  })
-})
+// Reload team board when any filter changes (uses unified filters ref)
+watch(
+  () => ({ ...filters.value }),
+  () => {
+    if (taskMode.value !== 'team' || activeView.value !== 'kanban') return
+    void teamBoard.load(buildTeamBoardParams())
+  },
+  { deep: true },
+)
 
 // Load team board when switching to team mode; reset to my-board data when switching back
 watch(taskMode, async (mode) => {
   if (mode === 'team') {
-    await teamBoard.load({
-      q: teamQ.value || undefined,
-      responsible_id: teamResponsibleId.value ?? undefined,
-    })
+    await teamBoard.load(buildTeamBoardParams())
   } else if (mode === 'my') {
     // Ensure personal board is up to date after returning
     if (activeView.value === 'kanban') {
@@ -366,21 +366,17 @@ const activeBoardAllDone = computed(() =>
   taskMode.value === 'team' ? teamBoard.allDone.value : taskBoard.allDone.value,
 )
 
-// Client-side filter application on kanban buckets for «Мои» mode.
-//
-// GET /api/activities/my-board accepts only ?q= (title/body search); all other
-// filter fields (kind, status, priority, responsible, due range) are unsupported
-// by the endpoint and must be applied locally on the already-loaded snapshot.
-// The q field is also applied client-side here (consistent with the pre-change
-// board search that already did this via taskBoard.searchQuery).
-//
-// For «Команда» mode the teamBoard already applies its own watcher-driven reload.
-const activeBucketsData = computed(() => {
-  const raw = taskMode.value === 'team' ? teamBoard.bucketsData.value : taskBoard.bucketsData.value
-
-  // Only apply client-side filter in «Мои» kanban — list view gets server-filtered data
-  if (taskMode.value !== 'my' || activeView.value === 'list') return raw
-
+/**
+ * Client-side filter on kanban buckets.
+ *
+ * «Мои» kanban — GET /api/activities/my-board accepts only ?q=; all other
+ * filters must be applied locally on the loaded snapshot.
+ *
+ * «Команда» kanban — GET /api/activities/team-board receives all params
+ * server-side; client-side filtering here acts as a graceful-degradation
+ * safety net for params the backend may not yet support.
+ */
+function applyClientFilters(raw: typeof taskBoard.bucketsData.value) {
   const f = filters.value
   const q = (f.q ?? '').toLowerCase().trim()
   const hasFilter = !!(q || f.kind || f.status || f.priority || f.responsible_id || f.due_from || f.due_to)
@@ -413,6 +409,15 @@ const activeBucketsData = computed(() => {
       return true
     }),
   }))
+}
+
+const activeBucketsData = computed(() => {
+  const raw = taskMode.value === 'team' ? teamBoard.bucketsData.value : taskBoard.bucketsData.value
+
+  // List view gets server-filtered data; no client-side pass needed
+  if (activeView.value === 'list') return raw
+
+  return applyClientFilters(raw)
 })
 
 const hasActiveFilters = computed(() => {
@@ -819,7 +824,7 @@ onMounted(async () => {
         }
       },
       onTeamRefresh: () => {
-        if (taskMode.value === 'team') {
+        if (taskMode.value === 'team' && activeView.value === 'kanban') {
           void teamBoard.reload()
         }
       },

@@ -184,7 +184,15 @@ export const activityApi = {
 
   // ── Team Board (department task board — admin/director/manager only) ─────────
 
-  async getTeamBoard(params: { responsible_id?: number; q?: string } = {}): Promise<MyBoardResponse> {
+  async getTeamBoard(params: {
+    responsible_id?: number | null
+    q?: string
+    kind?: string
+    status?: string
+    priority?: string
+    due_from?: string
+    due_to?: string
+  } = {}): Promise<MyBoardResponse> {
     const clean: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(params)) {
       if (v !== null && v !== undefined && v !== '') {

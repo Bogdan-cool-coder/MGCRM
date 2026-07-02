@@ -35,6 +35,11 @@ export interface TeamTaskBucket {
 export interface TeamBoardParams {
   responsible_id?: number | null
   q?: string
+  kind?: string | null
+  status?: string | null
+  priority?: string | null
+  due_from?: string | null
+  due_to?: string | null
 }
 
 export function useTeamBoard() {
@@ -62,9 +67,14 @@ export function useTeamBoard() {
   async function load(params: TeamBoardParams = {}) {
     lastParams.value = params
     await boardResource.run(async () => {
-      const clean: { responsible_id?: number; q?: string } = {}
+      const clean: Parameters<typeof activityApi.getTeamBoard>[0] = {}
       if (params.responsible_id) clean.responsible_id = params.responsible_id
       if (params.q) clean.q = params.q
+      if (params.kind) clean.kind = params.kind
+      if (params.status) clean.status = params.status
+      if (params.priority) clean.priority = params.priority
+      if (params.due_from) clean.due_from = params.due_from
+      if (params.due_to) clean.due_to = params.due_to
 
       const r = await activityApi.getTeamBoard(clean)
 
