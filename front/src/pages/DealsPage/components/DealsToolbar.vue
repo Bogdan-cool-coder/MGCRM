@@ -133,8 +133,10 @@ const moreMenu = ref<InstanceType<typeof Menu> | null>(null)
 const moreBtnEl = ref<HTMLElement | null>(null)
 const mergeDialogOpen = ref(false)
 
+// totalSum already contains ≈ when multiple currencies are present (from DealsPage index.vue).
+// Do NOT prepend a second ≈ here; render totalSum as-is.
 const subtitle = computed(() =>
-  `MACRO Global · ${props.totalDeals} сделок · ≈ ${props.totalSum}`,
+  `MACRO Global · ${props.totalDeals} сделок · ${props.totalSum}`,
 )
 
 const menuItems = computed(() => [

@@ -45,6 +45,30 @@
     </KeyFactsBlock>
   </InfoPanel>
 
+  <!-- ── Legal identity (M2): legal_form + tax_id — read-only, above catalog ── -->
+  <InfoPanel
+    v-if="company.legal_form || company.tax_id"
+    :title="t('crm.company.sections.legalIdentity')"
+    icon="pi-building"
+    panel-key="company-legal-identity"
+    :default-collapsed="false"
+  >
+    <KeyFactsBlock>
+      <KeyFactsItem
+        v-if="company.legal_form"
+        :label="t('company.page.fields.legalForm')"
+      >
+        <span class="requisites-panel__readonly">{{ company.full_legal_form || company.legal_form }}</span>
+      </KeyFactsItem>
+      <KeyFactsItem
+        v-if="company.tax_id"
+        :label="company.tax_id_label || t('company.page.fields.taxId')"
+      >
+        <span class="requisites-panel__readonly">{{ company.tax_id }}</span>
+      </KeyFactsItem>
+    </KeyFactsBlock>
+  </InfoPanel>
+
   <!-- ── Requisites list (FE-A.4) ────────────────────────────────────────────── -->
   <!-- spec §4: requisites panel icon = pi-id-card (not pi-building) -->
   <InfoPanel

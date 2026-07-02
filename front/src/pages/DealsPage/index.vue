@@ -348,7 +348,10 @@ async function onToggleHiddenStage(stageId: number) {
 // ── Summary (counts + sum) ─────────────────────────────────────────────────────
 
 const totalDealsCount = computed(() => {
-  return visibleColumns.value.reduce((s, col) => s + col.total, 0)
+  // Exclude won/lost columns — only active pipeline stages count.
+  return visibleColumns.value
+    .filter((col) => !col.stage.is_won && !col.stage.is_lost)
+    .reduce((s, col) => s + col.total, 0)
 })
 
 /**
@@ -356,7 +359,7 @@ const totalDealsCount = computed(() => {
  * with the real currency symbol), never with hardcoded ₽/млн/тыс. literals.
  *
  * Aggregate the NATIVE per-currency buckets (amounts_by_currency) across the
- * visible columns rather than summing the base-converted sum_amount blindly:
+ * ACTIVE (non-won, non-lost) columns rather than summing all columns blindly.
  *   - single currency  → one formatted figure in that currency;
  *   - multiple currencies, all rates available → the base-currency converted
  *     total (sum_amount already in base currency, all columns converted cleanly);
@@ -364,7 +367,8 @@ const totalDealsCount = computed(() => {
  *     by " + " (no fabricated single-currency sum).
  */
 const totalSumFormatted = computed(() => {
-  const cols = visibleColumns.value
+  // Exclude won/lost columns — only active pipeline stages contribute.
+  const cols = visibleColumns.value.filter((col) => !col.stage.is_won && !col.stage.is_lost)
   if (cols.length === 0) return formatCurrency(0, 'RUB')
 
   // Native per-currency totals across all visible columns.

@@ -65,20 +65,21 @@
 
           <Column :header="t('dashboard.funnel.transition')" style="min-width: 160px">
             <template #body="{ data: row }">
-              <div class="funnel-progress">
-                <div
-                  class="funnel-progress__track"
-                >
-                  <div
-                    class="funnel-progress__bar"
-                    :class="progressClass(row)"
-                    :style="{ width: `${row.transition_to_next_pct}%` }"
-                  />
+              <template v-if="row.transition_to_next_pct != null">
+                <div class="funnel-progress">
+                  <div class="funnel-progress__track">
+                    <div
+                      class="funnel-progress__bar"
+                      :class="progressClass(row)"
+                      :style="{ width: `${row.transition_to_next_pct}%` }"
+                    />
+                  </div>
+                  <span class="funnel-progress__pct">
+                    {{ row.transition_to_next_pct.toFixed(1) }}%
+                  </span>
                 </div>
-                <span class="funnel-progress__pct">
-                  {{ row.transition_to_next_pct.toFixed(1) }}%
-                </span>
-              </div>
+              </template>
+              <span v-else class="funnel-progress__null">—</span>
             </template>
           </Column>
         </DataTable>
@@ -106,7 +107,7 @@ defineProps<{
 const progressClass = (row: FunnelStage): string => {
   if (row.is_won) return 'funnel-progress__bar--won'
   if (row.is_lost) return 'funnel-progress__bar--lost'
-  if (row.transition_to_next_pct >= 50) return 'funnel-progress__bar--good'
+  if (row.transition_to_next_pct != null && row.transition_to_next_pct >= 50) return 'funnel-progress__bar--good'
   return 'funnel-progress__bar--low'
 }
 </script>
@@ -208,5 +209,10 @@ const progressClass = (row: FunnelStage): string => {
   color: $surface-600;
   min-width: 40px;
   text-align: right;
+}
+
+.funnel-progress__null {
+  font-size: $font-size-sm;
+  color: $surface-400;
 }
 </style>

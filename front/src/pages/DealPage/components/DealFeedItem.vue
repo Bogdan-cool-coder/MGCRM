@@ -199,7 +199,7 @@ import Tag from 'primevue/tag'
 import Menu from 'primevue/menu'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import MeetingReportDialog from '@/components/MeetingReportDialog.vue'
-import { statusSeverity, formatDueDate } from '@/utils/activity'
+import { statusSeverity, formatDueDate, OPERATIONAL_TZ } from '@/utils/activity'
 import { formatCurrency } from '@/utils/currency'
 import type { FeedItem } from '../composables/useDealFeed'
 import type { ActivityDto } from '@/entities/activity'
@@ -388,19 +388,25 @@ const menuItems = computed(() => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Format the time-of-day part for a feed item timestamp in the operational
+ * timezone (Asia/Dubai). Must use the same tz as the group date key produced by
+ * useDealFeed.toDate() so separator and item always show the same calendar day.
+ */
 function formatTime(iso: string): string {
   const d = new Date(iso)
-  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: OPERATIONAL_TZ })
 }
 
 /**
  * System date: «18 июн, 15:40» — matches spec §11 format
  * «{Автор}, {дата}, {время} {действие}»
+ * Both date and time rendered in operational tz (Asia/Dubai) for consistency.
  */
 function formatSystemDate(iso: string): string {
   const d = new Date(iso)
-  const datePart = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-  const timePart = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  const datePart = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: OPERATIONAL_TZ })
+  const timePart = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: OPERATIONAL_TZ })
   return `${datePart}, ${timePart}`
 }
 

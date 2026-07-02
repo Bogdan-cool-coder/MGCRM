@@ -30,7 +30,7 @@ export interface FunnelStage {
   sort_order: number
   count: number
   avg_days_in_stage: number
-  transition_to_next_pct: number
+  transition_to_next_pct: number | null
   is_won: boolean
   is_lost: boolean
   probability: number

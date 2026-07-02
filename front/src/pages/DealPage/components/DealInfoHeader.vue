@@ -31,6 +31,16 @@
       <!-- Health chip -->
       <DealHealthChip :next-task="nextTask" />
 
+      <!-- Won/Lost status badge (V4) -->
+      <span v-if="deal.stage.is_won" class="deal-header__status-badge deal-header__status-badge--won">
+        <i class="pi pi-check-circle" />
+        {{ t('sales.deal.page.wonStatus') }}
+      </span>
+      <span v-else-if="deal.stage.is_lost" class="deal-header__status-badge deal-header__status-badge--lost">
+        <i class="pi pi-times-circle" />
+        {{ t('sales.deal.page.lostStatus') }}
+      </span>
+
       <span class="deal-header__spacer" />
 
       <!-- N дн. в стадии -->
@@ -481,6 +491,42 @@ function confirmDelete() {
 
 .deal-header__spacer {
   flex: 1;
+}
+
+// ── Won/Lost status badge (V4) ────────────────────────────────────────────────
+.deal-header__status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-sm;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 2px 7px;
+
+  &--won {
+    color: var(--p-green-700);
+    background: var(--p-green-50);
+    border: 1px solid var(--p-green-200);
+
+    .app-dark & {
+      color: var(--p-green-300);
+      background: var(--p-green-950);
+      border-color: var(--p-green-800);
+    }
+  }
+
+  &--lost {
+    color: var(--p-red-700);
+    background: var(--p-red-50);
+    border: 1px solid var(--p-red-200);
+
+    .app-dark & {
+      color: var(--p-red-300);
+      background: var(--p-red-950);
+      border-color: var(--p-red-800);
+    }
+  }
 }
 
 .deal-header__days-hint {

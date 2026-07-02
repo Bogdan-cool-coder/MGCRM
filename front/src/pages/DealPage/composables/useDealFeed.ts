@@ -13,6 +13,7 @@ import { apiClient } from '@/api/client'
 import { activityApi } from '@/api/activity'
 import { useMutation } from '@/composables/async/useMutation'
 import type { ActivityDto, ActivityKind, ActivityStatus } from '@/entities/activity'
+import { dateInOperationalTz } from '@/utils/activity'
 
 // ─── Feed item types ──────────────────────────────────────────────────────────
 
@@ -137,8 +138,14 @@ interface FeedApiResponse {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Return the YYYY-MM-DD date key for a feed item timestamp in the operational
+ * timezone (Asia/Dubai / UTC+4). Using UTC slice caused off-by-one grouping for
+ * events near midnight UTC: the separator showed one date while the item's
+ * timestamp (browser-local) showed the next.
+ */
 function toDate(iso: string): string {
-  return iso.slice(0, 10) // YYYY-MM-DD
+  return dateInOperationalTz(new Date(iso)) // YYYY-MM-DD in Asia/Dubai
 }
 
 function normaliseItem(raw: RawFeedItem): FeedItem | null {

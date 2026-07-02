@@ -330,9 +330,20 @@ function onReset() {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Format the date-group separator label.
+ *
+ * dateStr is YYYY-MM-DD in the operational timezone (Asia/Dubai) — produced by
+ * toDate() in useDealFeed. We parse it using parseDateLocal (split into y/m/d)
+ * to avoid ECMAScript's UTC-midnight rule which would shift the day backwards
+ * for Dubai clients (UTC+4). The display uses the operational tz so the separator
+ * date always matches the item timestamps shown by DealFeedItem.
+ */
 function formatGroupDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+  // Parse YYYY-MM-DD as local midnight to avoid UTC off-by-one.
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y!, (m! - 1), d!)
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 // ─── Activity action handlers ─────────────────────────────────────────────────

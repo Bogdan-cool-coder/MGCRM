@@ -1926,6 +1926,8 @@
           "backToDeals": "Назад к сделкам"
         },
         "daysInStage": "дн. в стадии",
+        "wonStatus": "Выиграна",
+        "lostStatus": "Проиграна",
         "clickToChangeStage": "Нажмите, чтобы сменить стадию",
         "infoPanel": "Инфо",
         "menu": {
@@ -3784,6 +3786,7 @@
         "log": "Лог"
       },
       "sections": {
+        "legalIdentity": "Правовая форма и ИНН",
         "requisites": "Реквизиты",
         "employees": "Сотрудники",
         "holding": "Холдинг",

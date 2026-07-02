@@ -1926,6 +1926,8 @@
           "backToDeals": "Back to deals"
         },
         "daysInStage": "days in stage",
+        "wonStatus": "Won",
+        "lostStatus": "Lost",
         "clickToChangeStage": "Click to change stage",
         "infoPanel": "Info",
         "menu": {
@@ -3784,6 +3786,7 @@
         "log": "Log"
       },
       "sections": {
+        "legalIdentity": "Legal form & Tax ID",
         "requisites": "Requisites",
         "employees": "Employees",
         "holding": "Holding",
