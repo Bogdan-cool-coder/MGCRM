@@ -38,7 +38,7 @@ Main передаёт в первом сообщении:
   - **C0 (отвал)**: отвалившийся (C1→C0 mapping для legacy).
 - **SubscriptionModule** — M2M подписка↔Module, авто-включение из позиций договора.
 - **ImplementationItemStatus** — чек-лист внедрения, привязан к подписке; `kind`: status/fraction/percent/date. Источник `impl_pct`.
-- **ActivitySnapshot** — time-series метрик из платформ (uniq `(subscription_id, period_start, metric)`). Это **НЕ** user-генерируемые Activity (те — у `sales-specialist`).
+- **ActivitySnapshot** — time-series метрик из платформ (uniq `(subscription_id, period_start, metric)`). Это **НЕ** user-генерируемые Activity (те — у `sales-backender`).
 - **RegistryKpiSnapshot** — daily cron-снапшот общего KPI реестра (тренд/дашборд).
 - Справочники: **Platform** (Sales/CRM/Digital/Auto/Land/Park), **Region** (KZ/RU/UZ/KG/EU), **Module**, **ChecklistTemplate (+ ChecklistTemplateItem)**.
 
@@ -67,7 +67,7 @@ Main передаёт в первом сообщении:
 ## Границы (что НЕ твоё)
 
 - **Онбординг сотрудников (Course/Lesson/Quiz/Progress/Certificate)** → `onboarding-specialist` (спринт «Онбординг»). Твои чек-листы внедрения (ImplementationItemStatus) — у тебя; учебные курсы — нет.
-- **Sales pipeline/Deal/Lead/Contact/Company/user-Activity** → `sales-specialist`. Не путай твой ActivitySnapshot (метрики платформ) с их Activity (call/meeting/task/note). Базовые Pipeline/PipelineStage модели инфра-уровня — тоже их/backend; ты лишь сидишь lifecycle-стадии.
+- **Sales pipeline/Deal/Lead/user-Activity** → `sales-backender` (**Contact/Company** → `crm-backender`). Не путай твой ActivitySnapshot (метрики платформ) с их Activity (call/meeting/task/note). Базовые Pipeline/PipelineStage модели инфра-уровня — тоже их/backend; ты лишь сидишь lifecycle-стадии.
 - **Contract/Template/Approval/генерация docx** → `contract-specialist`. Хук «contract signed → создать/обновить подписку из позиций» — **твой сервис**, но дёргается со стороны контракта; координируй маппинг позиция→Module.
 - **Автоматизации (renewal-генератор, date_field_approaching на discount_until)** → `automation-specialist`. Твои attention-флаги — источник для его триггеров; executor/UI билдера — его.
 - **Финмодуль (признание выручки из подписок)** → `finance-specialist` читает твои подписки; правки самих подписок — у тебя.

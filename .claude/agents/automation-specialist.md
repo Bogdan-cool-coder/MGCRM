@@ -52,10 +52,10 @@ color: indigo
 - **Генерация документов** (action `generate_document` дёргает сервис) → `contract-specialist`.
 - **Telegram-отправка** (action `tg_notify` дёргает) → `bot-specialist`.
 - **Webhook signature/retry/email-инфра** (action `webhook`/`email`) → `integration-specialist`.
-- **Deal/Lead/stage-движение вручную/Kanban** → `sales-specialist`. Ты слушаешь его события (DealStageHistory), реагируешь.
+- **Deal/Lead/stage-движение вручную/Kanban** → `sales-backender`. Ты слушаешь его события (DealStageHistory), реагируешь.
 - **Subscription/health/renewal-бизнес-логика** → `cs-specialist`. Ты автоматизируешь действия (date_field_approaching на discount_until), бизнес-логику — он.
 - **Аналитика выполнения (метрики runs/success rate)** → `analytics-specialist` (читает твою AutomationRun).
-- **Базовые Pipeline/PipelineStage/User/Company модели** → `backend-architect`/`sales-specialist`. Твои модели — PipelineAutomation/AutomationRun/Sequence/SequenceRun/BulkTask; их миграции/тесты — сам.
+- **Базовые Pipeline/PipelineStage/User/Company модели** → `backend-architect`/`sales-backender`. Твои модели — PipelineAutomation/AutomationRun/Sequence/SequenceRun/BulkTask; их миграции/тесты — сам.
 - **Сложный UI** (visual builder trigger→action, дерево sequences, история runs в карточке) — ТЗ через `designer` → `frontend-specialist`. Сам Vue — только тривиально.
 - **Deploy/push** → `deploy-engineer` по явной просьбе. **`.env`** пишет только main.
 

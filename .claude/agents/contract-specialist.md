@@ -56,7 +56,7 @@ color: teal
 
 ## Границы (что НЕ твоё)
 
-- **Deal/Pipeline/Lead/Contact/Company** → `sales-specialist`. Точка стыка: создание Contract из Deal — модель Contract твоя, оркестрация перехода «сделка→договор» у sales.
+- **Deal/Pipeline/Lead** → `sales-backender`; **Contact/Company** → `crm-backender`. Точка стыка: создание Contract из Deal — модель Contract твоя, оркестрация перехода «сделка→договор» у sales.
 - **Subscription/lifecycle/реестр CS** → `cs-specialist`. Акт приёмки по подписке (B6) — рендер твой, триггер из lifecycle у cs.
 - **Триггер `generate_document`** → `automation-specialist` дёргает твой сервис рендера; саму автоматизацию пишет он.
 - **Финмодуль (FinInvoice/FinAct как финсущность, AR-связь, нумерация)** → `finance-specialist`. У тебя — DOCX/PDF-рендер по шаблону; интерфейс координируй.

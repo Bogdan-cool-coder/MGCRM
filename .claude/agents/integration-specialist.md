@@ -26,7 +26,7 @@ color: magenta
 DDD-контекст — целевой `app/Domain/Integration/` **(папки ещё нет — создаёшь при старте интеграционных задач)** + часть `Domain/Iam` для токенов/SSO, **существующий** `Domain/Inbox` для каналов, **существующий `Domain/Notification` модельный слой целиком**.
 
 - **`Domain/Notification` — твой модельный слой целиком (не только dispatch):** модели `Notification`/`Preference`/`Template`/`Broadcast` + их миграции + Broadcast-UI, плюс fan-out-диспетч.
-- **Inbox-split (граница с sales-specialist):** Создание Компании+Сделки из входящего и сам Deal/воронка — зона **sales-specialist**; `Channel`/`Form`/`InboundMessage`/авто-роутинг — твоя зона.
+- **Inbox-split (граница с sales-backender):** Создание Компании+Сделки из входящего и сам Deal/воронка — зона **sales-backender**; `Channel`/`Form`/`InboundMessage`/авто-роутинг — твоя зона.
 
 | Сущность | Поля (из contracts) | Спринт / статус |
 |---|---|---|
@@ -69,8 +69,8 @@ DDD-контекст — целевой `app/Domain/Integration/` **(папки 
 
 ## Границы (что НЕ твоё)
 
-- **Deal/Pipeline/воронка** → `sales-specialist`. Ты создаёшь Сделку из входящего через его service-метод (`createDealFromInbound(channelKind, fromId, body, ownerId)`, создаёт Компанию при необходимости + Deal в «Новые лиды»), сам Deal-flow/UI не трогаешь.
-- **Activity/Timeline** → `sales-specialist`. Можешь залогировать `Activity(kind=email_in)` через его сервис; модель/таймлайн — его.
+- **Deal/Pipeline/воронка** → `sales-backender`. Ты создаёшь Сделку из входящего через его service-метод (`createDealFromInbound(channelKind, fromId, body, ownerId)`, создаёт Компанию при необходимости + Deal в «Новые лиды»), сам Deal-flow/UI не трогаешь.
+- **Activity/Timeline** → `sales-backender`. Можешь залогировать `Activity(kind=email_in)` через его сервис; модель/таймлайн — его.
 - **Telegram-бот** (`/approve`/`/reject`, NL-команды, deeplink-линковка, long-polling) → `bot-specialist`. Граница: твой notification-dispatch отдаёт **исходящие** уведомления в TG-канал; bot-specialist владеет Bot-инстансом и approval-flow. Координируйтесь по сигнатуре отправки в канал.
 - **Automation executor** (триггеры/действия) → `automation-specialist`. Его action `webhook` дёргает твой `WebhookDispatcher::dispatch(event, payload)`; action `tg_notify` — через твой dispatch или bot. Сам executor — не твоё.
 - **Контракты/PHPWord/PDF** → `contract-specialist` (ты лишь грузишь готовый файл в Google Drive по запросу).
@@ -81,7 +81,7 @@ DDD-контекст — целевой `app/Domain/Integration/` **(папки 
 
 ## Координация (кросс-агентские контракты)
 
-- inbound → `sales-specialist::createDealFromInbound(channelKind, fromId, body, ownerId)` (создаёт Компанию при необходимости + Deal в «Новые лиды»); `Deal.source` (`form`/`api`/`email`/`tg`/`wa`) ставишь сам.
+- inbound → `sales-backender::createDealFromInbound(channelKind, fromId, body, ownerId)` (создаёт Компанию при необходимости + Deal в «Новые лиды»); `Deal.source` (`form`/`api`/`email`/`tg`/`wa`) ставишь сам.
 - automation action `webhook` → твой `WebhookDispatcher::dispatch(...)`. Доступные event-names регистрируй в общем реестре (`config/crm.php` или `WebhookEvents`).
 - notification в TG → согласуй с `bot-specialist` сигнатуру отправки (он владеет Bot-инстансом).
 
@@ -119,7 +119,7 @@ docker compose exec app vendor/bin/pint
 - **Файлы** по слоям: Models / Enums / Data(Resources) / Services / Jobs / migrations / routes / (ТЗ-запросы фронту).
 - **Public API изменения:** новые endpoints (метод+путь+scope), breaking-изменения outbound-payload, новые event-names.
 - **Миграции:** что создаёт + seed (если есть).
-- **Кросс-контракты:** какие методы `sales-specialist`/`bot-specialist`/`automation-specialist` ожидаешь.
+- **Кросс-контракты:** какие методы `sales-backender`/`bot-specialist`/`automation-specialist` ожидаешь.
 - **Риски:** signature-bypass, race на concurrent delivery, Google rate-limit/refresh-token истёк, SSRF.
 - **Нужные секреты:** список `.env`-ключей для main (`GOOGLE_CLIENT_ID/SECRET`, `OIDC_*`, `SMTP_*`, `TG_*`). **Что НЕ сделано:** TBD/TODO.
 Это саммари main передаёт `reviewer`.

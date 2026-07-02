@@ -59,7 +59,7 @@ DDD-контекст `app/Domain/Notification/` (бот-слой) + чтение
 
 ## Границы (что НЕ твоё)
 
-- **Сделки/воронка/лиды** → `sales-specialist`. Ты ЧИТАЕШЬ `Deal` для отчётов, стадии не двигаешь.
+- **Сделки/воронка/лиды** → `sales-backender`. Ты ЧИТАЕШЬ `Deal` для отчётов, стадии не двигаешь.
 - **Контракты/шаблоны/PDF, статус-машина approval** → `contract-specialist`. Approval-кнопки в TG обслуживаешь, но модели/переходы — его; согласуй изменения.
 - **Automation executor** (триггеры/действия) → `automation-specialist`. Его action `tg_notify` вызывает твою функцию отправки в канал — ты определяешь сигнатуру, он дёргает.
 - **Notification dispatch (email/in-app), каналы/inbox/webhooks/SSO/Google** → `integration-specialist`. Граница: он — общий диспетч и **входящие** клиентские каналы; ты — TG-бот команды и approval-кнопки. Координируйтесь по отправке в TG-канал.

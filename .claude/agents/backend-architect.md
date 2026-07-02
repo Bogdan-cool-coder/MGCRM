@@ -42,7 +42,7 @@ color: red
 ### Что НЕ делаешь (границы vs другие агенты)
 - **Доменные контексты (реально в `app/Domain/`):** `Crm` · `Sales` · `Inbox` · `Contracts` · `Activity` · `Notification` · `Automation` · `Onboarding` · `Catalog` · `Log` · `SalesPulse` · `Migration` — их специалисты. Ты даёшь User/роли/auth/миграции/тесты, доменную логику (сервисы/контроллеры) пишут они.
   - **`Log`** (сквозной журнал/таймлайн сущностей) — владелец `analytics-specialist` (домен «Сквозное — Лог + оболочка» в аудите); ты как обычно даёшь миграции/тесты.
-  - **`SalesPulse`** — `sales-specialist`; **`Migration`** (AMO ETL) — `migration-specialist`.
+  - **`SalesPulse`** — `sales-backender`; **`Migration`** (AMO ETL) — `migration-specialist`.
 - **Greenfield-контексты, которых ещё НЕТ в дереве:** `Domain/CustomerSuccess` (`cs-specialist`) и `Domain/Finance` (`finance-specialist`) — папки создаются при старте своих спринтов; `Analytics`/`Integration` пока вшиты в Sales/Inbox/Notification (отдельных папок нет). Не плоди пустые папки заранее.
 - **Frontend** (`front/`) → `frontend-specialist`.
 - **Деплой / docker-compose / GHA / nginx хоста** → `deploy-engineer`.

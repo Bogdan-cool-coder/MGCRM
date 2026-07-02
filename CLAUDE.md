@@ -79,15 +79,15 @@ Strangler, вертикальными срезами, домен за домен
 
 > **Текущий фокус:** redesign-hardening (DS-треки, Entity Card 2.0, Навигация) + audit-driven bugfix по `docs/audit/` + SalesPulse (off-roadmap, LIVE в проде). Строгий порядок спринтов на этот период приостановлен в пользу redesign/bug-треков.
 
-## 17 агентов (`.claude/agents/`)
+## 19 агентов (`.claude/agents/`)
 
 > **Все агенты — `bypassPermissions`** (рутина — docker/artisan/npm/git/Edit/Write/MCP, включая браузерные MCP-действия qa-tester'а — выполняется молча). Единственный жёсткий ограничитель — PreToolUse-хук `guard-destructive.sh` на критичный деструктив (работает и под bypass). Поведенческие правила (`frontend-specialist` и push у `deploy-engineer` — только по явной просьбе) остаются в силе как инструкции, не как пермишен-промпты.
 
 **Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-architect` (backend-консистентность + spec-author доменных/API-контрактов + library-registry + reuse-гейт) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**) · `qa-tester` (браузерные MCP этой машины — Claude_in_Chrome / chrome-devtools / Control_Chrome / Claude_Preview; Playwright MCP на этой машине нет) · `reviewer` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — владелец деплой-конфига и git-push в `main`; push/деплой — **только по явной просьбе юзера**; после push выкатка автоматическая через GHA `deploy.yml`; изменения деплой-инфры — **только по явной просьбе**).
 
-**Доменные (10) — спринт + реальный статус, НЕ M-номер:**
-- `crm-specialist` (спринт Фундамент/Продажи: Contact/Company/Catalog/CustomFields/дедуп — построено).
-- `sales-specialist` (спринт Продажи: Pipeline/Deal/Kanban/KPI/Lead/Activity — построено; SalesPulse — LIVE).
+**Доменные (12) — спринт + реальный статус, НЕ M-номер:**
+- `crm-backender` + `crm-frontender` (спринт Фундамент/Продажи: Contact/Company/Catalog/CustomFields/дедуп — построено; **pilot per-module split** — BE и FE раздельно).
+- `sales-backender` + `sales-frontender` (спринт Продажи: Pipeline/Deal/Kanban/KPI/Lead/Activity — построено; SalesPulse — LIVE; **pilot per-module split** — BE и FE раздельно).
 - `contract-specialist` (спринт Документы: генерация PHPWord→Gotenberg — каркас, не работает в проде, см. аудит).
 - `cs-specialist` (спринт CS — greenfield: `Domain/CustomerSuccess` ещё нет, создать при старте спринта).
 - `finance-specialist` (спринт Финансы — greenfield: `Domain/Finance` ещё нет, создать при старте спринта).
