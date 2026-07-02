@@ -24,9 +24,9 @@ class ReorderCustomFieldDefsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'entity_scope'       => ['required', 'string', Rule::enum(CustomFieldScope::class)],
-            'items'              => ['required', 'array', 'min:1'],
-            'items.*.id'         => ['required', 'integer', 'exists:custom_field_defs,id'],
+            'entity_scope' => ['required', 'string', Rule::enum(CustomFieldScope::class)],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.id' => ['required', 'integer', 'exists:custom_field_defs,id'],
             'items.*.sort_order' => ['required', 'integer', 'min:0'],
         ];
     }

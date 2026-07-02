@@ -195,9 +195,9 @@ class CustomFieldService
     private function scopeFor(Model $entity): CustomFieldScope
     {
         return match (true) {
-            $entity instanceof Contact  => CustomFieldScope::Contact,
-            $entity instanceof Company  => CustomFieldScope::Company,
-            $entity instanceof Deal     => CustomFieldScope::Deal,
+            $entity instanceof Contact => CustomFieldScope::Contact,
+            $entity instanceof Company => CustomFieldScope::Company,
+            $entity instanceof Deal => CustomFieldScope::Deal,
             $entity instanceof Document => CustomFieldScope::Contract,
             default => throw new InvalidArgumentException(
                 'Unsupported entity type for custom fields: '.$entity::class
@@ -260,7 +260,7 @@ class CustomFieldService
 
         if (mb_strlen($str) > self::MAX_VALUE_LEN) {
             throw ValidationException::withMessages([
-                "extra_fields.{$code}" => "Value exceeds the maximum allowed length of ".self::MAX_VALUE_LEN." characters.",
+                "extra_fields.{$code}" => 'Value exceeds the maximum allowed length of '.self::MAX_VALUE_LEN.' characters.',
             ])->status(422);
         }
 
@@ -273,7 +273,7 @@ class CustomFieldService
 
         if (mb_strlen($str) > self::MAX_VALUE_LEN) {
             throw ValidationException::withMessages([
-                "extra_fields.{$code}" => "URL value exceeds the maximum allowed length of ".self::MAX_VALUE_LEN." characters.",
+                "extra_fields.{$code}" => 'URL value exceeds the maximum allowed length of '.self::MAX_VALUE_LEN.' characters.',
             ])->status(422);
         }
 
@@ -309,7 +309,7 @@ class CustomFieldService
 
         if (count($arr) > self::MAX_MULTISELECT_ITEMS) {
             throw ValidationException::withMessages([
-                "extra_fields.{$def->code}" => "Too many values for multiselect field '{$def->code}' (max ".self::MAX_MULTISELECT_ITEMS.").",
+                "extra_fields.{$def->code}" => "Too many values for multiselect field '{$def->code}' (max ".self::MAX_MULTISELECT_ITEMS.').',
             ])->status(422);
         }
 

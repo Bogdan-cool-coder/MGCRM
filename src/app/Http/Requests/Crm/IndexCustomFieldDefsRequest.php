@@ -24,7 +24,7 @@ class IndexCustomFieldDefsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'scope'            => ['nullable', 'string', Rule::enum(CustomFieldScope::class)],
+            'scope' => ['nullable', 'string', Rule::enum(CustomFieldScope::class)],
             'include_inactive' => ['nullable', 'boolean'],
         ];
     }

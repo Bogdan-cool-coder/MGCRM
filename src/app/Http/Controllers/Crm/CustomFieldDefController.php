@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Crm;
 
 use App\Domain\Crm\Enums\CustomFieldScope;
+use App\Domain\Crm\Models\CustomFieldDef;
 use App\Domain\Crm\Services\CustomFieldService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\IndexCustomFieldDefsRequest;
@@ -16,6 +17,7 @@ use App\Http\Resources\Crm\CustomFieldDefResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 
 /**
  * Manages CustomFieldDef admin CRUD.
@@ -99,7 +101,7 @@ class CustomFieldDefController extends Controller
         return CustomFieldDefResource::collection($defs);
     }
 
-    public function store(StoreCustomFieldDefRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreCustomFieldDefRequest $request): JsonResponse
     {
         $this->authorize('admin-write');
 
@@ -110,12 +112,12 @@ class CustomFieldDefController extends Controller
             ->setStatusCode(201); // G9: 201 Created
     }
 
-    public function show(\App\Domain\Crm\Models\CustomFieldDef $customFieldDef): JsonResource
+    public function show(CustomFieldDef $customFieldDef): JsonResource
     {
         return CustomFieldDefResource::make($customFieldDef);
     }
 
-    public function update(UpdateCustomFieldDefRequest $request, \App\Domain\Crm\Models\CustomFieldDef $customFieldDef): JsonResource
+    public function update(UpdateCustomFieldDefRequest $request, CustomFieldDef $customFieldDef): JsonResource
     {
         $this->authorize('admin-write');
 
@@ -124,7 +126,7 @@ class CustomFieldDefController extends Controller
         return CustomFieldDefResource::make($def);
     }
 
-    public function destroy(\App\Domain\Crm\Models\CustomFieldDef $customFieldDef): \Illuminate\Http\Response
+    public function destroy(CustomFieldDef $customFieldDef): Response
     {
         $this->authorize('admin-write');
 

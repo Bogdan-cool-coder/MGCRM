@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Crm;
 
+use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\CustomFieldDef;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -29,9 +30,9 @@ class CustomFieldDeltaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->admin    = User::factory()->create(['role' => Role::Admin]);
+        $this->admin = User::factory()->create(['role' => Role::Admin]);
         $this->director = User::factory()->create(['role' => Role::Director]);
-        $this->manager  = User::factory()->create(['role' => Role::Manager]);
+        $this->manager = User::factory()->create(['role' => Role::Manager]);
     }
 
     // =========================================================================
@@ -44,16 +45,16 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'contract',
-            'code'         => 'contract_notes',
-            'label'        => 'Примечания договора',
-            'field_type'   => 'textarea',
+            'code' => 'contract_notes',
+            'label' => 'Примечания договора',
+            'field_type' => 'textarea',
         ])
             ->assertCreated()
             ->assertJsonPath('data.entity_scope', 'contract');
 
         $this->assertDatabaseHas('custom_field_defs', [
             'entity_scope' => 'contract',
-            'code'         => 'contract_notes',
+            'code' => 'contract_notes',
         ]);
     }
 
@@ -63,10 +64,10 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'contract',
-            'code'         => 'contract_flag',
-            'label'        => 'Contract Flag',
-            'field_type'   => 'boolean',
-            'is_active'    => true,
+            'code' => 'contract_flag',
+            'label' => 'Contract Flag',
+            'field_type' => 'boolean',
+            'is_active' => true,
         ]);
 
         $this->getJson('/api/crm/custom-fields/schema?entity_scope=contract')
@@ -84,16 +85,16 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'existing_field',
-            'label'        => 'Existing',
-            'field_type'   => 'text',
+            'code' => 'existing_field',
+            'label' => 'Existing',
+            'field_type' => 'text',
         ]);
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'company',
-            'code'         => 'existing_field',
-            'label'        => 'Duplicate',
-            'field_type'   => 'text',
+            'code' => 'existing_field',
+            'label' => 'Duplicate',
+            'field_type' => 'text',
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrorFor('code');
@@ -105,16 +106,16 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'shared_code',
-            'label'        => 'On Company',
-            'field_type'   => 'text',
+            'code' => 'shared_code',
+            'label' => 'On Company',
+            'field_type' => 'text',
         ]);
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'contact',
-            'code'         => 'shared_code',
-            'label'        => 'On Contact',
-            'field_type'   => 'text',
+            'code' => 'shared_code',
+            'label' => 'On Contact',
+            'field_type' => 'text',
         ])
             ->assertCreated();
     }
@@ -129,9 +130,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'contact',
-            'code'         => '1bad_code',
-            'label'        => 'Test',
-            'field_type'   => 'text',
+            'code' => '1bad_code',
+            'label' => 'Test',
+            'field_type' => 'text',
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrorFor('code');
@@ -143,9 +144,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'contact',
-            'code'         => '_bad_code',
-            'label'        => 'Test',
-            'field_type'   => 'text',
+            'code' => '_bad_code',
+            'label' => 'Test',
+            'field_type' => 'text',
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrorFor('code');
@@ -157,9 +158,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'contact',
-            'code'         => 'abc123_field',
-            'label'        => 'Test',
-            'field_type'   => 'text',
+            'code' => 'abc123_field',
+            'label' => 'Test',
+            'field_type' => 'text',
         ])
             ->assertCreated();
     }
@@ -174,9 +175,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'company',
-            'code'         => 'segment',
-            'label'        => 'Segment',
-            'field_type'   => 'select',
+            'code' => 'segment',
+            'label' => 'Segment',
+            'field_type' => 'select',
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrorFor('options');
@@ -188,9 +189,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'company',
-            'code'         => 'tags_multi',
-            'label'        => 'Tags',
-            'field_type'   => 'multiselect',
+            'code' => 'tags_multi',
+            'label' => 'Tags',
+            'field_type' => 'multiselect',
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrorFor('options');
@@ -202,10 +203,10 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'company',
-            'code'         => 'tier',
-            'label'        => 'Tier',
-            'field_type'   => 'select',
-            'options'      => ['Bronze', 'Silver', 'Gold'],
+            'code' => 'tier',
+            'label' => 'Tier',
+            'field_type' => 'select',
+            'options' => ['Bronze', 'Silver', 'Gold'],
         ])
             ->assertCreated();
     }
@@ -216,9 +217,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $def = CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'some_text',
-            'label'        => 'Text Field',
-            'field_type'   => 'text',
+            'code' => 'some_text',
+            'label' => 'Text Field',
+            'field_type' => 'text',
         ]);
 
         $this->patchJson("/api/crm/custom-fields/{$def->id}", [
@@ -236,7 +237,7 @@ class CustomFieldDeltaTest extends TestCase
     {
         Sanctum::actingAs($this->admin, ['*']);
 
-        $first  = CustomFieldDef::create(['entity_scope' => 'company', 'code' => 'field_a', 'label' => 'A', 'field_type' => 'text', 'sort_order' => 0]);
+        $first = CustomFieldDef::create(['entity_scope' => 'company', 'code' => 'field_a', 'label' => 'A', 'field_type' => 'text', 'sort_order' => 0]);
         $second = CustomFieldDef::create(['entity_scope' => 'company', 'code' => 'field_b', 'label' => 'B', 'field_type' => 'text', 'sort_order' => 1]);
 
         $this->patchJson('/api/crm/custom-fields/reorder?entity_scope=company', [
@@ -345,14 +346,14 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'tier',
-            'label'        => 'Tier',
-            'field_type'   => 'select',
-            'options'      => ['Bronze', 'Silver', 'Gold'],
-            'is_active'    => true,
+            'code' => 'tier',
+            'label' => 'Tier',
+            'field_type' => 'select',
+            'options' => ['Bronze', 'Silver', 'Gold'],
+            'is_active' => true,
         ]);
 
-        $company = \App\Domain\Crm\Models\Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $company = Company::factory()->create(['owner_user_id' => $this->admin->id]);
 
         $this->patchJson("/api/companies/{$company->id}", [
             'extra_fields' => ['tier' => 'Platinum'],
@@ -366,14 +367,14 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'tier',
-            'label'        => 'Tier',
-            'field_type'   => 'select',
-            'options'      => ['Bronze', 'Silver', 'Gold'],
-            'is_active'    => true,
+            'code' => 'tier',
+            'label' => 'Tier',
+            'field_type' => 'select',
+            'options' => ['Bronze', 'Silver', 'Gold'],
+            'is_active' => true,
         ]);
 
-        $company = \App\Domain\Crm\Models\Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $company = Company::factory()->create(['owner_user_id' => $this->admin->id]);
 
         $this->patchJson("/api/companies/{$company->id}", [
             'extra_fields' => ['tier' => 'Gold'],
@@ -390,14 +391,14 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'labels',
-            'label'        => 'Labels',
-            'field_type'   => 'multiselect',
-            'options'      => ['VIP', 'Partner', 'Lead'],
-            'is_active'    => true,
+            'code' => 'labels',
+            'label' => 'Labels',
+            'field_type' => 'multiselect',
+            'options' => ['VIP', 'Partner', 'Lead'],
+            'is_active' => true,
         ]);
 
-        $company = \App\Domain\Crm\Models\Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $company = Company::factory()->create(['owner_user_id' => $this->admin->id]);
 
         $this->patchJson("/api/companies/{$company->id}", [
             'extra_fields' => ['labels' => ['VIP', 'Partner']],
@@ -415,14 +416,14 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'categories',
-            'label'        => 'Categories',
-            'field_type'   => 'multiselect',
-            'options'      => ['A', 'B', 'C'],
-            'is_active'    => true,
+            'code' => 'categories',
+            'label' => 'Categories',
+            'field_type' => 'multiselect',
+            'options' => ['A', 'B', 'C'],
+            'is_active' => true,
         ]);
 
-        $company = \App\Domain\Crm\Models\Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $company = Company::factory()->create(['owner_user_id' => $this->admin->id]);
 
         $this->patchJson("/api/companies/{$company->id}", [
             'extra_fields' => ['categories' => ['A', 'Z']],
@@ -436,13 +437,13 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'website_custom',
-            'label'        => 'Website',
-            'field_type'   => 'url',
-            'is_active'    => true,
+            'code' => 'website_custom',
+            'label' => 'Website',
+            'field_type' => 'url',
+            'is_active' => true,
         ]);
 
-        $company = \App\Domain\Crm\Models\Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $company = Company::factory()->create(['owner_user_id' => $this->admin->id]);
 
         $this->patchJson("/api/companies/{$company->id}", [
             'extra_fields' => ['website_custom' => 'not a url'],
@@ -456,13 +457,13 @@ class CustomFieldDeltaTest extends TestCase
 
         CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'website_custom',
-            'label'        => 'Website',
-            'field_type'   => 'url',
-            'is_active'    => true,
+            'code' => 'website_custom',
+            'label' => 'Website',
+            'field_type' => 'url',
+            'is_active' => true,
         ]);
 
-        $company = \App\Domain\Crm\Models\Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $company = Company::factory()->create(['owner_user_id' => $this->admin->id]);
 
         $this->patchJson("/api/companies/{$company->id}", [
             'extra_fields' => ['website_custom' => 'https://example.com'],
@@ -480,9 +481,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'contact',
-            'code'         => 'contact_status',
-            'label'        => 'Contact Status',
-            'field_type'   => 'text',
+            'code' => 'contact_status',
+            'label' => 'Contact Status',
+            'field_type' => 'text',
         ])
             ->assertStatus(201);
     }
@@ -493,9 +494,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $def = CustomFieldDef::create([
             'entity_scope' => 'contact',
-            'code'         => 'to_delete',
-            'label'        => 'Delete Me',
-            'field_type'   => 'text',
+            'code' => 'to_delete',
+            'label' => 'Delete Me',
+            'field_type' => 'text',
         ]);
 
         $this->deleteJson("/api/crm/custom-fields/{$def->id}")
@@ -514,9 +515,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'company',
-            'code'         => 'director_field',
-            'label'        => 'Director Field',
-            'field_type'   => 'text',
+            'code' => 'director_field',
+            'label' => 'Director Field',
+            'field_type' => 'text',
         ])
             ->assertCreated();
     }
@@ -527,9 +528,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $def = CustomFieldDef::create([
             'entity_scope' => 'company',
-            'code'         => 'dir_delete',
-            'label'        => 'Dir Delete',
-            'field_type'   => 'text',
+            'code' => 'dir_delete',
+            'label' => 'Dir Delete',
+            'field_type' => 'text',
         ]);
 
         $this->deleteJson("/api/crm/custom-fields/{$def->id}")
@@ -542,9 +543,9 @@ class CustomFieldDeltaTest extends TestCase
 
         $this->postJson('/api/crm/custom-fields', [
             'entity_scope' => 'company',
-            'code'         => 'manager_field',
-            'label'        => 'Manager Field',
-            'field_type'   => 'text',
+            'code' => 'manager_field',
+            'label' => 'Manager Field',
+            'field_type' => 'text',
         ])
             ->assertStatus(403);
     }
