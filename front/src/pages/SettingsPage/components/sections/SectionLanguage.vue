@@ -103,9 +103,7 @@ defineExpose({ discard })
 </script>
 
 <style lang="scss" scoped>
-.section-language {
-  padding: $space-6;
-}
+// .section-language padding/centering is handled by SectionProfileTabs container.
 
 .profile-section {
   margin-bottom: $space-6;

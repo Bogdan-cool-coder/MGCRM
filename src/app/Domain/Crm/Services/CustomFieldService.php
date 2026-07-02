@@ -190,6 +190,36 @@ class CustomFieldService
         $def->delete();
     }
 
+    /**
+     * Permanently purge ALL custom field definitions.
+     *
+     * Used ONLY by the system-reset `directories` category
+     * (`docs/contracts/system-reset-api-contract.md` §1 row 9). Called by
+     * `App\Support\System\SystemResetService` — never invoked directly from a
+     * controller. No authorization check here: the caller is the single
+     * admin-gated entry point (`can:system-reset`).
+     *
+     * `custom_field_defs` has no FK dependents — field values live inside the
+     * target entity's `extra_fields` jsonb column (Contact/Company/Deal/
+     * Document), never referenced by FK to this table. A single bulk delete
+     * is safe. Stale keys left behind in `extra_fields` after this purge are
+     * inert (CustomFieldService::readFields only surfaces keys with a
+     * matching active def) — intentionally out of scope for this method,
+     * which only owns the `custom_field_defs` table itself.
+     *
+     * Must run inside the caller's own transaction (contract §5) — this
+     * method does NOT open one of its own.
+     *
+     * @return array<string, int> counts keyed by table name
+     */
+    public function purgeAll(): array
+    {
+        $count = CustomFieldDef::query()->count();
+        CustomFieldDef::query()->delete();
+
+        return ['custom_field_defs' => $count];
+    }
+
     // ---- Private helpers ----
 
     private function scopeFor(Model $entity): CustomFieldScope

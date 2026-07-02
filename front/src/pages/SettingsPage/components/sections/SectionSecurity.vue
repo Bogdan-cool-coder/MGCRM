@@ -252,9 +252,7 @@ async function copySecret(): Promise<void> {
 </script>
 
 <style lang="scss" scoped>
-.section-security {
-  padding: $space-6;
-}
+// .section-security padding/centering is handled by SectionProfileTabs container.
 
 .profile-section {
   margin-bottom: $space-6;

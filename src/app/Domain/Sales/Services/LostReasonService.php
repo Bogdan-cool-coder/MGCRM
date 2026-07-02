@@ -58,4 +58,28 @@ class LostReasonService
 
         $lostReason->delete();
     }
+
+    /**
+     * Purge ALL lost reasons — the Sales-owned slice of the `directories` reset
+     * category (docs/contracts/system-reset-api-contract.md §1 row 9, §7). Called
+     * ONLY by the cross-domain `App\Support\System\SystemResetService` orchestrator,
+     * never from a controller.
+     *
+     * Unlike delete(), this ignores the deal-reference guard: the reset always
+     * co-selects `deals` before `directories` (contract §3 prerequisite matrix), so
+     * no deal references a lost_reason by the time this runs; `deals.lost_reason_id`
+     * is `nullOnDelete()` regardless, so there is no FK RESTRICT hazard.
+     *
+     * No own transaction — the orchestrator wraps the whole category in one
+     * DB::transaction() (contract §5).
+     *
+     * @return array<string, int> counts keyed by table name
+     */
+    public function purgeAll(): array
+    {
+        $count = LostReason::query()->count();
+        LostReason::query()->delete();
+
+        return ['lost_reasons' => $count];
+    }
 }

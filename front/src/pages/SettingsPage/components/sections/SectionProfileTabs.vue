@@ -1,5 +1,15 @@
 <template>
   <div class="profile-tabs-container">
+    <!-- Hero card — spans all 4 sub-tabs (mounted above the tab bar per hi-fi TZ §3) -->
+    <div class="profile-hero-wrap">
+      <ProfileHeroCard
+        :user="user"
+        :avatar-path="avatarPath"
+        :avatar-uploading="avatarUploading"
+        :upload-avatar="uploadAvatar"
+      />
+    </div>
+
     <!-- Line-underline tabs (Ф2-pattern из SectionDirectories) -->
     <div class="profile-tabs">
       <Tabs :value="activeTab" @update:value="onTabChange">
@@ -17,12 +27,8 @@
       <SectionProfile
         v-if="activeTab === 'profile'"
         :user="user"
-        :avatar-path="avatarPath"
-        :avatar-uploading="avatarUploading"
         :saving-profile="savingProfile"
         :save-full-name="saveFullName"
-        :upload-avatar="uploadAvatar"
-        :remove-avatar="removeAvatar"
       />
 
       <SectionSecurity
@@ -48,6 +54,7 @@ import { useI18n } from 'vue-i18n'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
+import ProfileHeroCard from './profile/ProfileHeroCard.vue'
 import SectionProfile from './SectionProfile.vue'
 import SectionSecurity from './SectionSecurity.vue'
 import SectionAppearance from './SectionAppearance.vue'
@@ -89,20 +96,24 @@ function onTabChange(value: string | number | undefined) {
 
 <style lang="scss" scoped>
 .profile-tabs-container {
-  display: flex;
-  flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  // Centered detail column (hi-fi TZ §1 — profile detail max-width 680)
+  padding: $space-6;
+}
+
+.profile-hero-wrap {
+  max-width: 680px;
+  margin: 0 auto;
 }
 
 .profile-tabs {
+  max-width: 680px;
+  margin: 0 auto $space-4;
   flex-shrink: 0;
   border-bottom: 1px solid $surface-200;
-  background: $surface-card;
-  padding: 0 $space-6;
 
   .app-dark & {
-    background: var(--p-surface-100);
     border-bottom-color: var(--p-surface-200);
   }
 
@@ -144,8 +155,7 @@ function onTabChange(value: string | number | undefined) {
 }
 
 .profile-tab-content {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
+  max-width: 680px;
+  margin: 0 auto;
 }
 </style>

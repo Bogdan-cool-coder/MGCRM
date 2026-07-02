@@ -140,6 +140,53 @@ class AdminUserManagementTest extends TestCase
             ->assertJsonPath('data.0.full_name', 'Dept Manager');
     }
 
+    public function test_list_filters_by_is_active_across_query_boolean_forms(): void
+    {
+        // BUG-USERS-META-1: a query string carries `is_active` as the string
+        // "true"/"false" (never a native bool), which Laravel 13.15's `boolean`
+        // rule rejects with a 422. prepareForValidation() normalizes the accepted
+        // string forms; all four boolean spellings must work AND actually filter.
+        User::factory()->create(['full_name' => 'Active Only', 'is_active' => true]);
+        User::factory()->create(['full_name' => 'Inactive One', 'is_active' => false]);
+        // actingAsAdmin adds one more active user (the admin) → 2 active total.
+        $this->actingAsAdmin();
+
+        // String forms (what a real query string sends).
+        $this->getJson('/api/admin/users?is_active=true')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $this->getJson('/api/admin/users?is_active=false')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.full_name', 'Inactive One');
+
+        // Legacy numeric forms still accepted (regression guard).
+        $this->getJson('/api/admin/users?is_active=1')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $this->getJson('/api/admin/users?is_active=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.full_name', 'Inactive One');
+
+        // Absent filter → no is_active constraint (all 3 users returned).
+        $this->getJson('/api/admin/users')
+            ->assertOk()
+            ->assertJsonCount(3, 'data');
+    }
+
+    public function test_list_rejects_non_boolean_is_active(): void
+    {
+        // An unrecognised value is left untouched so the `boolean` rule still 422s.
+        $this->actingAsAdmin();
+
+        $this->getJson('/api/admin/users?is_active=maybe')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('is_active');
+    }
+
     public function test_list_excludes_service_accounts(): void
     {
         User::factory()->create(['full_name' => 'Real User']);

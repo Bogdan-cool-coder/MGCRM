@@ -1949,6 +1949,41 @@ class ActivityService
     }
 
     /**
+     * Permanently purge every activity — the `tasks` category cleaner for the
+     * selective system-reset feature
+     * (docs/contracts/system-reset-api-contract.md §1 row 4, §7 boundary
+     * decision). Called ONLY by the cross-domain `SystemResetService`
+     * orchestrator (App\Support\System), never from a controller directly.
+     *
+     * `activities` is self-contained: the polymorphic target (deal/company) is
+     * NOT an FK (mirrors CrmFile — see create_activities_table), so there is no
+     * child table to delete first and no cross-table ordering concern. A deal
+     * purged in the `deals` category leaves its activities' `target_id`
+     * dangling — harmless (no FK to violate) and by design: `tasks` and `deals`
+     * are independently selectable categories (contract §3 lists no
+     * prerequisite edge between them).
+     *
+     * Uses a raw `DB::table()` delete (no SoftDeletes on Activity, so this is
+     * equivalent to Eloquent delete here, but kept consistent with
+     * DealService::purgeAll() and avoids firing model events for a bulk
+     * administrative wipe).
+     *
+     * Runs with NO authorization check and NO transaction of its own — the
+     * caller (SystemResetService) wraps the whole category in one
+     * DB::transaction() and gates access via `system-reset` (contract §5/§6.2).
+     *
+     * @return array{activities: int}
+     */
+    public function purgeAll(): array
+    {
+        $count = DB::table('activities')->count();
+
+        DB::table('activities')->delete();
+
+        return ['activities' => $count];
+    }
+
+    /**
      * Apply the row-level visibility scope to a base Activity query (E6).
      * Mirrors DealService::scopedQuery; Department/Own additionally include
      * activities where the user is responsible or the creator.

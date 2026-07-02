@@ -1,7 +1,24 @@
 <template>
   <nav class="settings-sidebar" aria-label="Настройки навигация">
+    <!-- Search filter (hi-fi TZ §2) -->
+    <div class="settings-sidebar__search">
+      <IconField>
+        <InputIcon class="pi pi-search" />
+        <InputText
+          v-model="search"
+          :placeholder="t('settings.nav.searchPlaceholder')"
+          class="settings-sidebar__search-input"
+        />
+      </IconField>
+    </div>
+
+    <!-- Empty state when the search matches nothing -->
+    <p v-if="isSearchEmpty" class="settings-sidebar__empty">
+      {{ t('settings.nav.searchEmpty') }}
+    </p>
+
     <div
-      v-for="group in visibleGroups"
+      v-for="group in filteredGroups"
       :key="group.key"
       class="settings-nav-group"
       :class="{ 'settings-nav-group--faded': group.allDisabled }"
@@ -23,6 +40,10 @@
       >
         <i :class="[section.icon, 'settings-nav-item__icon']" aria-hidden="true" />
         <span class="settings-nav-item__label">{{ t(section.labelKey) }}</span>
+        <span
+          v-if="sectionMeta(section) !== null"
+          class="settings-nav-item__meta"
+        >{{ sectionMeta(section) }}</span>
         <i v-if="section.linkOut && section.phase === 1" class="pi pi-external-link settings-nav-item__link-icon" aria-hidden="true" />
         <Tag
           v-if="section.phase !== 1"
@@ -36,10 +57,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Tag from 'primevue/tag'
+import InputText from 'primevue/inputtext'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import { useUserStore } from '@/stores/user'
+import { adminUsersApi } from '@/api/adminUsers'
 import { isProfileSection } from '../composables/useSettings'
 
 const { t } = useI18n()
@@ -48,6 +73,12 @@ const userStore = useUserStore()
 const props = defineProps<{
   activeSection: string
 }>()
+
+// ─── Search filter ────────────────────────────────────────────────────────────
+const search = ref('')
+
+// ─── Users meta counter (active-user count next to «Пользователи») ────────────
+const activeUsersCount = ref<number | null>(null)
 
 const emit = defineEmits<{
   select: [key: string]
@@ -155,6 +186,43 @@ const visibleGroups = computed(() =>
     })),
 )
 
+/** Groups after applying the search filter (matches translated label substring). */
+const filteredGroups = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return visibleGroups.value
+  return visibleGroups.value
+    .map((g) => ({
+      ...g,
+      sections: g.sections.filter((s) => t(s.labelKey).toLowerCase().includes(q)),
+    }))
+    .filter((g) => g.sections.length > 0)
+})
+
+/** True when a non-empty search yields no matching items. */
+const isSearchEmpty = computed(
+  () => !!search.value.trim() && filteredGroups.value.length === 0,
+)
+
+/** Optional meta counter shown right of a section label (e.g. active users). */
+function sectionMeta(section: SettingsSection): number | string | null {
+  if (section.key === 'users' && activeUsersCount.value !== null) {
+    return activeUsersCount.value
+  }
+  return null
+}
+
+onMounted(async () => {
+  // Fetch active-user count once for the «Пользователи» badge — admin/director only,
+  // since only they see the item. Best-effort: silently skip on failure.
+  if (!isAdminOrDirector.value) return
+  try {
+    const res = await adminUsersApi.getUsers({ is_active: true, per_page: 1 })
+    activeUsersCount.value = res.meta.total
+  } catch {
+    activeUsersCount.value = null
+  }
+})
+
 /**
  * Пункт «Профиль» активен при любом из PROFILE_TAB_KEYS
  * (profile / security / appearance / language).
@@ -183,6 +251,34 @@ function onSectionClick(section: SettingsSection) {
   padding: $space-3 0;
 }
 
+// ─── Search field ─────────────────────────────────────────────────────────────
+.settings-sidebar__search {
+  padding: $space-2 $space-3 $space-1;
+
+  :deep(.p-iconfield),
+  :deep(.p-inputtext) {
+    width: 100%;
+  }
+}
+
+.settings-sidebar__search-input {
+  height: 36px;
+  font-size: $font-size-sm;
+}
+
+.settings-sidebar__empty {
+  padding: $space-3 $space-4;
+  margin: 0;
+  font-size: $font-size-xs;
+  color: $surface-500;
+
+  // Inverted dark scale: muted text must use a HIGH surface step (600+) to stay
+  // readable on the dark sidebar (#111E38). surface-400 = #616263 → too dark.
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}
+
 .settings-nav-group {
   margin-bottom: $space-2;
 
@@ -202,8 +298,9 @@ function onSectionClick(section: SettingsSection) {
   padding: $space-4 $space-4 $space-1;
   margin: 0;
 
+  // Inverted dark scale: group headers need surface-600+ to read on dark sidebar.
   .app-dark & {
-    color: var(--p-surface-500);
+    color: var(--p-surface-600);
   }
 }
 
@@ -237,12 +334,15 @@ function onSectionClick(section: SettingsSection) {
   // Both selectors have equal specificity (0,2,0); the LATER rule wins.
   // Active dark override (.app-dark .settings-nav-item--active) defined inside
   // &--active below will therefore appear AFTER this rule → wins correctly.
+  // Inverted dark scale: nav text must use HIGH surface steps on the dark
+  // sidebar. surface-300 (#27395C-ish) fails AA; surface-700 reads clearly and
+  // hover surface-900 (near-white) is the brightest step.
   .app-dark & {
-    color: var(--p-surface-300);
+    color: var(--p-surface-700);
 
     &:hover:not(.settings-nav-item--disabled) {
       background: var(--mg-surface-hover);
-      color: var(--p-surface-100);
+      color: var(--p-surface-900);
     }
   }
 
@@ -282,6 +382,18 @@ function onSectionClick(section: SettingsSection) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  &__meta {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $surface-500;
+    flex-shrink: 0;
+
+    // Inverted dark scale: meta count needs surface-600+ to read on dark sidebar.
+    .app-dark & {
+      color: var(--p-surface-600);
+    }
   }
 
   &__link-icon {

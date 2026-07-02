@@ -220,6 +220,36 @@ class MessageTemplateService
         return $binding->fresh();
     }
 
+    /**
+     * Purge ALL message templates + their bindings — the Contracts-owned slice of
+     * the `directories` reset category
+     * (docs/contracts/system-reset-api-contract.md §1 row 9, §7). Called ONLY by the
+     * cross-domain `App\Support\System\SystemResetService` orchestrator.
+     *
+     * Children before parent (contract §3a): `message_template_bindings.message_
+     * template_id` is `cascadeOnDelete`, but the bindings are deleted explicitly
+     * first so the behaviour is deterministic on both pgsql and the sqlite test
+     * suite (FK-cascade enforcement differs between drivers).
+     *
+     * No own transaction — the orchestrator wraps the category in one
+     * DB::transaction() (contract §5).
+     *
+     * @return array<string, int> counts keyed by table name
+     */
+    public function purgeAll(): array
+    {
+        $bindings = MessageTemplateBinding::query()->count();
+        MessageTemplateBinding::query()->delete();
+
+        $templates = MessageTemplate::query()->count();
+        MessageTemplate::query()->delete();
+
+        return [
+            'message_template_bindings' => $bindings,
+            'message_templates' => $templates,
+        ];
+    }
+
     // ---- Private ----
 
     /**

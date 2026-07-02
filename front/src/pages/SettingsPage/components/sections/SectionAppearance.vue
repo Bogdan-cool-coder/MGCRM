@@ -13,6 +13,21 @@
       />
     </div>
 
+    <!-- Density section -->
+    <div class="profile-section">
+      <h3 class="profile-section__title">{{ t('settings.appearance.density.title') }}</h3>
+      <p class="appearance-desc">{{ t('settings.appearance.density.desc') }}</p>
+      <SelectButton
+        v-model="densityDraft"
+        :options="densityOptions"
+        option-label="label"
+        option-value="value"
+        :allow-empty="false"
+        :pt="{ root: { class: 'theme-selectbtn' } }"
+        @change="onDensityChange"
+      />
+    </div>
+
     <!-- Nav mode section -->
     <div class="profile-section">
       <h3 class="profile-section__title">{{ t('layout.navMode') }}</h3>
@@ -108,17 +123,20 @@ import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import { useThemeStore } from '@/stores/theme'
 import { useLayoutStore } from '@/stores/layout'
+import { useDensityStore } from '@/stores/density'
 import { useUserStore } from '@/stores/user'
 import { resolveQuickActions } from '@/shared/nav/quickActionRegistry'
 import { profileApi } from '@/api/profile'
 import { mapUser } from '@/entities/user'
 import type { NavMode } from '@/stores/layout'
+import type { Density } from '@/stores/density'
 import { SETTINGS_MARK_DIRTY_KEY, SETTINGS_MARK_CLEAN_KEY } from '../../composables/useSettings'
 import QuickActionsPickerDialog from '@/pages/ProfilePage/components/QuickActionsPickerDialog.vue'
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
 const layoutStore = useLayoutStore()
+const densityStore = useDensityStore()
 const userStore = useUserStore()
 const toast = useToast()
 
@@ -128,8 +146,10 @@ const markClean = inject<() => void>(SETTINGS_MARK_CLEAN_KEY, () => {})
 // ─── Drafts (snapshots taken at section mount) ───────────────────────────────
 const themeDraft = ref<'light' | 'dark'>(themeStore.theme)
 const navModeDraft = ref<NavMode>(layoutStore.navMode)
+const densityDraft = ref<Density>(densityStore.density)
 const savedTheme = ref<'light' | 'dark'>(themeStore.theme)
 const savedNavMode = ref<NavMode>(layoutStore.navMode)
+const savedDensity = ref<Density>(densityStore.density)
 
 // ─── Quick actions draft (BUG-7) ─────────────────────────────────────────────
 // Dialog writes into this draft; persists only when section "Save" is clicked.
@@ -140,8 +160,10 @@ onMounted(() => {
   // Take snapshot of all drafts
   savedTheme.value = themeStore.theme
   savedNavMode.value = layoutStore.navMode
+  savedDensity.value = densityStore.density
   themeDraft.value = themeStore.theme
   navModeDraft.value = layoutStore.navMode
+  densityDraft.value = densityStore.density
   quickActionsDraft.value = [...userStore.getNavQuickActions]
   savedQuickActions.value = [...userStore.getNavQuickActions]
 })
@@ -150,6 +172,7 @@ const isDirty = computed(
   () =>
     themeDraft.value !== savedTheme.value ||
     navModeDraft.value !== savedNavMode.value ||
+    densityDraft.value !== savedDensity.value ||
     JSON.stringify(quickActionsDraft.value) !== JSON.stringify(savedQuickActions.value),
 )
 
@@ -170,6 +193,12 @@ function onNavModeChange(mode: NavMode) {
   layoutStore.setNavMode(mode)
 }
 
+function onDensityChange(event: { value: Density }) {
+  densityDraft.value = event.value
+  // Preview immediately — toggles .mg-cozy on <html>
+  densityStore.setDensity(event.value)
+}
+
 /** Receives draft keys from QuickActionsPickerDialog (draftMode=true) and closes the dialog. */
 function onQuickActionsDraftUpdate(keys: string[]) {
   quickActionsDraft.value = keys
@@ -179,9 +208,10 @@ function onQuickActionsDraftUpdate(keys: string[]) {
 }
 
 async function save() {
-  // Persist theme + navMode in stores (Pinia persist → localStorage)
+  // Persist theme + navMode + density in stores (Pinia persist → localStorage)
   savedTheme.value = themeDraft.value
   savedNavMode.value = navModeDraft.value
+  savedDensity.value = densityDraft.value
 
   // Persist quick actions to backend only if changed (BUG-7)
   const qaChanged =
@@ -210,11 +240,13 @@ async function save() {
 }
 
 function discard() {
-  // Rollback all previews including quick actions
+  // Rollback all previews including quick actions + density
   themeStore.setTheme(savedTheme.value)
   layoutStore.setNavMode(savedNavMode.value)
+  densityStore.setDensity(savedDensity.value)
   themeDraft.value = savedTheme.value
   navModeDraft.value = savedNavMode.value
+  densityDraft.value = savedDensity.value
   quickActionsDraft.value = [...savedQuickActions.value]
   markClean()
 }
@@ -244,6 +276,12 @@ const themeOptions = computed(() => [
   { label: t('account.themeDark'), value: 'dark' },
 ])
 
+// ─── Density options ───────────────────────────────────────────────────────────
+const densityOptions = computed(() => [
+  { label: t('settings.appearance.density.compact'), value: 'compact' as Density },
+  { label: t('settings.appearance.density.cozy'), value: 'cozy' as Density },
+])
+
 // ─── Quick actions ────────────────────────────────────────────────────────────
 const pickerVisible = ref(false)
 /** Preview chips — shown from draft so user sees pending changes before saving */
@@ -253,12 +291,22 @@ const currentQuickActions = computed(() =>
 </script>
 
 <style lang="scss" scoped>
-.section-appearance {
-  padding: $space-6;
-}
-
+// Padding/centering handled by SectionProfileTabs container.
 .profile-section {
   margin-bottom: $space-6;
+}
+
+.appearance-desc {
+  font-size: $font-size-sm;
+  color: $surface-500;
+  margin: 0 0 $space-3;
+  max-width: 460px;
+  line-height: $line-height-relaxed;
+
+  // Inverted dark scale: muted text needs surface-600 to read on dark.
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
 }
 
 .profile-section__title {
@@ -278,8 +326,9 @@ const currentQuickActions = computed(() =>
 .text-muted {
   color: $surface-500;
 
+  // Inverted dark scale: muted text needs surface-600 to read on dark.
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-600);
   }
 }
 
@@ -359,8 +408,9 @@ const currentQuickActions = computed(() =>
   font-size: $font-size-sm;
   color: $surface-500;
 
+  // Inverted dark scale: muted text needs surface-600 to read on dark.
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-600);
   }
 
   i {
@@ -417,22 +467,20 @@ const currentQuickActions = computed(() =>
   }
 }
 
-// Save bar
+// Save bar — sticky at the bottom of the centered detail column
 .settings-save-bar {
   display: flex;
   gap: $space-2;
   justify-content: flex-end;
-  padding: $space-4 $space-6;
+  padding: $space-4 0 0;
+  margin-top: $space-4;
   border-top: 1px solid $surface-200;
-  background: $surface-card;
-  margin: $space-4 calc(-1 * $space-6) 0;
   position: sticky;
   bottom: 0;
-  z-index: 1;
+  background: $surface-50;
 
   .app-dark & {
-    // BUG-2: surface-800 in dark = #F1F2F3 (light); use surface-100
-    background: var(--p-surface-100);
+    background: var(--p-surface-50);
     border-top-color: var(--p-surface-200);
   }
 }

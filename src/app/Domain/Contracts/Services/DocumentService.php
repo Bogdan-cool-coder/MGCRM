@@ -8,8 +8,11 @@ use App\Domain\Catalog\Models\Product;
 use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Enums\DocumentKind;
 use App\Domain\Contracts\Events\TerminationAgreementSigned;
+use App\Domain\Contracts\Models\Approval;
 use App\Domain\Contracts\Models\Document;
+use App\Domain\Contracts\Models\DocumentAttachment;
 use App\Domain\Contracts\Models\DocumentItem;
+use App\Domain\Contracts\Models\DocumentRemark;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Crm\Services\CustomFieldService;
@@ -491,6 +494,60 @@ class DocumentService
         return Document::query()
             ->where('source_deal_id', $dealId)
             ->count();
+    }
+
+    /**
+     * Cross-domain entry point for the selective system-reset `docs` category
+     * (`docs/contracts/system-reset-api-contract.md` §1, §7 boundary decision).
+     *
+     * Deletes every row owned by the `docs` category, children before parents so
+     * the delete order is deterministic on both pgsql and the sqlite test suite
+     * (contract §3a — do not rely solely on DB-level cascade):
+     *   approvals → document_remarks → document_items → document_attachments →
+     *   document_revisions → documents.
+     *
+     * Explicitly OUT of scope (never touched here):
+     *   - `templates` / `template_versions` / `template_variables` / `approval_routes`
+     *     — document-generation CONFIG, hard never-delete (contract §2).
+     *   - `contract_number_sequences` — numbering counters are PRESERVED by product
+     *     decision P3 (legal/accounting continuity — numbers must never repeat).
+     *   - `certificates` / `certificate_number_sequences` — owned by Domain\Onboarding,
+     *     not Contracts; that category cleaner lives there.
+     *   - Physical files under the `documents` disk (docx/pdf/attachments) are left
+     *     on disk; only the DB rows referencing them are removed. Known limitation —
+     *     see contract note; no instruction to reap orphaned files was given.
+     *
+     * No authorization check and no own transaction — the caller
+     * (`App\Support\System\SystemResetService`) wraps this in the per-category
+     * transaction and enforces the `system-reset` permission (contract §5, §6.2).
+     *
+     * @return array<string, int> per-table deleted row counts, e.g.
+     *                            ['approvals' => 3, 'document_remarks' => 2, 'document_items' => 5,
+     *                            'document_attachments' => 1, 'document_revisions' => 4, 'documents' => 2]
+     */
+    public function purgeAll(): array
+    {
+        $counts = [
+            'approvals' => Approval::query()->count(),
+            'document_remarks' => DocumentRemark::query()->count(),
+            'document_items' => DocumentItem::query()->count(),
+            'document_attachments' => DocumentAttachment::query()->count(),
+            'document_revisions' => DocumentRevision::query()->count(),
+            'documents' => Document::query()->count(),
+        ];
+
+        // Children before parents (contract §3a). All FKs to `documents` already
+        // cascadeOnDelete at the DB level; deleting explicitly here keeps the
+        // count deterministic and identical across pgsql/sqlite regardless of
+        // each driver's cascade-enforcement quirks.
+        Approval::query()->delete();
+        DocumentRemark::query()->delete();
+        DocumentItem::query()->delete();
+        DocumentAttachment::query()->delete();
+        DocumentRevision::query()->delete();
+        Document::query()->delete();
+
+        return $counts;
     }
 
     /**

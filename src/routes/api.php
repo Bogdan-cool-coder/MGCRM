@@ -514,9 +514,21 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     });
 
     // =========================================================================
-    // System — clean reset ("Сброс настроек", admin-only, guarded)
+    // System — selective data reset ("Сброс системы", admin-only, guarded)
+    // -------------------------------------------------------------------------
+    // Repurposed from the legacy full-wipe (contract P1-A): per-category permanent
+    // deletion, NOT migrate:fresh. Admin only (can:system-reset — NOT director),
+    // feature-flag gated in the controller (config('system.reset_enabled')), and
+    // the destructive execute is rate-limited (throttle:3,1) on top of the
+    // confirmation-phrase gate. Preview reveals total data volume → same admin gate.
     // =========================================================================
-    Route::post('system/reset', [SystemResetController::class, 'store'])->name('system.reset');
+    Route::middleware('can:system-reset')->group(function (): void {
+        Route::get('system/reset/preview', [SystemResetController::class, 'preview'])
+            ->name('system.reset.preview');
+        Route::post('system/reset', [SystemResetController::class, 'store'])
+            ->middleware('throttle:3,1')
+            ->name('system.reset');
+    });
 
     // =========================================================================
     // Manager Cabinet (S1.8) — personal KPI / profile / activity feed

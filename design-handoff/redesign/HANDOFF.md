@@ -181,7 +181,11 @@
   React; реализация — Vue+PrimeVue по нашим паттернам.
 - Эталон `settings.html` открывается против `../styles.css` (8-файловая токен-система:
   + `base.css`/`dark.css`/`logical.css`, extended-status, density, focus-ring).
-- Статус: **мокап принят, в работу — этап 2 визуал-апдейта.**
+- Статус: **этапы 0–2 РЕАЛИЗОВАНЫ — ждёт прод.** Этап 1 (hi-fi шелл/hero/акцент/плотность,
+  density-store `mgcrm_density` + токен `--mg-row-py`) QA PASS (navy dark 8/8 + 6/6 recheck).
+  Этап 2 (**выборочный** system-reset по 9 категориям — backend по контракту
+  `docs/contracts/system-reset-api-contract.md`, live e2e) QA PASS. Backend-паритет: 3737
+  PHPUnit зелёных (reset-сьют 37 + доменные purge-тесты). Незакоммичено.
 
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,

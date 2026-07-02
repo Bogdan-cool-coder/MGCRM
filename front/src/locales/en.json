@@ -392,6 +392,10 @@
         "desc": "Departments, roles, permissions and record visibility policies"
       }
     },
+    "nav": {
+      "searchPlaceholder": "Search settings…",
+      "searchEmpty": "Nothing found"
+    },
     "profile": {
       "saved": "Profile saved",
       "tabs": {
@@ -399,6 +403,14 @@
         "security": "Security",
         "appearance": "Appearance",
         "language": "Language"
+      },
+      "hero": {
+        "twoFaOn": "2FA enabled",
+        "twoFaOff": "2FA disabled"
+      },
+      "personalData": {
+        "title": "Personal data",
+        "desc": "How colleagues see you in the system"
       },
       "avatarCrop": {
         "title": "Upload photo",
@@ -413,7 +425,13 @@
     "appearance": {
       "saved": "Appearance settings saved",
       "quickActionsOrbitHint": "These actions will appear in the Orbit panel",
-      "quickActionsNonOrbitHint": "Quick actions are only available in Orbit navigation mode"
+      "quickActionsNonOrbitHint": "Quick actions are only available in Orbit navigation mode",
+      "density": {
+        "title": "Interface density",
+        "desc": "How tightly rows are packed in tables, lists and boards. Compact fits more on screen, Cozy is larger and airier.",
+        "compact": "Compact",
+        "cozy": "Cozy"
+      }
     },
     "language": {
       "saved": "Language changed",
@@ -480,7 +498,69 @@
       "sectionDesc": "Manage users, access control and system parameters",
       "reset": {
         "title": "System reset",
-        "desc": "Deletes all business data and restores the baseline state. Admin only."
+        "desc": "Selective deletion of system data. Account settings and user records are preserved.",
+        "dangerLead": "This operation is irreversible.",
+        "dangerBanner": "Selected data will be permanently deleted. We recommend exporting a backup first.",
+        "selectAll": "Select all",
+        "selectedCount": "Selected: {n} of {total}",
+        "recordsTag": "{n} rec.",
+        "confirmTitle": "Confirmation",
+        "confirmHintPrefix": "To delete the selected data ({n}), type",
+        "confirmHintPrefixEmpty": "To delete the selected data, type",
+        "confirmHintSuffix": "in the field below.",
+        "deleteBtn": "Delete selected ({n})",
+        "deleteBtnEmpty": "Delete selected",
+        "modalTitle": "Delete data?",
+        "modalBody": "{n} data category will be permanently deleted: {list}. Continue? | {n} data categories will be permanently deleted: {list}. Continue?",
+        "modalConfirm": "Delete permanently",
+        "success": "Selected data deleted",
+        "successDetail": "Records deleted: {n}",
+        "partialTitle": "Partially deleted",
+        "partialDetail": "Succeeded: {ok}, failed: {failed} ({list}). Check the log.",
+        "errorTitle": "Reset failed",
+        "unavailableTitle": "Feature unavailable",
+        "unavailableHint": "Selective reset is not wired up on the server yet. This section will appear once the endpoints are deployed.",
+        "unavailableToast": "Selective reset is coming soon.",
+        "disabledTitle": "Reset disabled",
+        "disabledHint": "Data reset is disabled for this environment.",
+        "categories": {
+          "deals": {
+            "name": "Deals",
+            "desc": "All deals and their change history"
+          },
+          "contacts": {
+            "name": "Contacts",
+            "desc": "Contact persons and their data"
+          },
+          "companies": {
+            "name": "Companies",
+            "desc": "Client organizations"
+          },
+          "tasks": {
+            "name": "Tasks and activities",
+            "desc": "Tasks, calls, meetings, notes"
+          },
+          "docs": {
+            "name": "Documents and files",
+            "desc": "Contracts and attachments"
+          },
+          "finance": {
+            "name": "Financial operations",
+            "desc": "Payments, invoices, entries"
+          },
+          "logs": {
+            "name": "Logs and history",
+            "desc": "Automation and audit log"
+          },
+          "automations": {
+            "name": "Automation rules",
+            "desc": "Configured scenarios"
+          },
+          "directories": {
+            "name": "Directories",
+            "desc": "Products, tags, fields, exchange rates"
+          }
+        }
       }
     }
   },

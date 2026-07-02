@@ -679,6 +679,57 @@ class ContactService
     }
 
     /**
+     * Permanently purge ALL contacts and their owned child rows.
+     *
+     * Used ONLY by the system-reset `contacts` category
+     * (`docs/contracts/system-reset-api-contract.md` §1 row 2). Called by
+     * `App\Support\System\SystemResetService` — never invoked directly from a
+     * controller. No authorization check here: the caller (SystemResetService)
+     * is the single admin-gated entry point (`can:system-reset`).
+     *
+     * Delete order (children → parent), matching the contract exactly:
+     *   crm_contact_relations → crm_contact_company_links (pivot) →
+     *   contact_channels → crm_contacts.
+     *
+     * `deal_contacts` is NOT touched here — it cascades from either `deals`
+     * (category `deals`) or from `crm_contacts` itself (FK `cascadeOnDelete`
+     * on both sides), so it never survives a full contacts purge either way.
+     *
+     * Contacts are hard-deleted (forceDelete), not soft-deleted — the reset is
+     * "permanent, irreversible" (contract §0), so already-trashed rows are
+     * included via withTrashed() and the delete bypasses SoftDeletes entirely.
+     *
+     * Must run inside the caller's own transaction (contract §5: per-category
+     * transaction owned by SystemResetService) — this method does NOT open
+     * one of its own.
+     *
+     * @return array<string, int> counts keyed by table name
+     */
+    public function purgeAll(): array
+    {
+        $relations = DB::table('crm_contact_relations')->count();
+        DB::table('crm_contact_relations')->delete();
+
+        $links = DB::table('crm_contact_company_links')->count();
+        DB::table('crm_contact_company_links')->delete();
+
+        $channels = DB::table('contact_channels')->count();
+        DB::table('contact_channels')->delete();
+
+        // withTrashed(): a permanent reset must also remove already
+        // soft-deleted contacts, not just the currently-visible ones.
+        $contacts = Contact::withTrashed()->count();
+        Contact::withTrashed()->forceDelete();
+
+        return [
+            'crm_contact_relations' => $relations,
+            'crm_contact_company_links' => $links,
+            'contact_channels' => $channels,
+            'crm_contacts' => $contacts,
+        ];
+    }
+
+    /**
      * Reassign primary company for a contact.
      * Un-primaries all other links, sets the target link as primary.
      */

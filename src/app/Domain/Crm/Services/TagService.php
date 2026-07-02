@@ -70,4 +70,30 @@ class TagService
 
         return true;
     }
+
+    /**
+     * Permanently purge ALL tag directory entries.
+     *
+     * Used ONLY by the system-reset `directories` category
+     * (`docs/contracts/system-reset-api-contract.md` §1 row 9). Called by
+     * `App\Support\System\SystemResetService` — never invoked directly from a
+     * controller. No authorization check here: the caller is the single
+     * admin-gated entry point (`can:system-reset`).
+     *
+     * `crm_tags` has no FK dependents — tag names are stored as plain strings
+     * inside `crm_contacts.tags` / `crm_companies.tags` (jsonb arrays), never
+     * referenced by FK. A single bulk delete is safe and order-independent.
+     *
+     * Must run inside the caller's own transaction (contract §5) — this
+     * method does NOT open one of its own.
+     *
+     * @return array<string, int> counts keyed by table name
+     */
+    public function purgeAll(): array
+    {
+        $count = Tag::query()->count();
+        Tag::query()->delete();
+
+        return ['crm_tags' => $count];
+    }
 }

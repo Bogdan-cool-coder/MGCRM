@@ -122,6 +122,7 @@ Vizion-holdover services that used to sit there were relocated into `app/Support
 | AI-cascade retry | `src/app/Support/Ai/AiRetryService.php` | `App\Support\Ai` | `Contracts/TemplateCheckService`, `Onboarding/{QuizGenerationService, AiTutorService}`, `SalesPulse/PrismPulseLlmClient` — 4 consumers / 3 domains; no single owner |
 | DOCX/HTML→PDF client | `src/app/Support/Documents/GotenbergClient.php` | `App\Support\Documents` | `Contracts/{ContractGenerationService, TemplateCheckService}`, `Onboarding/CertificateService` — 2 domains; no single owner |
 | Safe-LIKE escaper | `src/app/Support/LikeEscape.php` | `App\Support` | query-builder macros (§6.1) |
+| Selective system-reset orchestrator | `src/app/Support/System/SystemResetService.php` | `App\Support\System` | the "reset the whole system" op is inherently cross-domain with no single owner. Orchestrates each category via the owning domain's public `purgeAll()` — never touches a foreign table (`docs/contracts/system-reset-api-contract.md` §7). Ships the `ResetCategory` allow-list, the `CategoryPurger` seam, `ResetPreviewData`/`ResetResultData` DTOs, and `LogPurger` (the `entity_logs` cleaner — Log has no domain agent). |
 
 Do not scatter copies into contexts; inject and call these. A helper used by **exactly one** domain
 belongs in that domain's `Support` subfolder (§2 table), not here — `app/Support/` is for the

@@ -347,6 +347,66 @@ class CompanyService
     }
 
     /**
+     * Permanently purge ALL companies and their owned child rows.
+     *
+     * Used ONLY by the system-reset `companies` category
+     * (`docs/contracts/system-reset-api-contract.md` §1 row 3). Called by
+     * `App\Support\System\SystemResetService` — never invoked directly from a
+     * controller. No authorization check here: the caller is the single
+     * admin-gated entry point (`can:system-reset`).
+     *
+     * Prerequisite (enforced by SystemResetService BEFORE any category runs,
+     * NOT here): `deals` and `contacts` must also be selected, because
+     * `deals.company_id` and `crm_contact_company_links.company_id` are
+     * `restrictOnDelete` / a live pivot — deleting companies first would hit
+     * an FK violation on pgsql. This method assumes that ordering already
+     * happened; it does not re-validate it.
+     *
+     * Delete order (children → parent), matching the contract exactly:
+     *   company_channels → company_client_status_log → company_requisites →
+     *   crm_companies.
+     *
+     * `crm_contact_company_links` is NOT touched here — it is owned/purged by
+     * `ContactService::purgeAll()` (category `contacts`), which the orchestrator
+     * always runs before `companies` per the contract's category order.
+     *
+     * Companies are hard-deleted (forceDelete), not soft-deleted — the reset is
+     * "permanent, irreversible" (contract §0), so already-trashed rows are
+     * included via withTrashed() and the delete bypasses SoftDeletes entirely.
+     * The self-referencing `holding_id` FK is `nullOnDelete`, so no explicit
+     * pre-step is needed to break the self-reference before the bulk delete.
+     *
+     * Must run inside the caller's own transaction (contract §5: per-category
+     * transaction owned by SystemResetService) — this method does NOT open
+     * one of its own.
+     *
+     * @return array<string, int> counts keyed by table name
+     */
+    public function purgeAll(): array
+    {
+        $channels = DB::table('company_channels')->count();
+        DB::table('company_channels')->delete();
+
+        $statusLogs = DB::table('company_client_status_log')->count();
+        DB::table('company_client_status_log')->delete();
+
+        $requisites = DB::table('company_requisites')->count();
+        DB::table('company_requisites')->delete();
+
+        // withTrashed(): a permanent reset must also remove already
+        // soft-deleted companies, not just the currently-visible ones.
+        $companies = Company::withTrashed()->count();
+        Company::withTrashed()->forceDelete();
+
+        return [
+            'company_channels' => $channels,
+            'company_client_status_log' => $statusLogs,
+            'company_requisites' => $requisites,
+            'crm_companies' => $companies,
+        ];
+    }
+
+    /**
      * Express-company: create a minimal company and immediately link a contact as primary.
      *
      * @param  array<string, mixed>  $companyData

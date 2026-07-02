@@ -22,6 +22,36 @@ class AdminUserIndexRequest extends FormRequest
     }
 
     /**
+     * Normalize the string boolean a query string always yields.
+     *
+     * Laravel 13.15's `boolean` rule only accepts native booleans or `1`/`0` — it
+     * rejects the string `"true"`/`"false"` a GET query param carries (there are no
+     * native bools in a URL). We coerce the accepted string forms to a real bool
+     * BEFORE validation so the `boolean` rule passes, while leaving an absent param
+     * as null (the "no filter" case the controller checks via
+     * validated('is_active') !== null). An unrecognised value is left untouched so
+     * the `boolean` rule still rejects it with a 422.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('is_active')) {
+            return;
+        }
+
+        $normalized = filter_var(
+            $this->input('is_active'),
+            FILTER_VALIDATE_BOOLEAN,
+            FILTER_NULL_ON_FAILURE,
+        );
+
+        // Only overwrite when the value is a recognised boolean form; otherwise
+        // leave it so the `boolean` rule produces the validation error.
+        if ($normalized !== null) {
+            $this->merge(['is_active' => $normalized]);
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array

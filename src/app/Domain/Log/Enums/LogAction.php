@@ -63,6 +63,13 @@ enum LogAction: string
     // Admin edited a role's visibility scope (Settings → Access Control →
     // Visibility). meta: { role, from, to }.
     case VisibilityChanged = 'visibility_changed';
+    // Admin ran a selective system-reset (Settings → Система → «Сброс системы»).
+    // The mandatory audit row for a data wipe — written AFTER all deletions
+    // commit, so even a run that wiped the `logs` category leaves this trace as
+    // the first row of the freshly-emptied log. Subject = System, subject_id = 0.
+    // meta: { categories: [...], deleted: {cat: n}, total_deleted, failed: [...],
+    // confirmation_ok: true, ip }. Never carries totp/secret data.
+    case SystemReset = 'system_reset';
 
     /**
      * @return list<string>

@@ -28,6 +28,7 @@ import { createAppRouter } from '@/router'
 import { useUserStore } from '@/stores/user'
 import { useLayoutStore } from '@/stores/layout'
 import { useThemeStore } from '@/stores/theme'
+import { useDensityStore } from '@/stores/density'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -58,6 +59,11 @@ if (themeStore.theme === 'dark') {
   // Reset isDarkMode so this branch never fires again on subsequent boots
   layoutStore.$patch({ isDarkMode: false })
 }
+
+// Гидратация density (глобальный .mg-cozy на <html>): persist восстанавливает
+// значение в store, но класс на корне нужно проставить явно до первого рендера.
+const densityStore = useDensityStore(pinia)
+densityStore.syncClass()
 
 const router = createAppRouter(pinia)
 

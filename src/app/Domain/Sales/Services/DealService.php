@@ -1656,6 +1656,56 @@ class DealService
     }
 
     /**
+     * Permanently purge every deal and its owned child rows — the `deals`
+     * category cleaner for the selective system-reset feature
+     * (docs/contracts/system-reset-api-contract.md §1 row 1, §7 boundary
+     * decision). Called ONLY by the cross-domain `SystemResetService`
+     * orchestrator (App\Support\System), never from a controller directly.
+     *
+     * Deletes children before parents, matching the contract's explicit table
+     * list exactly (deterministic on both pgsql and the sqlite test suite,
+     * since FK enforcement differs between them — contract §3a):
+     *   deal_stage_history → deal_audits → deal_contacts (pivot) →
+     *   deal_products → deals.
+     *
+     * Uses raw `DB::table()` deletes rather than Eloquent so that (a) the
+     * `Deal` model's SoftDeletes global scope can never leave a "deleted"-but-
+     * still-present row behind (this purge is permanent, not a soft delete —
+     * archived/trashed deals are wiped too), and (b) no model events/observers
+     * fire for a bulk administrative wipe.
+     *
+     * NEVER touches `pipelines` / `pipeline_stages` (funnels are structural
+     * config, not business data — contract §2 never-delete list) — `deals.
+     * pipeline_id` / `stage_id` / `company_id` / `owner_user_id` are all
+     * `restrictOnDelete()`, so those parent tables are already DB-protected
+     * even if this method were ever mis-ordered.
+     *
+     * Runs with NO authorization check and NO transaction of its own — the
+     * caller (SystemResetService) wraps the whole category in one
+     * DB::transaction() and gates access via `system-reset` (contract §5/§6.2).
+     *
+     * @return array{deal_stage_history: int, deal_audits: int, deal_contacts: int, deal_products: int, deals: int}
+     */
+    public function purgeAll(): array
+    {
+        $counts = [
+            'deal_stage_history' => DB::table('deal_stage_history')->count(),
+            'deal_audits' => DB::table('deal_audits')->count(),
+            'deal_contacts' => DB::table('deal_contacts')->count(),
+            'deal_products' => DB::table('deal_products')->count(),
+            'deals' => DB::table('deals')->count(),
+        ];
+
+        DB::table('deal_stage_history')->delete();
+        DB::table('deal_audits')->delete();
+        DB::table('deal_contacts')->delete();
+        DB::table('deal_products')->delete();
+        DB::table('deals')->delete();
+
+        return $counts;
+    }
+
+    /**
      * Apply the row-level visibility scope to a base Deal query.
      *
      * @return Builder<Deal>

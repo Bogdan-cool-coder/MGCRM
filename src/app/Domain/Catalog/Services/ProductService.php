@@ -242,4 +242,57 @@ class ProductService
     {
         return $this->getPriceSnapshot($productId, $planId, $currencyCode);
     }
+
+    /**
+     * Permanently purge ALL catalog products, groups, plans and prices.
+     *
+     * Used ONLY by the system-reset `directories` category
+     * (`docs/contracts/system-reset-api-contract.md` §1 row 9). Called by
+     * `App\Support\System\SystemResetService` — never invoked directly from a
+     * controller. No authorization check here: the caller is the single
+     * admin-gated entry point (`can:system-reset`).
+     *
+     * `catalog_exchange_rates` is deliberately EXCLUDED from this purge (P5 —
+     * confirmed product decision): FX history is treated as config, not
+     * business data that resets, despite living in the same "directories"
+     * checkbox in the design copy. It is never deleted by any reset category.
+     * See ExchangeRateService — no purgeAll() exists there by design.
+     *
+     * Prerequisite (enforced by SystemResetService BEFORE any category runs,
+     * NOT here): `deal_products.product_id` / `.plan_id` are
+     * `restrictOnDelete`, so `deals` must also be selected — otherwise this
+     * purge would hit an FK violation on pgsql. This method assumes that
+     * ordering already happened; it does not re-validate it.
+     *
+     * Delete order (children → parents), matching the contract exactly:
+     *   catalog_product_prices → catalog_product_plans → catalog_products →
+     *   catalog_product_groups.
+     *
+     * Must run inside the caller's own transaction (contract §5: per-category
+     * transaction owned by SystemResetService) — this method does NOT open
+     * one of its own.
+     *
+     * @return array<string, int> counts keyed by table name
+     */
+    public function purgeAll(): array
+    {
+        $prices = DB::table('catalog_product_prices')->count();
+        DB::table('catalog_product_prices')->delete();
+
+        $plans = DB::table('catalog_product_plans')->count();
+        DB::table('catalog_product_plans')->delete();
+
+        $products = DB::table('catalog_products')->count();
+        DB::table('catalog_products')->delete();
+
+        $groups = DB::table('catalog_product_groups')->count();
+        DB::table('catalog_product_groups')->delete();
+
+        return [
+            'catalog_product_prices' => $prices,
+            'catalog_product_plans' => $plans,
+            'catalog_products' => $products,
+            'catalog_product_groups' => $groups,
+        ];
+    }
 }

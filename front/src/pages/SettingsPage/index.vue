@@ -3,7 +3,17 @@
     <PageHeader
       icon="pi pi-cog"
       :title="t('settings.pageTitle')"
-    />
+    >
+      <template #actions>
+        <Button
+          text
+          rounded
+          :icon="themeStore.theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'"
+          :aria-label="t('account.theme')"
+          @click="themeStore.toggleTheme()"
+        />
+      </template>
+    </PageHeader>
 
     <!-- Единственный экземпляр диалога «Несохранённые изменения» -->
     <UnsavedChangesDialog
@@ -96,7 +106,9 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 import Select from 'primevue/select'
+import Button from 'primevue/button'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import SettingsSidebar from './components/SettingsSidebar.vue'
 import SectionProfileTabs from './components/sections/SectionProfileTabs.vue'
@@ -122,6 +134,7 @@ const { t } = useI18n()
 const settings = useSettings()
 const profile = useProfilePage()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 function isDirectoriesSection(key: string): boolean {
   return (

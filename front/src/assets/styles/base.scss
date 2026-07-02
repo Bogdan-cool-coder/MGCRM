@@ -175,3 +175,24 @@ a {
   --app-sidebar-divider: rgba(255, 255, 255, 0.08);   // --mg-sidebar-divider
 }
 /* stylelint-enable scale-unlimited/declaration-strict-value */
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GLOBAL INTERFACE DENSITY (Settings → Внешний вид → «Плотность интерфейса»)
+// ───────────────────────────────────────────────────────────────────────────
+// --mg-row-py drives vertical padding of table/list/board rows. Default (:root)
+// = compact; the .mg-cozy class (toggled on <html> by useDensityStore) relaxes it.
+// Emitted here (global, once) so no scoped component duplicates the rule, and so
+// components can opt-in by consuming var(--mg-row-py) with a compact fallback.
+:root {
+  --mg-row-py: 8px;
+}
+html.mg-cozy {
+  --mg-row-py: 13px;
+}
+// Cozy = roomier PrimeVue DataTable cells app-wide. Compact keeps PrimeVue's own
+// default (this rule is inert unless .mg-cozy is present, so it never fights the
+// per-page ContactsPage density which sets its own cell padding via inline vars).
+html.mg-cozy .p-datatable .p-datatable-tbody > tr > td,
+html.mg-cozy .p-datatable .p-datatable-thead > tr > th {
+  padding-block: var(--mg-row-py);
+}
