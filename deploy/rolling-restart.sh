@@ -54,9 +54,16 @@ fi
 # Pass VITE_SENTRY_RELEASE as env var so docker-compose.yml build arg picks it up.
 export VITE_SENTRY_RELEASE="${SENTRY_RELEASE}"
 
-# Reverb build-time vars — non-secret, sourced from the server root .env
-# (/opt/mgcrm/.env) which is loaded by the deploy shell before this script runs.
-# Export them explicitly so docker-compose.yml build.args interpolation finds them.
+# Reverb build-time vars — non-secret; read from the server root .env
+# (/opt/mgcrm/.env, lives outside git).  Source it here so GHA deploy
+# (which does NOT source the file before calling this script) picks them up.
+ROOT_ENV="$(cd "$(dirname "$0")/.." && pwd)/.env"
+if [ -f "$ROOT_ENV" ]; then
+  # shellcheck source=/dev/null
+  set -o allexport; . "$ROOT_ENV"; set +o allexport
+  echo "==> Root .env sourced from ${ROOT_ENV}"
+fi
+# Export explicitly so docker-compose.yml build.args interpolation finds them.
 # If not set in root .env, fall back to safe defaults (empty key disables Reverb client).
 export VITE_REVERB_APP_KEY="${VITE_REVERB_APP_KEY:-}"
 export VITE_REVERB_HOST="${VITE_REVERB_HOST:-}"
