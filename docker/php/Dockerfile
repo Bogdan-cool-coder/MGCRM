@@ -56,7 +56,8 @@ RUN docker-php-ext-install -j"$(nproc)" \
     zip \
     intl \
     mbstring \
-    bcmath
+    bcmath \
+    pcntl
 
 RUN docker-php-ext-configure gd --with-jpeg --with-freetype \
     && docker-php-ext-install -j"$(nproc)" gd
