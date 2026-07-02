@@ -396,22 +396,36 @@ $font-size-xl   // ~18px — заголовок PageHeader
 
 ### Обе темы — обязательно
 
-Каждый компонент с кастомным цветом должен иметь dark-вариант:
+Предпочтительный путь — **theme-reactive токены**: `$surface-*` / `var(--p-*)` / `--p-primary-color` уже адаптируются под тему, поэтому одно правило читает и light, и dark — отдельная dark-ветка чаще всего НЕ нужна:
 
 ```scss
+// ✅ Правильно: theme-reactive токены читают ОБЕ темы из одного правила
 .my-component {
-  background: $surface-card;       // авто через $surface-card
-  color: $surface-700;             // light
+  background: $surface-card;            // navy card в dark автоматически
+  color: $surface-700;                 // navy secondary text в dark
   border: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    color: var(--p-surface-200);   // dark — инвертированная шкала!
-    border-color: var(--p-surface-700);
-  }
+}
+// Dark-override — ТОЛЬКО на собственном scoped-элементе компонента:
+.my-component__row:hover {
+  background: var(--p-surface-50);
+  .app-dark & { background: var(--p-surface-200); }  // ✅ live: [data-v] лендит на тот же элемент
 }
 ```
 
-> **Важно об инвертированной шкале dark-темы:** в `.app-dark` шкала surface PrimeVue инвертирована — `surface-100` в dark-теме тёмный (#444547), а `surface-900` — светлый (#F8F9FA). Для текста в dark-режиме используй `surface-100`/`surface-200` (светлые), не `surface-700`/`surface-800`.
+> **Инвертированная navy-шкала dark-темы (MSales 2.0):** в `.app-dark` шкала surface инвертирована, значения — navy. `surface-100` в dark = `#111E38` (тёмный card), `surface-200` = `#172847` (raised / soft-border), `surface-900` = `#EAF0FA` (светлый текст). Для текста в dark бери `surface-800`/`surface-900` (светлые), для raised-hover — `surface-200`. НЕ `surface-700`/`surface-800` для фона и НЕ `surface-200`/`surface-300` для текста (это dark-on-dark). Акцент в dark светлеет `#172747 → #4C7DF0` (читай через `--p-primary-color`).
+
+**⛔ Мёртвые dark-селекторы (закон — эти 3 варианта НИКОГДА не пиши):**
+
+1. `.app-dark &` **внутри** `:deep(...)` — компилируется в `.app-dark[data-v-x] …`; `.app-dark` сидит на `<html>` (вне scope компонента) → **никогда не матчит**.
+2. top-level `:deep(.app-dark …)` в scoped-блоке — Vue всё равно эмитит leftmost `[data-v]` атрибут → **мёртв**.
+3. `:deep(.app-dark) &` и вариации — та же причина.
+
+**✅ 2 рабочих паттерна для dark-override:**
+
+1. **Theme-reactive токены** (предпочтительно) — `$surface-*` / `var(--p-*)` / `--p-primary-color` уже адаптируются; одно правило читает обе темы, dark-ветка не нужна.
+2. **Non-scoped `<style>` блок** — когда нужен dark-override элемента внутри `:deep()`-зоны: отдельный `<style lang="scss">` (без `scoped`), правило `.app-dark .page-namespace .target { … }`, **обязательно namespaced классом страницы** (напр. `.contacts-page__table`) чтобы не течь глобально. Тот же идиом уже используется в `assets/styles/base.scss`.
+
+> `.app-dark &` на собственном scoped-элементе компонента (не внутри `:deep()`) — **live и допустим** (`[data-v]` лендит на тот же элемент, `.app-dark` — его предок). Мёртв только вложенный в `:deep()` вариант.
 
 ### Деньги
 

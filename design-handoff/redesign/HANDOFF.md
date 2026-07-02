@@ -167,7 +167,7 @@
   - QA: 10 функциональных сценариев PASS (регресс 3 CRM-карточек чист) + dark-контраст PASS
   - 3439 PHPUnit зелёных
 
-### Обновление 2026-07-03 — Settings hi-fi редизайн (мокап принят, в работу — этап 2 визуал-апдейта)
+### Обновление 2026-07-03 — MSales 2.0: navy dark theme + settings hi-fi (этапы 0–3)
 - **Settings hi-fi (`Settings-redesign-visual.md` + `settings.html`)** — визуальный редизайн-слой
   unified `/settings` поверх реализованной механики Ф1–Ф5: двухколоночный шелл (рельс 264px +
   detail), hero-карточка профиля (navy-градиент, аватар 72px, мета-строка вход/2FA/язык), выбор
@@ -186,6 +186,28 @@
   Этап 2 (**выборочный** system-reset по 9 категориям — backend по контракту
   `docs/contracts/system-reset-api-contract.md`, live e2e) QA PASS. Backend-паритет: 3737
   PHPUnit зелёных (reset-сьют 37 + доменные purge-тесты). Незакоммичено.
+- **Этап 1 (navy dark repaint, `b97e55c`) — РЕАЛИЗОВАН, reviewer PASS.** Dark-тема перекрашена
+  grey→navy (инверсия сохранена): surface-шкала `#0A1426…#F5F8FE`; акцент в dark светлеет
+  `#172747 → #4C7DF0`. Статусы/тени/brand-chrome вынесены в глобальные `--app-*` объявления
+  (`base.scss`, `:root` light + `.app-dark` dark) — ушли с inline-эмиссии на `<html>`, которая
+  била `.app-dark`-каскад. ECharts navy-палитра (10 цветов, порядок 1:1 light). Устранён
+  анти-паттерн мёртвых `:deep(.app-dark)`-веток (19 в 9 файлах). Sidebar dark `#091020`,
+  deal-header dark `#111E38`; light `#172747` — бренд-инвариант, сохранён. Light-тема не тронута.
+  **QA navy dark 8/8 + 6/6 recheck PASS.** Канон navy: `front/src/theme/tokens/colors.ts`.
+- **Этап 3 (section-level navy delta, `08b8e2e`) — РЕАЛИЗОВАН, reviewer PASS.** CRM+Sales-свип
+  ~58 инвертированных dark-оверрайдов; odd-row-dim fix (ссылки → `--p-primary-color`); deal-header
+  отвязан к токену (`$brand-header-bg`, `#111E38` в dark); kanban hover поднят (`surface-200`);
+  бордеры колонок унифицированы (`surface-300`); `DS_STAGE_PALETTE` → 5 канонических `$stage-color-*`;
+  dark row-hover перенесён в non-scoped namespaced-блок (`.contacts-page__table`). **QA этап-3 PASS
+  обе темы (после 3 итераций hover).**
+- **Navy dark — действующая тема проекта.** reviewer PASS-with-nits 2026-07-03; `type-check` +
+  `lint:ds` зелёные; ноль бизнес-логики (единственный JS-тач — theme-флаг в `macroCrmBarColor`).
+  Закон о 3 мёртвых dark-селекторах + 2 рабочих паттернах записан в `docs/designer-charter.md`
+  §«Обе темы». Незакоммичено → в main локально (этапы 1–3).
+- **Известные не-блокеры (nits, код не тронут):** (1) комментарий-аннотация `iconColor: {surface.400}`
+  в `foundation.ts` двусмыслен рядом с muted-семантикой (остальные muted ушли на `{surface.500}`);
+  (2) `DS_STAGE_PALETTE` — 5 сырых hex продублированы литералами в JS (1:1 совпадают с `$stage-color-*`,
+  но дрейф-риск от `_colors.scss`).
 
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,
