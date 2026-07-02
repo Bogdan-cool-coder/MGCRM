@@ -151,10 +151,6 @@ function formatDate(iso: string | null): string {
   font-weight: $font-weight-semibold;
   font-size: $font-size-base;
   color: $surface-900;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 // Empty / error state
@@ -211,9 +207,6 @@ function formatDate(iso: string | null): string {
   font-weight: $font-weight-medium;
   color: $surface-700;
 
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 
   &--to {
     color: var(--p-primary-color);

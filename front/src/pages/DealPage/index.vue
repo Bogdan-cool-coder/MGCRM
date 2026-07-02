@@ -772,9 +772,8 @@ onMounted(async () => {
 
   // ── Right panel: --c-feed background ─────────────────────────────────────
   // Light: --c-feed = #F1F2F3 = surfacePalette[100] = var(--p-surface-100).
-  // Dark:  --c-feed spec = #1f2021 (between surface-50 #272829 and surface-0 #000).
-  //        Closest available token: var(--p-surface-50) in dark = #272829.
-  //        No exact token exists — using surface-50 as approved approximation.
+  // Dark (navy):  surface-50 = #0F1F3D — one step darker than the card panels
+  //        (surface-100 = #111E38), giving the feed a subtly recessed zone.
   &__right {
     flex: 1;
     min-width: 0;

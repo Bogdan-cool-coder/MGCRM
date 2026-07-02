@@ -457,9 +457,6 @@ defineExpose({ setSaving: (v: boolean) => { saving.value = v } })
   color: $surface-700;
   margin-bottom: $space-1;
 
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 
   &--required::after {
     content: ' *';

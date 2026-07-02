@@ -275,10 +275,6 @@ async function onUploadScan(event: FileUploadUploaderEvent) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 .termination-drawer__body {
@@ -322,10 +318,6 @@ async function onUploadScan(event: FileUploadUploaderEvent) {
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   color: $surface-800;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 .termination-drawer__step-hint {
@@ -399,10 +391,6 @@ async function onUploadScan(event: FileUploadUploaderEvent) {
 .termination-drawer__scan-name {
   font-size: $font-size-sm;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .termination-drawer__step-locked {

@@ -290,7 +290,9 @@ onBeforeUnmount(() => {
 
   &--active {
     font-weight: $font-weight-bold;
-    color: $primary-900;
+    // Theme-reactive: $primary-900 is static #172747 → ~1.05:1 on the navy per-page
+    // menu in dark. --p-primary-color adapts to the navy accent in dark (no dark branch).
+    color: var(--p-primary-color);
   }
 }
 
@@ -360,14 +362,13 @@ onBeforeUnmount(() => {
   }
 
   &--active {
-    background: $primary-900;
-    color: $surface-0;
+    // Theme-reactive accent + its contrast ink. $surface-0 as text inverts to the
+    // deepest dark in the inverted dark scale (#0A1426) → unreadable on the navy
+    // active button. --p-primary-contrast-color always pairs legibly with the accent.
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
     font-weight: $font-weight-semibold;
     cursor: default;
-  }
-
-  .app-dark & {
-    color: var(--p-surface-300);
   }
 }
 </style>

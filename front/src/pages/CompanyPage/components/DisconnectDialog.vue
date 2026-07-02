@@ -232,10 +232,6 @@ async function onSubmit() {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .disconnect-dialog__required {

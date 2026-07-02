@@ -232,10 +232,6 @@ onMounted(() => {
   margin: 0 0 $space-1;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .contact-create-form__field {
@@ -248,10 +244,6 @@ onMounted(() => {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .contact-create-form__req {

@@ -193,10 +193,6 @@ function onApply() {
   flex: 1;
   font-size: $font-size-sm;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .col-chooser__required {

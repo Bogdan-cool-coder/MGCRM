@@ -277,10 +277,6 @@ function formatDate(dateStr: string): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 .requisite-card__badge {
@@ -378,10 +374,6 @@ function formatDate(dateStr: string): string {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 // E4: .requisite-card__field-copy removed — per-field copy buttons removed to eliminate duplicate

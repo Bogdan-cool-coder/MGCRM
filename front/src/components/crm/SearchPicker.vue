@@ -181,7 +181,6 @@ onUnmounted(() => {
 
   .app-dark & {
     border-color: var(--p-surface-600);
-    color: var(--p-surface-200);
   }
 
   &:hover {
@@ -249,9 +248,6 @@ onUnmounted(() => {
   color: $surface-800;
   min-width: 0;
 
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 
   &::placeholder {
     color: $surface-400;
@@ -283,9 +279,6 @@ onUnmounted(() => {
   color: $surface-700;
   transition: background var(--app-transition-fast);
 
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 
   &:hover {
     background: var(--p-surface-50);

@@ -1423,10 +1423,6 @@ watch(
   font-size: $font-size-sm;
   color: $surface-700;
   margin: 0;
-
-  .app-dark & {
-    color: $surface-300;
-  }
 }
 
 // ── Dialog form ────────────────────────────────────────────────────────────────

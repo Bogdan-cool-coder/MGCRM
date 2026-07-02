@@ -1016,16 +1016,13 @@ onMounted(() => {
   :deep(.p-datatable-tbody > tr:hover > td) {
     background: $surface-50;
   }
-  // Dark hover: top-level :deep(.app-dark …) so it de-scopes correctly (matches
-  // <html>.app-dark). A nested `.app-dark &` inside :deep() compiles dead.
-  :deep(.app-dark .p-datatable-tbody > tr:hover > td) {
-    background: var(--p-surface-200);
-  }
 
-  // Remove striped rows
-  :deep(.p-datatable-tbody > tr.p-row-odd > td) {
-    background: transparent;
-  }
+  // No striped rows on this table (stripedRows prop unset) → every row uses the
+  // uniform theme-reactive datatable.row.background (navy card in dark). No odd/even
+  // background override needed; link legibility is handled by the reactive link token.
+  // Dark hover lives in the NON-scoped <style> block at the end of this SFC — a scoped
+  // :deep() still emits a leftmost [data-v] attr, and .app-dark is on <html> (an ancestor
+  // of the table), so no scoped selector can structurally reach it.
 }
 
 // Custom sort header cell — wraps header text + sort icon
@@ -1100,7 +1097,11 @@ onMounted(() => {
 }
 
 .contacts-page__name-link {
-  color: $primary-900;
+  // Theme-reactive: --p-primary-color = #172747 (light) / #4C7DF0 navy accent (dark).
+  // $primary-900 is a STATIC brand hex (#172747) that does not adapt → invisible on
+  // the navy card row in dark. Use the reactive token so every row (odd + even)
+  // renders a legible link in both themes.
+  color: var(--p-primary-color);
   text-decoration: none;
   font-weight: $font-weight-semibold;
   font-size: $font-size-sm;
@@ -1117,7 +1118,8 @@ onMounted(() => {
 }
 
 .contacts-page__company-link {
-  color: $primary-900;
+  // Theme-reactive link colour (see .contacts-page__name-link note).
+  color: var(--p-primary-color);
   text-decoration: none;
   font-size: $font-size-sm;
 
@@ -1202,10 +1204,6 @@ onMounted(() => {
 .contacts-page__owner-name {
   font-size: $font-size-xs;
   color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 // Tag chips inside the name cell (1.2)
@@ -1274,15 +1272,27 @@ onMounted(() => {
 .contacts-page__empty-title {
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
+  // $surface-700 is theme-reactive (dark = #B4C2DA, a legible light tint). The
+  // former .app-dark override to surface-200 (#172847, DARK in the inverted scale)
+  // rendered the title near-invisible on the dark card. Reactive base is correct.
   color: $surface-700;
   margin: 0;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .w-full {
   width: 100%;
+}
+</style>
+
+<!--
+  NON-scoped block: dark-mode DataTable row hover. .app-dark sits on <html>, an
+  ancestor of the table, so it is structurally unreachable from any scoped selector
+  (Vue emits a leftmost [data-v] attr, even for top-level :deep()). A plain global
+  rule reaches it. The .contacts-page__table class keeps page specificity so this
+  never leaks to other tables. Same idiom base.scss already uses for global .app-dark.
+-->
+<style lang="scss">
+.app-dark .contacts-page__table .p-datatable-tbody > tr:hover > td {
+  background: var(--p-surface-200);
 }
 </style>

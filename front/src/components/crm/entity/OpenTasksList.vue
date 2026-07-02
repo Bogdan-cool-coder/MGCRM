@@ -799,9 +799,6 @@ async function onDelete(id: number) {
   overflow: hidden;
   cursor: default;
 
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 
   &--editing {
     border-color: var(--p-primary-color);
@@ -886,10 +883,6 @@ async function onDelete(id: number) {
 
   &:hover {
     color: $surface-600;
-
-    .app-dark & {
-      color: var(--p-surface-300);
-    }
   }
 
   &--static {
@@ -984,7 +977,6 @@ async function onDelete(id: number) {
 
   .app-dark & {
     border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
   }
 
   &:hover:not(:disabled) {
@@ -1047,10 +1039,6 @@ async function onDelete(id: number) {
   font-size: $font-size-sm;
   color: $surface-700;
   font-family: inherit;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .open-tasks__picker-option {
@@ -1068,9 +1056,6 @@ async function onDelete(id: number) {
   text-align: left;
   transition: background var(--app-transition-fast);
 
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 
   &:hover {
     background: var(--p-surface-100);
@@ -1215,10 +1200,6 @@ async function onDelete(id: number) {
   font-weight: $font-weight-medium;
   color: $surface-700;
   line-height: $line-height-normal;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .open-tasks__expanded-actions {

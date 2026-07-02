@@ -162,16 +162,15 @@ function onDragEnd(event: { item: HTMLElement; from: HTMLElement; to: HTMLElemen
 
 // ── Header style — tint 13% + border-top 3px ──────────────────────────────────
 
-// DS stage palette fallback by index (teal/blue/amber/pink/purple)
+// DS stage palette fallback by index — MUST mirror the canonical $stage-color-*
+// set (_colors.scss) that StageColorPicker offers and the redesign mockups use,
+// so a colorless stage falls back to a real pickable swatch (not off-palette).
 const DS_STAGE_PALETTE = [
-  '#0D9488', // teal
-  '#2563EB', // blue
-  '#D97706', // amber
-  '#DB2777', // pink
-  '#7C3AED', // purple
-  '#059669', // emerald
-  '#DC2626', // red
-  '#0891B2', // cyan
+  '#1D9E75', // teal
+  '#378ADD', // blue
+  '#EF9F27', // amber
+  '#D4537E', // pink
+  '#7F77DD', // purple
 ]
 
 const effectiveStageColor = computed(() => {
@@ -341,7 +340,7 @@ function hidePopover() {
   .app-dark & {
     background: var(--p-surface-100);
     border-color: var(--p-surface-200);
-    color: var(--p-surface-900); // dark surface-900 = #F9FAFB (light text on dark bg)
+    color: var(--p-surface-900); // dark surface-900 = #EAF0FA (light navy text on dark bg)
   }
 }
 
@@ -357,7 +356,7 @@ function hidePopover() {
   white-space: nowrap;
 
   .app-dark & {
-    color: var(--p-surface-900); // dark surface-900 = #F9FAFB (light text on dark bg)
+    color: var(--p-surface-900); // dark surface-900 = #EAF0FA (light navy text on dark bg)
   }
 }
 

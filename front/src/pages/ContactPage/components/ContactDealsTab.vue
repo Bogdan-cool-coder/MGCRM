@@ -229,10 +229,6 @@ function formatDate(iso: string | null | undefined): string {
 .contact-deals-tab__owner {
   font-size: $font-size-sm;
   color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 .contact-deals-tab__date {

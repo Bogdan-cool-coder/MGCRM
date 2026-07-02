@@ -253,9 +253,6 @@ onUnmounted(() => {
   cursor: text;
   padding: 0;
 
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 
   &::placeholder {
     color: $surface-400;

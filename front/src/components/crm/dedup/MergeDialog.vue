@@ -743,10 +743,6 @@ function onHide() {
     font-weight: $font-weight-semibold;
     color: $surface-700;
     margin: 0;
-
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
   }
 
   &__empty-subtitle {
@@ -788,10 +784,6 @@ function onHide() {
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $surface-800;
-
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
   }
 
   &__group-actions {
@@ -899,9 +891,6 @@ function onHide() {
     padding-bottom: $space-2;
     border-bottom: 1px solid var(--p-surface-200);
 
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
 
     &--append i {
       color: $green-900;
@@ -1021,10 +1010,6 @@ function onHide() {
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     color: $surface-700;
-
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
   }
 
   // ── Append block ──────────────────────────────────────────────────────────
@@ -1057,10 +1042,6 @@ function onHide() {
     color: $surface-700;
     white-space: nowrap;
     flex-shrink: 0;
-
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
   }
 
   &__append-tags {
@@ -1122,10 +1103,6 @@ function onHide() {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-
-    .app-dark & {
-      color: var(--p-surface-200);
-    }
   }
 
   &__delete-warning {

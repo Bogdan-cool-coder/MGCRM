@@ -393,8 +393,9 @@ function confirmDelete() {
 <style lang="scss" scoped>
 // ── Container ──────────────────────────────────────────────────────────────────
 .deal-header {
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  background: #172747; // brand invariant navy
+  // Brand chrome: navy #172747 (light) → darkens to #111E38 (dark) via token,
+  // per MSales 2.0 navy repaint. Do NOT pin the raw light hex here.
+  background: $brand-header-bg;
   padding: 14px $space-4 $space-4;
   display: flex;
   flex-direction: column;

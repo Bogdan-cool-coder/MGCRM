@@ -456,10 +456,6 @@ async function executeDelete() {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 .w-full {

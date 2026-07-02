@@ -499,10 +499,6 @@ function onDeleteChannel(ch: CompanyChannel) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 .company-channels__primary-star {

@@ -224,7 +224,7 @@ const menuItems = computed(() => [
   line-height: 1.1;
 
   .app-dark & {
-    color: var(--p-surface-900); // dark surface-900 = #F9FAFB (light text on dark bg)
+    color: var(--p-surface-900); // dark surface-900 = #EAF0FA (light navy text on dark bg)
   }
 }
 

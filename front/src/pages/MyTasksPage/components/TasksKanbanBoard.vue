@@ -351,7 +351,8 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
 
   .app-dark & {
     background: var(--p-surface-100);
-    border-color: var(--p-surface-200);
+    // DS --mg-border-default (dark) = #27395C = surface-300 (matches Deals board).
+    border-color: var(--p-surface-300);
   }
 }
 

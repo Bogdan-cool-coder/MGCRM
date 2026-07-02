@@ -286,10 +286,6 @@ function onHide() {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 .create-contact-inline__req {

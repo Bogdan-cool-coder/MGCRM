@@ -1052,10 +1052,6 @@ async function doDelete() {
   color: $surface-600;
   line-height: $line-height-normal;
   word-break: break-word;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 .task-window__result-textarea {
@@ -1180,7 +1176,6 @@ async function doDelete() {
 
   .app-dark & {
     border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
   }
 
   &:hover {

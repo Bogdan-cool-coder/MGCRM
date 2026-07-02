@@ -654,9 +654,6 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
 
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 
   &--done {
     text-decoration: line-through;
@@ -670,10 +667,6 @@ defineExpose({
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 // Meta line — ONE line «дата · время · ответственный», spec DealCard §12
@@ -729,9 +722,6 @@ defineExpose({
   font-size: $font-size-xs;
   color: $surface-600;
 
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 
   strong {
     font-weight: $font-weight-medium;
@@ -742,10 +732,6 @@ defineExpose({
   font-weight: $font-weight-medium;
   color: $surface-700;
   margin-left: $space-1;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 // Old value — struck-through, spec DealCard §11
@@ -762,10 +748,6 @@ defineExpose({
 .entity-activities__fc-new {
   color: $surface-700;
   font-weight: $font-weight-medium;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .entity-activities__fc-time {

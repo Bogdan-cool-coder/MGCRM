@@ -333,10 +333,6 @@ function holdingRoleLabel(role: HoldingRole | null): string {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 .holding-tree__you-tag {

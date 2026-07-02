@@ -537,10 +537,6 @@ function mimeIcon(mime: string | null | undefined): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .entity-files-tab__folder-count {
@@ -681,10 +677,6 @@ function mimeIcon(mime: string | null | undefined): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .entity-files-tab__file-meta {
@@ -783,9 +775,5 @@ function mimeIcon(mime: string | null | undefined): string {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 </style>

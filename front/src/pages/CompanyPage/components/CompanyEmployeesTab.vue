@@ -353,8 +353,10 @@ function channelIcon(type: string): string {
     border-color: var(--p-primary-color);
     background: var(--p-surface-50);
 
+    // surface-800 is LIGHT in the inverted dark scale → near-white flash on hover.
+    // surface-200 (#172847) is the established dark raised-hover surface.
     .app-dark & {
-      background: var(--p-surface-800);
+      background: var(--p-surface-200);
     }
   }
 

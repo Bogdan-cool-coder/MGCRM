@@ -302,7 +302,7 @@ defineExpose({ collapse, expand })
 
 // ── Dark active segment override (higher specificity than .deal-products-group__seg-btn .app-dark &) ──
 // In dark mode the track bg = surface-200 (#616263). The active chip must be clearly lighter.
-// surface-900 = #F9FAFB (near-white in inverted dark scale) mirrors the light-theme "white chip" look.
+// surface-900 = #EAF0FA (near-white navy in inverted dark scale) mirrors the light-theme "white chip" look.
 // primary-900 (navy) on near-white gives 16:1 contrast — WAY above WCAG AA.
 // Selector specificity: 2 class + element-descendant context beats the 1-class + .app-dark context above.
 .deal-products-group__segmented .deal-products-group__seg-btn--active {

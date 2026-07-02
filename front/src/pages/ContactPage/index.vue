@@ -1021,10 +1021,6 @@ void attachCompanyStatus
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 // ── AddBtn (spec §4) — text-link with icon + label ───────────────────────────

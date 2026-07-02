@@ -64,18 +64,22 @@ a {
   animation-duration: 0ms !important;
 }
 
-// S1.3 DealsListView DataTable dark mode — BUG-1 pattern from S1.1
-// DataTable body backgrounds are not toggled by PrimeVue's colorScheme in all versions:
-// we target the component CSS variables in the .app-dark scope.
+// DataTable dark mode — link legibility (MSales 2.0 navy).
+// BUG-DARK-CONTACTS-ROW-DIM root cause: the previous rule forced *only* odd-row
+// link colour (nth-child(odd) td a → --p-primary-300), leaving even-row links at
+// the static brand navy #172747, which is near-invisible on the navy card row.
+// That produced the odd/even asymmetry (odd links legible, even links dark).
+// The legacy --p-datatable-body-background / --p-datatable-row-odd-background vars
+// were also dead: PrimeVue 4.5 reads --p-datatable-row-background /
+// --p-datatable-row-striped-background, not those names. Both removed.
+//
+// Fix: colour ALL in-cell links (odd + even) with the theme-reactive primary token
+// (--p-primary-color = #4C7DF0 navy accent in dark) so every row is symmetric and
+// legible. Page-scoped link classes already point at the same token; this global
+// rule covers tables that render bare <a> in cells.
 .app-dark {
-  --p-datatable-body-background: var(--p-surface-900);
-  --p-datatable-row-odd-background: var(--p-surface-800);
-  --p-datatable-row-hover-background: var(--p-surface-700);
-
-  // BUG-5: odd-row links are nearly invisible in dark because the odd-row bg is
-  // very dark. Force link colour to the primary-light token so text stays legible.
-  .p-datatable .p-datatable-tbody > tr:nth-child(odd) > td a {
-    color: var(--p-primary-300, #7fa8d4);
+  .p-datatable .p-datatable-tbody > tr > td a {
+    color: var(--p-primary-color);
   }
 }
 

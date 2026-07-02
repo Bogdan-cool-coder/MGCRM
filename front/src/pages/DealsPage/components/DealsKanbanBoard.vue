@@ -108,7 +108,9 @@ function onDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   border-radius: $radius-lg;
 
   .app-dark & {
-    border-color: var(--p-surface-700);
+    // Match real columns' dark border (DS --mg-border-default = surface-300);
+    // surface-700 was a too-bright navy-grey edge on the skeleton.
+    border-color: var(--p-surface-300);
   }
 }
 

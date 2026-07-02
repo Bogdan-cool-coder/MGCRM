@@ -502,10 +502,6 @@ function onDeleteChannel(ch: ContactChannel) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 .contact-channels__primary-star {

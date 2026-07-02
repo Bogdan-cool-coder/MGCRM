@@ -391,10 +391,6 @@ function onReset() {
   font-weight: $font-weight-medium;
   color: $surface-600;
   margin-bottom: $space-1;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 
 .contacts-filter-panel__footer {

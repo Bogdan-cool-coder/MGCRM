@@ -490,7 +490,7 @@ function taskDateShort(dueAt: string | null): string {
   // background set by :style color-mix (uses --mg-surface-card for proper tint base)
 
   .app-dark & {
-    color: var(--p-surface-900); // dark surface-900 = #F9FAFB — readable on color-mix tint bg
+    color: var(--p-surface-900); // dark surface-900 = #EAF0FA — readable on color-mix tint bg
   }
 }
 
@@ -541,7 +541,7 @@ function taskDateShort(dueAt: string | null): string {
     color: var(--p-red-700);
 
     .app-dark & {
-      // surface-100 in dark = #444547 (dark card) — tint with red via mix
+      // surface-100 in dark = #111E38 (navy card) — tint with red via mix
       background: color-mix(in srgb, var(--p-red-500) 18%, var(--p-surface-100));
       color: var(--p-red-300);
     }

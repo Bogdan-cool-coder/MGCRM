@@ -405,9 +405,6 @@ function onSelect(value: string) {
   font-weight: $font-weight-medium;
   color: $surface-700;
 
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 
   &--inline {
     cursor: pointer;

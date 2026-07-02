@@ -100,10 +100,6 @@ function truncateDesc(desc: string): string {
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .entity-mini-timeline__title-icon {
@@ -173,8 +169,11 @@ function truncateDesc(desc: string): string {
   &:hover {
     background: var(--p-surface-50);
 
+    // Dark raised-hover surface. surface-800 is a LIGHT tint in the inverted dark
+    // scale (#C6D0E2) → would flash near-white. surface-200 (#172847) is the
+    // established dark raised token used across entity components.
     .app-dark & {
-      background: var(--p-surface-800);
+      background: var(--p-surface-200);
     }
   }
 }

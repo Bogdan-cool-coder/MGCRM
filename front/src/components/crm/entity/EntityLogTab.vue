@@ -249,10 +249,6 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
   font-weight: $font-weight-semibold;
   color: $surface-700;
   margin: 0;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
 }
 
 .entity-log-tab__empty-hint {

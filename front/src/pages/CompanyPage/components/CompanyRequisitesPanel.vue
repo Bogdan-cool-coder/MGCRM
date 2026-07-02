@@ -416,9 +416,5 @@ onMounted(() => {
 .requisites-panel__readonly {
   font-size: $font-size-sm;
   color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
 }
 </style>

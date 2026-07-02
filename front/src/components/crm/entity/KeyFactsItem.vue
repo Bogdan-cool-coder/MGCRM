@@ -45,9 +45,5 @@ defineProps<{
   min-height: 32px;
   display: flex;
   align-items: center;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 </style>

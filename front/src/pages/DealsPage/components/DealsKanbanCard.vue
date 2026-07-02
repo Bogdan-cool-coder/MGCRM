@@ -314,8 +314,10 @@ const ownerInitial = computed(() => {
     background: var(--p-surface-100);
     border-color: var(--p-surface-200);
 
+    // Navy inverted scale: surface-50 (#0F1F3D) is DARKER than card #111E38.
+    // Hover must RAISE → surface-200 (#172847) so the card lightens, not sinks.
     &:hover {
-      background: var(--p-surface-50);
+      background: var(--p-surface-200);
     }
   }
 

@@ -247,10 +247,6 @@ function onTagClick(event: Event) {
   font-weight: $font-weight-semibold;
   color: $surface-800;
   margin-bottom: $space-3;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
 }
 
 .client-status-badge__popover-loading {
