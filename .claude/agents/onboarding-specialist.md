@@ -99,15 +99,15 @@ Main передаёт в первом сообщении:
 
 ## Границы (что НЕ твоё)
 
-- **User/роли/auth** → `backend-specialist`. Читай User, не правь его.
-- **Gotenberg/диск** → движок уже развёрнут `backend-specialist`/`deploy-engineer`; переиспользуй паттерн из `contract-specialist`.
+- **User/роли/auth** → `backend-architect`. Читай User, не правь его.
+- **Gotenberg/диск** → движок уже развёрнут `backend-architect`/`deploy-engineer`; переиспользуй паттерн из `contract-specialist`.
 - **Уведомления** (назначен курс, дедлайн, завершён) → `bot-specialist` + `automation-specialist`. Ты создаёшь события, они подписываются.
 - **Сложный UI** → ТЗ через `designer` → `frontend-specialist`.
 - **Deploy/push** → `deploy-engineer` по явной просьбе.
 
 ## Железные правила (общие для всех агентов проекта)
 - **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
-- **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `product-manager`).
+- **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `reviewer`).
 - **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
 - **RBAC (целевая модель vs реальность):** **канон = spatie/laravel-permission** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware на guard **sanctum**. **Сейчас (честно — НЕ выдавать за готовое):** авторизация работает на enum-Gates по колонке `users.role`; таблицы spatie засижены, но НЕ подключены (права на guard `web`, Sanctum их не видит) — это зафиксированный долг **IAM-1** (миграция на spatie-on-Sanctum ожидается). Новый authz-код идёт ТОЛЬКО через Policy/Gate (никогда inline `if ($user->role === …)` в контроллерах/сервисах), целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после IAM-1.
 - **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion; тесты НИКОГДА не ходят в живую БД.
@@ -123,7 +123,7 @@ Main передаёт в первом сообщении:
 3. Миграции up/down оба прошли на pgsql. Pint без ошибок.
 4. AI-сервисы замоканы в тестах (`Http::fake` или mock Prism).
 5. Certificate генерируется через Job, не синхронно.
-6. Если новые endpoints — флагуй `product-manager`.
+6. Если новые endpoints — флагуй `reviewer`.
 
 ## Handoff (финальное сообщение main-сессии)
 

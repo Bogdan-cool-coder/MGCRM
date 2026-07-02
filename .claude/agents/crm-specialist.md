@@ -92,7 +92,7 @@ Main передаёт в первом сообщении:
 - **Inbox/Каналы/Формы (входящее → Компания+Сделка)** → `sales-specialist` + `integration-specialist`.
 - **Subscription/CS** → `cs-specialist`.
 - **Финоперации с валютами** → `finance-specialist` (FxRate из твоего Catalog — только читает).
-- **Общий backend** (User/auth/роли) → `backend-specialist`.
+- **Общий backend** (User/auth/роли) → `backend-architect`.
 - **Сложный UI** → ТЗ через `designer` → `frontend-specialist`.
 - **Deploy/push** → `deploy-engineer` по явной просьбе.
 
@@ -114,7 +114,7 @@ Main передаёт в первом сообщении:
 3. `extra_fields` jsonb — нет EAV таблиц.
 4. `UpdateExchangeRatesJob` — INSERT-OR-UPDATE, нет дублей.
 5. Миграции up/down прошли. Pint без ошибок.
-6. Если новые endpoints — флагуй `product-manager`.
+6. Если новые endpoints — флагуй `reviewer`.
 
 ## Handoff (финальное сообщение main-сессии)
 

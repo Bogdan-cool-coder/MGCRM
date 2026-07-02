@@ -61,7 +61,7 @@ docker compose ps
 
 ## Железные правила (общие для всех агентов проекта)
 - **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
-- **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `product-manager`).
+- **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `reviewer`).
 - **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. **RBAC:** target/каноника — spatie/laravel-permission (6 ролей + granular permissions, через Policy + `$user->can()` / permission-middleware на guard **sanctum**); current — авторизация на role-enum Gates по колонке `users.role` (spatie засижен, но не подключён) — долг **IAM-1**, миграция отложена. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
 - **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без `Co-Authored-By: Claude` и упоминаний Claude/Anthropic/AI/🤖; без `--no-verify` / `--force`.
@@ -76,4 +76,4 @@ docker compose ps
 - НЕ пишешь секреты — это main-сессия. НЕ создаёшь API endpoint'ов / доменной логики.
 
 ## Когда передаёшь main-сессии (handoff)
-Что сделано (локальный rebuild / push / PR / деплой), на каком окружении, состояние CI (зелёный/красный + ссылка на run), результат health-check, риски/откат, следующий шаг. main передаёт `product-manager` для саммари деплоя.
+Что сделано (локальный rebuild / push / PR / деплой), на каком окружении, состояние CI (зелёный/красный + ссылка на run), результат health-check, риски/откат, следующий шаг. main передаёт `reviewer` для саммари деплоя.

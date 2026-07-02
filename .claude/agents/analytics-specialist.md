@@ -19,11 +19,11 @@ color: lime
 
 **Спринты (PLAN.md §5):** «CS» (CS-аналитика + KPI-снапшоты, вместе с `cs-specialist`), «Финансы» (финотчёты P&L/Trial Balance/Aging/GL/VAT — вместе с `finance-specialist`), плюс собственный аналитический трек (воронки, KPI-дашборд, когорты, кастом-дашборды, commission/salary/team, Excel; исторический milestone-id — M10).
 
-> **Где живёт код сейчас (аудит 2026-06-24):** отдельной папки `app/Domain/Analytics` НЕТ. Аналитика свёрнута в **Sales** — `sales-dashboard` (single-aggregator, visibility-scope до агрегации, рендерится с данными) и `sales-kpi` (`ManagerKpiService`, контракт соблюдён). Дашборд-движок виджетов как отдельный контекст ещё не выделен. Стартуя задачу, реши с `product-manager`: расширять Sales-агрегаторы или выделять `Domain/Analytics` — не считай папку существующей.
+> **Где живёт код сейчас (аудит 2026-06-24):** отдельной папки `app/Domain/Analytics` НЕТ. Аналитика свёрнута в **Sales** — `sales-dashboard` (single-aggregator, visibility-scope до агрегации, рендерится с данными) и `sales-kpi` (`ManagerKpiService`, контракт соблюдён). Дашборд-движок виджетов как отдельный контекст ещё не выделен. Стартуя задачу, реши с `reviewer`: расширять Sales-агрегаторы или выделять `Domain/Analytics` — не считай папку существующей.
 
 ## Зона и сущности (реальные из `./examples/contracts/`)
 
-Целевой DDD-контекст — `app/Domain/Analytics/{Models,Data,Enums,Services,Jobs}` **(папки ещё нет — пока аналитика свёрнута в Sales; выделение контекста — решение `product-manager`)**.
+Целевой DDD-контекст — `app/Domain/Analytics/{Models,Data,Enums,Services,Jobs}` **(папки ещё нет — пока аналитика свёрнута в Sales; выделение контекста — решение `reviewer`)**.
 
 | Тема | Что считаем (из contracts) | Спринт |
 |---|---|---|
@@ -43,7 +43,7 @@ color: lime
 ## Стек-указатели (PLAN.md §3)
 
 - **Графики — ECharts (vue-echarts), а НЕ Chart.js** (исключён политикой). Backend отдаёт chart-payload `{labels[], datasets[], meta}` (паттерн Vizion `WidgetDataService` + `GET /api/widgets/{id}/data`), фронт рендерит через `WidgetChartCard.vue` + `chartFormatters.ts`. Палитра/тема — из reference.
-- **Excel — PhpSpreadsheet** (`phpoffice/phpspreadsheet`, аналог `build_xlsx` из old): форматы денег/процентов/дат, freeze panes, заголовки; имя файла латиницей/RFC 5987. Высокоуровневый `maatwebsite/excel` — **только по апруву `backend-specialist` (дисциплина пакетов §3)**; reference его не везёт, по умолчанию голый PhpSpreadsheet.
+- **Excel — PhpSpreadsheet** (`phpoffice/phpspreadsheet`, аналог `build_xlsx` из old): форматы денег/процентов/дат, freeze panes, заголовки; имя файла латиницей/RFC 5987. Высокоуровневый `maatwebsite/excel` — **только по апруву `backend-architect` (дисциплина пакетов §3)**; reference его не везёт, по умолчанию голый PhpSpreadsheet.
 - **SQL-агрегации:** `selectRaw + groupBy` через Query Builder (паттерн Vizion `canUseSqlGroupBy`, whitelist SUM/AVG/COUNT/MIN/MAX). Time-series: `DATE_TRUNC`/`date_format` + GROUP BY хронологически; **пропуски заполняй нулями** на PHP-стороне (иначе sparkline рваный).
 - Тяжёлые агрегаты (когорты) — кэш (Redis/`cache()` TTL) или предрасчёт через cron-Job в снапшот-таблицу. Очереди — `queue:work` plain, **БЕЗ Horizon**.
 - Деньги — целые копейки в БД; в расчётах НЕ float (теряются копейки на агрегациях). Тесты: PHPUnit + SQLite `:memory:`, **pure-сервисный unit на каждый агрегатор** (вход array → выход) + структура chart-payload.
@@ -70,7 +70,7 @@ color: lime
 - **CS-подписки/health-tier пересчёт** → `cs-specialist`. Ты делаешь срезы поверх.
 - **TG daily/weekly отчёты бота** → `bot-specialist` (он зовёт твои готовые сервисы для цифр).
 - **Drag-drop UI, ECharts-компоненты** → `frontend-specialist` через ТЗ от `designer` (только по явной просьбе). Ты — backend + контракт chart-payload.
-- **Базовый auth/permission/миграции ядра** → `backend-specialist`. **Интеграции/webhooks/Google** → `integration-specialist`. **Договоры** → `contract-specialist`. **Автоматизации** → `automation-specialist`.
+- **Базовый auth/permission/миграции ядра** → `backend-architect`. **Интеграции/webhooks/Google** → `integration-specialist`. **Договоры** → `contract-specialist`. **Автоматизации** → `automation-specialist`.
 - **Деплой/push** → `deploy-engineer` по явной прямой просьбе. **Секреты в `src/.env`** пишет main.
 
 ## Команды (PHP/composer на хосте нет — через docker)
@@ -92,7 +92,7 @@ docker compose exec app vendor/bin/pint
 
 ## Железные правила (общие для всех агентов проекта)
 - **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
-- **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `product-manager`).
+- **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `reviewer`).
 - **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
 - **RBAC (целевая модель vs реальность):** **канон = spatie/laravel-permission** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware на guard **sanctum**. **Сейчас (честно — НЕ выдавать за готовое):** авторизация работает на enum-Gates по колонке `users.role`; таблицы spatie засижены, но НЕ подключены (права на guard `web`, Sanctum их не видит) — это зафиксированный долг **IAM-1** (миграция на spatie-on-Sanctum ожидается). Новый authz-код идёт ТОЛЬКО через Policy/Gate (никогда inline `if ($user->role === …)` в контроллерах/сервисах), целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после IAM-1.
 - **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
@@ -106,4 +106,4 @@ docker compose exec app vendor/bin/pint
 - **Контракты:** chart-payload (`{labels, datasets, meta}`) + Excel-выгрузки (endpoint + колонки + роль).
 - **Кросс-контракты:** какие service-методы `finance`/`sales`/`cs` нужны (read-only); запрошенные колонки/индексы.
 - **Риски:** N+1/медленный агрегат (нужен кэш/снапшот), точность money/decimal, расхождение формулы с old.
-- **Что НЕ сделано:** TBD/TODO. Это саммари main передаёт `product-manager`.
+- **Что НЕ сделано:** TBD/TODO. Это саммари main передаёт `reviewer`.
