@@ -84,10 +84,31 @@ class DealMoveService
                 ])->status(422);
             }
 
+            // 4b. Skip-block gate (M7): a target stage may forbid being reached by
+            //     a FORWARD skip (dragging past intermediate stages). Configurable
+            //     per stage — default allow_stage_skip=true keeps today's freedom.
+            //     Backward moves and moves into won/lost terminals are always
+            //     allowed; only a strict forward jump (> from + 1) is refused.
+            $this->assertNoForbiddenSkip($locked, $toStage);
+
             // 5a. Required-fields gate: the target stage may demand certain deal /
             //     company fields be filled before entry (S1.5). Checked on entry
             //     only — existing deals are never retro-validated (E6).
             $this->assertRequiredFields($locked, $toStage);
+
+            // 5b. Won-amount gate (M7): entering a WON stage that requires an amount
+            //     while the deal amount is still <= 0 is refused (422). Independent
+            //     of won_gate / the contract gate, so it protects funnels where the
+            //     contract gate is off. is_won is the reliable win marker (the stage
+            //     editor cannot toggle it). Pre-save → clean rollback, no history.
+            if ($toStage->is_won
+                && $toStage->won_gate_amount_required
+                && (int) $locked->amount <= 0
+            ) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Укажите сумму сделки, прежде чем переводить её в выигрыш.',
+                ])->status(422);
+            }
 
             // 5. Won-gate (S2.8): hard. Entering a won stage with the contract gate
             //    on requires a live contract (approved/signed/uploaded). Otherwise
@@ -290,6 +311,44 @@ class DealMoveService
 
         if ($currentMaxSort === null || (int) $toStage->sort_order > (int) $currentMaxSort) {
             $deal->max_stage_id = $toStage->id;
+        }
+    }
+
+    /**
+     * Skip-block gate (M7). A target stage with allow_stage_skip=false refuses a
+     * FORWARD skip — a move that jumps past one or more intermediate stages
+     * (toStage.sort_order > fromStage.sort_order + 1). Always allowed regardless:
+     *   - backward moves (target ranks at/below the current stage);
+     *   - adjacent forward moves (exactly +1);
+     *   - moves into won/lost terminal stages (closing a deal must never be
+     *     blocked by a skip rule).
+     * Default allow_stage_skip=true short-circuits, preserving today's freedom.
+     *
+     * The from-stage sort_order is read with a single value() lookup (the locked
+     * deal only carries stage_id); a missing/orphaned from-stage is treated as
+     * "no skip" (fail-open) rather than blocking a move.
+     */
+    private function assertNoForbiddenSkip(Deal $deal, PipelineStage $toStage): void
+    {
+        // Configurable escape hatch (default) + terminal stages are never blocked.
+        if ($toStage->allow_stage_skip || $toStage->is_won || $toStage->is_lost) {
+            return;
+        }
+
+        $fromSort = PipelineStage::query()
+            ->whereKey($deal->stage_id)
+            ->value('sort_order');
+
+        if ($fromSort === null) {
+            return; // orphaned source stage → fail-open, do not block.
+        }
+
+        // Only a strict forward skip (jumping over ≥1 stage) is refused; backward
+        // and adjacent (+1) moves pass.
+        if ((int) $toStage->sort_order > (int) $fromSort + 1) {
+            throw ValidationException::withMessages([
+                'to_stage_id' => "Нельзя перепрыгивать стадии — переведите сделку в стадию \"{$toStage->name}\" последовательно.",
+            ])->status(422);
         }
     }
 

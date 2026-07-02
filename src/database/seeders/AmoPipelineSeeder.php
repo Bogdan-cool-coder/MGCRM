@@ -142,6 +142,8 @@ class AmoPipelineSeeder extends Seeder
                     'is_lost' => $def['is_lost'] ?? false,
                     'hidden_by_default' => $def['hidden'] ?? false,
                     'won_gate' => false,
+                    // M7: won stages guard against a win with amount=0 by default.
+                    'won_gate_amount_required' => $def['is_won'] ?? false,
                     'stage_features' => [],
                 ],
             );

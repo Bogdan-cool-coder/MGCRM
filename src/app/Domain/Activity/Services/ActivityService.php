@@ -14,6 +14,7 @@ use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\EngagementService;
+use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
@@ -1155,20 +1156,6 @@ class ActivityService
      */
     public function myBoard(User $user, ?string $search = null): array
     {
-        // Day/week boundaries are anchored to the OPERATIONAL timezone (Дубай-окно)
-        // so a task due early in the Dubai morning lands in "today", not the
-        // previous UTC day (MINOR-8). due_at is a real UTC instant, so every
-        // boundary is normalised to UTC for accurate absolute-instant comparison.
-        // The calendar-week edges are computed on the Dubai-zoned day start first
-        // (so Mon–Sun aligns to the Dubai calendar) and only then converted to UTC.
-        $todayStart = $this->operationalTodayStart();
-        $tomorrowStart = $todayStart->copy()->addDay();
-        $dayAfterTomorrow = $tomorrowStart->copy()->addDay();
-
-        $localDayStart = $this->operationalLocalDayStart();
-        $thisWeekEnd = $localDayStart->copy()->endOfWeek()->addSecond()->utc(); // exclusive next-week start
-        $nextWeekEnd = $thisWeekEnd->copy()->addWeek();
-
         $activities = Activity::query()
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
             ->whereIn('kind', ActivityType::taskLikeValues())
@@ -1200,6 +1187,106 @@ class ActivityService
         // is visibility-scoped (resolved from the user's role) so a board task on a
         // now-foreign deal renders null context instead of leaking it (E18).
         $this->stampDealContext($activities, $user);
+
+        return $this->bucketByDeadline($activities);
+    }
+
+    /**
+     * Team task board (M4/M5): the SAME urgency-bucket shape as {@see myBoard}, but
+     * scoped to a manager's TEAM instead of "my work". Every OPEN, task-like activity
+     * whose denormalised department_id falls inside the AUTHENTICATED viewer's
+     * department subtree is bucketed — i.e. the tasks of every user in the viewer's
+     * department and its descendants, not just the viewer's own.
+     *
+     * The department scope is inferred from the CALLER, never passed in: a director
+     * (department set) sees their whole subtree; a manager sees their own department
+     * (and any child departments). An admin with NO department has no subtree anchor
+     * and would otherwise see nothing, so they intentionally fall through to ALL
+     * task-owners (department_id filter skipped) — an admin is an org-wide role and
+     * the team board is a supervision surface; an admin WITH a department is scoped
+     * to that subtree exactly like a director. Departmentless director/manager → no
+     * anchor → empty buckets (matches VisibilityResolver::departmentSubtreeIds → [-1]).
+     *
+     * Authorisation (only admin/director/manager may call) is enforced at the
+     * controller via ActivityPolicy::viewTeamBoard; this method assumes an authorised
+     * viewer and only computes scope.
+     *
+     * Optional filters:
+     *   - responsible_id — narrow the board to one manager in the subtree;
+     *   - q             — case-insensitive title/body search.
+     * Both reuse applyListFilters so the team board narrows exactly like the flat list.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, list<Activity>>
+     */
+    public function teamBoard(User $user, array $filters = []): array
+    {
+        $query = Activity::query()
+            ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
+            ->whereIn('kind', ActivityType::taskLikeValues())
+            ->where(fn (Builder $q) => $this->scopeOpen($q));
+
+        // An admin without a department supervises org-wide → no department filter.
+        // Everyone else (admin WITH a dept, director, manager) is scoped to their
+        // department subtree; a departmentless director/manager anchors to [-1] and
+        // therefore sees an empty board (fail-closed).
+        $scopeToSubtree = ! ($user->hasRole(Role::Admin->value) && $user->department_id === null);
+
+        if ($scopeToSubtree) {
+            $query->whereIn('department_id', $this->visibility->departmentSubtreeIds($user));
+        }
+
+        // responsible_id / q narrow inside the team scope exactly like the flat list.
+        $query->where(fn (Builder $q) => $this->applyListFilters($q, $filters));
+
+        $activities = $query
+            ->orderByRaw('due_at is null')
+            ->orderBy('due_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Deal/target context is stamped through the viewer's OWN visibility scope
+        // (resolved from role): a director/admin (All) sees full context; a manager
+        // (Department) still renders context for team deals in their subtree and null
+        // for anything foreign — the same E18 no-leak rule as the personal board.
+        $this->stampDealContext($activities, $user);
+
+        return $this->bucketByDeadline($activities);
+    }
+
+    // ---- Private ----
+
+    /**
+     * Sort a set of task-like activities into the six fixed urgency buckets shared by
+     * the personal ({@see myBoard}) and team ({@see teamBoard}) boards, so the two can
+     * never disagree on where a given due date lands. Boundaries are anchored to the
+     * OPERATIONAL timezone (Дубай-окно) and normalised to UTC for absolute-instant
+     * comparison against the UTC-stored due_at column.
+     *
+     *   overdue    — due before today's start (and still open)
+     *   today      — due within today
+     *   tomorrow   — due within tomorrow
+     *   this_week  — due after tomorrow, within the current calendar week (→ Sun)
+     *   next_week  — due within the following calendar week
+     *   later      — due on/after next-week-end (further-out horizon, #6)
+     *
+     * A task with no due_at falls into this_week (ТЗ §4.2 backlog default). Buckets are
+     * always all present (possibly empty) so the frontend renders fixed columns
+     * without null checks; input order is preserved within each bucket (the caller
+     * pre-sorts soonest-first).
+     *
+     * @param  Collection<int, Activity>  $activities
+     * @return array<string, list<Activity>>
+     */
+    private function bucketByDeadline(Collection $activities): array
+    {
+        $todayStart = $this->operationalTodayStart();
+        $tomorrowStart = $todayStart->copy()->addDay();
+        $dayAfterTomorrow = $tomorrowStart->copy()->addDay();
+
+        $localDayStart = $this->operationalLocalDayStart();
+        $thisWeekEnd = $localDayStart->copy()->endOfWeek()->addSecond()->utc(); // exclusive next-week start
+        $nextWeekEnd = $thisWeekEnd->copy()->addWeek();
 
         $buckets = [
             'overdue' => [],
@@ -1239,8 +1326,6 @@ class ActivityService
 
         return $buckets;
     }
-
-    // ---- Private ----
 
     /**
      * Stamp last_activity_at on the Crm entities behind an activity's target

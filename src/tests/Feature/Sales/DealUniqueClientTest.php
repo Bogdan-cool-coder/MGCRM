@@ -36,6 +36,9 @@ class DealUniqueClientTest extends TestCase
             'pipeline_id' => $pipeline->id,
             'stage_id' => $this->stageCode($pipeline, 'hot'),
             'company_id' => $company->id,
+            // Positive amount so the M7 won-amount gate on the seeded won stage
+            // does not block the win-transition this test is really about.
+            'amount' => 100_000,
         ], $attrs));
     }
 

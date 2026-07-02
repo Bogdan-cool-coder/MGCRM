@@ -55,11 +55,12 @@ class PipelineService
      * System stages auto-seeded on pipeline creation. Codes/names mirror the
      * locked seeder defaults so funnels stay consistent.
      *
-     * @var list<array{code: string, name: string, is_won?: bool, is_lost?: bool, hidden?: bool, won_gate?: bool}>
+     * @var list<array{code: string, name: string, is_won?: bool, is_lost?: bool, hidden?: bool, won_gate?: bool, won_gate_amount_required?: bool}>
      */
     private const SYSTEM_STAGES = [
         ['code' => 'new', 'name' => 'Новые лиды'],
-        ['code' => 'won', 'name' => 'Успешная сделка', 'is_won' => true, 'won_gate' => true],
+        // M7: newly-created won stages guard against a win with amount=0 by default.
+        ['code' => 'won', 'name' => 'Успешная сделка', 'is_won' => true, 'won_gate' => true, 'won_gate_amount_required' => true],
         ['code' => 'lost', 'name' => 'Сделка проиграна', 'is_lost' => true, 'hidden' => true],
     ];
 
@@ -249,6 +250,7 @@ class PipelineService
                     'is_lost' => $def['is_lost'] ?? false,
                     'hidden_by_default' => $def['hidden'] ?? false,
                     'won_gate' => $def['won_gate'] ?? false,
+                    'won_gate_amount_required' => $def['won_gate_amount_required'] ?? false,
                 ]);
             }
 
@@ -268,7 +270,8 @@ class PipelineService
     private const DUPLICATED_STAGE_FIELDS = [
         'name', 'code', 'sort_order', 'color', 'warn_days', 'danger_days',
         'is_won', 'is_lost', 'hidden_by_default', 'stage_features', 'task_types',
-        'required_fields', 'won_gate', 'won_gate_contract_required', 'sla_hours',
+        'required_fields', 'won_gate', 'won_gate_contract_required',
+        'won_gate_amount_required', 'allow_stage_skip', 'sla_hours',
         'visible_department_ids', 'visible_user_ids',
     ];
 

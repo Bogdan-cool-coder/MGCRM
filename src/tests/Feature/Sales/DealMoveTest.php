@@ -17,13 +17,17 @@ class DealMoveTest extends TestCase
     use RefreshDatabase;
     use SalesTestHelpers;
 
-    private function dealFor(User $user, string $stageCode = 'new'): Deal
+    private function dealFor(User $user, string $stageCode = 'new', int $amount = 100_000): Deal
     {
         $pipeline = $this->seedSalesPipeline();
 
+        // Default a positive amount: the seeded won stage now carries the M7
+        // won_gate_amount_required flag, so a won-path deal needs a real amount to
+        // clear that gate and exercise the (separate) contract gate under test.
         return Deal::factory()->forOwner($user)->create([
             'pipeline_id' => $pipeline->id,
             'stage_id' => $this->stageCode($pipeline, $stageCode),
+            'amount' => $amount,
         ]);
     }
 
@@ -176,5 +180,124 @@ class DealMoveTest extends TestCase
 
         $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $qualify->id])
             ->assertForbidden();
+    }
+
+    // ---- M7: won-amount gate ----
+
+    public function test_move_to_won_with_zero_amount_returns_422(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'hot', amount: 0);
+        $won = $deal->pipeline->stages->firstWhere('code', 'won');
+        // A live contract is present so the ONLY thing that can block is the amount.
+        $this->activeContractFor($deal);
+        $originalStageId = $deal->stage_id;
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $won->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('amount');
+
+        // Rolled back: no move, no history row.
+        $this->assertDatabaseHas('deals', ['id' => $deal->id, 'stage_id' => $originalStageId]);
+        $this->assertDatabaseMissing('deal_stage_history', [
+            'deal_id' => $deal->id,
+            'to_stage_id' => $won->id,
+        ]);
+    }
+
+    public function test_move_to_won_with_positive_amount_returns_200(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'hot', amount: 250_000);
+        $won = $deal->pipeline->stages->firstWhere('code', 'won');
+        $this->activeContractFor($deal);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $won->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $won->id);
+    }
+
+    public function test_move_to_won_with_amount_gate_off_allows_zero_amount(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'hot', amount: 0);
+        $won = $deal->pipeline->stages->firstWhere('code', 'won');
+        // Turn the amount gate off; also relax the contract gate so amount=0 wins.
+        $won->update(['won_gate_amount_required' => false, 'won_gate_contract_required' => false]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $won->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $won->id);
+    }
+
+    // ---- M7: skip-block gate ----
+
+    public function test_forward_skip_into_no_skip_stage_returns_422(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'new'); // sort_order 1
+        // hot (sort_order 7) is far ahead of new → a forward skip once locked down.
+        $hot = $deal->pipeline->stages->firstWhere('code', 'hot');
+        $hot->update(['allow_stage_skip' => false]);
+        $originalStageId = $deal->stage_id;
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $hot->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('to_stage_id');
+
+        $this->assertDatabaseHas('deals', ['id' => $deal->id, 'stage_id' => $originalStageId]);
+        $this->assertDatabaseMissing('deal_stage_history', [
+            'deal_id' => $deal->id,
+            'to_stage_id' => $hot->id,
+        ]);
+    }
+
+    public function test_adjacent_move_into_no_skip_stage_allowed(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'new'); // sort_order 1
+        $qualify = $deal->pipeline->stages->firstWhere('code', 'qualify'); // sort_order 2
+        $qualify->update(['allow_stage_skip' => false]);
+        Sanctum::actingAs($user, ['*']);
+
+        // Exactly +1 is not a skip → allowed even with the flag off.
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $qualify->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $qualify->id);
+    }
+
+    public function test_backward_move_into_no_skip_stage_allowed(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'hot'); // sort_order 7
+        $new = $deal->pipeline->stages->firstWhere('code', 'new'); // sort_order 1
+        $new->update(['allow_stage_skip' => false]);
+        Sanctum::actingAs($user, ['*']);
+
+        // A backward move is never a forward skip → always allowed.
+        $this->postJson("/api/deals/{$deal->id}/move", ['to_stage_id' => $new->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $new->id);
+    }
+
+    public function test_skip_into_lost_terminal_allowed_even_when_skip_blocked(): void
+    {
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = $this->dealFor($user, 'new'); // sort_order 1
+        $lost = $deal->pipeline->stages->firstWhere('code', 'lost');
+        $reason = LostReason::factory()->create();
+        // Even if lost were flagged no-skip, closing a deal is never blocked.
+        $lost->update(['allow_stage_skip' => false]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson("/api/deals/{$deal->id}/move", [
+            'to_stage_id' => $lost->id,
+            'lost_reason_id' => $reason->id,
+        ])->assertOk()
+            ->assertJsonPath('data.stage_id', $lost->id);
     }
 }

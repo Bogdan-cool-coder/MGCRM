@@ -248,6 +248,31 @@ class ActivityController extends Controller
         return response()->json(['data' => $payload]);
     }
 
+    /**
+     * Team task board (M4/M5): the same urgency-bucket shape as myBoard, but scoped
+     * to the authenticated manager's DEPARTMENT subtree instead of "my work" — a
+     * director/manager sees the open tasks of every user under them. Gated to
+     * admin/director/manager via ActivityPolicy::viewTeamBoard (others 403). The
+     * department is inferred from the caller, never passed in. Optional
+     * ?responsible_id= narrows to one team member and ?q= searches title/body.
+     */
+    public function teamBoard(Request $request): JsonResponse
+    {
+        $this->authorize('viewTeamBoard', Activity::class);
+
+        $buckets = $this->service->teamBoard(
+            $request->user(),
+            $request->only(['responsible_id', 'q']),
+        );
+
+        $payload = [];
+        foreach ($buckets as $key => $activities) {
+            $payload[$key] = ActivityCardResource::collection(collect($activities));
+        }
+
+        return response()->json(['data' => $payload]);
+    }
+
     public function myOpenCount(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Activity::class);

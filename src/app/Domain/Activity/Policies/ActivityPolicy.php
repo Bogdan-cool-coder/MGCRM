@@ -57,6 +57,22 @@ class ActivityPolicy
         return true; // listing is visibility-filtered in the service
     }
 
+    /**
+     * The TEAM task board (M4/M5) is a supervision surface: only a manager-tier role
+     * may see the aggregated tasks of a whole department. Gated by the
+     * `view-manager-cabinet` permission — granted to EXACTLY admin/director/manager
+     * (IAM-1, {@see RolePermissionSeeder}), the same audience as the KPI manager
+     * cabinet; lawyer/accountant/cfo are not a team-management audience and get 403.
+     * No inline role checks (ARCHITECTURE.md §3): the permission is the single source.
+     * The department SUBTREE actually returned is inferred from the caller in
+     * ActivityService::teamBoard, so this ability only guards the "may see any team
+     * board at all" question.
+     */
+    public function viewTeamBoard(User $user): bool
+    {
+        return $user->can('view-manager-cabinet');
+    }
+
     public function view(User $user, Activity $activity): bool
     {
         return $this->ownershipAllows($user, $activity);

@@ -676,6 +676,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::get('activities/my-open-count', [ActivityController::class, 'myOpenCount'])->name('activities.my-open-count');
     // Personal task board — urgency buckets for the current user (Сделки — ТЗ §4).
     Route::get('activities/my-board', [ActivityController::class, 'myBoard'])->name('activities.my-board');
+    // Team task board — same buckets, scoped to the caller's department subtree
+    // (M4/M5). Gated to admin/director/manager; department inferred from the caller.
+    Route::get('activities/team-board', [ActivityController::class, 'teamBoard'])->name('activities.team-board');
 
     Route::get('activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::post('activities', [ActivityController::class, 'store'])->name('activities.store');

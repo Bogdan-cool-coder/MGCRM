@@ -88,10 +88,11 @@ class PipelineCrudTest extends TestCase
         ])->assertCreated()->json('data.id');
 
         // Close it — the won stage must exist on the new pipeline. This test is
-        // about pipeline CRUD, not the S2.8 contract won-gate, so take that gate
-        // out of scope by relaxing the requirement on this pipeline's won stage.
+        // about pipeline CRUD, not the won-gates, so take BOTH the S2.8 contract
+        // gate and the M7 amount gate out of scope on this pipeline's won stage
+        // (the deal was created with amount=0).
         $won = Pipeline::find($pipelineId)->stages()->where('code', 'won')->firstOrFail();
-        $won->update(['won_gate_contract_required' => false]);
+        $won->update(['won_gate_contract_required' => false, 'won_gate_amount_required' => false]);
 
         $this->postJson("/api/deals/{$dealId}/move", ['to_stage_id' => $won->id])
             ->assertOk()

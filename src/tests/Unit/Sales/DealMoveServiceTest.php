@@ -178,6 +178,113 @@ class DealMoveServiceTest extends TestCase
         $this->assertSame($target->id, (int) $result->stage_id);
     }
 
+    public function test_won_amount_gate_blocks_zero_amount(): void
+    {
+        [$deal, $target, $user] = $this->makeDeal(
+            targetState: fn (array $s): array => $s + ['is_won' => true, 'won_gate_amount_required' => true],
+        );
+        $deal->update(['amount' => 0]);
+        // The amount gate fires BEFORE the contract gate → DocumentService untouched.
+        $service = $this->serviceWithContract(null);
+
+        $caught = false;
+        try {
+            $service->move($deal, $target->id, $user->id);
+        } catch (ValidationException $e) {
+            $caught = true;
+            $this->assertArrayHasKey('amount', $e->errors());
+        }
+
+        $this->assertTrue($caught, 'Expected a ValidationException on amount.');
+        $deal->refresh();
+        $this->assertNotSame($target->id, (int) $deal->stage_id);
+        $this->assertDatabaseCount('deal_stage_history', 0);
+    }
+
+    public function test_won_amount_gate_passes_with_positive_amount(): void
+    {
+        [$deal, $target, $user] = $this->makeDeal(
+            targetState: fn (array $s): array => $s + ['is_won' => true, 'won_gate_amount_required' => true],
+        );
+        $deal->update(['amount' => 100_000]);
+        $service = $this->serviceWithContract(null);
+
+        $result = $service->move($deal, $target->id, $user->id);
+
+        $this->assertSame($target->id, (int) $result->stage_id);
+    }
+
+    public function test_won_amount_gate_skipped_when_flag_off(): void
+    {
+        [$deal, $target, $user] = $this->makeDeal(
+            targetState: fn (array $s): array => $s + ['is_won' => true, 'won_gate_amount_required' => false],
+        );
+        $deal->update(['amount' => 0]);
+        $service = $this->serviceWithContract(null);
+
+        $result = $service->move($deal, $target->id, $user->id);
+
+        $this->assertSame($target->id, (int) $result->stage_id);
+    }
+
+    public function test_forward_skip_blocked_when_stage_disallows_skip(): void
+    {
+        // open sort_order 1; a mid stage sort_order 2; target sort_order 3 with
+        // allow_stage_skip=false → moving open→target jumps over the mid stage.
+        $pipeline = Pipeline::factory()->create();
+        $open = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'code' => 'open', 'sort_order' => 1]);
+        PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'code' => 'mid', 'sort_order' => 2]);
+        $target = PipelineStage::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'code' => 'far',
+            'sort_order' => 3,
+            'allow_stage_skip' => false,
+        ]);
+        $user = User::factory()->create();
+        $deal = Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $open->id,
+            'company_id' => Company::factory()->create()->id,
+            'owner_user_id' => $user->id,
+        ]);
+        $service = $this->serviceWithContract(null);
+
+        $caught = false;
+        try {
+            $service->move($deal, $target->id, $user->id);
+        } catch (ValidationException $e) {
+            $caught = true;
+            $this->assertArrayHasKey('to_stage_id', $e->errors());
+        }
+
+        $this->assertTrue($caught, 'Expected a ValidationException on to_stage_id.');
+        $this->assertDatabaseCount('deal_stage_history', 0);
+    }
+
+    public function test_adjacent_move_allowed_when_stage_disallows_skip(): void
+    {
+        $pipeline = Pipeline::factory()->create();
+        $open = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'code' => 'open', 'sort_order' => 1]);
+        $target = PipelineStage::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'code' => 'next',
+            'sort_order' => 2,
+            'allow_stage_skip' => false,
+        ]);
+        $user = User::factory()->create();
+        $deal = Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $open->id,
+            'company_id' => Company::factory()->create()->id,
+            'owner_user_id' => $user->id,
+        ]);
+        $service = $this->serviceWithContract(null);
+
+        $result = $service->move($deal, $target->id, $user->id);
+
+        $this->assertSame($target->id, (int) $result->stage_id);
+    }
+
     public function test_move_to_foreign_pipeline_stage_rejected(): void
     {
         [$deal, , $user] = $this->makeDeal();
