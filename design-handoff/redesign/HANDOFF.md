@@ -5,10 +5,12 @@
 
 ## Состав
 - **Эталоны (открыть в браузере):** `deal-card.html`, `entity-card.html` (контакт/компания),
-  `contacts.html` (список), `sales-funnel.html` (воронка), `tasks.html` (задачник) + `styles.css`,
-  `tweaks-panel.jsx`.
+  `contacts.html` (список), `sales-funnel.html` (воронка), `tasks.html` (задачник),
+  `settings.html` (настройки hi-fi) + `styles.css`, `tweaks-panel.jsx`.
 - **ТЗ (источник правды):** `DealCard-spec.md`, `EntityCard-spec.md`, `Contacts-spec.md`,
-  `SalesFunnel-spec.md`, `Tasks-spec.md`, `Inbox-spec.md`.
+  `SalesFunnel-spec.md`, `Tasks-spec.md`, `Inbox-spec.md`, `Settings-redesign-visual.md`.
+- **JSX-референсы поведения (Settings hi-fi, стек — референс, не копировать):** `users-section.jsx`,
+  `access-section.jsx`, `system-section.jsx`.
 
 ## Что нового в этой версии
 - Карточка сделки доведена: лента только со свершившимися действиями, системка одной строкой,
@@ -133,6 +135,9 @@
   i18n RU+EN: `contact.create.*`, `company.create.*`, `sales.deal.create.*`;
   QA PASS: 3 create-флоу грузят созданную карточку (POST 201 + GET /:id), обе темы, регресс.
 
+### Обновление 2026-07-02 — Мотивационные карты (ТЗ готово, в очереди)
+- **МК (`motivation-card/SPEC.md`)** — два экрана: (1) `/manager-cabinet/motivation` — read-only карточка менеджера (hero-число ЗП, план отдела с ProgressBar, карточная раскладка позиций, прогноз командного бонуса live, мультивалютный факт, PctTag семантика); (2) `/settings/motivation-builder` — конструктор для director/admin (AutoComplete сотрудника, ToggleButton позиций, DataTable small с инлайн-InputNumber, редактор TeamTarget с пулом/порогом/долями, MkCurrencyEditor, sticky save-bar, dirty-guard). 5 backend-блокеров (B-1…B-5), 6 открытых вопросов (ОВ-1…ОВ-6). Нет новых PrimeVue компонентов — всё на переиспользовании.
+
 ### Обновление 2026-07-02 — Управление кастомными полями (ТЗ готово, в очереди)
 - **CustomFields UI (`custom-fields-ui-tz.md`)** — два среза: (1) `CustomFieldsPage` — directory-экран управления схемой (DataTable, scope-табы, Dialog create/edit, row-reorder, toggleActive, delete), встраивается в SectionDirectories как новый таб «Кастомные поля»; (2) доработка `CustomFieldRenderer` — `checkbox`-alias, scope `contract`, required-звёздочка. Новый компонент `FieldKindTag` (тип поля иконкой + лейблом). 6 открытых вопросов — ОВ-1/ОВ-2 (backend shape, admin-endpoint) требуют ответа от `backend-architect` перед стартом.
 
@@ -161,6 +166,22 @@
   - 10.5: `TaskExpandedPanel.vue` (mode=dialog/inline) — единый компонент: OpenTasksList (CRM-карточки) использует mode=inline, kanban/список используют mode=dialog 540px; гейт «нельзя выполнить без итога» только фронт (server complete без result — допустимо по risk-note); 3-step delete; related entity RouterLink
   - QA: 10 функциональных сценариев PASS (регресс 3 CRM-карточек чист) + dark-контраст PASS
   - 3439 PHPUnit зелёных
+
+### Обновление 2026-07-03 — Settings hi-fi редизайн (мокап принят, в работу — этап 2 визуал-апдейта)
+- **Settings hi-fi (`Settings-redesign-visual.md` + `settings.html`)** — визуальный редизайн-слой
+  unified `/settings` поверх реализованной механики Ф1–Ф5: двухколоночный шелл (рельс 264px +
+  detail), hero-карточка профиля (navy-градиент, аватар 72px, мета-строка вход/2FA/язык), выбор
+  акцента (4 свотча), сегмент плотности «Компактная/Просторная» (density-токены `spacing.css`),
+  единый header с theme-toggle, hi-fi карточки каналов и модалки. Функциональный апгрейд:
+  **выборочный** system-reset по 9 категориям (чекбоксы + indeterminate, ввод `СБРОСИТЬ`).
+- **JSX-референсы поведения:** `users-section.jsx` (таблица пользователей, тулбар
+  поиск+роль+отдел, архивный блок, модалка 544px, сброс пароля разовым показом),
+  `access-section.jsx` (Отделы Дерево/Схема · Роли-матрица · Видимость), `system-section.jsx`
+  (AutomationsTab сегмент-фильтр со счётчиками + ResetTab выборочный сброс). Стек референсов —
+  React; реализация — Vue+PrimeVue по нашим паттернам.
+- Эталон `settings.html` открывается против `../styles.css` (8-файловая токен-система:
+  + `base.css`/`dark.css`/`logical.css`, extended-status, density, focus-ring).
+- Статус: **мокап принят, в работу — этап 2 визуал-апдейта.**
 
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,

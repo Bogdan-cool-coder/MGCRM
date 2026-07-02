@@ -1,0 +1,20 @@
+/* ===========================================================================
+   MACRO Global — Logical / RTL helpers
+   The CRM ships EN + RU + AR (UAE market). Build layouts with LOGICAL CSS
+   properties (padding-inline, margin-inline, inset-inline, text-align:start)
+   so a single dir="rtl" on the root mirrors the whole interface.
+   This file adds the few helpers that logical properties can't express.
+   =========================================================================== */
+
+/* Directional icons (chevrons, arrows, "next/back") flip in RTL.
+   Status/semantic glyphs (fire, check, star) must NOT — don't add this class
+   to them. */
+[dir="rtl"] .mg-flip-rtl { transform: scaleX(-1); }
+
+/* Numeric clusters stay LTR even inside an RTL flow: phones, prices, dates,
+   payment schedules, chart axes. */
+.mg-ltr-nums { direction: ltr; unicode-bidi: isolate; }
+
+/* Text alignment that follows reading direction (use instead of left/right). */
+.mg-text-start { text-align: start; }
+.mg-text-end   { text-align: end; }

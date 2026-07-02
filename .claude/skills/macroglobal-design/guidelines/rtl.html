@@ -1,0 +1,59 @@
+<!-- @dsCard group="Colors" viewport="760x400" name="RTL / i18n" subtitle="EN · RU · AR — зеркалирование интерфейса (рынок UAE)" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-page); color: var(--mg-text-primary); }
+  .wrap { padding: 22px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .card { background: var(--mg-surface-card); border: 1px solid var(--mg-border-default); border-radius: var(--mg-radius-lg); padding: 15px; box-shadow: var(--mg-shadow-sm); }
+  .card.ar { border: 2px solid var(--mg-primary-900); }
+  .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .5px; color: var(--mg-text-muted); margin-bottom: 10px; }
+  .card.ar .eyebrow { color: var(--mg-primary-900); }
+  .name { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .sub { font-size: 12px; color: var(--mg-text-secondary); margin-bottom: 10px; }
+  .foot { display: flex; align-items: center; justify-content: space-between; }
+  .price { font-weight: 700; font-size: 15px; }
+  .pill { padding: 3px 10px; border-radius: 999px; background: var(--mg-status-info-bg); color: var(--mg-status-info-text); font-size: 11px; font-weight: 600; }
+  .rules { background: var(--mg-surface-card); border: 1px solid var(--mg-border-default); border-radius: var(--mg-radius-lg); overflow: hidden; }
+  .rule { display: grid; grid-template-columns: 190px 1fr; gap: 16px; padding: 11px 16px; border-bottom: 1px solid var(--mg-surface-muted); font-size: 13px; }
+  .rule:last-child { border-bottom: none; }
+  .rk { font-weight: 600; }
+  .rv { color: var(--mg-text-secondary); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="row">
+      <div class="card" dir="ltr">
+        <div class="eyebrow">RU · LTR →</div>
+        <div class="name">Богдан Ядыкин <i class="pi pi-fire" style="color:var(--mg-danger)"></i></div>
+        <div class="sub">City Park · 2-комн · 94 м²</div>
+        <div class="foot"><span class="price mg-ltr-nums">2 950 000 ₽</span><span class="pill">Сделка</span></div>
+      </div>
+      <div class="card" dir="ltr">
+        <div class="eyebrow">EN · LTR →</div>
+        <div class="name">Kevin Hapkins <i class="pi pi-fire" style="color:var(--mg-danger)"></i></div>
+        <div class="sub">City Park · 2BR · 94 m²</div>
+        <div class="foot"><span class="price mg-ltr-nums">AED 2,950,000</span><span class="pill">Deal</span></div>
+      </div>
+      <div class="card ar" dir="rtl">
+        <div class="eyebrow">AR · RTL ←</div>
+        <div class="name">كيفين هابكنز <i class="pi pi-fire" style="color:var(--mg-danger)"></i></div>
+        <div class="sub">سيتي بارك · غرفتين · ٩٤ م²</div>
+        <div class="foot"><span class="price mg-ltr-nums">2,950,000 AED</span><span class="pill">صفقة</span></div>
+      </div>
+    </div>
+    <div class="rules">
+      <div class="rule"><span class="rk">Направление</span><span class="rv"><code>dir="rtl"</code> на корне зеркалит весь поток</span></div>
+      <div class="rule"><span class="rk">Отступы</span><span class="rv">Логические свойства: <code>padding-inline</code>, <code>margin-inline</code>, <code>inset-inline</code></span></div>
+      <div class="rule"><span class="rk">Иконки направления</span><span class="rv"><code>.mg-flip-rtl</code> на шевронах/стрелках; статусные (огонь, галка) — не флипаются</span></div>
+      <div class="rule"><span class="rk">Числа и цены</span><span class="rv"><code>.mg-ltr-nums</code> — телефоны, цены, даты, график платежей остаются LTR</span></div>
+      <div class="rule"><span class="rk">Выравнивание</span><span class="rv"><code>text-align:start/end</code> вместо left/right (<code>.mg-text-start/end</code>)</span></div>
+    </div>
+  </div>
+</body>
+</html>

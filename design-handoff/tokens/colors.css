@@ -82,6 +82,21 @@
   --mg-blue-700: #2a84e6;
   --mg-blue-900: #22589b;
 
+  /* ─── Extended status scale (funnel / chessboard — from MSales 2.0) ────── */
+  --mg-gold-50:  #FBF1D2;  /* marketing reserve — soft */
+  --mg-gold-300: #F5D688;
+  --mg-gold-500: #FFE08A;  /* marketing reserve — solid */
+  --mg-gold-900: #8A6A12;  /* marketing reserve — ink */
+
+  --mg-pink-50:  #FBE7F3;  /* marketing deal — soft */
+  --mg-pink-300: #F4A6D7;
+  --mg-pink-500: #F4A6D7;  /* marketing deal — solid */
+  --mg-pink-900: #A53B80;  /* marketing deal — ink */
+
+  --mg-neutral-50:  #EDEFF1; /* done / archived — soft */
+  --mg-neutral-500: #D5D6D8; /* done — solid */
+  --mg-neutral-900: #5A616B; /* done — ink */
+
   /* ─── Pipeline-stage palette (kanban column headers) ──────────────────── */
   --mg-stage-teal:  #1D9E75;
   --mg-stage-blue:  #378ADD;

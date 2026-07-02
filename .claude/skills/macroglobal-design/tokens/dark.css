@@ -1,0 +1,173 @@
+/* ===========================================================================
+   MACRO Global — Dark theme
+   Navy-based dark palette ported from MACROSALES 2.0 brief (etalon).
+   The CRM is light-first; this file adds an opt-in dark scope that remaps the
+   SEMANTIC role tokens (semantic.css) + the page-level --c-* surface bridge.
+   Activate by adding data-theme="dark" or class .mg-dark to a root element
+   (existing redesign pages use .surface.dark — also matched here).
+   Brand chrome (sidebar) darkens further, staying navy — never neutral gray.
+   =========================================================================== */
+
+[data-theme="dark"],
+.mg-dark,
+.surface.dark {
+  /* ─── Dark navy primitives (addressable) ──────────────────────────────── */
+  --mg-navy-bg:       #0A1426; /* deepest — app background */
+  --mg-navy-surface:  #111E38; /* card / panel */
+  --mg-navy-surface2: #172847; /* muted / raised */
+  --mg-navy-surface3: #1F3157; /* hover / active row */
+  --mg-navy-border:   #27395C;
+  --mg-navy-border-strong: #3A4F78;
+  --mg-navy-accent:       #4C7DF0; /* accent brightens in dark */
+  --mg-navy-accent-hover: #6E99FF;
+  --mg-navy-accent-soft:  #9DB8FF;
+
+  /* ─── Brand accent remap (navy #172747 would vanish on navy bg) ────────── */
+  --mg-primary-900: #4C7DF0;
+  --mg-primary-800: #6E99FF;
+  --mg-primary-700: #3D6AD8;
+  --mg-primary-100: rgba(76, 125, 240, 0.16);
+  --mg-primary-50:  rgba(76, 125, 240, 0.10);
+
+  /* ─── Surfaces ────────────────────────────────────────────────────────── */
+  --mg-surface-page:  #0A1426;
+  --mg-surface-card:  #111E38;
+  --mg-surface-muted: #172847;
+  --mg-surface-hover: #1F3157;
+  --mg-surface-panel: #0A1426;
+
+  /* ─── Text ────────────────────────────────────────────────────────────── */
+  --mg-text-primary:   #EAF0FA;
+  --mg-text-secondary: #B4C2DA;
+  --mg-text-muted:     #8593B0;
+  --mg-text-inverse:   #0A1426;
+  --mg-text-link:      #9DB8FF;
+
+  /* ─── Borders ─────────────────────────────────────────────────────────── */
+  --mg-border-default: #27395C;
+  --mg-border-strong:  #3A4F78;
+  --mg-border-focus:   #4C7DF0;
+  --mg-border-accent:  #6E99FF;
+
+  /* ─── Status triads (soft same-hue tint on dark — no black/white flips) ── */
+  --mg-status-success-bg:     rgba(123, 196, 140, 0.16);
+  --mg-status-success-border: rgba(123, 196, 140, 0.30);
+  --mg-status-success-text:   #8FD3A0;
+  --mg-status-success-solid:  #7BE07F;
+
+  --mg-status-danger-bg:      rgba(232, 120, 104, 0.18);
+  --mg-status-danger-border:  rgba(232, 120, 104, 0.32);
+  --mg-status-danger-text:    #F4A293;
+  --mg-status-danger-solid:   #FF6B57;
+
+  --mg-status-warning-bg:     rgba(214, 164, 110, 0.16);
+  --mg-status-warning-border: rgba(214, 164, 110, 0.30);
+  --mg-status-warning-text:   #E6B98C;
+  --mg-status-warning-solid:  #FFB87E;
+
+  --mg-status-info-bg:        rgba(120, 176, 224, 0.16);
+  --mg-status-info-border:    rgba(120, 176, 224, 0.30);
+  --mg-status-info-text:      #94C2EC;
+  --mg-status-info-solid:     #7CCBFF;
+
+  /* Extended status (funnel/chess) — dark soft-tint */
+  --mg-status-reserve-bg:    rgba(206, 176, 96, 0.16);
+  --mg-status-reserve-text:  #DFC57E;
+  --mg-status-reserve-solid: #CEB060;
+
+  --mg-status-mdeal-bg:      rgba(196, 138, 178, 0.16);
+  --mg-status-mdeal-text:    #DDAAC9;
+  --mg-status-mdeal-solid:   #C48AB2;
+
+  --mg-status-done-bg:       rgba(150, 170, 205, 0.16);
+  --mg-status-done-text:     #AEB9CE;
+  --mg-status-done-solid:    #3A4F78;
+
+  /* ─── Actions ─────────────────────────────────────────────────────────── */
+  --mg-action-primary-bg:     #4C7DF0;
+  --mg-action-primary-hover:  #6E99FF;
+  --mg-action-primary-active: #3D6AD8;
+  --mg-action-primary-text:   #EEF3FB;
+
+  --mg-action-secondary-bg:    #172847;
+  --mg-action-secondary-text:  #DCE4F2;
+  --mg-action-secondary-border:#3A4F78;
+  --mg-action-secondary-hover: #1F3157;
+
+  --mg-action-danger-bg:    #FF6B57;
+  --mg-action-danger-hover: #FF8271;
+  --mg-action-danger-text:  #FFFFFF;
+
+  /* ─── Inputs ──────────────────────────────────────────────────────────── */
+  --mg-input-bg:           #111E38;
+  --mg-input-border:       #3A4F78;
+  --mg-input-hover-border: #4C7DF0;
+  --mg-input-focus-border: #6E99FF;
+  --mg-input-text:         #EAF0FA;
+  --mg-input-placeholder:  #647294;
+  --mg-input-disabled-bg:  #172847;
+
+  /* ─── Brand chrome (sidebar / deal header — darken, keep navy) ─────────── */
+  --mg-sidebar-bg:          #091020;
+  --mg-sidebar-hover-bg:    #0A1426;
+  --mg-sidebar-active-bg:   rgba(76, 125, 240, 0.16);
+  --mg-sidebar-active-bar:  #6E99FF;
+  --mg-sidebar-text:        rgba(234, 240, 250, 0.66);
+  --mg-sidebar-text-active: #FFFFFF;
+  --mg-sidebar-divider:     rgba(255, 255, 255, 0.08);
+  --mg-deal-header-bg:      #111E38;
+
+  /* ─── Deal / pipeline status pills ────────────────────────────────────── */
+  --mg-deal-new-bg:    rgba(120, 176, 224, 0.16); --mg-deal-new-text:    #94C2EC;
+  --mg-deal-active-bg: rgba(76, 125, 240, 0.18);  --mg-deal-active-text: #9DB8FF;
+  --mg-deal-won-bg:    rgba(123, 196, 140, 0.16); --mg-deal-won-text:    #8FD3A0;
+  --mg-deal-hot-bg:    rgba(214, 164, 110, 0.16); --mg-deal-hot-text:    #E6B98C;
+  --mg-deal-lost-bg:   rgba(232, 120, 104, 0.18); --mg-deal-lost-text:   #F4A293;
+
+  /* ─── Primitive tint remaps (soft pastel chips must read on navy) ──────── */
+  /* Consuming pages use raw --mg-*-100/-50 as chip backgrounds + --mg-*-700/900
+     as ink. In the dark scope these flip to dark same-hue tints + light ink. */
+  --mg-gray-50:   #0F1F3D;
+  --mg-gray-100:  #172847;
+  --mg-gray-200:  #27395C;
+  --mg-gray-300:  #3A4F78;
+  --mg-gray-700:  #AEB9CE;
+  --mg-gray-800:  #C6D0E2;
+  --mg-gray-900:  #EAF0FA;
+
+  --mg-green-100: rgba(123, 196, 140, 0.16);
+  --mg-green-700: #7BE07F;
+  --mg-green-900: #8FD3A0;
+
+  --mg-red-50:    rgba(232, 120, 104, 0.18);
+  --mg-red-100:   rgba(232, 120, 104, 0.18);
+  --mg-red-200:   rgba(232, 120, 104, 0.34);
+  --mg-red-600:   #FF6B57;
+  --mg-red-700:   #F4A293;
+
+  --mg-orange-50:  rgba(214, 164, 110, 0.16);
+  --mg-orange-100: rgba(214, 164, 110, 0.16);
+  --mg-orange-700: #E6B98C;
+  --mg-orange-900: #E6B98C;
+
+  --mg-blue-100:  rgba(120, 176, 224, 0.16);
+  --mg-blue-700:  #94C2EC;
+
+  /* ─── Elevation (deeper shadows read on dark) ─────────────────────────── */
+  --mg-shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.55);
+  --mg-shadow-card: 0 4px 14px rgba(3, 8, 20, 0.55);
+  --mg-shadow-md:   0 8px 26px rgba(3, 8, 20, 0.60);
+  --mg-shadow-lg:   0 22px 52px rgba(2, 6, 16, 0.72);
+
+  /* ─── Page-level --c-* bridge (redesign pages: tasks/funnel/contacts) ──── */
+  --c-page:    #0A1426;
+  --c-board:   #0A1426;
+  --c-card:    #111E38;
+  --c-border:  #27395C;
+  --c-border2: #3A4F78;
+  --c-text:    #EAF0FA;
+  --c-text2:   #B4C2DA;
+  --c-muted:   #8593B0;
+  --c-hover:   #172847;
+  --c-muted2:  #1B2C4E;
+}

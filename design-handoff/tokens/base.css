@@ -1,0 +1,59 @@
+/* ===========================================================================
+   MACRO Global — Base layer
+   Opt-in reset, z-index scale, typography utilities, shared keyframes.
+   Nothing here touches bare element selectors globally — the reset is scoped
+   to .mg-app so consuming pages opt in and nothing leaks into host apps.
+   =========================================================================== */
+
+:root {
+  /* ─── Z-index scale (stop hand-picking z values) ──────────────────────── */
+  /* base | sticky headers | dropdowns | overlay scrim | drawers | modals | toasts | tooltips */
+  --mg-z-base:      0;    /* @kind other */
+  --mg-z-sticky:    100;  /* @kind other */
+  --mg-z-dropdown:  1000; /* @kind other */
+  --mg-z-overlay:   1100; /* @kind other */
+  --mg-z-drawer:    1200; /* @kind other */
+  --mg-z-modal:     1300; /* @kind other */
+  --mg-z-toast:     1400; /* @kind other */
+  --mg-z-tooltip:   1500; /* @kind other */
+}
+
+/* ─── Opt-in app reset (add class="mg-app" to your root) ────────────────── */
+.mg-app, .mg-app * { box-sizing: border-box; }
+.mg-app {
+  margin: 0;
+  font-family: var(--mg-font-sans);
+  font-size: var(--mg-text-base);
+  line-height: var(--mg-leading-normal);
+  color: var(--mg-text-primary);
+  background: var(--mg-surface-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Focus ring (keyboard only) ───────────────────────────────────────── */
+.mg-focusable:focus-visible { outline: none; box-shadow: var(--mg-focus-ring); }
+
+/* ─── Scrollbar hiding (dense boards/tables) ───────────────────────────── */
+.mg-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.mg-no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* ─── Numeric alignment (prices, amounts, schedules) ───────────────────── */
+.mg-tnum { font-variant-numeric: tabular-nums; }
+
+/* ─── Typography utilities (size + weight + color in one class) ────────── */
+.mg-eyebrow { font-size: var(--mg-text-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mg-text-muted); }
+.mg-h1 { font-size: var(--mg-text-xl); font-weight: 600; color: var(--mg-text-primary); line-height: 1.25; margin: 0; }
+.mg-h2 { font-size: var(--mg-text-2xl); font-weight: 600; color: var(--mg-text-primary); line-height: 1.25; margin: 0; }
+.mg-h3 { font-size: var(--mg-text-md); font-weight: 600; color: var(--mg-text-primary); line-height: 1.3; margin: 0; }
+.mg-body { font-size: var(--mg-text-sm); font-weight: 400; color: var(--mg-text-primary); line-height: 1.5; }
+.mg-label { font-size: var(--mg-text-sm); font-weight: 600; color: var(--mg-text-secondary); }
+.mg-caption { font-size: var(--mg-text-xs); font-weight: 400; color: var(--mg-text-muted); }
+.mg-link { color: var(--mg-text-link); font-weight: 500; text-decoration: none; cursor: pointer; }
+
+/* ─── Shared keyframes (loaders, entrances) ────────────────────────────── */
+@keyframes mg-shimmer { 0% { background-position: -320px 0; } 100% { background-position: 320px 0; } }
+@keyframes mg-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mg-slide-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes mg-slide-in-end { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@keyframes mg-scale-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }

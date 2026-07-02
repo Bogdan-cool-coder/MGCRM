@@ -1,0 +1,52 @@
+<!-- @dsCard group="Components" viewport="760x420" name="Feedback — Toast, Skeleton, Empty" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-page); color: var(--mg-text-primary); }
+  .wrap { padding: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .cap { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--mg-text-muted); font-weight: 600; }
+  .panel { background: var(--mg-surface-card); border: 1px solid var(--mg-border-default); border-radius: var(--mg-radius-lg); padding: 16px; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { Toast, Skeleton, EmptyState, Button } = window.MACROGlobalCRMDesignSystem_2f42e6;
+  function Demo() {
+    return (
+      <div className="wrap">
+        <div className="col">
+          <span className="cap">Toast</span>
+          <Toast severity="success" title="Сделка сохранена" description="График платежей пересчитан" onClose={() => {}} />
+          <Toast severity="danger" title="Нет прав" description="Недоступно для роли «Sales»" onClose={() => {}} />
+          <Toast severity="info" title="Новый лид из TouchLink" description="City Park · 2BR" />
+        </div>
+        <div className="col">
+          <span className="cap">Skeleton</span>
+          <div className="panel" style={{display:'flex',gap:14,alignItems:'center'}}>
+            <Skeleton variant="circle" width={46} />
+            <div style={{flex:1}}><Skeleton variant="text" lines={2} /></div>
+          </div>
+          <span className="cap">Empty state</span>
+          <div className="panel">
+            <EmptyState icon="pi-inbox" title="Пока нет лидов"
+              description="Появятся автоматически из TouchLink или при ручном создании."
+              action={<Button icon="pi-plus">Создать лид</Button>} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>
+</body>
+</html>

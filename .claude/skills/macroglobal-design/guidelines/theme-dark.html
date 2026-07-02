@@ -1,0 +1,70 @@
+<!-- @dsCard group="Colors" viewport="760x440" name="Dark theme (navy)" subtitle="Тёмная тема на бренд-navy — порт из MACROSALES 2.0" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); }
+  .stage { background: var(--mg-surface-page); color: var(--mg-text-primary); padding: 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .swrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sw { width: 92px; border-radius: var(--mg-radius-md); overflow: hidden; border: 1px solid var(--mg-border-default); }
+  .sw .chip { height: 42px; }
+  .sw .m { padding: 5px 7px; }
+  .sw .n { font-size: 10px; font-weight: 600; color: var(--mg-text-secondary); }
+  .sw .h { font-size: 9px; color: var(--mg-text-muted); font-variant-numeric: tabular-nums; text-transform: uppercase; }
+  .lbl { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--mg-text-muted); margin: 0 0 10px; }
+  .card { background: var(--mg-surface-card); border: 1px solid var(--mg-border-default); border-radius: var(--mg-radius-lg); padding: 16px; box-shadow: var(--mg-shadow-card); }
+  .btn { display: inline-flex; align-items: center; height: 34px; padding: 0 15px; border-radius: var(--mg-radius-md); font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
+  .btn.primary { background: var(--mg-action-primary-bg); color: var(--mg-action-primary-text); }
+  .btn.secondary { background: var(--mg-action-secondary-bg); color: var(--mg-action-secondary-text); border: 1px solid var(--mg-action-secondary-border); }
+  .pill { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .input { display: flex; align-items: center; height: 38px; padding: 0 12px; border-radius: var(--mg-radius-md); border: 1px solid var(--mg-input-border); background: var(--mg-input-bg); color: var(--mg-input-text); font-size: 13px; }
+  .input.focus { border-color: var(--mg-input-focus-border); box-shadow: var(--mg-focus-ring); }
+</style>
+</head>
+<body>
+  <div class="stage mg-dark">
+    <div class="grid">
+      <div>
+        <p class="lbl">Поверхности и текст</p>
+        <div class="swrow">
+          <div class="sw"><div class="chip" style="background:var(--mg-surface-page)"></div><div class="m"><div class="n">page</div><div class="h">#0A1426</div></div></div>
+          <div class="sw"><div class="chip" style="background:var(--mg-surface-card)"></div><div class="m"><div class="n">card</div><div class="h">#111E38</div></div></div>
+          <div class="sw"><div class="chip" style="background:var(--mg-surface-muted)"></div><div class="m"><div class="n">muted</div><div class="h">#172847</div></div></div>
+          <div class="sw"><div class="chip" style="background:var(--mg-surface-hover)"></div><div class="m"><div class="n">hover</div><div class="h">#1F3157</div></div></div>
+        </div>
+      </div>
+      <div>
+        <p class="lbl">Статусы (soft-tint)</p>
+        <div class="swrow" style="margin-bottom:12px">
+          <span class="pill" style="background:var(--mg-status-success-bg);color:var(--mg-status-success-text)">Успех</span>
+          <span class="pill" style="background:var(--mg-status-info-bg);color:var(--mg-status-info-text)">Сделка</span>
+          <span class="pill" style="background:var(--mg-status-warning-bg);color:var(--mg-status-warning-text)">Бронь</span>
+          <span class="pill" style="background:var(--mg-status-danger-bg);color:var(--mg-status-danger-text)">Просрочено</span>
+        </div>
+        <div class="swrow">
+          <span style="width:26px;height:26px;border-radius:999px;background:var(--mg-status-success-solid)"></span>
+          <span style="width:26px;height:26px;border-radius:999px;background:var(--mg-status-info-solid)"></span>
+          <span style="width:26px;height:26px;border-radius:999px;background:var(--mg-status-warning-solid)"></span>
+          <span style="width:26px;height:26px;border-radius:999px;background:var(--mg-status-danger-solid)"></span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--mg-text-primary)">Богдан Ядыкин</div>
+          <div style="font-size:12px;color:var(--mg-text-muted)">City Park · 2к · 94 м² · <span style="color:var(--mg-text-link)">AED 2 950 000</span></div>
+        </div>
+        <div style="display:flex;gap:9px;align-items:center">
+          <div class="input focus" style="width:150px">Воронка · City Park</div>
+          <button class="btn secondary">Отмена</button>
+          <button class="btn primary">Перевести в сделку</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

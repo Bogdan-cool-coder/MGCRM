@@ -1,0 +1,678 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1280x860" name="Redesign — Настройки" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Настройки (redesign)</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
+  .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
+    --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-muted2:#ECEDEF; --sw-off:#C3C8D2; }
+  /* .surface.dark navy palette from tokens/dark.css bridge */
+  .surface.dark { --sw-off:#455778; }
+  * { scrollbar-width: none; -ms-overflow-style: none; }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .inp:focus { outline: none; border-color: var(--mg-input-focus-border); box-shadow: var(--mg-focus-ring); }
+  .inp:-webkit-autofill, .inp:-webkit-autofill:hover, .inp:-webkit-autofill:focus, .inp:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--c-text) !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--c-card) inset !important;
+    caret-color: var(--c-text); transition: background-color 9999s ease 0s; }
+  .urow:hover { background: var(--c-hover); }
+  .uicon:hover { background: var(--c-muted2); }
+  .atnode:hover .atacts { opacity: 1 !important; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react" src="users-section.jsx"></script>
+<script type="text/babel" data-presets="react" src="access-section.jsx"></script>
+<script type="text/babel" data-presets="react" src="system-section.jsx"></script>
+<script type="text/babel" data-presets="react">
+
+const { useState } = React;
+
+const GROUPS = [
+{ key: 'account', label: 'Аккаунт', items: [
+  { key: 'profile', icon: 'pi-user', label: 'Профиль' }]
+},
+{ key: 'integrations', label: 'Интеграции', items: [
+  { key: 'channels', icon: 'pi-share-alt', label: 'Каналы связи' }]
+},
+{ key: 'directories', label: 'Справочники', items: [
+  { key: 'directories', icon: 'pi-folder-open', label: 'Справочники' },
+  { key: 'pipeline', icon: 'pi-sliders-h', label: 'Воронка продаж', ext: true }]
+},
+{ key: 'system', label: 'Система', items: [
+  { key: 'users', icon: 'pi-users', label: 'Пользователи', meta: '14' },
+  { key: 'access', icon: 'pi-shield', label: 'Доступ и оргструктура' },
+  { key: 'auto', icon: 'pi-clock', label: 'Журнал автоматизаций' },
+  { key: 'reset', icon: 'pi-refresh', label: 'Сброс системы', danger: true }]
+}];
+
+
+const TABS = [['profile', 'Профиль'], ['security', 'Безопасность'], ['appearance', 'Внешний вид'], ['language', 'Язык']];
+
+function Field({ label, value, disabled, half }) {
+  return <div style={{ flex: half ? 1 : 'unset', marginBottom: 16 }}>
+    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 7 }}>{label}</label>
+    <input className="inp" defaultValue={value} disabled={disabled} style={{ width: '100%', height: 40, padding: '0 13px', borderRadius: 'var(--mg-radius-md)',
+      border: '1px solid var(--mg-input-border)', background: disabled ? 'var(--mg-input-disabled-bg)' : 'var(--c-card)', color: disabled ? 'var(--c-muted)' : 'var(--c-text)', fontFamily: 'var(--mg-font-sans)', fontSize: 14 }} />
+  </div>;
+}
+function Switch({ on, onClick }) {
+  return <span onClick={onClick} style={{ display: 'inline-block', width: 44, height: 24, borderRadius: 999, background: on ? 'var(--mg-primary-900)' : 'var(--sw-off)', position: 'relative', cursor: 'pointer', flexShrink: 0, verticalAlign: 'middle', transition: 'background .18s ease', boxShadow: 'inset 0 0 0 1px rgba(15,23,42,.06)' }}>
+    <span style={{ position: 'absolute', top: 3, insetInlineStart: on ? 23 : 3, width: 18, height: 18, borderRadius: 999, background: '#fff', boxShadow: '0 1px 2px rgba(15,23,42,.45), 0 0 0 .5px rgba(15,23,42,.04)', transition: 'inset-inline-start .18s ease' }} /></span>;
+}
+function SettingRow({ icon, title, sub, children, last }) {
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 0', borderBottom: last ? 'none' : '1px solid var(--c-border)' }}>
+    {icon && <span style={{ width: 34, height: 34, borderRadius: 'var(--mg-radius-md)', background: 'var(--mg-primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><i className={'pi ' + icon} style={{ fontSize: 15, color: 'var(--mg-primary-900)' }} /></span>}
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-text)' }}>{title}</div>
+      {sub && <div style={{ fontSize: 12.5, color: 'var(--c-muted)', marginTop: 2 }}>{sub}</div>}
+    </div>
+    {children}
+  </div>;
+}
+function Card({ title, desc, children }) {
+  return <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-sm)', padding: '20px 22px', marginBottom: 16 }}>
+    {title && <div style={{ marginBottom: 6 }}><div style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-text)' }}>{title}</div>
+      {desc && <div style={{ fontSize: 13, color: 'var(--c-muted)', marginTop: 2 }}>{desc}</div>}</div>}
+    {children}
+  </div>;
+}
+
+function ProfileTab() {
+  return <React.Fragment>
+    <Card title="Личные данные" desc="Как вас видят коллеги в системе">
+      <div style={{ display: 'flex', gap: 14 }}><Field label="Имя" value="Богдан" half /><Field label="Фамилия" value="Ядыкин" half /></div>
+      <div style={{ display: 'flex', gap: 14 }}><Field label="Телефон" value="+7 777 012 34 56" half /><Field label="Email" value="b.yadykin@macroglobal.tech" disabled half /></div>
+      <Field label="Должность" value="Администратор" disabled />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+        <button style={btn('ghost')}>Отмена</button><button style={btn('primary')}><i className="pi pi-check" style={{ fontSize: 12 }} />Сохранить</button>
+      </div>
+    </Card>
+  </React.Fragment>;
+}
+function SecurityTab({ setModal }) {
+  const [f2, setF2] = useState(true);
+  return <Card title="Безопасность" desc="Пароль, двухфакторная защита и сессии">
+    <SettingRow icon="pi-key" title="Пароль" sub="Последнее изменение 3 месяца назад"><button style={btn('ghost')} onClick={() => setModal('password')}>Сменить</button></SettingRow>
+    <SettingRow icon="pi-lock" title="Двухфакторная аутентификация" sub={f2 ? 'Включена · приложение-аутентификатор' : 'Отключена'}><Switch on={f2} onClick={() => {if (!f2) setModal('2fa');setF2(!f2);}} /></SettingRow>
+    <SettingRow icon="pi-desktop" title="Активные сессии" sub="3 устройства" last><button style={btn('ghost')} onClick={() => setModal('sessions')}>Управлять</button></SettingRow>
+  </Card>;
+}
+function AppearanceTab({ dark, setDark, accent, setAccent, density, setDensity }) {
+  const themes = [['light', 'Светлая', 'pi-sun'], ['dark', 'Тёмная', 'pi-moon']];
+  const accents = ['#172747', '#2B4987', '#312e81', '#0f4d3a'];
+  return <Card title="Внешний вид" desc="Тема, акцент и плотность интерфейса">
+    <div style={{ padding: '6px 0 16px', borderBottom: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 10 }}>Тема</div>
+      <div style={{ display: 'flex', gap: 12 }}>{themes.map(([k, l, ic]) => {const on = k === 'dark' === dark;
+          return <div key={k} onClick={() => setDark(k === 'dark')} style={{ flex: 1, cursor: 'pointer', border: '2px solid ' + (on ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-md)', padding: 14, background: k === 'dark' ? '#0A1426' : '#fff', color: k === 'dark' ? '#EAF0FA' : '#272829', position: 'relative' }}>
+          <i className={'pi ' + ic} style={{ fontSize: 16 }} /><div style={{ fontSize: 13, fontWeight: 600, marginTop: 8 }}>{l}</div>
+          {on && <i className="pi pi-check-circle" style={{ position: 'absolute', top: 10, insetInlineEnd: 10, color: 'var(--mg-primary-900)', fontSize: 15 }} />}</div>;})}</div>
+    </div>
+    <div style={{ padding: '16px 0', borderBottom: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 10 }}>Акцент</div>
+      <div style={{ display: 'flex', gap: 10 }}>{accents.map((c) => <span key={c} onClick={() => setAccent(c)} style={{ width: 30, height: 30, borderRadius: '50%', background: c, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: accent === c ? '0 0 0 3px var(--c-card), 0 0 0 5px ' + c : 'none' }}>{accent === c && <i className="pi pi-check" style={{ color: '#fff', fontSize: 12 }} />}</span>)}</div>
+    </div>
+    <div style={{ paddingTop: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text2)' }}>Плотность интерфейса</div>
+      <div style={{ fontSize: 12, color: 'var(--c-muted)', margin: '3px 0 10px', maxWidth: 460 }}>Насколько плотно расположены строки в таблицах, списках и на досках. «Компактная» — больше данных на экране, «Просторная» — крупнее и воздушнее.</div>
+      <div style={{ display: 'inline-flex', gap: 2, background: 'var(--mg-surface-muted)', borderRadius: 7, padding: 3 }}>{[['compact', 'Компактная'], ['cozy', 'Просторная']].map(([k, l]) => {const on = density === k;
+          return <button key={k} onClick={() => setDensity(k)} style={{ height: 30, padding: '0 14px', border: 'none', borderRadius: 5, cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: 12.5, fontWeight: 600, background: on ? 'var(--c-card)' : 'transparent', color: on ? 'var(--mg-primary-900)' : 'var(--c-muted)', boxShadow: on ? 'var(--mg-shadow-sm)' : 'none' }}>{l}</button>;})}</div>
+    </div>
+  </Card>;
+}
+function LanguageTab() {
+  const [lang, setLang] = useState('ru');
+  const langs = [['ru', 'Русский', 'RU'], ['en', 'English', 'EN'], ['ar', 'العربية', 'AR']];
+  return <Card title="Язык интерфейса" desc="Применяется ко всему приложению">
+    {langs.map(([k, l, c], i) => <div key={k} onClick={() => setLang(k)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', borderBottom: i < langs.length - 1 ? '1px solid var(--c-border)' : 'none', cursor: 'pointer' }}>
+      <span style={{ width: 30, height: 30, borderRadius: 'var(--mg-radius-sm)', background: 'var(--mg-surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--c-text2)' }}>{c}</span>
+      <span style={{ flex: 1, fontSize: 14, color: 'var(--c-text)' }}>{l}</span>
+      <span style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid ' + (lang === k ? 'var(--mg-primary-900)' : 'var(--c-border2)'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{lang === k && <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--mg-primary-900)' }} />}</span>
+    </div>)}
+  </Card>;
+}
+
+function Modal({ title, icon, children, footer, close, width }) {
+  return <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(9,16,32,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: width || 440, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-lg)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderBottom: '1px solid var(--c-border)' }}>
+        {icon && <i className={'pi ' + icon} style={{ fontSize: 17, color: 'var(--mg-primary-900)' }} />}
+        <span style={{ flex: 1, fontSize: 16, fontWeight: 600, color: 'var(--c-text)' }}>{title}</span>
+        <i className="pi pi-times" onClick={close} style={{ fontSize: 14, color: 'var(--c-muted)', cursor: 'pointer' }} />
+      </div>
+      <div style={{ padding: 20 }}>{children}</div>
+      {footer && <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 18px' }}>{footer}</div>}
+    </div>
+  </div>;
+}
+function dbtn() {return { ...btn('ghost'), color: 'var(--mg-status-danger-text)', borderColor: 'var(--mg-status-danger-border)' };}
+function PhotoModal({ close }) {
+  return <Modal title="Изменить фото" icon="pi-camera" close={close} width={430}
+  footer={<React.Fragment><button style={dbtn()}>Удалить</button><span style={{ flex: 1 }} /><button style={btn('ghost')} onClick={close}>Отмена</button><button style={btn('primary')} onClick={close}><i className="pi pi-check" style={{ fontSize: 12 }} />Сохранить</button></React.Fragment>}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <span style={{ width: 92, height: 92, borderRadius: '50%', background: 'var(--mg-primary-900)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 600 }}>БЯ</span>
+      <div style={{ width: '100%', border: '1.5px dashed var(--c-border2)', borderRadius: 'var(--mg-radius-md)', padding: '22px', textAlign: 'center', background: 'var(--c-hover)' }}>
+        <i className="pi pi-cloud-upload" style={{ fontSize: 24, color: 'var(--mg-primary-900)' }} />
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', marginTop: 8 }}>Перетащите фото или <span style={{ color: 'var(--mg-primary-900)' }}>выберите файл</span></div>
+        <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 4 }}>PNG, JPG до 5 МБ · квадрат от 200×200</div>
+      </div>
+    </div>
+  </Modal>;
+}
+function PasswordModal({ close }) {
+  const F = ({ label }) => <div style={{ marginBottom: 14 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 7 }}>{label}</label><div style={{ display: 'flex', alignItems: 'center', height: 40, padding: '0 12px', border: '1px solid var(--mg-input-border)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)' }}><span style={{ flex: 1, color: 'var(--c-muted)', letterSpacing: '2px' }}>••••••••</span><i className="pi pi-eye" style={{ color: 'var(--c-muted)', fontSize: 14, cursor: 'pointer' }} /></div></div>;
+  const req = (ok, t) => <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: ok ? 'var(--mg-status-success-text)' : 'var(--c-muted)' }}><i className={'pi ' + (ok ? 'pi-check-circle' : 'pi-circle')} style={{ fontSize: 13 }} />{t}</div>;
+  return <Modal title="Смена пароля" icon="pi-key" close={close} width={430}
+  footer={<React.Fragment><span style={{ flex: 1 }} /><button style={btn('ghost')} onClick={close}>Отмена</button><button style={btn('primary')} onClick={close}>Сменить пароль</button></React.Fragment>}>
+    <F label="Текущий пароль" /><F label="Новый пароль" /><F label="Повторите новый пароль" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4, padding: '12px 14px', background: 'var(--c-hover)', borderRadius: 'var(--mg-radius-md)' }}>
+      {req(true, 'Минимум 8 символов')}{req(true, 'Буквы и цифры')}{req(false, 'Хотя бы один спецсимвол')}
+    </div>
+  </Modal>;
+}
+function TwoFAModal({ close }) {
+  return <Modal title="Двухфакторная аутентификация" icon="pi-lock" close={close} width={470}
+  footer={<React.Fragment><span style={{ flex: 1 }} /><button style={btn('ghost')} onClick={close}>Отмена</button><button style={btn('primary')} onClick={close}><i className="pi pi-check" style={{ fontSize: 12 }} />Подтвердить</button></React.Fragment>}>
+    <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 16 }}>Отсканируйте QR-код в приложении-аутентификаторе (Google Authenticator, 1Password) и введите 6-значный код.</div>
+    <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+      <div style={{ width: 116, height: 116, flexShrink: 0, borderRadius: 'var(--mg-radius-md)', background: '#fff', border: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="pi pi-qrcode" style={{ fontSize: 62, color: '#111' }} /></div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 6 }}>Или введите ключ вручную:</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 11px', background: 'var(--c-hover)', borderRadius: 'var(--mg-radius-sm)', fontFamily: 'ui-monospace,monospace', fontSize: 13, color: 'var(--c-text)' }}>JBSW Y3DP EHPK 3PXP<i className="pi pi-copy" style={{ marginInlineStart: 'auto', color: 'var(--c-muted)', cursor: 'pointer' }} /></div>
+      </div>
+    </div>
+    <div style={{ marginTop: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 8 }}>Код из приложения</label>
+      <div style={{ display: 'flex', gap: 8 }}>{[0, 1, 2, 3, 4, 5].map((i) => <span key={i} style={{ width: 44, height: 48, border: '1px solid ' + (i < 3 ? 'var(--mg-primary-900)' : 'var(--mg-input-border)'), borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 600, color: 'var(--c-text)' }}>{i < 3 ? ['1', '2', '4'][i] : ''}</span>)}</div></div>
+  </Modal>;
+}
+function SessionsModal({ close }) {
+  const S = ({ icon, dev, loc, active, cur, last }) => <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', borderBottom: last ? 'none' : '1px solid var(--c-border)' }}>
+    <span style={{ width: 36, height: 36, borderRadius: 'var(--mg-radius-md)', background: 'var(--c-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><i className={'pi ' + icon} style={{ fontSize: 15, color: 'var(--c-text2)' }} /></span>
+    <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-text)' }}>{dev}</div><div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>{loc} · {active}</div></div>
+    {cur ? <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 999, background: 'var(--mg-status-success-bg)', color: 'var(--mg-status-success-text)' }}>Текущая</span> : <button style={{ ...btn('ghost'), height: 32, padding: '0 12px', fontSize: 12.5 }}>Завершить</button>}
+  </div>;
+  return <Modal title="Активные сессии" icon="pi-desktop" close={close} width={520}
+  footer={<React.Fragment><button style={dbtn()}>Завершить все остальные</button><span style={{ flex: 1 }} /><button style={btn('primary')} onClick={close}>Готово</button></React.Fragment>}>
+    <S icon="pi-desktop" dev="MacBook Pro · Chrome" loc="Алматы, KZ · 2.56.14.xx" active="сейчас" cur />
+    <S icon="pi-mobile" dev="iPhone 15 · Safari" loc="Алматы, KZ" active="12 мин назад" />
+    <S icon="pi-desktop" dev="Windows · Edge" loc="Дубай, AE · 94.xx.xx.xx" active="вчера 18:40" last />
+  </Modal>;
+}
+function Modals({ modal, close }) {
+  if (modal === 'photo') return <PhotoModal close={close} />;
+  if (modal === 'password') return <PasswordModal close={close} />;
+  if (modal === '2fa') return <TwoFAModal close={close} />;
+  if (modal === 'sessions') return <SessionsModal close={close} />;
+  return null;
+}
+
+function ChannelsTab() {
+  const [linked, setLinked] = useState(true);
+  const [cm, setCm] = useState(null);
+  const Row = ({ icon, name, status, action, dis }) => <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-sm)', opacity: dis ? 0.6 : 1 }}>
+    <span style={{ width: 44, height: 44, borderRadius: 'var(--mg-radius-md)', background: 'var(--mg-primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><i className={'pi ' + icon} style={{ fontSize: 20, color: 'var(--mg-primary-900)' }} /></span>
+    <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-text)' }}>{name}</div><div style={{ fontSize: 13, color: 'var(--c-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 8 }}>{status}</div></div>
+    {action}
+  </div>;
+  const tag = (bg, fg, tx) => <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 999, background: bg, color: fg }}>{tx}</span>;
+  return <React.Fragment>
+    <h2 style={{ margin: '2px 0 4px', fontSize: 18, fontWeight: 600 }}>Каналы связи</h2>
+    <p style={{ margin: '0 0 18px', fontSize: 13, color: 'var(--c-muted)', maxWidth: 520 }}>Подключите мессенджеры — туда будут приходить уведомления о задачах, сделках и упоминаниях</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Row icon="pi-telegram" name="Telegram"
+      status={linked ? <React.Fragment>{tag('var(--mg-status-success-bg)', 'var(--mg-status-success-text)', 'Подключено')}<span style={{ color: 'var(--mg-primary-900)', fontWeight: 500 }}>@b_yadykin</span></React.Fragment> : 'Не подключено'}
+      action={linked ? <button style={dbtn()} onClick={() => setCm('off')}><i className="pi pi-unlink" style={{ fontSize: 12 }} />Отключить</button> : <button style={{ ...btn('ghost'), color: 'var(--mg-primary-900)', borderColor: 'var(--mg-primary-900)' }} onClick={() => setCm('on')}><i className="pi pi-link" style={{ fontSize: 12 }} />Подключить</button>} />
+      <Row icon="pi-envelope" name="Email" dis status="—" action={tag('var(--c-hover)', 'var(--c-muted)', 'Скоро')} />
+      <Row icon="pi-whatsapp" name="WhatsApp" dis status="—" action={tag('var(--c-hover)', 'var(--c-muted)', 'Скоро')} />
+    </div>
+    {cm === 'on' && <Modal title="Подключение Telegram" icon="pi-telegram" close={() => setCm(null)} width={440}
+    footer={<React.Fragment><span style={{ flex: 1 }} /><button style={btn('ghost')} onClick={() => setCm(null)}>Отмена</button><button style={btn('primary')} onClick={() => {setLinked(true);setCm(null);}}>Готово</button></React.Fragment>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {[['1', 'Откройте бота', '@MacroCRM_bot в Telegram'], ['2', 'Отправьте команду', '/start боту'], ['3', 'Введите код', 'код ниже — в чат с ботом']].map(([n, tx, s]) => <div key={n} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}><span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--mg-primary-100)', color: 'var(--mg-primary-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{n}</span><div><div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-text)' }}>{tx}</div><div style={{ fontSize: 12.5, color: 'var(--c-muted)', marginTop: 1 }}>{s}</div></div></div>)}
+        <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '11px', background: 'var(--c-hover)', borderRadius: 'var(--mg-radius-md)', fontFamily: 'ui-monospace,monospace', fontSize: 16, fontWeight: 700, letterSpacing: '3px', color: 'var(--c-text)' }}>MG-8241</div>
+          <button style={{ ...btn('ghost'), height: 44 }}><i className="pi pi-copy" style={{ fontSize: 14 }} /></button>
+        </div>
+        <a href="#" onClick={(e) => e.preventDefault()} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 42, borderRadius: 'var(--mg-radius-md)', background: 'var(--mg-primary-900)', color: '#fff', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}><i className="pi pi-external-link" style={{ fontSize: 13 }} />Открыть бота в Telegram</a>
+      </div>
+    </Modal>}
+    {cm === 'off' && <Modal title="Отключить Telegram" icon="pi-exclamation-triangle" close={() => setCm(null)} width={400}
+    footer={<React.Fragment><span style={{ flex: 1 }} /><button style={btn('ghost')} onClick={() => setCm(null)}>Отмена</button><button style={{ ...btn('primary'), background: 'var(--mg-status-danger-solid)' }} onClick={() => {setLinked(false);setCm(null);}}>Отключить</button></React.Fragment>}>
+      <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.5 }}>Уведомления о задачах, сделках и упоминаниях перестанут приходить в Telegram (<span style={{ color: 'var(--mg-primary-900)', fontWeight: 500 }}>@b_yadykin</span>). Вернуть можно в любой момент.</div>
+    </Modal>}
+  </React.Fragment>;
+}
+
+function DirectoriesTab() {
+  const TABS2 = ['Страны', 'Теги', 'Кастомные поля', 'Каналы привлечения', 'Причины отказа', 'Каталог продуктов', 'Курсы валют', 'Шаблоны документов', 'Переменные шаблонов', 'Маршруты согласования', 'Шаблоны сообщений'];
+  const [dt, setDt] = useState('Страны');
+  const [off, setOff] = useState({});
+  const [amodal, setAmodal] = useState(false);
+  const [cfScope, setCfScope] = useState('Все');
+  const [order, setOrder] = useState({});
+  const [menu, setMenu] = useState(null);
+  const [edit, setEdit] = useState(null);
+  const [editRec, setEditRec] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const dragRef = React.useRef(null);
+
+  const DIRS = {
+    'Страны': { drag: true, add: 'Добавить', cols: [['Код', 'mono'], ['Название (RU)', 'text'], ['Название (EN)', 'muted'], ['Тел. код', 'num'], ['Активна', 'toggle', 'center'], ['', 'menu']],
+      rows: [['KZ', 'Казахстан', 'Kazakhstan', '+7', true], ['UZ', 'Узбекистан', 'Uzbekistan', '+998', true], ['RU', 'Россия', 'Russia', '+7', true], ['AE', 'ОАЭ', 'United Arab Emirates', '+971', true]] },
+    'Теги': { drag: true, add: 'Добавить', cols: [['Тег', 'tag'], ['Область', 'muted'], ['Активен', 'toggle', 'center'], ['', 'menu']],
+      rows: [[['VIP', '#D4537E'], 'Контакты', true], [['Тёплый', '#EF9F27'], 'Контакты', true], [['Холодный', '#378ADD'], 'Сделки', true], [['Партнёр', '#1D9E75'], 'Контакты', false]] },
+    'Кастомные поля': { subtabs: ['Все', 'Сделка', 'Контакт', 'Компания', 'Договор'], add: 'Добавить поле', empty: true,
+      cols: [['Название', 'text'], ['Тип', 'muted'], ['Сущность', 'muted'], ['Обязательное', 'radio', 'center'], ['Активно', 'toggle', 'center'], ['', 'menu']],
+      rows: [['Бюджет проекта', 'Число', 'Сделка', false, true], ['Источник лида', 'Список', 'Контакт', true, true], ['ИНН', 'Текст', 'Компания', false, true], ['Отдел внедрения', 'Список', 'Договор', false, true], ['Дата запуска внедрения', 'Дата', 'Сделка', false, true]] },
+    'Каналы привлечения': { drag: true, add: 'Добавить', cols: [['Название', 'text'], ['Активен', 'toggle', 'center'], ['', 'menu']],
+      rows: [['Instagram', true], ['Google Ads', true], ['Сайт', true], ['Рекомендация', true], ['Партнёрский канал', false]] },
+    'Причины отказа': { drag: true, add: 'Добавить', cols: [['Причина', 'text'], ['Активна', 'toggle', 'center'], ['', 'menu']],
+      rows: [['Дорого', true], ['Не устроили условия', true], ['Купил у конкурента', true], ['Передумал', true], ['Нет ответа', false]] },
+    'Каталог продуктов': { add: 'Создать продукт', tb: [['Импорт Excel', 'pi-upload'], ['Экспорт Excel', 'pi-download'], ['Создать продукт', 'pi-plus', 1]],
+      filters: [['search', 'Поиск по названию', 1], ['select', 'Группа'], ['select', 'Тип цены'], ['select', 'Активные'], ['reset']],
+      cols: [['Название', 'textb'], ['Группа', 'muted'], ['Тип цены', 'fixed'], ['RUB', 'price', 'end'], ['KZT', 'price', 'end'], ['UZS', 'price', 'end'], ['USD', 'price', 'end'], ['AED', 'price', 'end'], ['Активен', 'toggle', 'center'], ['', 'menu']],
+      rows: [['MacroSales CRM', 'MacroSales CRM', 'Фиксированная', '360 000 ₽', '2 500 000 ₸', '53 700 000 сўм', '4 500 $', '16 500 AED', true], ['Настройка MacroSales CRM', 'MacroSales CRM', 'Фиксированная', '—', '—', '—', '—', '—', true], ['TouchLink', 'MacroSales CRM', 'Фиксированная', '48 000 ₽', '300 000 ₸', '7 160 000 сўм', '600 $', '2 200 AED', true], ['AI mailings', 'MACRO AI', 'Фиксированная', '48 000 ₽', '300 000 ₸', '7 160 000 сўм', '600 $', '2 200 AED', true], ['WhatsApp AI Broker', 'MACRO AI', 'Фиксированная', '280 000 ₽', '1 800 000 ₸', '57 300 000 сўм', '4 800 $', '17 600 AED', true]] },
+    'Курсы валют': { add: 'Ввести вручную', tb: [['Обновить курсы', 'pi-refresh'], ['Ввести вручную', 'pi-plus', 1]],
+      filters: [['select', 'Из валюты'], ['select', 'В валюту'], ['date', 'Дата с'], ['date', 'Дата по'], ['reset']],
+      cols: [['Из', 'mono'], ['В', 'mono'], ['Курс', 'rate'], ['Дата', 'muted'], ['Источник', 'api'], ['Действия', 'menu', 'center']],
+      rows: [['AED', 'UZS', '3248.931067', '02.07.2026', 'API'], ['AED', 'USD', '0.272264', '02.07.2026', 'API'], ['AED', 'RUB', '21.100164', '02.07.2026', 'API'], ['AED', 'KZT', '130.373810', '02.07.2026', 'API'], ['EUR', 'AED', '4.180734', '02.07.2026', 'API'], ['EUR', 'USD', '1.138265', '02.07.2026', 'API'], ['EUR', 'RUB', '88.214172', '02.07.2026', 'API']] },
+    'Шаблоны документов': { add: 'Создать шаблон', tb: [['Создать шаблон', 'pi-plus', 1]], filters: [['select', 'Тип'], ['search', 'Поиск', 1]],
+      cols: [['Название', 'text'], ['Тип', 'muted'], ['Продукты', 'muted'], ['AI-статус', 'tagok'], ['Версия', 'muted', 'center'], ['Дата', 'muted'], ['', 'menu']],
+      rows: [['Казахстан — страновой оверлей', 'YAML', '—', '—', '—', '17.06.2026'], ['Узбекистан — страновой оверлей', 'YAML', '—', '—', '—', '17.06.2026'], ['Master Skeleton (основной шаблон договора)', 'DOCX', '—', 'Проверен', 'v1', '17.06.2026'], ['Сублицензионный договор', 'DOCX', 'sales', 'Проверен', 'v1', '02.07.2026'], ['MacroCRM — продуктовый оверлей', 'YAML', '—', '—', '—', '17.06.2026'], ['MacroERP — продуктовый оверлей', 'YAML', '—', '—', '—', '17.06.2026']] },
+    'Переменные шаблонов': { add: 'Добавить переменную', tb: [['Добавить переменную', 'pi-plus', 1]], filters: [['select', 'Тип'], ['search', 'Поиск', 1], ['check', 'Активна']],
+      cols: [['Название', 'text'], ['Ключ (метка)', 'var'], ['Тип', 'badge'], ['Группа', 'muted'], ['Продукты', 'star', 'center'], ['Обязательная', 'radio', 'center'], ['Активна', 'toggle', 'center'], ['', 'editdel']],
+      rows: [['Количество часов обучения', '{{training_hours}}', 'Число', 'Обучение', '*', false, true], ['Дата оплаты', '{{payment_date}}', 'Дата', 'Платёж', '*', false, true], ['Дата начала внедрения', '{{start_date}}', 'Дата', 'Сроки', '*', false, true], ['Город нахождения Сублицензиата', '{{city}}', 'Текст', 'Реквизиты', '*', false, true], ['Дополнительное условие', '{{custom_clause}}', 'Текст (много)', 'Прочее', '*', false, true]] },
+    'Маршруты согласования': { add: 'Создать маршрут', tb: [['Создать маршрут', 'pi-plus', 1]],
+      cols: [['Название', 'text'], ['Тип документа', 'muted'], ['Шаблон', 'muted'], ['По умолчанию', 'dot', 'center'], ['Активен', 'check', 'center'], ['', 'edit']],
+      rows: [['Default Contract Approval (Юрист → Директор)', 'Договор', '—', true, true]] },
+    'Шаблоны сообщений': { add: 'Создать шаблон', tb: [['Создать шаблон', 'pi-plus', 1]],
+      cols: [['Название', 'text'], ['Привязок', 'num'], ['Активен', 'check', 'center'], ['', 'edit']],
+      rows: [['Уведомление о готовом договоре', 0, true], ['Приветствие нового лида', 1, true], ['Напоминание о встрече', 1, true]] }
+  };
+  const cur = DIRS[dt];
+
+  const cellRender = (kind, val, ri) => {
+    if (kind === 'mono') return <span style={{ fontFamily: 'ui-monospace,monospace', fontWeight: 700, fontSize: 12, color: 'var(--c-text2)' }}>{val}</span>;
+    if (kind === 'var') return <span style={{ fontFamily: 'ui-monospace,monospace', fontSize: 12, fontWeight: 600, color: 'var(--c-text2)', background: 'var(--c-hover)', border: '1px solid var(--c-border)', borderRadius: 6, padding: '3px 8px' }}>{val}</span>;
+    if (kind === 'text') return <span style={{ fontWeight: 500 }}>{val}</span>;
+    if (kind === 'textb') return <span style={{ fontWeight: 700, color: 'var(--mg-primary-900)' }}>{val}</span>;
+    if (kind === 'muted') return val === '—' ? <span style={{ color: 'var(--c-muted)' }}>—</span> : <span style={{ color: 'var(--c-text2)' }}>{val}</span>;
+    if (kind === 'num') return <span className="mg-tnum">{val}</span>;
+    if (kind === 'price') return val === '—' ? <span style={{ color: 'var(--c-muted)' }}>—</span> : <span className="mg-tnum" style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{val}</span>;
+    if (kind === 'rate') return <span style={{ fontFamily: 'ui-monospace,monospace', fontSize: 12.5, color: 'var(--c-text2)' }}>{val}</span>;
+    if (kind === 'star') return <span style={{ color: 'var(--c-muted)', fontWeight: 700 }}>{val}</span>;
+    if (kind === 'fixed') return <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'var(--mg-status-success-bg)', color: 'var(--mg-status-success-text)' }}>{val}</span>;
+    if (kind === 'api') return <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: 'color-mix(in srgb, #378ADD 16%, var(--c-card))', color: '#2E76C7' }}>{val}</span>;
+    if (kind === 'badge') return <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 6, background: 'var(--c-hover)', color: 'var(--c-text2)' }}>{val}</span>;
+    if (kind === 'tag') {const [n, c] = val;return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: c + '22', color: c }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: c }} />{n}</span>;}
+    if (kind === 'tagok') return val === '—' ? <span style={{ color: 'var(--c-muted)' }}>—</span> : <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 999, background: 'var(--mg-status-success-bg)', color: 'var(--mg-status-success-text)' }}>{val}</span>;
+    if (kind === 'check') return val ? <i className="pi pi-check" style={{ fontSize: 14, color: 'var(--mg-status-success-text)' }} /> : <span style={{ color: 'var(--c-muted)' }}>—</span>;
+    if (kind === 'dot') return val ? <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: 'var(--mg-primary-900)' }} /> : <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', border: '1.5px solid var(--c-border2)' }} />;
+    if (kind === 'radio') return <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', border: '1.5px solid var(--c-border2)', background: val ? 'var(--mg-primary-900)' : 'transparent', boxShadow: val ? 'inset 0 0 0 3px var(--c-card)' : 'none' }} />;
+    if (kind === 'toggle') {const offl = off[dt] || [];const on = offl.includes(ri) ? !val : !!val;return <Switch on={on} onClick={() => setOff((o) => ({ ...o, [dt]: (o[dt] || []).includes(ri) ? (o[dt] || []).filter((x) => x !== ri) : [...(o[dt] || []), ri] }))} />;}
+    if (kind === 'expand') return <i className="pi pi-chevron-right" style={{ fontSize: 12, color: 'var(--c-muted)', cursor: 'pointer' }} />;
+    if (kind === 'menu') {
+      const key = dt + ri;const opn = menu && menu.key === key;
+      const items = dt === 'Каталог продуктов' ?
+      [['Редактировать', 'pi-pencil', () => {setEdit(cur.rows[ri]);setMenu(null);}], ['Дублировать', 'pi-copy', () => setMenu(null)], ['Архивировать', 'pi-inbox', () => setMenu(null)], ['Удалить', 'pi-trash', () => setMenu(null), 1]] :
+      [['Редактировать', 'pi-pencil', () => {setEditRec(ri);setMenu(null);}], ['Удалить', 'pi-trash', () => setMenu(null), 1]];
+      return <span style={{ position: 'relative', display: 'inline-block' }}>
+        <i className="pi pi-ellipsis-v" onClick={(e) => {e.stopPropagation();const r = e.currentTarget.getBoundingClientRect();setMenu(opn ? null : { key, x: r.right, y: r.bottom + 4 });}} style={{ fontSize: 14, color: 'var(--c-muted)', cursor: 'pointer', padding: 4, borderRadius: 6 }} />
+        {opn && <React.Fragment>
+          <div onClick={() => setMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+          <div style={{ position: 'fixed', top: menu.y, left: menu.x - 194, zIndex: 61, width: 194, background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: 5 }}>
+            {items.map((it, k) => <div key={k} onClick={it[2]} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13.5, fontWeight: 500, color: it[3] ? 'var(--mg-status-danger-text)' : 'var(--c-text)' }}><i className={'pi ' + it[1]} style={{ fontSize: 13, width: 15 }} />{it[0]}</div>)}
+          </div>
+        </React.Fragment>}
+      </span>;
+    }
+    if (kind === 'edit') return <i className="pi pi-pencil" onClick={() => setEditRec(ri)} style={{ fontSize: 13, color: 'var(--c-muted)', cursor: 'pointer', padding: 4 }} />;
+    if (kind === 'editdel') return <span style={{ display: 'inline-flex', gap: 12 }}><i className="pi pi-pencil" onClick={() => setEditRec(ri)} style={{ fontSize: 13, color: 'var(--c-muted)', cursor: 'pointer' }} /><i className="pi pi-trash" style={{ fontSize: 13, color: 'var(--mg-status-danger-text)', cursor: 'pointer' }} /></span>;
+    return val;
+  };
+  const th = { padding: '11px 16px', fontSize: 12, fontWeight: 600, color: 'var(--c-text2)', textAlign: 'start', borderBottom: '1px solid var(--c-border)', whiteSpace: 'nowrap', background: 'var(--c-card)' };
+  const td = { padding: '13px 16px', fontSize: 13.5, color: 'var(--c-text)', borderBottom: '1px solid var(--c-border)', verticalAlign: 'middle' };
+
+  const ord = order[dt] || cur.rows.map((_, i) => i);
+  const onDrop = (toPos) => {const from = dragRef.current;if (from == null || from === toPos) return;const a = ord.slice();const [m] = a.splice(from, 1);a.splice(toPos, 0, m);setOrder((o) => ({ ...o, [dt]: a }));dragRef.current = null;};
+  const dragOn = cur.drag && editing;
+  const isAction = (k) => k === 'menu' || k === 'edit' || k === 'editdel';
+  const visCols = editing ? cur.cols : cur.cols.filter((c) => !isAction(c[1]));
+  let rowsToShow = dragOn ? ord.map((ri) => [ri, cur.rows[ri]]) : cur.rows.map((r, ri) => [ri, r]);
+  if (cur.subtabs && cfScope !== 'Все') rowsToShow = rowsToShow.filter(([ri, r]) => r[2] === cfScope);
+  const colCount = visCols.length + (dragOn ? 1 : 0);
+
+  const catMin = colCount > 9 ? 1080 : colCount > 7 ? 860 : 'auto';
+
+  return <React.Fragment>
+    <h2 style={{ margin: '2px 0 4px', fontSize: 18, fontWeight: 600 }}>Справочники</h2>
+    <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--c-muted)' }}>Управление системными справочниками</p>
+    <div className="mg-no-scrollbar" style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--c-border)', overflowX: 'auto' }}>
+      {TABS2.map((tx) => {const on = tx === dt;return <button key={tx} onClick={() => {setDt(tx);setEditing(false);}} style={{ whiteSpace: 'nowrap', background: 'transparent', border: 'none', cursor: 'pointer', padding: '11px 14px', marginBottom: -1, fontFamily: 'var(--mg-font-sans)', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? 'var(--mg-primary-900)' : 'var(--c-muted)', borderBottom: '2px solid ' + (on ? 'var(--mg-primary-900)' : 'transparent') }}>{tx}</button>;})}
+    </div>
+
+    {/* toolbar */}
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, margin: '16px 0' }}>
+      {cur.rows.length > 0 && <button style={editing ? { ...btn('ghost'), color: 'var(--mg-primary-900)', borderColor: 'var(--mg-primary-900)' } : btn('ghost')} onClick={() => setEditing((e) => !e)}><i className={'pi ' + (editing ? 'pi-check' : 'pi-pencil')} style={{ fontSize: 12 }} />{editing ? 'Завершить редактирование' : 'Редактировать'}</button>}
+      {(cur.tb || [[cur.add || 'Добавить', 'pi-plus', 1]]).map((b, i) => <button key={i} style={b[2] ? btn('primary') : btn('ghost')} onClick={() => b[2] && setAmodal(true)}>{b[1] && <i className={'pi ' + b[1]} style={{ fontSize: 12 }} />}{b[0]}</button>)}
+    </div>
+
+    {/* filters */}
+    {cur.filters && <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+      {cur.filters.map((f, i) => f[0] === 'search' ? <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 12px', flex: f[2] ? 1 : 'none', minWidth: 200, maxWidth: f[2] ? 320 : 'none', border: '1px solid var(--mg-input-border)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)' }}><i className="pi pi-search" style={{ fontSize: 13, color: 'var(--c-muted)' }} /><span style={{ fontSize: 13.5, color: 'var(--c-muted)' }}>{f[1]}</span></div> :
+      f[0] === 'reset' ? <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--c-muted)', cursor: 'pointer' }}><i className="pi pi-refresh" style={{ fontSize: 12 }} />Сбросить</span> :
+      f[0] === 'check' ? <label key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13.5, color: 'var(--c-text2)', cursor: 'pointer' }}><span style={{ width: 17, height: 17, borderRadius: 4, background: 'var(--mg-primary-900)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><i className="pi pi-check" style={{ fontSize: 10, color: '#fff' }} /></span>{f[1]}</label> :
+      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 12px', minWidth: 150, border: '1px solid var(--mg-input-border)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)' }}><span style={{ flex: 1, fontSize: 13.5, color: 'var(--c-muted)' }}>{f[1]}</span><i className={'pi ' + (f[0] === 'date' ? 'pi-calendar' : 'pi-chevron-down')} style={{ fontSize: 12, color: 'var(--c-muted)' }} /></div>)}
+    </div>}
+
+    {/* subtabs (custom fields) */}
+    {cur.subtabs && <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--c-border)', marginBottom: 16 }}>
+      {cur.subtabs.map((s) => {const on = s === cfScope;return <button key={s} onClick={() => setCfScope(s)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '9px 12px', marginBottom: -1, fontFamily: 'var(--mg-font-sans)', fontSize: 13.5, fontWeight: on ? 600 : 500, color: on ? 'var(--mg-primary-900)' : 'var(--c-muted)', borderBottom: '2px solid ' + (on ? 'var(--mg-primary-900)' : 'transparent') }}>{s}</button>;})}
+    </div>}
+
+    <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-sm)', overflow: 'hidden' }}>
+      {cur.empty && cur.rows.length === 0 ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '56px 20px', color: 'var(--c-muted)' }}>
+        <i className="pi pi-sliders-h" style={{ fontSize: 28 }} />
+        <div style={{ fontSize: 15, color: 'var(--c-text2)', fontWeight: 500 }}>Нет кастомных полей</div>
+        <div style={{ fontSize: 13 }}>Создайте первое поле для этой сущности</div>
+        <button style={{ ...btn('ghost'), marginTop: 6, color: 'var(--mg-primary-900)', borderColor: 'var(--c-border)' }} onClick={() => setAmodal(true)}><i className="pi pi-plus" style={{ fontSize: 12 }} />Добавить поле</button>
+      </div> : <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: catMin }}>
+        <thead><tr>{dragOn && <th style={{ ...th, width: 34 }} />}{visCols.map((c, ci) => <th key={ci} style={{ ...th, textAlign: c[2] || 'start' }}>{c[0]}</th>)}</tr></thead>
+        <tbody>{rowsToShow.map(([ri, r], pos) => <tr key={ri} draggable={dragOn ? true : undefined}
+            onDragStart={dragOn ? () => {dragRef.current = pos;} : undefined}
+            onDragOver={dragOn ? (e) => e.preventDefault() : undefined}
+            onDrop={dragOn ? () => onDrop(pos) : undefined}
+            style={{ background: pos % 2 ? 'var(--c-hover)' : 'var(--c-card)', cursor: dragOn ? 'grab' : 'default' }}>
+          {dragOn && <td style={{ ...td, width: 34, textAlign: 'center', color: 'var(--c-border2)' }}><i className="pi pi-bars" style={{ fontSize: 13 }} /></td>}
+          {visCols.map((c, ci) => <td key={ci} style={{ ...td, textAlign: c[2] || 'start' }}>{cellRender(c[1], r[ci], ri)}</td>)}
+        </tr>)}</tbody>
+      </table></div>}
+    </div>
+    {amodal && <DirModal dt={dt} close={() => setAmodal(false)} />}
+    {editRec != null && <DirModal dt={dt} edit={true} row={cur.rows[editRec]} close={() => setEditRec(null)} />}
+    {edit && <ProductEditModal row={edit} close={() => setEdit(null)} />}
+  </React.Fragment>;
+}
+
+/* ── product edit page (opened from row ⋮ → Редактировать) ── */
+function ProductEditModal({ row, close }) {
+  const nm = row ? row[0] : '';
+  const grp = row ? row[1] : '';
+  const typ = row ? row[2] : 'Фиксированная';
+  const [act, setAct] = useState(row ? !!row[8] : true);
+  const code = (nm || '').toLowerCase().replace(/[^a-zа-я0-9]+/gi, '_').replace(/^_|_$/g, '');
+  const amt = (i) => {const v = row ? row[3 + i] : '';return v && v !== '—' ? String(v).replace(/[^\d\s]/g, '').trim() : '';};
+  const inp = { width: '100%', height: 40, padding: '0 13px', borderRadius: 'var(--mg-radius-md)', border: '1px solid var(--mg-input-border)', background: 'var(--c-card)', color: 'var(--c-text)', fontFamily: 'var(--mg-font-sans)', fontSize: 14, boxSizing: 'border-box' };
+  const Fld = ({ label, req, hint, children }) => <div style={{ marginBottom: 14 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 7 }}>{label}{req && <span style={{ color: 'var(--mg-status-danger-text)', marginInlineStart: 4 }}>*</span>}</label>{children}{hint && <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 6 }}>{hint}</div>}</div>;
+  const Sel = ({ ph }) => <div style={{ display: 'flex', alignItems: 'center', height: 40, padding: '0 12px', border: '1px solid var(--mg-input-border)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)' }}><span style={{ flex: 1, color: 'var(--c-text)', fontSize: 14 }}>{ph}</span><i className="pi pi-chevron-down" style={{ fontSize: 12, color: 'var(--c-muted)' }} /></div>;
+  const CUR = ['RUB ₽', 'KZT ₸', 'UZS сўм', 'USD $', 'AED'];
+  return <Modal title="Редактирование продукта" icon="pi-box" close={close} width={640}
+  footer={<React.Fragment>
+      <button style={{ ...btn('ghost'), color: 'var(--mg-status-danger-text)' }} onClick={close}><i className="pi pi-trash" style={{ fontSize: 12 }} />Удалить</button>
+      <span style={{ flex: 1 }} />
+      <button style={btn('ghost')} onClick={close}>Отмена</button>
+      <button style={btn('primary')} onClick={close}><i className="pi pi-check" style={{ fontSize: 12 }} />Сохранить</button>
+    </React.Fragment>}>
+    <div style={{ display: 'flex', gap: 14 }}>
+      <div style={{ flex: 2 }}><Fld label="Название" req><input className="inp" style={inp} defaultValue={nm} /></Fld></div>
+      <div style={{ flex: 1 }}><Fld label="Код" hint="Изменить нельзя"><input className="inp" style={{ ...inp, fontFamily: 'ui-monospace,monospace', fontSize: 13, color: 'var(--c-muted)', background: 'var(--c-hover)' }} defaultValue={code} readOnly /></Fld></div>
+    </div>
+    <div style={{ display: 'flex', gap: 14 }}>
+      <div style={{ flex: 1 }}><Fld label="Группа"><Sel ph={grp || 'Без группы'} /></Fld></div>
+      <div style={{ flex: 1 }}><Fld label="Тип цены"><Sel ph={typ} /></Fld></div>
+    </div>
+    <Fld label="Стоимость" hint="Указывается в 5 валютах"><div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10 }}>{CUR.map((c, i) => <div key={c}><div style={{ fontSize: 11, fontWeight: 600, color: 'var(--c-muted)', marginBottom: 6 }}>{c}</div><input className="inp" style={{ ...inp, height: 38, textAlign: 'end', fontVariantNumeric: 'tabular-nums' }} defaultValue={amt(i)} placeholder="—" /></div>)}</div></Fld>
+    <Fld label="Описание"><textarea className="inp" style={{ ...inp, height: 74, padding: '10px 13px', resize: 'vertical' }} placeholder="Краткое описание продукта…" defaultValue="" /></Fld>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 12, borderTop: '1px solid var(--c-border)' }}><Switch on={act} onClick={() => setAct(!act)} /><div><div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-text)' }}>Активен</div><div style={{ fontSize: 12, color: 'var(--c-muted)' }}>Доступен для выбора в сделках и КП</div></div></div>
+  </Modal>;
+}
+
+/* ── per-directory create dialogs ── */
+function DirModal({ dt, close, edit, row }) {
+  const inp = { width: '100%', height: 40, padding: '0 13px', borderRadius: 'var(--mg-radius-md)', border: '1px solid var(--mg-input-border)', background: 'var(--c-card)', color: 'var(--c-text)', fontFamily: 'var(--mg-font-sans)', fontSize: 14, boxSizing: 'border-box' };
+  const Fld = ({ label, req, hint, children }) => <div style={{ marginBottom: 14 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 7 }}>{label}{req && <span style={{ color: 'var(--mg-status-danger-text)', marginInlineStart: 4 }}>*</span>}</label>{children}{hint && <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 6 }}>{hint}</div>}</div>;
+  const Sel = ({ ph }) => <div style={{ display: 'flex', alignItems: 'center', height: 40, padding: '0 12px', border: '1px solid var(--mg-input-border)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)' }}><span style={{ flex: 1, color: 'var(--c-muted)', fontSize: 14 }}>{ph}</span><i className="pi pi-chevron-down" style={{ fontSize: 12, color: 'var(--c-muted)' }} /></div>;
+  const Txt = ({ ph, val }) => <input className="inp" style={inp} placeholder={ph} defaultValue={val} />;
+  const Tgl = ({ label, sub, on }) => {const [v, setV] = useState(on);return <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}><Switch on={v} onClick={() => setV(!v)} /><div><div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-text)' }}>{label}</div>{sub && <div style={{ fontSize: 12, color: 'var(--c-muted)' }}>{sub}</div>}</div></div>;};
+  const foot = (label) => <React.Fragment><span style={{ flex: 1 }} /><button style={btn('ghost')} onClick={close}>Отмена</button><button style={btn('primary')} onClick={close}><i className="pi pi-check" style={{ fontSize: 12 }} />{label || 'Создать'}</button></React.Fragment>;
+  const editMode = !!edit;const R = row || [];
+  const ET = { 'Страны': 'Редактирование страны', 'Теги': 'Редактирование тега', 'Кастомные поля': 'Редактирование поля', 'Каналы привлечения': 'Редактирование канала', 'Причины отказа': 'Редактирование причины', 'Шаблоны документов': 'Редактирование шаблона документа', 'Переменные шаблонов': 'Редактирование переменной', 'Курсы валют': 'Редактирование курса' };
+  const T = (createT) => editMode ? ET[dt] || createT : createT;
+  const FT = editMode ? 'Сохранить' : null;
+  if (dt === 'Шаблоны сообщений') return <MsgTemplateModal close={close} editMode={editMode} row={R} Fld={Fld} Sel={Sel} Txt={Txt} Tgl={Tgl} foot={foot} FT={FT} inp={inp} />;
+
+  if (dt === 'Кастомные поля') return <Modal title={T('Новое поле')} icon="pi-plus" close={close} width={460} footer={foot(FT || 'Создать')}>
+    <Fld label="Название" req><Txt ph="Например: Бюджет проекта" /></Fld>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1 }}><Fld label="Тип поля" req><Sel ph="Текст" /></Fld></div><div style={{ flex: 1 }}><Fld label="Сущность" req><Sel ph="Сделка" /></Fld></div></div>
+    <Fld label="Группа" hint="Необязательно — для группировки полей в карточке"><Txt ph="Например: Финансы" /></Fld>
+    <div style={{ paddingTop: 12, borderTop: '1px solid var(--c-border)' }}><Tgl label="Обязательное" sub="Нельзя сохранить запись без значения" on={false} /><Tgl label="Активно" on={true} /></div>
+  </Modal>;
+
+  if (dt === 'Каталог продуктов') return <Modal title="Новый продукт" icon="pi-box" close={close} width={520} footer={foot('Создать')}>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1 }}><Fld label="Код" req hint="snake_case, латиница"><Txt ph="macro_sales_crm" /></Fld></div><div style={{ flex: 1.4 }}><Fld label="Название" req><Txt ph="MacroSales CRM" /></Fld></div></div>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1 }}><Fld label="Группа"><Sel ph="MacroSales CRM" /></Fld></div><div style={{ flex: 1 }}><Fld label="Тип цены"><Sel ph="Фиксированная" /></Fld></div></div>
+    <Fld label="Стоимость" hint="Указывается в 5 валютах"><div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10 }}>{['RUB ₽', 'KZT ₸', 'UZS сўм', 'USD $', 'AED'].map((c) => <div key={c}><div style={{ fontSize: 11, color: 'var(--c-muted)', marginBottom: 5 }}>{c}</div><input className="inp" style={{ ...inp, textAlign: 'end' }} placeholder="0" /></div>)}</div></Fld>
+    <div style={{ paddingTop: 12, borderTop: '1px solid var(--c-border)' }}><Tgl label="Активен" on={true} /></div>
+  </Modal>;
+
+  if (dt === 'Курсы валют') return <Modal title={T('Курс вручную')} icon="pi-dollar" close={close} width={440} footer={foot('Сохранить')}>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1 }}><Fld label="Из валюты" req><Sel ph={editMode ? R[0] : 'AED'} /></Fld></div><div style={{ flex: 1 }}><Fld label="В валюту" req><Sel ph={editMode ? R[1] : 'KZT'} /></Fld></div></div>
+    <Fld label="Курс" req hint="Значение 1 единицы «из валюты» в «валюте назначения»"><Txt ph="130.373810" val={editMode ? R[2] : undefined} /></Fld>
+    <Fld label="Дата"><div style={{ ...inp, display: 'flex', alignItems: 'center' }}><span style={{ flex: 1, color: 'var(--c-text)' }}>{editMode ? R[3] : '02.07.2026'}</span><i className="pi pi-calendar" style={{ fontSize: 13, color: 'var(--c-muted)' }} /></div></Fld>
+  </Modal>;
+
+  if (dt === 'Шаблоны документов') return <Modal title={T('Новый шаблон документа')} icon="pi-file-edit" close={close} width={520} footer={foot(FT || 'Создать')}>
+    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'color-mix(in srgb, #378ADD 8%, var(--c-card))', border: '1px solid color-mix(in srgb, #378ADD 24%, var(--c-border))', borderRadius: 'var(--mg-radius-md)', padding: '11px 13px', marginBottom: 16 }}><i className="pi pi-info-circle" style={{ fontSize: 15, color: '#2E76C7', marginTop: 1 }} /><span style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.45 }}>После создания вы сразу перейдёте на страницу шаблона — там можно загрузить файл версии (.docx) и отредактировать метаданные.</span></div>
+    <Fld label="Ключ (code)" req hint="Например: country_kz, main_contract. Ключ нельзя изменить после создания."><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><input className="inp" style={{ ...inp, flex: 1 }} placeholder="country_kz" /><span style={{ fontSize: 12, color: 'var(--c-muted)', whiteSpace: 'nowrap' }}>Латиница, snake_case</span></div></Fld>
+    <Fld label="Тип" req><Sel ph={editMode ? R[1] : 'Выберите тип…'} /></Fld>
+    <Fld label="Название" req><Txt ph="" val={editMode ? R[0] : undefined} /></Fld>
+    <Fld label="Продукты" hint="Коды через запятую, напр. macrocrm, macrosales"><Txt ph="macrocrm, macrosales" val={editMode && R[2] !== '—' ? R[2] : undefined} /></Fld>
+    <Fld label="Страны" hint="Коды через запятую, напр. kz, uz"><Txt ph="kz, uz" /></Fld>
+  </Modal>;
+
+  if (dt === 'Переменные шаблонов') return <Modal title={T('Новая переменная')} icon="pi-plus" close={close} width={480} footer={foot(FT || 'Создать')}>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1 }}><Fld label="Ключ (метка)" req hint="Подставляется как {{ключ}}"><Txt ph="payment_date" val={editMode ? String(R[1] || '').replace(/[{}]/g, '') : undefined} /></Fld></div><div style={{ flex: 1 }}><Fld label="Тип" req><Sel ph={editMode ? R[2] : 'Текст'} /></Fld></div></div>
+    <Fld label="Название" req><Txt ph="Дата оплаты" val={editMode ? R[0] : undefined} /></Fld>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1 }}><Fld label="Группа"><Txt ph="Платёж" val={editMode ? R[3] : undefined} /></Fld></div><div style={{ flex: 1 }}><Fld label="Продукты" hint="* — для всех"><Txt ph="*" val={editMode ? R[4] : undefined} /></Fld></div></div>
+    <div style={{ paddingTop: 12, borderTop: '1px solid var(--c-border)' }}><Tgl label="Обязательная" on={editMode ? !!R[5] : false} /><Tgl label="Активна" on={editMode ? !!R[6] : true} /></div>
+  </Modal>;
+
+  if (dt === 'Маршруты согласования') return <RouteModal close={close} Fld={Fld} Sel={Sel} Txt={Txt} Tgl={Tgl} foot={foot} inp={inp} />;
+
+  // fallback (Страны / Теги / Каналы / Причины)
+  const ADDFORM = {
+    'Страны': { t: 'Новая страна', f: [['Код (ISO)', 'text'], ['Название (RU)', 'text'], ['Название (EN)', 'text'], ['Телефонный код', 'text']], v: editMode ? [R[0], R[1], R[2], R[3]] : [] },
+    'Теги': { t: 'Новый тег', f: [['Название', 'text'], ['Цвет', 'color'], ['Область', 'select']], v: editMode ? [(R[0] || [])[0], (R[0] || [])[1], R[1]] : [] },
+    'Каналы привлечения': { t: 'Новый канал', f: [['Название', 'text']], v: editMode ? [R[0]] : [] },
+    'Причины отказа': { t: 'Новая причина', f: [['Причина', 'text']], v: editMode ? [R[0]] : [] }
+  };
+  const cfg = ADDFORM[dt] || { t: 'Добавить запись', f: [['Название', 'text']], v: [] };
+  return <Modal title={T(cfg.t)} icon="pi-plus" close={close} width={440} footer={foot(FT || 'Добавить')}>
+    {cfg.f.map(([lbl, kind], i) => <Fld key={i} label={lbl}>
+      {kind === 'color' ? <div style={{ display: 'flex', gap: 10 }}>{['#D4537E', '#EF9F27', '#378ADD', '#1D9E75', '#7F77DD'].map((c, ci) => {const sel = editMode ? cfg.v[i] === c : ci === 0;return <span key={c} style={{ width: 28, height: 28, borderRadius: '50%', background: c, cursor: 'pointer', boxShadow: sel ? '0 0 0 3px var(--c-card), 0 0 0 5px ' + c : 'none' }} />;})}</div> :
+      kind === 'select' ? <Sel ph={editMode && cfg.v[i] ? cfg.v[i] : 'Выберите…'} /> : <Txt ph={lbl} val={editMode ? cfg.v[i] : undefined} />}
+    </Fld>)}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, paddingTop: 14, borderTop: '1px solid var(--c-border)' }}><Switch on onClick={() => {}} /><span style={{ fontSize: 13.5, color: 'var(--c-text)' }}>{editMode ? 'Активна' : 'Активна сразу после создания'}</span></div>
+  </Modal>;
+}
+
+/* ── message template dialog (with bindings/привязки, mirrors MessageTemplateDrawer) ── */
+function MsgTemplateModal({ close, editMode, row, Fld, Sel, Txt, Tgl, foot, FT, inp }) {
+  const R = row || [];
+  const CH = ['Telegram', 'WhatsApp', 'Email', 'Web Form', 'API'];
+  const PL = ['Продажи', 'Партнёры'];
+  const ST = ['Новый', 'Квалификация', 'Переговоры', 'Договор', 'Won'];
+  const AC = ['Звонок', 'Встреча', 'Задача', 'Заметка'];
+  const [binds, setBinds] = useState(editMode && R[1] > 0 ? [{ ch: 'Telegram' }] : []);
+  const [open, setOpen] = useState(false);
+  const [bf, setBf] = useState({ ch: '', pl: '', st: '', ac: '', slot: '' });
+  const sel = { ...inp, height: 38, color: 'var(--c-text)', cursor: 'pointer' };
+  const lbl = { fontSize: 11, fontWeight: 600, color: 'var(--c-muted)', marginBottom: 5 };
+  const label = (b) => [b.ch, b.pl, b.st, b.ac, b.slot].filter(Boolean).join(' · ') || 'Универсальная';
+  const addB = () => {setBinds((a) => [...a, bf]);setBf({ ch: '', pl: '', st: '', ac: '', slot: '' });setOpen(false);};
+  return <Modal title={editMode ? 'Редактирование шаблона сообщения' : 'Новый шаблон сообщения'} icon="pi-envelope" close={close} width={544} footer={foot(FT || 'Создать')}>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1.4 }}><Fld label="Название" req><Txt ph="Приветствие нового лида" val={editMode ? R[0] : undefined} /></Fld></div><div style={{ flex: 1 }}><Fld label="Канал по умолчанию"><Sel ph="Telegram" /></Fld></div></div>
+    <Fld label="Тема"><Txt ph="Тема сообщения" /></Fld>
+    <Fld label="Текст сообщения" hint="Доступны переменные: {{client_name}}, {{deal_title}}, {{manager}}"><textarea className="inp" style={{ ...inp, height: 108, padding: '10px 13px', resize: 'vertical', lineHeight: 1.5 }} defaultValue={editMode ? '' : 'Здравствуйте, {{client_name}}! Спасибо за интерес к MACRO.'} placeholder="Здравствуйте, {{client_name}}!" /></Fld>
+    <div style={{ paddingTop: 14, borderTop: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 4 }}>Привязки</div>
+      <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginBottom: 10 }}>Условия, при которых шаблон подставляется автоматически. Без привязок — универсальный шаблон.</div>
+      {binds.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>{binds.map((b, i) => <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 500, padding: '5px 10px', borderRadius: 999, background: 'var(--mg-primary-100)', color: 'var(--mg-primary-900)' }}><i className="pi pi-link" style={{ fontSize: 11 }} />{label(b)}<i className="pi pi-times" onClick={() => setBinds((a) => a.filter((_, k) => k !== i))} style={{ fontSize: 11, cursor: 'pointer', opacity: .7 }} /></span>)}</div>}
+      {!open ? <button style={{ ...btn('ghost'), color: 'var(--mg-primary-900)', borderColor: 'var(--c-border)' }} onClick={() => setOpen(true)}><i className="pi pi-plus" style={{ fontSize: 12 }} />Добавить привязку</button> :
+      <div style={{ border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', padding: 12, background: 'var(--c-hover)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div><div style={lbl}>Канал</div><select style={sel} value={bf.ch} onChange={(e) => setBf({ ...bf, ch: e.target.value })}><option value="">— любой —</option>{CH.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div><div style={lbl}>Воронка</div><select style={sel} value={bf.pl} onChange={(e) => setBf({ ...bf, pl: e.target.value, st: '' })}><option value="">— любая —</option>{PL.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div><div style={lbl}>Этап</div><select style={{ ...sel, opacity: bf.pl ? 1 : .5 }} disabled={!bf.pl} value={bf.st} onChange={(e) => setBf({ ...bf, st: e.target.value })}><option value="">— любой —</option>{ST.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div><div style={lbl}>Тип активности</div><select style={sel} value={bf.ac} onChange={(e) => setBf({ ...bf, ac: e.target.value })}><option value="">— любой —</option>{AC.map((x) => <option key={x}>{x}</option>)}</select></div>
+          </div>
+          <div style={{ marginTop: 10 }}><div style={lbl}>Слот автоматизации</div><input className="inp" style={{ ...inp, height: 38 }} placeholder="напр. deal_won, lead_created" value={bf.slot} onChange={(e) => setBf({ ...bf, slot: e.target.value })} /></div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}><button style={btn('primary')} onClick={addB}><i className="pi pi-check" style={{ fontSize: 12 }} />Добавить</button><button style={btn('ghost')} onClick={() => setOpen(false)}>Отмена</button></div>
+        </div>}
+    </div>
+    <div style={{ paddingTop: 14, marginTop: 14, borderTop: '1px solid var(--c-border)' }}><Tgl label="Активен" on={editMode ? !!R[2] : true} /></div>
+  </Modal>;
+}
+
+/* ── Approval route builder dialog ── */
+function RouteModal({ close, Fld, Sel, Txt, Tgl, foot, inp }) {
+  const [stages, setStages] = useState([{ name: 'Юридическая проверка' }, { name: 'Утверждение директором' }]);
+  return <Modal title="Новый маршрут согласования" icon="pi-sitemap" close={close} width={560} footer={foot('Создать')}>
+    <div style={{ display: 'flex', gap: 14 }}><div style={{ flex: 1.5 }}><Fld label="Название" req><Txt ph="Согласование договора" /></Fld></div><div style={{ flex: 1 }}><Fld label="Тип документа" req><Sel ph="Договор" /></Fld></div></div>
+    <Tgl label="По умолчанию для типа" sub="Будет применяться автоматически ко всем документам этого типа" on={false} />
+    <div style={{ marginTop: 6, paddingTop: 14, borderTop: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text2)', marginBottom: 10 }}>Этапы согласования</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {stages.map((s, i) => <div key={i} style={{ border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', padding: '12px', background: 'var(--c-hover)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: 'var(--c-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginInlineEnd: 8 }}>{i + 1}. {s.name}</span>
+            <span style={{ display: 'inline-flex', gap: 4 }}>
+              <i className="pi pi-arrow-up" style={{ fontSize: 12, color: i === 0 ? 'var(--c-border2)' : 'var(--c-muted)', cursor: 'pointer', padding: 3 }} />
+              <i className="pi pi-arrow-down" style={{ fontSize: 12, color: i === stages.length - 1 ? 'var(--c-border2)' : 'var(--c-muted)', cursor: 'pointer', padding: 3 }} />
+              <i className="pi pi-trash" style={{ fontSize: 12, color: 'var(--mg-status-danger-text)', cursor: 'pointer', padding: 3 }} onClick={() => setStages((a) => a.filter((_, k) => k !== i))} />
+            </span>
+          </div>
+          <input className="inp" style={{ ...inp, marginBottom: 8 }} defaultValue={s.name} placeholder="Название этапа" />
+          <div style={{ display: 'flex', gap: 8 }}><div style={{ flex: 1 }}><Sel ph="Участники (роли / пользователи)" /></div><div style={{ width: 130 }}><div style={{ ...inp, display: 'flex', alignItems: 'center' }}><span style={{ flex: 1, color: 'var(--c-muted)', fontSize: 13 }}>Мин. 1</span></div></div></div>
+        </div>)}
+      </div>
+      <button style={{ ...btn('ghost'), marginTop: 10, color: 'var(--mg-primary-900)', borderColor: 'var(--c-border)' }} onClick={() => setStages((a) => [...a, { name: 'Новый этап' }])}><i className="pi pi-plus" style={{ fontSize: 12 }} />Добавить этап</button>
+    </div>
+  </Modal>;
+}
+
+function btn(kind) {
+  const base = { display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 15px', borderRadius: 'var(--mg-radius-md)', fontFamily: 'var(--mg-font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' };
+  if (kind === 'primary') return { ...base, background: 'var(--mg-primary-900)', color: '#fff' };
+  return { ...base, background: 'transparent', color: 'var(--c-text2)', border: '1px solid var(--c-border2)' };
+}
+
+function App() {
+  const [sec, setSec] = useState('profile');
+  const [tab, setTab] = useState('profile');
+  const [q, setQ] = useState('');
+  const [dark, setDark] = useState(false);
+  const [accent, setAccent] = useState('#172747');
+  const [density, setDensity] = useState('compact');
+  const [modal, setModal] = useState(null);
+  const DARKACC = { '#172747': '#4C7DF0', '#2B4987': '#6E99FF', '#312e81': '#8b87ff', '#0f4d3a': '#3fbf8f' };
+  const acc = dark ? DARKACC[accent] || '#4C7DF0' : accent;
+  const ACCH = { '#172747': '#1f2f5a', '#2B4987': '#3a5ca8', '#312e81': '#3f3a9e', '#0f4d3a': '#13654c' };
+
+  const filtered = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => it.label.toLowerCase().includes(q.trim().toLowerCase())) })).filter((g) => g.items.length);
+  const activeLabel = (GROUPS.flatMap((g) => g.items).find((it) => it.key === sec) || {}).label;
+
+  return <div className={'surface' + (dark ? ' dark' : '') + (density === 'cozy' ? ' mg-cozy' : '')}
+  style={{ '--mg-primary-900': acc, '--mg-primary-800': dark ? '#6E99FF' : ACCH[accent] || '#1f2f5a', '--mg-primary-100': dark ? 'rgba(76,125,240,0.16)' : undefined,
+    height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--c-page)', color: 'var(--c-text)' }}>
+
+    {/* module header */}
+    <header style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 24px', background: 'var(--c-card)', borderBottom: '1px solid var(--c-border)', flexShrink: 0 }}>
+      <span style={{ width: 38, height: 38, borderRadius: 'var(--mg-radius-md)', background: 'var(--mg-primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="pi pi-cog" style={{ fontSize: 18, color: 'var(--mg-primary-900)' }} /></span>
+      <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, flex: 1 }}>Настройки</h1>
+      <button onClick={() => setDark(!dark)} style={{ ...btn('ghost'), width: 38, padding: 0, justifyContent: 'center' }}><i className={'pi ' + (dark ? 'pi-sun' : 'pi-moon')} style={{ fontSize: 15 }} /></button>
+    </header>
+
+    <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      {/* rail */}
+      <nav style={{ width: 264, flexShrink: 0, overflowY: 'auto', background: 'var(--c-card)', borderInlineEnd: '1px solid var(--c-border)', padding: '14px 0' }}>
+        <div style={{ padding: '0 12px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 11px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-md)', background: 'var(--c-page)' }}>
+            <i className="pi pi-search" style={{ fontSize: 12, color: 'var(--c-muted)' }} />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по настройкам…" style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--mg-font-sans)', fontSize: 13, color: 'var(--c-text)' }} />
+          </div>
+        </div>
+        {filtered.map((g) => <div key={g.key} style={{ marginBottom: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--c-muted)', padding: '12px 18px 6px' }}>{g.label}</div>
+          {g.items.map((it) => {const on = it.key === sec;
+            return <button key={it.key} onClick={() => {setSec(it.key);setTab('profile');}} style={{ display: 'flex', alignItems: 'center', gap: 11, width: 'calc(100% - 16px)', margin: '2px 8px', padding: '9px 12px', border: 'none', background: on ? 'var(--mg-primary-100)' : 'transparent', borderRadius: 'var(--mg-radius-md)', cursor: 'pointer', textAlign: 'start', fontFamily: 'var(--mg-font-sans)', fontSize: 13, fontWeight: on ? 600 : 500, color: it.danger && !on ? 'var(--mg-status-danger-text)' : on ? 'var(--mg-primary-900)' : 'var(--c-text2)', boxShadow: on ? 'inset 3px 0 0 var(--mg-primary-900)' : 'none' }}>
+              <i className={'pi ' + it.icon} style={{ fontSize: 14, width: 16, opacity: .8 }} />
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
+              {it.meta && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)' }}>{it.meta}</span>}
+              {it.ext && <i className="pi pi-external-link" style={{ fontSize: 11, opacity: .5 }} />}
+            </button>;})}
+        </div>)}
+      </nav>
+
+      {/* detail */}
+      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--c-page)', padding: '24px' }}>
+        <div style={{ maxWidth: sec === 'users' || sec === 'access' ? 1080 : 680, margin: '0 auto' }}>
+          {sec === 'profile' ? <React.Fragment>
+            {/* profile hero */}
+            <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-sm)', overflow: 'hidden', marginBottom: 16 }}>
+              <div style={{ background: 'linear-gradient(100deg, var(--mg-primary-900), var(--mg-primary-800))', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 18 }}>
+                <span style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 600, border: '3px solid rgba(255,255,255,0.5)', flexShrink: 0 }}>БЯ</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span style={{ fontSize: 20, fontWeight: 600, color: '#fff' }}>Богдан Ядыкин</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', color: '#fff' }}>Администратор</span></div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.82)', marginTop: 4 }}>b.yadykin@macroglobal.tech</div>
+                </div>
+                <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 15px', borderRadius: 'var(--mg-radius-md)', fontFamily: 'var(--mg-font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.32)', background: 'rgba(255,255,255,0.12)', color: '#fff', flexShrink: 0, whiteSpace: 'nowrap' }} onClick={() => setModal('photo')}><i className="pi pi-camera" style={{ fontSize: 13 }} />Изменить фото</button>
+              </div>
+              <div style={{ display: 'flex', gap: 24, padding: '14px 24px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--c-text2)', whiteSpace: 'nowrap' }}><i className="pi pi-clock" style={{ fontSize: 13, color: 'var(--c-muted)' }} />Вход: сегодня 09:12</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--mg-status-success-text)', whiteSpace: 'nowrap' }}><i className="pi pi-verified" style={{ fontSize: 13 }} />2FA включена</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--c-text2)', whiteSpace: 'nowrap' }}><i className="pi pi-globe" style={{ fontSize: 13, color: 'var(--c-muted)' }} />Русский</div>
+              </div>
+            </div>
+            {/* subtabs */}
+            <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--c-border)', marginBottom: 18 }}>
+              {TABS.map(([k, l]) => {const on = tab === k;
+                return <button key={k} onClick={() => setTab(k)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 14px', marginBottom: -1, fontFamily: 'var(--mg-font-sans)', fontSize: 14, fontWeight: on ? 600 : 500, whiteSpace: 'nowrap', color: on ? 'var(--mg-primary-900)' : 'var(--c-muted)', borderBottom: '2px solid ' + (on ? 'var(--mg-primary-900)' : 'transparent') }}>{l}</button>;})}
+            </div>
+            {tab === 'profile' && <ProfileTab />}
+            {tab === 'security' && <SecurityTab setModal={setModal} />}
+            {tab === 'appearance' && <AppearanceTab dark={dark} setDark={setDark} accent={accent} setAccent={setAccent} density={density} setDensity={setDensity} />}
+            {tab === 'language' && <LanguageTab />}
+          </React.Fragment> : sec === 'users' ? <UsersTab /> : sec === 'access' ? <AccessTab /> : sec === 'channels' ? <ChannelsTab /> : sec === 'directories' ? <DirectoriesTab /> : sec === 'auto' ? <AutomationsTab /> : sec === 'reset' ? <ResetTab /> :
+          <React.Fragment>
+              <h2 style={{ margin: '2px 0 4px', fontSize: 18, fontWeight: 600 }}>{activeLabel}</h2>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--c-muted)' }}>Раздел настроек</p>
+              <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)', boxShadow: 'var(--mg-shadow-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '52px 20px', color: 'var(--c-muted)' }}>
+                <i className="pi pi-cog" style={{ fontSize: 30 }} /><div style={{ fontSize: 14, color: 'var(--c-text2)' }}>«{activeLabel}»</div>
+              </div>
+            </React.Fragment>
+          }
+        </div>
+      </div>
+    </div>
+    <Modals modal={modal} close={() => setModal(null)} />
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!-- @dsCard group="Components" viewport="760x460" name="Overlay — Command palette, Tree" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  body { margin: 0; font-family: var(--mg-font-sans); background: var(--mg-surface-page); color: var(--mg-text-primary); }
+  .wrap { padding: 22px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; align-items: start; }
+  .cap { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--mg-text-muted); font-weight: 600; display: block; margin-bottom: 10px; }
+  .panel { background: var(--mg-surface-card); border: 1px solid var(--mg-border-default); border-radius: var(--mg-radius-lg); padding: 14px; box-shadow: var(--mg-shadow-sm); }
+  .pal { position: relative; height: 300px; border-radius: var(--mg-radius-lg); overflow: hidden; border: 1px solid var(--mg-border-default); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { CommandPalette, Tree } = window.MACROGlobalCRMDesignSystem_2f42e6;
+  const items = [
+    { icon: 'pi-user', label: 'Богдан · Лид · City Park', kbd: 'Перейти', active: true },
+    { icon: 'pi-th-large', label: 'Шахматка · City Park, корпус 1', sub: '56 юнитов' },
+    { icon: 'pi-plus-circle', label: 'Создать лид' },
+    { icon: 'pi-file-o', label: 'Сгенерировать договор' },
+  ];
+  const nodes = [
+    { label: 'ЖК City Park', icon: 'pi-building', count: 168, children: [
+      { label: 'Корпус 1', icon: 'pi-home', count: 112, children: [
+        { label: 'Подъезд 1', icon: 'pi-th-large', count: 56 },
+        { label: 'Подъезд 2', icon: 'pi-th-large', count: 56, defaultExpanded: false },
+      ]},
+      { label: 'Корпус 2', icon: 'pi-home', count: 56, defaultExpanded: false, children: [
+        { label: 'Подъезд 1', icon: 'pi-th-large', count: 56 },
+      ]},
+    ]},
+  ];
+  function Demo() {
+    return (
+      <div className="wrap">
+        <div>
+          <span className="cap">Command palette · ⌘K</span>
+          <div className="pal">
+            <div style={{position:'absolute',inset:0}}>
+              <CommandPalette open items={items} style={{position:'absolute',padding:'20px'}} />
+            </div>
+          </div>
+        </div>
+        <div>
+          <span className="cap">Tree · иерархия объектов</span>
+          <div className="panel"><Tree nodes={nodes} /></div>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>
+</body>
+</html>

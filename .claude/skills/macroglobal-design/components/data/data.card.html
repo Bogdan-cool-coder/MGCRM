@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" viewport="700x300" name="Data — Tag, Badge, Avatar, Card" -->
+<!-- @dsCard group="Components" viewport="700x360" name="Data — Tag, Badge, Avatar, Card" -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,7 +19,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-  const { Tag, Badge, Avatar, Card, Button } = window.MACROGlobalCRMDesignSystem_2f42e6;
+  const { Tag, Badge, Avatar, AvatarGroup, NotificationBadge, Card, Button } = window.MACROGlobalCRMDesignSystem_2f42e6;
   function Demo() {
     return (
       <div className="wrap">
@@ -35,7 +35,9 @@
         </div>
         <div className="grp">
           <span className="cap">Badges</span>
-          <span style={{position:'relative',display:'inline-flex',alignItems:'center',gap:'6px'}}><i className="pi pi-bell" style={{fontSize:'18px'}}></i><Badge value={20} /></span>
+          <NotificationBadge value={20}><i className="pi pi-bell" style={{fontSize:'20px',color:'var(--mg-text-secondary)'}}></i></NotificationBadge>
+          <NotificationBadge value={128} variant="danger"><i className="pi pi-envelope" style={{fontSize:'20px',color:'var(--mg-text-secondary)'}}></i></NotificationBadge>
+          <NotificationBadge dot><i className="pi pi-inbox" style={{fontSize:'20px',color:'var(--mg-text-secondary)'}}></i></NotificationBadge>
           <Badge value={3} variant="danger" />
           <Badge value="99+" variant="primary" />
           <span style={{display:'inline-flex',alignItems:'center',gap:'5px'}}><Badge dot variant="danger" /> просрочка</span>
@@ -46,6 +48,7 @@
           <Avatar name="Анна Сидорова" />
           <Avatar name="MG" size="sm" color="var(--mg-stage-pink)" />
           <Avatar name="Договор" square color="var(--mg-stage-teal)" />
+          <AvatarGroup max={3} items={[{name:'Иван Петров'},{name:'Анна Сидорова'},{name:'Кевин Х'},{name:'Олег Л'},{name:'Клим С'}]} />
         </div>
         <div className="grp">
           <Card title="Сводка по сделке" icon="pi-briefcase" actions={<Button variant="secondary" text icon="pi-ellipsis-h" />} style={{width:'320px'}}>

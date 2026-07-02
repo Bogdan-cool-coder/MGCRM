@@ -122,8 +122,10 @@ brand-correct and consistent — but visually conservative (see the assessment b
   buttons darken one step (primary 900→800); text/outline buttons get a faint tinted bg.
 - **Press/active:** primary button steps to 700; no shrink/scale.
 - **Focus:** navy border + a 2px `--mg-primary-100` ring on inputs/selects.
-- **Dark mode** exists in the product (PrimeVue colorScheme, inverted surface palette) but is
-  secondary; this system is authored light-first.
+- **Dark mode** ships as a first-class **navy dark theme** (`tokens/dark.css`, ported from
+  MACROSALES 2.0): deep-navy surfaces `#0A1426`→`#1F3157`, accent brightens to `#4C7DF0`,
+  soft-tint statuses, darker elevation. Opt-in via `data-theme="dark"` / `.mg-dark`; the
+  system is still authored light-first.
 
 ### Imagery
 - The product is **chrome + data, not imagery** — no hero photography, no illustration, no
@@ -198,16 +200,40 @@ status treatment — all **within** the existing navy/white/14px brand, not a re
 - `styles.css` — the entry point consumers link (import-only).
 - `tokens/colors.css` · `typography.css` · `spacing.css` · `semantic.css` · `fonts.css` —
   all `--mg-*` custom properties + the Inter/Roboto webfont imports.
-- `guidelines/*.html` — foundation specimen cards (Colors, Type, Spacing, Brand) shown in the
-  Design System tab.
+- `tokens/dark.css` — **navy dark theme** (ported from MACROSALES 2.0). Opt-in via
+  `data-theme="dark"` / `.mg-dark`; remaps every semantic role token + the `--c-*` page
+  bridge. Bright accent `#4C7DF0`, soft-tint statuses, darkened navy sidebar.
+- `tokens/logical.css` — **RTL / i18n helpers** (EN·RU·AR / UAE): `.mg-flip-rtl` for
+  directional icons, `.mg-ltr-nums` to keep prices/phones LTR, `.mg-text-start/end`. Build
+  with logical CSS properties so one `dir="rtl"` mirrors the app.
+- **Density:** `--mg-row-py` / `--mg-cell-py` / `--mg-control-h` / `--mg-card-pad` are compact
+  by default; add `.mg-cozy` on any container for the roomier scale.
+- **Extended status scale:** `--mg-status-reserve-*` (gold), `--mg-status-mdeal-*` (pink),
+  `--mg-status-done-*` (neutral) extend success/danger/warning/info for funnel & chessboard.
+- `tokens/base.css` — **base layer**: z-index scale (`--mg-z-dropdown/modal/toast/tooltip…`),
+  opt-in reset (`.mg-app`), typography utilities (`.mg-h1 … .mg-caption`, `.mg-eyebrow`,
+  `.mg-tnum`, `.mg-link`), `.mg-no-scrollbar`, `.mg-focusable`, and shared keyframes
+  (`mg-shimmer/fade-in/slide-up/scale-in`).
+- `guidelines/*.html` — foundation specimen cards (Colors, Type, Spacing, Brand, Dark theme,
+  RTL) shown in the Design System tab.
+
+**Templates** (`templates/<slug>/`) — copyable starting points (Templates group in the picker)
+- `crm-shell/` — full app frame: navy sidebar + topbar + page header + work area.
+- `kanban-board/` — pipeline board with stage columns + KanbanCards.
+- `data-table-page/` — list screen: KPI tiles + filter bar + DataTable + Pagination.
+- Each is a `.dc.html` that loads the system via a sibling `ds-base.js` and mounts components
+  with `<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.*">`.
 - `assets/` — `macroglobal-logo-primary-light.svg` (primary wordmark),
   `macroglobal-logo.svg`, `oldcrm-logo-primary.svg`.
 
 **Components** (`components/`) — React primitives, `window.MACROGlobalCRMDesignSystem_2f42e6.*`
 - `forms/` — **Button**, **Input**, **Select**, **Checkbox**
-- `data/` — **Tag**, **Badge**, **Avatar**, **Card**
-- `crm/` — **KanbanCard** (the pipeline deal card)
-- Each has a `.d.ts` (props), `.prompt.md` (usage), and a `*.card.html` specimen.
+- `data/` — **Tag**, **Badge**, **Avatar**, **AvatarGroup**, **NotificationBadge**, **Card**, **DataTable**, **StatCard**
+- `crm/` — **KanbanCard** (pipeline deal card), **Stepper** (deal stages / approval route)
+- `feedback/` — **Toast**, **Skeleton**, **EmptyState**
+- `overlay/` — **CommandPalette** (Cmd+K), **Tree**, **Menu** (dropdown/context), **Tooltip**, **Dialog**
+- `nav/` — **Tabs**, **SegmentedControl**, **Pagination**
+- Each has a `.d.ts` (props), and every group has a `*.card.html` specimen.
 
 **UI kit** (`ui_kits/crm/`) — faithful, interactive recreation of the product
 - `index.html` — full app shell; click **Контакты / Сделки / Мои задачи** in the sidebar to

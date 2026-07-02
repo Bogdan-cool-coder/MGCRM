@@ -42,4 +42,19 @@
   --mg-sidebar-rail-width: 56px;
   --mg-web-container: 1320px; /* brand 12-col grid container @1920 */
   --mg-web-gutter: 24px;
+
+  /* ─── Density (compact default — CRM tables/boards are data-dense) ─────── */
+  --mg-row-py:     7px;   /* table/list row vertical padding */
+  --mg-cell-py:    10px;  /* data cell vertical padding */
+  --mg-control-h:  38px;  /* inputs, buttons, selects */
+  --mg-control-h-sm: 31px;/* compact toolbar controls */
+  --mg-card-pad:   16px;  /* card / panel inner padding */
 }
+
+/* Cozy density — opt-in via class .mg-cozy on any container */
+.mg-cozy {
+  --mg-row-py:     11px;
+  --mg-cell-py:    14px;
+  --mg-control-h:  44px;
+  --mg-control-h-sm: 36px;
+  --mg-card-pad:   22px;

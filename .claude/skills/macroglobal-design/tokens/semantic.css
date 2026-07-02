@@ -47,6 +47,19 @@
   --mg-status-info-text:      var(--mg-blue-900);
   --mg-status-info-solid:     var(--mg-blue-500);
 
+  /* Extended status (funnel/chess): reserve / marketing-deal / done ─────── */
+  --mg-status-reserve-bg:    var(--mg-gold-50);
+  --mg-status-reserve-text:  var(--mg-gold-900);
+  --mg-status-reserve-solid: var(--mg-gold-500);
+
+  --mg-status-mdeal-bg:      var(--mg-pink-50);
+  --mg-status-mdeal-text:    var(--mg-pink-900);
+  --mg-status-mdeal-solid:   var(--mg-pink-500);
+
+  --mg-status-done-bg:       var(--mg-neutral-50);
+  --mg-status-done-text:     var(--mg-neutral-900);
+  --mg-status-done-solid:    var(--mg-neutral-500);
+
   /* ─── Actions (buttons) ───────────────────────────────────────────────── */
   --mg-action-primary-bg:     var(--mg-primary-900);
   --mg-action-primary-hover:  var(--mg-primary-800);
@@ -70,6 +83,10 @@
   --mg-input-text:         var(--mg-gray-900);
   --mg-input-placeholder:  var(--mg-gray-500);
   --mg-input-disabled-bg:  var(--mg-gray-100);
+
+  /* ─── Focus ring (accessibility — flows to accent, incl. dark) ────────── */
+  --mg-focus-ring-color: color-mix(in srgb, var(--mg-primary-900) 25%, transparent);
+  --mg-focus-ring:       0 0 0 3px var(--mg-focus-ring-color);
 
   /* ─── Brand-invariant chrome (never adapts to theme) ──────────────────── */
   --mg-sidebar-bg:          #172747; /* brand-primary */
