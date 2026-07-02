@@ -2199,6 +2199,7 @@
           "expectedCloseDate": "Expected Close Date"
         },
         "stageAutoNote": "If not selected — will be placed in the first pipeline stage",
+        "createCompany": "+ Create company",
         "cancelBtn": "Cancel",
         "saveBtn": "Create Deal",
         "saving": "Saving...",

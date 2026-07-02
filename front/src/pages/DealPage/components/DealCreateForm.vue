@@ -26,6 +26,16 @@
           <template #option="{ option }">
             <span>{{ option.name }}</span>
           </template>
+          <template #footer>
+            <button
+              type="button"
+              class="deal-create-form__company-create-btn"
+              @mousedown.prevent="goCreateCompany"
+            >
+              <i class="pi pi-plus deal-create-form__company-create-icon" />
+              {{ t('sales.deal.create.createCompany') }}
+            </button>
+          </template>
         </AutoComplete>
         <small v-if="errors.company_id" class="p-error">{{ errors.company_id }}</small>
       </div>
@@ -78,6 +88,7 @@
           class="w-full"
           :class="{ 'p-invalid': errors.currency }"
           :disabled="saving"
+          @change="currencyTouched = true"
         />
         <small v-if="errors.currency" class="p-error">{{ errors.currency }}</small>
       </div>
@@ -155,6 +166,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
+import { useRouter } from 'vue-router'
 import AutoComplete from 'primevue/autocomplete'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
@@ -170,9 +182,18 @@ import { useSalesStore } from '@/stores/salesStore'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import type { DealDto, PipelineDto, PipelineStageDto } from '@/entities/sales'
 
+/** Map from company country_code to default deal currency */
+const COUNTRY_CURRENCY_MAP: Record<string, string> = {
+  RU: 'RUB',
+  KZ: 'KZT',
+  UZ: 'UZS',
+  AE: 'AED',
+}
+
 interface CompanyOption {
   id: number
   name: string
+  country_code?: string | null
 }
 
 const props = defineProps<{
@@ -192,6 +213,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
+const router = useRouter()
 const userStore = useUserStore()
 const salesStore = useSalesStore()
 const { users: usersCache, load: loadUsers } = useUsersCache()
@@ -217,10 +239,16 @@ const form = ref<DealCreateForm>({
   title: '',
   pipeline_id: null,
   stage_id: null,
-  currency: 'KZT',
+  currency: 'RUB',
   owner_user_id: userStore.getUser?.id ?? null,
   expected_close_date: null,
 })
+
+/**
+ * True once the user has manually changed the currency field.
+ * Prevents the company-country auto-set from overwriting a deliberate choice.
+ */
+const currencyTouched = ref(false)
 
 const errors = ref<Record<string, string>>({})
 const companySuggestions = ref<CompanyOption[]>([])
@@ -256,7 +284,7 @@ async function searchCompanies(query: string) {
   }
   try {
     const res = await companiesApi.list({ search: query, per_page: 10 })
-    companySuggestions.value = res.data.map((c) => ({ id: c.id, name: c.name }))
+    companySuggestions.value = res.data.map((c) => ({ id: c.id, name: c.name, country_code: c.country_code ?? null }))
   } catch {
     companySuggestions.value = []
   }
@@ -273,6 +301,32 @@ function onCompanySelect() {
 function onPipelineChange() {
   // Clear stage when pipeline changes since stage IDs are pipeline-specific
   form.value.stage_id = null
+}
+
+// Auto-set currency from selected company's country — only if the user hasn't
+// manually changed the currency field yet (set-once on first company selection).
+watch(
+  () => form.value.company,
+  (company) => {
+    if (!company || currencyTouched.value) return
+    const code = company.country_code
+    if (!code) return
+    const mapped = COUNTRY_CURRENCY_MAP[code]
+    if (mapped) form.value.currency = mapped
+  },
+)
+
+/**
+ * Navigate to the company create page, passing returnTo=deal-new so CompanyPage
+ * knows to redirect back here on successful save.
+ * We pass pipeline_id so the deal form can be pre-populated on return.
+ */
+function goCreateCompany() {
+  const query: Record<string, string> = { returnTo: 'deal-new' }
+  if (form.value.pipeline_id != null) {
+    query['pipeline_id'] = String(form.value.pipeline_id)
+  }
+  void router.push({ path: '/companies/new', query })
 }
 
 function validate(): boolean {
@@ -463,6 +517,39 @@ watch(
 .deal-create-form__hint {
   font-size: $font-size-xs;
   color: $surface-400;
+}
+
+.deal-create-form__company-create-btn {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  padding: $space-2 $space-3;
+  border: none;
+  background: transparent;
+  color: var(--p-primary-color);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  border-top: 1px solid var(--p-surface-200);
+  text-align: left;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--p-surface-50);
+  }
+
+  .app-dark & {
+    border-top-color: var(--p-surface-700);
+
+    &:hover {
+      background: var(--p-surface-100);
+    }
+  }
+}
+
+.deal-create-form__company-create-icon {
+  font-size: $font-size-xs;
 }
 
 .deal-create-form__actions {

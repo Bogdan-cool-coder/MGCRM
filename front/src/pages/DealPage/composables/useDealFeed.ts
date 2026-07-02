@@ -41,6 +41,8 @@ export interface StageRef {
 
 export interface FieldChange {
   field: string
+  /** Human-readable label from backend (e.g. «Скидка %»); falls back to field name when absent */
+  field_label?: string
   old_value: string | null
   new_value: string | null
 }
@@ -109,6 +111,8 @@ interface RawFeedPayloadActivity {
 
 interface RawFeedPayloadFieldChange {
   field: string
+  /** Optional human-readable label added by backend */
+  field_label?: string | null
   old_value: string | null
   new_value: string | null
 }
@@ -223,6 +227,7 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
       fieldChanges: [
         {
           field: p.field,
+          field_label: p.field_label ?? undefined,
           old_value: p.old_value,
           new_value: p.new_value,
         },

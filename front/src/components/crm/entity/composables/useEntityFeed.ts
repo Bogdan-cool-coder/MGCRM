@@ -36,7 +36,7 @@ export interface FeedItem {
   date: string
   actor: FeedActor | null
   activity?: ActivityDto
-  fieldChanges?: Array<{ field: string; old_value: string | null; new_value: string | null }>
+  fieldChanges?: Array<{ field: string; field_label?: string; old_value: string | null; new_value: string | null }>
   isEntityCreated?: boolean
   /**
    * A3/A4: set when the item originated from a linked deal's activity feed.
@@ -145,6 +145,7 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
           const ch = (c ?? {}) as Record<string, unknown>
           return {
             field: (ch['field'] as string) ?? '',
+            field_label: (ch['field_label'] as string | null | undefined) ?? undefined,
             old_value: toStringOrNull(ch['old']),
             new_value: toStringOrNull(ch['new']),
           }
@@ -152,6 +153,7 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
       : [
           {
             field: (p['field'] as string) ?? '',
+            field_label: (p['field_label'] as string | null | undefined) ?? undefined,
             old_value: (p['old_value'] as string | null) ?? null,
             new_value: (p['new_value'] as string | null) ?? null,
           },

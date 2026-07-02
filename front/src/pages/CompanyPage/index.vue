@@ -12,12 +12,12 @@
         :entity-id="0"
         :title="t('company.create.title')"
         :menu-items="[]"
-        @back="router.push('/companies')"
+        @back="onCompanyCreateCancel"
       />
       <div class="company-page-v2__body">
         <CompanyCreateForm
           @saved="onCompanySaved"
-          @cancel="router.push('/companies')"
+          @cancel="onCompanyCreateCancel"
         />
       </div>
     </template>
@@ -1048,9 +1048,40 @@ function onSubmitEmployee() {
   }
 }
 
+// ── Create mode cancel / back ─────────────────────────────────────────────────
+
+function onCompanyCreateCancel() {
+  const returnTo = typeof route.query['returnTo'] === 'string' ? route.query['returnTo'] : null
+
+  if (returnTo === 'deal-new') {
+    // Return to the deal form, restoring any pipeline_id that was passed
+    const query: Record<string, string> = {}
+    const pipelineId = route.query['pipeline_id']
+    if (pipelineId) query['pipeline_id'] = String(pipelineId)
+    void router.push({ path: '/deals/new', query })
+    return
+  }
+
+  void router.push('/companies')
+}
+
 // ── Create mode save ─────────────────────────────────────────────────────────
 
 function onCompanySaved(created: import('@/entities/crm').Company) {
+  const returnTo = typeof route.query['returnTo'] === 'string' ? route.query['returnTo'] : null
+
+  if (returnTo === 'deal-new') {
+    // Return to the deal create form with the new company preselected
+    const query: Record<string, string> = {
+      company_id: String(created.id),
+      company_name: created.name,
+    }
+    const pipelineId = route.query['pipeline_id']
+    if (pipelineId) query['pipeline_id'] = String(pipelineId)
+    void router.push({ path: '/deals/new', query })
+    return
+  }
+
   void router.replace(`/companies/${created.id}`)
 }
 

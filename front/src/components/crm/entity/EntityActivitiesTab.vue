@@ -187,7 +187,7 @@
                     <template v-if="item.timestamp"> · {{ formatTimestamp(item.timestamp) }}</template>
                     {{ t('sales.deal.feed.changedField') }}:
                     <span v-for="(fc, idx) in item.fieldChanges" :key="idx" class="entity-activities__fc-field">
-                      {{ fc.field }}
+                      {{ fc.field_label || fc.field }}
                       <template v-if="fc.old_value !== undefined && fc.new_value !== undefined">
                         <!-- old value struck-through, spec DealCard §11 -->
                         <s class="entity-activities__fc-old">{{ fc.old_value }}</s>

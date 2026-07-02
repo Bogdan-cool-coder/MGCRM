@@ -59,7 +59,7 @@
               class="feed-item__sys-change"
             >
               <template v-if="i > 0">&nbsp;·&nbsp;</template>
-              {{ change.field }}:
+              {{ change.field_label || change.field }}:
               <s v-if="change.old_value" class="feed-item__sys-old">{{ change.old_value }}</s>
               <i class="pi pi-arrow-right feed-item__sys-arrow" />
               <span class="feed-item__sys-new">{{ change.new_value ?? '—' }}</span>
