@@ -54,6 +54,15 @@ fi
 # Pass VITE_SENTRY_RELEASE as env var so docker-compose.yml build arg picks it up.
 export VITE_SENTRY_RELEASE="${SENTRY_RELEASE}"
 
+# Reverb build-time vars — non-secret, sourced from the server root .env
+# (/opt/mgcrm/.env) which is loaded by the deploy shell before this script runs.
+# Export them explicitly so docker-compose.yml build.args interpolation finds them.
+# If not set in root .env, fall back to safe defaults (empty key disables Reverb client).
+export VITE_REVERB_APP_KEY="${VITE_REVERB_APP_KEY:-}"
+export VITE_REVERB_HOST="${VITE_REVERB_HOST:-}"
+export VITE_REVERB_PORT="${VITE_REVERB_PORT:-8080}"
+export VITE_REVERB_SCHEME="${VITE_REVERB_SCHEME:-https}"
+
 # Point compose to the secrets token file (used by top-level `secrets:` declaration).
 export SENTRY_AUTH_TOKEN_FILE="${SENTRY_AUTH_TOKEN_FILE:-/opt/mgcrm/secrets/sentry_auth_token}"
 
@@ -132,9 +141,10 @@ docker compose exec -T app php artisan config:cache
 docker compose exec -T app php artisan route:cache
 docker compose exec -T app php artisan view:cache
 
-echo "==> Bring up remaining services (nginx, frontend, queue-worker, scheduler, gotenberg)"
+echo "==> Bring up remaining services (nginx, frontend, queue-worker, scheduler, gotenberg, reverb)"
 # --force-recreate ensures workers and nginx also pick up the freshly built images.
-docker compose up -d --force-recreate --no-deps nginx frontend queue-worker scheduler gotenberg
+# reverb shares the app image — must be recreated so it runs the new code.
+docker compose up -d --force-recreate --no-deps nginx frontend queue-worker scheduler gotenberg reverb
 
 # Bot is intentionally NOT started automatically during deploy.
 # It is held back (nutgram:run exits with 409 Conflict when a second polling

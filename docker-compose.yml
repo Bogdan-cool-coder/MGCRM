@@ -108,6 +108,11 @@ services:
         SENTRY_ORG: ${SENTRY_ORG:-}
         SENTRY_PROJECT: ${SENTRY_PROJECT:-}
         VITE_SOURCEMAP: ${VITE_SOURCEMAP:-false}
+        # Laravel Echo / Reverb — non-secret, baked into the JS bundle at build time.
+        VITE_REVERB_APP_KEY: ${VITE_REVERB_APP_KEY:-}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST:-}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT:-8080}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-https}
       # SENTRY_AUTH_TOKEN is injected via BuildKit secret-mount only.
       # It never appears in any image layer or `docker history` output.
       secrets:
@@ -297,6 +302,55 @@ services:
         condition: service_healthy
       app:
         condition: service_started
+
+  # ---------------------------------------------------------------------------
+  # Reverb — Laravel WebSocket server (long-running, single process).
+  #
+  # Reuses the same PHP app image as `app`/`queue-worker`/`scheduler` — it
+  # needs the full vendor tree + Laravel bootstrapped (config/broadcasting.php,
+  # config/reverb.php) but runs the reverb:start command, not php-fpm.
+  #
+  # Traffic path:
+  #   browser --wss--> Traefik --wss--> frontend:80 --ws--> reverb:8080
+  #                                          ^
+  #                        frontend.conf proxies /app/* + /apps/*
+  #
+  # App publishing (internal, HTTP):
+  #   app / queue-worker → http://reverb:8080/apps/{appId}/events (pusher protocol)
+  #
+  # Healthcheck decision: a simple TCP probe (`php -r fsockopen`) is used,
+  # identical to the pattern on the `app` container. Reverb 1.x does not expose
+  # an HTTP health endpoint on port 8080 by default; the TCP connect is the most
+  # reliable available probe without adding extra tooling to the image.
+  # Exec-form CMD avoids CMD-SHELL double-parsing of `$` (prod gotcha on this
+  # stack — documented in prod-traefik-model memory).
+  # ---------------------------------------------------------------------------
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: app
+    image: macro-crm-app:${IMAGE_TAG:-dev-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-reverb
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    env_file:
+      - src/.env
+    networks:
+      - macro-crm-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1',8080)?0:1);"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   gotenberg:
     image: gotenberg/gotenberg:8

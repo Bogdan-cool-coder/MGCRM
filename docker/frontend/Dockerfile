@@ -34,9 +34,20 @@ ARG SENTRY_PROJECT=""
 # Optional: set to "true" to emit sourcemaps (default off in local builds).
 ARG VITE_SOURCEMAP="false"
 
+# Laravel Echo / Reverb connection vars — baked into the JS bundle at build time.
+# All four are non-secret (public app key + connection coords).
+ARG VITE_REVERB_APP_KEY=""
+ARG VITE_REVERB_HOST=""
+ARG VITE_REVERB_PORT="8080"
+ARG VITE_REVERB_SCHEME="https"
+
 ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 ENV VITE_SENTRY_RELEASE=${VITE_SENTRY_RELEASE}
 ENV VITE_SOURCEMAP=${VITE_SOURCEMAP}
+ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY}
+ENV VITE_REVERB_HOST=${VITE_REVERB_HOST}
+ENV VITE_REVERB_PORT=${VITE_REVERB_PORT}
+ENV VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
 
 # SENTRY_AUTH_TOKEN is injected ONLY via BuildKit secret-mount.
 # It is NEVER declared as ARG or ENV — it never appears in any image layer.
