@@ -39,9 +39,10 @@
 
     <div class="tasks-top-bar__spacer" />
 
-    <!-- Filter button — list view only (kanban has no server-side filter support) -->
+    <!-- Filter button — shown in both kanban and list views.
+         Hidden in team mode because TeamTasksFilterBar is always visible there. -->
     <button
-      v-if="view === 'list'"
+      v-if="(mode ?? 'my') === 'my'"
       type="button"
       class="tasks-top-bar__filter-btn"
       :class="{ 'tasks-top-bar__filter-btn--active': filterActive }"

@@ -15,10 +15,11 @@
       @enter-select-mode="enterSelectMode"
     />
 
-    <!-- Team filter bar — shown when in team mode -->
+    <!-- Team filter bar — shown in team mode kanban only (list view in team mode
+         falls back to personal list, so the team filter bar is not relevant there) -->
     <Transition name="tasks-panel-slide">
       <TeamTasksFilterBar
-        v-if="taskMode === 'team'"
+        v-if="taskMode === 'team' && activeView === 'kanban'"
         v-model:q="teamQ"
         v-model:responsible-id="teamResponsibleId"
       />
@@ -33,10 +34,12 @@
       />
     </Transition>
 
-    <!-- FilterPanel — list view only (kanban has no server-side filter support) -->
+    <!-- FilterPanel — shown in both kanban and list views for «Мои» mode.
+         In kanban: q reloads board from server; other filters applied client-side.
+         In list: all filters go to server as before. -->
     <Transition name="tasks-panel-slide">
       <MyTasksFilterPanel
-        v-if="filterOpen && activeView === 'list' && taskMode === 'my'"
+        v-if="filterOpen && taskMode === 'my'"
         v-model="filters"
         @reset="onResetFilters"
         @close="filterOpen = false"
@@ -363,9 +366,54 @@ const activeBoardAllDone = computed(() =>
   taskMode.value === 'team' ? teamBoard.allDone.value : taskBoard.allDone.value,
 )
 
-const activeBucketsData = computed(() =>
-  taskMode.value === 'team' ? teamBoard.bucketsData.value : taskBoard.bucketsData.value,
-)
+// Client-side filter application on kanban buckets for «Мои» mode.
+//
+// GET /api/activities/my-board accepts only ?q= (title/body search); all other
+// filter fields (kind, status, priority, responsible, due range) are unsupported
+// by the endpoint and must be applied locally on the already-loaded snapshot.
+// The q field is also applied client-side here (consistent with the pre-change
+// board search that already did this via taskBoard.searchQuery).
+//
+// For «Команда» mode the teamBoard already applies its own watcher-driven reload.
+const activeBucketsData = computed(() => {
+  const raw = taskMode.value === 'team' ? teamBoard.bucketsData.value : taskBoard.bucketsData.value
+
+  // Only apply client-side filter in «Мои» kanban — list view gets server-filtered data
+  if (taskMode.value !== 'my' || activeView.value === 'list') return raw
+
+  const f = filters.value
+  const q = (f.q ?? '').toLowerCase().trim()
+  const hasFilter = !!(q || f.kind || f.status || f.priority || f.responsible_id || f.due_from || f.due_to)
+  if (!hasFilter) return raw
+
+  const dueFromMs = f.due_from ? new Date(f.due_from).setHours(0, 0, 0, 0) : null
+  const dueToMs = f.due_to ? new Date(f.due_to).setHours(23, 59, 59, 999) : null
+
+  return raw.map((bucket) => ({
+    ...bucket,
+    tasks: bucket.tasks.filter((task) => {
+      if (q) {
+        const title = (task.title ?? '').toLowerCase()
+        const body = (task.body ?? task.description ?? '').toLowerCase()
+        if (!title.includes(q) && !body.includes(q)) return false
+      }
+      if (f.kind && task.kind !== f.kind) return false
+      if (f.status && task.status !== f.status) return false
+      if (f.priority && task.priority !== f.priority) return false
+      if (f.responsible_id) {
+        const respId = task.responsible?.id ?? task.assigned_to?.id
+        if (respId !== f.responsible_id) return false
+      }
+      if (dueFromMs !== null) {
+        if (!task.due_at || new Date(task.due_at).getTime() < dueFromMs) return false
+      }
+      if (dueToMs !== null) {
+        if (!task.due_at || new Date(task.due_at).getTime() > dueToMs) return false
+      }
+      return true
+    }),
+  }))
+})
 
 const hasActiveFilters = computed(() => {
   const f = filters.value
