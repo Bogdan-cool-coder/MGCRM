@@ -20,7 +20,7 @@ use App\Domain\Contracts\Services\YamlTemplateParser;
 use App\Domain\Crm\Services\CompanyRequisiteService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
-use App\Services\Documents\GotenbergClient;
+use App\Support\Documents\GotenbergClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;

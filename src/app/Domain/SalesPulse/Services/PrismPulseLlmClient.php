@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\SalesPulse\Services;
 
 use App\Domain\SalesPulse\Contracts\PulseLlmClient;
-use App\Services\AI\AiRetryService;
+use App\Support\Ai\AiRetryService;
 use Prism\Prism\Contracts\Schema;
 use Prism\Prism\Facades\Tool as ToolFactory;
 use Prism\Prism\Schema\ArraySchema;

@@ -7,7 +7,7 @@ namespace App\Domain\Onboarding\Services;
 use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\Quiz;
-use App\Services\AI\AiRetryService;
+use App\Support\Ai\AiRetryService;
 use Prism\Prism\ValueObjects\Messages\UserMessage;
 
 /**

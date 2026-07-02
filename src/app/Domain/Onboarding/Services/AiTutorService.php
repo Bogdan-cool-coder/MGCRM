@@ -8,7 +8,7 @@ use App\Domain\Iam\Models\User;
 use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\OnboardingAiSession;
-use App\Services\AI\AiRetryService;
+use App\Support\Ai\AiRetryService;
 use Prism\Prism\ValueObjects\Messages\AssistantMessage;
 use Prism\Prism\ValueObjects\Messages\UserMessage;
 

@@ -10,7 +10,7 @@ use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
 use App\Domain\Contracts\Services\Helpers\MoneyFormatter;
-use App\Services\Documents\GotenbergClient;
+use App\Support\Documents\GotenbergClient;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;

@@ -6,8 +6,8 @@ namespace App\Domain\Contracts\Services;
 
 use App\Domain\Contracts\Models\TemplateVariable;
 use App\Domain\Contracts\Models\TemplateVersion;
-use App\Services\AI\AiRetryService;
-use App\Services\Documents\GotenbergClient;
+use App\Support\Ai\AiRetryService;
+use App\Support\Documents\GotenbergClient;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpWord\Element\AbstractContainer;

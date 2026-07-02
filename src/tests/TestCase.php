@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Services\Documents\GotenbergClient;
+use App\Support\Documents\GotenbergClient;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;

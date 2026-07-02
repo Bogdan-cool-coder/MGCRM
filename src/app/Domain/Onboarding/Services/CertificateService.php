@@ -7,7 +7,7 @@ namespace App\Domain\Onboarding\Services;
 use App\Domain\Onboarding\Models\Certificate;
 use App\Domain\Onboarding\Models\CourseAssignment;
 use App\Domain\Onboarding\Services\Helpers\CertificateHelper;
-use App\Services\Documents\GotenbergClient;
+use App\Support\Documents\GotenbergClient;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;

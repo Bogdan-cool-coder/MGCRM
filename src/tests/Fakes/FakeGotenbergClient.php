@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Fakes;
 
-use App\Services\Documents\GotenbergClient;
+use App\Support\Documents\GotenbergClient;
 
 /**
  * In-memory stand-in for the real GotenbergClient used as the default test

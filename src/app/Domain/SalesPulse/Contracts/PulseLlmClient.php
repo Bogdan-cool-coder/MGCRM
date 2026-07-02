@@ -13,7 +13,7 @@ namespace App\Domain\SalesPulse\Contracts;
  *                    `weekly_analysis`) — we want the tool ARGUMENTS, not a
  *                    side-effecting tool execution.
  *
- * The default binding (PrismPulseLlmClient) drives App\Services\AI\AiRetryService
+ * The default binding (PrismPulseLlmClient) drives App\Support\Ai\AiRetryService
  * (library-first reuse of the cascade/retry/budget). Tests bind a fake to assert
  * payload building + brief application + offline fallback WITHOUT touching the
  * network — hence this interface (spec: abstract the LLM call).

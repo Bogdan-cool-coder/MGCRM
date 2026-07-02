@@ -20,7 +20,7 @@ use App\Domain\Crm\Services\CompanyRequisiteService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
-use App\Services\Documents\GotenbergClient;
+use App\Support\Documents\GotenbergClient;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;

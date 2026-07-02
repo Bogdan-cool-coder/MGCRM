@@ -111,10 +111,21 @@ Org, Sales, SalesPulse` (greenfield: `CustomerSuccess`, `Finance` — created at
 > The `Contracts` folder here means **PHP interfaces / DI seams**, NOT the `Contracts` *domain*
 > (`Domain/Contracts` = документооборот). Do not confuse them.
 
-**Non-DDD shared services (documented exception):** `src/app/Services/AI/AiRetryService.php` and
-`src/app/Services/Documents/GotenbergClient.php` are cross-cutting infra used by multiple contexts.
-They live outside the DDD tree by design (shared seam). Do not scatter copies into contexts; call
-these. Shared pure helpers live in `src/app/Support/` (e.g. `App\Support\LikeEscape`).
+**Non-DDD shared infra — consolidated under `app/Support/` (blessed exception).** Truly
+cross-cutting infra with no single owning domain lives in `src/app/Support/`, NOT in a domain
+context and NOT in a parallel `app/Services/` tree. There is **no `app/Services/`** — the two
+Vizion-holdover services that used to sit there were relocated into `app/Support/` (backlog #21,
+2026-07-02) so every shared seam lives under one roof:
+
+| Class | Canonical location | Namespace | Consumers (why it's shared, not domain-owned) |
+|---|---|---|---|
+| AI-cascade retry | `src/app/Support/Ai/AiRetryService.php` | `App\Support\Ai` | `Contracts/TemplateCheckService`, `Onboarding/{QuizGenerationService, AiTutorService}`, `SalesPulse/PrismPulseLlmClient` — 4 consumers / 3 domains; no single owner |
+| DOCX/HTML→PDF client | `src/app/Support/Documents/GotenbergClient.php` | `App\Support\Documents` | `Contracts/{ContractGenerationService, TemplateCheckService}`, `Onboarding/CertificateService` — 2 domains; no single owner |
+| Safe-LIKE escaper | `src/app/Support/LikeEscape.php` | `App\Support` | query-builder macros (§6.1) |
+
+Do not scatter copies into contexts; inject and call these. A helper used by **exactly one** domain
+belongs in that domain's `Support` subfolder (§2 table), not here — `app/Support/` is for the
+genuinely cross-cutting-with-no-owner case only.
 
 ---
 
@@ -227,9 +238,9 @@ Any user-input "contains" search MUST use the query-builder macros — **never**
 
 - **Row-level visibility** → `VisibilityResolver::applyScope()` / `departmentSubtreeIds()`. Never
   hand-roll an owner/department scope branch.
-- **Cross-cutting AI** → `App\Services\AI\AiRetryService` + `config/ai.php` (`executeWithRetry` /
+- **Cross-cutting AI** → `App\Support\Ai\AiRetryService` + `config/ai.php` (`executeWithRetry` /
   `executeWithRetryAndToolChoice` for forced tool_use). Never call a provider SDK directly.
-- **DOCX→PDF** → `App\Services\Documents\GotenbergClient` (+ PHPWord). Never hand-roll headless Chrome.
+- **DOCX→PDF** → `App\Support\Documents\GotenbergClient` (+ PHPWord). Never hand-roll headless Chrome.
 - **Excel export** → PhpSpreadsheet. Never hand-assemble xlsx.
 - **DTOs** → plain `final readonly` classes. **API responses** → hand-written `JsonResource`.
 - **Translatable fields** → `spatie/laravel-translatable` + `jsonb` column + `protected array $translatable`.
@@ -251,8 +262,8 @@ approval.
 | DTOs | plain `final readonly` classes | spatie/laravel-data |
 | API responses | hand-written `JsonResource` | spatie/laravel-data, raw arrays |
 | Translatable fields | `spatie/laravel-translatable` + jsonb | |
-| AI cascades | Prism via `App\Services\AI\AiRetryService` + `config/ai.php` | direct SDK calls |
-| DOCX→PDF | `App\Services\Documents\GotenbergClient` (+ PHPWord) | hand-rolled headless Chrome |
+| AI cascades | Prism via `App\Support\Ai\AiRetryService` + `config/ai.php` | direct SDK calls |
+| DOCX→PDF | `App\Support\Documents\GotenbergClient` (+ PHPWord) | hand-rolled headless Chrome |
 | Excel export | PhpSpreadsheet | hand-built xlsx |
 | Queues | redis (`config/queue.php`) | Horizon |
 | Telegram bot | Nutgram (`config/nutgram.php`; SalesPulse runs a second bot instance) | |

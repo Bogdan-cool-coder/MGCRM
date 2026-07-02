@@ -9,7 +9,7 @@ use App\Domain\Onboarding\Enums\LessonKind;
 use App\Domain\Onboarding\Models\CourseModule;
 use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Services\AiTutorService;
-use App\Services\AI\AiRetryService;
+use App\Support\Ai\AiRetryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Mockery\MockInterface;

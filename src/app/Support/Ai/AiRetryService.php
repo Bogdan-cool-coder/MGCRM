@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services\AI;
+namespace App\Support\Ai;
 
 use Illuminate\Support\Str;
 use Prism\Prism\Enums\ToolChoice;

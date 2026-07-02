@@ -14,7 +14,7 @@ use App\Domain\Onboarding\Models\Lesson;
 use App\Domain\Onboarding\Models\OnboardingAiSession;
 use App\Domain\Onboarding\Models\Quiz;
 use App\Jobs\Onboarding\GenerateQuizQuestionsJob;
-use App\Services\AI\AiRetryService;
+use App\Support\Ai\AiRetryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
