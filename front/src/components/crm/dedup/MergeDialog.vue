@@ -176,9 +176,9 @@
                 :value="entity.id"
                 :input-id="`master-${entity.id}`"
               />
-              <CrmAvatar
+              <EntityAvatar
                 :name="getCandidateName(entity)"
-                :size="32"
+                :pixel-size="32"
                 class="dedup-dialog__master-avatar"
               />
               <label :for="`master-${entity.id}`" class="dedup-dialog__master-label">
@@ -403,7 +403,7 @@ import Tag from 'primevue/tag'
 import Popover from 'primevue/popover'
 import Skeleton from 'primevue/skeleton'
 import { useDedupFlow } from './useDedupFlow'
-import CrmAvatar from '@/components/ui/CrmAvatar.vue'
+import EntityAvatar from '@/components/crm/entity/EntityAvatar.vue'
 import type { DedupCandidate, DedupScope } from '@/entities/crm'
 import type { DedupGroup } from '@/api/crm/dedup'
 

@@ -97,15 +97,10 @@ Slots: `#status` (ClientStatusBadge), `#meta` (дополнительные ме
 
 #### `EntityAvatar`
 **Путь:** `front/src/components/crm/entity/EntityAvatar.vue`
-**Назначение:** круглый аватар с инициалами. Цвет фона определяется по `entityId % 8` из палитры 8 фирменных оттенков. В `onBrand`-режиме (на navy-панели) — полупрозрачный белый фон.
-**Props:** `entityId: number`, `initials: string`, `size?: 'sm' | 'md' | 'lg'`, `onBrand?: boolean`.
-**Когда применять:** шапки карточек, строки списков.
-
-#### `CrmAvatar`
-**Путь:** `front/src/components/ui/CrmAvatar.vue`
-**Назначение:** упрощённый аватар (имя → инициалы, фиксированный primary-900 фон). Применяется там, где нет `entityId` или нужен квадратный вариант (`square` prop).
-**Props:** `name: string`, `size?: number` (px, по умолчанию 32), `square?: boolean`.
-**Кандидат на унификацию:** `CrmAvatar` и `EntityAvatar` делают похожие вещи, но с разными API. При следующем рефакторинге имеет смысл объединить.
+**Назначение:** единственный аватар-компонент проекта (backlog #26: `CrmAvatar` удалён, объединён сюда). Круглый или квадратный аватар с инициалами. Цвет фона: при наличии `entityId` — детерминированный из палитры 8 фирменных оттенков (`entityId % 8`); без `entityId` — `$primary-900`. В `onBrand`-режиме (на navy-панели) — полупрозрачный белый фон. Инициалы: авто-вычисляются из `name` (до 3 слов), либо передаются напрямую через `initials`. Размер: именованный (`sm` 32 / `md` 56 / `lg` 72 px) или произвольный через `pixelSize` (перекрывает `size`).
+**Props:** `name?: string`, `initials?: string`, `size?: 'sm' | 'md' | 'lg'` (default `'md'`), `pixelSize?: number`, `entityId?: number`, `onBrand?: boolean`, `square?: boolean`.
+**Миграция с CrmAvatar:** старый `CrmAvatar :size="N"` → `EntityAvatar :pixel-size="N"`; `name` и `square` — те же. Без `entityId` поведение идентично (фон `$primary-900`).
+**Когда применять:** шапки карточек (`EntityInfoHeader` — `size="md" on-brand`), строки таблиц (`:pixel-size="32"` или `22`), профиль (`:pixel-size="72"`), диалоги дедупликации. Везде — один компонент.
 
 #### `EntityActionMenu`
 **Путь:** `front/src/components/crm/entity/EntityActionMenu.vue`
@@ -280,7 +275,7 @@ Emit: `confirm: [comment]`.
 
 | Проблема | Что делать |
 |----------|-----------|
-| `EntityAvatar` vs `CrmAvatar` — два компонента с аватаром, разные API | При следующей итерации объединить в один. Пока: `EntityAvatar` — на карточках сущностей с `entityId`; `CrmAvatar` — в остальных местах (users, sidebar). |
+| ~~`EntityAvatar` vs `CrmAvatar`~~ — **ЗАКРЫТО** (backlog #26, 2026-07-02): `CrmAvatar` удалён, API объединён в `EntityAvatar`. | — |
 | `SearchPicker` vs PrimeVue `Select filter` — пересекающийся функционал | В новых компонентах предпочитать `Select filter` (PrimeVue native). `SearchPicker` оставить только в `EntityComposer` / `DealComposer` где нужна кастомная компоновка trigger'а. |
 | `DateField` vs PrimeVue `DatePicker` — два поля даты | `DateField` — compact inline (в composer'е, в ячейке таблицы). `DatePicker` — в стандартных формах. Не использовать `DateField` в Dialog/Drawer-формах. |
 | Статус-тэги (DocumentStatusTag / AssignmentStatusTag / CourseStatusTag / DealStageTag) имеют идентичную структуру STATUS_CONFIG | Потенциальный universal `StatusTag` компонент через generic props. Пока — держать разделёнными (домен-специфичные типы). |
@@ -306,7 +301,7 @@ Emit: `confirm: [comment]`.
 | Вовлечённость контакта/компании | `EngagementChip` |
 | Тип канала входящего | `ChannelKindTag` |
 | Строка связанной сущности в рейле | `EntityRow` |
-| Аватар сущности с initials | `EntityAvatar` (с entityId) / `CrmAvatar` (без) |
+| Аватар сущности с initials | `EntityAvatar` (с `entityId` — палитра; без — `$primary-900`; `square` для компаний в таблице) |
 | Лента активностей + composer | `EntityActivitiesTab` |
 | Composer заметки/задачи | `EntityComposer` |
 | Список открытых задач | `OpenTasksList` |

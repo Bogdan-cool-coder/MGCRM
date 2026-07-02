@@ -162,9 +162,9 @@
                 </template>
                 <template #body="{ data }">
                   <div class="contacts-page__name-cell">
-                    <CrmAvatar
+                    <EntityAvatar
                       :name="(data as Company).name"
-                      :size="32"
+                      :pixel-size="32"
                       square
                     />
                     <div class="contacts-page__name-cell-text">
@@ -215,10 +215,9 @@
                 </template>
                 <template #body="{ data }">
                   <div class="contacts-page__name-cell">
-                    <CrmAvatar
+                    <EntityAvatar
                       :name="(data as Contact).full_name"
-                      :size="32"
-                      :square="false"
+                      :pixel-size="32"
                     />
                     <div class="contacts-page__name-cell-text">
                       <RouterLink
@@ -483,10 +482,9 @@
                 </template>
                 <template #body="{ data }">
                   <div v-if="getOwnerColumnUser(data)" class="contacts-page__owner-cell">
-                    <CrmAvatar
+                    <EntityAvatar
                       :name="getOwnerColumnUser(data)!.full_name"
-                      :size="22"
-                      :square="false"
+                      :pixel-size="22"
                     />
                     <span class="contacts-page__owner-name">{{ getOwnerColumnUser(data)!.full_name }}</span>
                   </div>
@@ -605,7 +603,7 @@ import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 
 import MergeDialog from '@/components/crm/dedup/MergeDialog.vue'
-import CrmAvatar from '@/components/ui/CrmAvatar.vue'
+import EntityAvatar from '@/components/crm/entity/EntityAvatar.vue'
 
 import { useDirectoriesStore } from '@/stores/directories'
 import { useUserStore } from '@/stores/user'

@@ -9,7 +9,7 @@
           :alt="user.full_name"
           class="profile-avatar-row__img"
         />
-        <CrmAvatar v-else :name="user.full_name" :size="72" />
+        <EntityAvatar v-else :name="user.full_name" :pixel-size="72" />
         <div class="profile-avatar-row__actions">
           <!-- Скрытый file-input; открывается через avatarInput.click() -->
           <input
@@ -101,7 +101,7 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
-import CrmAvatar from '@/components/ui/CrmAvatar.vue'
+import EntityAvatar from '@/components/crm/entity/EntityAvatar.vue'
 import AvatarCropModal from './profile/AvatarCropModal.vue'
 import { SETTINGS_MARK_DIRTY_KEY, SETTINGS_MARK_CLEAN_KEY } from '../../composables/useSettings'
 import type { useProfilePage } from '@/pages/ProfilePage/composables/useProfilePage'
