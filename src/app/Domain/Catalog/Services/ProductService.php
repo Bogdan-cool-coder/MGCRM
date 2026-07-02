@@ -27,10 +27,10 @@ class ProductService
             ->when(! empty($filters['active_only']), fn (Builder $q) => $q->where('is_active', true))
             ->when(! empty($filters['group_id']), fn (Builder $q) => $q->where('group_id', $filters['group_id']))
             ->when(! empty($filters['q']), function (Builder $q) use ($filters): void {
-                $term = '%'.$filters['q'].'%';
+                $term = (string) $filters['q'];
                 $q->where(function (Builder $inner) use ($term): void {
-                    $inner->where('name', 'like', $term)
-                        ->orWhere('code', 'like', $term);
+                    $inner->whereLikeCi('name', $term)
+                        ->orWhereLike('code', $term);
                 });
             })
             ->orderBy('sort_order')

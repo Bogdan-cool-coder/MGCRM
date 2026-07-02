@@ -35,7 +35,7 @@ class TagService
             )
             ->when(
                 $search !== null && $search !== '',
-                fn ($q) => $q->where('name', 'like', '%'.$search.'%')
+                fn ($q) => $q->whereLikeCi('name', $search)
             )
             ->orderBy('sort_order')
             ->orderBy('name')

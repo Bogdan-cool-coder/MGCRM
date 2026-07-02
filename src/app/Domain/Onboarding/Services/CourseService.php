@@ -31,10 +31,10 @@ class CourseService
             ->when(! empty($filters['published_only']), fn (Builder $q) => $q->where('is_published', true))
             ->when(! empty($filters['created_by']), fn (Builder $q) => $q->where('created_by_user_id', $filters['created_by']))
             ->when(! empty($filters['q']), function (Builder $q) use ($filters): void {
-                $term = '%'.$filters['q'].'%';
+                $term = (string) $filters['q'];
                 $q->where(function (Builder $inner) use ($term): void {
-                    $inner->where('title', 'like', $term)
-                        ->orWhere('description', 'like', $term);
+                    $inner->whereLikeCi('title', $term)
+                        ->orWhereLikeCi('description', $term);
                 });
             })
             ->orderBy('sort_order')

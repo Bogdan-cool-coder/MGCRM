@@ -22,6 +22,46 @@ class ProductServiceTest extends TestCase
         $this->service = new ProductService;
     }
 
+    public function test_list_q_filter_matches_name_and_code(): void
+    {
+        Product::factory()->create(['name' => 'CRM Basic', 'code' => 'crm_basic', 'sort_order' => 1]);
+        Product::factory()->create(['name' => 'CRM Pro',   'code' => 'crm_pro',   'sort_order' => 2]);
+        Product::factory()->create(['name' => 'ERP Suite', 'code' => 'erp_suite', 'sort_order' => 3]);
+
+        $result = $this->service->list(['q' => 'CRM']);
+        $names = collect($result->items())->pluck('name')->toArray();
+
+        $this->assertContains('CRM Basic', $names);
+        $this->assertContains('CRM Pro', $names);
+        $this->assertNotContains('ERP Suite', $names);
+    }
+
+    public function test_list_q_filter_matches_by_code(): void
+    {
+        Product::factory()->create(['name' => 'Alpha Product', 'code' => 'alpha_001', 'sort_order' => 1]);
+        Product::factory()->create(['name' => 'Beta Product',  'code' => 'beta_002',  'sort_order' => 2]);
+
+        $result = $this->service->list(['q' => 'alpha']);
+        $names = collect($result->items())->pluck('name')->toArray();
+
+        $this->assertContains('Alpha Product', $names);
+        $this->assertNotContains('Beta Product', $names);
+    }
+
+    public function test_list_q_filter_escapes_like_wildcards(): void
+    {
+        // 'suite_pro' contains an underscore; without escaping the LIKE would
+        // also match 'suiteXpro' (underscore = any single char in raw LIKE).
+        Product::factory()->create(['name' => 'suite_pro', 'code' => 'suite_pro', 'sort_order' => 1]);
+        Product::factory()->create(['name' => 'suiteXpro', 'code' => 'suitexpro', 'sort_order' => 2]);
+
+        $result = $this->service->list(['q' => 'suite_pro']);
+        $names = collect($result->items())->pluck('name')->toArray();
+
+        $this->assertContains('suite_pro', $names);
+        $this->assertNotContains('suiteXpro', $names);
+    }
+
     public function test_get_price_snapshot_returns_kopecks(): void
     {
         $product = Product::factory()->create();

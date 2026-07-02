@@ -441,6 +441,22 @@ class TagDirectoryTest extends TestCase
         $this->assertNotContains('Gamma', $names);
     }
 
+    public function test_service_list_search_escapes_like_wildcards(): void
+    {
+        // A tag whose name contains a LIKE wildcard character.
+        // Without proper escaping, searching for 'vip_lead' would also match
+        // 'vipXlead' (underscore acts as single-char wildcard in raw LIKE).
+        Tag::create(['name' => 'vip_lead', 'sort_order' => 1]);
+        Tag::create(['name' => 'vipXlead', 'sort_order' => 2]);
+
+        $service = app(TagService::class);
+        $results = $service->list(search: 'vip_lead');
+
+        $names = $results->pluck('name')->toArray();
+        $this->assertContains('vip_lead', $names);
+        $this->assertNotContains('vipXlead', $names);
+    }
+
     public function test_service_delete_removes_tag(): void
     {
         $tag = Tag::create(['name' => 'ToDelete', 'sort_order' => 1]);

@@ -111,6 +111,39 @@ class CourseCrudTest extends TestCase
             ->assertStatus(409);
     }
 
+    // ---- index: search filter (q) ----
+
+    public function test_search_filter_matches_title_case_insensitively(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Course::factory()->create(['title' => 'Laravel Основы', 'description' => 'Базовый курс']);
+        Course::factory()->create(['title' => 'Vue Продвинутый', 'description' => 'Про компоненты']);
+        Course::factory()->create(['title' => 'PHP Углублённый', 'description' => 'laravel internals']);
+        Sanctum::actingAs($user, ['*']);
+
+        // 'laravel' (lowercase) must hit "Laravel Основы" (title) AND "PHP Углублённый" (description)
+        $response = $this->getJson('/api/admin/onboarding/courses?q=laravel')->assertOk();
+
+        $titles = collect($response->json('data'))->pluck('title')->toArray();
+        $this->assertContains('Laravel Основы', $titles);
+        $this->assertContains('PHP Углублённый', $titles);
+        $this->assertNotContains('Vue Продвинутый', $titles);
+    }
+
+    public function test_search_filter_matches_description(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Course::factory()->create(['title' => 'Курс А', 'description' => 'Onboarding новых сотрудников']);
+        Course::factory()->create(['title' => 'Курс Б', 'description' => 'Технический курс']);
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->getJson('/api/admin/onboarding/courses?q=onboarding')->assertOk();
+
+        $titles = collect($response->json('data'))->pluck('title')->toArray();
+        $this->assertContains('Курс А', $titles);
+        $this->assertNotContains('Курс Б', $titles);
+    }
+
     // ---- show ----
 
     public function test_show_course_with_modules_and_lessons(): void

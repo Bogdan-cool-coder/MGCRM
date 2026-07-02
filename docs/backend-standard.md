@@ -68,8 +68,8 @@ The cleanest end-to-end CRUD reference. Trace it in build order:
 | Resource | `src/app/Http/Resources/Crm/TagResource.php` | manual `toArray()` :14-25 |
 | Routes | `src/routes/api.php:436-437, 509` | read = any auth user; write = `apiResource` behind admin-write |
 
-> **Note:** `TagService.php:38` uses a raw `where('name','like','%'.$search.'%')` — that ONE line is a
-> known deviation from §6.1 and should use `whereLikeCi()`. Everything else in the slice is canonical.
+> The Tag slice is fully canonical as of backlog #20 (2026-07-02): `TagService.php:38` was updated to
+> `whereLikeCi('name', $search)` — the deviation noted here is closed.
 
 For anything involving **row-level visibility, money, or cross-domain orchestration**, the mature
 reference is `src/app/Domain/Sales/Services/DealService.php` + `Sales/Policies/DealPolicy.php` +
@@ -220,8 +220,8 @@ Any user-input "contains" search MUST use the query-builder macros — **never**
 
 **Correct adopters (copy these):** `Activity/Services/ActivityService`, `Crm/Services/CompanyService`,
 `Crm/Services/ContactService`, `Sales/Services/DealService`.
-**Known deviations to fix (do NOT copy):** `Crm/Services/TagService.php:38`,
-`Catalog/Services/ProductService.php:32-33`, `Onboarding/Services/CourseService.php:36-37`.
+**Known deviations — CLOSED (backlog #20, 2026-07-02):** `TagService` `:38`, `ProductService` `:30-34`,
+`CourseService` `:36-38` all migrated to `whereLikeCi`/`orWhereLike` macros. No remaining known deviations.
 
 ### 6.2 Other mandatory reuse
 
