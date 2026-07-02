@@ -10,11 +10,25 @@ use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Sales\Models\Deal;
 
 /**
- * DealPolicy — visibility-scoped authorization (own / department / all), mirroring
- * CompanyPolicy. The effective scope is resolved from the user's role via
- * VisibilityResolver so policy access matches the query filtering in DealService
- * exactly. Item endpoints return 403 for inaccessible deals (404-on-foreign
- * conversion is handled at the HTTP layer). No inline role checks outside policies.
+ * DealPolicy — visibility-scoped authorization (M9: FULL department access). The
+ * effective scope is resolved from the user's role via VisibilityResolver so policy
+ * access matches the query filtering in DealService exactly:
+ *
+ *   All        (admin/director/lawyer) → every deal, read + write.
+ *   Department (manager)               → every deal in their department subtree
+ *                                        (plus their own), read AND write. A manager
+ *                                        may VIEW, UPDATE, MOVE and DELETE a
+ *                                        colleague's deal within their department —
+ *                                        the same as the owner would. Nothing across
+ *                                        other departments.
+ *   Own        (accountant/cfo)        → only deals they own.
+ *
+ * view / update / delete / move ALL share ONE gate — canAccess() — so read and write
+ * scope can never diverge. (A future per-user restriction layer may narrow an
+ * individual manager below full department access; that layer is out of scope here.)
+ *
+ * Item endpoints return 403 for inaccessible deals (404-on-foreign conversion is
+ * handled at the HTTP layer). No inline role checks outside policies.
  */
 class DealPolicy
 {
@@ -60,15 +74,26 @@ class DealPolicy
      * re-enables a manual override, restricted to managerial scope (All — admin /
      * director / lawyer) so a plain manager cannot set an arbitrary deal value.
      * Resolved through VisibilityScope (no inline role checks; ARCHITECTURE §authz).
+     * DELIBERATE CHOICE (M9): even though managers now have full Department CRUD,
+     * price override stays All-only (admin/director/lawyer) — a manager (owner or
+     * department peer) cannot set an arbitrary line-item price. Widen to Department
+     * later if the business wants managers to re-price.
      */
     public function overridePrice(User $user, Deal $deal): bool
     {
-        return $this->resolver->resolve($user) === VisibilityScope::All
-            && $this->canAccess($user, $deal);
+        return $this->resolver->resolve($user) === VisibilityScope::All;
     }
 
     // ---- Private ----
 
+    /**
+     * The single shared gate for view/update/delete/move (M9): read and write scope
+     * are identical so they can never diverge.
+     *   All        → any deal.
+     *   Own        → owner only.
+     *   Department → own deals plus the whole department subtree — a manager gets
+     *                full CRUD over any deal in their department.
+     */
     private function canAccess(User $user, Deal $deal): bool
     {
         return match ($this->resolver->resolve($user)) {

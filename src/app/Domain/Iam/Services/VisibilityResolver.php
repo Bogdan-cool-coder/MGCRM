@@ -72,9 +72,11 @@ class VisibilityResolver
      *                $departmentColumn is given, Department degrades to Own (the
      *                model carries no department anchor) — never to All.
      *
-     * NB: with today's role map (VisibilityScope::forRole) no role resolves to
-     * Department — it is the M1 reserve. The Department branch is wired and tested
-     * so that enabling it later is a one-line role-map change, not a rewrite.
+     * NB: since M9 the Manager role resolves to Department (VisibilityScope::forRole),
+     * so this Department branch is now live for every table that passes a
+     * $departmentColumn (Deal). Tables without a department anchor (Contact, Company
+     * list) degrade Department to Own, so a manager still only reads their own rows
+     * there — the M9 team-read widening is intentionally scoped to Deals/Activities.
      *
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *

@@ -33,14 +33,15 @@ class ResolveVisibilityMiddlewareTest extends TestCase
         $this->assertSame(VisibilityScope::All, $scope);
     }
 
-    public function test_stamps_own_scope_for_manager(): void
+    public function test_stamps_department_scope_for_manager(): void
     {
+        // M9: a manager now resolves to Department (team read scope).
         $manager = User::factory()->create(['role' => Role::Manager]);
         $manager->assignRole(Role::Manager->value);
 
         $scope = $this->runMiddleware($manager);
 
-        $this->assertSame(VisibilityScope::Own, $scope);
+        $this->assertSame(VisibilityScope::Department, $scope);
     }
 
     public function test_fails_closed_to_own_for_guest(): void

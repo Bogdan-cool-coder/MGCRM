@@ -18,9 +18,9 @@ use Tests\TestCase;
  * Settings → Access Control → Visibility: the role × scope matrix endpoints +
  * the fact that the config actually drives VisibilityResolver.
  *
- * Defaults (unseeded table) reproduce the legacy behavior so existing tests +
- * e2e regression locks stay green. Setting manager=Department makes the resolver
- * return Department for a manager; the Department branch of applyScope then
+ * Defaults (unseeded table): admin/director/lawyer = All, manager = Department
+ * (M9 — managers see their department subtree), accountant/cfo = Own. An admin can
+ * still override any role via the matrix; the Department branch of applyScope
  * scopes to the user's department subtree.
  */
 class AdminVisibilityConfigTest extends TestCase
@@ -35,16 +35,17 @@ class AdminVisibilityConfigTest extends TestCase
         return $admin;
     }
 
-    public function test_default_config_reflects_legacy_behavior(): void
+    public function test_default_config_reflects_current_defaults(): void
     {
         $this->actingAsAdmin();
 
+        // M9: manager defaults to Department (team read); accountant/cfo stay Own.
         $this->getJson('/api/admin/visibility-config')
             ->assertOk()
             ->assertJsonPath('data.admin', 'all')
             ->assertJsonPath('data.director', 'all')
             ->assertJsonPath('data.lawyer', 'all')
-            ->assertJsonPath('data.manager', 'own')
+            ->assertJsonPath('data.manager', 'department')
             ->assertJsonPath('data.accountant', 'own')
             ->assertJsonPath('data.cfo', 'own');
     }
@@ -53,13 +54,16 @@ class AdminVisibilityConfigTest extends TestCase
     {
         $admin = $this->actingAsAdmin();
 
-        $this->patchJson('/api/admin/visibility-config', ['manager' => 'department'])
+        // Patch to a value that DIFFERS from the default (manager default is now
+        // Department) so the update + audit path is genuinely exercised: setting it
+        // back to Own is a real change that must be persisted and logged.
+        $this->patchJson('/api/admin/visibility-config', ['manager' => 'own'])
             ->assertOk()
-            ->assertJsonPath('data.manager', 'department');
+            ->assertJsonPath('data.manager', 'own');
 
         $this->assertDatabaseHas('visibility_settings', [
             'role' => 'manager',
-            'scope' => 'department',
+            'scope' => 'own',
         ]);
 
         // Audited.
@@ -86,27 +90,28 @@ class AdminVisibilityConfigTest extends TestCase
         $this->getJson('/api/admin/visibility-config')->assertForbidden();
     }
 
-    public function test_config_drives_resolver_default_is_own(): void
+    public function test_config_drives_resolver_defaults(): void
+    {
+        // Unseeded table → current defaults: manager = Department (M9),
+        // accountant = Own.
+        $manager = User::factory()->create(['role' => Role::Manager]);
+        $accountant = User::factory()->create(['role' => Role::Accountant]);
+
+        $resolver = app(VisibilityResolver::class);
+
+        $this->assertSame(VisibilityScope::Department, $resolver->resolve($manager));
+        $this->assertSame(VisibilityScope::Own, $resolver->resolve($accountant));
+    }
+
+    public function test_admin_can_override_manager_back_to_own(): void
     {
         $manager = User::factory()->create(['role' => Role::Manager]);
 
-        // Unseeded table → legacy default Own.
+        $this->actingAsAdmin();
+        $this->patchJson('/api/admin/visibility-config', ['manager' => 'own'])->assertOk();
+
         $this->assertSame(
             VisibilityScope::Own,
-            app(VisibilityResolver::class)->resolve($manager),
-        );
-    }
-
-    public function test_setting_manager_to_department_changes_resolver(): void
-    {
-        $dept = Department::factory()->create();
-        $manager = User::factory()->create(['role' => Role::Manager, 'department_id' => $dept->id]);
-
-        $admin = $this->actingAsAdmin();
-        $this->patchJson('/api/admin/visibility-config', ['manager' => 'department'])->assertOk();
-
-        $this->assertSame(
-            VisibilityScope::Department,
             app(VisibilityResolver::class)->resolve($manager),
         );
     }

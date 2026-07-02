@@ -7,6 +7,7 @@ namespace App\Domain\Sales\Services;
 use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Crm\Services\FieldLabelResolver;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
@@ -56,6 +57,18 @@ class DealFeedService
      * pages of the timeline are always complete.
      */
     private const MAX_SOURCE_ROWS = 500;
+
+    private readonly FieldLabelResolver $fieldLabels;
+
+    /**
+     * FieldLabelResolver is optional so `new DealFeedService` (used in unit tests
+     * and legacy call sites) keeps working; the container injects the singleton
+     * in production. Defaults to a fresh resolver when omitted.
+     */
+    public function __construct(?FieldLabelResolver $fieldLabels = null)
+    {
+        $this->fieldLabels = $fieldLabels ?? new FieldLabelResolver;
+    }
 
     /**
      * @param  array{types?: array<int, string>}  $filters
@@ -333,6 +346,10 @@ class DealFeedService
                 'actor' => $this->actor($row->user),
                 'payload' => [
                     'field' => $row->field,
+                    // Human-readable RU label for the field (e.g. discount_percent
+                    // → «Скидка»). `field` is kept for compatibility; the frontend
+                    // renders field_label || field.
+                    'field_label' => $this->fieldLabels->forDeal($row->field),
                     'old_value' => $row->old_value,
                     'new_value' => $row->new_value,
                 ],

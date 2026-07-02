@@ -411,6 +411,87 @@ class AmoTransformTest extends TestCase
         $this->assertSame('ignore', $out['class']);
     }
 
+    public function test_custom_field_value_change_renders_readable_labels_not_json(): void
+    {
+        // The exact shape AMO returns for a select-field change (the deal-70 bug):
+        // value_after nests the enum label inside a `custom_field_value` wrapper.
+        $out = (new EventTransformer($this->resolver))->transform([
+            'id' => 'e10',
+            'type' => 'custom_field_711078_value_changed',
+            '_lead_id' => 100,
+            'created_at' => 1600000300,
+            'created_by' => 7,
+            'value_before' => [['custom_field_value' => [
+                'field_id' => 711078, 'field_type' => 4, 'enum_id' => 1188594, 'text' => 'г. Санкт-Петербург',
+            ]]],
+            'value_after' => [['custom_field_value' => [
+                'field_id' => 711078, 'field_type' => 4, 'enum_id' => 1188488, 'text' => 'г. Москва',
+            ]]],
+        ]);
+
+        $this->assertSame('data_change', $out['class']);
+        $this->assertSame('Регион', $out['field']); // human field name, not amo_cf_711078
+        $this->assertSame('г. Санкт-Петербург', $out['old_value']);
+        $this->assertSame('г. Москва', $out['new_value']);
+
+        // Hard guarantee: no raw-JSON tokens leaked into any stored value.
+        foreach (['field', 'old_value', 'new_value'] as $key) {
+            $this->assertStringNotContainsString('{', (string) $out[$key]);
+            $this->assertStringNotContainsString('custom_field_value', (string) $out[$key]);
+            $this->assertStringNotContainsString('enum_id', (string) $out[$key]);
+        }
+    }
+
+    public function test_custom_field_value_change_without_name_map_still_readable(): void
+    {
+        // A field_id with no field_name_map entry → generic name, but the VALUE
+        // text is still rendered (never JSON).
+        $out = (new EventTransformer($this->resolver))->transform([
+            'id' => 'e11',
+            'type' => 'custom_field_999999_value_changed',
+            '_lead_id' => 100,
+            'value_after' => [['custom_field_value' => [
+                'field_id' => 999999, 'enum_id' => 706692, 'text' => 'Расписание (calendar)',
+            ]]],
+        ]);
+
+        $this->assertSame('Поле', $out['field']);
+        $this->assertSame('Расписание (calendar)', $out['new_value']);
+        $this->assertNull($out['old_value']);
+        $this->assertStringNotContainsString('{', (string) $out['new_value']);
+    }
+
+    public function test_scalar_data_change_never_emits_json_for_unknown_shape(): void
+    {
+        // A non-custom-field data-change whose value block matches no known key
+        // must resolve to null, never a json_encode() dump.
+        $out = (new EventTransformer($this->resolver))->transform([
+            'id' => 'e12',
+            'type' => 'entity_tag_added',
+            '_lead_id' => 100,
+            'value_after' => [['tag' => ['id' => 5, 'name' => 'VIP']]],
+        ]);
+
+        $this->assertSame('data_change', $out['class']);
+        // 'tag' is not a known flat key and carries no custom_field_value wrapper.
+        $this->assertNull($out['new_value']);
+        $this->assertStringNotContainsString('{', (string) ($out['new_value'] ?? ''));
+    }
+
+    public function test_note_with_field_change_payload_renders_label_not_json(): void
+    {
+        // Defensive: a field-change payload that arrived shaped as a note body.
+        $note = (new NoteTransformer($this->resolver))->transform([
+            'id' => 'n3', '_lead_id' => 100, 'note_type' => 'service_message',
+            'params' => ['custom_field_value' => ['field_id' => 711078, 'enum_id' => 1188488, 'text' => 'г. Москва']],
+            'created_at' => 1599990000,
+        ]);
+
+        $this->assertFalse($note['skip']);
+        $this->assertSame('г. Москва', $note['activity']['body']);
+        $this->assertStringNotContainsString('custom_field_value', (string) $note['activity']['body']);
+    }
+
     // ---- Task / Note ----
 
     public function test_task_completed_lands_done_and_closed(): void

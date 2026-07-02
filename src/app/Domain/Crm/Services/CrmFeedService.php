@@ -66,6 +66,7 @@ class CrmFeedService
 
     public function __construct(
         private readonly VisibilityResolver $visibility,
+        private readonly FieldLabelResolver $fieldLabels,
     ) {}
 
     /**
@@ -322,10 +323,54 @@ class CrmFeedService
                 'occurred_at' => $row->created_at?->toIso8601String(),
                 'actor' => $this->actor($row->actor),
                 'payload' => [
-                    // meta.changes = [{field, old, new}] — normalised on the FE.
-                    'changes' => is_array($row->meta['changes'] ?? null) ? $row->meta['changes'] : [],
+                    // meta.changes = [{field, field_label, old, new}] — normalised
+                    // on the FE. field_label is the human-readable RU label; the
+                    // raw `field` is kept for compatibility (FE renders label || field).
+                    'changes' => $this->labelChanges($entity, $row->meta['changes'] ?? null),
                 ],
             ]);
+    }
+
+    /**
+     * Enrich each raw {field, old, new} change with a human-readable field_label,
+     * resolved for the entity's scope (company/contact). Non-array/malformed input
+     * yields an empty list; unknown fields fall back to a humanized label without
+     * crashing.
+     *
+     * @param  mixed  $changes  the raw meta.changes payload
+     * @return list<array<string, mixed>>
+     */
+    private function labelChanges(Company|Contact $entity, mixed $changes): array
+    {
+        if (! is_array($changes)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($changes as $change) {
+            if (! is_array($change)) {
+                continue;
+            }
+
+            $field = is_string($change['field'] ?? null) ? $change['field'] : null;
+
+            $result[] = $field === null
+                ? $change
+                : $change + ['field_label' => $this->labelFor($entity, $field)];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Resolve a raw field name to its RU label for the entity's scope.
+     */
+    private function labelFor(Company|Contact $entity, string $field): string
+    {
+        return $entity instanceof Company
+            ? $this->fieldLabels->forCompany($field)
+            : $this->fieldLabels->forContact($field);
     }
 
     // ── Deal-id resolution ───────────────────────────────────────────────────
@@ -343,9 +388,13 @@ class CrmFeedService
 
         $query = match ($scope) {
             VisibilityScope::All => $query,
-            VisibilityScope::Department => $query->whereIn(
-                'department_id',
-                $this->visibility->departmentSubtreeIds($user),
+            // Own deals stay visible under department scope even when their
+            // department_id is null / outside the subtree (mirror
+            // DealService::scopedQuery) so a manager's own deal never drops out.
+            VisibilityScope::Department => $query->where(
+                fn (Builder $q): Builder => $q
+                    ->where('owner_user_id', $user->id)
+                    ->orWhereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
             ),
             VisibilityScope::Own => $query->where('owner_user_id', $user->id),
         };
@@ -377,9 +426,13 @@ class CrmFeedService
 
         $query = match ($scope) {
             VisibilityScope::All => $query,
-            VisibilityScope::Department => $query->whereIn(
-                'department_id',
-                $this->visibility->departmentSubtreeIds($user),
+            // Own deals stay visible under department scope even when their
+            // department_id is null / outside the subtree (mirror
+            // DealService::scopedQuery) so a manager's own deal never drops out.
+            VisibilityScope::Department => $query->where(
+                fn (Builder $q): Builder => $q
+                    ->where('owner_user_id', $user->id)
+                    ->orWhereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
             ),
             VisibilityScope::Own => $query->where('owner_user_id', $user->id),
         };

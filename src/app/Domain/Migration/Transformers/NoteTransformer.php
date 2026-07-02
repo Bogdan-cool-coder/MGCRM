@@ -7,6 +7,7 @@ namespace App\Domain\Migration\Transformers;
 use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
+use App\Domain\Migration\Support\AmoEnumLabelResolver;
 use App\Domain\Migration\Support\AmoReferenceResolver;
 
 /**
@@ -23,6 +24,7 @@ final class NoteTransformer
 {
     public function __construct(
         private readonly AmoReferenceResolver $resolver,
+        private readonly AmoEnumLabelResolver $labels = new AmoEnumLabelResolver,
     ) {}
 
     /**
@@ -102,6 +104,15 @@ final class NoteTransformer
             $duration = $params['duration'] ?? null;
             if ($phone !== '') {
                 $text = trim($phone.($duration !== null ? ' ('.$duration.'s)' : ''));
+            }
+        }
+
+        if ($text === '' && is_array($params) && isset($params['custom_field_value'])) {
+            // Defensive: a field-change payload that arrived shaped as a note body.
+            // Render it readable via the label resolver rather than leaving JSON.
+            $label = $this->labels->value([$params]);
+            if ($label !== null) {
+                $text = $label;
             }
         }
 

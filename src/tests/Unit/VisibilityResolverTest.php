@@ -33,12 +33,22 @@ class VisibilityResolverTest extends TestCase
         $this->assertSame(VisibilityScope::All, $this->resolver->resolve($admin));
     }
 
-    public function test_manager_resolves_to_own_scope(): void
+    public function test_manager_resolves_to_department_scope(): void
     {
+        // M9: manager default is Department (team read scope), not Own.
         $manager = User::factory()->create(['role' => Role::Manager]);
         $manager->assignRole(Role::Manager->value);
 
-        $this->assertSame(VisibilityScope::Own, $this->resolver->resolve($manager));
+        $this->assertSame(VisibilityScope::Department, $this->resolver->resolve($manager));
+    }
+
+    public function test_accountant_resolves_to_own_scope(): void
+    {
+        // Accountant/cfo stay Own — the M9 department read is manager-only.
+        $accountant = User::factory()->create(['role' => Role::Accountant]);
+        $accountant->assignRole(Role::Accountant->value);
+
+        $this->assertSame(VisibilityScope::Own, $this->resolver->resolve($accountant));
     }
 
     public function test_user_without_spatie_role_falls_back_to_mirror_column(): void

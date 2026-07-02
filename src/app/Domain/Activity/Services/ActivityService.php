@@ -822,8 +822,6 @@ class ActivityService
      */
     public function countDealsWithoutTasks(int $pipelineId, User $user): int
     {
-        $scope = $this->visibility->resolve($user);
-
         $query = Deal::query()
             ->where('pipeline_id', $pipelineId)
             // Open deals only: exclude won/lost stages (status lives on the stage).
@@ -833,13 +831,15 @@ class ActivityService
             // Single-sourced with the list / KPI: no open next task on this deal.
             ->whereDoesntHave('nextTask');
 
-        $query = match ($scope) {
-            VisibilityScope::All => $query,
-            VisibilityScope::Department => $query->whereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
-            VisibilityScope::Own => $query->where('owner_user_id', $user->id),
-        };
-
-        return $query->count();
+        // Scope through the SAME VisibilityResolver::applyScope as the deep-linked
+        // list (stampDealContext) so the count can never drift from it — including
+        // the owner-OR branch under Department scope (own deals with null/foreign
+        // department_id stay counted). A hand-rolled match previously dropped that
+        // branch and undercounted a manager's own deals once M9 made manager =
+        // Department.
+        return $this->visibility
+            ->applyScope($query, $user, ['owner_user_id'], 'department_id')
+            ->count();
     }
 
     /**
@@ -1798,7 +1798,15 @@ class ActivityService
 
         $query = match ($scope) {
             VisibilityScope::All => $query,
-            VisibilityScope::Department => $query->whereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
+            // Own deals stay visible under department scope even when their
+            // department_id is null / outside the subtree (mirror
+            // DealService::scopedQuery) — otherwise a manager's own deal drops out of
+            // their company feed under M9 department scope.
+            VisibilityScope::Department => $query->where(
+                fn (Builder $q): Builder => $q
+                    ->where('owner_user_id', $user->id)
+                    ->orWhereIn('department_id', $this->visibility->departmentSubtreeIds($user)),
+            ),
             VisibilityScope::Own => $query->where('owner_user_id', $user->id),
         };
 

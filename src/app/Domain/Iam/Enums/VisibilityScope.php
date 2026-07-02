@@ -13,8 +13,8 @@ namespace App\Domain\Iam\Enums;
  * fail-closed contract every domain context will build on.
  *
  *   All        — sees every record (admin / director / lawyer)
- *   Department — sees records owned by anyone in their department subtree
- *   Own        — sees only records they own (manager / accountant / cfo)
+ *   Department — sees records owned by anyone in their department subtree (manager)
+ *   Own        — sees only records they own (accountant / cfo)
  *
  * Fail-closed: anything not explicitly mapped resolves to Own (most restrictive).
  */
@@ -40,7 +40,12 @@ enum VisibilityScope: string
     {
         return match ($role) {
             Role::Admin->value, Role::Director->value, Role::Lawyer->value => self::All,
-            Role::Manager->value, Role::Accountant->value, Role::Cfo->value => self::Own,
+            // Manager (M9): department READ scope — a manager LISTS/VIEWS the deals &
+            // activities of teammates in their department subtree. This is a READ grant
+            // only; write authority (update/move/delete) stays owner-only in the
+            // policies, decoupled from this scope, so a peer can see but not hijack.
+            Role::Manager->value => self::Department,
+            Role::Accountant->value, Role::Cfo->value => self::Own,
             default => self::Own,
         };
     }

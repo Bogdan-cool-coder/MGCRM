@@ -654,9 +654,16 @@ class SalesDashboardService
 
         return match ($scope) {
             VisibilityScope::All => $query,
-            VisibilityScope::Department => $query->whereIn(
-                'deals.department_id',
-                $this->visibility->departmentSubtreeIds($user)
+            // Mirror DealService::scopedQuery / DealPolicy::inDepartmentSubtree
+            // EXACTLY: own deals are always visible under department scope (even when
+            // their department_id is null or outside the subtree), IN ADDITION to the
+            // department subtree. Without the owner-OR branch the dashboard would
+            // undercount a manager's own deals that the board/list DO show — a
+            // list/aggregate drift surfaced by M9 (manager → Department).
+            VisibilityScope::Department => $query->where(
+                fn (Builder $q): Builder => $q
+                    ->where('deals.owner_user_id', $user->id)
+                    ->orWhereIn('deals.department_id', $this->visibility->departmentSubtreeIds($user)),
             ),
             VisibilityScope::Own => $query->where('deals.owner_user_id', $user->id),
         };

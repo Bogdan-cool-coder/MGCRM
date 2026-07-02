@@ -450,6 +450,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Custom-field name map: amo custom_field field_id => human RU label
+    |--------------------------------------------------------------------------
+    |
+    | Read by AmoEnumLabelResolver to render `custom_field_value_changed` timeline
+    | events as "«<field name>»: <old> → <new>" instead of dumping raw AMO JSON.
+    | The list covers the fields present in the source funnels; a field_id not
+    | listed here falls back to a generic "Поле" label (the readable VALUE text is
+    | still rendered, so the row stays human even without a name entry). Extend as
+    | new fields surface in the coverage report.
+    |
+    */
+    'field_name_map' => [
+        584603 => 'Дата подписания договора',
+        585395 => 'Дата оплаты',
+        708366 => 'Источник',
+        709194 => 'ИНН',
+        709546 => 'Специализация',
+        709732 => 'Бессрочная лицензия',
+        711078 => 'Регион',
+        748860 => 'Категория',
+        583865 => 'Должность',
+        2707 => 'Должность',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Note type map: amo_note_type => mgcrm note/activity kind ('skip' = drop)
     |--------------------------------------------------------------------------
     */

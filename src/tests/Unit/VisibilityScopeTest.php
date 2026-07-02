@@ -25,7 +25,7 @@ class VisibilityScopeTest extends TestCase
         yield 'admin -> all' => [Role::Admin->value, VisibilityScope::All];
         yield 'director -> all' => [Role::Director->value, VisibilityScope::All];
         yield 'lawyer -> all' => [Role::Lawyer->value, VisibilityScope::All];
-        yield 'manager -> own' => [Role::Manager->value, VisibilityScope::Own];
+        yield 'manager -> department' => [Role::Manager->value, VisibilityScope::Department];
         yield 'accountant -> own' => [Role::Accountant->value, VisibilityScope::Own];
         yield 'cfo -> own' => [Role::Cfo->value, VisibilityScope::Own];
         yield 'unknown role -> own (fail-closed)' => ['ghost', VisibilityScope::Own];

@@ -15,19 +15,28 @@ use App\Domain\Sales\Models\Deal;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * ActivityPolicy — visibility-scoped authorization (own / department / all),
+ * ActivityPolicy — visibility-scoped authorization (M9: FULL department access),
  * mirroring DealPolicy. The effective scope is resolved from the user's role via
  * VisibilityResolver so policy access matches ActivityService query filtering
- * exactly. Under Department/Own scope a user always reaches activities where they
- * are responsible or the creator. No inline role checks (ARCHITECTURE.md §3).
+ * exactly. No inline role checks (ARCHITECTURE.md §3).
  *
- * COHERENT OWNERSHIP (E16): view/update/delete/complete/reopen/changeStatus ALL
- * share ONE ownership test — ownershipAllows() — so the read+edit scope and the
- * complete/delete scope can never invert. Previously delete and the status gates
- * dropped the department branch, so a department manager could EDIT a
- * subordinate's task but not complete or delete it. Now any actor who can see and
- * edit a task (own/responsible/creator + department subtree + All) can also
- * complete and delete it.
+ * COHERENT OWNERSHIP (E16, restored under M9): view/update/delete/complete/reopen/
+ * changeStatus ALL share ONE ownership test — ownershipAllows() — so read and write
+ * scope can never diverge:
+ *   All        (admin/director/lawyer) → any activity, read + write.
+ *   Department (manager)               → own/responsible/created + the whole
+ *                                        department subtree, read AND write. A manager
+ *                                        may VIEW, EDIT, COMPLETE and DELETE a
+ *                                        colleague's task within their department —
+ *                                        the same as the responsible would. Nothing
+ *                                        across other departments.
+ *   Own        (accountant/cfo)        → own/responsible/created only.
+ * (A future per-user restriction layer may narrow an individual manager below full
+ * department access; that layer is out of scope here.)
+ *
+ * CREATE is gated by TARGET visibility at the service layer
+ * (ActivityService::assertTargetVisible → Gate view): a manager may add a task/note
+ * to any deal/company/contact in their department that they can see.
  *
  * MUTATIONS additionally re-check that the activity's polymorphic target (deal/
  * company/contact) is STILL visible to the actor (B4): create() gates the target
@@ -60,19 +69,18 @@ class ActivityPolicy
 
     public function update(User $user, Activity $activity): bool
     {
-        // Ownership/scope AND current visibility of the polymorphic target (B4):
-        // reschedule routes through this same gate (RescheduleActivityRequest
-        // authorizes 'update').
+        // Ownership/scope (own/responsible/created + department subtree + All) AND the
+        // polymorphic target must still be visible to the actor (B4). reschedule routes
+        // through this same gate (RescheduleActivityRequest authorizes 'update').
         return $this->ownershipAllows($user, $activity)
             && $this->targetVisible($user, $activity);
     }
 
     /**
-     * Delete shares the exact ownership model as view/update (E16): own /
-     * responsible / creator + department subtree + All. A department manager who
-     * can see and edit a subordinate's task can also delete it. The B4 target
-     * re-check still applies — a task whose parent deal moved out of scope is no
-     * longer actionable.
+     * Delete shares the exact ownership model as view/update (E16, M9): own /
+     * responsible / creator + department subtree + All. A manager can delete any
+     * task in their department subtree. The B4 target re-check still applies — a task
+     * whose parent deal moved out of scope is no longer actionable.
      */
     public function delete(User $user, Activity $activity): bool
     {
@@ -82,10 +90,9 @@ class ActivityPolicy
 
     /**
      * complete / reopen / status share the SAME ownership model as view/update
-     * (E16): own / responsible / creator + department subtree + All, AND the
-     * activity's target must still be visible to the actor (B4). Aligning these
-     * with update/view removes the old inversion where a department manager could
-     * edit but not complete/reopen a subordinate's task.
+     * (E16, M9): own / responsible / creator + department subtree + All, AND the
+     * activity's target must still be visible to the actor (B4). A manager can
+     * complete/reopen a colleague's task within their department.
      */
     public function complete(User $user, Activity $activity): bool
     {
@@ -150,14 +157,15 @@ class ActivityPolicy
     }
 
     /**
-     * The single shared ownership test (E16) used by EVERY activity gate
+     * The single shared ownership test (E16, M9) used by EVERY activity gate
      * (view/update/delete/complete/reopen/changeStatus). Resolving the actor's
-     * visibility scope and branching here once means the gates can never drift
-     * apart again:
+     * visibility scope and branching here once means read and write scope can never
+     * drift apart:
      *   All        — any activity.
      *   Own        — the actor is responsible or the creator.
      *   Department — own/responsible/creator OR the activity's department_id falls
-     *                in the actor's department subtree.
+     *                in the actor's department subtree — a manager gets full CRUD
+     *                over any task in their department.
      * The B4 target re-check is layered ON TOP of this by the mutating gates.
      */
     private function ownershipAllows(User $user, Activity $activity): bool

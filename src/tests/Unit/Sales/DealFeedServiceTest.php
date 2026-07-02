@@ -7,6 +7,7 @@ namespace Tests\Unit\Sales;
 use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Crm\Models\CustomFieldDef;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
@@ -61,14 +62,14 @@ class DealFeedServiceTest extends TestCase
         ]);
     }
 
-    private function audit(Deal $deal, ?string $at = null): void
+    private function audit(Deal $deal, ?string $at = null, string $field = 'title', ?string $old = 'A', ?string $new = 'B'): void
     {
         DealAudit::query()->insert([
             'deal_id' => $deal->id,
             'user_id' => null,
-            'field' => 'title',
-            'old_value' => 'A',
-            'new_value' => 'B',
+            'field' => $field,
+            'old_value' => $old,
+            'new_value' => $new,
             'created_at' => $at ?? now(),
         ]);
     }
@@ -595,5 +596,117 @@ class DealFeedServiceTest extends TestCase
         // A page entirely past the ceiling is empty — deep-pagination truncation.
         $beyond = $this->service()->feed($deal, [], 18, 30); // offset 510 > 500
         $this->assertCount(0, $beyond['data']);
+    }
+
+    // ---- field_label: raw column names render as human-readable RU labels ----
+
+    /**
+     * Pull the single field_change payload for a deal that carries exactly one
+     * audit row.
+     *
+     * @return array<string, mixed>
+     */
+    private function soleFieldChangePayload(Deal $deal): array
+    {
+        $event = collect($this->service()->feed($deal)['data'])
+            ->firstWhere('type', DealFeedService::TYPE_FIELD_CHANGE);
+
+        $this->assertNotNull($event, 'a field_change event must be present');
+
+        return $event['payload'];
+    }
+
+    public function test_field_change_carries_human_readable_label(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // The bug: the feed rendered the raw column «discount_percent». It must
+        // now carry a localized «Скидка» label while keeping the raw field too.
+        $this->audit($deal, null, 'discount_percent', '0', '10');
+
+        $payload = $this->soleFieldChangePayload($deal);
+
+        $this->assertSame('discount_percent', $payload['field'], 'raw field kept for compatibility');
+        $this->assertSame('Скидка', $payload['field_label']);
+        $this->assertSame('10', $payload['new_value']);
+    }
+
+    public function test_core_deal_fields_resolve_to_ru_labels(): void
+    {
+        $deal = Deal::factory()->create();
+
+        $expected = [
+            'title' => 'Название',
+            'amount' => 'Сумма',
+            'currency' => 'Валюта',
+            'owner_user_id' => 'Ответственный',
+            'company_id' => 'Компания',
+            'expected_close_date' => 'Планируемая дата закрытия',
+            'tags' => 'Теги',
+            'perpetual_license' => 'Бессрочная лицензия',
+        ];
+
+        foreach ($expected as $field => $label) {
+            $one = Deal::factory()->create();
+            $this->audit($one, null, $field);
+
+            $this->assertSame(
+                $label,
+                $this->soleFieldChangePayload($one)['field_label'],
+                "field {$field} must resolve to «{$label}»",
+            );
+        }
+    }
+
+    public function test_known_custom_field_resolves_to_its_def_label(): void
+    {
+        $deal = Deal::factory()->create();
+
+        CustomFieldDef::create([
+            'entity_scope' => 'deal',
+            'code' => 'contract_number',
+            'label' => 'Номер договора',
+            'field_type' => 'text',
+            'is_active' => true,
+        ]);
+
+        $this->audit($deal, null, 'extra_fields.contract_number', null, 'X-1');
+
+        $this->assertSame('Номер договора', $this->soleFieldChangePayload($deal)['field_label']);
+    }
+
+    public function test_unknown_custom_field_falls_back_to_humanized_label_without_crashing(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // No CustomFieldDef exists for foo_bar → humanized fallback, never a crash
+        // and never the raw «extra_fields.foo_bar» column string.
+        $this->audit($deal, null, 'extra_fields.foo_bar', null, 'v');
+
+        $label = $this->soleFieldChangePayload($deal)['field_label'];
+
+        $this->assertSame('Foo bar', $label);
+        $this->assertStringNotContainsString('extra_fields', $label);
+    }
+
+    public function test_unknown_amo_custom_field_drops_prefix_in_fallback(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // An AMO-migrated code with no def → the amo_cf_ prefix is stripped so the
+        // fallback reads «709732», not «Amo cf 709732».
+        $this->audit($deal, null, 'extra_fields.amo_cf_709732', null, 'v');
+
+        $this->assertSame('709732', $this->soleFieldChangePayload($deal)['field_label']);
+    }
+
+    public function test_unknown_core_field_falls_back_to_humanized_label(): void
+    {
+        $deal = Deal::factory()->create();
+
+        // A raw column with no map entry must never surface as snake_case.
+        $this->audit($deal, null, 'some_new_column', 'a', 'b');
+
+        $this->assertSame('Some new column', $this->soleFieldChangePayload($deal)['field_label']);
     }
 }

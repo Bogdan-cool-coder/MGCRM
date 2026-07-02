@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Migration\Transformers;
 
+use App\Domain\Migration\Support\AmoEnumLabelResolver;
 use App\Domain\Migration\Support\AmoReferenceResolver;
 
 /**
@@ -33,6 +34,7 @@ final class EventTransformer
 {
     public function __construct(
         private readonly AmoReferenceResolver $resolver,
+        private readonly AmoEnumLabelResolver $labels = new AmoEnumLabelResolver,
     ) {}
 
     /**
@@ -76,9 +78,23 @@ final class EventTransformer
         }
 
         if ($class === 'data_change') {
-            $base['field'] = $this->fieldName($type);
-            $base['old_value'] = $this->scalar($amoEvent['value_before'] ?? null);
-            $base['new_value'] = $this->scalar($amoEvent['value_after'] ?? null);
+            $before = $amoEvent['value_before'] ?? null;
+            $after = $amoEvent['value_after'] ?? null;
+
+            if (str_starts_with($type, 'custom_field_')) {
+                // AMO nests the readable label inside a `custom_field_value`
+                // wrapper. Route through AmoEnumLabelResolver so old/new store the
+                // enum text (never raw JSON), and label the field by its AMO name
+                // instead of the opaque `extra_fields.amo_cf_<id>` key.
+                $amoFieldId = $this->customFieldId($type) ?? $this->labels->fieldId($after) ?? $this->labels->fieldId($before);
+                $base['field'] = $this->labels->fieldName($amoFieldId);
+                $base['old_value'] = $this->labels->value($before);
+                $base['new_value'] = $this->labels->value($after);
+            } else {
+                $base['field'] = $this->fieldName($type);
+                $base['old_value'] = $this->scalar($before);
+                $base['new_value'] = $this->scalar($after);
+            }
         }
 
         return $base;
@@ -121,6 +137,15 @@ final class EventTransformer
     }
 
     /**
+     * AMO custom-field id embedded in the event type
+     * (custom_field_709732_value_changed → 709732), or null.
+     */
+    private function customFieldId(string $type): ?int
+    {
+        return preg_match('/custom_field_(\d+)/', $type, $m) === 1 ? (int) $m[1] : null;
+    }
+
+    /**
      * Pull the status id out of an AMO value_before/value_after block.
      * Shape: [{"lead_status": {"id": 142, "pipeline_id": 6149857}}]
      */
@@ -142,6 +167,9 @@ final class EventTransformer
 
     /**
      * Flatten an AMO value block into a short scalar string for the audit diff.
+     * NEVER falls back to json_encode(): a shape we cannot read yields null (the
+     * loader treats a null side as "no readable value"), so raw AMO JSON never
+     * reaches deal_audits or the activity feed.
      */
     private function scalar(mixed $valueBlock): ?string
     {
@@ -167,9 +195,10 @@ final class EventTransformer
                 return (string) $entry;
             }
 
-            $json = json_encode($valueBlock, JSON_UNESCAPED_UNICODE);
-
-            return $json !== false ? mb_substr($json, 0, 500) : null;
+            // Last resort: a custom_field_value-wrapped shape or nested label the
+            // flat keys above missed. Delegate to the label resolver — still no
+            // JSON dump; unresolvable → null.
+            return $this->labels->value($valueBlock);
         }
 
         return null;

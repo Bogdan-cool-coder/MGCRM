@@ -183,7 +183,11 @@ class DealsWithoutTasksTest extends TestCase
 
     public function test_manager_only_sees_own_deals(): void
     {
-        $manager = User::factory()->create(['role' => Role::Manager]); // Own scope
+        // M9: manager = Department scope. Neither manager has a department here, so
+        // the subtree is empty and each still sees only their OWN deals (the
+        // owner-OR branch keeps own deals visible; the foreign deals fall outside
+        // the empty subtree). Same expected result as the old Own scope.
+        $manager = User::factory()->create(['role' => Role::Manager]);
         $other = User::factory()->create(['role' => Role::Manager]);
         $pipeline = $this->pipeline();
         $stage = $this->openStage($pipeline);
