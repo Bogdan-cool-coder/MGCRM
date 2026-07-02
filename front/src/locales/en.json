@@ -471,7 +471,8 @@
         "docTemplates": "Document Templates",
         "tplVariables": "Template Variables",
         "approvalRoutes": "Approval Routes",
-        "msgTemplates": "Message Templates"
+        "msgTemplates": "Message Templates",
+        "customFields": "Custom Fields"
       }
     },
     "system": {
@@ -3723,6 +3724,62 @@
       "success_detail": "Baseline successfully restored. Please log in again.",
       "error_title": "Reset failed"
     }
+  },
+  "customFields": {
+    "pageTitle": "Custom Fields",
+    "add": "Add field",
+    "edit": "Edit field",
+    "columns": {
+      "label": "Name",
+      "kind": "Type",
+      "scope": "Entity",
+      "isRequired": "Required",
+      "isActive": "Active"
+    },
+    "empty": {
+      "title": "No custom fields",
+      "hint": "Create the first field for this entity"
+    },
+    "deleteConfirm": "Delete field «{label}»? Data in existing records will remain but the field will no longer be displayed.",
+    "saved": "Field saved",
+    "deleted": "Field deleted",
+    "errors": {
+      "codeConflict": "A field with this code already exists for this entity",
+      "codeFormat": "Code must be snake_case: lowercase letters, digits and _, starting with a letter",
+      "required": "Required field"
+    },
+    "fields": {
+      "label": "Name",
+      "code": "Code (snake_case)",
+      "codeHint": "Code cannot be changed after creation",
+      "scope": "Entity",
+      "kind": "Field type",
+      "options": "Options",
+      "optionsHint": "Add options for selection",
+      "sortOrder": "Order",
+      "isRequired": "Required field",
+      "isActive": "Active"
+    },
+    "scopes": {
+      "deal": "Deal",
+      "contact": "Contact",
+      "company": "Company",
+      "contract": "Contract",
+      "all": "All"
+    },
+    "kinds": {
+      "text": "Text",
+      "textarea": "Text area",
+      "number": "Number",
+      "date": "Date",
+      "select": "List",
+      "multiselect": "Multi-list",
+      "url": "Link",
+      "checkbox": "Checkbox",
+      "user_ref": "User"
+    },
+    "reorderDisabledHint": "Select a specific entity to sort",
+    "configureLink": "Configure fields"
   },
   "crm": {
     "saved_views": {

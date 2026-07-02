@@ -1,5 +1,7 @@
 <template>
-  <dt class="key-facts-item__label">{{ label }}</dt>
+  <dt class="key-facts-item__label">
+    {{ label }}<span v-if="required" class="key-facts-item__req" aria-hidden="true"> *</span>
+  </dt>
   <dd class="key-facts-item__value">
     <slot />
   </dd>
@@ -8,6 +10,7 @@
 <script setup lang="ts">
 defineProps<{
   label: string
+  required?: boolean
 }>()
 </script>
 
@@ -25,6 +28,13 @@ defineProps<{
   .app-dark & {
     color: var(--p-surface-400);
   }
+}
+
+.key-facts-item__req {
+  color: var(--p-red-500);
+  font-size: $font-size-xs;
+  line-height: 1;
+  margin-left: $space-1;
 }
 
 .key-facts-item__value {

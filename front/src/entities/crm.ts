@@ -346,9 +346,11 @@ export interface CompanyChannel {
   updated_at: string | null
 }
 
-// ─── Custom Field Definition (scope=deal|company) ─────────────────────────────
+// ─── Custom Field Definition ──────────────────────────────────────────────────
+// Canonical shape per docs/contracts/custom-fields-api-contract.md §3
 
-export type CustomFieldScope = 'deal' | 'company' | 'contact'
+export type CustomFieldScope = 'deal' | 'company' | 'contact' | 'contract'
+
 export type CustomFieldType =
   | 'text'
   | 'textarea'
@@ -357,19 +359,24 @@ export type CustomFieldType =
   | 'multiselect'
   | 'date'
   | 'url'
-  | 'bool'
   | 'boolean'
   | 'user_ref'
 
 export interface CustomFieldDef {
   id: number
-  scope: CustomFieldScope
+  entity_scope: CustomFieldScope     // was `scope` — renamed to match backend Resource
   code: string
   label: string
+  help_text: string | null
   field_type: CustomFieldType
-  options?: string[] | null
+  options: string[]                  // always an array (never null)
+  default_value: string | number | boolean | string[] | null
+  required: boolean
+  group: string | null
   sort_order: number
   is_active: boolean
+  created_at: string                 // ISO-8601
+  updated_at: string                 // ISO-8601
 }
 
 export interface DealCustomFieldsResponse {

@@ -320,9 +320,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     // CRM — Custom Fields
     // =========================================================================
-    // CRITICAL: /schema MUST be declared BEFORE apiResource to avoid routing clash.
+    // CRITICAL: /schema and /reorder MUST be declared BEFORE apiResource to avoid
+    // routing clash where the static segment is captured as {customFieldDef}.
     Route::get('crm/custom-fields/schema', [CustomFieldDefController::class, 'schema'])
         ->name('crm.custom-fields.schema');
+    Route::patch('crm/custom-fields/reorder', [CustomFieldDefController::class, 'reorder'])
+        ->name('crm.custom-fields.reorder');
 
     Route::apiResource('crm/custom-fields', CustomFieldDefController::class)
         ->parameter('custom-fields', 'customFieldDef')

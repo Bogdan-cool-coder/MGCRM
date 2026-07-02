@@ -12,6 +12,7 @@ use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
 use App\Domain\Contracts\Models\DocumentRevision;
 use App\Domain\Contracts\Models\Template;
+use App\Domain\Crm\Services\CustomFieldService;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
@@ -39,6 +40,7 @@ class DocumentService
         private readonly AttachmentService $attachmentService,
         private readonly EntityLogService $entityLog,
         private readonly DealService $dealService,
+        private readonly CustomFieldService $customFieldService,
     ) {}
 
     /**
@@ -127,12 +129,18 @@ class DocumentService
                 'acts' => [],
                 'custom' => [],
             ],
-            'extra_fields' => $data['extra_fields'] ?? [],
+            'extra_fields' => [],
             'subtotal' => 0,
             'discount_pct' => 0,
             'discount_amount' => 0,
             'total' => 0,
         ]);
+
+        // Validate + coerce custom-field values through the Crm service (G1).
+        if (! empty($data['extra_fields']) && is_array($data['extra_fields'])) {
+            $this->customFieldService->writeFields($doc, $data['extra_fields']);
+            $doc->refresh();
+        }
 
         return $doc;
     }
@@ -160,6 +168,25 @@ class DocumentService
                 $editableData['context'] = $merged;
             }
 
+            // Validate + coerce custom-field values through the Crm service (G1).
+            if (array_key_exists('extra_fields', $editableData)) {
+                $extraFields = $editableData['extra_fields'];
+                unset($editableData['extra_fields']);
+
+                if (is_array($extraFields) && $extraFields !== []) {
+                    // Update non-extra_fields fields first so the doc is fresh.
+                    if ($editableData !== []) {
+                        $doc->update($editableData);
+                    }
+
+                    $this->customFieldService->writeFields($doc, $extraFields);
+                    $doc->refresh();
+                } else {
+                    // null / [] → clear extra_fields.
+                    $editableData['extra_fields'] = $extraFields ?? [];
+                }
+            }
+
             // Recalculate discount_amount and total if discount_pct changes.
             if (isset($editableData['discount_pct'])) {
                 $subtotal = $doc->subtotal;
@@ -169,7 +196,9 @@ class DocumentService
                 $editableData['total'] = $subtotal - $discountAmount;
             }
 
-            $doc->update($editableData);
+            if ($editableData !== []) {
+                $doc->update($editableData);
+            }
         }
 
         // Persist signed_at factual date (unconditional when provided in the PATCH payload).

@@ -21,6 +21,7 @@ export function isProfileSection(key: string): key is ProfileTabKey {
 export const DIRECTORIES_KEYS = [
   'countries',
   'tags',
+  'custom-fields',
   'acq-channels',
   'disc-reasons',
   'catalog',

@@ -5,21 +5,24 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Crm;
 
 use App\Domain\Crm\Enums\CustomFieldScope;
-use App\Domain\Crm\Models\CustomFieldDef;
 use App\Domain\Crm\Services\CustomFieldService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Crm\IndexCustomFieldDefsRequest;
+use App\Http\Requests\Crm\ReorderCustomFieldDefsRequest;
+use App\Http\Requests\Crm\SchemaCustomFieldDefsRequest;
 use App\Http\Requests\Crm\StoreCustomFieldDefRequest;
 use App\Http\Requests\Crm\UpdateCustomFieldDefRequest;
 use App\Http\Resources\Crm\CustomFieldDefResource;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Validation\Rule;
 
 /**
  * Manages CustomFieldDef admin CRUD.
  * Routes: /crm/custom-fields
+ *
+ * Route ordering is critical: schema and reorder MUST be declared BEFORE apiResource
+ * in api.php to prevent the static segment from matching as the {customFieldDef} parameter.
  */
 class CustomFieldDefController extends Controller
 {
@@ -28,22 +31,18 @@ class CustomFieldDefController extends Controller
     ) {}
 
     /**
-     * GET /crm/custom-fields/schema?entity_scope=contact|company
+     * GET /crm/custom-fields/schema?entity_scope=contact|company|deal|contract
      *
-     * Returns field definitions grouped by `group` and sorted by `sort_order`.
+     * Returns active-only field definitions grouped by `group` and sorted by `sort_order`.
      * Designed for CustomFieldRenderer.vue — provides everything needed to render
      * a form for any entity scope without the front having to group manually.
      *
      * MUST be declared BEFORE apiResource (route order matters).
      */
-    public function schema(Request $request): JsonResponse
+    public function schema(SchemaCustomFieldDefsRequest $request): JsonResponse
     {
-        $request->validate([
-            'entity_scope' => ['required', 'string', Rule::enum(CustomFieldScope::class)],
-        ]);
-
         $scope = CustomFieldScope::from($request->query('entity_scope'));
-        $defs = $this->service->defsForScope($scope);
+        $defs = $this->service->defsForScope($scope); // active-only, for form render
 
         // Group by `group` field, sorted by sort_order within each group
         $grouped = $defs->groupBy('group')->map(static function ($fields, string $group): array {
@@ -57,40 +56,66 @@ class CustomFieldDefController extends Controller
     }
 
     /**
-     * GET /crm/custom-fields?scope=company|contact
+     * PATCH /crm/custom-fields/reorder?entity_scope=<scope>
+     *
+     * Bulk sort_order update for one entity_scope. Accepts {items: [{id, sort_order}]}.
+     * All ids must belong to the given scope — cross-scope ids return 422.
+     *
+     * MUST be declared BEFORE apiResource (route order matters).
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function reorder(ReorderCustomFieldDefsRequest $request): JsonResponse
     {
-        $request->validate([
-            'scope' => ['nullable', 'string', Rule::enum(CustomFieldScope::class)],
-        ]);
+        $this->authorize('admin-write');
 
+        $scope = CustomFieldScope::from($request->query('entity_scope'));
+        $this->service->reorder($scope, $request->validated('items'));
+
+        return response()->json(['message' => 'Custom field order updated.']);
+    }
+
+    /**
+     * GET /crm/custom-fields?scope=company|contact|deal|contract&include_inactive=1
+     *
+     * Admin list — includes inactive defs by default (G5b).
+     * Pass `?include_inactive=0` to limit to active-only.
+     *
+     * `defsForScope()` (active-only) is intentionally NOT used here; it is reserved
+     * for form-render (schema endpoint) and writeFields validation.
+     */
+    public function index(IndexCustomFieldDefsRequest $request): AnonymousResourceCollection
+    {
         $scope = $request->query('scope')
             ? CustomFieldScope::from($request->query('scope'))
             : null;
 
-        $defs = $scope
-            ? $this->service->defsForScope($scope)
-            : CustomFieldDef::orderBy('entity_scope')->orderBy('sort_order')->get();
+        // Default: include inactive (admin list shows all); pass 0 to narrow to active.
+        $includeInactive = filter_var(
+            $request->query('include_inactive', '1'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        $defs = $this->service->listDefs($scope, (bool) $includeInactive);
 
         return CustomFieldDefResource::collection($defs);
     }
 
-    public function store(StoreCustomFieldDefRequest $request): JsonResource
+    public function store(StoreCustomFieldDefRequest $request): \Illuminate\Http\JsonResponse
     {
         $this->authorize('admin-write');
 
         $def = $this->service->createDef($request->validated());
 
-        return CustomFieldDefResource::make($def);
+        return CustomFieldDefResource::make($def)
+            ->response()
+            ->setStatusCode(201); // G9: 201 Created
     }
 
-    public function show(Request $request, CustomFieldDef $customFieldDef): JsonResource
+    public function show(\App\Domain\Crm\Models\CustomFieldDef $customFieldDef): JsonResource
     {
         return CustomFieldDefResource::make($customFieldDef);
     }
 
-    public function update(UpdateCustomFieldDefRequest $request, CustomFieldDef $customFieldDef): JsonResource
+    public function update(UpdateCustomFieldDefRequest $request, \App\Domain\Crm\Models\CustomFieldDef $customFieldDef): JsonResource
     {
         $this->authorize('admin-write');
 
@@ -99,12 +124,12 @@ class CustomFieldDefController extends Controller
         return CustomFieldDefResource::make($def);
     }
 
-    public function destroy(Request $request, CustomFieldDef $customFieldDef): JsonResponse
+    public function destroy(\App\Domain\Crm\Models\CustomFieldDef $customFieldDef): \Illuminate\Http\Response
     {
         $this->authorize('admin-write');
 
         $this->service->deleteDef($customFieldDef);
 
-        return response()->json(['message' => 'Custom field definition deleted.']);
+        return response()->noContent(); // G9: 204 No Content
     }
 }

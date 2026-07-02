@@ -9,4 +9,5 @@ enum CustomFieldScope: string
     case Contact = 'contact';
     case Company = 'company';
     case Deal = 'deal';
+    case Contract = 'contract';
 }

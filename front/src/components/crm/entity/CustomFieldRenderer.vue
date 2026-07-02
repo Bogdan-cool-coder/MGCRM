@@ -32,7 +32,7 @@
 
         <KeyFactsBlock>
           <template v-for="def in group.fields" :key="def.code">
-            <KeyFactsItem :label="def.label">
+            <KeyFactsItem :label="def.label" :required="def.required">
               <!-- ── Text / Textarea ─────────────────────────────────────── -->
               <InlineEditableField
                 v-if="def.field_type === 'text' || def.field_type === 'textarea'"
@@ -157,8 +157,8 @@
                 </span>
               </span>
 
-              <!-- ── Boolean ─────────────────────────────────────────────── -->
-              <span v-else-if="def.field_type === 'boolean' || def.field_type === 'bool'" class="custom-field-renderer__bool-wrap">
+              <!-- ── Boolean ────────────────────────────────────────────── -->
+              <span v-else-if="def.field_type === 'boolean'" class="custom-field-renderer__bool-wrap">
                 <ToggleSwitch
                   :model-value="Boolean(getFieldValue(def.code))"
                   :disabled="isSaving(def.code)"
@@ -243,7 +243,7 @@ interface UserOption {
 }
 
 const props = defineProps<{
-  /** 'contact' | 'company' */
+  /** 'deal' | 'contact' | 'company' | 'contract' */
   entityScope: CustomFieldScope
   entityId: number
   /** Current extra_fields values from entity */
@@ -287,7 +287,7 @@ const groupedDefinitions = computed((): FieldGroup[] => {
 
   for (const def of definitions.value) {
     if (!def.is_active) continue
-    const groupKey = ''  // No group field in current entity; use empty for a single group
+    const groupKey = def.group ?? ''
     const existing = groups.get(groupKey)
     if (existing) {
       existing.push(def)

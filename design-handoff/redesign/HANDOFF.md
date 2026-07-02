@@ -133,6 +133,9 @@
   i18n RU+EN: `contact.create.*`, `company.create.*`, `sales.deal.create.*`;
   QA PASS: 3 create-флоу грузят созданную карточку (POST 201 + GET /:id), обе темы, регресс.
 
+### Обновление 2026-07-02 — Управление кастомными полями (ТЗ готово, в очереди)
+- **CustomFields UI (`custom-fields-ui-tz.md`)** — два среза: (1) `CustomFieldsPage` — directory-экран управления схемой (DataTable, scope-табы, Dialog create/edit, row-reorder, toggleActive, delete), встраивается в SectionDirectories как новый таб «Кастомные поля»; (2) доработка `CustomFieldRenderer` — `checkbox`-alias, scope `contract`, required-звёздочка. Новый компонент `FieldKindTag` (тип поля иконкой + лейблом). 6 открытых вопросов — ОВ-1/ОВ-2 (backend shape, admin-endpoint) требуют ответа от `backend-architect` перед стартом.
+
 ### Обновление 2026-07-01 — Единое окно объединения MergeDialog 2.0 (ТЗ готово, в очереди)
 - **MergeDialog 2.0 (`Dedup-Merge-spec.md`)** — ТЗ написано. Два режима одного компонента:
   `mode='dedup'` (скан → группы → merge) и `mode='bulk'` (сразу merge из выбранных N записей).
