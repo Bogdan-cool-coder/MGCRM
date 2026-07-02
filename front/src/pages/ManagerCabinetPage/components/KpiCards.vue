@@ -29,14 +29,15 @@
             </div>
             <div
               class="kpi-card__value"
-              :style="kpi.personal.has_salary_plan ? { color: scoreColor } : undefined"
-              :title="`${kpi.personal.score_pct}%`"
+              :class="{ 'kpi-card__value--muted': !kpi.personal.has_salary_plan }"
+              :style="kpi.personal.has_salary_plan && kpi.personal.score_pct !== null ? { color: scoreColor } : undefined"
+              :title="kpi.personal.score_pct !== null ? `${kpi.personal.score_pct}%` : undefined"
             >
               {{ formatScorePct(kpi.personal.score_pct) }}
             </div>
             <div class="kpi-card__footer">
               <Tag
-                v-if="kpi.personal.has_salary_plan"
+                v-if="kpi.personal.has_salary_plan && kpi.personal.score_badge !== 'none'"
                 :severity="kpi.personal.score_badge"
                 :value="scoreLabel"
                 size="small"
@@ -135,7 +136,8 @@ const scoreColor = computed<string>(() => {
   const badge = props.kpi.personal.score_badge
   if (badge === 'success') return 'var(--p-green-500)'
   if (badge === 'warning') return 'var(--p-orange-500)'
-  return 'var(--p-red-500)'
+  if (badge === 'danger') return 'var(--p-red-500)'
+  return '' // 'none' — no colour applied (muted via CSS class)
 })
 
 const scoreLabel = computed<string>(() => {
@@ -143,7 +145,8 @@ const scoreLabel = computed<string>(() => {
   const badge = props.kpi.personal.score_badge
   if (badge === 'success') return t('managerCabinet.kpi.excellent')
   if (badge === 'warning') return t('managerCabinet.kpi.good')
-  return t('managerCabinet.kpi.needsWork')
+  if (badge === 'danger') return t('managerCabinet.kpi.needsWork')
+  return '' // 'none' — tag not rendered
 })
 </script>
 
@@ -196,6 +199,11 @@ const scoreLabel = computed<string>(() => {
 
 .kpi-card__value--md {
   font-size: $font-size-2xl; // 1.5rem
+}
+
+.kpi-card__value--muted {
+  color: $surface-400;
+  font-weight: $font-weight-medium;
 }
 
 .kpi-card__footer {

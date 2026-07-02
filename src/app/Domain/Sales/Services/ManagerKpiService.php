@@ -138,19 +138,22 @@ class ManagerKpiService
     /**
      * Compute score_pct (plan §Б1).
      *
-     * - plan=0 AND fact=0  → 0
-     * - plan=0 AND fact>0  → 100
-     * - fact < 0 (guard)   → 0
-     * - general case       → round(fact / plan * 100), minimum 0
+     * - plan=0 (no plan set) → null  (undefined — cannot score against no target)
+     * - fact < 0 (guard)     → 0
+     * - general case         → round(fact / plan * 100), minimum 0
+     *
+     * A missing plan yields NULL rather than a fake 100/0: a manager with a won
+     * deal but no target must NOT read as "100% of plan achieved" (misleading
+     * green) nor as "0% achieved" (misleading red). The UI renders «—» for null.
      */
-    public function scorePct(int $fact, int $plan): int
+    public function scorePct(int $fact, int $plan): ?int
     {
-        if ($fact < 0) {
-            return 0;
+        if ($plan === 0) {
+            return null;
         }
 
-        if ($plan === 0) {
-            return $fact > 0 ? 100 : 0;
+        if ($fact < 0) {
+            return 0;
         }
 
         return max(0, (int) round($fact / $plan * 100));
@@ -158,10 +161,15 @@ class ManagerKpiService
 
     /**
      * Translate score_pct to a Bootstrap/PrimeVue severity (plan §Б1).
-     * >= 100 → success, 80..99 → warning, < 80 → danger.
+     * null (no plan) → 'none' (neutral — no green/red), >= 100 → success,
+     * 80..99 → warning, < 80 → danger.
      */
-    public function scoreBadge(int $pct): string
+    public function scoreBadge(?int $pct): string
     {
+        if ($pct === null) {
+            return 'none';
+        }
+
         $warningThreshold = (int) config('crm.kpi.score_warning_threshold', 80);
 
         if ($pct >= 100) {
@@ -178,11 +186,19 @@ class ManagerKpiService
     /**
      * Competition rank: 1 + count of members with strictly higher score_pct (plan §Б3).
      *
-     * @param  list<int>  $memberPcts  all team member percentages including viewer
+     * A null score (no plan set) is treated as 0 for ranking, so a no-plan member
+     * sorts last and never outranks a member who is actually being measured.
+     *
+     * @param  list<int|null>  $memberPcts  all team member percentages including viewer
      */
-    public function teamRank(int $userPct, array $memberPcts): int
+    public function teamRank(?int $userPct, array $memberPcts): int
     {
-        $higher = array_filter($memberPcts, static fn (int $p): bool => $p > $userPct);
+        $userScore = $userPct ?? 0;
+
+        $higher = array_filter(
+            $memberPcts,
+            static fn (?int $p): bool => ($p ?? 0) > $userScore,
+        );
 
         return 1 + count($higher);
     }
@@ -196,7 +212,10 @@ class ManagerKpiService
      * spread the median tracks the mean closely; under an outlier it stays on
      * the representative member. Rounded to an integer percentage.
      *
-     * @param  list<int>  $memberPcts
+     * A null score (no plan set) is treated as 0 so a no-plan member does not
+     * inflate the team figure.
+     *
+     * @param  list<int|null>  $memberPcts
      */
     public function teamAvgPct(array $memberPcts): int
     {
@@ -204,7 +223,7 @@ class ManagerKpiService
             return 0;
         }
 
-        $sorted = $memberPcts;
+        $sorted = array_map(static fn (?int $p): int => $p ?? 0, $memberPcts);
         sort($sorted);
 
         $count = count($sorted);
@@ -281,7 +300,7 @@ class ManagerKpiService
      *
      * @param  list<int>  $userIds
      * @param  bool  $multiCurrencyWarning  pass-by-reference, OR'd with any conversion miss
-     * @return array<int, array{income_fact: int, score_pct: int, user_id: int}>
+     * @return array<int, array{income_fact: int, score_pct: int|null, user_id: int}>
      */
     public function teamKpiBatch(array $userIds, KpiFilters $filters, bool &$multiCurrencyWarning = false): array
     {
@@ -510,7 +529,7 @@ class ManagerKpiService
     private function buildTeamData(
         User $target,
         KpiFilters $filters,
-        int $targetScorePct,
+        ?int $targetScorePct,
         User $viewer,
         bool &$multiCurrencyWarning,
     ): array {
@@ -520,7 +539,10 @@ class ManagerKpiService
         // resolves to the target alone). Returns size 1 with just the viewer.
         if (count($memberIds) <= 1) {
             return [
-                'avg_pct' => $targetScorePct,
+                // avg_pct is a team-level aggregate: a null (no-plan) score counts
+                // as 0, matching teamAvgPct/teamRank. The per-member score_pct
+                // below preserves null so the UI can render «—».
+                'avg_pct' => $targetScorePct ?? 0,
                 'rank' => 1,
                 'size' => 1,
                 'members' => [
@@ -545,8 +567,9 @@ class ManagerKpiService
 
         $isPrivileged = $viewer->can('manager-cabinet.view-all');
 
+        /** @var list<int|null> $memberPcts */
         $memberPcts = array_map(
-            static fn (array $row): int => $row['score_pct'],
+            static fn (array $row): ?int => $row['score_pct'],
             $kpiData,
         );
 
@@ -569,8 +592,11 @@ class ManagerKpiService
             $members[] = $member;
         }
 
-        // Sort DESC by score_pct
-        usort($members, static fn (array $a, array $b): int => $b['score_pct'] <=> $a['score_pct']);
+        // Sort DESC by score_pct; a null (no-plan) score sorts last (treated as 0).
+        usort(
+            $members,
+            static fn (array $a, array $b): int => ($b['score_pct'] ?? 0) <=> ($a['score_pct'] ?? 0),
+        );
 
         return [
             'avg_pct' => $this->teamAvgPct(array_values($memberPcts)),

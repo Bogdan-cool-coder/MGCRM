@@ -138,10 +138,10 @@ class ManagerCabinetKpiTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // No salary plan → graceful zeros
+    // No salary plan → null score (undefined), neutral badge
     // -------------------------------------------------------------------------
 
-    public function test_kpi_no_salary_plan_returns_graceful_zeros(): void
+    public function test_kpi_no_salary_plan_returns_null_score(): void
     {
         $manager = $this->makeManager();
         Sanctum::actingAs($manager, ['*']);
@@ -150,8 +150,29 @@ class ManagerCabinetKpiTest extends TestCase
 
         $response->assertJsonPath('personal.has_salary_plan', false);
         $response->assertJsonPath('personal.income_plan_kopecks', 0);
-        $response->assertJsonPath('personal.score_pct', 0);
+        // No plan → score is undefined (null), not a misleading 0/100.
+        $response->assertJsonPath('personal.score_pct', null);
+        $response->assertJsonPath('personal.score_badge', 'none');
         $response->assertJsonPath('personal.ftm_count_plan', null);
+    }
+
+    public function test_kpi_no_plan_but_won_deal_is_null_not_100(): void
+    {
+        // The degenerate case: a won deal with NO plan must NOT read as 100%
+        // (misleading green). It scores null with a neutral 'none' badge.
+        $manager = $this->makeManager();
+        $wonStage = $this->wonStage();
+
+        $this->wonDeal($manager, $wonStage, 12_000_000);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        $response->assertJsonPath('personal.income_fact_kopecks', 12_000_000);
+        $response->assertJsonPath('personal.score_pct', null);
+        $response->assertJsonPath('personal.score_badge', 'none');
+        $response->assertJsonPath('personal.has_salary_plan', false);
     }
 
     // -------------------------------------------------------------------------
@@ -417,6 +438,55 @@ class ManagerCabinetKpiTest extends TestCase
         $response->assertJsonPath('team.size', 2);
     }
 
+    public function test_team_avg_and_rank_handle_null_member_score(): void
+    {
+        // A colleague with NO salary plan (null score) must not crash the team
+        // aggregation, must sort last, and must not inflate the average.
+        $dept = $this->makeDept();
+        $manager = $this->makeManager($dept->id);
+        $colleagueNoPlan = User::factory()->create([
+            'role' => Role::Manager,
+            'department_id' => $dept->id,
+            'is_active' => true,
+        ]);
+
+        $wonStage = $this->wonStage();
+
+        // Manager: 100% (10_000_000 / 10_000_000)
+        $this->wonDeal($manager, $wonStage, 10_000_000);
+        SalaryPlan::factory()->create([
+            'user_id' => $manager->id,
+            'period_year' => now()->year,
+            'period_month' => now()->month,
+            'personal_income_plan_kopecks' => 10_000_000,
+        ]);
+
+        // Colleague: a won deal but NO plan → score_pct null, badge 'none'.
+        $this->wonDeal($colleagueNoPlan, $wonStage, 8_000_000);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        $response->assertJsonPath('team.size', 2);
+        // Manager (100%) outranks the null (treated as 0) colleague → rank 1.
+        $response->assertJsonPath('team.rank', 1);
+        // Median of [0, 100] = 50 (null treated as 0, does not inflate).
+        $response->assertJsonPath('team.avg_pct', 50);
+
+        $members = $response->json('team.members');
+        $this->assertCount(2, $members);
+
+        // The no-plan member preserves null score + neutral badge, and sorts last.
+        $noPlanMember = collect($members)->firstWhere('full_name', $colleagueNoPlan->full_name);
+        $this->assertNotNull($noPlanMember);
+        $this->assertNull($noPlanMember['score_pct']);
+        $this->assertSame('none', $noPlanMember['score_badge']);
+        // Sorted DESC by score: measured manager first, null-score colleague last.
+        $this->assertSame($manager->full_name, $members[0]['full_name']);
+        $this->assertSame($colleagueNoPlan->full_name, $members[1]['full_name']);
+    }
+
     public function test_team_income_fact_excludes_colleagues_for_manager_role(): void
     {
         $dept = $this->makeDept();
@@ -639,7 +709,8 @@ class ManagerCabinetKpiTest extends TestCase
 
         foreach ($response->json('team.members') as $member) {
             $this->assertArrayHasKey('score_badge', $member);
-            $this->assertContains($member['score_badge'], ['success', 'warning', 'danger']);
+            // 'none' covers members with no salary plan (null score).
+            $this->assertContains($member['score_badge'], ['success', 'warning', 'danger', 'none']);
         }
     }
 

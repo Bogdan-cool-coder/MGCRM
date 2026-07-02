@@ -41,15 +41,17 @@ class ManagerKpiScorePctTest extends TestCase
         $this->assertSame(50, $this->service->scorePct(50_000, 100_000));
     }
 
-    public function test_score_pct_0_when_no_plan_and_no_fact(): void
+    public function test_score_pct_null_when_no_plan_and_no_fact(): void
     {
-        $this->assertSame(0, $this->service->scorePct(0, 0));
+        // No plan set → score is undefined (null), not a misleading 0.
+        $this->assertNull($this->service->scorePct(0, 0));
     }
 
-    public function test_score_pct_100_when_no_plan_but_fact_positive(): void
+    public function test_score_pct_null_when_no_plan_but_fact_positive(): void
     {
-        $this->assertSame(100, $this->service->scorePct(1, 0));
-        $this->assertSame(100, $this->service->scorePct(500_000, 0));
+        // A won deal with NO plan must NOT read as "100% of plan achieved".
+        $this->assertNull($this->service->scorePct(1, 0));
+        $this->assertNull($this->service->scorePct(500_000, 0));
     }
 
     public function test_score_pct_not_negative_when_fact_zero_plan_positive(): void
@@ -102,5 +104,11 @@ class ManagerKpiScorePctTest extends TestCase
     public function test_score_badge_danger_at_0(): void
     {
         $this->assertSame('danger', $this->service->scoreBadge(0));
+    }
+
+    public function test_score_badge_none_when_score_null(): void
+    {
+        // No plan → null score → neutral badge, never green/red.
+        $this->assertSame('none', $this->service->scoreBadge(null));
     }
 }

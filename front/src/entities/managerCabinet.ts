@@ -24,8 +24,10 @@ export interface KpiMeta {
 export interface PersonalKpi {
   income_fact_kopecks: number
   income_plan_kopecks: number
-  score_pct: number
-  score_badge: 'success' | 'warning' | 'danger'
+  /** null when has_salary_plan === false (no plan set) */
+  score_pct: number | null
+  /** 'none' when has_salary_plan === false */
+  score_badge: 'success' | 'warning' | 'danger' | 'none'
   ftm_count_fact: number
   ftm_count_plan: number | null
   has_salary_plan: boolean
@@ -33,8 +35,10 @@ export interface PersonalKpi {
 
 export interface TeamMember {
   full_name: string
-  score_pct: number
-  score_badge: 'success' | 'warning' | 'danger'
+  /** null when the member has no salary plan set */
+  score_pct: number | null
+  /** 'none' when the member has no salary plan set */
+  score_badge: 'success' | 'warning' | 'danger' | 'none'
   is_viewer: boolean
   income_fact_kopecks?: number
 }

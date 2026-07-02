@@ -10,7 +10,16 @@
  */
 const DEFAULT_SCORE_CAP = 300
 
-export function formatScorePct(pct: number, cap: number = DEFAULT_SCORE_CAP): string {
+/**
+ * Format a KPI score percentage for display.
+ * Returns '—' (em-dash) for null (no salary plan set).
+ * Clamps extreme values at `cap`%+ to keep badges visually meaningful.
+ */
+export function formatScorePct(pct: number | null, cap: number = DEFAULT_SCORE_CAP): string {
+  if (pct === null) {
+    return '—'
+  }
+
   if (pct > cap) {
     return `${cap}%+`
   }

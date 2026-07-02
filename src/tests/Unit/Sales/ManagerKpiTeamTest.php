@@ -62,6 +62,19 @@ class ManagerKpiTeamTest extends TestCase
         $this->assertSame(1, $this->service->teamRank(80, [80, 80, 80]));
     }
 
+    public function test_team_rank_null_member_treated_as_zero(): void
+    {
+        // A no-plan colleague (null) counts as 0 → never outranks anyone.
+        // Viewer at 50 has one higher (90); the null member does not → rank 2.
+        $this->assertSame(2, $this->service->teamRank(50, [90, 50, null]));
+    }
+
+    public function test_team_rank_null_viewer_sorts_last(): void
+    {
+        // A no-plan viewer (null → 0) is outranked by both measured members → rank 3.
+        $this->assertSame(3, $this->service->teamRank(null, [90, 50, null]));
+    }
+
     // -------------------------------------------------------------------------
     // teamAvgPct
     // -------------------------------------------------------------------------
@@ -93,6 +106,19 @@ class ManagerKpiTeamTest extends TestCase
     public function test_team_avg_pct_all_zero(): void
     {
         $this->assertSame(0, $this->service->teamAvgPct([0, 0, 0]));
+    }
+
+    public function test_team_avg_pct_null_member_treated_as_zero(): void
+    {
+        // A no-plan member (null) counts as 0 and does not inflate the figure.
+        // sorted [0, 80, 100] → median = 80.
+        $this->assertSame(80, $this->service->teamAvgPct([100, 80, null]));
+    }
+
+    public function test_team_avg_pct_all_null_returns_zero(): void
+    {
+        // Every member without a plan → all treated as 0 → median 0.
+        $this->assertSame(0, $this->service->teamAvgPct([null, null, null]));
     }
 
     public function test_team_avg_pct_is_outlier_resistant(): void

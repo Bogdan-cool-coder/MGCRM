@@ -43,19 +43,24 @@
             :header="t('managerCabinet.team.scorePct')"
             style="width: 80px"
           >
-            <template #body="{ data: row }">
-              <span :title="`${row.score_pct}%`">{{ formatScorePct(row.score_pct) }}</span>
+            <template #body="{ data: row }: { data: TeamMember }">
+              <span
+                :class="{ 'team-table__score--muted': row.score_pct === null }"
+                :title="row.score_pct !== null ? `${row.score_pct}%` : undefined"
+              >{{ formatScorePct(row.score_pct) }}</span>
             </template>
           </Column>
 
           <!-- Статус -->
           <Column :header="t('managerCabinet.team.status')" style="width: 130px">
-            <template #body="{ data: row }">
+            <template #body="{ data: row }: { data: TeamMember }">
               <Tag
+                v-if="row.score_badge !== 'none'"
                 :severity="row.score_badge"
                 :value="labelFor(row.score_pct)"
                 size="small"
               />
+              <span v-else class="team-table__no-plan">{{ t('managerCabinet.kpi.noPlan') }}</span>
             </template>
           </Column>
         </DataTable>
@@ -97,7 +102,8 @@ const rowClass = (row: TeamMember): Record<string, boolean> => ({
   'team-table__row--viewer': row.is_viewer,
 })
 
-const labelFor = (pct: number): string => {
+const labelFor = (pct: number | null): string => {
+  if (pct === null) return ''
   if (pct >= 100) return t('managerCabinet.kpi.excellent')
   if (pct >= 80) return t('managerCabinet.kpi.good')
   return t('managerCabinet.kpi.needsWork')
@@ -131,6 +137,16 @@ const labelFor = (pct: number): string => {
 
 .team-table__footer {
   border-top: 1px solid $surface-200;
+}
+
+.team-table__score--muted {
+  color: $surface-400;
+  font-weight: $font-weight-medium;
+}
+
+.team-table__no-plan {
+  font-size: $font-size-sm;
+  color: $surface-400;
 }
 
 .team-table__empty {
