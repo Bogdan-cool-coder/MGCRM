@@ -17,6 +17,26 @@
       </p>
     </div>
 
+    <!-- My / Team toggle (admin/director/manager only) -->
+    <div v-if="showModeToggle" class="tasks-top-bar__mode-segment">
+      <button
+        type="button"
+        class="tasks-top-bar__mode-btn"
+        :class="{ 'tasks-top-bar__mode-btn--active': (mode ?? 'my') === 'my' }"
+        @click="emit('update:mode', 'my')"
+      >
+        {{ t('tasks.team.toggle.my') }}
+      </button>
+      <button
+        type="button"
+        class="tasks-top-bar__mode-btn"
+        :class="{ 'tasks-top-bar__mode-btn--active': (mode ?? 'my') === 'team' }"
+        @click="emit('update:mode', 'team')"
+      >
+        {{ t('tasks.team.toggle.team') }}
+      </button>
+    </div>
+
     <div class="tasks-top-bar__spacer" />
 
     <!-- Filter button — list view only (kanban has no server-side filter support) -->
@@ -98,6 +118,7 @@ import Menu from 'primevue/menu'
 import type { TaskScope } from '../composables/useTaskBoard'
 
 type TaskView = 'kanban' | 'list'
+type TasksMode = 'my' | 'team'
 
 defineProps<{
   view: TaskView
@@ -106,11 +127,16 @@ defineProps<{
   filterCount: number
   totalCount: number
   overdueCount: number
+  /** Current mode: 'my' (default) or 'team'. */
+  mode?: TasksMode
+  /** If true, show the My/Team toggle (admin/director/manager only). */
+  showModeToggle?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:view': [v: TaskView]
   'update:scope': [v: TaskScope]
+  'update:mode': [v: TasksMode]
   toggleFilter: []
   toggleQuickCreate: []
   enterSelectMode: []
@@ -329,6 +355,50 @@ function onMoreClick(e: MouseEvent) {
 .tasks-top-bar__scope-btn {
   height: 25px;
   padding: 0 $space-2;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $surface-600;
+  cursor: pointer;
+  transition: all var(--app-transition-fast);
+  white-space: nowrap;
+
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
+
+  &--active {
+    background: $surface-card;
+    color: $primary-900;
+    box-shadow: $shadow-sm;
+
+    .app-dark & {
+      background: var(--p-surface-600);
+      color: var(--p-primary-300);
+    }
+  }
+}
+
+// ── Mode segment (My / Team) ──────────────────────────────────────────────────
+
+.tasks-top-bar__mode-segment {
+  display: inline-flex;
+  gap: 2px;
+  background: $surface-100;
+  border-radius: $radius-sm;
+  padding: 3px;
+  flex-shrink: 0;
+
+  .app-dark & {
+    background: var(--p-surface-800);
+  }
+}
+
+.tasks-top-bar__mode-btn {
+  height: 25px;
+  padding: 0 $space-3;
   border: none;
   border-radius: $radius-sm;
   background: transparent;

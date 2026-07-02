@@ -4,19 +4,30 @@
     <TasksTopBar
       v-model:view="activeView"
       v-model:scope="boardScope"
+      v-model:mode="taskMode"
       :filter-active="filterOpen || hasActiveFilters"
       :filter-count="activeFilterCount"
       :total-count="totalCount"
       :overdue-count="counts?.overdue ?? 0"
+      :show-mode-toggle="canSeeTeam"
       @toggle-filter="filterOpen = !filterOpen"
       @toggle-quick-create="quickOpen = !quickOpen"
       @enter-select-mode="enterSelectMode"
     />
 
-    <!-- QuickCreate panel -->
+    <!-- Team filter bar — shown when in team mode -->
+    <Transition name="tasks-panel-slide">
+      <TeamTasksFilterBar
+        v-if="taskMode === 'team'"
+        v-model:q="teamQ"
+        v-model:responsible-id="teamResponsibleId"
+      />
+    </Transition>
+
+    <!-- QuickCreate panel — only in my-tasks mode -->
     <Transition name="tasks-panel-slide">
       <TasksQuickCreate
-        v-if="quickOpen"
+        v-if="quickOpen && taskMode === 'my'"
         @created="onActivityCreated"
         @cancel="quickOpen = false"
       />
@@ -25,7 +36,7 @@
     <!-- FilterPanel — list view only (kanban has no server-side filter support) -->
     <Transition name="tasks-panel-slide">
       <MyTasksFilterPanel
-        v-if="filterOpen && activeView === 'list'"
+        v-if="filterOpen && activeView === 'list' && taskMode === 'my'"
         v-model="filters"
         @reset="onResetFilters"
         @close="filterOpen = false"
@@ -51,11 +62,11 @@
     <div v-if="activeView === 'kanban'" class="my-tasks-page__kanban-wrap">
       <TasksKanbanBoard
         :scope="boardScope"
-        :select-mode="selectMode"
+        :select-mode="selectMode && taskMode === 'my'"
         :selected-ids="selectedIds"
-        :loading="taskBoard.loading.value"
-        :all-done="taskBoard.allDone.value"
-        :buckets-data="taskBoard.bucketsData.value"
+        :loading="activeBoardLoading"
+        :all-done="activeBoardAllDone"
+        :buckets-data="activeBucketsData"
         @task-created="onKanbanTaskCreated"
         @task-completed="onKanbanTaskCompleted"
         @task-rescheduled="onKanbanTaskRescheduled"
@@ -64,7 +75,7 @@
         @complete="onKanbanComplete"
         @task-deleted="onKanbanTaskDeleted"
         @task-completed-dialog="onKanbanTaskCompletedDialog"
-        @reschedule="onKanbanReschedule"
+        @reschedule="onKanbanRescheduleGuarded"
       />
     </div>
 
@@ -152,6 +163,7 @@ import TaskExpandedPanel from '@/components/crm/activity/TaskExpandedPanel.vue'
 import TasksTopBar from './components/TasksTopBar.vue'
 import TasksQuickCreate from './components/TasksQuickCreate.vue'
 import TasksBulkBar from './components/TasksBulkBar.vue'
+import TeamTasksFilterBar from './components/TeamTasksFilterBar.vue'
 import MyTasksPresetTabs from './components/MyTasksPresetTabs.vue'
 import MyTasksFilterPanel from './components/MyTasksFilterPanel.vue'
 import MyTasksTable from './components/MyTasksTable.vue'
@@ -160,18 +172,39 @@ import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import { activityApi } from '@/api/activity'
 import { useActivityStore } from '@/stores/activityStore'
 import { useMyTasksStore } from '@/stores/myTasksStore'
+import { useUserStore } from '@/stores/user'
 import { useMyTasks } from './composables/useMyTasks'
 import { useTaskBoard } from './composables/useTaskBoard'
+import { useTeamBoard } from './composables/useTeamBoard'
 import { getApiErrorMessage } from '@/utils/errors'
 import type { ActivityDto } from '@/entities/activity'
 import type { MyBoardBucket } from '@/entities/activity'
 import type { TaskScope } from './composables/useTaskBoard'
+
+type TasksMode = 'my' | 'team'
+
+const TEAM_ROLES = ['admin', 'director', 'manager'] as const
 
 const { t } = useI18n()
 const toast = useToast()
 const confirm = useConfirm()
 const activityStore = useActivityStore()
 const myTasksStore = useMyTasksStore()
+const userStore = useUserStore()
+
+// ── Role gating ───────────────────────────────────────────────────────────────
+const canSeeTeam = computed(() => {
+  const role = userStore.getUserRole
+  return role !== null && (TEAM_ROLES as readonly string[]).includes(role)
+})
+
+// ── Mode (My / Team) ──────────────────────────────────────────────────────────
+const taskMode = ref<TasksMode>('my')
+
+// Reset to 'my' if user has no team access (safety net)
+watch(canSeeTeam, (can) => {
+  if (!can) taskMode.value = 'my'
+})
 
 // ── View ─────────────────────────────────────────────────────────────────────
 
@@ -184,6 +217,19 @@ const activeView = ref<TasksPageView>(_savedView ?? 'kanban')
 // Persist view and trigger reload when switching views
 watch(activeView, (view) => {
   localStorage.setItem(TASKS_VIEW_KEY, view)
+  if (taskMode.value === 'team') {
+    // In team mode: only the kanban board is active (list falls back to personal)
+    if (view === 'kanban') {
+      void teamBoard.load({
+        q: teamQ.value || undefined,
+        responsible_id: teamResponsibleId.value ?? undefined,
+      })
+    } else {
+      // List view in team mode falls through to personal list (same preset tabs)
+      void Promise.all([load(), refreshCounts()])
+    }
+    return
+  }
   if (view === 'list') {
     void Promise.all([load(), refreshCounts()])
   } else {
@@ -273,6 +319,52 @@ const {
 
 // ── Task board (lifted here so select-all / bulk / BulkBar count work in kanban)
 const taskBoard = useTaskBoard()
+
+// ── Team board ────────────────────────────────────────────────────────────────
+const teamBoard = useTeamBoard()
+
+// Team filter state
+const teamQ = ref('')
+const teamResponsibleId = ref<number | null>(null)
+
+// Reload team board when filter params change (debounced by TeamTasksFilterBar for q)
+watch([teamQ, teamResponsibleId], () => {
+  if (taskMode.value !== 'team') return
+  void teamBoard.load({
+    q: teamQ.value || undefined,
+    responsible_id: teamResponsibleId.value ?? undefined,
+  })
+})
+
+// Load team board when switching to team mode; reset to my-board data when switching back
+watch(taskMode, async (mode) => {
+  if (mode === 'team') {
+    await teamBoard.load({
+      q: teamQ.value || undefined,
+      responsible_id: teamResponsibleId.value ?? undefined,
+    })
+  } else if (mode === 'my') {
+    // Ensure personal board is up to date after returning
+    if (activeView.value === 'kanban') {
+      void taskBoard.load()
+    } else {
+      void Promise.all([load(), refreshCounts()])
+    }
+  }
+})
+
+// ── Unified board data (switches between personal and team) ───────────────────
+const activeBoardLoading = computed(() =>
+  taskMode.value === 'team' ? teamBoard.loading.value : taskBoard.loading.value,
+)
+
+const activeBoardAllDone = computed(() =>
+  taskMode.value === 'team' ? teamBoard.allDone.value : taskBoard.allDone.value,
+)
+
+const activeBucketsData = computed(() =>
+  taskMode.value === 'team' ? teamBoard.bucketsData.value : taskBoard.bucketsData.value,
+)
 
 const hasActiveFilters = computed(() => {
   const f = filters.value
@@ -580,8 +672,21 @@ function onKanbanError(message: string) {
 /**
  * Board card "complete" — lifted from TasksKanbanBoard so the page owns all
  * board mutations (required for correct bulk/select-all state).
+ * In team mode: call the API directly and optimistically remove from team board.
  */
 async function onKanbanComplete(id: number) {
+  if (taskMode.value === 'team') {
+    try {
+      teamBoard.removeLocalById(id)
+      await activityApi.completeActivity(id)
+      onKanbanTaskCompleted()
+    } catch {
+      // Rollback: reload team board
+      void teamBoard.reload()
+      onKanbanError(t('tasks.board.card.completed'))
+    }
+    return
+  }
   try {
     await taskBoard.completeTask(id)
     onKanbanTaskCompleted()
@@ -594,7 +699,11 @@ async function onKanbanComplete(id: number) {
  * Task deleted from the board dialog (API already called by TaskExpandedPanel).
  */
 function onKanbanTaskDeleted(id: number) {
-  taskBoard.removeLocalById(id)
+  if (taskMode.value === 'team') {
+    teamBoard.removeLocalById(id)
+  } else {
+    taskBoard.removeLocalById(id)
+  }
   void refreshCounts()
 }
 
@@ -602,7 +711,11 @@ function onKanbanTaskDeleted(id: number) {
  * Task completed from the board dialog (API already called by TaskExpandedPanel, toast already shown).
  */
 function onKanbanTaskCompletedDialog(id: number) {
-  taskBoard.removeLocalById(id)
+  if (taskMode.value === 'team') {
+    teamBoard.removeLocalById(id)
+  } else {
+    taskBoard.removeLocalById(id)
+  }
   void refreshCounts()
 }
 
@@ -616,6 +729,15 @@ async function onKanbanReschedule(taskId: number, targetBucket: MyBoardBucket) {
   } catch {
     onKanbanError(t('tasks.board.reschedule.error'))
   }
+}
+
+/**
+ * Reschedule guard — only allowed in personal mode. In team mode drag is
+ * silently ignored (directors shouldn't reschedule other people's tasks).
+ */
+async function onKanbanRescheduleGuarded(taskId: number, targetBucket: MyBoardBucket) {
+  if (taskMode.value !== 'my') return
+  await onKanbanReschedule(taskId, targetBucket)
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────

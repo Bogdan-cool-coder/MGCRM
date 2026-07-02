@@ -182,6 +182,19 @@ export const activityApi = {
     return res.data
   },
 
+  // ── Team Board (department task board — admin/director/manager only) ─────────
+
+  async getTeamBoard(params: { responsible_id?: number; q?: string } = {}): Promise<MyBoardResponse> {
+    const clean: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== null && v !== undefined && v !== '') {
+        clean[k] = v
+      }
+    }
+    const res = await apiClient.get<MyBoardResponse>('/api/activities/team-board', { params: clean })
+    return res.data
+  },
+
   // ── Inline status change (PATCH /api/activities/{id}/status) ─────────────
 
   async changeStatus(

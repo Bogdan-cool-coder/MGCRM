@@ -3665,6 +3665,24 @@
         "contact": "Contact",
         "company": "Company"
       }
+    },
+    "team": {
+      "toggle": {
+        "my": "Mine",
+        "team": "Team"
+      },
+      "filterBar": {
+        "searchPlaceholder": "Search tasks…",
+        "responsible": "Responsible",
+        "clear": "Clear"
+      },
+      "board": {
+        "title": "Team Tasks",
+        "empty": {
+          "title": "No department tasks",
+          "subtitle": "All team tasks are done or no tasks match the filter."
+        }
+      }
     }
   },
   "system": {
