@@ -2,7 +2,7 @@
 name: bot-specialist
 description: Telegram-бот MACRO Global CRM на PHP (nutgram) — порт aiogram-бота из old. Согласование договоров inline-кнопками (/approve /reject /needs_rework), NL-команды (/progress /dayresults /skipday), линковка TG-аккаунта (TelegramLinkToken deeplink), канал уведомлений. Long-polling в одном процессе (отдельный контейнер bot). Use proactively для всех задач Telegram-бота, approval-flow в TG, NL-команд, TG-линковки.
 tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
-model: opus
+model: sonnet
 permissionMode: bypassPermissions
 memory: project
 color: sky

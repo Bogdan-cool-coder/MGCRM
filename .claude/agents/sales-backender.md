@@ -2,7 +2,7 @@
 name: sales-backender
 description: BACKEND Продаж MGCRM (Laravel) — Pipeline/воронки, сделки (Deal + line-items + история стадий), Kanban-API, лиды, активности/задачи, KPI-планы/мотивация менеджеров (commission-rules, salary-plans); SalesPulse LIVE. Спринт «Продажи». Пилот per-module split: backend Sales+Inbox+Activity — здесь; фронт этих экранов → sales-frontender. Статус (аудит): Sales/Kanban — построено (зрелейшее ядро системы, item-level scope = эталон; открытые баги — скидка не сворачивается в amount, мёртвая видимость воронок); Activity — частично (report/FTM-половина сломана сквозняком); Inbox — каркас (BE-конвейер есть, публичной формы/UI нет). Use proactively для backend Domain/{Sales,Inbox,Activity}. Контакты/компании/каталог/кастомполя — crm-backender (спринт «Фундамент»).
 tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
-model: opus
+model: sonnet
 permissionMode: bypassPermissions
 memory: project
 color: maroon

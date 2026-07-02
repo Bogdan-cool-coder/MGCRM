@@ -2,7 +2,7 @@
 name: crm-frontender
 description: "FRONTEND CRM-ядра MACRO Global CRM (Vue 3 + PrimeVue + Pinia) — экраны Crm+Catalog: контакты, компании, каталог продуктов/цен, UI кастом-полей (CustomFieldDef), UI дедупа/merge. Пилот per-module split: реализует ТЗ designer поверх API-контракта от crm-backender. Активируется ТОЛЬКО по явной просьбе пользователя — фронт не вызывается проактивно после backend-задач."
 tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
-model: sonnet
+model: opus
 permissionMode: bypassPermissions
 memory: project
 color: purple

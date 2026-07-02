@@ -2,7 +2,7 @@
 name: frontend-specialist
 description: "Vue 3 + PrimeVue + Pinia frontend для MACRO Global CRM. Зона — всё в front/ (pages, components, application/, composables/async, stores, api, entities, router, theme, locales, i18n RU). Реализует ТЗ от designer. Активируется ТОЛЬКО по явной просьбе пользователя — фронт не вызывается проактивно после backend-задач."
 tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
-model: sonnet
+model: opus
 permissionMode: bypassPermissions
 memory: project
 color: blue

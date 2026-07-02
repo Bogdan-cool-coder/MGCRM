@@ -2,7 +2,7 @@
 name: sales-frontender
 description: "FRONTEND Продаж MACRO Global CRM (Vue 3 + PrimeVue + Pinia) — экраны Sales+Inbox+Activity: pipeline/Kanban (drag&drop), карточка сделки, список сделок, задачи/активности, таймлайн, UI интейка Inbox, KPI/мотивация-виджеты. Пилот per-module split: реализует ТЗ designer поверх API-контракта от sales-backender. Активируется ТОЛЬКО по явной просьбе пользователя — фронт не вызывается проактивно после backend-задач."
 tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
-model: sonnet
+model: opus
 permissionMode: bypassPermissions
 memory: project
 color: maroon
