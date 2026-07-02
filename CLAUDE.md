@@ -1,7 +1,7 @@
 # CLAUDE.md — MACRO Global CRM (always-context)
 
-> Мозг проекта **MACRO Global CRM**: переписываем огромную CRM (FastAPI+Next.js) на **жёсткий стек Laravel + PrimeVue по эталону Vizion**, домен за доменом.
-> Этот файл лёгкий и always-injected. Жёсткие паттерны кода — в **`ARCHITECTURE.md`** (закон проекта). План — в `PLAN.md`. Эталон стека целиком лежит в `./examples/vizion/`.
+> Мозг проекта **MACRO Global CRM**: переписываем огромную CRM (FastAPI+Next.js) на **жёсткий стек Laravel + PrimeVue**, домен за доменом.
+> Этот файл лёгкий и always-injected. Жёсткие паттерны кода — в **`ARCHITECTURE.md`** (закон проекта). План — в `PLAN.md`. **Эталон стека — `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`.** `./examples/vizion/` — архив/не-референс (лежит в репо до cutover, стеком больше НЕ рулит).
 
 ## Brain-vault проекта
 
@@ -32,8 +32,8 @@ macroglobalcrm/          ← git-репозиторий Bogdan-cool-coder/MGCRM.
 ├── src/                ← Laravel 13 API
 ├── front/              ← Vue 3.5 + PrimeVue SPA
 ├── docker/  docker-compose*.yml  .github/
-└── examples/            ← полные копии-эталоны, КОММИТЯТСЯ в репо (нелокальная работа)
-    ├── vizion/          📐 ЭТАЛОН СТЕКА — реализацию смотрим здесь, делаем 1-в-1
+└── examples/            ← полные копии, КОММИТЯТСЯ в репо (нелокальная работа)
+    ├── vizion/          🗄️ АРХИВ — стеком больше НЕ рулит; эталон стека = ARCHITECTURE.md + docs/backend-standard.md + реальный src/app/Domain/*. Лежит до cutover
     └── contracts/       ⚠️ macro-contracts (FastAPI+Next) — ТОЛЬКО ИСТОЧНИК БИЗНЕС-ЛОГИКИ
 ```
 
@@ -44,18 +44,18 @@ macroglobalcrm/          ← git-репозиторий Bogdan-cool-coder/MGCRM.
 Каждый агент при любой задаче идёт по трём шагам:
 
 1. **Бизнес-логику и поведение фронта смотрит в `./examples/contracts/`** — это ТЗ: модели, поля, связи, эндпоинты, статус-машины, экраны. **Написано на FastAPI/Next.js — код НЕ копируем, копируем смысл (что приложение делает).**
-2. **Технический паттерн/реализацию смотрит в `./examples/vizion/`** (полная копия Vizion) — как ровно это сделано на нашем стеке: структура, сервисы, миграции, контроллеры, Vue-компоненты, конфиги.
-3. **Делает 1-в-1 как Vizion** в корне проекта (`src/`, `front/`), **с единственной поправкой — деление по DDD `app/Domain/<Context>`**. Не изобретай — копируй Vizion.
+2. **Технический паттерн/реализацию смотрит в `ARCHITECTURE.md` + `docs/backend-standard.md` + реальном `src/app/Domain/*`** — как ровно это сделано на нашем стеке: структура, сервисы, миграции, контроллеры, Vue-компоненты, конфиги. Зрелые домены (напр. `Sales/DealService`) — живой референс паттерна.
+3. **Делает строго по house-style** в корне проекта (`src/`, `front/`), **с делением по DDD `app/Domain/<Context>`**. Не изобретай — равняйся на ARCHITECTURE.md + docs/backend-standard.md + существующий код.
 
-Конфликт: **стек → `./examples/vizion/`**, **бизнес-логика → `./examples/contracts/`**.
+Конфликт: **стек → `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`**, **бизнес-логика → `./examples/contracts/`**.
 
 ## 📐 Закон проекта: ARCHITECTURE.md
 
-**Любой код — строго по `ARCHITECTURE.md`.** Это не рекомендации, а паттерны: backend-слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы, деньги-копейки, **авторизация только через Policy/Gate** (никогда inline `if($user->role===…)`; цель — permission-модель spatie, сейчас — enum-Gates, долг IAM-1), frontend-слои (api → composables/async → page-composable → component → Pinia), именование, тесты, чёрный список. Отклонение = баг; `product-manager` режет такой код на ревью. Перед кодом агент читает релевантный раздел ARCHITECTURE.md.
+**Любой код — строго по `ARCHITECTURE.md`.** Это не рекомендации, а паттерны: backend-слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы, деньги-копейки, **авторизация только через Policy/Gate** (никогда inline `if($user->role===…)`; модель — `spatie/laravel-permission` на guard `sanctum`, IAM-1 закрыт), frontend-слои (api → composables/async → page-composable → component → Pinia), именование, тесты, чёрный список. Отклонение = баг; `reviewer` режет такой код на ревью. Перед кодом агент читает релевантный раздел ARCHITECTURE.md.
 
 ## 🎨 Эталон визуала: дизайн-система MACRO Global (design-handoff)
 
-**Одна явная цепочка source-of-truth визуала (по типу вопроса):** значения токенов → `front/src/theme` (код, единственный источник) · визуальный замысел/лейаут конкретного экрана → спеки+мокапы `design-handoff/redesign/` · бренд-инварианты/общая дизайн-система → skill `macroglobal-design` (`.claude/skills/macroglobal-design/`). Vault-спека `MG CRM 2026` и «визуальный» Vizion — вторичны/исторические. **Иерархия эталонов в целом:** визуал/бренд → эта цепочка; структура кода/паттерны → Vizion + ARCHITECTURE.md; состав фич/поведение → `./examples/contracts/`.
+**Одна явная цепочка source-of-truth визуала (по типу вопроса):** значения токенов → `front/src/theme` (код, единственный источник) · визуальный замысел/лейаут конкретного экрана → спеки+мокапы `design-handoff/redesign/` · бренд-инварианты/общая дизайн-система → skill `macroglobal-design` (`.claude/skills/macroglobal-design/`). Vault-спека `MG CRM 2026` — вторична/историческая. **Иерархия эталонов в целом:** визуал/бренд → эта цепочка; структура кода/паттерны → `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`; состав фич/поведение → `./examples/contracts/`.
 - **Живой индекс апрувнутых мокапов + ТЗ — `design-handoff/redesign/HANDOFF.md`** (актуальный перечень экранов и их статус). Есть макет — реализуем ИМЕННО его; статус (зашипперено/в работе) сверяем по HANDOFF.
 - **Токены:** значения системы (`--mg-*`) ⇄ переменные репо (`$primary-900`/`$surface-*`/`--p-*`); в `.vue`/`.scss` пиши переменную репо, НЕ литерал. Бренд-инварианты (сайдбар `#172747`, шапка карточки сделки `#172747`) — единственные допустимые хардкоды.
 - **Жёстко:** никаких hex/px мимо токенов · только PrimeIcons (`pi pi-*`) · без эмодзи/градиентов/bluish-purple/цветных теней · обе темы (light+dark) обязательны · деньги `1 200 000 ₽`.
@@ -63,19 +63,19 @@ macroglobalcrm/          ← git-репозиторий Bogdan-cool-coder/MGCRM.
 
 ## Целевой стек (жёсткий — см. PLAN.md §3)
 
-**Backend:** Laravel **13** / PHP **8.5** · PostgreSQL 16 · **Sanctum** (Bearer personal access token, как Vizion; фронт хранит токен) · **TOTP 2FA** + **RBAC** (цель = **spatie/laravel-permission**: 6 ролей `admin/director/lawyer/manager/accountant/cfo` + гранулярные права, через Policy/`$user->can()`/permission-middleware на guard `sanctum`) · spatie/translatable · spatie/backup · **Prism** (AI-каскады, `config/ai.php` как Vizion) · **PHPWord + Gotenberg** (договоры→PDF) · Redis (очереди, **БЕЗ Horizon**) · **PHPUnit + SQLite :memory:** · **Sentry** (`sentry/sentry-laravel ^4.26` — error+performance; DSN из env; `send_default_pii=false`, `sql_bindings=false`; release = git-SHA из deploy-pipeline).
+**Backend:** Laravel **13** / PHP **8.5** · PostgreSQL 16 · **Sanctum** (Bearer personal access token; фронт хранит токен) · **TOTP 2FA** + **RBAC** (**spatie/laravel-permission**: 6 ролей `admin/director/lawyer/manager/accountant/cfo` + гранулярные права, через Policy/`$user->can()`/permission-middleware на guard `sanctum`) · spatie/translatable · spatie/backup · **Prism** (AI-каскады, `config/ai.php`) · **PHPWord + Gotenberg** (договоры→PDF) · Redis (очереди, **БЕЗ Horizon**) · **PHPUnit + SQLite :memory:** · **Sentry** (`sentry/sentry-laravel ^4.26` — error+performance; DSN из env; `send_default_pii=false`, `sql_bindings=false`; release = git-SHA из deploy-pipeline).
 
-> **RBAC — состояние (честно, долг IAM-1):** spatie — целевая/каноничная модель. **Сейчас** авторизация реально идёт через **enum-Gates на колонке `users.role`**; таблицы spatie засеяны, но НЕ подключены (права висят на guard `web`, Sanctum их не видит). План IAM-1: подключить spatie на guard `sanctum` и перенести Gate-проверки в права; до этого новый authz-код идёт **через Policy/Gate** (никогда inline `if($user->role===…)`), целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после миграции.
+> **RBAC — состояние (IAM-1 ЗАКРЫТ):** авторизация работает на **`spatie/laravel-permission`, guard `sanctum`**. Колонка `users.role` **удалена**; `role` — виртуальный accessor поверх единственной spatie-роли пользователя. 4 глобальные ability — это spatie-permissions, автозарегистрированные как Gates. Никакого двойного источника роли и переходного долга больше нет. Новый authz-код — **через Policy/`$user->can()`/permission-middleware** (никогда inline `if($user->role===…)`).
 
 **Frontend:** Vue **3.5** + TS strict · Vite · Pinia · Vue Router · **PrimeVue 4.5** + **Bootstrap-grid + SCSS** · PrimeIcons · **ECharts** · vue-i18n · axios · **Sentry** (`@sentry/vue` + `@sentry/vite-plugin` — error+tracing; Session Replay отключён (PII); sourcemaps загружаются через BuildKit secret-mount токена; release = git-SHA).
 
 **Организация:** **DDD `app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies}`**.
 
-**Сознательно НЕТ:** Tailwind · Inertia · Livewire · Filament · Chart.js · Horizon · VeeValidate/Zod · spatie/laravel-data (ручные API Resources как Vizion) · Fortify · Pest.
+**Сознательно НЕТ:** Tailwind · Inertia · Livewire · Filament · Chart.js · Horizon · VeeValidate/Zod · spatie/laravel-data (ручные API Resources) · Fortify · Pest.
 
 ## Стратегия и темп
 
-Strangler, вертикальными срезами, домен за доменом. **Темп — milestone-стиль:** vertical slice + day/week-оценка + Acceptance-чеклист, «копируем Vizion 1-в-1». **Первичная координата — порядок спринтов по именам:** Фундамент → Продажи → Документы → Онбординг → CS → Финансы. M-номера (`M0…M12`) — только внутри `PLAN.md` как исторические ID вех, замапленные на эти спринты; в координации статус домена выражаем не номером, а реальным состоянием (`построено` / `частично` / `каркас — не работает в проде` / `greenfield — кода нет`). Cutover (снос `examples/`) + финальный паритет — на закрывающем спринте (перенос данных не нужен — тестовые). Детали — PLAN.md §5 и vault `MG CRM 2026`.
+Strangler, вертикальными срезами, домен за доменом. **Темп — milestone-стиль:** vertical slice + day/week-оценка + Acceptance-чеклист, «строго по house-style (`ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/`)». **Первичная координата — порядок спринтов по именам:** Фундамент → Продажи → Документы → Онбординг → CS → Финансы. M-номера (`M0…M12`) — только внутри `PLAN.md` как исторические ID вех, замапленные на эти спринты; в координации статус домена выражаем не номером, а реальным состоянием (`построено` / `частично` / `каркас — не работает в проде` / `greenfield — кода нет`). Cutover (снос `examples/`) + финальный паритет — на закрывающем спринте (перенос данных не нужен — тестовые). Детали — PLAN.md §5 и vault `MG CRM 2026`.
 
 > **Текущий фокус:** redesign-hardening (DS-треки, Entity Card 2.0, Навигация) + audit-driven bugfix по `docs/audit/` + SalesPulse (off-roadmap, LIVE в проде). Строгий порядок спринтов на этот период приостановлен в пользу redesign/bug-треков.
 
@@ -83,7 +83,7 @@ Strangler, вертикальными срезами, домен за домен
 
 > **Все агенты — `bypassPermissions`** (рутина — docker/artisan/npm/git/Edit/Write/MCP, включая браузерные MCP-действия qa-tester'а — выполняется молча). Единственный жёсткий ограничитель — PreToolUse-хук `guard-destructive.sh` на критичный деструктив (работает и под bypass). Поведенческие правила (`frontend-specialist` и push у `deploy-engineer` — только по явной просьбе) остаются в силе как инструкции, не как пермишен-промпты.
 
-**Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-specialist` (Laravel-ядро: auth/Sanctum/2FA, базовые модели, миграции, тесты — для всех) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**, как у Vizion) · `qa-tester` (браузерные MCP этой машины — Claude_in_Chrome / chrome-devtools / Control_Chrome / Claude_Preview; Playwright MCP на этой машине нет) · `product-manager` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — владелец деплой-конфига и git-push в `main`; push/деплой — **только по явной просьбе юзера**; после push выкатка автоматическая через GHA `deploy.yml`; изменения деплой-инфры — **только по явной просьбе**).
+**Кросс-функциональные (6):** `designer` (ТЗ, без кода) · `backend-architect` (backend-консистентность + spec-author доменных/API-контрактов + library-registry + reuse-гейт) · `frontend-specialist` (Vue/PrimeVue/Pinia/Bootstrap-grid — **только по явной просьбе**) · `qa-tester` (браузерные MCP этой машины — Claude_in_Chrome / chrome-devtools / Control_Chrome / Claude_Preview; Playwright MCP на этой машине нет) · `reviewer` (ревью + verify против ARCHITECTURE.md/PLAN.md) · `deploy-engineer` (Docker/GHA/SSH — владелец деплой-конфига и git-push в `main`; push/деплой — **только по явной просьбе юзера**; после push выкатка автоматическая через GHA `deploy.yml`; изменения деплой-инфры — **только по явной просьбе**).
 
 **Доменные (10) — спринт + реальный статус, НЕ M-номер:**
 - `crm-specialist` (спринт Фундамент/Продажи: Contact/Company/Catalog/CustomFields/дедуп — построено).
@@ -101,11 +101,13 @@ Strangler, вертикальными срезами, домен за домен
 
 > **Контексты `src/app/Domain/` (14, реально):** Activity · Automation · Catalog · Contracts · Crm · Iam · Inbox · Log · Migration · Notification · Org · Onboarding · Sales · SalesPulse. (`CustomerSuccess`/`Finance` — greenfield; `Analytics`/`Integration` — пока вшиты в Sales/Inbox/Notification.)
 
-## Workflow (как у Vizion)
+**Per-module split (spawn-on-demand):** активные тяжёлые модули → `<module>-backender` + `<module>-frontender` (пилот `sales`+`crm`), создаются под реальную задачу, не все 2×N заранее. При параллельной работе backender+frontender — **раздельные git-worktree** (был инцидент stash/reset при общем дереве). Полная governance-модель флота — **`.claude/AGENTS.md`** (стандарт организации агентов).
+
+## Workflow
 
 ```
-[задача] → [main определяет агента и порядок] → [рабочий агент(ы): backend→domain→frontend→qa→PM]
-        → [если был UI у frontend-specialist → qa-tester] → [product-manager: саммари+ревью+verify+sync PLAN.md]
+[задача] → [main определяет агента и порядок] → [рабочий агент(ы): backend→domain→frontend→qa→reviewer]
+        → [если был UI у frontend-specialist → qa-tester] → [reviewer: саммари+ревью+verify+sync PLAN.md]
         → [апрув юзера] → [main коммитит локально] → [deploy-engineer: git push в main по явной просьбе → авто-деплой на прод через GHA deploy.yml]
 ```
 
@@ -123,17 +125,19 @@ Strangler, вертикальными срезами, домен за домен
 
 **Анти-паттерны main (запрещено):** ❌ Read src-файла «понять класс» · ❌ grep ради поиска бага · ❌ `docker compose exec … artisan …` напрямую · ❌ ssh · ❌ править «по мелочи» код/тесты/.md.
 
+> **Жёстко:** main **не читает `src/` для ревью** — роутинг + фрейминг задачи + steering консистентности его зона; глубокое код-ревью — `reviewer`. Нарушение = потеря высоты обзора.
+
 ## Правила (железные)
 
-- **`ARCHITECTURE.md` — закон.** Любой код строго по нему. Эталон паттернов — `./examples/vizion/`. Единственный источник при конфликте стека — `./examples/vizion/` (других эталонов стека в репо нет).
+- **`ARCHITECTURE.md` — закон.** Любой код строго по нему. Эталон паттернов/стека — **`ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`**. `./examples/vizion/` — архив, стеком больше НЕ рулит (лежит в репо до cutover).
 - **`./examples/contracts/` — только ТЗ по бизнес-логике** (FastAPI/Next — код не копируем).
 - **Стек жёсткий** (PLAN §3). Пакетов вне списка не добавлять без явной просьбы. Никакого Tailwind/Inertia/Horizon/Pest/VeeValidate.
-- **Library-first** (ARCHITECTURE.md §0.1): весь функционал — на готовых библиотеках. Если задачу закрывает уже подключённая/доступная либа (в проекте или `./examples/vizion/`) — новую НЕ ставим. Свой код — только когда готового нет. Новый пакет — лишь в случае особой необходимости + аппрув.
+- **Library-first** (ARCHITECTURE.md §0.1): весь функционал — на готовых библиотеках. Если задачу закрывает уже подключённая/доступная либа (в проекте) — новую НЕ ставим. Свой код — только когда готового нет. Новый пакет — лишь в случае особой необходимости + аппрув.
 - **Самодостаточность репо:** работа нелокальная — всё нужное (включая `examples/`) лежит в репозитории. Агенты НЕ ссылаются на внешние пути вне репо.
-- **Изоляция тестов:** PHPUnit строго в SQLite `:memory:` (тройная защита как Vizion). Тесты НИКОГДА не ходят в живую БД.
+- **Изоляция тестов:** PHPUnit строго в SQLite `:memory:` (тройная защита: `phpunit.xml` force + `.env.testing` + guard в `TestCase`). Тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English.** **НИКАКИХ** `Co-Authored-By: Claude`, упоминаний Claude/Anthropic/AI/🤖. Никаких `--no-verify`, `--force` push.
 - **Деструктив — только по явной просьбе + бэкап** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных). Guard-хук блокирует под bypass.
 - **Секреты не светим** — значения в `src/.env` пишет main.
 - **`docker compose`**, не `docker-compose`. PHP/composer на хосте нет — через docker (bootstrap: `docker run --rm -v "$(pwd):/app" -w /app composer:latest …`).
 - **Деплой/push:** push в `main` делает `deploy-engineer` ТОЛЬКО по явной прямой просьбе; push в `main` автоматически катит прод (GHA `deploy.yml`), кроме пушей только по `**.md`/`docs/**`/`.claude/**`. main не пушит. WIP в `main` не пушим. Изменения деплой-инфры — через `deploy-engineer` по явной просьбе. Локальный rebuild допустим.
-- При расхождении PLAN.md/ARCHITECTURE.md ↔ реальность — `product-manager` обновляет документ (с аппрувом), не молчим.
+- При расхождении PLAN.md/ARCHITECTURE.md ↔ реальность — `reviewer` обновляет документ (с аппрувом), не молчим.

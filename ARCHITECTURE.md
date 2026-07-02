@@ -1,15 +1,14 @@
 # ARCHITECTURE.md — жёсткие паттерны разработки MACRO Global CRM
 
 > **Обязательно для main-сессии и ВСЕХ агентов. Ни шаг влево, ни шаг вправо.**
-> Любой код пишется строго по этим паттернам. Отклонение — это баг, а не «стиль». `product-manager` режет код, нарушающий ARCHITECTURE.md, на ревью.
-> Эталон паттернов — **`./examples/vizion/`** (копия Vizion). Если паттерн ниже расходится с тем, как сделано у Vizion, — **прав Vizion**, обнови этот файл через product-manager.
-> **Нюанс:** Vizion — оракул для **ещё не построенных** паттернов. Для доменов, уже доведённых до спеки, зрелая реализация в самом репо (например `Sales/DealService`) — тоже легитимный референс паттерна: новый код в этом домене равняется на неё, а не переоткрывает Vizion с нуля.
+> Любой код пишется строго по этим паттернам. Отклонение — это баг, а не «стиль». `reviewer` режет код, нарушающий ARCHITECTURE.md, на ревью.
+> **Эталон паттернов/стека — этот файл + `docs/backend-standard.md` (конкретный house-style с worked-примерами) + зрелая реализация в самом репо** (например `Sales/DealService`). Новый код равняется на них. `./examples/vizion/` — архив, стеком больше НЕ рулит и НЕ является tiebreaker'ом при расхождении.
 
 ---
 
 ## 0. Принцип
 
-Перед любой строкой кода: **(1)** посмотри бизнес-логику/поведение в `./examples/contracts/` → **(2)** найди реализацию того же класса задачи в `./examples/vizion/` → **(3)** скопируй паттерн Vizion в корень проекта (`src/`, `front/`), изменив только деление на `app/Domain/<Context>`. **Не изобретаем — копируем Vizion.**
+Перед любой строкой кода: **(1)** посмотри бизнес-логику/поведение в `./examples/contracts/` → **(2)** найди реализацию того же класса задачи в реальном `src/app/Domain/*` + `docs/backend-standard.md` → **(3)** повтори house-style в корне проекта (`src/`, `front/`), с делением на `app/Domain/<Context>`. **Не изобретаем — равняемся на ARCHITECTURE.md + docs/backend-standard.md + существующий код.**
 
 ---
 
@@ -17,13 +16,12 @@
 
 **Максимум готовых библиотек, минимум своего кода.** Любую фичу строим на существующей библиотеке, а не пишем вручную.
 
-1. **Сначала ищи в том, что уже стоит.** Зависимости проекта = `composer.json` / `package.json` (адаптируем с Vizion под LV13/PHP8.5, не 1-в-1) + то, что есть в `./examples/vizion/` и `./examples/contracts/`. Если задачу закрывает уже подключённая библиотека (Laravel/Prism/PrimeVue/ECharts/PHPWord/vue-i18n/Sanctum и т.п.) — **используй её, ничего не ставь.**
-   > ⚠️ **`spatie/laravel-permission` и `pragmarx/google2fa` — НЕ в Vizion (эталона нет).** Vizion использует простую строковую колонку `role`, а 2FA у него отсутствует. Паттерн авторизации (роли/permissions) и 2FA берём из `./examples/contracts/` + офиц. доки пакетов, **а не grep'ом по Vizion**. Это два осознанных NEW-пакета (см. PLAN §3.1).
+1. **Сначала ищи в том, что уже стоит.** Зависимости проекта = `composer.json` / `package.json`. Если задачу закрывает уже подключённая библиотека (Laravel/Prism/PrimeVue/ECharts/PHPWord/vue-i18n/Sanctum/spatie-permission/google2fa и т.п.) — **используй её, ничего не ставь.** Как именно эти либы применяются в проекте — `docs/backend-standard.md` + зрелые домены (`Sales/DealService` и т.п.).
 2. **Не пиши своё там, где есть библиотечное.** Кастомный код вместо готового хелпера/пакета/компонента — антипаттерн. (Пример: экспорт Excel — PhpSpreadsheet, а не ручная сборка xlsx; даты — встроенные Carbon/date-fns; таблицы/диалоги — PrimeVue, а не самописные.)
 3. **Новый пакет — только в случае особой необходимости** и только если функционал реально не покрыт ни одной уже доступной библиотекой. Любой новый пакет — по явной просьбе/аппруву (PLAN §3 — закрытый список; добавление = решение, а не самодеятельность агента).
-4. **Порядок выбора:** (а) готовое в уже подключённых либах → (б) библиотека, использованная у Vizion (`./examples/vizion/`) → (в) широко используемый maintained-пакет под наш стек (с аппрувом) → (г) свой код — только если (а)–(в) не подходят.
+4. **Порядок выбора:** (а) готовое в уже подключённых либах → (б) библиотека, уже применённая в реальном `src/` → (в) широко используемый maintained-пакет под наш стек (с аппрувом) → (г) свой код — только если (а)–(в) не подходят.
 
-`product-manager` на ревью режет самописный код, дублирующий готовую библиотеку, как нарушение.
+`reviewer` на ревью режет самописный код, дублирующий готовую библиотеку, как нарушение.
 
 ---
 
@@ -49,7 +47,7 @@ HTTP → Route (/api, auth:sanctum)
 
 ## 2. Backend — DDD-границы (НЕРУШИМО)
 
-- Весь код домена строго в `app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies}`.
+- Весь код домена строго в `app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies,Events,Listeners,Actions,Exceptions,Support,Contracts,Renderers,Telegram,ETL}` (набор папок — по надобности домена; каждый вид уже используется в реальном `src/`).
 - **Существующие контексты (14, реально в `src/app/Domain/`):** `Activity, Automation, Catalog, Contracts, Crm, Iam, Inbox, Log, Migration, Notification, Onboarding, Org, Sales, SalesPulse`.
 - **Запланированные (greenfield — папки ещё нет, создаются при старте спринта):** `CustomerSuccess` (спринт CS), `Finance` (спринт Финансы).
 - **Analytics / Integration — отдельных контекстов НЕТ.** Сегодня эта работа вшита в `Sales` / `Inbox` / `Notification`; самостоятельные `Domain/Analytics` и `Domain/Integration` не заводим, пока для них не назрел отдельный срез.
@@ -60,13 +58,13 @@ HTTP → Route (/api, auth:sanctum)
 
 - **Деньги — целые копейки** (`unsignedBigInteger`) везде: БД, расчёты, DTO. Форматирование (рубли, разделители) — только на фронте. `float`/`decimal` для денег — запрещено.
 - **Миграции:** обратимые (`up`/`down`); FK `->constrained()->cascadeOnDelete()`; translatable-поля → `jsonb`; индексы на горячих `WHERE`/`ORDER BY`; имя `YYYY_MM_DD_HHMMSS_<verb>_<entity>`. Перед коммитом — `migrate` и `migrate:rollback` оба прошли.
-- **Авторизация (цель/канон):** `spatie/laravel-permission` — **6 ролей** (`admin, director, lawyer, manager, accountant, cfo`) + гранулярные permissions, на guard **`sanctum`**, + **Policy на каждую доменную модель**. Проверка — через `$user->can()` / Policy / permission-middleware. Это целевая модель.
-  > **⚠️ Текущее состояние vs цель (долг IAM-1).** СЕГОДНЯ код авторизует через **enum-Gates на колонке `users.role`**: таблицы spatie засеяны, но **не подключены** (permissions висят на guard `web`, а Sanctum их не видит → `$user->can()` по ним не срабатывает). То есть spatie — канон, но в проде **ещё не работает**; это зафиксированный долг **IAM-1**. **План:** подключить spatie на guard `sanctum` и перевести Gate-проверки на permissions; до этого вся новая авторизация идёт через **Gate/Policy** (целясь в permission-модель), `users.role` — переходный двойной источник роли, удаляется после миграции IAM-1.
-  > **Разрешение противоречия §3 ↔ §7:** inline-проверка роли по-прежнему **запрещена**. Логика ролей живёт в **Gates/Policy** сейчас и становится **permissions** после IAM-1. То есть `if ($user->role === 'admin')` в контроллере/сервисе — баг; роль читается только внутри Gate/Policy.
+- **Авторизация (канон, работает в проде):** `spatie/laravel-permission` — **6 ролей** (`admin, director, lawyer, manager, accountant, cfo`) + гранулярные permissions, на guard **`sanctum`**, + **Policy на каждую доменную модель**. Проверка — через `$user->can()` / Policy / permission-middleware.
+  > **✅ IAM-1 ЗАКРЫТ.** spatie работает на guard `sanctum`; `$user->can()` по permissions срабатывает. Колонка `users.role` **удалена** — `role` теперь виртуальный accessor поверх единственной spatie-роли пользователя. 4 глобальные ability — это spatie-permissions, автозарегистрированные как Gates. Двойного источника роли и переходного долга больше нет.
+  > **Разрешение противоречия §3 ↔ §7:** inline-проверка роли **запрещена**. Логика ролей — в **permissions/Gates/Policy**. То есть `if ($user->role === 'admin')` в контроллере/сервисе — баг; роль/право читается только внутри Gate/Policy/`$user->can()`.
 - **N+1 запрещён:** связи — через eager-load (`with()`). Запросы живут в сервисах, не в контроллерах и не в ресурсах.
 - `env()` — только в `config/`. Проектные значения — `config/crm.php`.
 
-## 4. Frontend — слои (как Vizion, НЕРУШИМО)
+## 4. Frontend — слои (НЕРУШИМО)
 
 **Единственный разрешённый путь данных:**
 
@@ -105,7 +103,7 @@ api/<domain>.ts            (axios-клиент + типизированные ф
 
 ## 6. Тесты (фиксировано)
 
-- **PHPUnit + SQLite `:memory:`**, тройная изоляция как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`). Тесты НИКОГДА не ходят в живую БД.
+- **PHPUnit + SQLite `:memory:`**, тройная изоляция (`phpunit.xml` force + `.env.testing` + guard в `TestCase`). Тесты НИКОГДА не ходят в живую БД.
 - **Feature-тест на каждый endpoint**, **Unit-тест на каждый Service**. AI/HTTP — мокать. Pest запрещён (только PHPUnit).
 - **Внешние HTTP-сервисы (Gotenberg, …):** общий фейк биндится в `TestCase::setUp()` через `$this->app->instance(GotenbergClient::class, new FakeGotenbergClient)` — все тесты без сетевого I/O по умолчанию. Тесты, которые целенаправленно проверяют HTTP-слой (TemplateCheck / ContractGeneration), конструируют `new GotenbergClient` напрямую и добавляют собственный `Http::fake()`. Фейки живут в `tests/Fakes/`.
 - **`AiRetryService` (Prism-каскад):** `executeWithRetry(chatType, system, messages, tools)` — стандартный вызов без tool_choice; `executeWithRetryAndToolChoice(...)` — расширение для forced `tool_use` (weekly-отчёт Sonnet). Базовый метод делегирует в расширенный с `toolChoice=null` — non-breaking для всех существующих потребителей. Новые задачи Prism с tool_use обязательно используют `executeWithRetryAndToolChoice`; без tool_use — `executeWithRetry`.
@@ -129,7 +127,7 @@ app.use(PrimeVue, { theme: {
 
 **Тёмная тема:** через класс `.app-dark` на `<html>` (тоггл в Toolbox), не через media-query.
 
-**Бренд-ассеты:** `brand/` — логотип и брендбук MACRO Global (источник истины по цветам). Primary `#172747` (brand-primary = совпадает с Vizion). Дизайн-система и полная спека токенов — vault `MG CRM 2026` (`6. Справочник/Дизайн-система MG CRM…`, `6. Справочник/PrimeVue 4 — тема…`).
+**Бренд-ассеты:** `brand/` — логотип и брендбук MACRO Global (источник истины по цветам). Primary `#172747` (brand-primary). Дизайн-система и полная спека токенов — vault `MG CRM 2026` (`6. Справочник/Дизайн-система MG CRM…`, `6. Справочник/PrimeVue 4 — тема…`).
 
 **PrimeVue MCP:** инструменты `mcp__primevue__*` доступны после рестарта Claude Code (подключён через `~/.local/primevue-mcp`). `llms.txt`: `https://primevue.org/llms.txt`.
 
@@ -149,11 +147,11 @@ app.use(PrimeVue, { theme: {
 
 ## 8. Процессные паттерны (для main-сессии)
 
-- **Делегирование по правилу №1** (whitelist в CLAUDE.md). Main не пишет код, не дебажит, не гоняет artisan/docker.
-- **Цепочка фичи:** агент → (если был UI у `frontend-specialist`) `qa-tester` → `product-manager` (ревью + verify против ARCHITECTURE.md/PLAN.md) → апрув юзера → (по явной просьбе) `deploy-engineer`.
-- **Рабочий цикл агента:** `./examples/contracts/` (ТЗ) → `./examples/vizion/` (паттерн) → корень (`src/`/`front/`).
+- **Делегирование по правилу №1** (whitelist в CLAUDE.md). Main не пишет код, не дебажит, не гоняет artisan/docker, не читает `src/` для ревью.
+- **Цепочка фичи:** агент → (если был UI у `frontend-specialist`) `qa-tester` → `reviewer` (ревью + verify против ARCHITECTURE.md/PLAN.md) → апрув юзера → (по явной просьбе) `deploy-engineer`.
+- **Рабочий цикл агента:** `./examples/contracts/` (ТЗ) → `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*` (паттерн) → корень (`src/`/`front/`).
 - **Деплой/push** — только по явной прямой просьбе.
 
 ---
 
-> Если ARCHITECTURE.md и реальный паттерн Vizion (`./examples/vizion/`) расходятся для **ещё не построенного** паттерна — Vizion прав; `product-manager` правит этот файл с аппрувом. Для уже построенных по спеке доменов эталоном паттерна служит и зрелая реализация в репо (напр. `Sales/DealService`). Этот документ — закон проекта.
+> **Эталон стека — этот файл + `docs/backend-standard.md` (конкретный house-style с worked-примерами) + зрелая реализация в репо** (напр. `Sales/DealService`). При расхождении паттерна с реальностью `reviewer` правит этот файл с аппрувом. `./examples/vizion/` — архив, стеком больше НЕ рулит и НЕ tiebreaker. Этот документ — закон проекта.
