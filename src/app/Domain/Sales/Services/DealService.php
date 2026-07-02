@@ -24,6 +24,8 @@ use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Data\DealTotalsDTO;
 use App\Domain\Sales\Events\DealCreated;
+use App\Domain\Sales\Events\DealDeleted;
+use App\Domain\Sales\Events\DealUpdated;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\DealStageHistory;
@@ -1201,6 +1203,11 @@ class DealService
         // A meaningful deal edit is engagement on its company + contacts.
         $this->touchEngagement($deal);
 
+        // Realtime (Phase 7a): drives a live board-card patch + live deal-card
+        // feed. A stage move is DealStageChanged (dispatched by DealMoveService),
+        // so update() only covers field/amount/owner edits.
+        DealUpdated::dispatch($deal);
+
         return $deal;
     }
 
@@ -1232,7 +1239,15 @@ class DealService
      */
     public function delete(Deal $deal): void
     {
+        // Snapshot the board-routing fields before the soft-delete so
+        // DealDeleted can reach the right board channel without re-hydrating a
+        // now-hidden (SoftDeletes global scope) model on the worker (Phase 7a).
+        $dealId = (int) $deal->id;
+        $departmentId = $deal->department_id !== null ? (int) $deal->department_id : null;
+
         $deal->delete();
+
+        DealDeleted::dispatch($dealId, $departmentId);
     }
 
     /**

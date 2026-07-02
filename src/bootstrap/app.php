@@ -18,6 +18,16 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Realtime (Reverb): registers POST /broadcasting/auth, which authorizes
+    // private-channel subscriptions against routes/channels.php. The SPA
+    // authenticates with a Sanctum Bearer token (no session cookie), so the
+    // endpoint runs behind auth:sanctum — the default `web` session guard would
+    // never resolve the API-token user. Channel callbacks then run the same
+    // Gate/Policy checks used by the REST layer.
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        ['middleware' => ['auth:sanctum']],
+    )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
 

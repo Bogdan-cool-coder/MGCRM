@@ -12,17 +12,16 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Fired when a deal is created. Stable contract for the automation / outbound-
- * webhook / Notification domains (mirrors Activity\Events\ActivityCreated).
+ * Fired when a deal is edited via DealService::update() — field / amount / owner
+ * changes (NOT a stage move, which is DealStageChanged, nor creation). Realtime-
+ * only contract (Phase 7a): drives a live board-card patch + live deal-card feed
+ * when a deal's data changes under another user's eyes.
  *
- * Realtime (Phase 7a): implements ShouldBroadcast — fans out over the Redis
- * queue to the deal entity channel + the department deals channel, so an open
- * board / kanban gains the new card live. Broadcasting is additive; existing
- * (non-realtime) subscribers are unaffected.
- *
- * Emitted by DealService::create() and DealService::createInbound().
+ * Broadcasts to the deal entity channel + the department deals channel. If the
+ * owner or department changed, the department in the payload is the NEW one, so
+ * the card lands on the correct board; the frontend refetches to reconcile.
  */
-class DealCreated implements ShouldBroadcast
+class DealUpdated implements ShouldBroadcast
 {
     use BroadcastsDealChannels;
     use Dispatchable;
@@ -40,7 +39,7 @@ class DealCreated implements ShouldBroadcast
 
     public function broadcastAs(): string
     {
-        return 'deal.created';
+        return 'deal.updated';
     }
 
     /** @return array<string, mixed> */

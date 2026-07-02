@@ -9,7 +9,9 @@ use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Events\ActivityAssigned;
 use App\Domain\Activity\Events\ActivityCreated;
+use App\Domain\Activity\Events\ActivityDeleted;
 use App\Domain\Activity\Events\ActivityStatusChanged;
+use App\Domain\Activity\Events\ActivityUpdated;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
@@ -269,6 +271,10 @@ class ActivityService
             && (int) $activity->responsible_id !== (int) $previousResponsible) {
             ActivityAssigned::dispatch($activity, $previousResponsible);
         }
+
+        // Realtime (Phase 7a): a field edit drives the live feed + task lists.
+        // Additive to any assignment event above.
+        ActivityUpdated::dispatch($activity, $actor);
 
         return $activity;
     }
@@ -594,7 +600,30 @@ class ActivityService
 
     public function delete(Activity $activity): void
     {
+        // Snapshot the routing fields BEFORE the row is gone — ActivityDeleted
+        // broadcasts to the same target/user/department channels but can no
+        // longer re-hydrate the model on the queue worker (Phase 7a).
+        $targetType = $activity->target_type instanceof \BackedEnum
+            ? $activity->target_type->value
+            : $activity->target_type;
+
+        $snapshot = [
+            'id' => (int) $activity->id,
+            'target_type' => $targetType !== null ? (string) $targetType : null,
+            'target_id' => $activity->target_id !== null ? (int) $activity->target_id : null,
+            'responsible_id' => $activity->responsible_id !== null ? (int) $activity->responsible_id : null,
+            'department_id' => $activity->department_id !== null ? (int) $activity->department_id : null,
+        ];
+
         $activity->delete();
+
+        ActivityDeleted::dispatch(
+            $snapshot['id'],
+            $snapshot['target_type'],
+            $snapshot['target_id'],
+            $snapshot['responsible_id'],
+            $snapshot['department_id'],
+        );
     }
 
     /**

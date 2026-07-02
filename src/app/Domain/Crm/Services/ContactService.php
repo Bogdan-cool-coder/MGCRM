@@ -9,6 +9,9 @@ use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Crm\Enums\CustomFieldScope;
 use App\Domain\Crm\Enums\EngagementTier;
+use App\Domain\Crm\Events\ContactCreated;
+use App\Domain\Crm\Events\ContactDeleted;
+use App\Domain\Crm\Events\ContactUpdated;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Models\ContactCompanyLink;
 use App\Domain\Iam\Models\User;
@@ -262,6 +265,11 @@ class ContactService
             return $contact;
         });
 
+        // Realtime (Phase 7a): new contact appears live in the list. The list
+        // channel is anchored on the owner's department (Contact has no
+        // department column of its own).
+        ContactCreated::dispatch($contact, $this->ownerDepartmentId($contact));
+
         return $contact;
     }
 
@@ -336,6 +344,10 @@ class ContactService
             }
         });
 
+        // Realtime (Phase 7a): live contact-card + list-row patch. Department is
+        // re-derived from the (possibly reassigned) owner after commit.
+        ContactUpdated::dispatch($contact, $this->ownerDepartmentId($contact));
+
         return $contact;
     }
 
@@ -383,6 +395,12 @@ class ContactService
 
     public function delete(Contact $contact): void
     {
+        // Snapshot the list-routing ids before the soft-delete so ContactDeleted
+        // reaches the right list channel without re-hydrating a now-hidden model
+        // on the queue worker (Phase 7a).
+        $contactId = (int) $contact->id;
+        $departmentId = $this->ownerDepartmentId($contact);
+
         DB::transaction(function () use ($contact): void {
             // Detach sub-resources before soft-delete: the FK cascade fires only on
             // hard-delete, so a soft-deleted contact would leave contact_channels orphaned
@@ -394,6 +412,27 @@ class ContactService
 
             $contact->delete();
         });
+
+        ContactDeleted::dispatch($contactId, $departmentId);
+    }
+
+    /**
+     * The department that anchors a contact's live-list broadcast channel.
+     * Contact has no department column, so it inherits the OWNER user's
+     * department (the same anchor the M9 department-visibility model uses for a
+     * contact via its owner). Null when unowned or the owner has no department.
+     */
+    private function ownerDepartmentId(Contact $contact): ?int
+    {
+        if ($contact->owner_id === null) {
+            return null;
+        }
+
+        $departmentId = User::query()
+            ->whereKey($contact->owner_id)
+            ->value('department_id');
+
+        return $departmentId !== null ? (int) $departmentId : null;
     }
 
     /**

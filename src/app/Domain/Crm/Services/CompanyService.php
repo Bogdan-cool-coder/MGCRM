@@ -10,6 +10,9 @@ use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Crm\Enums\ClientStatus;
 use App\Domain\Crm\Enums\CustomFieldScope;
 use App\Domain\Crm\Enums\EngagementTier;
+use App\Domain\Crm\Events\CompanyCreated;
+use App\Domain\Crm\Events\CompanyDeleted;
+use App\Domain\Crm\Events\CompanyUpdated;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\CompanyClientStatusLog;
 use App\Domain\Crm\Models\Contact;
@@ -223,7 +226,7 @@ class CompanyService
 
         // Wrap create + custom-field validation in a transaction so that an invalid
         // extra_fields key does not leave a bare (no extra_fields) company record behind.
-        return DB::transaction(function () use ($data, $extraFields): Company {
+        $company = DB::transaction(function () use ($data, $extraFields): Company {
             $company = Company::create($data);
 
             // Apply validated/coerced custom-field values. If no active defs exist for the
@@ -235,6 +238,12 @@ class CompanyService
 
             return $company;
         });
+
+        // Realtime (Phase 7a): new company appears live in the list. Dispatched
+        // AFTER commit so subscribers never observe an uncommitted row.
+        CompanyCreated::dispatch($company);
+
+        return $company;
     }
 
     /**
@@ -269,7 +278,7 @@ class CompanyService
         // any transaction, so a failure between the mutation and the log left the
         // company saved but the timeline/history without a row, and 500'd a
         // successful edit (DATA-INCONSISTENCY).
-        return DB::transaction(function () use ($company, $data, $extraFields, $oldChannelId, $original, $actor): Company {
+        $company = DB::transaction(function () use ($company, $data, $extraFields, $oldChannelId, $original, $actor): Company {
             $company->update($data);
             $company->refresh();
 
@@ -313,14 +322,28 @@ class CompanyService
 
             return $company;
         });
+
+        // Realtime (Phase 7a): live company-card + list-row patch. Dispatched
+        // after commit so the payload reflects persisted state.
+        CompanyUpdated::dispatch($company);
+
+        return $company;
     }
 
     public function delete(Company $company): void
     {
+        // Snapshot the list-routing department before the soft-delete so
+        // CompanyDeleted reaches the right list channel without re-hydrating a
+        // now-hidden model on the queue worker (Phase 7a).
+        $companyId = (int) $company->id;
+        $departmentId = $company->department_id !== null ? (int) $company->department_id : null;
+
         DB::transaction(function () use ($company): void {
             // Soft-delete cascades to contact links are handled by DB/application layer
             $company->delete();
         });
+
+        CompanyDeleted::dispatch($companyId, $departmentId);
     }
 
     /**
