@@ -313,34 +313,40 @@ class DashboardEndpointTest extends TestCase
 
     public function test_trend_prev_period_ignores_soft_deleted_deals(): void
     {
-        // 1 active deal this month; previous month has 1 live + 1 soft-deleted
-        // deal. The scoped trend must compare 1 (current) vs 1 (prev, live only),
-        // i.e. trend_pct = 0.0 — NOT 1 vs 2 (-50%) that the raw query produced.
+        // 3 active deals this month; previous month has 3 live + 1 soft-deleted
+        // deal. The scoped trend must compare 3 (current) vs 3 (prev, live only),
+        // i.e. trend_pct = 0.0 — NOT 3 vs 4 (-25%) that the raw query produced.
+        // Prior count (3) is at the V6 min-throughput threshold so the delta is
+        // still reported.
         $director = User::factory()->create(['role' => Role::Director]);
         $pipeline = $this->salesPipeline();
         $stage = $this->openStage($pipeline);
 
-        // Current period — 1 active deal.
-        Deal::factory()->create([
-            'pipeline_id' => $pipeline->id,
-            'stage_id' => $stage->id,
-            'owner_user_id' => $director->id,
-            'company_id' => Company::factory()->create()->id,
-            'currency' => 'RUB',
-            'amount' => 100_000,
-            'stage_changed_at' => now(),
-        ]);
+        // Current period — 3 active deals.
+        for ($i = 0; $i < 3; $i++) {
+            Deal::factory()->create([
+                'pipeline_id' => $pipeline->id,
+                'stage_id' => $stage->id,
+                'owner_user_id' => $director->id,
+                'company_id' => Company::factory()->create()->id,
+                'currency' => 'RUB',
+                'amount' => 100_000,
+                'stage_changed_at' => now(),
+            ]);
+        }
 
-        // Previous period — 1 live deal.
-        Deal::factory()->create([
-            'pipeline_id' => $pipeline->id,
-            'stage_id' => $stage->id,
-            'owner_user_id' => $director->id,
-            'company_id' => Company::factory()->create()->id,
-            'currency' => 'RUB',
-            'amount' => 100_000,
-            'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(3),
-        ]);
+        // Previous period — 3 live deals.
+        for ($i = 0; $i < 3; $i++) {
+            Deal::factory()->create([
+                'pipeline_id' => $pipeline->id,
+                'stage_id' => $stage->id,
+                'owner_user_id' => $director->id,
+                'company_id' => Company::factory()->create()->id,
+                'currency' => 'RUB',
+                'amount' => 100_000,
+                'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(3),
+            ]);
+        }
 
         // Previous period — 1 soft-deleted deal (must NOT count in prev).
         $deleted = Deal::factory()->create([
@@ -360,8 +366,8 @@ class DashboardEndpointTest extends TestCase
             ->assertOk();
 
         $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
-        $this->assertSame(1, $activeGroup['count']);
-        // 1 (current) vs 1 (prev live) → 0%. Raw-query bug would yield -50.
+        $this->assertSame(3, $activeGroup['count']);
+        // 3 (current) vs 3 (prev live) → 0%. Raw-query bug would yield -25.
         // JSON serializes 0.0 as 0 (no fractional part) → compare loosely.
         $this->assertEquals(0.0, $activeGroup['trend_pct']);
     }
@@ -369,30 +375,32 @@ class DashboardEndpointTest extends TestCase
     public function test_trend_prev_period_respects_manager_id_filter(): void
     {
         // Director filters by a single manager. The previous-period denominator
-        // must be scoped to that manager too — not all owners.
+        // must be scoped to that manager too — not all owners. Prior counts are
+        // kept at/above the V6 min-throughput threshold so the delta is reported.
         $director = User::factory()->create(['role' => Role::Director]);
         $mgr = User::factory()->create(['role' => Role::Manager]);
         $other = User::factory()->create(['role' => Role::Manager]);
         $pipeline = $this->salesPipeline();
         $stage = $this->openStage($pipeline);
 
-        // Current period: mgr has 2 deals.
-        $this->deal($mgr, $pipeline, $stage);
-        $this->deal($mgr, $pipeline, $stage);
+        // Current period: mgr has 4 deals.
+        for ($i = 0; $i < 4; $i++) {
+            $this->deal($mgr, $pipeline, $stage);
+        }
 
-        // Previous period: mgr has 1 deal, other has 3 (must be excluded).
-        foreach ([$mgr] as $owner) {
+        // Previous period: mgr has 3 deals, other has 5 (must be excluded).
+        for ($i = 0; $i < 3; $i++) {
             Deal::factory()->create([
                 'pipeline_id' => $pipeline->id,
                 'stage_id' => $stage->id,
-                'owner_user_id' => $owner->id,
+                'owner_user_id' => $mgr->id,
                 'company_id' => Company::factory()->create()->id,
                 'currency' => 'RUB',
                 'amount' => 100_000,
                 'stage_changed_at' => now()->startOfMonth()->subMonth()->addDays(2),
             ]);
         }
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 5; $i++) {
             Deal::factory()->create([
                 'pipeline_id' => $pipeline->id,
                 'stage_id' => $stage->id,
@@ -411,10 +419,9 @@ class DashboardEndpointTest extends TestCase
         )->assertOk();
 
         $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
-        $this->assertSame(2, $activeGroup['count']);
-        // 2 (current, mgr) vs 1 (prev, mgr only) → +100%. Unscoped prev (4) → -50.
-        // JSON serializes 100.0 as 100 (no fractional part) → compare loosely.
-        $this->assertEquals(100.0, $activeGroup['trend_pct']);
+        $this->assertSame(4, $activeGroup['count']);
+        // 4 (current, mgr) vs 3 (prev, mgr only) → +33.3%. Unscoped prev (8) → -50.
+        $this->assertEquals(33.3, $activeGroup['trend_pct']);
     }
 
     // =========================================================================

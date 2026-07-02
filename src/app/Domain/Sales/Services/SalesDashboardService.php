@@ -245,26 +245,41 @@ class SalesDashboardService
         $laterTotal = 0;
 
         for ($i = $n - 1; $i >= 0; $i--) {
+            $current = $stageData[$i]['count'];
+
+            // No throughput to measure: the stage holds no deals of its own, so
+            // there is nothing to compute a conversion FROM. Report null (JSON
+            // null → «—» on the frontend) rather than a misleading 100 / 0.
+            // This subsumes won/lost stages — their 100/0 semantics only hold
+            // when the stage actually has deals. An empty stage with deals only
+            // further downstream (a deal that jumped past it) still has no local
+            // throughput, so it stays null — otherwise a single deal jumped to
+            // "won" would paint every empty upstream stage 100%.
+            if ($current === 0) {
+                $stageData[$i]['transition_to_next_pct'] = null;
+
+                continue;
+            }
+
             if ($stageData[$i]['is_won']) {
                 $stageData[$i]['transition_to_next_pct'] = 100.0;
-                $laterTotal += $stageData[$i]['count'];
+                $laterTotal += $current;
 
                 continue;
             }
 
             if ($stageData[$i]['is_lost']) {
                 $stageData[$i]['transition_to_next_pct'] = 0.0;
-                $laterTotal += $stageData[$i]['count'];
+                $laterTotal += $current;
 
                 continue;
             }
 
-            $current = $stageData[$i]['count'];
             $denominator = $current + $laterTotal;
 
             $stageData[$i]['transition_to_next_pct'] = $denominator > 0
                 ? round($laterTotal / $denominator * 100, 1)
-                : 0.0;
+                : null;
 
             $laterTotal += $current;
         }
@@ -442,13 +457,21 @@ class SalesDashboardService
 
     /**
      * Trend percentage: (current - previous) / previous × 100, rounded to 1dp.
-     * Returns null when previous = 0 (undefined, not infinity).
+     *
+     * Returns null when there is not enough prior data to make the delta
+     * meaningful. A prior count below the configured minimum
+     * (`crm.kpi.min_prior_trend_count`) yields wild, misleading swings on sparse
+     * data (e.g. previous=1, current=0 → −100%), so we report null → «—» /
+     * «Недостаточно данных» on the frontend rather than a noisy number. This
+     * also subsumes the previous = 0 (division-by-zero) guard.
      *
      * Pure function — no DB.
      */
     public function computeTrendPct(int $current, int $previous): ?float
     {
-        if ($previous === 0) {
+        $minPrior = (int) config('crm.kpi.min_prior_trend_count', 3);
+
+        if ($previous < $minPrior) {
             return null;
         }
 

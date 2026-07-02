@@ -221,6 +221,14 @@ return [
     */
     'kpi' => [
         'score_warning_threshold' => 80,
+
+        /*
+         | Minimum prior-period count required for a period-over-period trend
+         | delta to be reported. Below this, the sample is too small for the
+         | delta to be meaningful (e.g. previous=1 → wild ±% swings), so
+         | computeTrendPct() returns null and the frontend shows «—».
+         */
+        'min_prior_trend_count' => 3,
     ],
 
     /*

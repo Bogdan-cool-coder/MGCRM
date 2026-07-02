@@ -50,7 +50,57 @@ class SalesDashboardFunnelTest extends TestCase
         $this->assertCount(1, $result['stages']);
         $this->assertSame(0, $result['stages'][0]['count']);
         $this->assertSame(0.0, $result['stages'][0]['avg_days_in_stage']);
-        $this->assertSame(0.0, $result['stages'][0]['transition_to_next_pct']);
+        // No deals in the stage and none downstream → no throughput to measure.
+        // M6: report null («—»), not a misleading 100/0.
+        $this->assertNull($result['stages'][0]['transition_to_next_pct']);
+    }
+
+    public function test_empty_intermediate_stages_return_null_when_deal_jumps_to_won(): void
+    {
+        // M6 regression: only 1 deal, sitting straight in the won stage.
+        // Every intermediate stage has 0 deals AND no throughput downstream
+        // through them, so each must report null (not 100%).
+        $pipeline = Pipeline::factory()->create();
+        $s1 = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'sort_order' => 1, 'name' => 'New leads']);
+        $s2 = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'sort_order' => 2, 'name' => 'Qualified']);
+        $won = PipelineStage::factory()->won()->create(['pipeline_id' => $pipeline->id, 'sort_order' => 3]);
+        $pipeline->load('stages');
+
+        // Single deal jumps straight to the won stage.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $won->id,
+            'company_id' => Company::factory()->create()->id,
+            'stage_changed_at' => now()->subDay(),
+        ]);
+
+        $base = Deal::query()->where('pipeline_id', $pipeline->id);
+        $result = $this->service->funnelMetrics($pipeline, $base);
+
+        $stageMap = collect($result['stages'])->keyBy('stage_id');
+
+        // Empty intermediate stages: no throughput → null, NOT 100%.
+        $this->assertNull($stageMap[$s1->id]['transition_to_next_pct']);
+        $this->assertNull($stageMap[$s2->id]['transition_to_next_pct']);
+        // The won stage actually holds a deal → its 100% semantics still apply.
+        $this->assertSame(100.0, $stageMap[$won->id]['transition_to_next_pct']);
+    }
+
+    public function test_empty_won_stage_reports_null_not_100(): void
+    {
+        // M6: a won stage with 0 deals and nothing downstream has no throughput
+        // to measure — its 100% semantics only hold when it actually has deals.
+        $pipeline = Pipeline::factory()->create();
+        PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'sort_order' => 1, 'name' => 'New leads']);
+        $won = PipelineStage::factory()->won()->create(['pipeline_id' => $pipeline->id, 'sort_order' => 2]);
+        $pipeline->load('stages');
+
+        // No deals at all.
+        $base = Deal::query()->where('pipeline_id', $pipeline->id);
+        $result = $this->service->funnelMetrics($pipeline, $base);
+
+        $wonData = collect($result['stages'])->firstWhere('is_won', true);
+        $this->assertNull($wonData['transition_to_next_pct']);
     }
 
     public function test_won_stage_has_100_pct_transition(): void
