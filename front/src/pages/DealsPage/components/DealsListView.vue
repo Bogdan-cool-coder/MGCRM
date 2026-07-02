@@ -393,10 +393,9 @@ function taskDateShort(dueAt: string | null): string {
   padding: 0 !important;
   // L1: center header labels over columns
   text-align: center;
-
-  .app-dark & {
-    color: var(--p-surface-900); // dark surface-900 = #F9FAFB — near-white on dark bg
-  }
+  // $surface-900 / $surface-card are theme-reactive → base rule is correct in dark
+  // (surface-900 dark = navy #EAF0FA). No dark branch: a nested `.app-dark &` inside
+  // :deep() compiles to `.app-dark[data-v-*] …` and never matches.
 }
 
 // Sort button inside each column header

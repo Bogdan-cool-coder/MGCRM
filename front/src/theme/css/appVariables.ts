@@ -65,15 +65,10 @@ export function createAppCssVariables(): FlatVars {
   vars['primary-color'] = appTheme.semantic.brand.primary
   vars['secondary-color'] = appTheme.semantic.brand.secondary
 
-  // Status
-  const statusKeys = ['success', 'danger', 'warning', 'info'] as const
-  statusKeys.forEach((status) => {
-    const s = appTheme.semantic.status[status]
-    vars[`status-${status}-bg`] = s.bg
-    vars[`status-${status}-border`] = s.border
-    vars[`status-${status}-text`] = s.text
-    vars[`status-${status}-solid`] = s.solid
-  })
+  // Status triads: NOT emitted here (was inline on <html>, which blocks .app-dark
+  // overrides since inline wins over any selector). Declared in SCSS
+  // theme/scss/foundation/_colors.scss under :root (light) + .app-dark (navy dark)
+  // so they dark-adapt via cascade (MSales 2.0). See --app-status-*.
 
   // Actions — primary stays brand hex (always dark); secondary uses surface tokens (reactive)
   vars['action-primary-bg'] = appTheme.semantic.action.primary.bg
@@ -100,11 +95,9 @@ export function createAppCssVariables(): FlatVars {
   vars['border-radius'] = appTheme.radius.md
   vars['card-border-radius'] = appTheme.radius.lg
 
-  // Shadows
-  vars['shadow-sm'] = appTheme.shadows.sm
-  vars['shadow-card'] = appTheme.shadows.card
-  vars['shadow-md'] = appTheme.shadows.md
-  vars['shadow-lg'] = appTheme.shadows.lg
+  // Shadows: NOT emitted here — declared in SCSS theme/scss/foundation/_overlays.scss
+  // under :root (light) + .app-dark (deeper navy-black dark) so they dark-adapt via
+  // cascade (MSales 2.0). Inline emission would block the .app-dark override.
 
   // Motion
   vars['duration-fast'] = appTheme.motion.duration.fast

@@ -124,7 +124,7 @@ const barOption = computed<EChartsOption>(() => {
       {
         type: 'bar',
         data: reversedValues,
-        itemStyle: { borderRadius: [0, 6, 6, 0], color: macroCrmBarColor() },
+        itemStyle: { borderRadius: [0, 6, 6, 0], color: macroCrmBarColor(themeStore.theme === 'dark') },
         barMaxWidth: 32,
         label: {
           show: true,

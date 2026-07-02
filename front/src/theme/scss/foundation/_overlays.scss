@@ -5,6 +5,9 @@ $shadow-sm: var(--app-shadow-sm);
 $shadow-card: var(--app-shadow-card);
 $shadow-md: var(--app-shadow-md);
 $shadow-lg: var(--app-shadow-lg);
+// The --app-shadow-* DECLARATIONS (light :root + dark .app-dark) live in
+// assets/styles/base.scss (emitted ONCE globally) — avoids per-scoped-component
+// duplication (this partial is @forward'd into the shared theme index).
 
 // Supplemental static shadows (not theme-reactive — elevation-specific, always dark)
 // Used for dragging state, focus-ring outlines, elevated overlays.

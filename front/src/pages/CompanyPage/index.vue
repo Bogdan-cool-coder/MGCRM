@@ -1221,13 +1221,7 @@ watch(
     position: sticky;
     top: 0;
     z-index: 10;
-
-    // #4 fix: dark tablist must use {surface.100}=#444547 (card bg), NOT {surface.900}=#F9FAFB.
-    // {surface.900} in our inverted dark palette is surfacePalette[50]=#F9FAFB (nearly white).
-    .app-dark & {
-      background: var(--p-surface-100); // dark #444547 (card bg canon §5.2)
-      border-bottom-color: var(--p-surface-700); // dark #616263
-    }
+    // $surface-card + --p-surface-200 are theme-reactive → base reads in dark too.
   }
 
   // spec §3: active tab label font-weight = 600

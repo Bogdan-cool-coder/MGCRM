@@ -909,10 +909,8 @@ void attachCompanyStatus
     background: $surface-card;
     border-bottom: 1px solid var(--p-surface-200);
     padding: 0 $space-4;
-
-    .app-dark & {
-      border-bottom-color: var(--p-surface-700);
-    }
+    // $surface-card + --p-surface-200 are theme-reactive → base reads in dark.
+    // (A nested `.app-dark &` inside :deep() compiles dead — never matches <html>.)
   }
 
   :deep(.p-tabpanels) {

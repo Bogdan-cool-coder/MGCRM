@@ -123,36 +123,23 @@ function onTabChange(value: string | number | undefined) {
     cursor: pointer;
     white-space: nowrap;
 
+    // $surface-600 / $surface-900 theme-reactive → muted + hover read in dark.
+    // No dark branch: nested `.app-dark &` inside :deep() compiles dead.
     &:hover {
       color: $surface-900;
     }
-
-    // dark general — MUST come BEFORE active override (source order = specificity tiebreak)
-    .app-dark & {
-      color: var(--p-surface-400);
-
-      &:hover {
-        color: var(--p-surface-100);
-      }
-    }
   }
 
+  // Active tab + underline bar: --p-primary-color = navy #172747 (light) /
+  // accent #4C7DF0 (dark) — correct in both from one rule (no dead dark branch).
   :deep(.p-tab[aria-selected="true"]) {
-    color: $primary-900;
+    color: var(--p-primary-color);
     font-weight: $font-weight-semibold;
-
-    .app-dark & {
-      color: var(--p-primary-300);
-    }
   }
 
   :deep(.p-tablist-active-bar) {
-    background: $primary-900;
+    background: var(--p-primary-color);
     height: 2px;
-
-    .app-dark & {
-      background: var(--p-primary-300);
-    }
   }
 }
 

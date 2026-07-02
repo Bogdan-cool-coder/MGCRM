@@ -55,6 +55,22 @@ export const MACRO_ECHARTS_PALETTE: readonly string[] = Object.freeze([
   '#9B9C9F', // Light-mid grey
 ])
 
+// Dark navy series palette (MSales 2.0): lightened same-hue tints so charts read
+// on the navy card #111E38 — navy brand hexes above would sink into the card.
+// Order preserved 1:1 with the light palette (widgets index by position).
+export const MACRO_ECHARTS_PALETTE_DARK: readonly string[] = Object.freeze([
+  '#5B8DEF', // accent-blue (navy-accent lightened)
+  '#4C7DF0', // brand accent dark (--mg-navy-accent)
+  '#7CCBFF', // info-solid dark
+  '#8593B0', // navy muted (--mg-text-muted)
+  '#7BE07F', // success-solid dark
+  '#FF6B57', // danger-solid dark
+  '#AEB9CE', // light navy neutral (--mg-gray-700 dark)
+  '#FFB87E', // warning-solid dark
+  '#6E99FF', // second blue (accent-hover) for extra series
+  '#9DB8FF', // accent-soft
+])
+
 const FONT_FAMILY =
   "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif"
 
@@ -68,13 +84,14 @@ const SPLIT_LINE_LIGHT = 'rgba(209, 213, 219, 0.25)'
 const TOOLTIP_BG_LIGHT = 'rgba(23, 39, 71, 0.92)' // brand-primary dark
 
 // ---------------------------------------------------------------------------
-// Dark theme constants
+// Dark theme constants (MSales 2.0 navy — tokens/dark.css)
 // ---------------------------------------------------------------------------
-const TEXT_PRIMARY_DARK = '#E3E4E6' // surface.200
-const TEXT_MUTED_DARK = '#7E7F82' // surface.600
-const AXIS_LINE_DARK = 'rgba(97, 98, 99, 0.4)' // surface.700
-const SPLIT_LINE_DARK = 'rgba(97, 98, 99, 0.25)'
-const TOOLTIP_BG_DARK = 'rgba(39, 40, 41, 0.96)' // surface.900
+const TEXT_PRIMARY_DARK = '#EAF0FA' // --mg-text-primary
+const TEXT_MUTED_DARK = '#8593B0' // --mg-text-muted
+const AXIS_LINE_DARK = 'rgba(58, 79, 120, 0.55)' // --mg-navy-border-strong @55%
+const SPLIT_LINE_DARK = 'rgba(39, 57, 92, 0.45)' // --mg-navy-border @45%
+const TOOLTIP_BG_DARK = 'rgba(23, 40, 71, 0.96)' // #172847 (navy surface2) @96%
+const SERIES_BORDER_DARK = '#111E38' // navy card bg — segment/point separator
 
 // ---------------------------------------------------------------------------
 // Theme builder
@@ -85,9 +102,11 @@ export const buildMacroCrmTheme = (isDark: boolean) => {
   const AXIS_LINE = isDark ? AXIS_LINE_DARK : AXIS_LINE_LIGHT
   const SPLIT_LINE = isDark ? SPLIT_LINE_DARK : SPLIT_LINE_LIGHT
   const TOOLTIP_BG = isDark ? TOOLTIP_BG_DARK : TOOLTIP_BG_LIGHT
+  const PALETTE = isDark ? MACRO_ECHARTS_PALETTE_DARK : MACRO_ECHARTS_PALETTE
+  const SERIES_BORDER = isDark ? SERIES_BORDER_DARK : '#ffffff'
 
   return {
-    color: [...MACRO_ECHARTS_PALETTE],
+    color: [...PALETTE],
     backgroundColor: 'transparent',
 
     textStyle: {
@@ -187,11 +206,11 @@ export const buildMacroCrmTheme = (isDark: boolean) => {
       symbol: 'circle',
       symbolSize: 6,
       lineStyle: { width: 2.5 },
-      itemStyle: { borderWidth: 2, borderColor: isDark ? '#2C2C2C' : '#ffffff' },
+      itemStyle: { borderWidth: 2, borderColor: SERIES_BORDER },
     },
 
     pie: {
-      itemStyle: { borderColor: isDark ? '#2C2C2C' : '#ffffff', borderWidth: 2 },
+      itemStyle: { borderColor: SERIES_BORDER, borderWidth: 2 },
       label: {
         color: TEXT_PRIMARY,
         fontFamily: FONT_FAMILY,
@@ -207,7 +226,8 @@ export const buildMacroCrmTheme = (isDark: boolean) => {
 // ---------------------------------------------------------------------------
 
 /** Primary brand bar colour (palette[0]) — used for single-series bar charts. */
-export const macroCrmBarColor = (): string => MACRO_ECHARTS_PALETTE[0] as string
+export const macroCrmBarColor = (isDark = false): string =>
+  (isDark ? MACRO_ECHARTS_PALETTE_DARK[0] : MACRO_ECHARTS_PALETTE[0]) as string
 
 /** Muted text colour for series data-labels, adapts to dark mode. */
 export const macroCrmMutedText = (isDark: boolean): string =>

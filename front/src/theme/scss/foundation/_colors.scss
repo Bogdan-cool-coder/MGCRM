@@ -92,25 +92,34 @@ $background-color: $surface-100;
 
 .app-dark {
   --mg-surface-card: var(--p-surface-100);
-  // Dark hover = #3a3b3d — sits between surface-50(#272829) and surface-100(#444547),
-  // gives a subtle DARKEN effect (darker than the card bg = correct direction).
-  --mg-surface-hover: #3a3b3d; // stylelint-disable-line scale-unlimited/declaration-strict-value
+  // Dark hover = navy #172847 (surface-200) — darker/raised over card #111E38.
+  --mg-surface-hover: var(--p-surface-200);
 }
 
-// ─── Brand header token ───────────────────────────────────────────────────────
-// Бренд-инвариант: хедер карточки сделки всегда тёмный (из брендбука).
-// НЕ меняется в dark-mode — зафиксировано в ТЗ DealPage 2.0 §1.1.
-$brand-header-bg: #172747;
+// Status triads & shadows: their --app-status-* / --app-shadow-* custom-property
+// DECLARATIONS (light :root + dark .app-dark) live in assets/styles/base.scss
+// (emitted ONCE globally). They are NOT declared here because this partial is
+// @forward'd into the shared theme index that scoped components @use — declaring
+// CSS rules here would duplicate them into every scoped component (bloat).
+// The $-var aliases above/below are symbols only (no CSS emission).
 
-// ─── Sidebar tokens ──────────────────────────────────────────────────────────
-// Sidebar always stays dark (brand bg), regardless of light/dark theme.
-$sidebar-bg:           #172747;   // brand-primary — static, sidebar never adapts to theme
-$sidebar-hover-bg:     #0E172B;   // brand-primary-dark — replaces hardcoded #0e172b
-$sidebar-active-bg:    rgba(255, 255, 255, 0.08);   // active pill highlight
-$sidebar-active-bar:   #ffffff;                      // 3px left indicator bar
-$sidebar-text:         rgba(255, 255, 255, 0.75);    // default nav text
-$sidebar-text-active:  #ffffff;                      // active nav text
-$sidebar-divider:      rgba(255, 255, 255, 0.08);    // hairline before admin block
+// ─── Brand chrome tokens (sidebar + deal-header) ─────────────────────────────
+// MSales 2.0: brand chrome DARKENS in dark theme but stays NAVY (never neutral).
+// Light values = brand invariants (#172747 — allowed raw navy per ТЗ rule 1).
+// Dark values (tokens/dark.css --mg-sidebar-* / --mg-deal-header-bg): sidebar
+// darkens to #091020, deal-header to #111E38, active-bar → #6E99FF.
+// SCSS $-vars now alias --app-* custom props so they adapt via cascade.
+$brand-header-bg:      var(--app-brand-header-bg);
+$sidebar-bg:           var(--app-sidebar-bg);
+$sidebar-hover-bg:     var(--app-sidebar-hover-bg);
+$sidebar-active-bg:    var(--app-sidebar-active-bg);
+$sidebar-active-bar:   var(--app-sidebar-active-bar);
+$sidebar-text:         var(--app-sidebar-text);
+$sidebar-text-active:  #ffffff;   // active nav text — stays white in BOTH themes (brand invariant)
+$sidebar-divider:      var(--app-sidebar-divider);
+// The --app-brand-header-bg / --app-sidebar-* DECLARATIONS (light + .app-dark)
+// live in assets/styles/base.scss (emitted ONCE globally), same rationale as
+// status/shadows above — avoids per-scoped-component duplication.
 
 // ─── Kanban health-signal colors ─────────────────────────────────────────────
 

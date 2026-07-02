@@ -178,11 +178,8 @@ function onTabChange(value: string | number) {
     background: $surface-card;
     border-bottom: 1px solid $surface-200;
     overflow-x: auto;
-
-    .app-dark & {
-      background: var(--p-surface-100);
-      border-bottom-color: var(--p-surface-200);
-    }
+    // $surface-card / $surface-200 theme-reactive → base reads in dark (navy).
+    // No dark branch: nested `.app-dark &` inside :deep() compiles dead.
   }
 
   :deep(.p-tab) {
@@ -194,30 +191,20 @@ function onTabChange(value: string | number) {
     transition: color var(--app-transition-fast), border-color var(--app-transition-fast);
     cursor: pointer;
     white-space: nowrap;
+    // $surface-600 / $surface-900 theme-reactive → muted + hover read in dark.
 
     &:hover {
       color: $surface-900;
     }
-
-    .app-dark & {
-      color: var(--p-surface-400);
-
-      &:hover {
-        color: var(--p-surface-100);
-      }
-    }
   }
 
+  // Active tab: --p-primary-color = navy #172747 (light) / accent #4C7DF0 (dark) —
+  // correct in both from one rule (no dead nested dark branch).
   :deep(.p-tab[data-p-active="true"]),
   :deep(.p-tab-active) {
-    color: $primary-900;
+    color: var(--p-primary-color);
     font-weight: $font-weight-semibold;
-    border-bottom-color: $primary-900;
-
-    .app-dark & {
-      color: var(--p-primary-200);
-      border-bottom-color: var(--p-primary-200);
-    }
+    border-bottom-color: var(--p-primary-color);
   }
 
   // Hide PrimeVue default active-bar indicator (we use border-bottom instead)

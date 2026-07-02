@@ -63,6 +63,41 @@ export const surfacePalette = {
   950: '#000000',
 } as const
 
+// ==========================================
+// NAVY DARK SURFACE SCALE (MSales 2.0 dark theme, tokens/dark.css)
+// ==========================================
+// ИНВЕРТИРОВАННАЯ шкала для dark: индекс 0 = самый ТЁМНЫЙ фон (page),
+// индекс 900/950 = самый СВЕТЛЫЙ (текст). Это НЕ монотонная инверсия
+// surfacePalette — это отдельная navy-шкала пакета MACROSALES 2.0.
+// Опорные точки пакета: bg #0A1426 / surface #111E38 / surface2 #172847
+// / surface3 #1F3157 + границы #27395C / #3A4F78. Шаги 500–700 интерполированы.
+// Потребляется ТОЛЬКО в colorScheme.dark.surface (foundation.ts). Light не трогает.
+export const navyDarkSurfacePalette = {
+  0: '#0A1426',   // --mg-navy-bg — глубочайший фон / page
+  50: '#0F1F3D',  // app bg alt / striped row / disabled-input darker
+  100: '#111E38', // --mg-navy-surface — card / panel / input / overlay bg
+  200: '#172847', // --mg-navy-surface2 — muted / raised / soft border
+  300: '#27395C', // --mg-navy-border — border default / hover-border
+  400: '#3A4F78', // --mg-navy-border-strong — strong border / placeholder / icon
+  500: '#647294', // interp — muted ink / disabled ink (input-placeholder)
+  600: '#8593B0', // --mg-text-muted — secondary-muted text
+  700: '#B4C2DA', // --mg-text-secondary — secondary text
+  800: '#C6D0E2', // --mg-gray-800 (dark) — strong text (outlined ink)
+  900: '#EAF0FA', // --mg-text-primary — primary text
+  950: '#F5F8FE', // interp — max-contrast / near-white text
+} as const
+
+// Бренд-акцент dark: navy #172747 растворился бы на navy-фоне, поэтому в dark
+// светлеет до #4C7DF0 (пакет --mg-action-primary-*). Потребляется в
+// colorScheme.dark.primary + preset.ts filled-button dark.
+export const navyDarkAccent = {
+  color: '#4C7DF0',   // --mg-navy-accent — bg акцента / links-outlined-controls
+  hover: '#6E99FF',   // --mg-navy-accent-hover — focus-ring / hover
+  active: '#3D6AD8',  // --mg-primary-700 (dark) — active
+  soft: '#9DB8FF',    // --mg-navy-accent-soft — text link в dark
+  ink: '#EEF3FB',     // --mg-action-primary-text — ink на #4C7DF0 (остаётся светлым)
+} as const
+
 export const monochromePalette = {
   0: '#FFFFFF',
   50: '#fafafa',
@@ -166,6 +201,8 @@ export const colors = {
   ...commonColors,
   primary: primaryPalette,
   surface: surfacePalette,
+  navyDarkSurface: navyDarkSurfacePalette,
+  navyDarkAccent,
   red: redPalette,
   orange: orangePalette,
   blue: bluePalette,

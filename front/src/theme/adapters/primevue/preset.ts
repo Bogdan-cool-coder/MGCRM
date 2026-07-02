@@ -1,6 +1,7 @@
 // PrimeVue 4.5 — @primeuix/themes
 import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
+import { navyDarkAccent } from '@/theme/tokens/colors'
 import { zIndex as primeVueZIndex } from '@/theme/tokens/zIndex'
 import { primeVuePrimitive } from './primitive'
 import { primeVueSemantic } from './semantic'
@@ -46,32 +47,32 @@ export const MgCrmPreset = definePreset(Aura, {
           // LIGHT outlined secondary уже читаем из Aura-defaults — оставляем без изменений.
         },
         dark: {
-          // BUG-DS4-4 DARK: primary filled должна быть brand-navy (#172747) в dark-режиме.
-          // Semantic dark primary.color = '{primary.400}' = #6F87BC (светло-синий, для ссылок/фокус-ринга).
-          // Переопределяем root.primary явно — заливная кнопка всегда navy.
+          // MSales 2.0 (ТЗ решение a): navy #172747 растворяется на navy-фоне #0A1426,
+          // поэтому filled-primary в dark СВЕТЛЕЕТ до акцента #4C7DF0 (light-блок выше НЕ трогаем).
+          // ink остаётся светлым #EEF3FB (не инвертируем в тёмный — контраст ≈ 4.6:1, AA для 14px+).
           root: {
             primary: {
-              background: '{primary.900}',        // #172747 — brand navy в dark тоже
-              borderColor: '{primary.900}',
-              color: '{monochrome.white}',        // белый текст на navy
-              hoverBackground: '{primary.800}',   // #1f2f5a
-              hoverBorderColor: '{primary.800}',
-              hoverColor: '{monochrome.white}',
-              activeBackground: '{primary.700}',  // #263a6e
-              activeBorderColor: '{primary.700}',
-              activeColor: '{monochrome.white}',
+              background: navyDarkAccent.color,        // #4C7DF0 — --mg-action-primary-bg
+              borderColor: navyDarkAccent.color,
+              color: navyDarkAccent.ink,               // #EEF3FB — --mg-action-primary-text
+              hoverBackground: navyDarkAccent.hover,   // #6E99FF
+              hoverBorderColor: navyDarkAccent.hover,
+              hoverColor: navyDarkAccent.ink,
+              activeBackground: navyDarkAccent.active, // #3D6AD8
+              activeBorderColor: navyDarkAccent.active,
+              activeColor: navyDarkAccent.ink,
             },
           },
-          // BUG-DS4-6 DARK: outlined secondary — бордер и текст читаемы на тёмном фоне.
-          // Наша dark-палитра ИНВЕРТИРОВАНА:
-          //   {surface.300} → surfacePalette[600] = #7E7F82 — видимый бордер
-          //   {surface.800} → surfacePalette[100] = #F1F2F3 — светлый текст (читаемо)
-          //   {surface.100} → surfacePalette[800] = #444547 — hover bg (card bg canon §5.2)
+          // BUG-DS4-6 DARK: outlined secondary — бордер и текст читаемы на navy-фоне.
+          // Navy-шкала (инверсия сохранена):
+          //   {surface.300} → #27395C — бордер (default)
+          //   {surface.800} → #C6D0E2 — светлый текст (читаемо)
+          //   {surface.100} → #111E38 — hover bg (navy card bg)
           outlined: {
             secondary: {
-              borderColor: '{surface.300}',      // #7E7F82 — видимый на тёмном фоне
-              color: '{surface.800}',            // #F1F2F3 — светлый, читаемый
-              hoverBackground: '{surface.100}',  // #444547 — card bg canon
+              borderColor: '{surface.400}',      // #3A4F78 — видимый strong border на navy
+              color: '{surface.800}',            // #C6D0E2 — светлый, читаемый
+              hoverBackground: '{surface.100}',  // #111E38 — navy card bg
               activeBackground: '{surface.100}',
             },
           },
@@ -81,9 +82,9 @@ export const MgCrmPreset = definePreset(Aura, {
 
     // BUG-STRIPED FIX: Aura задаёт dark stripedBackground = '{surface.950}' в расчёте
     // на НЕинвертированную палитру (950 = почти чёрный). Наша dark-схема инвертирована
-    // (dark surface.950 = #FFFFFF) → striped-строки становились белыми.
-    // '{surface.50}' в dark = #272829 — чуть темнее обычных строк ({content.background}
-    // = #444547), симметрично light (striped #F9FAFB чуть темнее белых строк).
+    // (dark surface.950 = #F5F8FE) → striped-строки становились светлыми.
+    // '{surface.50}' в dark = #0F1F3D — чуть темнее обычных строк ({content.background}
+    // = #111E38), симметрично light (striped #F9FAFB чуть темнее белых строк).
     datatable: {
       colorScheme: {
         dark: {
@@ -96,19 +97,18 @@ export const MgCrmPreset = definePreset(Aura, {
 
     // BUG-TOGGLEBUTTON FIX: Aura dark ToggleButton (и SelectButton, который его наследует)
     // использует '{surface.950}' для background/checkedBackground/hoverBackground/borderColor.
-    // Наша dark-палитра ИНВЕРТИРОВАНА → dark surface.950 = surfacePalette[0] = #FFFFFF → белый.
-    // Дополнительно: content.checkedBackground = '{surface.800}' → surfacePalette[100] = #F1F2F3 (почти белый).
+    // Наша dark-палитра ИНВЕРТИРОВАНА → dark surface.950 = #F5F8FE (светлый) → фон был светлым.
     //
     // Фикс через тот же паттерн, что и datatable выше (components.*.colorScheme.dark):
-    //   {surface.100} → surfacePalette[800] = #444547  — контейнер SelectButton (канон card bg)
-    //   {surface.50}  → surfacePalette[900] = #272829  — выбранный элемент (темнее = выделяется)
-    //   {surface.400} → surfacePalette[500] = #9B9C9F  — muted text (не выбранный)
-    //   {surface.300} → surfacePalette[600] = #7E7F82  — hover text
-    //   {surface.900} → surfacePalette[50]  = #F9FAFB  — текст активного (checked) элемента
+    //   {surface.100} → #111E38  — контейнер SelectButton (navy card bg)
+    //   {surface.50}  → #0F1F3D  — выбранный элемент (темнее = выделяется)
+    //   {surface.400} → #3A4F78  — muted text (не выбранный)
+    //   {surface.300} → #27395C  — hover
+    //   {surface.900} → #EAF0FA  — текст активного (checked) элемента
     // TABS SPEC §3:
     // - active tab label font-weight = 600 (scoped via colorScheme to avoid affecting inactive).
     // - active underline bar height = 2px (Aura default = 1px).
-    // - tablist dark background = {surface.100} = #444547 (dark card bg, NOT {surface.900}=#F9FAFB).
+    // - tablist dark background = {surface.100} = #111E38 (navy card bg, NOT {surface.900}=#EAF0FA).
     //
     // NOTE: tabs.tab.fontWeight is a single token for all tabs — it cannot be split active/inactive
     // at the token level. Aura Tabs render active tab with data-p-active="true"; we use scoped
@@ -122,7 +122,7 @@ export const MgCrmPreset = definePreset(Aura, {
       colorScheme: {
         dark: {
           tablist: {
-            background: '{surface.100}', // dark: #444547 (canon card bg, NOT {surface.900}=#F9FAFB)
+            background: '{surface.100}', // dark: #111E38 (navy card bg, NOT {surface.900}=#EAF0FA)
           },
           tab: {
             background: '{surface.100}',
@@ -137,22 +137,22 @@ export const MgCrmPreset = definePreset(Aura, {
       colorScheme: {
         dark: {
           root: {
-            background: '{surface.100}',           // #444547 — контейнер кнопок
-            checkedBackground: '{surface.100}',    // #444547 — тот же контейнер
-            hoverBackground: '{surface.100}',      // #444547
-            borderColor: '{surface.100}',          // #444547
-            color: '{surface.400}',                // #9B9C9F — неактивный текст
-            hoverColor: '{surface.300}',           // #7E7F82 — hover
-            checkedColor: '{surface.900}',         // #F9FAFB — активный (читаемый)
-            checkedBorderColor: '{surface.100}',   // #444547
+            background: '{surface.100}',           // #111E38 — контейнер кнопок
+            checkedBackground: '{surface.100}',    // #111E38 — тот же контейнер
+            hoverBackground: '{surface.100}',      // #111E38
+            borderColor: '{surface.100}',          // #111E38
+            color: '{surface.500}',                // #647294 — неактивный текст
+            hoverColor: '{surface.700}',           // #B4C2DA — hover
+            checkedColor: '{surface.900}',         // #EAF0FA — активный (читаемый)
+            checkedBorderColor: '{surface.100}',   // #111E38
           },
           content: {
-            checkedBackground: '{surface.50}',     // #272829 — выбранный чип (тёмнее контейнера)
+            checkedBackground: '{surface.50}',     // #0F1F3D — выбранный чип (тёмнее контейнера)
           },
           icon: {
-            color: '{surface.400}',                // #9B9C9F
-            hoverColor: '{surface.300}',           // #7E7F82
-            checkedColor: '{surface.900}',         // #F9FAFB
+            color: '{surface.500}',                // #647294
+            hoverColor: '{surface.700}',           // #B4C2DA
+            checkedColor: '{surface.900}',         // #EAF0FA
           },
         },
       },

@@ -242,10 +242,8 @@ defineExpose({ canManage, openCreate })
     background: transparent;
     border-bottom: 1px solid var(--p-surface-200);
     padding: 0;
-
-    .app-dark & {
-      border-bottom-color: var(--p-surface-600);
-    }
+    // --p-surface-200 is theme-reactive (navy soft border in dark). No dark branch:
+    // a nested `.app-dark &` inside :deep() compiles dead (never matches <html>).
   }
 
   :deep(.p-tab) {
@@ -255,29 +253,20 @@ defineExpose({ canManage, openCreate })
     color: $surface-600;
     border-bottom: 2px solid transparent;
     white-space: nowrap;
+    // $surface-600 / $surface-900 are theme-reactive → muted text + hover read
+    // correctly in dark (navy #8593B0 / #EAF0FA). No dark branch needed.
 
     &:hover {
       color: $surface-900;
     }
-
-    .app-dark & {
-      color: var(--p-surface-400);
-
-      &:hover {
-        color: var(--p-surface-100);
-      }
-    }
   }
 
+  // Active tab: --p-primary-color IS navy #172747 in light, accent #4C7DF0 in dark —
+  // correct in both themes from one rule (no dead nested dark branch).
   :deep(.p-tab[data-p-active="true"]) {
-    color: $primary-900;
+    color: var(--p-primary-color);
     font-weight: $font-weight-semibold;
-    border-bottom-color: $primary-900;
-
-    .app-dark & {
-      color: var(--p-primary-200);
-      border-bottom-color: var(--p-primary-200);
-    }
+    border-bottom-color: var(--p-primary-color);
   }
 
   :deep(.p-tablist-active-bar) {

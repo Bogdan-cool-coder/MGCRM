@@ -70,15 +70,14 @@ const activeTab = ref<'main' | 'documents' | 'finances' | 'activity'>('main')
   }
 }
 
-// Make tabs compact / underline style
+// Make tabs compact / underline style.
+// --p-surface-200 is theme-reactive (light #E3E4E6, dark navy #172847) — the base
+// rule alone reads correctly in both themes. No dark branch: a nested `.app-dark &`
+// inside :deep() would compile to `.app-dark[data-v-*]` and never match.
 :deep(.p-tabs-tablist) {
   padding: 0 $space-3;
   border-bottom: 1px solid var(--p-surface-200);
   background: var(--p-card-background);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
 }
 
 :deep(.p-tab) {
@@ -86,20 +85,15 @@ const activeTab = ref<'main' | 'documents' | 'finances' | 'activity'>('main')
   padding: $space-2 $space-3;
 }
 
-// spec §2.2: active tab = font-weight 600; color/border = #172747 brand invariant in both themes
+// spec §2.2: active tab = font-weight 600; color/underline = brand primary.
+// Use --p-primary-color directly: it IS navy #172747 in light and #4C7DF0 in dark
+// (MSales 2.0 accent lightens on the darkened #111E38 header). Single rule, no
+// dark branch — a nested `.app-dark &` inside :deep() would compile to
+// `.app-dark[data-v-*]` which never matches (.app-dark sits on <html>, outside scope).
 :deep(.p-tab[aria-selected="true"]) {
   font-weight: $font-weight-semibold;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  color: #172747; // brand invariant navy
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  border-bottom-color: #172747; // brand invariant navy
-
-  .app-dark & {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    color: #172747; // brand invariant — spec §2.2 forces navy in both themes
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    border-bottom-color: #172747;
-  }
+  color: var(--p-primary-color);
+  border-bottom-color: var(--p-primary-color);
 }
 
 :deep(.p-tabpanel) {

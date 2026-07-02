@@ -362,7 +362,7 @@ function onCompleteBtn() {
   overflow: hidden;
 
   .app-dark & {
-    // surface-100 = #444547 (dark card bg) → invisible; use surface-800 = #F1F2F3 (near-white)
+    // surface-100 = navy card bg → invisible; use surface-800 = #C6D0E2 (near-white)
     color: var(--p-surface-800);
   }
 
@@ -411,7 +411,7 @@ function onCompleteBtn() {
 
     .app-dark & {
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: color-mix(in srgb, #2A6FDB 18%, #444547);
+      background: color-mix(in srgb, #2A6FDB 18%, var(--p-surface-100));
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
       color: color-mix(in srgb, white 55%, #2A6FDB);
     }
@@ -423,7 +423,7 @@ function onCompleteBtn() {
 
     .app-dark & {
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: color-mix(in srgb, #1F8A5B 18%, #444547);
+      background: color-mix(in srgb, #1F8A5B 18%, var(--p-surface-100));
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
       color: color-mix(in srgb, white 55%, #1F8A5B);
     }
@@ -445,7 +445,7 @@ function onCompleteBtn() {
 
     .app-dark & {
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: color-mix(in srgb, #E8A317 18%, #444547);
+      background: color-mix(in srgb, #E8A317 18%, var(--p-surface-100));
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
       color: color-mix(in srgb, white 55%, #E8A317);
     }
@@ -457,7 +457,7 @@ function onCompleteBtn() {
 
     .app-dark & {
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: color-mix(in srgb, #E8A317 18%, #444547);
+      background: color-mix(in srgb, #E8A317 18%, var(--p-surface-100));
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
       color: color-mix(in srgb, white 55%, #E8A317);
     }

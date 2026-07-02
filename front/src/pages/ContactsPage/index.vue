@@ -1001,12 +1001,9 @@ onMounted(() => {
     background: $surface-card;
     // Remove PrimeVue built-in sort cursor (we handle it ourselves)
     cursor: default;
-
-    .app-dark & {
-      border-bottom-color: var(--p-surface-700);
-      color: var(--p-text-color);
-      background: var(--p-surface-100);
-    }
+    // NOTE: $surface-200 / $surface-card / --p-text-color are theme-reactive,
+    // so the base rule reads correctly in dark — no dark branch needed. A nested
+    // `.app-dark &` here would compile to `.app-dark[data-v-*] …` and never match.
   }
 
   :deep(.p-datatable-tbody > tr > td) {
@@ -1014,18 +1011,15 @@ onMounted(() => {
     font-size: $font-size-sm;
     border-bottom: 1px solid $surface-200;
     white-space: nowrap;
-
-    .app-dark & {
-      border-bottom-color: var(--p-surface-700);
-    }
   }
 
   :deep(.p-datatable-tbody > tr:hover > td) {
     background: $surface-50;
-
-    .app-dark & {
-      background: var(--p-surface-200);
-    }
+  }
+  // Dark hover: top-level :deep(.app-dark …) so it de-scopes correctly (matches
+  // <html>.app-dark). A nested `.app-dark &` inside :deep() compiles dead.
+  :deep(.app-dark .p-datatable-tbody > tr:hover > td) {
+    background: var(--p-surface-200);
   }
 
   // Remove striped rows
@@ -1248,13 +1242,11 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-// Row selected highlight
+// Row selected highlight — reactive accent tint, reads in BOTH themes from one
+// rule. (Previously the dark branch was nested in :deep() → dead selector, and
+// used the invalid rgba(var(--app-primary-900),.2); dark fell back to light primary-50.)
 :deep(.contacts-page__row--selected td) {
-  background: var(--p-primary-50) !important;
-
-  .app-dark & {
-    background: rgba($primary-900, 0.2) !important;
-  }
+  background: color-mix(in srgb, var(--p-primary-color) 12%, var(--p-surface-0)) !important;
 }
 
 // Empty state

@@ -78,3 +78,100 @@ a {
     color: var(--p-primary-300, #7fa8d4);
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MSales 2.0 NAVY DARK THEME — theme-reactive --app-* declarations
+// ───────────────────────────────────────────────────────────────────────────
+// Emitted HERE (global, once) rather than inside theme/scss partials, because
+// those partials are @forward'd into the shared theme index that every scoped
+// component @use's — declaring these rules there duplicates them per component.
+// The SCSS $-var aliases ($status-*, $shadow-*, $sidebar-*, $brand-header-bg)
+// still live in the partials as symbols; only the CSS emission lives here.
+//
+// WHY here and not inline via appVariables.ts: inline custom props on <html>
+// beat any selector, so a .app-dark override of an inline var never applies.
+// Declaring in stylesheets (:root light + .app-dark dark) lets them dark-adapt.
+
+// ─── Status triads ──────────────────────────────────────────────────────────
+// Light references the palette --app-* vars (still emitted inline) → byte-identical
+// to the previous inline emission. Dark = navy soft-tint (tokens/dark.css).
+:root {
+  --app-status-success-bg: var(--app-green-100);
+  --app-status-success-border: var(--app-green-300);
+  --app-status-success-text: var(--app-green-900);
+  --app-status-success-solid: var(--app-green-500);
+  --app-status-danger-bg: var(--app-red-50);
+  --app-status-danger-border: var(--app-red-200);
+  --app-status-danger-text: var(--app-red-700);
+  --app-status-danger-solid: var(--app-red-500);
+  --app-status-warning-bg: var(--app-orange-100);
+  --app-status-warning-border: var(--app-orange-300);
+  --app-status-warning-text: var(--app-orange-900);
+  --app-status-warning-solid: var(--app-orange-500);
+  --app-status-info-bg: var(--app-blue-100);
+  --app-status-info-border: var(--app-blue-300);
+  --app-status-info-text: var(--app-blue-900);
+  --app-status-info-solid: var(--app-blue-500);
+}
+
+/* stylelint-disable scale-unlimited/declaration-strict-value */
+// Package-canonical navy rgba/hex — no token equivalent (ТЗ rule 5 disable idiom).
+.app-dark {
+  // Status triads (soft same-hue tint on navy + light ink)
+  --app-status-success-bg: rgba(123, 196, 140, 0.16);
+  --app-status-success-border: rgba(123, 196, 140, 0.30);
+  --app-status-success-text: #8FD3A0;
+  --app-status-success-solid: #7BE07F;
+  --app-status-danger-bg: rgba(232, 120, 104, 0.18);
+  --app-status-danger-border: rgba(232, 120, 104, 0.32);
+  --app-status-danger-text: #F4A293;
+  --app-status-danger-solid: #FF6B57;
+  --app-status-warning-bg: rgba(214, 164, 110, 0.16);
+  --app-status-warning-border: rgba(214, 164, 110, 0.30);
+  --app-status-warning-text: #E6B98C;
+  --app-status-warning-solid: #FFB87E;
+  --app-status-info-bg: rgba(120, 176, 224, 0.16);
+  --app-status-info-border: rgba(120, 176, 224, 0.30);
+  --app-status-info-text: #94C2EC;
+  --app-status-info-solid: #7CCBFF;
+}
+/* stylelint-enable scale-unlimited/declaration-strict-value */
+
+// ─── Shadows (light = brandbook §4.3, dark = deeper navy-black) ──────────────
+/* stylelint-disable scale-unlimited/declaration-strict-value */
+:root {
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --app-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.10);
+  --app-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
+  --app-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.app-dark {
+  --app-shadow-sm: 0 1px 2px rgba(2, 6, 16, 0.45);
+  --app-shadow-card: 0 4px 14px rgba(3, 8, 20, 0.55);
+  --app-shadow-md: 0 8px 26px rgba(3, 8, 20, 0.60);
+  --app-shadow-lg: 0 22px 52px rgba(2, 6, 16, 0.72);
+}
+/* stylelint-enable scale-unlimited/declaration-strict-value */
+
+// ─── Brand chrome (sidebar + deal-header) — darkens but stays navy in dark ───
+// Light navy values are allowed brand invariants (ТЗ rule 1). Dark = tokens/dark.css.
+/* stylelint-disable scale-unlimited/declaration-strict-value */
+:root {
+  --app-brand-header-bg: #172747;                     // deal-header / brand panel (light)
+  --app-sidebar-bg: #172747;                          // brand-primary
+  --app-sidebar-hover-bg: #0E172B;                    // brand-primary-dark
+  --app-sidebar-active-bg: rgba(255, 255, 255, 0.08); // active pill highlight
+  --app-sidebar-active-bar: #ffffff;                  // 3px left indicator bar
+  --app-sidebar-text: rgba(255, 255, 255, 0.75);      // default nav text
+  --app-sidebar-divider: rgba(255, 255, 255, 0.08);   // hairline before admin block
+}
+.app-dark {
+  --app-brand-header-bg: #111E38;                     // --mg-deal-header-bg
+  --app-sidebar-bg: #091020;                          // --mg-sidebar-bg (darker navy)
+  --app-sidebar-hover-bg: #0A1426;                    // --mg-sidebar-hover-bg
+  --app-sidebar-active-bg: rgba(76, 125, 240, 0.16);  // --mg-sidebar-active-bg (accent tint)
+  --app-sidebar-active-bar: #6E99FF;                  // --mg-sidebar-active-bar (accent)
+  --app-sidebar-text: rgba(234, 240, 250, 0.66);      // --mg-sidebar-text
+  --app-sidebar-divider: rgba(255, 255, 255, 0.08);   // --mg-sidebar-divider
+}
+/* stylelint-enable scale-unlimited/declaration-strict-value */

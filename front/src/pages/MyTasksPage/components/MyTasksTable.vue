@@ -952,7 +952,7 @@ onMounted(() => {
 
       .app-dark & {
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-        background: color-mix(in srgb, #2A6FDB 18%, #444547);
+        background: color-mix(in srgb, #2A6FDB 18%, var(--p-surface-100));
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
         color: color-mix(in srgb, white 55%, #2A6FDB);
       }
@@ -964,7 +964,7 @@ onMounted(() => {
 
       .app-dark & {
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-        background: color-mix(in srgb, #1F8A5B 18%, #444547);
+        background: color-mix(in srgb, #1F8A5B 18%, var(--p-surface-100));
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
         color: color-mix(in srgb, white 55%, #1F8A5B);
       }
@@ -986,7 +986,7 @@ onMounted(() => {
 
       .app-dark & {
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-        background: color-mix(in srgb, #E8A317 18%, #444547);
+        background: color-mix(in srgb, #E8A317 18%, var(--p-surface-100));
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
         color: color-mix(in srgb, white 55%, #E8A317);
       }
@@ -998,7 +998,7 @@ onMounted(() => {
 
       .app-dark & {
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-        background: color-mix(in srgb, #E8A317 18%, #444547);
+        background: color-mix(in srgb, #E8A317 18%, var(--p-surface-100));
         // stylelint-disable-next-line scale-unlimited/declaration-strict-value
         color: color-mix(in srgb, white 55%, #E8A317);
       }
@@ -1100,12 +1100,12 @@ onMounted(() => {
 }
 
 // ── Selected row ──────────────────────────────────────────────────────────────
+// Reactive accent tint over the theme surface — reads in BOTH themes from one rule.
+// (Previously `.app-dark &` was nested inside :deep(), compiling to
+// `.app-dark[data-v-*]` which never matches → dark fell back to the static light
+// $primary-100 #e3e8f3.) light: navy #172747 @12% over white ≈ soft blue-grey;
+// dark: accent #4C7DF0 @12% over navy #0A1426 ≈ subtle navy-blue selection tint.
 :deep(.activity-table__row--selected td) {
-  background: $primary-100;
-
-  .app-dark & {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    background: rgba(23, 39, 71, 0.2);
-  }
+  background: color-mix(in srgb, var(--p-primary-color) 12%, var(--p-surface-0));
 }
 </style>
