@@ -6,6 +6,7 @@ import { useUserStore } from '@/stores/user'
 import { authApi } from '@/api/auth'
 import { mapUser } from '@/entities/user'
 import { getApiErrorMessage, getValidationErrors } from '@/utils/errors'
+import { initEcho } from '@/composables/realtime/echo'
 
 // State machine для 2FA flow
 type AuthStep = 'awaitingPassword' | 'awaitingTOTP' | 'done'
@@ -105,6 +106,8 @@ export const useLoginPage = () => {
             token: response.token,
             user: mapUser(response.data),
           })
+          // Инициализируем Echo WebSocket после успешного логина
+          initEcho(response.token)
           afterLoginRedirect()
         }
       },
@@ -140,6 +143,8 @@ export const useLoginPage = () => {
           user: mapUser(response.data),
         })
         tempToken.value = null
+        // Инициализируем Echo WebSocket после успешной верификации 2FA
+        initEcho(response.token)
         afterLoginRedirect()
       },
       {

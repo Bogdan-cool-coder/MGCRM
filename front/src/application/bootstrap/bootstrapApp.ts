@@ -3,6 +3,7 @@ import type { Router } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { authApi } from '@/api/auth'
 import { isUnauthorizedError } from '@/utils/errors'
+import { initEcho } from '@/composables/realtime/echo'
 
 /**
  * Bootstrap-promise: инициализирует сессию при старте приложения.
@@ -23,6 +24,14 @@ export const bootstrapApp = async (pinia: Pinia, router: Router): Promise<void> 
     // Токен есть — загружаем текущего пользователя
     const meResponse = await authApi.me()
     userStore.setCurrentUser(meResponse.data)
+
+    // Инициализируем Echo WebSocket после успешного восстановления сессии.
+    // Graceful-degradation: если VITE_REVERB_* не заданы или сервер недоступен,
+    // initEcho является no-op и приложение продолжает работу без live-обновлений.
+    const token = userStore.getAuthCredential
+    if (token) {
+      initEcho(token)
+    }
 
     // Если на корне — редиректим на дашборд (fire-and-forget)
     const currentPath = window.location.pathname

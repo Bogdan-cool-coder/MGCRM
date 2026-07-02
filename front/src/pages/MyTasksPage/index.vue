@@ -180,6 +180,7 @@ import { getApiErrorMessage } from '@/utils/errors'
 import type { ActivityDto } from '@/entities/activity'
 import type { MyBoardBucket } from '@/entities/activity'
 import type { TaskScope } from './composables/useTaskBoard'
+import { useTasksRealtime } from '@/composables/realtime/useTasksRealtime'
 
 type TasksMode = 'my' | 'team'
 
@@ -750,6 +751,32 @@ onMounted(async () => {
     await Promise.all([taskBoard.load(), refreshCounts()])
   }
   await activityStore.fetchMyOpenCount()
+
+  // ── Realtime: subscribe to personal + team task events ───────────────────────
+  // Personal refresh reloads whichever view is active (kanban / list).
+  // Team refresh reloads the team board (only called when deptId is set).
+  useTasksRealtime(
+    () => userStore.getUser?.id ?? null,
+    () => userStore.getUser?.department_id ?? null,
+    {
+      onPersonalRefresh: () => {
+        void refreshCounts()
+        void activityStore.fetchMyOpenCount()
+        if (taskMode.value === 'my') {
+          if (activeView.value === 'list') {
+            void load()
+          } else {
+            void taskBoard.load()
+          }
+        }
+      },
+      onTeamRefresh: () => {
+        if (taskMode.value === 'team') {
+          void teamBoard.reload()
+        }
+      },
+    },
+  )
 })
 </script>
 

@@ -314,6 +314,7 @@ import { usersApi } from '@/api/users'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import type { DealDto, DealProductDto, DealContactDto, PipelineStageDto, KeyActionType } from '@/entities/sales'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
+import { useDealRealtime } from '@/composables/realtime/useDealRealtime'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -640,6 +641,23 @@ onMounted(async () => {
   // swallows it — error.value drives the error template, preventing false-positive
   // Sentry events (audit N2).
   await bootstrapDeal()
+
+  // ── Realtime: subscribe to live deal-card events after initial load ──────────
+  // Debounced feed reload: avoids double-requests when multiple events arrive
+  // in quick succession (e.g. task completed + stage changed simultaneously).
+  let feedDebounce: ReturnType<typeof setTimeout> | null = null
+  function debouncedFeedLoad() {
+    if (feedDebounce !== null) clearTimeout(feedDebounce)
+    feedDebounce = setTimeout(() => {
+      feedDebounce = null
+      void feedComposable.load()
+    }, 300)
+  }
+
+  useDealRealtime(() => dealId.value, {
+    onFeedRefresh: debouncedFeedLoad,
+    onDealRefresh: () => { void reloadSilent() },
+  })
 })
 </script>
 

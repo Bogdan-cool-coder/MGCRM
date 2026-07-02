@@ -161,6 +161,8 @@ import { formatCurrency } from '@/utils/currency'
 import type { PipelineDto, DealDto, DealCardDto, PipelineStageDto, UserRefDto } from '@/entities/sales'
 import type { OverlayFilters } from './components/DealsFilterOverlay.vue'
 import type { DealsView } from '@/stores/salesStore'
+import { useUserStore } from '@/stores/user'
+import { useDealsListRealtime } from '@/composables/realtime/useDealsListRealtime'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -169,6 +171,7 @@ const toast = useToast()
 const confirm = useConfirm()
 const salesStore = useSalesStore()
 const directoriesStore = useDirectoriesStore()
+const userStore = useUserStore()
 
 // ── Filter overlay ─────────────────────────────────────────────────────────────
 
@@ -675,6 +678,12 @@ onMounted(async () => {
   } catch {
     // Non-critical
   }
+
+  // ── Realtime: subscribe to live board events ─────────────────────────────────
+  useDealsListRealtime(
+    () => userStore.getUser?.department_id ?? null,
+    () => { void reload() },
+  )
 
   // Load deals
   await reload()

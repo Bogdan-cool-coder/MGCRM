@@ -90,6 +90,7 @@ import { localeManager } from '@/application/locale'
 import { getI18nLocale } from '@/plugins/i18n'
 import type { AvailableLocales } from '@/plugins/i18n'
 import { authApi } from '@/api/auth'
+import { destroyEcho } from '@/composables/realtime/echo'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -154,6 +155,8 @@ async function handleLogout() {
     await authApi.logout()
   } finally {
     userStore.clearAuthenticatedUserState()
+    // Закрыть Echo WebSocket при выходе из системы
+    destroyEcho()
     isLoggingOut.value = false
     popoverRef.value?.hide()
     void router.push('/login')

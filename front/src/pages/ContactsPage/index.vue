@@ -617,6 +617,7 @@ import { useContactsView } from './composables/useContactsView'
 import { useContactsBulk } from './composables/useContactsBulk'
 import { useSavedViews } from './composables/useSavedViews'
 import { contactsApi } from '@/api/crm/contacts'
+import { useContactsRealtime } from '@/composables/realtime/useContactsRealtime'
 
 import ContactsToolbar from './components/ContactsToolbar.vue'
 import ContactsBulkToolbar from './components/ContactsBulkToolbar.vue'
@@ -924,6 +925,15 @@ onMounted(() => {
   void load()
   void loadKpi()
   void savedViews.load()
+
+  // ── Realtime: subscribe to live contact/company list events ──────────────────
+  useContactsRealtime(
+    () => userStore.getUser?.department_id ?? null,
+    () => {
+      void load()
+      void loadKpi()
+    },
+  )
 })
 </script>
 
