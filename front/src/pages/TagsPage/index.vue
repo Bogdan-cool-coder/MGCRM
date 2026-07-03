@@ -22,7 +22,17 @@
           :loading="loading"
           row-hover
           size="small"
+          :reorderable-rows="editMode && canManage"
+          @row-reorder="onRowReorder"
         >
+          <!-- Drag handle — edit-mode only -->
+          <Column
+            v-if="editMode && canManage"
+            row-reorder
+            style="width: 40px"
+            :pt="{ rowReorderIcon: { class: 'dir-page__drag-handle' } }"
+          />
+
           <!-- Name -->
           <Column :header="t('admin.tags.columns.name')">
             <template #body="{ data }">{{ data.name }}</template>
@@ -72,27 +82,13 @@
             </template>
           </Column>
 
-          <!-- Actions -->
-          <Column v-if="canManage" style="width: 90px">
+          <!-- Actions (kebab) — edit-mode only -->
+          <Column v-if="editMode && canManage" style="width: 56px">
             <template #body="{ data }">
-              <span class="d-flex gap-1">
-                <Button
-                  icon="pi pi-pencil"
-                  text
-                  severity="secondary"
-                  size="small"
-                  :title="t('common.edit')"
-                  @click="openEdit(data)"
-                />
-                <Button
-                  icon="pi pi-trash"
-                  text
-                  severity="danger"
-                  size="small"
-                  :title="t('common.delete')"
-                  @click="deleteTag(data)"
-                />
-              </span>
+              <DirRowActionsMenu
+                @edit="openEdit(data)"
+                @delete="deleteTag(data)"
+              />
             </template>
           </Column>
 
@@ -134,12 +130,22 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import ToggleSwitch from 'primevue/toggleswitch'
 import TagDialog from './components/TagDialog.vue'
+import DirRowActionsMenu from '@/pages/SettingsPage/components/sections/directories/DirRowActionsMenu.vue'
 import { useTagsPage } from './composables/useTagsPage'
-import type { TagScope } from '@/entities/crm'
+import type { Tag, TagScope } from '@/entities/crm'
+
+interface DataTableRowReorderEvent {
+  dragIndex: number
+  dropIndex: number
+  value: unknown[]
+}
 
 const { t } = useI18n()
 
-withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean; editMode?: boolean }>(), {
+  embedded: false,
+  editMode: false,
+})
 
 const {
   tagsList,
@@ -153,7 +159,12 @@ const {
   save,
   toggleActive,
   deleteTag,
+  reorder,
 } = useTagsPage()
+
+function onRowReorder(event: DataTableRowReorderEvent) {
+  void reorder(event.value as Tag[])
+}
 
 const scopeLabelsMap = computed((): Record<string, string> => ({
   all: t('admin.tags.scopes.all'),
@@ -166,7 +177,9 @@ function scopeLabel(scope: TagScope | null): string {
   return scopeLabelsMap.value[scope ?? 'all'] ?? scope ?? '—'
 }
 
-defineExpose({ canManage, openCreate })
+const rowCount = computed(() => tagsList.value.length)
+
+defineExpose({ canManage, openCreate, rowCount })
 </script>
 
 <style lang="scss" scoped>
@@ -276,6 +289,15 @@ defineExpose({ canManage, openCreate })
   i {
     font-size: $font-size-2xl;
     opacity: 0.4;
+  }
+}
+
+:deep(.dir-page__drag-handle) {
+  cursor: grab;
+  color: var(--p-surface-400);
+
+  &:hover {
+    color: var(--p-surface-500);
   }
 }
 </style>

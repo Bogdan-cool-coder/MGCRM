@@ -287,6 +287,10 @@
         "title": "Channels",
         "desc": "Telegram, Email, WhatsApp"
       },
+      "directories": {
+        "title": "Directories",
+        "desc": "Countries, tags, custom fields, channels, decline reasons, catalog"
+      },
       "countries": {
         "title": "Countries",
         "desc": "Country and phone prefix reference"
@@ -390,6 +394,9 @@
       "accessControl": {
         "title": "Access & Org Structure",
         "desc": "Departments, roles, permissions and record visibility policies"
+      },
+      "motivation-builder": {
+        "title": "Motivation constructor"
       }
     },
     "nav": {
@@ -479,6 +486,7 @@
     "directories": {
       "sectionTitle": "Directories",
       "sectionDesc": "Manage system directories",
+      "finishEditing": "Finish editing",
       "tabs": {
         "countries": "Countries",
         "tags": "Tags",
@@ -2336,6 +2344,7 @@
     },
     "pipelineEditor": {
       "pageTitle": "Pipeline settings",
+      "railTitle": "Pipelines",
       "section": {
         "pipelines": "Sales pipelines",
         "stages": "Pipeline stages"
@@ -4512,7 +4521,8 @@
       "errorLoad": "Failed to load departments",
       "errorSave": "Failed to save department",
       "errorDelete": "Failed to delete department",
-      "noMembers": "No members"
+      "noMembers": "No members",
+      "finishEditing": "Finish editing"
     },
     "roles": {
       "title": "Permissions matrix",
@@ -4629,5 +4639,132 @@
   "contacts_bulk": {
     "mergeHint": "Select 2 or more records",
     "mergeHintMax": "Recommended: up to 5 records"
+  },
+  "motivation": {
+    "card": {
+      "title": "Motivation card",
+      "prev_month": "Previous month",
+      "next_month": "Next month",
+      "period": "Period",
+      "supervisor": "Supervisor",
+      "dept_plan": "Department plan for new income",
+      "dept_pct": "Department completion",
+      "salary_components": "Salary components",
+      "salary_short": "Salary",
+      "indicators": "Indicators",
+      "position_base": "Base salary",
+      "position_commission": "Commission",
+      "position_kpi": "KPI",
+      "position_bonus": "Bonus",
+      "position_team_bonus": "Team bonus",
+      "col_plan": "Plan",
+      "col_fact": "Fact",
+      "col_pct": "%",
+      "col_salary_plan": "Salary plan",
+      "col_salary_fact": "Salary fact",
+      "total_label": "Total salary",
+      "total_plan": "Salary plan",
+      "total_fact": "Salary fact",
+      "forecast_total": "Forecast total",
+      "team_bonus_forecast": "Team bonus forecast",
+      "team_bonus_part1": "Part 1 (60%) — by contribution",
+      "team_bonus_part2": "Part 2 (40%) — equal",
+      "gate_passed": "Gate passed",
+      "gate_locked": "Team bonus is not granted",
+      "gate_hint": "Department completion: {pct} (need ≥ {threshold}%)",
+      "manual_done": "Done",
+      "manual_not_done": "Not done",
+      "rates_as_of": "Rates as of {date}",
+      "no_plan": "No plan set for this month",
+      "no_dept_plan": "Department plan for this month is not set",
+      "no_card": "The motivation card for this month has not been created yet",
+      "go_to_builder": "Open the constructor",
+      "commission_breakdown": "Breakdown by deals",
+      "multirate_breakdown": "Multi-currency fact",
+      "status_draft": "Draft",
+      "status_finalized": "Finalized",
+      "status_paid": "Paid",
+      "payment_note_base": "Paid in the month following the current one",
+      "payment_note_commission": "Paid immediately on receipt",
+      "position_not_included": "Position is not included in the plan",
+      "fact_basis_won_deals": "Calculated by won deals, not by payment",
+      "load_error": "Failed to load the card. Please try again later.",
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      }
+    },
+    "builder": {
+      "title": "Motivation card constructor",
+      "breadcrumb": "Settings › Motivation cards",
+      "step_employee": "Employee and period",
+      "step_positions": "Salary positions",
+      "step_plan": "Plan by position",
+      "step_team_bonus": "Department plan and team bonus",
+      "step_currency": "Multi-currency",
+      "load_card": "Load card",
+      "select_employee": "Select an employee",
+      "year": "Year",
+      "month": "Month",
+      "toggle_hint": "Enable the positions included in this manager’s plan",
+      "indicator": "Indicator",
+      "indicator_income": "Income",
+      "indicator_fixed": "Fixed rate",
+      "indicator_oneoff": "One-off",
+      "plan_label": "Plan",
+      "currency_label": "Currency",
+      "rule_label": "Rule",
+      "kpi_name": "KPI name",
+      "kpi_salary": "Salary per completion",
+      "kpi_type_count": "Count (pcs.)",
+      "kpi_type_amount": "Amount",
+      "kpi_type_manual": "Manual",
+      "commission_pct_hint": "Only the manager’s personal deals count. Condition: first payment, signed contract, amount per plan.",
+      "team_pipeline": "Team (pipeline)",
+      "dept_plan_label": "Department income plan",
+      "bonus_pool_label": "Team bonus pool",
+      "bonus_threshold_label": "Completion threshold (%)",
+      "bonus_part1_label": "Part 1 — by contribution (%)",
+      "bonus_part2_label": "Part 2 — equal (%)",
+      "bonus_per_member_label": "Extra per member",
+      "pool_extra_hint": "With 3+ managers the pool grows: base pool + (N−2) × extra",
+      "base_currency_label": "Base currency of the salary total",
+      "rates_auto_title": "Conversion rates (auto)",
+      "rates_source_label": "Rates source",
+      "rates_source_cbr": "CBR (auto)",
+      "rates_source_manual": "Manual",
+      "rates_refresh": "Refresh",
+      "rates_refreshed": "Rates refreshed",
+      "rates_empty": "No rates available for the selected base currency",
+      "save_bar_plan": "Salary plan",
+      "save_bar_fact": "Salary fact",
+      "copy_prev_month": "Copy previous month",
+      "save": "Save plan",
+      "update": "Update plan",
+      "saved_toast": "Plan saved",
+      "finalize": "Finalize",
+      "mark_paid": "Mark as paid",
+      "finalized_toast": "Card finalized",
+      "paid_toast": "Card marked as paid",
+      "no_prev_month": "No data for the previous month",
+      "access_denied": "You do not have permission to access the constructor",
+      "err_employee": "Select an employee",
+      "err_base": "Enter the base salary amount",
+      "err_commission": "Enter a % from 0 to 100",
+      "err_pool": "Enter the pool amount",
+      "err_threshold": "The threshold must be between 1 and 100",
+      "err_split": "Enter a value from 1 to 99",
+      "err_form": "Fix the errors in the form"
+    }
   }
 }

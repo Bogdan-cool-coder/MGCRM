@@ -4,8 +4,8 @@
     :class="{ 'pipeline-item--active': isActive, 'pipeline-item--highlight': highlighted }"
     @click="emit('select')"
   >
-    <!-- Color dot -->
-    <span class="pipeline-item__dot" />
+    <!-- Leading filter icon (rail affordance) -->
+    <i class="pi pi-filter pipeline-item__icon" aria-hidden="true" />
 
     <!-- Name / inline-rename -->
     <div class="pipeline-item__name-area" @dblclick.stop="startRename">
@@ -39,12 +39,8 @@
       <span v-else class="pipeline-item__name">{{ pipeline.name }}</span>
     </div>
 
-    <Tag
-      v-if="isActive && !renaming"
-      :value="t('sales.pipelineEditor.activeBadge')"
-      severity="info"
-      class="pipeline-item__active-tag"
-    />
+    <!-- Stage count (hidden while renaming / on hover to make room for actions) -->
+    <span v-if="!renaming" class="pipeline-item__count">{{ pipeline.stages.length }}</span>
 
     <!-- Actions -->
     <div v-if="!renaming" class="pipeline-item__actions" @click.stop>
@@ -82,7 +78,6 @@ import { ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
-import Tag from 'primevue/tag'
 import type { PipelineDto } from '@/entities/sales'
 
 const props = defineProps<{
@@ -146,31 +141,38 @@ async function commitRename() {
 .pipeline-item {
   display: flex;
   align-items: center;
-  gap: $space-3;
+  gap: $space-2;
   padding: $space-2 $space-3;
   border-radius: $radius-md;
   cursor: pointer;
-  transition: background-color var(--app-transition-fast);
-  min-height: 44px;
+  transition: background-color var(--app-transition-fast), color var(--app-transition-fast);
+  min-height: 40px;
+  color: var(--p-text-muted-color);
 
   &:hover {
     background-color: var(--p-surface-hover);
   }
 
+  // Active pipeline (rail): navy-inverted tint + navy text + inset marker.
   &--active {
     background-color: var(--p-primary-50);
+    color: var(--p-primary-color);
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    box-shadow: inset 3px 0 0 var(--p-primary-color);
 
+    // Dark: primary-950 tint (matches sidebar active), primary-200 text — inverted scale.
     .app-dark & {
-      background-color: var(--p-surface-800);
+      background-color: var(--p-primary-950);
+      color: var(--p-primary-200);
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      box-shadow: inset 3px 0 0 var(--p-primary-200);
     }
   }
 
-  &__dot {
-    width: 10px;
-    height: 10px;
-    border-radius: $radius-circle;
-    background-color: var(--p-primary-500);
+  &__icon {
+    font-size: $font-size-sm;
     flex-shrink: 0;
+    opacity: 0.75;
   }
 
   &__name-area {
@@ -184,10 +186,24 @@ async function commitRename() {
   &__name {
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
-    color: var(--p-text-color);
+    color: inherit;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  &__count {
+    flex-shrink: 0;
+    font-size: $font-size-xs;
+    color: var(--p-text-muted-color);
+    transition: opacity var(--app-transition-fast);
+  }
+
+  // Hover reveals actions → hide the count to make room.
+  &:hover &__count {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
   }
 
   &__rename-input {
@@ -196,10 +212,6 @@ async function commitRename() {
   }
 
   &__rename-btn {
-    flex-shrink: 0;
-  }
-
-  &__active-tag {
     flex-shrink: 0;
   }
 

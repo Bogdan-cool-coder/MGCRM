@@ -15,7 +15,7 @@
             <i class="pi pi-users" />
             {{ node.data.members_count }}
           </span>
-          <span class="dept-tree__node-actions">
+          <span v-if="editMode" class="dept-tree__node-actions">
             <Button
               icon="pi pi-pencil"
               text
@@ -68,10 +68,15 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import type { DepartmentDto, DeptTreeNode } from '@/entities/accessControl'
 
-defineProps<{
-  nodes: DeptTreeNode[]
-  loading: boolean
-}>()
+withDefaults(
+  defineProps<{
+    nodes: DeptTreeNode[]
+    loading: boolean
+    /** Edit-mode (Гэп-3): row action icons only show when true */
+    editMode?: boolean
+  }>(),
+  { editMode: false },
+)
 
 const emit = defineEmits<{
   (e: 'select', dept: DepartmentDto): void

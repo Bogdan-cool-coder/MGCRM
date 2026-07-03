@@ -139,6 +139,20 @@ export const useCountriesPage = () => {
     })
   }
 
+  // ─── Reorder (drag) ─────────────────────────────────────────────────────────
+  // Optimistic: apply the new array immediately, PATCH the order, roll back on error.
+  async function reorder(newOrder: Country[]) {
+    const previous = countries.value
+    countries.value = newOrder
+    try {
+      await directoriesApi.reorderCountries(newOrder.map((c) => ({ id: c.id })))
+      directoriesStore.loaded = false
+    } catch {
+      countries.value = previous
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    }
+  }
+
   return {
     countries,
     loading,
@@ -151,5 +165,6 @@ export const useCountriesPage = () => {
     save,
     toggleActive,
     deleteCountry,
+    reorder,
   }
 }

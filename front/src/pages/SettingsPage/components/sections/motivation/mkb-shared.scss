@@ -1,0 +1,69 @@
+// Shared МК-builder card / label / error primitives (screen 2).
+// Imported via `@use ... as *` into constructor SFC scoped blocks.
+@use '@/theme/scss/index' as *;
+
+.mkb-card {
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  padding: $space-4 $space-5;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
+}
+
+.mkb-card__head {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin-bottom: $space-3;
+}
+
+.mkb-eyebrow {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}
+
+.mkb-head-icon {
+  font-size: $font-size-base;
+  color: $surface-500;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}
+
+.mkb-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $surface-700;
+
+  .app-dark & {
+    color: var(--p-surface-700);
+  }
+}
+
+.mkb-error {
+  font-size: $font-size-xs;
+  color: var(--p-red-500);
+}
+
+.mkb-hint {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}

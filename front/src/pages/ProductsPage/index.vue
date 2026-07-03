@@ -234,26 +234,25 @@
             </template>
           </Column>
 
-          <!-- Actions -->
+          <!-- Actions (kebab) — edit-mode only -->
           <Column
+            v-if="editMode && canWrite"
             :header="t('catalog.products.page.columns.actions')"
             style="width: 60px"
           >
             <template #body="{ data }">
-              <template v-if="canWrite">
-                <Button
-                  icon="pi pi-ellipsis-v"
-                  text
-                  severity="secondary"
-                  size="small"
-                  @click.stop="toggleRowMenu($event, data.id)"
-                />
-                <Menu
-                  :ref="(el) => setRowMenuRef(data.id, el)"
-                  :model="getRowMenuItems(data)"
-                  popup
-                />
-              </template>
+              <Button
+                icon="pi pi-ellipsis-v"
+                text
+                severity="secondary"
+                size="small"
+                @click.stop="toggleRowMenu($event, data.id)"
+              />
+              <Menu
+                :ref="(el) => setRowMenuRef(data.id, el)"
+                :model="getRowMenuItems(data)"
+                popup
+              />
             </template>
           </Column>
 
@@ -329,7 +328,10 @@ const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 
-withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean; editMode?: boolean }>(), {
+  embedded: false,
+  editMode: false,
+})
 
 const canWrite = computed(() => {
   const role = userStore.getUserRole
@@ -454,7 +456,9 @@ onMounted(() => {
   void loadGroups()
 })
 
-defineExpose({ canWrite, openCreateDrawer, toggleImportMenu, importMenuRef, importMenuItems })
+const rowCount = computed(() => products.value.length)
+
+defineExpose({ canWrite, openCreateDrawer, toggleImportMenu, importMenuRef, importMenuItems, rowCount })
 </script>
 
 <style lang="scss" scoped>

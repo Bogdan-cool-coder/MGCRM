@@ -32,11 +32,22 @@
         </div>
       </div>
 
-      <Button
-        icon="pi pi-plus"
-        :label="t('accessControl.departments.addDepartment')"
-        @click="openCreate"
-      />
+      <div class="departments-tab__toolbar-actions">
+        <!-- Edit-mode toggle (Гэп-3): reveals row/card action affordances -->
+        <Button
+          :label="editing ? t('accessControl.departments.finishEditing') : t('common.edit')"
+          :icon="editing ? 'pi pi-check' : 'pi pi-pencil'"
+          :outlined="!editing"
+          :severity="editing ? 'primary' : 'secondary'"
+          size="small"
+          @click="editing = !editing"
+        />
+        <Button
+          icon="pi pi-plus"
+          :label="t('accessControl.departments.addDepartment')"
+          @click="openCreate"
+        />
+      </div>
     </div>
 
     <!-- Depth warning -->
@@ -65,6 +76,7 @@
             <DepartmentTree
               :nodes="filteredTreeNodes"
               :loading="depts.loading.value"
+              :edit-mode="editing"
               @select="(d) => selectDept(d)"
               @edit="(d) => openEdit(d)"
               @delete="confirmDelete"
@@ -80,6 +92,7 @@
             <div class="departments-tab__detail-header">
               <span class="departments-tab__detail-title">{{ deptDetail.dept.name }}</span>
               <Button
+                v-if="editing"
                 icon="pi pi-pencil"
                 text
                 severity="secondary"
@@ -144,7 +157,9 @@
         <OrgChartView
           v-else
           :nodes="filteredTreeNodes"
-          @select="(n) => openEdit(n.data)"
+          :edit-mode="editing"
+          :load-members="loadChartMembers"
+          @edit="(n) => openEdit(n.data)"
         />
       </template>
     </div>
@@ -211,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConfirm } from 'primevue/useconfirm'
 import Button from 'primevue/button'
@@ -259,6 +274,7 @@ const {
   saveMutation,
   membersMutation,
   loadDepartments,
+  loadChartMembers,
   selectDept,
   openCreate,
   openEdit,
@@ -268,6 +284,10 @@ const {
   addMembers,
   removeMember,
 } = useDepartments()
+
+// Гэп-3: единый edit-mode для дерева и схемы. Вне режима действия скрыты
+// (просмотр по умолчанию); в режиме — карандаши/корзины видны.
+const editing = ref(false)
 
 function roleSeverity(role: UserRole): 'info' | 'success' | 'warn' | 'danger' | 'secondary' {
   const map: Record<UserRole, 'info' | 'success' | 'warn' | 'danger' | 'secondary'> = {
@@ -328,6 +348,12 @@ function confirmDelete(dept: DepartmentDto) {
 .departments-tab__view-toggle {
   display: flex;
   gap: $space-1;
+}
+
+.departments-tab__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
 }
 
 .departments-tab__warn {

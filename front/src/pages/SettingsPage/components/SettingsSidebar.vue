@@ -33,6 +33,7 @@
         :class="{
           'settings-nav-item--active': isSectionActive(section) && section.phase === 1 && !section.linkOut,
           'settings-nav-item--disabled': section.phase !== 1,
+          'settings-nav-item--danger': section.danger && !(isSectionActive(section) && section.phase === 1 && !section.linkOut),
         }"
         :disabled="section.phase !== 1"
         :aria-current="activeSection === section.key ? 'page' : undefined"
@@ -65,7 +66,7 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import { useUserStore } from '@/stores/user'
 import { adminUsersApi } from '@/api/adminUsers'
-import { isProfileSection } from '../composables/useSettings'
+import { isProfileSection, isDirectoriesSection } from '../composables/useSettings'
 
 const { t } = useI18n()
 const userStore = useUserStore()
@@ -95,6 +96,8 @@ interface SettingsSection {
   roles?: string[]
   /** If set — item navigates to this route instead of switching section panel */
   linkOut?: string
+  /** Danger item — red text when at rest (e.g. «Сброс системы») */
+  danger?: boolean
 }
 
 interface SettingsGroup {
@@ -126,19 +129,21 @@ const GROUPS: SettingsGroup[] = [
     key: 'directories',
     labelKey: 'settings.groups.directories',
     adminOnly: false, // group visibility now driven by per-item role filter below
+    // Гэп-1: 11 отдельных справочников свёрнуты в ЕДИНЫЙ пункт «Справочники»
+    // (открывает SectionDirectories с таб-стрипом). Роли — объединение всех
+    // per-tab ролей: пункт виден, если пользователю доступен хотя бы один таб.
     sections: [
-      { key: 'countries',       labelKey: 'settings.sections.countries.title',       icon: 'pi pi-globe',       phase: 1, roles: ['admin', 'director'] },
-      { key: 'tags',            labelKey: 'settings.sections.tags.title',            icon: 'pi pi-tags',        phase: 1, roles: ['admin', 'director'] },
-      { key: 'acq-channels',    labelKey: 'settings.sections.acq-channels.title',    icon: 'pi pi-megaphone',   phase: 1, roles: ['admin', 'director'] },
-      { key: 'disc-reasons',    labelKey: 'settings.sections.disc-reasons.title',    icon: 'pi pi-ban',         phase: 1, roles: ['admin', 'director'] },
-      { key: 'catalog',         labelKey: 'settings.sections.catalog.title',         icon: 'pi pi-box',         phase: 1, roles: ['admin', 'director'] },
-      { key: 'exchange-rates',  labelKey: 'settings.sections.exchange-rates.title',  icon: 'pi pi-dollar',      phase: 1, roles: ['admin', 'director'] },
+      { key: 'directories',     labelKey: 'settings.sections.directories.title',     icon: 'pi pi-folder-open', phase: 1, roles: ['admin', 'director', 'lawyer', 'manager'] },
       // link-out: navigates to standalone PipelineSettingsPage instead of embedding
       { key: 'pipeline-stg',    labelKey: 'settings.sections.pipeline-stg.title',    icon: 'pi pi-sliders-h',   phase: 1, roles: ['admin', 'director'], linkOut: '/settings/pipeline' },
-      { key: 'doc-templates',   labelKey: 'settings.sections.doc-templates.title',   icon: 'pi pi-file-edit',   phase: 1, roles: ['admin', 'lawyer', 'director'] },
-      { key: 'tpl-variables',   labelKey: 'settings.sections.tpl-variables.title',   icon: 'pi pi-list',        phase: 1, roles: ['admin', 'lawyer', 'director'] },
-      { key: 'approval-routes', labelKey: 'settings.sections.approval-routes.title', icon: 'pi pi-sitemap',     phase: 1, roles: ['admin', 'lawyer'] },
-      { key: 'msg-templates',   labelKey: 'settings.sections.msg-templates.title',   icon: 'pi pi-envelope',    phase: 1, roles: ['admin', 'lawyer', 'director', 'manager'] },
+    ],
+  },
+  {
+    key: 'sales',
+    labelKey: 'settings.groups.sales',
+    adminOnly: false, // per-item role filter (admin/director)
+    sections: [
+      { key: 'motivation-builder', labelKey: 'settings.sections.motivation-builder.title', icon: 'pi pi-chart-line', phase: 1, roles: ['admin', 'director'] },
     ],
   },
   {
@@ -149,7 +154,7 @@ const GROUPS: SettingsGroup[] = [
       { key: 'users',           labelKey: 'settings.sections.users.title',           icon: 'pi pi-users',       phase: 1, roles: ['admin', 'director'] },
       { key: 'access-control',  labelKey: 'settings.sections.access-control.title',  icon: 'pi pi-shield',      phase: 1, roles: ['admin', 'director'] },
       { key: 'automation-runs', labelKey: 'settings.sections.automation-runs.title', icon: 'pi pi-clock',       phase: 1, roles: ['admin', 'director'] },
-      { key: 'system-reset',    labelKey: 'settings.sections.system-reset.title',    icon: 'pi pi-refresh',     phase: 1, roles: ['admin'] },
+      { key: 'system-reset',    labelKey: 'settings.sections.system-reset.title',    icon: 'pi pi-refresh',     phase: 1, roles: ['admin'], danger: true },
     ],
   },
 ]
@@ -230,6 +235,11 @@ onMounted(async () => {
 function isSectionActive(section: SettingsSection): boolean {
   if (section.key === 'profile') {
     return isProfileSection(props.activeSection)
+  }
+  // Гэп-1: единый пункт «Справочники» активен при любом directory/document-ключе
+  // (activeSection хранит конкретный таб, напр. countries / msg-templates).
+  if (section.key === 'directories') {
+    return isDirectoriesSection(props.activeSection)
   }
   return props.activeSection === section.key
 }
@@ -367,6 +377,26 @@ function onSectionClick(section: SettingsSection) {
     opacity: 0.5;
     cursor: default;
     pointer-events: none;
+  }
+
+  // Danger item (e.g. «Сброс системы») — красный текст в состоянии покоя.
+  // При active применяется навы-инверт из &--active (danger-класс не ставится).
+  &--danger {
+    color: var(--p-red-500);
+
+    &:hover:not(.settings-nav-item--disabled) {
+      // slightly stronger red on hover; background inherits shared hover token
+      color: var(--p-red-600);
+    }
+
+    // Inverted dark scale: red lightens in dark → red-400 reads on dark sidebar.
+    .app-dark & {
+      color: var(--p-red-400);
+
+      &:hover:not(.settings-nav-item--disabled) {
+        color: var(--p-red-300);
+      }
+    }
   }
 
   &__icon {

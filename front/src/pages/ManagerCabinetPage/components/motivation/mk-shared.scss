@@ -1,0 +1,59 @@
+// Shared МК card primitives — imported via `@use ... as *` into МК SFC scoped
+// blocks. Keeps the eyebrow / card / label rhythm identical across sections
+// (SPEC §Фиксы «криво» #3 «единообразие eyebrow»).
+//
+// All surface/border tokens are theme-reactive; the `.app-dark &` override only
+// re-points the border (the navy card bg is already carried by $surface-card).
+@use '@/theme/scss/index' as *;
+
+.mk-card {
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  padding: $space-4 $space-5;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
+}
+
+.mk-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-3;
+  margin-bottom: $space-3;
+  flex-wrap: wrap;
+}
+
+.mk-card__head-meta {
+  font-size: $font-size-xs;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}
+
+// Eyebrow section header — 13px uppercase, letter-spaced, muted.
+.mk-eyebrow {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}
+
+// Small meta label under a value.
+.mk-label {
+  font-size: $font-size-xs;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}

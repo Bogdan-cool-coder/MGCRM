@@ -4,6 +4,15 @@
       <div class="dir-tab-toolbar__spacer" />
       <div v-if="pageRef?.canWrite" class="dir-tab-toolbar__actions">
         <Button
+          v-if="(pageRef?.rowCount ?? 0) > 0"
+          :label="editing ? t('settings.directories.finishEditing') : t('common.edit')"
+          :icon="editing ? 'pi pi-check' : 'pi pi-pencil'"
+          :outlined="!editing"
+          :severity="editing ? 'primary' : 'secondary'"
+          size="small"
+          @click="editing = !editing"
+        />
+        <Button
           icon="pi pi-refresh"
           :label="t('catalog.exchangeRates.page.refresh')"
           severity="secondary"
@@ -19,7 +28,7 @@
     </div>
 
     <div class="dir-tab-body">
-      <ExchangeRatesPage ref="pageRef" :embedded="true" />
+      <ExchangeRatesPage ref="pageRef" :embedded="true" :edit-mode="editing" />
     </div>
   </div>
 </template>
@@ -33,6 +42,7 @@ import ExchangeRatesPage from '@/pages/ExchangeRatesPage/index.vue'
 const { t } = useI18n()
 
 const pageRef = ref<InstanceType<typeof ExchangeRatesPage> | null>(null)
+const editing = ref(false)
 </script>
 
 <style lang="scss" scoped>

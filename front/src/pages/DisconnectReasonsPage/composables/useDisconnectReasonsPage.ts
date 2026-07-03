@@ -110,6 +110,18 @@ export const useDisconnectReasonsPage = () => {
     })
   }
 
+  // ─── Reorder (drag) ─────────────────────────────────────────────────────────
+  async function reorder(newOrder: DisconnectReason[]) {
+    const previous = reasons.value
+    reasons.value = newOrder
+    try {
+      await directoriesApi.reorderDisconnectReasons(newOrder.map((r) => ({ id: r.id })))
+    } catch {
+      reasons.value = previous
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    }
+  }
+
   return {
     reasons,
     loading,
@@ -122,5 +134,6 @@ export const useDisconnectReasonsPage = () => {
     save,
     toggleActive,
     deleteReason,
+    reorder,
   }
 }

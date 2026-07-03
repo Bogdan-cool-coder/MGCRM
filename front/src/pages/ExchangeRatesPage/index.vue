@@ -159,26 +159,25 @@
             </template>
           </Column>
 
-          <!-- Actions -->
+          <!-- Actions (kebab) — edit-mode only -->
           <Column
+            v-if="editMode && canWrite"
             :header="t('catalog.exchangeRates.page.columns.actions')"
             style="width: 60px"
           >
             <template #body="{ data }">
-              <template v-if="canWrite">
-                <Button
-                  icon="pi pi-ellipsis-v"
-                  text
-                  severity="secondary"
-                  size="small"
-                  @click.stop="toggleRowMenu($event, data.id)"
-                />
-                <Menu
-                  :ref="(el) => setRowMenuRef(data.id, el)"
-                  :model="getRowMenuItems(data)"
-                  popup
-                />
-              </template>
+              <Button
+                icon="pi pi-ellipsis-v"
+                text
+                severity="secondary"
+                size="small"
+                @click.stop="toggleRowMenu($event, data.id)"
+              />
+              <Menu
+                :ref="(el) => setRowMenuRef(data.id, el)"
+                :model="getRowMenuItems(data)"
+                popup
+              />
             </template>
           </Column>
         </DataTable>
@@ -237,7 +236,10 @@ import type { ExchangeRateDto } from '@/entities/catalog'
 const { t } = useI18n()
 const userStore = useUserStore()
 
-withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean; editMode?: boolean }>(), {
+  embedded: false,
+  editMode: false,
+})
 
 const canWrite = computed(() => {
   const role = userStore.getUserRole
@@ -307,7 +309,9 @@ onMounted(() => {
   void load()
 })
 
-defineExpose({ canWrite, refreshRates, refreshing, openCreateDialog })
+const rowCount = computed(() => rates.value.length)
+
+defineExpose({ canWrite, refreshRates, refreshing, openCreateDialog, rowCount })
 </script>
 
 <style lang="scss" scoped>

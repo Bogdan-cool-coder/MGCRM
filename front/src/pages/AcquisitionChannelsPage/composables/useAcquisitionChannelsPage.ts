@@ -110,6 +110,18 @@ export const useAcquisitionChannelsPage = () => {
     })
   }
 
+  // ─── Reorder (drag) ─────────────────────────────────────────────────────────
+  async function reorder(newOrder: AcquisitionChannel[]) {
+    const previous = channels.value
+    channels.value = newOrder
+    try {
+      await directoriesApi.reorderAcquisitionChannels(newOrder.map((c) => ({ id: c.id })))
+    } catch {
+      channels.value = previous
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    }
+  }
+
   return {
     channels,
     loading,
@@ -122,5 +134,6 @@ export const useAcquisitionChannelsPage = () => {
     save,
     toggleActive,
     deleteChannel,
+    reorder,
   }
 }

@@ -17,6 +17,18 @@ export function isProfileSection(key: string): key is ProfileTabKey {
   return (PROFILE_TAB_KEYS as readonly string[]).includes(key)
 }
 
+/**
+ * Проверяет, относится ли ключ к единому экрану «Справочники»
+ * (табы DIRECTORIES_KEYS ∪ DOCUMENTS_KEYS). Гэп-1: сайдбар показывает один пункт
+ * «Справочники», активный при любом directory/document-ключе (аналогично isProfileSection).
+ */
+export function isDirectoriesSection(key: string): boolean {
+  return (
+    (DIRECTORIES_KEYS as readonly string[]).includes(key) ||
+    (DOCUMENTS_KEYS as readonly string[]).includes(key)
+  )
+}
+
 /** Разделы Ф2 — Справочники (admin/director only) */
 export const DIRECTORIES_KEYS = [
   'countries',
@@ -47,6 +59,14 @@ const DOCUMENT_SECTION_ROLES: Record<string, string[]> = {
   'msg-templates':   ['admin', 'lawyer', 'director', 'manager'],
 }
 
+/**
+ * Раздел «Продажи» — Конструктор МК (мотивационные карты).
+ * Гейт по праву `motivation.manage` (admin/director) — маппинг право→роли в
+ * useMotivationPermissions. Регистрация здесь обязательна: без ключа в VALID_KEYS
+ * секция отрендерит SectionComingSoon.
+ */
+export const SALES_KEYS = ['motivation-builder'] as const
+
 /** Разделы Ф3 — Система (admin/director; system-reset — только admin) */
 export const SYSTEM_KEYS = [
   'users',
@@ -58,8 +78,14 @@ export const SYSTEM_KEYS = [
 /** Ключи системы, доступные только admin (не director) */
 const ADMIN_ONLY_KEYS = ['system-reset'] as const
 
-/** Все валидные ключи разделов (Ф1 + Ф2 + Ф2-docs + Ф3 активные) */
-const VALID_KEYS = [...ACCOUNT_KEYS, ...DIRECTORIES_KEYS, ...DOCUMENTS_KEYS, ...SYSTEM_KEYS] as const
+/** Все валидные ключи разделов (Ф1 + Ф2 + Ф2-docs + Продажи + Ф3 активные) */
+const VALID_KEYS = [
+  ...ACCOUNT_KEYS,
+  ...DIRECTORIES_KEYS,
+  ...DOCUMENTS_KEYS,
+  ...SALES_KEYS,
+  ...SYSTEM_KEYS,
+] as const
 type ValidKey = (typeof VALID_KEYS)[number]
 
 /**
@@ -153,9 +179,29 @@ export function useSettings() {
 
   const isAdmin = computed(() => userStore.getUserRole === 'admin')
 
+  /**
+   * Первый доступный таб единого экрана «Справочники» для текущей роли.
+   * Используется, когда deep-link указывает на группу-алиас `directories`
+   * без конкретного таба.
+   */
+  function firstDirectoriesTab(): string {
+    const role = userStore.getUserRole ?? ''
+    if (isAdminOrDirector.value) return 'countries'
+    for (const key of DOCUMENTS_KEYS) {
+      const allowed = DOCUMENT_SECTION_ROLES[key] ?? []
+      if (allowed.includes(role)) return key
+    }
+    return 'profile'
+  }
+
   function resolveSection(key: string | undefined): string {
     if (!key) return 'profile'
     const role = userStore.getUserRole ?? ''
+
+    // Group alias «directories» → первый доступный таб единого экрана справочников.
+    // Позволяет deep-link ?section=directories открыть экран, не ломая
+    // существующие ?section=countries|tags|… (они резолвятся штатно ниже).
+    if (key === 'directories') return firstDirectoriesTab()
 
     // Directories (admin/director only)
     if ((DIRECTORIES_KEYS as readonly string[]).includes(key) && !isAdminOrDirector.value) {
@@ -165,6 +211,10 @@ export function useSettings() {
     if ((DOCUMENTS_KEYS as readonly string[]).includes(key)) {
       const allowed = DOCUMENT_SECTION_ROLES[key] ?? []
       if (!allowed.includes(role)) return 'profile'
+    }
+    // Sales — Конструктор МК: право motivation.manage → admin/director.
+    if ((SALES_KEYS as readonly string[]).includes(key) && !isAdminOrDirector.value) {
+      return 'profile'
     }
     // System sections (admin/director)
     if ((SYSTEM_KEYS as readonly string[]).includes(key) && !isAdminOrDirector.value) {
@@ -188,7 +238,11 @@ export function useSettings() {
    * При «Остаться» навигация отменяется; при «Покинуть» — выполняется.
    */
   async function setSection(key: string) {
-    if (key === activeSection.value) return
+    // Group alias «directories» из сайдбара → резолвим в конкретный первый таб
+    // единого экрана справочников (иначе detail-панель не найдёт ключ и покажет
+    // SectionComingSoon). Deep-link на конкретные табы приходит уже резолвленным.
+    const resolved = key === 'directories' ? firstDirectoriesTab() : key
+    if (resolved === activeSection.value) return
 
     if (isDirty.value) {
       const confirmed = await askUserToConfirmLeave()
@@ -196,8 +250,8 @@ export function useSettings() {
       // isDirty уже false (onDialogLeave сбросил)
     }
 
-    activeSection.value = key
-    await router.replace({ path: '/settings', query: { section: key } })
+    activeSection.value = resolved
+    await router.replace({ path: '/settings', query: { section: resolved } })
   }
 
   /**

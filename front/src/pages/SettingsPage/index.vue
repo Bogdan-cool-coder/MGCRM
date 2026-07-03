@@ -79,6 +79,10 @@
           @tab-change="settings.setSection($event)"
         />
 
+        <SectionMotivationBuilder
+          v-else-if="settings.activeSection.value === 'motivation-builder'"
+        />
+
         <SysTabUsers
           v-else-if="settings.activeSection.value === 'users'"
         />
@@ -115,6 +119,7 @@ import SectionProfileTabs from './components/sections/SectionProfileTabs.vue'
 import SectionChannels from './components/sections/SectionChannels.vue'
 import SectionDirectories from './components/sections/SectionDirectories.vue'
 import SectionSystemReset from './components/sections/SectionSystemReset.vue'
+import SectionMotivationBuilder from './components/sections/motivation/SectionMotivationBuilder.vue'
 import SysTabUsers from './components/sections/system/SysTabUsers.vue'
 import SysTabAccessControl from './components/sections/system/SysTabAccessControl.vue'
 import SysTabAutomationRuns from './components/sections/system/SysTabAutomationRuns.vue'
@@ -181,6 +186,9 @@ const mobileSectionOptions = computed(() => {
   }
   if (['admin', 'lawyer', 'director', 'manager'].includes(role)) {
     base.push({ value: 'msg-templates',   label: t('settings.sections.msg-templates.title') })
+  }
+  if (isAdminOrDirector) {
+    base.push({ value: 'motivation-builder', label: t('settings.sections.motivation-builder.title') })
   }
   if (isAdminOrDirector) {
     base.push(

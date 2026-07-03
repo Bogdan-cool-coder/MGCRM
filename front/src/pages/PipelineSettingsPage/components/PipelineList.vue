@@ -1,67 +1,53 @@
 <template>
-  <Card class="pipeline-list-card">
-    <template #content>
-      <!-- Header row -->
-      <div class="pipeline-list-card__header">
-        <span class="pipeline-list-card__title">
-          {{ t('sales.pipelineEditor.section.pipelines') }}
-        </span>
-        <Button
-          :label="t('sales.pipelineEditor.createPipeline')"
-          icon="pi pi-plus"
-          severity="primary"
-          size="small"
-          @click="emit('create')"
-        />
-      </div>
+  <!-- Гэп-4: pipelines rail (250px) — matches pipeline.html <nav> -->
+  <nav class="pipeline-rail" aria-label="Воронки">
+    <p class="pipeline-rail__title">{{ t('sales.pipelineEditor.railTitle') }}</p>
 
-      <Divider class="pipeline-list-card__divider" />
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="pipeline-rail__skeleton">
+      <Skeleton height="40px" class="mb-1" border-radius="8px" />
+      <Skeleton height="40px" border-radius="8px" width="70%" />
+    </div>
 
-      <!-- Loading skeleton -->
-      <template v-if="loading">
-        <div class="pipeline-list-card__skeleton">
-          <Skeleton height="44px" class="mb-2" border-radius="8px" />
-          <Skeleton height="44px" border-radius="8px" width="70%" />
-        </div>
-      </template>
+    <!-- Empty state -->
+    <div v-else-if="pipelines.length === 0" class="pipeline-rail__empty">
+      <i class="pi pi-sitemap pipeline-rail__empty-icon" />
+      <p class="pipeline-rail__empty-title">{{ t('sales.pipelineEditor.section.pipelines') }}</p>
+    </div>
 
-      <!-- Empty state -->
-      <div v-else-if="pipelines.length === 0" class="pipeline-list-card__empty">
-        <i class="pi pi-sitemap pipeline-list-card__empty-icon" />
-        <p class="pipeline-list-card__empty-title">{{ t('sales.pipelineEditor.section.pipelines') }}</p>
-        <Button
-          :label="t('sales.pipelineEditor.createPipeline')"
-          icon="pi pi-plus"
-          size="small"
-          @click="emit('create')"
-        />
-      </div>
+    <!-- List -->
+    <div v-else class="pipeline-rail__list">
+      <PipelineListItem
+        v-for="pipeline in pipelines"
+        :key="pipeline.id"
+        :pipeline="pipeline"
+        :is-active="pipeline.id === selectedPipelineId"
+        :saving="savingId === pipeline.id"
+        :duplicating="duplicatingId === pipeline.id"
+        :highlighted="highlightedId === pipeline.id"
+        @select="emit('select', pipeline.id)"
+        @rename="(id, name) => emit('rename', id, name)"
+        @duplicate="(id) => emit('duplicate', id)"
+        @delete="(id) => emit('delete', id)"
+      />
+    </div>
 
-      <!-- List -->
-      <div v-else class="pipeline-list-card__list">
-        <PipelineListItem
-          v-for="pipeline in pipelines"
-          :key="pipeline.id"
-          :pipeline="pipeline"
-          :is-active="pipeline.id === selectedPipelineId"
-          :saving="savingId === pipeline.id"
-          :duplicating="duplicatingId === pipeline.id"
-          :highlighted="highlightedId === pipeline.id"
-          @select="emit('select', pipeline.id)"
-          @rename="(id, name) => emit('rename', id, name)"
-          @duplicate="(id) => emit('duplicate', id)"
-          @delete="(id) => emit('delete', id)"
-        />
-      </div>
-    </template>
-  </Card>
+    <!-- New pipeline (bottom of rail) -->
+    <Button
+      :label="t('sales.pipelineEditor.createPipeline')"
+      icon="pi pi-plus"
+      severity="secondary"
+      outlined
+      size="small"
+      class="pipeline-rail__new"
+      @click="emit('create')"
+    />
+  </nav>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
-import Divider from 'primevue/divider'
 import Skeleton from 'primevue/skeleton'
 import PipelineListItem from './PipelineListItem.vue'
 import type { PipelineDto } from '@/entities/sales'
@@ -87,53 +73,67 @@ const { t } = useI18n()
 </script>
 
 <style lang="scss" scoped>
-.pipeline-list-card {
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space-3;
-    padding: $space-1 0;
-  }
+.pipeline-rail {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: $space-4 $space-3;
+  background-color: $surface-card;
+  border-inline-end: 1px solid var(--p-surface-200);
+  overflow-y: auto;
+}
 
-  &__title {
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: var(--p-text-color);
-  }
+.pipeline-rail__title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: $surface-500;
+  padding: $space-1 $space-2 $space-2;
+  margin: 0;
 
-  &__divider {
-    margin: $space-3 0;
+  // Inverted dark scale: uppercase header needs surface-600+ to read on dark card.
+  .app-dark & {
+    color: var(--p-surface-600);
   }
+}
 
-  &__skeleton {
-    padding: $space-2 0;
-  }
+.pipeline-rail__list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
 
-  &__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $space-3;
-    padding: $space-8 $space-4;
-    text-align: center;
-  }
+.pipeline-rail__new {
+  margin-top: $space-2;
+  width: 100%;
+  justify-content: center;
+}
 
-  &__empty-icon {
-    font-size: $font-size-icon-2xl;
-    color: var(--p-surface-400);
-  }
+.pipeline-rail__skeleton {
+  padding: $space-2 0;
+}
 
-  &__empty-title {
-    font-size: $font-size-base;
-    color: var(--p-text-muted-color);
-    margin: 0;
-  }
+.pipeline-rail__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-6 $space-2;
+  text-align: center;
+}
 
-  &__list {
-    display: flex;
-    flex-direction: column;
-    gap: $space-1;
-  }
+.pipeline-rail__empty-icon {
+  font-size: $font-size-icon-lg;
+  color: var(--p-surface-400);
+}
+
+.pipeline-rail__empty-title {
+  font-size: $font-size-sm;
+  color: var(--p-text-muted-color);
+  margin: 0;
 }
 </style>

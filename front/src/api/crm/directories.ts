@@ -11,6 +11,11 @@ import type {
   TagScope,
 } from '@/entities/crm'
 
+/** Reorder payload item — array order = new sort order, backend maps to sort_order. */
+export interface DirectoryReorderItem {
+  id: number
+}
+
 export const directoriesApi = {
   async getCompanyTypes(): Promise<CompanyType[]> {
     const res = await apiClient.get<{ data: CompanyType[] }>('/api/admin/company-types')
@@ -44,6 +49,10 @@ export const directoriesApi = {
 
   async deleteCountry(id: number): Promise<void> {
     await apiClient.delete(`/api/admin/countries/${id}`)
+  },
+
+  async reorderCountries(items: DirectoryReorderItem[]): Promise<void> {
+    await apiClient.patch('/api/admin/countries/reorder', { items })
   },
 
   async getCities(countryCode?: string): Promise<City[]> {
@@ -92,6 +101,10 @@ export const directoriesApi = {
     await apiClient.delete(`/api/admin/acquisition-channels/${id}`)
   },
 
+  async reorderAcquisitionChannels(items: DirectoryReorderItem[]): Promise<void> {
+    await apiClient.patch('/api/admin/acquisition-channels/reorder', { items })
+  },
+
   // ── Disconnect Reasons (N6) ───────────────────────────────────────────────
 
   async getDisconnectReasons(params: { active_only?: boolean } = {}): Promise<DisconnectReason[]> {
@@ -127,6 +140,10 @@ export const directoriesApi = {
     await apiClient.delete(`/api/admin/disconnect-reasons/${id}`)
   },
 
+  async reorderDisconnectReasons(items: DirectoryReorderItem[]): Promise<void> {
+    await apiClient.patch('/api/admin/disconnect-reasons/reorder', { items })
+  },
+
   // ── Tags ──────────────────────────────────────────────────────────────────────
 
   async getTags(params: { active_only?: boolean; scope?: TagScope; q?: string } = {}): Promise<Tag[]> {
@@ -156,5 +173,9 @@ export const directoriesApi = {
 
   async deleteTag(id: number): Promise<void> {
     await apiClient.delete(`/api/admin/tags/${id}`)
+  },
+
+  async reorderTags(items: DirectoryReorderItem[]): Promise<void> {
+    await apiClient.patch('/api/admin/tags/reorder', { items })
   },
 }

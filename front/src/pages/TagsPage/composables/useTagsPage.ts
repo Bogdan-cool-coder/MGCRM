@@ -127,6 +127,19 @@ export const useTagsPage = () => {
     })
   }
 
+  // ─── Reorder (drag) ─────────────────────────────────────────────────────────
+  async function reorder(newOrder: Tag[]) {
+    const previous = tagsList.value
+    tagsList.value = newOrder
+    try {
+      await directoriesApi.reorderTags(newOrder.map((tag) => ({ id: tag.id })))
+      directoriesStore.loaded = false
+    } catch {
+      tagsList.value = previous
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    }
+  }
+
   return {
     tagsList,
     loading,
@@ -139,5 +152,6 @@ export const useTagsPage = () => {
     save,
     toggleActive,
     deleteTag,
+    reorder,
   }
 }

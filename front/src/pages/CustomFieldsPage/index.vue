@@ -38,12 +38,12 @@
             :loading="loading"
             row-hover
             size="small"
-            :reorderable-rows="activeScope !== 'all'"
+            :reorderable-rows="editMode && activeScope !== 'all'"
             @row-reorder="onRowReorder"
           >
-            <!-- Drag handle -->
+            <!-- Drag handle — edit-mode only (reorder unavailable in 'all' scope) -->
             <Column
-              v-if="canManage"
+              v-if="canManage && editMode"
               row-reorder
               style="width: 40px"
               :pt="{ rowReorderIcon: { class: activeScope === 'all' ? 'cf-page__drag-handle--disabled' : 'cf-page__drag-handle' } }"
@@ -98,27 +98,13 @@
               </template>
             </Column>
 
-            <!-- Actions -->
-            <Column v-if="canManage" style="width: 80px">
+            <!-- Actions (kebab) — edit-mode only -->
+            <Column v-if="canManage && editMode" style="width: 56px">
               <template #body="{ data }">
-                <span class="d-flex gap-1">
-                  <Button
-                    icon="pi pi-pencil"
-                    text
-                    severity="secondary"
-                    size="small"
-                    :title="t('common.edit')"
-                    @click="openEdit(data)"
-                  />
-                  <Button
-                    icon="pi pi-trash"
-                    text
-                    severity="danger"
-                    size="small"
-                    :title="t('common.delete')"
-                    @click="deleteField(data)"
-                  />
-                </span>
+                <DirRowActionsMenu
+                  @edit="openEdit(data)"
+                  @delete="deleteField(data)"
+                />
               </template>
             </Column>
 
@@ -157,6 +143,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Card from 'primevue/card'
@@ -170,6 +157,7 @@ import Tab from 'primevue/tab'
 import ConfirmDialog from 'primevue/confirmdialog'
 import FieldKindTag from '@/components/crm/FieldKindTag.vue'
 import CustomFieldDialog from './components/CustomFieldDialog.vue'
+import DirRowActionsMenu from '@/pages/SettingsPage/components/sections/directories/DirRowActionsMenu.vue'
 import { useCustomFieldsPage } from './composables/useCustomFieldsPage'
 import type { CustomFieldScope } from '@/entities/crm'
 import type { ScopeFilter } from './composables/useCustomFieldsPage'
@@ -180,7 +168,10 @@ interface DataTableRowReorderEvent {
   value: InstanceType<typeof Array>
 }
 
-withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean; editMode?: boolean }>(), {
+  embedded: false,
+  editMode: false,
+})
 
 const { t } = useI18n()
 
@@ -214,7 +205,9 @@ function onRowReorder(event: DataTableRowReorderEvent) {
   void reorder(event.value as Array<import('@/entities/crm').CustomFieldDef>)
 }
 
-defineExpose({ canManage, openCreate })
+const rowCount = computed(() => filteredFields.value.length)
+
+defineExpose({ canManage, openCreate, rowCount })
 </script>
 
 <style lang="scss" scoped>

@@ -1,44 +1,49 @@
 <template>
   <div class="org-chart">
-    <div
-      v-for="node in nodes"
-      :key="node.key"
-      class="org-chart__level"
-    >
+    <div class="org-chart__roots">
       <OrgChartNode
+        v-for="node in nodes"
+        :key="node.key"
         :node="node"
-        :depth="0"
-        @select="$emit('select', $event)"
+        :edit-mode="editMode"
+        :load-members="loadMembers"
+        @edit="$emit('edit', $event)"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { DeptTreeNode } from '@/entities/accessControl'
+import type { DeptTreeNode, DepartmentMemberDto } from '@/entities/accessControl'
 import OrgChartNode from './OrgChartNode.vue'
 
-defineProps<{
-  nodes: DeptTreeNode[]
-}>()
+withDefaults(
+  defineProps<{
+    nodes: DeptTreeNode[]
+    editMode?: boolean
+    /** Lazy members loader passed down to each node for on-expand fetch */
+    loadMembers: (deptId: number) => Promise<DepartmentMemberDto[]>
+  }>(),
+  { editMode: false },
+)
 
 defineEmits<{
-  (e: 'select', node: DeptTreeNode): void
+  (e: 'edit', node: DeptTreeNode): void
 }>()
 </script>
 
 <style scoped lang="scss">
 .org-chart {
-  display: flex;
-  flex-direction: column;
-  gap: $space-4;
-  padding: $space-4;
-  overflow: auto;
+  padding: $space-8 $space-4;
+  overflow-x: auto;
 }
 
-.org-chart__level {
+// Top-down chart: root departments laid out in a centred horizontal row.
+.org-chart__roots {
   display: flex;
-  flex-direction: column;
-  gap: $space-3;
+  gap: $space-8;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: min-content;
 }
 </style>

@@ -20,9 +20,17 @@
               <i :class="data.is_active ? 'pi pi-check text-success' : 'pi pi-times text-secondary'" />
             </template>
           </Column>
-          <Column style="width: 80px">
+          <!-- Actions — edit-mode only -->
+          <Column v-if="editMode" style="width: 80px">
             <template #body="{ data }">
-              <Button icon="pi pi-pencil" text severity="secondary" size="small" @click="openDrawer(data.id)" />
+              <Button
+                icon="pi pi-pencil"
+                text
+                severity="secondary"
+                size="small"
+                :title="t('common.edit')"
+                @click="openDrawer(data.id)"
+              />
             </template>
           </Column>
           <template #empty>
@@ -58,11 +66,15 @@ import type { MessageTemplateListItemDto } from '@/entities/messageTemplate'
 
 const { t } = useI18n()
 
-withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean; editMode?: boolean }>(), {
+  embedded: false,
+  editMode: false,
+})
 
 const resource = useAsyncResource<MessageTemplateListItemDto[]>(() => [])
 const templates = computed(() => resource.data.value)
 const loading = computed(() => resource.loading.value)
+const rowCount = computed(() => templates.value.length)
 
 watch(() => true, () => {
   void resource.run(() => messageTemplatesApi.getMessageTemplates())
@@ -80,7 +92,7 @@ function onSaved() {
   void resource.run(() => messageTemplatesApi.getMessageTemplates())
 }
 
-defineExpose({ openDrawer })
+defineExpose({ openDrawer, rowCount })
 </script>
 
 <style lang="scss" scoped>

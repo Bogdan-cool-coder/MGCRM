@@ -35,68 +35,76 @@
       </div>
 
       <!-- ── FORM MODE chrome ───────────────────────────────────────────────── -->
-      <!-- Pipelines section (full card — form mode only) -->
-      <PipelineList
-        v-if="viewMode !== 'canvas'"
-        :pipelines="pipelines"
-        :selected-pipeline-id="selectedPipelineId"
-        :loading="pipelinesLoading"
-        :duplicating-id="duplicatingPipelineId"
-        :highlighted-id="highlightedPipelineId"
-        @create="showCreatePipeline = true"
-        @select="selectPipeline"
-        @rename="handleRenamePipeline"
-        @duplicate="handleDuplicatePipeline"
-        @delete="handleDeletePipeline"
-      />
-
-      <!-- View mode toggle — form mode only, shown when a pipeline is selected -->
-      <div v-if="viewMode !== 'canvas' && selectedPipelineId !== null" class="pipeline-settings-page__mode-bar">
-        <SelectButton
-          v-model="viewMode"
-          :options="viewModeOptions"
-          option-label="label"
-          option-value="value"
-          :allow-empty="false"
+      <!-- Гэп-4: two-column layout — pipelines rail (250px) + editor content. -->
+      <div v-if="viewMode === 'form'" class="pipeline-settings-page__form-layout">
+        <!-- Left rail: pipelines list -->
+        <PipelineList
+          :pipelines="pipelines"
+          :selected-pipeline-id="selectedPipelineId"
+          :loading="pipelinesLoading"
+          :duplicating-id="duplicatingPipelineId"
+          :highlighted-id="highlightedPipelineId"
+          @create="showCreatePipeline = true"
+          @select="selectPipeline"
+          @rename="handleRenamePipeline"
+          @duplicate="handleDuplicatePipeline"
+          @delete="handleDeletePipeline"
         />
+
+        <!-- Right content column -->
+        <div class="pipeline-settings-page__form-content">
+          <!-- View mode toggle — shown when a pipeline is selected -->
+          <div v-if="selectedPipelineId !== null" class="pipeline-settings-page__mode-bar">
+            <SelectButton
+              v-model="viewMode"
+              :options="viewModeOptions"
+              option-label="label"
+              option-value="value"
+              :allow-empty="false"
+            />
+          </div>
+
+          <!-- Stages editor section -->
+          <StageEditorList
+            v-if="selectedPipelineId !== null"
+            :top-level-stages="topLevelStages"
+            :substages-of="substagesOf"
+            :pipeline-name="selectedPipeline?.name"
+            :loading="stagesLoading"
+            :automations-for="pipelineAutomations.getForStage"
+            :automations-loading="pipelineAutomations.loading.value"
+            :automations-error="pipelineAutomations.error.value"
+            @add-stage="showCreateStage = true"
+            @edit-stage="openEditDrawer"
+            @delete-stage="handleDeleteStage"
+            @rename-stage="handleRenameStage"
+            @toggle-hidden="handleToggleHidden"
+            @reorder="handleReorder"
+            @add-automation="openWizardForStage"
+            @edit-automation="openWizardForEdit"
+            @delete-automation="handleDeleteAutomation"
+            @toggle-automation="handleToggleAutomation"
+            @refetch-automations="() => pipelineAutomations.invalidate()"
+          />
+
+          <!-- Automation list panel (all automations of pipeline) -->
+          <AutomationListPanel
+            v-if="selectedPipelineId !== null"
+            :automations="pipelineAutomations.automations.value"
+            :loading="pipelineAutomations.loading.value"
+            @add-automation="openWizardForPipeline"
+            @edit-automation="openWizardForEdit"
+            @delete-automation="handleDeleteAutomation"
+            @toggle="handleToggleAutomation"
+          />
+
+          <!-- No pipeline selected placeholder -->
+          <div v-if="selectedPipelineId === null && !pipelinesLoading" class="pipeline-settings-page__form-empty">
+            <i class="pi pi-sitemap pipeline-settings-page__form-empty-icon" />
+            <p>{{ t('sales.pipelineEditor.selectPlaceholder') }}</p>
+          </div>
+        </div>
       </div>
-
-      <!-- FORM MODE: Stages editor + Automation panel -->
-      <template v-if="viewMode === 'form'">
-        <!-- Stages editor section -->
-        <StageEditorList
-          v-if="selectedPipelineId !== null"
-          :top-level-stages="topLevelStages"
-          :substages-of="substagesOf"
-          :pipeline-name="selectedPipeline?.name"
-          :loading="stagesLoading"
-          :automations-for="pipelineAutomations.getForStage"
-          :automations-loading="pipelineAutomations.loading.value"
-          :automations-error="pipelineAutomations.error.value"
-          @add-stage="showCreateStage = true"
-          @edit-stage="openEditDrawer"
-          @delete-stage="handleDeleteStage"
-          @rename-stage="handleRenameStage"
-          @toggle-hidden="handleToggleHidden"
-          @reorder="handleReorder"
-          @add-automation="openWizardForStage"
-          @edit-automation="openWizardForEdit"
-          @delete-automation="handleDeleteAutomation"
-          @toggle-automation="handleToggleAutomation"
-          @refetch-automations="() => pipelineAutomations.invalidate()"
-        />
-
-        <!-- Automation list panel (all automations of pipeline) -->
-        <AutomationListPanel
-          v-if="selectedPipelineId !== null"
-          :automations="pipelineAutomations.automations.value"
-          :loading="pipelineAutomations.loading.value"
-          @add-automation="openWizardForPipeline"
-          @edit-automation="openWizardForEdit"
-          @delete-automation="handleDeleteAutomation"
-          @toggle="handleToggleAutomation"
-        />
-      </template>
 
       <!-- CANVAS MODE -->
       <div
@@ -548,21 +556,59 @@ onMounted(async () => {
   &__content {
     display: flex;
     flex-direction: column;
-    gap: $space-6;
-    padding: $space-6;
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    max-width: 900px;
+
+    // Form-mode chrome: no page padding — the two-column layout owns spacing
+    // (rail hugs the edge, content column carries its own padding).
 
     &--canvas {
-      max-width: none;
       overflow: hidden;
       padding: $space-3 $space-6 0;
       gap: $space-3;
       // Нейтрализуем padding layout__content, чтобы canvas мог занять всю высоту
       margin-bottom: calc(-1 * $space-4);
     }
+  }
+
+  // ── Form two-column layout (Гэп-4): rail + editor content ────────────────────
+  &__form-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__form-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $space-6;
+    padding: $space-6;
+    overflow-y: auto;
+    min-height: 0;
+
+    // Content column width matches mockup (max 780) but stays left-aligned next
+    // to the rail rather than centring in the full viewport.
+    > * {
+      max-width: 780px;
+      width: 100%;
+    }
+  }
+
+  &__form-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-3;
+    padding: $space-8 $space-4;
+    text-align: center;
+    color: var(--p-text-muted-color);
+  }
+
+  &__form-empty-icon {
+    font-size: $font-size-icon-2xl;
+    color: var(--p-surface-400);
   }
 
   &__mode-bar {

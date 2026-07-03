@@ -4,6 +4,15 @@
       <div class="dir-tab-toolbar__spacer" />
       <div class="dir-tab-toolbar__actions">
         <Button
+          v-if="pageRef?.canManage && (pageRef?.rowCount ?? 0) > 0"
+          :label="editing ? t('settings.directories.finishEditing') : t('common.edit')"
+          :icon="editing ? 'pi pi-check' : 'pi pi-pencil'"
+          :outlined="!editing"
+          :severity="editing ? 'primary' : 'secondary'"
+          size="small"
+          @click="editing = !editing"
+        />
+        <Button
           v-if="pageRef?.canManage"
           icon="pi pi-plus"
           :label="t('customFields.add')"
@@ -13,7 +22,7 @@
     </div>
 
     <div class="dir-tab-body">
-      <CustomFieldsPage ref="pageRef" :embedded="true" />
+      <CustomFieldsPage ref="pageRef" :embedded="true" :edit-mode="editing" />
     </div>
   </div>
 </template>
@@ -27,6 +36,7 @@ import CustomFieldsPage from '@/pages/CustomFieldsPage/index.vue'
 const { t } = useI18n()
 
 const pageRef = ref<InstanceType<typeof CustomFieldsPage> | null>(null)
+const editing = ref(false)
 </script>
 
 <style lang="scss" scoped>

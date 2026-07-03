@@ -287,6 +287,10 @@
         "title": "Каналы",
         "desc": "Telegram, Email, WhatsApp"
       },
+      "directories": {
+        "title": "Справочники",
+        "desc": "Страны, теги, кастомные поля, каналы, причины отказа, каталог"
+      },
       "countries": {
         "title": "Страны",
         "desc": "Справочник стран и телефонных кодов"
@@ -390,6 +394,9 @@
       "accessControl": {
         "title": "Доступ и оргструктура",
         "desc": "Отделы, роли, права и политики видимости записей"
+      },
+      "motivation-builder": {
+        "title": "Конструктор МК"
       }
     },
     "nav": {
@@ -479,6 +486,7 @@
     "directories": {
       "sectionTitle": "Справочники",
       "sectionDesc": "Управление системными справочниками",
+      "finishEditing": "Завершить редактирование",
       "tabs": {
         "countries": "Страны",
         "tags": "Теги",
@@ -2336,6 +2344,7 @@
     },
     "pipelineEditor": {
       "pageTitle": "Настройки воронки",
+      "railTitle": "Воронки",
       "section": {
         "pipelines": "Воронки продаж",
         "stages": "Этапы воронки"
@@ -4512,7 +4521,8 @@
       "errorLoad": "Не удалось загрузить отделы",
       "errorSave": "Ошибка сохранения отдела",
       "errorDelete": "Ошибка удаления отдела",
-      "noMembers": "Нет участников"
+      "noMembers": "Нет участников",
+      "finishEditing": "Завершить редактирование"
     },
     "roles": {
       "title": "Матрица прав",
@@ -4629,5 +4639,132 @@
   "contacts_bulk": {
     "mergeHint": "Выберите 2 или более записей",
     "mergeHintMax": "Рекомендуется до 5 записей"
+  },
+  "motivation": {
+    "card": {
+      "title": "Мотивационная карта",
+      "prev_month": "Предыдущий месяц",
+      "next_month": "Следующий месяц",
+      "period": "Период",
+      "supervisor": "Руководитель",
+      "dept_plan": "План отдела по новым поступлениям",
+      "dept_pct": "Выполнение отдела",
+      "salary_components": "Компоненты зарплаты",
+      "salary_short": "ЗП",
+      "indicators": "Показатели",
+      "position_base": "Оклад",
+      "position_commission": "Комиссия",
+      "position_kpi": "KPI",
+      "position_bonus": "Бонус",
+      "position_team_bonus": "Командный бонус",
+      "col_plan": "План",
+      "col_fact": "Факт",
+      "col_pct": "%",
+      "col_salary_plan": "ЗП план",
+      "col_salary_fact": "ЗП факт",
+      "total_label": "Итого ЗП",
+      "total_plan": "ЗП план",
+      "total_fact": "ЗП факт",
+      "forecast_total": "Прогноз итого",
+      "team_bonus_forecast": "Прогноз командного бонуса",
+      "team_bonus_part1": "Часть 1 (60%) — по вкладу",
+      "team_bonus_part2": "Часть 2 (40%) — поровну",
+      "gate_passed": "Гейт пройден",
+      "gate_locked": "Командный бонус не начисляется",
+      "gate_hint": "Выполнение отдела: {pct} (нужно ≥ {threshold}%)",
+      "manual_done": "Выполнено",
+      "manual_not_done": "Не выполнено",
+      "rates_as_of": "Курсы на {date}",
+      "no_plan": "План на этот месяц не задан",
+      "no_dept_plan": "План отдела на этот месяц не задан",
+      "no_card": "Мотивационная карта за этот месяц ещё не создана",
+      "go_to_builder": "Перейти в конструктор",
+      "commission_breakdown": "Разбивка по сделкам",
+      "multirate_breakdown": "Мультивалютный факт",
+      "status_draft": "Черновик",
+      "status_finalized": "Финализирована",
+      "status_paid": "Выплачено",
+      "payment_note_base": "Выплачивается в следующем месяце за текущим",
+      "payment_note_commission": "Выплачивается сразу в момент поступления",
+      "position_not_included": "Позиция не включена в план",
+      "fact_basis_won_deals": "Расчёт по выигранным сделкам, не по оплате",
+      "load_error": "Не удалось загрузить карточку. Попробуйте позже.",
+      "months": {
+        "january": "Январь",
+        "february": "Февраль",
+        "march": "Март",
+        "april": "Апрель",
+        "may": "Май",
+        "june": "Июнь",
+        "july": "Июль",
+        "august": "Август",
+        "september": "Сентябрь",
+        "october": "Октябрь",
+        "november": "Ноябрь",
+        "december": "Декабрь"
+      }
+    },
+    "builder": {
+      "title": "Конструктор МК",
+      "breadcrumb": "Настройки › Мотивационные карты",
+      "step_employee": "Выбор сотрудника и периода",
+      "step_positions": "Позиции зарплаты",
+      "step_plan": "План по позициям",
+      "step_team_bonus": "План отдела и командный бонус",
+      "step_currency": "Мультивалюта",
+      "load_card": "Загрузить карту",
+      "select_employee": "Выберите сотрудника",
+      "year": "Год",
+      "month": "Месяц",
+      "toggle_hint": "Включите позиции, которые входят в план этого менеджера",
+      "indicator": "Показатель",
+      "indicator_income": "Поступления",
+      "indicator_fixed": "Базовая ставка",
+      "indicator_oneoff": "Разовый",
+      "plan_label": "План",
+      "currency_label": "Валюта",
+      "rule_label": "Правило",
+      "kpi_name": "Название KPI",
+      "kpi_salary": "ЗП за выполнение",
+      "kpi_type_count": "Количество (шт.)",
+      "kpi_type_amount": "Сумма",
+      "kpi_type_manual": "Вручную",
+      "commission_pct_hint": "В зачёт идут только личные сделки менеджера. Условие: первый платёж, подписанный договор, сумма по плану.",
+      "team_pipeline": "Отдел (воронка)",
+      "dept_plan_label": "План поступлений отдела",
+      "bonus_pool_label": "Пул командного бонуса",
+      "bonus_threshold_label": "Порог выполнения (%)",
+      "bonus_part1_label": "Часть 1 — по вкладу (%)",
+      "bonus_part2_label": "Часть 2 — поровну (%)",
+      "bonus_per_member_label": "Доп. взнос на участника",
+      "pool_extra_hint": "При 3+ менеджерах пул увеличивается: базовый пул + (N−2) × доп. взнос",
+      "base_currency_label": "Base-валюта итога ЗП",
+      "rates_auto_title": "Курсы конвертации (авто)",
+      "rates_source_label": "Источник курсов",
+      "rates_source_cbr": "ЦБ РФ (авто)",
+      "rates_source_manual": "Вручную",
+      "rates_refresh": "Обновить",
+      "rates_refreshed": "Курсы обновлены",
+      "rates_empty": "Нет доступных курсов для выбранной base-валюты",
+      "save_bar_plan": "ЗП план",
+      "save_bar_fact": "ЗП факт",
+      "copy_prev_month": "Копировать предыдущий месяц",
+      "save": "Сохранить план",
+      "update": "Обновить план",
+      "saved_toast": "План сохранён",
+      "finalize": "Финализировать",
+      "mark_paid": "Отметить выплаченным",
+      "finalized_toast": "Карта финализирована",
+      "paid_toast": "Карта отмечена выплаченной",
+      "no_prev_month": "Нет данных за предыдущий месяц",
+      "access_denied": "Недостаточно прав для доступа к конструктору МК",
+      "err_employee": "Выберите сотрудника",
+      "err_base": "Введите сумму оклада",
+      "err_commission": "Укажите % от 0 до 100",
+      "err_pool": "Введите размер пула",
+      "err_threshold": "Порог должен быть от 1 до 100",
+      "err_split": "Укажите от 1 до 99",
+      "err_form": "Исправьте ошибки в форме"
+    }
   }
 }

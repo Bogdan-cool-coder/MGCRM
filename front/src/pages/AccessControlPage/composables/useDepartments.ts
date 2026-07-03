@@ -130,6 +130,15 @@ export function useDepartments() {
     await membersResource.run(() => accessControlApi.getDepartmentMembers(deptId))
   }
 
+  /**
+   * Lazy members loader for the org-chart (Гэп-3): each chart card fetches its
+   * own members on first expand. Independent of the shared membersResource
+   * (which backs the side-panel), so multiple cards can expand without clobbering.
+   */
+  async function loadChartMembers(deptId: number): Promise<DepartmentMemberDto[]> {
+    return accessControlApi.getDepartmentMembers(deptId)
+  }
+
   // ─── select dept (tree node click — show members without opening edit panel) ─
   async function selectDept(dept: DepartmentDto) {
     deptDetail.value = { dept, members: [], loading: true, error: false }
@@ -286,6 +295,7 @@ export function useDepartments() {
     // actions
     loadDepartments,
     loadUsers,
+    loadChartMembers,
     selectDept,
     openCreate,
     openEdit,

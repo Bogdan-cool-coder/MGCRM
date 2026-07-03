@@ -2,7 +2,27 @@
   <div class="manager-cabinet-page">
     <PageHeader :title="t('managerCabinet.title')" icon="pi pi-id-card" />
 
+    <!-- Tab strip: dashboard overview vs motivation card -->
+    <div class="manager-cabinet-page__tabs">
+      <SelectButton
+        :model-value="activeTab"
+        :options="tabOptions"
+        option-label="label"
+        option-value="value"
+        :allow-empty="false"
+        @update:model-value="setActiveTab"
+      />
+    </div>
+
     <div class="manager-cabinet-page__content">
+      <!-- Motivation card tab -->
+      <MotivationTab
+        v-if="activeTab === 'motivation'"
+        :viewed-user-id="viewedUserId"
+      />
+
+      <!-- Dashboard overview tab -->
+      <template v-else>
       <!-- Cross-user picker (admin / director only) -->
       <div v-if="canViewOthers" class="row g-4 mb-4">
         <div class="col-12 col-md-6 col-lg-4">
@@ -101,6 +121,7 @@
           />
         </div>
       </div>
+      </template>
     </div>
 
     <Toast position="top-right" />
@@ -109,10 +130,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
 import Toast from 'primevue/toast'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import CabinetHeader from './components/CabinetHeader.vue'
@@ -120,9 +143,34 @@ import MonthStepper from './components/MonthStepper.vue'
 import KpiCards from './components/KpiCards.vue'
 import TeamComparisonTable from './components/TeamComparisonTable.vue'
 import ActivityFeedList from './components/ActivityFeedList.vue'
+import MotivationTab from './components/motivation/MotivationTab.vue'
 import { useManagerCabinetPage } from './composables/useManagerCabinetPage'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+
+// ─── Tab strip (overview | motivation) ────────────────────────────────────────
+type CabinetTab = 'overview' | 'motivation'
+
+const activeTab = computed<CabinetTab>(() =>
+  route.query.tab === 'motivation' ? 'motivation' : 'overview',
+)
+
+const tabOptions = computed(() => [
+  { label: t('managerCabinet.title'), value: 'overview' as const },
+  { label: t('motivation.card.title'), value: 'motivation' as const },
+])
+
+const setActiveTab = (tab: CabinetTab): void => {
+  const query = { ...route.query }
+  if (tab === 'overview') {
+    delete query.tab
+  } else {
+    query.tab = tab
+  }
+  void router.replace({ query })
+}
 
 const {
   profile,
@@ -157,6 +205,10 @@ const memberSelectOptions = computed(() =>
   flex-direction: column;
   height: 100%;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+}
+
+.manager-cabinet-page__tabs {
+  padding: $space-4 $space-6 0;
 }
 
 .manager-cabinet-page__content {

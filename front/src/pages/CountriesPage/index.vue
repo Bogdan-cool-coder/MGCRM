@@ -22,7 +22,17 @@
           :loading="loading"
           row-hover
           size="small"
+          :reorderable-rows="editMode && canManage"
+          @row-reorder="onRowReorder"
         >
+          <!-- Drag handle — edit-mode only -->
+          <Column
+            v-if="editMode && canManage"
+            row-reorder
+            style="width: 40px"
+            :pt="{ rowReorderIcon: { class: 'dir-page__drag-handle' } }"
+          />
+
           <!-- Code -->
           <Column :header="t('admin.countries.columns.code')" style="width: 70px">
             <template #body="{ data }">
@@ -65,27 +75,13 @@
             </template>
           </Column>
 
-          <!-- Actions -->
-          <Column v-if="canManage" style="width: 90px">
+          <!-- Actions (kebab) — edit-mode only -->
+          <Column v-if="editMode && canManage" style="width: 56px">
             <template #body="{ data }">
-              <span class="d-flex gap-1">
-                <Button
-                  icon="pi pi-pencil"
-                  text
-                  severity="secondary"
-                  size="small"
-                  :title="t('common.edit')"
-                  @click="openEdit(data)"
-                />
-                <Button
-                  icon="pi pi-trash"
-                  text
-                  severity="danger"
-                  size="small"
-                  :title="t('common.delete')"
-                  @click="deleteCountry(data)"
-                />
-              </span>
+              <DirRowActionsMenu
+                @edit="openEdit(data)"
+                @delete="deleteCountry(data)"
+              />
             </template>
           </Column>
 
@@ -118,6 +114,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Card from 'primevue/card'
@@ -126,11 +123,22 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import ToggleSwitch from 'primevue/toggleswitch'
 import CountryDialog from './components/CountryDialog.vue'
+import DirRowActionsMenu from '@/pages/SettingsPage/components/sections/directories/DirRowActionsMenu.vue'
 import { useCountriesPage } from './composables/useCountriesPage'
+import type { Country } from '@/entities/crm'
+
+interface DataTableRowReorderEvent {
+  dragIndex: number
+  dropIndex: number
+  value: unknown[]
+}
 
 const { t } = useI18n()
 
-withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean; editMode?: boolean }>(), {
+  embedded: false,
+  editMode: false,
+})
 
 const {
   countries,
@@ -144,9 +152,16 @@ const {
   save,
   toggleActive,
   deleteCountry,
+  reorder,
 } = useCountriesPage()
 
-defineExpose({ canManage, openCreate })
+function onRowReorder(event: DataTableRowReorderEvent) {
+  void reorder(event.value as Country[])
+}
+
+const rowCount = computed(() => countries.value.length)
+
+defineExpose({ canManage, openCreate, rowCount })
 </script>
 
 <style lang="scss" scoped>
@@ -179,6 +194,16 @@ defineExpose({ canManage, openCreate })
   i {
     font-size: $font-size-2xl;
     opacity: 0.4;
+  }
+}
+
+// Drag handle (edit-mode reorder). Muted surface, grab cursor.
+:deep(.dir-page__drag-handle) {
+  cursor: grab;
+  color: var(--p-surface-400);
+
+  &:hover {
+    color: var(--p-surface-500);
   }
 }
 </style>

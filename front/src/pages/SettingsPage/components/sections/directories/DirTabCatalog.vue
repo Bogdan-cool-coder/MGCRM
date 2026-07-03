@@ -4,6 +4,15 @@
       <div class="dir-tab-toolbar__spacer" />
       <div v-if="pageRef?.canWrite" class="dir-tab-toolbar__actions">
         <Button
+          v-if="(pageRef?.rowCount ?? 0) > 0"
+          :label="editing ? t('settings.directories.finishEditing') : t('common.edit')"
+          :icon="editing ? 'pi pi-check' : 'pi pi-pencil'"
+          :outlined="!editing"
+          :severity="editing ? 'primary' : 'secondary'"
+          size="small"
+          @click="editing = !editing"
+        />
+        <Button
           icon="pi pi-upload"
           :label="t('catalog.products.page.import')"
           severity="secondary"
@@ -18,7 +27,7 @@
     </div>
 
     <div class="dir-tab-body">
-      <ProductsPage ref="pageRef" :embedded="true" />
+      <ProductsPage ref="pageRef" :embedded="true" :edit-mode="editing" />
     </div>
   </div>
 </template>
@@ -32,6 +41,7 @@ import ProductsPage from '@/pages/ProductsPage/index.vue'
 const { t } = useI18n()
 
 const pageRef = ref<InstanceType<typeof ProductsPage> | null>(null)
+const editing = ref(false)
 
 function onToggleImportMenu(event: Event) {
   pageRef.value?.toggleImportMenu(event)
