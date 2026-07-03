@@ -105,6 +105,7 @@ use App\Http\Controllers\Sales\Motivation\MotivationPlanController;
 use App\Http\Controllers\Sales\PipelineController;
 use App\Http\Controllers\Sales\PipelineStageController;
 use App\Http\Controllers\Sales\Planning\PlanMatrixController;
+use App\Http\Controllers\Sales\Planning\ReportsController;
 use App\Http\Controllers\System\SystemResetController;
 use Illuminate\Support\Facades\Route;
 
@@ -604,6 +605,12 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
             ->middleware('can:plans.manage')->name('cells.upsert');
         Route::post('copy-previous', [PlanMatrixController::class, 'copyPrevious'])
             ->middleware('can:plans.manage')->name('copy-previous');
+    });
+
+    // Reports (read, visibility-scoped in the aggregator) — Ф2 R1/R2 (contract §6.4/§6.5).
+    Route::prefix('reports')->name('reports.')->group(function (): void {
+        Route::get('registry', [ReportsController::class, 'registry'])->name('registry');
+        Route::get('income-schedule', [ReportsController::class, 'incomeSchedule'])->name('income-schedule');
     });
 
     // =========================================================================

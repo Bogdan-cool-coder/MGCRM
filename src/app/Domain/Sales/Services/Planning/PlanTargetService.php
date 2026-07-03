@@ -83,7 +83,10 @@ class PlanTargetService
 
             foreach (range(1, 12) as $month) {
                 $cellPlan = $rowPlans->first(fn (PlanTarget $p) => (int) $p->period_month_key === $month);
-                $planKopecks = $cellPlan?->value_kopecks ?? 0;
+                $rawPlanKopecks = $cellPlan?->value_kopecks ?? 0;
+                $planKopecks = $cellPlan !== null
+                    ? $this->planKopecksInBase($rawPlanKopecks, $cellPlan->currency, $baseCurrency, $query->year, $month, $multiCurrencyWarning)
+                    : 0;
                 $factKopecks = $monthlyFacts[$month] ?? 0;
                 $pct = $this->kpiService->scorePct($factKopecks, $planKopecks);
 
@@ -111,7 +114,9 @@ class PlanTargetService
             if ($annualCell !== null) {
                 $annualHasStoredCell = true;
                 $annualPlanId = $annualCell->id;
-                $annualPlanKopecks = $annualCell->value_kopecks ?? 0;
+                // Standalone annual cell (no monthly children): convert at the
+                // 1st-of-January rate of the year (contract §4.1).
+                $annualPlanKopecks = $this->planKopecksInBase($annualCell->value_kopecks ?? 0, $annualCell->currency, $baseCurrency, $query->year, 1, $multiCurrencyWarning);
             }
 
             $annualPct = $this->kpiService->scorePct($annualFactKopecks, $annualPlanKopecks);
@@ -403,6 +408,33 @@ class PlanTargetService
     }
 
     /**
+     * Convert a stored plan cell's kopecks to base currency, symmetric with the
+     * fact side (contract §4.1 known-gap fix). Rate resolved at the 1st-of the
+     * cell's period month (same convention as monthlyMoneyFactFor); a missing
+     * rate sets multi_currency_warning and falls back to the raw amount so
+     * plan/fact comparison never collapses to a misleading 0.
+     */
+    private function planKopecksInBase(int $amountKopecks, ?string $currency, string $baseCurrency, int $year, int $month, bool &$multiCurrencyWarning): int
+    {
+        $currency ??= $baseCurrency;
+
+        if (strtoupper($currency) === strtoupper($baseCurrency)) {
+            return $amountKopecks;
+        }
+
+        $ratesDate = Carbon::create($year, $month, 1)->toDateString();
+        $converted = $this->exchangeRateService->convertAmount($amountKopecks, $currency, $baseCurrency, $ratesDate);
+
+        if ($converted === null) {
+            $multiCurrencyWarning = true;
+
+            return $amountKopecks;
+        }
+
+        return $converted;
+    }
+
+    /**
      * count fact for tasks_completed(kind) / expected_deals — stubbed until Ф4.
      * Validated by the FormRequest but the fact helper is not wired for these
      * metrics yet (contract §9 Ф1 scope: new_income scope=user end-to-end only).
@@ -430,6 +462,35 @@ class PlanTargetService
         };
     }
 
+    /**
+     * Visibility-scoped user IDs eligible for a `scope_type=user` plan row —
+     * the SAME population `buildMatrix()` expands into matrix rows (active
+     * Manager/Director users, Own→self / Department→self+subtree / All→everyone).
+     * Public so report aggregators (e.g. IncomeScheduleService's default
+     * "все менеджеры" total) can sum the identical set of user-scoped cells
+     * the matrix shows as its ИТОГО row — never a second, drifting definition.
+     *
+     * @return list<int>
+     */
+    public function scopedUserIds(User $viewer): array
+    {
+        $scope = $this->visibility->resolve($viewer);
+
+        $usersQuery = User::query()->where('is_active', true)->role([Role::Manager->value, Role::Director->value]);
+
+        if ($scope !== VisibilityScope::All) {
+            $usersQuery->where(function ($q) use ($viewer, $scope): void {
+                $q->where('id', $viewer->id);
+
+                if ($scope === VisibilityScope::Department) {
+                    $q->orWhereIn('department_id', $this->visibility->departmentSubtreeIds($viewer));
+                }
+            });
+        }
+
+        return $usersQuery->pluck('id')->map(static fn ($id): int => (int) $id)->all();
+    }
+
     private function rowKeyFor(PlanTarget $target): string
     {
         return (string) match ($target->scope_type) {
@@ -451,21 +512,10 @@ class PlanTargetService
     private function resolveScopeRows(PlanMatrixQuery $query, User $viewer): array
     {
         if ($query->scopeType === PlanScopeType::User) {
-            $scope = $this->visibility->resolve($viewer);
-
-            $usersQuery = User::query()->where('is_active', true)->role([Role::Manager->value, Role::Director->value]);
-
-            if ($scope !== VisibilityScope::All) {
-                $usersQuery->where(function ($q) use ($viewer): void {
-                    $q->where('id', $viewer->id);
-
-                    if ($this->visibility->resolve($viewer) === VisibilityScope::Department) {
-                        $q->orWhereIn('department_id', $this->visibility->departmentSubtreeIds($viewer));
-                    }
-                });
-            }
-
-            return $usersQuery->orderBy('full_name')->get()
+            return User::query()
+                ->whereIn('id', $this->scopedUserIds($viewer))
+                ->orderBy('full_name')
+                ->get()
                 ->map(fn (User $u): array => ['id' => $u->id, 'label' => $u->full_name])
                 ->values()
                 ->all();

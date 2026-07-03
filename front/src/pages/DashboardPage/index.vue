@@ -142,15 +142,26 @@ const TAB_COMPONENTS: Record<HubTab, Component> = {
 
 const activeComponent = computed<Component>(() => TAB_COMPONENTS[activeTab.value])
 
-// Only «Планы» consumes the shared filter props today; Обзор owns its own
-// filters and the WIP report tabs are prop-less stubs — pass nothing so no stray
-// DOM attributes land on their roots. When Ф2/Ф3 wire the report tabs, add them
-// here and declare the props on those components.
-const activeProps = computed<Record<string, unknown>>(() =>
-  activeTab.value === 'plans'
-    ? { year: year.value, layer: layer.value, pipelineId: pipelineId.value }
-    : {},
-)
+// Each report/plan tab reads the cross-cutting hub filters through props (single
+// source of truth, TZ §1.1). Обзор owns its own filters; Рейтинг (Ф3) is still a
+// stub — pass nothing so no stray DOM attributes land on its root.
+const activeProps = computed<Record<string, unknown>>(() => {
+  switch (activeTab.value) {
+    case 'plans':
+      return { year: year.value, layer: layer.value, pipelineId: pipelineId.value }
+    case 'registry':
+      return {
+        year: year.value,
+        month: month.value,
+        pipelineId: pipelineId.value,
+        managerId: managerId.value,
+      }
+    case 'schedule':
+      return { year: year.value, month: month.value, pipelineId: pipelineId.value }
+    default:
+      return {}
+  }
+})
 </script>
 
 <style lang="scss" scoped>

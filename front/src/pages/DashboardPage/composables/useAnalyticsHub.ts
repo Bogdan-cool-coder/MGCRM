@@ -38,8 +38,8 @@ export interface HubTabOption {
   label: string
 }
 
-/** Tabs still under construction (Ф2/Ф3) — rendered as «в разработке» stubs. */
-export const HUB_WIP_TABS: readonly HubTab[] = ['registry', 'schedule', 'rating']
+/** Tabs still under construction — rendered as «в разработке» stubs (Ф3 rating). */
+export const HUB_WIP_TABS: readonly HubTab[] = ['rating']
 
 /** A tab-registered leave guard: returns `false` to veto an in-hub tab switch. */
 export type HubLeaveGuard = () => boolean | Promise<boolean>

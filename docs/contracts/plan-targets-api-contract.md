@@ -211,7 +211,7 @@ For `conversion` the plan value is the **target %** (`value_count = 85` means "p
 - Missing rate → `convertAmount` returns null → set `multi_currency_warning=true` in the response + fall back to the raw amount (defensive, same as `ManagerKpiService::normalisedPlanKopecks`).
 - Response money is always integer kopecks in base currency; per-currency breakdown is surfaced via a `currency_breakdown` block for the info-popover (matrix response §6.1).
 
-> **As-built known-gap (Ф1, reviewer 2026-07-03):** the **fact** side of the matrix converts foreign-currency won deals to base at the month's 1st-of-month rate as specified (tested in `PlanMatrixMultiCurrencyTest`). The **plan** side does NOT yet convert — `PlanTargetService::buildMatrix` returns `plan_kopecks` as the raw stored `value_kopecks` in the cell's own currency, so a non-RUB plan cell would be compared raw against a base-currency fact. Ф1 is **RUB-first** (plans are entered in RUB in practice), so this does not bite in the shipped scope. **Fix when multi-currency PLANS are exercised (Ф2+):** convert the plan cell via `ExchangeRateService::convertAmount(value_kopecks, cell.currency, base, ratesDate)` before the plan/fact %, symmetric with the fact side, with the same `multi_currency_warning` + raw-fallback semantics.
+> **As-built (Ф2, reviewer 2026-07-03 — known-gap CLOSED):** the plan side of the matrix now converts each cell to base currency symmetric with the fact side. `PlanTargetService::buildMatrix` runs `plan_kopecks` through the private `planKopecksInBase(value_kopecks, cell.currency, base, year, month, &warn)` helper before the plan/fact %, at the cell month's 1st-of-month rate (a standalone annual cell converts at the 1st-of-**January** rate, per the annual rule above), with the same `multi_currency_warning` + raw-fallback degrade path as the fact side. Covered by `PlanMatrixPlanFxTest` (3 tests: EUR cell converted before scoring · missing rate → warning + raw fallback · standalone annual → Jan-1st rate). **Residual (intentional, non-gap):** the per-cell `currency_breakdown` block still carries the **raw** `value_kopecks` in the cell's own currency — that block exists precisely to show the original per-currency figure in the info-popover, so it is correctly NOT base-converted; only the scored `plan_kopecks` is.
 
 ### 4.2 Fact-source seam (interim = won_deals, identical shape to МК)
 
@@ -430,10 +430,13 @@ Query `?year=2026&month=1&pipeline_id=1&product_group_id=<opt>&manager_id=<opt>`
   "squeeze": {                             // «дожим»: open, expected_payment_date < today, paid_at null
     "rows": [ /* same row shape */ ],
     "total_base_kopecks": 394376500,
-    "no_date_count": 3                     // open deals with NO expected_payment_date (UI warns — plan §7 risk)
+    "no_date_count": 3,                    // open deals with NO expected_payment_date (UI warns — plan §7 risk)
+    "no_date_rows": [ /* same row shape */ ]  // the no-date deals themselves (as-built Ф2, see below)
   }
 }
 ```
+
+> **As-built (Ф2, reviewer 2026-07-03):** `squeeze.no_date_rows` was **added** alongside `no_date_count`. The FE renders these open no-expected-date deals as an expandable warning list, and `squeeze.rows` is built with `whereNotNull(expected_payment_date)`, so the no-date deals are never in `rows` — the aggregator surfaces them explicitly here (same row shape). `no_date_count` is exactly `count(no_date_rows)` from the single query, so the number shown and the rows drilled-into can never drift. **`owner` nullability:** `rowForDeal` returns `owner: null` for an owner-less deal; the FE `RegistryRow.owner` type is currently non-nullable and the table renders `owner.full_name` directly — safe today because open deals in the pipeline always have an owner, but flagged (see reviewer notes) so a null-owner guard is added if owner-less deals ever reach these lists.
 
 ### 6.5 R2 · `GET /api/reports/income-schedule` — График НП (день-календарь)
 
@@ -455,6 +458,13 @@ Query `?year=2026&month=1&pipeline_id=1`. Aggregator `IncomeScheduleService` (Ф
 }
 ```
 Legend colours (plan/squeeze/fact/weekend) are FE concerns; the payload gives the four kopeck series per day + cumulative plan/fact.
+
+> **As-built rollup semantics (Ф2, reviewer 2026-07-03).** `IncomeScheduleService::resolvePlanTotal` resolves `plan_total_base_kopecks` as:
+> - **`manager_id` present** → that single user's `scope_type=user` cell only (base-converted).
+> - **no `manager_id`** (default view, regardless of `pipeline_id`) → SUM of every visibility-scoped user's `scope_type=user` cell, PLUS an additive `scope_type=company` cell PLUS (if `pipeline_id` present) an additive `scope_type=pipeline` cell — pipeline/company cells are ADDED on top of the per-user sum (orthogonal planning levels), not used instead of it.
+> - **`pipeline_id` does NOT switch to a single pipeline-cell lookup.** A `scope_type=user` cell has no pipeline dimension in the Ф1 data model (§2.1 — user cell = user × period), and the matrix UI never authors a pipeline-scope cell, so treating `pipeline_id !== null` as "one pipeline cell" reproduced BUG-SCHEDULE-PLAN-ZERO under the real default request (the funnel selector is always pre-selected). **Honest consequence: the plan total is identical for any pipeline filter** — only the FACT series is pipeline-filtered. This matches `PlanTargetService::buildMatrix`, whose user-row population is likewise not pipeline-filtered, so the schedule plan total and the matrix ИТОГО agree under a pipeline filter.
+> - **Single source of population.** The default-view sum iterates `PlanTargetService::scopedUserIds($viewer)` — a new public method that `buildMatrix()`'s own `resolveScopeRows` was refactored to call too, so the matrix rows and the schedule rollup can never drift to two different manager sets. Covered by `IncomeScheduleReportTest` (director-sums-all-users · manager_id-returns-only-that-user · pipeline_id-still-sums-not-zero · multi-currency-sum-in-base).
+> - **Working-day plan distribution (§O9):** the monthly plan spreads linearly across working days only (weekends carry a 0 increment); the integer remainder (`plan − perDay×workingDays`) is absorbed into the LAST working day so `cumulative_plan` on the final working day equals `plan_total` exactly — no float drift, no missing month-end kopeck. Squeeze totals roll onto **today's** day-of-month bucket, and only when the queried month is the current one. Covered by `IncomeScheduleReportTest` (cumulative-reaches-exact-total-on-last-working-day · weekend-carries-zero-increment).
 
 ### 6.6 R3 · `GET /api/reports/best-manager` — Лучший менеджер
 
@@ -594,7 +604,7 @@ Report/matrix **reads are visibility-scoped, not gated** — any authed user cal
 - Tests: Unit (scope-key resolution, metric×scope validation, FX annual-sum, audit-on-change-only) + Feature (matrix read visibility-scoped; bulk-upsert 200/422; plans.manage 403 for manager; copy-previous).
 - Frontend (sales-frontender): the «Планы» tab with the new_income inline matrix.
 
-**Ф2 — R1 Registry+Squeeze, R2 Schedule.** `ExpectedIncomeRegistryService` + `IncomeScheduleService` over Deal/DealProduct; endpoints R1/R2 + Resources + tests. Reverb realtime hook (план/факт refresh on won/paid).
+**Ф2 — R1 Registry+Squeeze, R2 Schedule. ✅ DONE (uncommitted, 2026-07-03, QA e2e PASS, 3882 PHPUnit).** `ExpectedIncomeRegistryService` (expected/squeeze/no_date lists) + `IncomeScheduleService` (day-calendar + cumulative plan/fact, working-day distribution) over Deal/DealProduct; endpoints R1/R2 (read-only, visibility-scoped, not `plans.manage`-gated) + Resources + FE (TabRegistry/RegistryTable, TabSchedule/NpCalendar/ScheduleLegend + ECharts cumulative). Tests R1 9 + R2 10. **Also closed in this phase:** the Ф1 plan-side FX known-gap (§4.1 above) + `PlanTargetService::scopedUserIds` extracted as the single population source shared by `buildMatrix` and the schedule rollup. Reverb realtime hook (план/факт refresh on won/paid) — **not in this pass** (deferred).
 
 **Ф3 — R3 Best manager.** `BestManagerService` (yearly points from config); endpoint R6.6 + Resource + tests.
 
@@ -627,7 +637,7 @@ All defaults chosen so Ф1 can start without blocking; flag `reviewer`/PM if any
 |---|---|---|
 | O1 | department-level plans in `plan_targets`? | **No** — three levels only: user / pipeline / company (§1.3). Department is additive later (nullable scope + enum case). Matches the МК pipeline-not-department finding. |
 | O2 | UNIQUE over nullable scope columns (PG treats NULLs distinct) | **Computed `scope_key` + `period_month_key` columns** carry the DB UNIQUE (§2.1) — deterministic, sqlite/pgsql-portable, testable. Service also resolves identity with `whereNull` for the upsert. |
-| O3 | «Прямая / СБС» deal type (R1) — where does it come from? | **Derived, best-effort.** No `deal_type` column exists. Default: `extra_fields`/tags heuristic → fallback `"direct"`. Flag to product; if they want a first-class field, it's an additive Deal migration (out of Ф0 scope). |
+| O3 | «Прямая / СБС» deal type (R1) — where does it come from? | **Derived, best-effort.** No `deal_type` column exists. Default: `extra_fields`/tags heuristic → fallback `"direct"`. Flag to product; if they want a first-class field, it's an additive Deal migration (out of Ф0 scope). **As-built (Ф2):** `ExpectedIncomeRegistryService::dealType` reads **tags only** — a case-insensitive tag literally named `sbs` marks СБС, everything else → `"direct"` (the `extra_fields` half of the heuristic was not wired). Narrower than spec but within the best-effort latitude; an additive first-class `deal_type` Deal column is the correct long-term fix, flagged to product. |
 | O4 | Conversion plan value — % target or raw counts? | **% target** (`value_count = 85` → plan 85%, `config.unit="pct"`, §3.5). Fact-% scored against plan-% via `scorePct`. Matches SpaceCRM's «План/Факt/%» conversion display. |
 | O5 | R3 points formula weights | **Config** (`config('crm.plans.best_manager')`, §4.4) — tunable without a logic deploy. Starter weights are placeholders to confirm with product. |
 | O6 | Annual cell (period_month NULL) — authored or derived? | **Both supported.** Default matrix shows annual as a **derived sum** of the 12 monthly cells (read-only, `plan_id:null`). A directly-authored annual cell (period_month NULL) is allowed and then editable — for metrics planned only yearly. |
