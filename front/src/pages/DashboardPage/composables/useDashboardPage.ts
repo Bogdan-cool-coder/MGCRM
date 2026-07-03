@@ -10,6 +10,7 @@ import { useToast } from 'primevue/usetoast'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useUserStore } from '@/stores/user'
 import { getDashboardData, exportDashboardXlsx } from '@/api/salesDashboard'
+import { triggerBlobDownload } from '@/utils/download'
 import { salesApi } from '@/api/sales'
 import { usersApi } from '@/api/users'
 import type { DashboardFilters, DashboardResponse } from '@/entities/salesDashboard'
@@ -134,18 +135,13 @@ export const useDashboardPage = () => {
   )
 
   // ─── Export ─────────────────────────────────────────────────────────────────
-  // Download via the authenticated axios client as a Blob, then build a
+  // Download via the authenticated axios client as a Blob, then trigger a
   // temporary object-URL <a download> (the app is Bearer-only — window.open
-  // would 500). Mirrors DealsPage onExport().
+  // would 500). Uses the shared download helper (same path as the report exports).
   const exportXlsx = async (): Promise<void> => {
     try {
       const blob = await exportDashboardXlsx({ ...filters })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
+      triggerBlobDownload(blob, `dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       toast.add({

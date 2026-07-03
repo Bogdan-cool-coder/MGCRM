@@ -240,6 +240,7 @@
     "hub": {
       "title": "Sales analytics",
       "export": "Export to Excel",
+      "export_soon": "Excel export will be available soon",
       "tab_overview": "Overview",
       "tab_plans": "Plans",
       "tab_registry": "Registry",
@@ -248,9 +249,14 @@
     },
     "plans": {
       "metric_income": "Income",
+      "metric_product": "Product lines",
       "metric_tasks": "Tasks",
       "metric_conversions": "Conversions",
+      "breakdown": "Breakdown",
+      "breakdown_by_user": "By employee",
+      "breakdown_by_product": "By product line",
       "col_employee": "Employee",
+      "col_product_line": "Product line",
       "col_currency": "Currency",
       "col_total": "Total",
       "col_fact": "fact",
@@ -287,7 +293,12 @@
       "conv_fact": "Fact",
       "side_task": "Task: {kind}",
       "side_deal": "Deal: {status}",
-      "side_stage": "Stage #{id}"
+      "side_stage": "Stage #{id}",
+      "product_endpoint_missing": "Product-line income is not yet available on the server — data will appear after the backend update",
+      "product_empty_title": "No product lines",
+      "product_empty_hint": "There are no product lines in the catalog to plan income for",
+      "expected": "Expected",
+      "total_forecast": "Total (forecast)"
     },
     "registry": {
       "expected_title": "Expected income",

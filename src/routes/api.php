@@ -600,6 +600,7 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // Read (matrix) = any authed user, visibility-scoped inside the Service.
     // Write (cells/copy-previous) = plans.manage (admin/director), contract §8.
     Route::prefix('plans')->name('plans.')->group(function (): void {
+        Route::get('matrix/export', [PlanMatrixController::class, 'export'])->name('matrix.export');
         Route::get('matrix', [PlanMatrixController::class, 'index'])->name('matrix');
         Route::post('cells', [PlanMatrixController::class, 'bulkUpsert'])
             ->middleware('can:plans.manage')->name('cells.upsert');
@@ -608,14 +609,32 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     });
 
     // Reports (read, visibility-scoped in the aggregator) — Ф2 R1/R2, Ф3 R3,
-    // Ф4 R4/R5 + honest stage-conversions (contract §6.4-§6.8).
+    // Ф4 R4/R5 + honest stage-conversions, Ф5 R6 + xlsx export (contract
+    // §6.4-§6.9 / §Excel export).
+    // NOTE: each `{report}/export` path is declared BEFORE its plain JSON
+    // sibling — same route-ordering rule as sales/dashboard.xlsx (a literal
+    // path segment must win over nothing being ambiguous here, but kept
+    // consistent with that precedent for readability).
     Route::prefix('reports')->name('reports.')->group(function (): void {
+        Route::get('registry/export', [ReportsController::class, 'registryExport'])->name('registry.export');
         Route::get('registry', [ReportsController::class, 'registry'])->name('registry');
+
+        Route::get('income-schedule/export', [ReportsController::class, 'incomeScheduleExport'])->name('income-schedule.export');
         Route::get('income-schedule', [ReportsController::class, 'incomeSchedule'])->name('income-schedule');
+
+        Route::get('best-manager/export', [ReportsController::class, 'bestManagerExport'])->name('best-manager.export');
         Route::get('best-manager', [ReportsController::class, 'bestManager'])->name('best-manager');
+
+        Route::get('task-matrix/export', [ReportsController::class, 'taskMatrixExport'])->name('task-matrix.export');
         Route::get('task-matrix', [ReportsController::class, 'taskMatrix'])->name('task-matrix');
+
+        Route::get('conversions/export', [ReportsController::class, 'conversionsExport'])->name('conversions.export');
         Route::get('conversions', [ReportsController::class, 'conversions'])->name('conversions');
+
         Route::get('stage-conversions', [ReportsController::class, 'stageConversions'])->name('stage-conversions');
+
+        Route::get('product-income/export', [ReportsController::class, 'productIncomeExport'])->name('product-income.export');
+        Route::get('product-income', [ReportsController::class, 'productIncome'])->name('product-income');
     });
 
     // =========================================================================

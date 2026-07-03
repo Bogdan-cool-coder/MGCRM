@@ -8,9 +8,9 @@
       scroll-height="flex"
       class="plan-matrix__table"
     >
-      <!-- Employee (frozen left) -->
+      <!-- Employee / product line (frozen left) -->
       <Column
-        :header="t('dashboard.plans.col_employee')"
+        :header="entityLabel ?? t('dashboard.plans.col_employee')"
         :footer="t('dashboard.plans.row_total')"
         frozen
         align-frozen="left"
@@ -118,6 +118,7 @@ import type {
   PlanMatrixRow,
   PlanMatrixColumn,
 } from '@/entities/planTargets'
+import type { ProductIncomeCell } from '@/entities/reports'
 
 const props = defineProps<{
   matrix: PlanMatrixResponse
@@ -129,6 +130,8 @@ const props = defineProps<{
   isCellDirty: (scopeId: number | null, columnKey: string) => boolean
   /** Row plan total (display units) across 12 months, dirty-aware. */
   rowTotal: (row: PlanMatrixRow) => number
+  /** Frozen-column header label (e.g. «Сотрудник» | «Продуктовая линейка»). */
+  entityLabel?: string
 }>()
 
 const emit = defineEmits<{
@@ -158,8 +161,25 @@ const factLabel = (row: PlanMatrixRow, columnKey: string): string => {
   return cell.fact_count != null ? String(cell.fact_count) : '—'
 }
 
-const factTooltip = (row: PlanMatrixRow, columnKey: string): string =>
-  `${t('dashboard.plans.col_fact')}: ${factLabel(row, columnKey)}`
+/**
+ * Fact tooltip. For money grids that carry the R6 «Прогноз | Поступления» split
+ * (expected/total ride along on `ProductIncomeCell`), append «Ожидается» and «Всего»
+ * so the reused grid tells the full product-income story without a second component.
+ */
+const factTooltip = (row: PlanMatrixRow, columnKey: string): string => {
+  const lines = [`${t('dashboard.plans.col_fact')}: ${factLabel(row, columnKey)}`]
+  const cell = row.cells[columnKey] as ProductIncomeCell | undefined
+  if (props.isMoney && cell) {
+    const base = props.matrix.meta.base_currency
+    if (cell.expected_kopecks != null) {
+      lines.push(`${t('dashboard.plans.expected')}: ${formatMkMoney(cell.expected_kopecks, base)}`)
+    }
+    if (cell.total_kopecks != null) {
+      lines.push(`${t('dashboard.plans.total_forecast')}: ${formatMkMoney(cell.total_kopecks, base)}`)
+    }
+  }
+  return lines.join(' · ')
+}
 
 // ─── Total column (row-level, base) ────────────────────────────────────────────
 const formatTotal = (row: PlanMatrixRow): string => {
@@ -197,13 +217,30 @@ const rowBaseKopecks = (row: PlanMatrixRow): number => {
 }
 
 // ─── ИТОГО footer per-column ───────────────────────────────────────────────────
+// Product-income (R6) footers show «Всего» = fact + expected (backend supplies it
+// in `total_kopecks`); the plan-oriented income/tasks grids show the plan sum. The
+// mode is derived from the matrix metric so the footer can never drift from the data.
+const isProductIncome = computed<boolean>(
+  () => props.matrix.meta.metric === 'product_income',
+)
+
+/** The money field a footer cell reports: `total_kopecks` for R6, else `plan_kopecks`. */
+const footerKopecks = (columnKey: string): number | null => {
+  const cell = props.matrix.totals[columnKey]
+  if (!cell) return null
+  if (isProductIncome.value) {
+    const total = (cell as ProductIncomeCell).total_kopecks
+    return total ?? null
+  }
+  return cell.plan_kopecks ?? null
+}
+
 const totalLabel = (columnKey: string): string => {
   const cell = props.matrix.totals[columnKey]
   if (!cell) return '—'
   if (props.isMoney) {
-    return cell.plan_kopecks != null
-      ? formatMkMoney(cell.plan_kopecks, props.matrix.meta.base_currency)
-      : '—'
+    const kopecks = footerKopecks(columnKey)
+    return kopecks != null ? formatMkMoney(kopecks, props.matrix.meta.base_currency) : '—'
   }
   return cell.plan_count != null ? String(cell.plan_count) : '—'
 }
@@ -212,10 +249,7 @@ const totalLabel = (columnKey: string): string => {
 const grandTotalLabel = computed<string>(() => {
   const monthCols = props.matrix.columns.filter((c) => c.period_month != null)
   if (props.isMoney) {
-    const sum = monthCols.reduce(
-      (acc, c) => acc + (props.matrix.totals[c.key]?.plan_kopecks ?? 0),
-      0,
-    )
+    const sum = monthCols.reduce((acc, c) => acc + (footerKopecks(c.key) ?? 0), 0)
     return formatMkMoney(sum, props.matrix.meta.base_currency)
   }
   const sum = monthCols.reduce(

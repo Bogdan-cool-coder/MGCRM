@@ -28,6 +28,26 @@ import type {
   BulkUpsertCellsPayload,
 } from '@/entities/planTargets'
 
+/**
+ * How a saved cell's scope FKs are stamped from its matrix row.
+ *
+ * Income / tasks plan per user (`scope_type='user'`, `scope_user_id` = row id).
+ * R6 «Поступления по линейкам» plans per product line (`scope_type='company'`,
+ * `scope_product_group_id` = row id). Pluggable so one core serves every scope.
+ */
+export interface CellScopeStamp {
+  scope_type: UpsertCellData['scope_type']
+  scope_user_id?: number | null
+  scope_pipeline_id?: number | null
+  scope_product_group_id?: number | null
+}
+
+/** Default (user-scoped) stamp — income + tasks grids plan per manager row. */
+const userScopeStamp = (row: PlanMatrixRow): CellScopeStamp => ({
+  scope_type: 'user',
+  scope_user_id: row.scope.id,
+})
+
 export interface PlanMatrixCoreDeps {
   /** Current matrix (null until loaded). */
   matrix: ComputedRef<PlanMatrixResponse | null>
@@ -35,6 +55,12 @@ export interface PlanMatrixCoreDeps {
   reload: () => Promise<void>
   /** Optional per-cell `config` bag (e.g. `{ activity_kind }` for tasks). */
   cellConfig?: () => Record<string, unknown> | undefined
+  /**
+   * Optional scope-FK stamp per saved cell. Defaults to user-scoped
+   * (`scope_type='user'`); R6 injects a product-group stamp so the same
+   * bulk-upsert path plans product lines (`scope_type='company'` + group FK).
+   */
+  cellScope?: (row: PlanMatrixRow) => CellScopeStamp
 }
 
 export const usePlanMatrixCore = (deps: PlanMatrixCoreDeps) => {
@@ -112,6 +138,7 @@ export const usePlanMatrixCore = (deps: PlanMatrixCoreDeps) => {
     const layer = matrix.value.meta.layer
     const year = matrix.value.meta.year
     const config = deps.cellConfig?.()
+    const stampScope = deps.cellScope ?? userScopeStamp
     const cells: UpsertCellData[] = []
 
     for (const [key, value] of dirty.entries()) {
@@ -126,8 +153,7 @@ export const usePlanMatrixCore = (deps: PlanMatrixCoreDeps) => {
 
       const base: UpsertCellData = {
         metric: matrix.value.meta.metric,
-        scope_type: 'user',
-        scope_user_id: row.scope.id,
+        ...stampScope(row),
         period_year: year,
         period_month: column.period_month,
         layer,

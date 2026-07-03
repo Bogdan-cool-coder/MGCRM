@@ -19,6 +19,8 @@ import type {
   TaskMatrixResponse,
   ConversionReportQuery,
   ConversionReportResponse,
+  ProductIncomeQuery,
+  ProductIncomeResponse,
 } from '@/entities/reports'
 
 /** R1 · GET /api/reports/registry — expected + squeeze registry. */
@@ -90,5 +92,18 @@ export const getConversionsReport = (
   if (query.scope_type != null) params.scope_type = query.scope_type
   return apiClient
     .get<ConversionReportResponse>('/api/reports/conversions', { params })
+    .then((r) => r.data)
+}
+
+/** R6 · GET /api/reports/product-income — Поступления по продуктовым линейкам. */
+export const getProductIncomeReport = (
+  query: ProductIncomeQuery,
+): Promise<ProductIncomeResponse> => {
+  const params: Record<string, unknown> = {
+    year: query.year,
+    layer: query.layer,
+  }
+  return apiClient
+    .get<ProductIncomeResponse>('/api/reports/product-income', { params })
     .then((r) => r.data)
 }

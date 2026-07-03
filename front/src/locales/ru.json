@@ -240,6 +240,7 @@
     "hub": {
       "title": "Аналитика продаж",
       "export": "Экспорт в Excel",
+      "export_soon": "Экспорт в Excel скоро будет доступен",
       "tab_overview": "Обзор",
       "tab_plans": "Планы",
       "tab_registry": "Реестр",
@@ -248,9 +249,14 @@
     },
     "plans": {
       "metric_income": "Поступления",
+      "metric_product": "Линейки",
       "metric_tasks": "Задачи",
       "metric_conversions": "Конверсии",
+      "breakdown": "Разрез",
+      "breakdown_by_user": "По сотрудникам",
+      "breakdown_by_product": "По линейкам",
       "col_employee": "Сотрудник",
+      "col_product_line": "Продуктовая линейка",
       "col_currency": "Валюта",
       "col_total": "Всего",
       "col_fact": "факт",
@@ -287,7 +293,12 @@
       "conv_fact": "Факт",
       "side_task": "Задача: {kind}",
       "side_deal": "Сделка: {status}",
-      "side_stage": "Этап #{id}"
+      "side_stage": "Этап #{id}",
+      "product_endpoint_missing": "Поступления по линейкам ещё не подключены на сервере — данные появятся после обновления бэкенда",
+      "product_empty_title": "Нет продуктовых линеек",
+      "product_empty_hint": "В каталоге нет продуктовых линеек для планирования поступлений",
+      "expected": "Ожидается",
+      "total_forecast": "Всего (прогноз)"
     },
     "registry": {
       "expected_title": "Ожидаемые поступления",

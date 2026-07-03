@@ -132,4 +132,25 @@ class PlanTargetFactory extends Factory
             'config' => ['numerator' => $numerator, 'denominator' => $denominator, 'unit' => 'pct'],
         ]);
     }
+
+    /**
+     * R6 product-income plan cell — money metric, always
+     * scope_type=company + scope_product_group_id set (contract §3.3, always
+     * company-wide per line, never per-manager for this sprint).
+     */
+    public function productIncome(int $productGroupId, int $kopecks, string $currency = 'RUB'): static
+    {
+        return $this->state([
+            'metric' => PlanMetric::ProductIncome,
+            'scope_type' => PlanScopeType::Company,
+            'scope_user_id' => null,
+            'scope_pipeline_id' => null,
+            'scope_product_group_id' => $productGroupId,
+            'scope_key' => 'pg:'.$productGroupId,
+            'value_kopecks' => $kopecks,
+            'value_count' => null,
+            'currency' => $currency,
+            'config' => null,
+        ]);
+    }
 }

@@ -213,7 +213,11 @@
   (2) `DS_STAGE_PALETTE` — 5 сырых hex продублированы литералами в JS (1:1 совпадают с `$stage-color-*`,
   но дрейф-риск от `_colors.scss`).
 
-## Analytics-hub (`analytics-hub-tz.md`) — РЕАЛИЗОВАН Ф1-скоупом, reviewer PASS-with-nits (2026-07-03)
+## Analytics-hub (`analytics-hub-tz.md`) — СПРИНТ ЗАВЕРШЁН (Ф1–Ф5 DONE, reviewer PASS 2026-07-04)
+- **Итог спринта «Планы и отчёты»:** все report-табы теперь живые (не стабы `TabComingSoon`): «Планы» (P-1 матрица + 4 метрики: НП/Поступления-по-линейкам/Задачи/Конверсии), «Реестр+Дожим» (R1), «График НП» (R2), «Рейтинг» (R3), + R4 «Закрытие задач» / R5 «Конверсии» / R6 «Поступления по линейкам». Ф5 добавил R6 + **Excel-экспорт всех отчётов** (кнопка «Экспорт в Excel» на report-табах + «Планы»; 7 export-роутов, blob-download через `@/utils/download`). Полный статус фаз + as-built — контракт `docs/contracts/plan-targets-api-contract.md` §9 и `PLAN.md` (строка «Планы и отчёты»). Следующее по контуру: Ф6 МК-линк, Ф7 payment-fact (post-Finance). `type-check`+`lint:ds`+3944 PHPUnit зелёные, QA e2e PASS.
+- **Dark-nit из Ф1-снапшота ниже — статус:** мёртвый `.app-dark &`-внутри-`:deep()` в `plans/PlanMatrix.vue` был отдельным треком; при финальном ревью Ф5 новый код (`MetricProductIncome.vue`) закон dark-селекторов соблюдает (top-level `.app-dark &`). Если исходный nit ещё в дереве — остаётся на frontender (не блок Ф5).
+
+### (историческое) Ф1-снапшот — reviewer PASS-with-nits (2026-07-03)
 - **Что сделано:** `DashboardPage/index.vue` переписан в хаб аналитики (таб-стрип `SelectButton` +
   `<keep-alive>` + `?tab=` + `AnalyticsFilterBar` сквозные фильтры). Старый Обзор перенесён **без
   изменений** в `TabOverview.vue` (те же 5 виджетов + `useDashboardPage` + `DashboardToolbar` — регресса

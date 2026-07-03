@@ -59,6 +59,26 @@ export const PLANS_REGISTER_METRIC_GUARD: InjectionKey<
   (guard: HubLeaveGuard | null) => void
 > = Symbol('plansRegisterMetricGuard')
 
+/**
+ * Excel-export descriptor for the currently shown «Планы» grid — the metric + scope
+ * the export endpoint needs (same query shape as `GET /api/plans/matrix`). `TabPlans`
+ * publishes the active metric; the product panel refines it with its inner breakdown
+ * (product line = company scope vs employee = user scope). The shell reads it to
+ * build the plans export request.
+ */
+export interface PlansExportDescriptor {
+  metric: string
+  scope_type: string
+}
+
+/**
+ * Provide/inject key: `TabPlans` (and its product panel) publish the active export
+ * descriptor here; the shell (`index.vue`) reads it to export the visible plans grid.
+ */
+export const PLANS_REGISTER_EXPORT: InjectionKey<
+  (descriptor: PlansExportDescriptor) => void
+> = Symbol('plansRegisterExport')
+
 export const useAnalyticsHub = () => {
   const { t } = useI18n()
   const toast = useToast()
@@ -127,9 +147,10 @@ export const useAnalyticsHub = () => {
     return true
   }
 
-  /** Report-style tabs surface the Excel export button (not overview/plans). */
+  /** Report-style tabs surface the Excel export button; Планы exports the visible
+   *  matrix too (matrix-export endpoint). Only Обзор has no export. */
   const showExport = computed<boolean>(() =>
-    (['registry', 'schedule', 'rating'] as HubTab[]).includes(activeTab.value),
+    (['plans', 'registry', 'schedule', 'rating'] as HubTab[]).includes(activeTab.value),
   )
 
   // ─── Period (month-stepper: year + month + granularity) ────────────────────

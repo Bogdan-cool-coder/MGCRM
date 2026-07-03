@@ -2,15 +2,17 @@
   <div class="dashboard-page">
     <PageHeader :title="t('dashboard.hub.title')" icon="pi pi-chart-bar">
       <template #actions>
-        <!-- Excel export lives on the report tabs (Ф2+). Hidden on Обзор/Планы. -->
+        <!-- Excel export lives on the report tabs. Backend export endpoints are
+             built in parallel — a 404 degrades to an info-toast «скоро» (live but
+             graceful), so the button is enabled on report tabs. -->
         <Button
           v-if="showExport"
           icon="pi pi-file-excel"
           :label="t('dashboard.hub.export')"
           severity="secondary"
           outlined
-          disabled
-          v-tooltip.bottom="t('common.coming_soon')"
+          :loading="exporting"
+          @click="onExport"
         />
       </template>
     </PageHeader>
@@ -83,8 +85,12 @@ import TabRating from './components/tabs/TabRating.vue'
 import {
   useAnalyticsHub,
   HUB_REGISTER_LEAVE_GUARD,
+  PLANS_REGISTER_EXPORT,
   type HubTab,
+  type PlansExportDescriptor,
 } from './composables/useAnalyticsHub'
+import { useAnalyticsExport } from './composables/useAnalyticsExport'
+import type { ReportExportParams } from '@/api/reportsExport'
 
 const { t } = useI18n()
 
@@ -115,6 +121,49 @@ const {
 // The dirty-capable tab (Планы) registers a leave guard through this provider so
 // switching tabs via the strip prompts before losing unsaved plan edits.
 provide(HUB_REGISTER_LEAVE_GUARD, registerLeaveGuard)
+
+// ─── Excel export (report + plans tabs) ──────────────────────────────────────
+const { exporting, exportTab } = useAnalyticsExport()
+
+// The Планы tab publishes the visible matrix's (metric, scope_type) here so the
+// plans export mirrors the current GET /api/plans/matrix query (metric + scope).
+const plansExport = ref<PlansExportDescriptor>({ metric: 'new_income', scope_type: 'user' })
+provide(PLANS_REGISTER_EXPORT, (d: PlansExportDescriptor) => {
+  plansExport.value = d
+})
+
+/** Build the export params slice relevant to the active tab. */
+const exportParams = (): ReportExportParams => {
+  switch (activeTab.value) {
+    case 'plans':
+      // Matrix export takes the same query as GET /api/plans/matrix: metric +
+      // scope_type of the visible grid + year/layer/pipeline (month is n/a).
+      return {
+        year: year.value,
+        layer: layer.value,
+        pipeline_id: pipelineId.value,
+        metric: plansExport.value.metric,
+        scope_type: plansExport.value.scope_type,
+      }
+    case 'registry':
+      return {
+        year: year.value,
+        month: month.value,
+        pipeline_id: pipelineId.value,
+        manager_id: managerId.value,
+      }
+    case 'schedule':
+      return { year: year.value, month: month.value, pipeline_id: pipelineId.value }
+    case 'rating':
+      return { year: year.value, pipeline_id: pipelineId.value }
+    default:
+      return {}
+  }
+}
+
+const onExport = (): void => {
+  void exportTab(activeTab.value, exportParams())
+}
 
 // PrimeVue SelectButton toggles its internal checked-state OPTIMISTICALLY before
 // the async leave guard resolves. On a veto («Остаться») the strip would stick

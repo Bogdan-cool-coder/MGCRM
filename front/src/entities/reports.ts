@@ -13,7 +13,9 @@ import type { PctBadge } from '@/entities/motivation'
 import type {
   PlanLayer,
   PlanScopeType,
+  PlanScopeRef,
   PlanMatrixColumn,
+  PlanMatrixCell,
   PlanMatrixRow,
   PlanMatrixTotals,
   PlanMatrixResponse,
@@ -346,3 +348,82 @@ export interface ConversionReportQuery {
   pipeline_id?: number | null
   scope_type?: PlanScopeType
 }
+
+// --- R6 · Product income (Поступления по линейкам) (§6.9) ---------------------
+
+export interface ProductIncomeMeta {
+  year: number
+  layer: PlanLayer
+  base_currency: string
+  /** "calculated on won deals, not on payment" badge basis. */
+  fact_source: string
+  multi_currency_warning: boolean
+  /** $user->can('plans.manage') — FE renders inputs only when true. */
+  can_edit: boolean
+}
+
+/**
+ * One R6 cell — richer than a plain income cell: it carries the SpaceCRM
+ * «Прогноз | Поступления» split (plan / expected / fact / total = fact+expected)
+ * plus the two scored ratios (total_pct = total/plan, fact_pct = fact/plan).
+ *
+ * The `plan_kopecks`/`fact_kopecks`/`pct`/`badge`/`plan_id`/`currency` subset is
+ * exactly a `PlanMatrixCell`, so a row adapts 1:1 to `PlanMatrixResponse` for the
+ * shared editing core; the extra fields drive the R6-specific display.
+ */
+export interface ProductIncomeCell extends PlanMatrixCell {
+  /** Open deals with expected_payment_date in the month, base kopecks. */
+  expected_kopecks?: number | null
+  /** fact + expected (SpaceCRM «Всего»), base kopecks. */
+  total_kopecks?: number | null
+  /** total / plan × 100. */
+  total_pct?: number | null
+  /** fact / plan × 100. */
+  fact_pct?: number | null
+}
+
+export interface ProductIncomeRow {
+  scope: PlanScopeRef
+  /** Keyed by column.key ("1".."12" | "annual"). */
+  cells: Record<string, ProductIncomeCell>
+}
+
+export type ProductIncomeTotals = Record<string, ProductIncomeCell>
+
+export interface ProductIncomeResponse {
+  meta: ProductIncomeMeta
+  columns: PlanMatrixColumn[]
+  rows: ProductIncomeRow[]
+  totals: ProductIncomeTotals
+}
+
+export interface ProductIncomeQuery {
+  year: number
+  layer: PlanLayer
+}
+
+/**
+ * Adapt an R6 product-income response to a `PlanMatrixResponse` so the shared
+ * PlanMatrix component + editing core render/edit it exactly like the income
+ * grid (money mode). The R6-only cell fields (expected/total/fact_pct) ride along
+ * on each cell (ProductIncomeCell extends PlanMatrixCell) for a richer display.
+ */
+export const productIncomeToMatrix = (
+  report: ProductIncomeResponse,
+): PlanMatrixResponse => ({
+  meta: {
+    metric: 'product_income',
+    scope_type: 'company',
+    layer: report.meta.layer,
+    year: report.meta.year,
+    pipeline_id: null,
+    value_kind: 'money',
+    base_currency: report.meta.base_currency,
+    fact_source: report.meta.fact_source,
+    multi_currency_warning: report.meta.multi_currency_warning,
+    can_edit: report.meta.can_edit,
+  },
+  columns: report.columns,
+  rows: report.rows,
+  totals: report.totals,
+})

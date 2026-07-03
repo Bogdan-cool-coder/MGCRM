@@ -11,6 +11,7 @@ use App\Domain\Sales\Enums\PlanLayer;
 use App\Domain\Sales\Enums\PlanMetric;
 use App\Domain\Sales\Enums\PlanScopeType;
 use App\Domain\Sales\Services\Planning\PlanTargetService;
+use App\Domain\Sales\Services\Reports\ReportExportService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\BulkUpsertCellsRequest;
 use App\Http\Requests\Sales\CopyPreviousPlanRequest;
@@ -19,16 +20,20 @@ use App\Http\Resources\Sales\PlanCellResource;
 use App\Http\Resources\Sales\PlanMatrixResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Thin controller for the plan matrix (P-1/P-2/P-3, contract §6.1-6.3).
- * Reads (index) are visibility-scoped in the Service, not gated; writes
+ * Thin controller for the plan matrix (P-1/P-2/P-3, contract §6.1-6.3) plus
+ * its Ф5 xlsx export (`GET /api/plans/matrix/export` — same query shape as
+ * `index`, frontend-requested alongside the report exports).
+ * Reads (index/export) are visibility-scoped in the Service, not gated; writes
  * (bulkUpsert/copyPrevious) sit behind `can:plans.manage` route middleware.
  */
 class PlanMatrixController extends Controller
 {
     public function __construct(
         private readonly PlanTargetService $planTargetService,
+        private readonly ReportExportService $exportService,
     ) {}
 
     /**
@@ -36,7 +41,35 @@ class PlanMatrixController extends Controller
      */
     public function index(PlanMatrixRequest $request): PlanMatrixResource
     {
-        $query = new PlanMatrixQuery(
+        $query = $this->queryFromRequest($request);
+
+        return new PlanMatrixResource($this->planTargetService->buildMatrix($query, $request->user()));
+    }
+
+    /**
+     * GET /api/plans/matrix/export — P-1 xlsx export (Ф5, frontend-aligned).
+     */
+    public function export(PlanMatrixRequest $request): StreamedResponse
+    {
+        $query = $this->queryFromRequest($request);
+        $xlsx = $this->exportService->exportPlanMatrix($query, $request->user());
+
+        return response()->streamDownload(
+            function () use ($xlsx): void {
+                echo $xlsx;
+            },
+            'plan-matrix.xlsx',
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="plan-matrix.xlsx"',
+                'Cache-Control' => 'no-store',
+            ]
+        );
+    }
+
+    private function queryFromRequest(PlanMatrixRequest $request): PlanMatrixQuery
+    {
+        return new PlanMatrixQuery(
             metric: PlanMetric::from($request->string('metric')->toString()),
             scopeType: PlanScopeType::from($request->string('scope_type')->toString()),
             layer: PlanLayer::from($request->string('layer')->toString()),
@@ -44,8 +77,6 @@ class PlanMatrixController extends Controller
             pipelineId: $request->filled('pipeline_id') ? $request->integer('pipeline_id') : null,
             month: $request->filled('month') ? $request->integer('month') : null,
         );
-
-        return new PlanMatrixResource($this->planTargetService->buildMatrix($query, $request->user()));
     }
 
     /**

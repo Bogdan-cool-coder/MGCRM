@@ -25,16 +25,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, provide, nextTick, inject, onMounted, onActivated, onDeactivated, onBeforeUnmount, type Component } from 'vue'
+import { ref, computed, provide, watch, nextTick, inject, onMounted, onActivated, onDeactivated, onBeforeUnmount, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SelectButton from 'primevue/selectbutton'
 import MetricIncome from '../plans/MetricIncome.vue'
+import MetricProductIncome from '../plans/MetricProductIncome.vue'
 import MetricTasks from '../plans/MetricTasks.vue'
 import MetricConversions from '../plans/MetricConversions.vue'
 import {
   HUB_REGISTER_LEAVE_GUARD,
   PLANS_REGISTER_METRIC_GUARD,
+  PLANS_REGISTER_EXPORT,
   type HubLeaveGuard,
+  type PlansExportDescriptor,
 } from '../../composables/useAnalyticsHub'
 import type { PlanLayer } from '@/entities/planTargets'
 
@@ -47,7 +50,7 @@ defineProps<{
 const { t } = useI18n()
 
 /** Metric sub-tab (local state — the metric panel owns its own data/dirty-set). */
-type PlanMetricTab = 'income' | 'tasks' | 'conversions'
+type PlanMetricTab = 'income' | 'product' | 'tasks' | 'conversions'
 const metricTab = ref<PlanMetricTab>('income')
 
 interface MetricOption {
@@ -57,12 +60,14 @@ interface MetricOption {
 
 const metricOptions = computed<MetricOption[]>(() => [
   { label: t('dashboard.plans.metric_income'), value: 'income' },
+  { label: t('dashboard.plans.metric_product'), value: 'product' },
   { label: t('dashboard.plans.metric_tasks'), value: 'tasks' },
   { label: t('dashboard.plans.metric_conversions'), value: 'conversions' },
 ])
 
 const METRIC_COMPONENTS: Record<PlanMetricTab, Component> = {
   income: MetricIncome,
+  product: MetricProductIncome,
   tasks: MetricTasks,
   conversions: MetricConversions,
 }
@@ -87,6 +92,33 @@ onMounted(() => hubRegister?.(forwardGuard))
 onActivated(() => hubRegister?.(forwardGuard))
 onDeactivated(() => hubRegister?.(null))
 onBeforeUnmount(() => hubRegister?.(null))
+
+// ─── Export descriptor bridge ───────────────────────────────────────────────
+// Publish the active metric's (metric, scope_type) to the shell so its Excel
+// button exports the visible plans matrix via `/api/plans/matrix/export`. The
+// product panel refines its own entry (breakdown = company vs user scope) through
+// the same injected register, so its publish wins after mounting.
+const hubExport = inject(PLANS_REGISTER_EXPORT, null)
+
+/** Static metric → export query descriptor (product refined by its own panel). */
+const METRIC_EXPORT: Record<PlanMetricTab, PlansExportDescriptor> = {
+  income: { metric: 'new_income', scope_type: 'user' },
+  product: { metric: 'product_income', scope_type: 'company' },
+  tasks: { metric: 'tasks_completed', scope_type: 'user' },
+  conversions: { metric: 'conversion', scope_type: 'user' },
+}
+
+const publishExport = (): void => {
+  const d = METRIC_EXPORT[metricTab.value]
+  hubExport?.({ ...d })
+}
+watch(metricTab, publishExport)
+onMounted(publishExport)
+onActivated(publishExport)
+
+// Provide down so the product panel can override the descriptor for its inner
+// breakdown (product line → company scope; employee → user scope).
+provide(PLANS_REGISTER_EXPORT, (d: PlansExportDescriptor) => hubExport?.(d))
 
 // PrimeVue SelectButton toggles its checked-state optimistically before the async
 // guard resolves; on a veto we bump this key to re-create the strip so the
