@@ -9,7 +9,9 @@ use App\Domain\Crm\Services\CountryService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\StoreCountryRequest;
 use App\Http\Requests\Crm\UpdateCountryRequest;
+use App\Http\Requests\Shared\ReorderDirectoryRequest;
 use App\Http\Resources\Crm\CountryResource;
+use App\Support\SortOrderReorderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,6 +35,21 @@ class CountryController extends Controller
         $activeOnly = $request->boolean('active_only');
 
         return CountryResource::collection($this->service->list($activeOnly));
+    }
+
+    /**
+     * PATCH /admin/countries/reorder
+     *
+     * Drag-and-drop reorder. Array order of items[] wins; sort_order is renumbered
+     * 1..n (see SortOrderReorderer). Admin/director only (admin-write gate).
+     */
+    public function reorder(ReorderDirectoryRequest $request): JsonResponse
+    {
+        $this->authorize('admin-write');
+
+        SortOrderReorderer::apply(Country::class, $request->orderedIds());
+
+        return response()->json(['message' => 'Order updated.']);
     }
 
     public function store(StoreCountryRequest $request): JsonResource

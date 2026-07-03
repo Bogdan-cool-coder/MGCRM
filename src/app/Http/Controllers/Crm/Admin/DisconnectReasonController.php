@@ -8,7 +8,9 @@ use App\Domain\Crm\Models\DisconnectReason;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\StoreDisconnectReasonRequest;
 use App\Http\Requests\Crm\UpdateDisconnectReasonRequest;
+use App\Http\Requests\Shared\ReorderDirectoryRequest;
 use App\Http\Resources\Crm\DisconnectReasonResource;
+use App\Support\SortOrderReorderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,6 +33,21 @@ class DisconnectReasonController extends Controller
             ->get();
 
         return DisconnectReasonResource::collection($reasons);
+    }
+
+    /**
+     * PATCH /admin/disconnect-reasons/reorder
+     *
+     * Drag-and-drop reorder. Array order of items[] wins; sort_order is renumbered
+     * 1..n (see SortOrderReorderer). Admin/director only (admin-write gate).
+     */
+    public function reorder(ReorderDirectoryRequest $request): JsonResponse
+    {
+        $this->authorize('admin-write');
+
+        SortOrderReorderer::apply(DisconnectReason::class, $request->orderedIds());
+
+        return response()->json(['message' => 'Order updated.']);
     }
 
     public function store(StoreDisconnectReasonRequest $request): JsonResource

@@ -123,4 +123,47 @@ class UserDirectoryTest extends TestCase
 
         $this->getJson('/api/users')->assertStatus(403);
     }
+
+    // -------------------------------------------------------------------------
+    // ?role= / ?managed_by= — Motivation Cards manager AutoComplete (contract §6.5)
+    // -------------------------------------------------------------------------
+
+    public function test_role_filter_returns_only_matching_role(): void
+    {
+        $me = User::factory()->create(['full_name' => 'Admin One', 'role' => Role::Admin]);
+        User::factory()->create(['full_name' => 'Manager Two', 'role' => Role::Manager]);
+        User::factory()->create(['full_name' => 'Director Three', 'role' => Role::Director]);
+        Sanctum::actingAs($me, ['*']);
+
+        $this->getJson('/api/users?role=manager')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.full_name', 'Manager Two');
+    }
+
+    public function test_managed_by_me_scopes_to_own_subordinates(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $sub = User::factory()->create(['full_name' => 'My Sub', 'role' => Role::Manager, 'manager_id' => $director->id]);
+        User::factory()->create(['full_name' => 'Not My Sub', 'role' => Role::Manager]);
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/users?managed_by=me')->assertOk();
+
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.full_name', 'My Sub');
+    }
+
+    public function test_managed_by_id_scopes_to_that_leaders_subordinates(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $director = User::factory()->create(['role' => Role::Director]);
+        User::factory()->create(['full_name' => 'Their Sub', 'role' => Role::Manager, 'manager_id' => $director->id]);
+        Sanctum::actingAs($admin, ['*']);
+
+        $this->getJson("/api/users?managed_by={$director->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.full_name', 'Their Sub');
+    }
 }

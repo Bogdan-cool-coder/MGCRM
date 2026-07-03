@@ -113,6 +113,38 @@ class RolePermissionSeederTest extends TestCase
         $this->assertTrue($manager->can('view-manager-cabinet'));
     }
 
+    public function test_motivation_manage_granted_to_admin_and_director_only(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $admin = SpatieRole::findByName(Role::Admin->value, 'sanctum');
+        $director = SpatieRole::findByName(Role::Director->value, 'sanctum');
+        $manager = SpatieRole::findByName(Role::Manager->value, 'sanctum');
+        $accountant = SpatieRole::findByName(Role::Accountant->value, 'sanctum');
+
+        $this->assertTrue($admin->hasPermissionTo('motivation.manage'));
+        $this->assertTrue($director->hasPermissionTo('motivation.manage'));
+        $this->assertFalse($manager->hasPermissionTo('motivation.manage'));
+        $this->assertFalse($accountant->hasPermissionTo('motivation.manage'));
+    }
+
+    public function test_motivation_status_granted_to_accountant_director_admin(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $admin = SpatieRole::findByName(Role::Admin->value, 'sanctum');
+        $director = SpatieRole::findByName(Role::Director->value, 'sanctum');
+        $accountant = SpatieRole::findByName(Role::Accountant->value, 'sanctum');
+        $manager = SpatieRole::findByName(Role::Manager->value, 'sanctum');
+        $cfo = SpatieRole::findByName(Role::Cfo->value, 'sanctum');
+
+        $this->assertTrue($admin->hasPermissionTo('motivation.status'));
+        $this->assertTrue($director->hasPermissionTo('motivation.status'));
+        $this->assertTrue($accountant->hasPermissionTo('motivation.status'));
+        $this->assertFalse($manager->hasPermissionTo('motivation.status'));
+        $this->assertFalse($cfo->hasPermissionTo('motivation.status'));
+    }
+
     public function test_admin_seeder_creates_dev_admin_with_role(): void
     {
         $this->seed(RolePermissionSeeder::class);

@@ -96,9 +96,11 @@ use App\Domain\Sales\Events\DealCreated;
 use App\Domain\Sales\Events\DealStageChanged;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
+use App\Domain\Sales\Models\MotivationCard;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Policies\DealPolicy;
 use App\Domain\Sales\Policies\LostReasonPolicy;
+use App\Domain\Sales\Policies\MotivationCardPolicy;
 use App\Domain\Sales\Policies\PipelinePolicy;
 use App\Domain\SalesPulse\Contracts\PulseLlmClient;
 use App\Domain\SalesPulse\Services\PrismPulseLlmClient;
@@ -193,6 +195,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Deal::class, DealPolicy::class);
         Gate::policy(Pipeline::class, PipelinePolicy::class);
         Gate::policy(LostReason::class, LostReasonPolicy::class);
+
+        // Sales Policies — Motivation Cards (МК, Sales sprint Phase A)
+        Gate::policy(MotivationCard::class, MotivationCardPolicy::class);
 
         // Activity Policies
         Gate::policy(Activity::class, ActivityPolicy::class);

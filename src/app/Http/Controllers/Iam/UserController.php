@@ -14,9 +14,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  * Read-only colleague directory (Iam context).
  *
  * Feeds assign / responsible dropdowns on the front (e.g. the "Исполнитель"
- * select in ActivityFormDialog). It is a reference list of co-workers, so it is
- * open to any authenticated user — no per-row policy. The list is intentionally
- * thin: active users only, safe fields only (UserOptionResource never exposes
+ * select in ActivityFormDialog) and the Motivation Cards manager AutoComplete
+ * (contract §6.5). It is a reference list of co-workers, so it is open to any
+ * authenticated user — no per-row policy. The list is intentionally thin:
+ * active users only, safe fields only (UserOptionResource never exposes
  * secrets). A simple data-wrapped array (no pagination) matches the front's
  * usage in front/src/api/users.ts (res.data.data → flat list).
  */
@@ -25,6 +26,8 @@ class UserController extends Controller
     public function index(UserIndexRequest $request): AnonymousResourceCollection
     {
         $search = $request->validated('search');
+        $role = $request->validated('role');
+        $managedBy = $request->validated('managed_by');
 
         $users = User::query()
             ->where('is_active', true)
@@ -43,6 +46,21 @@ class UserController extends Controller
                         $q->whereRaw('LOWER(full_name) LIKE ?', [$needle])
                             ->orWhereRaw('LOWER(email) LIKE ?', [$needle]);
                     });
+                }
+            )
+            // ?role=manager — spatie role filter (contract §6.5 B-5).
+            ->when(
+                $role !== null && $role !== '',
+                fn ($query) => $query->role($role)
+            )
+            // ?managed_by=me|<id> — scope to a leader's subordinates
+            // (manager_id = the resolved leader). "me" self-scopes to the
+            // caller, so no extra gate is needed (contract §6.5 / ОВ-3).
+            ->when(
+                $managedBy !== null && $managedBy !== '',
+                function ($query) use ($managedBy, $request): void {
+                    $leaderId = $managedBy === 'me' ? $request->user()->id : (int) $managedBy;
+                    $query->where('manager_id', $leaderId);
                 }
             )
             ->orderBy('full_name')

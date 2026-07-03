@@ -100,6 +100,8 @@ use App\Http\Controllers\Sales\DealKpiController;
 use App\Http\Controllers\Sales\DealProductController;
 use App\Http\Controllers\Sales\LostReasonController;
 use App\Http\Controllers\Sales\ManagerCabinetController;
+use App\Http\Controllers\Sales\Motivation\MotivationCardController;
+use App\Http\Controllers\Sales\Motivation\MotivationPlanController;
 use App\Http\Controllers\Sales\PipelineController;
 use App\Http\Controllers\Sales\PipelineStageController;
 use App\Http\Controllers\System\SystemResetController;
@@ -490,6 +492,19 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
         Route::get('visibility-config', [VisibilityConfigController::class, 'index'])->name('visibility-config.index');
         Route::patch('visibility-config', [VisibilityConfigController::class, 'update'])->name('visibility-config.update');
 
+        // Directory drag-and-drop reorder (settings-gaps ОВ-3, gap 2). Flat
+        // sort_order renumber; the items[] array order is authoritative (see
+        // App\Support\SortOrderReorderer). Only directories whose schema actually
+        // has a sort_order column expose a reorder route (countries /
+        // acquisition-channels / disconnect-reasons / tags here; lost-reasons in
+        // the Sales group). These are collection-level static PATCH paths (no
+        // {param}) so they cannot be swallowed as an id, but are declared before
+        // the apiResource writes for clarity.
+        Route::patch('countries/reorder', [CountryController::class, 'reorder'])->name('countries.reorder');
+        Route::patch('acquisition-channels/reorder', [AcquisitionChannelController::class, 'reorder'])->name('acquisition-channels.reorder');
+        Route::patch('disconnect-reasons/reorder', [DisconnectReasonController::class, 'reorder'])->name('disconnect-reasons.reorder');
+        Route::patch('tags/reorder', [TagController::class, 'reorder'])->name('tags.reorder');
+
         // Directory write verbs (store/update/destroy) — admin/director only.
         Route::apiResource('company-types', CompanyTypeController::class)
             ->only(['store', 'update', 'destroy'])
@@ -551,6 +566,33 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     });
 
     // =========================================================================
+    // Motivation Cards (МК, Sales sprint — Phase A)
+    // =========================================================================
+    // Cabinet (read) — visibility scope matches the S1.8 manager cabinet:
+    // manager → own only; director/admin → any (ManagerKpiService::resolveTargetUser).
+    Route::prefix('motivation')->name('motivation.')->group(function (): void {
+        Route::get('cards/me', [MotivationCardController::class, 'me'])->name('cards.me');
+    });
+
+    // Constructor (write) — plan authoring, admin/director only (motivation.manage).
+    Route::prefix('admin/motivation')->name('admin.motivation.')->middleware('can:motivation.manage')->group(function (): void {
+        Route::get('plans/{userId}/{year}/{month}', [MotivationPlanController::class, 'show'])
+            ->whereNumber(['userId', 'year', 'month'])
+            ->name('plans.show');
+        Route::post('plans', [MotivationPlanController::class, 'store'])->name('plans.store');
+        Route::post('plans/copy-previous', [MotivationPlanController::class, 'copyPrevious'])->name('plans.copy-previous');
+    });
+
+    // Status transitions — deliberately OUTSIDE the motivation.manage group: the
+    // motivation.status permission is granted to a BROADER role set (accountant,
+    // director, admin) than motivation.manage (admin/director only, contract §3.4).
+    // The FormRequest's authorize() checks MotivationCardPolicy::transitionStatus.
+    Route::prefix('admin/motivation')->name('admin.motivation.')->group(function (): void {
+        Route::post('plans/{card}/finalize', [MotivationPlanController::class, 'finalize'])->name('plans.finalize');
+        Route::post('plans/{card}/mark-paid', [MotivationPlanController::class, 'markPaid'])->name('plans.mark-paid');
+    });
+
+    // =========================================================================
     // Notifications — in-app flyout (task #9). Always scoped to the caller.
     // =========================================================================
     Route::prefix('notifications')->name('notifications.')->group(function (): void {
@@ -599,6 +641,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     Route::get('lost-reasons', [LostReasonController::class, 'index'])->name('lost-reasons.index');
     Route::post('lost-reasons', [LostReasonController::class, 'store'])->name('lost-reasons.store');
+    // Drag-and-drop reorder (ОВ-3). MUST precede {lostReason} so 'reorder' is not
+    // bound as a lost-reason id.
+    Route::patch('lost-reasons/reorder', [LostReasonController::class, 'reorder'])->name('lost-reasons.reorder');
     Route::patch('lost-reasons/{lostReason}', [LostReasonController::class, 'update'])->name('lost-reasons.update');
     Route::delete('lost-reasons/{lostReason}', [LostReasonController::class, 'destroy'])->name('lost-reasons.destroy');
 

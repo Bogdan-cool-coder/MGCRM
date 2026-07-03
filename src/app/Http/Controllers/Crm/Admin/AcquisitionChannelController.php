@@ -8,7 +8,9 @@ use App\Domain\Crm\Models\AcquisitionChannel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\StoreAcquisitionChannelRequest;
 use App\Http\Requests\Crm\UpdateAcquisitionChannelRequest;
+use App\Http\Requests\Shared\ReorderDirectoryRequest;
 use App\Http\Resources\Crm\AcquisitionChannelResource;
+use App\Support\SortOrderReorderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,6 +33,21 @@ class AcquisitionChannelController extends Controller
             ->get();
 
         return AcquisitionChannelResource::collection($channels);
+    }
+
+    /**
+     * PATCH /admin/acquisition-channels/reorder
+     *
+     * Drag-and-drop reorder. Array order of items[] wins; sort_order is renumbered
+     * 1..n (see SortOrderReorderer). Admin/director only (admin-write gate).
+     */
+    public function reorder(ReorderDirectoryRequest $request): JsonResponse
+    {
+        $this->authorize('admin-write');
+
+        SortOrderReorderer::apply(AcquisitionChannel::class, $request->orderedIds());
+
+        return response()->json(['message' => 'Order updated.']);
     }
 
     public function store(StoreAcquisitionChannelRequest $request): JsonResource

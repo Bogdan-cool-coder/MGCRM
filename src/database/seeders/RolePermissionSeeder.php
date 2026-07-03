@@ -134,6 +134,15 @@ class RolePermissionSeeder extends Seeder
      *   automation.webhook.configure — configure an outbound-webhook automation
      *                                  action (data-exfiltration surface). admin
      *
+     *   --- Motivation Cards (МК, Sales sprint, Phase A) ---
+     *   motivation.manage            — constructor: create/edit plan (header +
+     *                                  items + team_kpi_rule), copy-previous.
+     *                                                               admin, director
+     *   motivation.status            — status transitions (draft→finalized→paid).
+     *                                  A broader set than motivation.manage:
+     *                                  accountant can move status but cannot edit
+     *                                  the plan.               accountant, director, admin
+     *
      * @var list<string>
      */
     private const DOMAIN_PERMISSIONS = [
@@ -151,6 +160,8 @@ class RolePermissionSeeder extends Seeder
         'manager-cabinet.view-all',
         'onboarding.manage',
         'automation.webhook.configure',
+        'motivation.manage',
+        'motivation.status',
     ];
 
     /**
@@ -247,6 +258,7 @@ class RolePermissionSeeder extends Seeder
                 'inbox.manage',
                 'pipelines.manage', 'pipelines.view-all', 'manager-cabinet.view-all',
                 'onboarding.manage',
+                'motivation.manage', 'motivation.status',
             ],
 
             // Contracts / legal, elevated read across operations. No operational
@@ -274,13 +286,17 @@ class RolePermissionSeeder extends Seeder
                 'contracts.templates.use',
             ],
 
-            // Finance: data entry / posting / manual journals.
+            // Finance: data entry / posting / manual journals. Also carries
+            // motivation.status (МК contract §3.4): accountant can advance a
+            // Motivation Card's status (draft→finalized→paid) but cannot edit
+            // the plan itself (motivation.manage is admin/director only).
             Role::Accountant->value => [
                 'finance.view',
                 'finance.entry',
                 'finance.posting',
                 'finance.journals.manual',
                 'analytics.view',
+                'motivation.status',
             ],
 
             // Finance: + payments approval, period close, settings, mgmt reports.

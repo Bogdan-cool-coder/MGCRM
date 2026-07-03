@@ -9,7 +9,9 @@ use App\Domain\Crm\Services\TagService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\StoreTagRequest;
 use App\Http\Requests\Crm\UpdateTagRequest;
+use App\Http\Requests\Shared\ReorderDirectoryRequest;
 use App\Http\Resources\Crm\TagResource;
+use App\Support\SortOrderReorderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -41,6 +43,22 @@ class TagController extends Controller
     public function show(Request $request, Tag $tag): JsonResource
     {
         return TagResource::make($tag);
+    }
+
+    /**
+     * PATCH /admin/tags/reorder
+     *
+     * Drag-and-drop reorder. Array order of items[] wins; sort_order is renumbered
+     * 1..n (see SortOrderReorderer). Reorders the whole tag directory as displayed;
+     * scope is not a partition here. Admin/director only (admin-write gate).
+     */
+    public function reorder(ReorderDirectoryRequest $request): JsonResponse
+    {
+        $this->authorize('admin-write');
+
+        SortOrderReorderer::apply(Tag::class, $request->orderedIds());
+
+        return response()->json(['message' => 'Order updated.']);
     }
 
     public function store(StoreTagRequest $request): JsonResource
