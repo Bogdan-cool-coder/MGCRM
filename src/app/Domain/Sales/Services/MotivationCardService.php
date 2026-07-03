@@ -432,12 +432,62 @@ class MotivationCardService
         $salaryPlanKopecks = $item->salary_plan_kopecks;
         $salaryFactKopecks = $item->salary_fact_kopecks;
 
+        // Fix #35: salary_plan was NEVER derived for any kind (only commission's
+        // salary_fact was) — so an item saved with only plan_amount_kopecks filled
+        // (the common constructor path) rendered salary_plan=0 in the cabinet total,
+        // even though a real plan existed. Manual entry (storage != 0) always wins —
+        // every branch below only fires when the stored column is still 0.
         if ($item->kind === MotivationCardItemKind::Commission) {
             $ratePctTimes100 = (int) ($params['rate_pct_times_100'] ?? 0);
-            $computedCommission = $this->commissionKopecks($factAmountKopecks, $ratePctTimes100);
+
+            if ($salaryPlanKopecks === 0) {
+                // Plan-side ЗП = rate × plan indicator (mirrors the fact-side formula).
+                $salaryPlanKopecks = $this->commissionKopecks($item->plan_amount_kopecks, $ratePctTimes100);
+            }
 
             if ($salaryFactKopecks === 0) {
-                $salaryFactKopecks = $computedCommission;
+                $salaryFactKopecks = $this->commissionKopecks($factAmountKopecks, $ratePctTimes100);
+            }
+        } elseif ($item->kind === MotivationCardItemKind::BaseSalary || $item->kind === MotivationCardItemKind::Bonus) {
+            // Оклад / flat bonus is always paid in full — plan salary = plan
+            // indicator; fact salary = plan indicator too (contract §6.1 example:
+            // "Оклад" plan_amount == salary_plan == salary_fact when unpaid-yet).
+            if ($salaryPlanKopecks === 0) {
+                $salaryPlanKopecks = $item->plan_amount_kopecks;
+            }
+
+            if ($salaryFactKopecks === 0) {
+                $salaryFactKopecks = $item->plan_amount_kopecks;
+            }
+        } elseif ($item->kind === MotivationCardItemKind::Kpi) {
+            $kpiType = $params['kpi_type'] ?? 'count';
+
+            if ($kpiType === 'count') {
+                $planCount = (int) ($params['plan_count'] ?? 0);
+                $perCompletion = (int) ($params['salary_per_completion_kopecks'] ?? 0);
+
+                if ($salaryPlanKopecks === 0) {
+                    $salaryPlanKopecks = $planCount * $perCompletion;
+                }
+            } elseif ($kpiType === 'amount') {
+                // Money-denominated indicator: the plan salary IS the plan amount
+                // (same "paid if plan is met" logic as base_salary/bonus).
+                if ($salaryPlanKopecks === 0) {
+                    $salaryPlanKopecks = $item->plan_amount_kopecks;
+                }
+            } elseif ($kpiType === 'manual') {
+                // Binary done/not-done: the planned payout is the full completion
+                // bonus (mirrors count's plan_count=1 case); fact only pays out
+                // once manual_done is actually true.
+                $perCompletion = (int) ($params['salary_per_completion_kopecks'] ?? 0);
+
+                if ($salaryPlanKopecks === 0) {
+                    $salaryPlanKopecks = $perCompletion;
+                }
+
+                if ($salaryFactKopecks === 0 && ($params['manual_done'] ?? false) === true) {
+                    $salaryFactKopecks = $perCompletion;
+                }
             }
         }
 

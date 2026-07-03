@@ -110,6 +110,14 @@ Table `motivation_card_items`. One card has 0..N items (one per enabled position
 | `fact_amount_kopecks` | bigint, default 0 | the *indicator* fact — Phase A manual; interim engine may fill from won_deals |
 | `salary_plan_kopecks` | bigint, default 0 | ЗП plan for this row (money paid if plan met) |
 | `salary_fact_kopecks` | bigint, default 0 | ЗП fact for this row (computed or manual) |
+
+> **As-built (fix #35):** stored 0 in either `salary_plan_kopecks`/`salary_fact_kopecks` means "not manually
+> entered" and is derived on read by `MotivationCardService::computeItemRow` — manual entry (non-zero) always
+> wins. `base_salary`/`bonus`: plan=fact=`plan_amount_kopecks` (always paid in full). `commission`: plan =
+> `commissionKopecks(plan_amount_kopecks, rate)`, fact = `commissionKopecks(fact_amount_kopecks, rate)`. `kpi`
+> `count`: plan = `plan_count × salary_per_completion_kopecks`. `kpi` `amount`: plan = `plan_amount_kopecks`. `kpi`
+> `manual`: plan = `salary_per_completion_kopecks`, fact = same only when `manual_done=true`. `team_kpi`: untouched
+> (its payout lives in `team_bonus_forecast`, not this per-item derive).
 | `currency` | string(3), default base | currency the indicator plan/fact are denominated in (multi-currency, §4.4) |
 | `params` | jsonb, nullable | flexible bag — see §2.2.1 |
 | `sort` | smallint, default 0 | row order in the card |
@@ -334,6 +342,10 @@ public function gatePassed(int $teamFactKopecks, int $teamTargetKopecks, int $mi
 
 **Rounding:** round-half-up, done in integer arithmetic (`intdiv` with +half, or reuse the bcmath pattern in
 `ExchangeRateService::convertAmount`). **#DIV/0 → 0** everywhere a denominator can be zero (plan §8 A2, §11.6).
+
+> **As-built (fix #35):** these pure helpers only cover the money/split math — `salary_plan_kopecks`/
+> `salary_fact_kopecks` per-row derivation (when the stored column is 0, i.e. not manually entered) is a
+> separate per-kind rule set in `MotivationCardService::computeItemRow`, documented at §2.2 above.
 
 ### 4.4 Multi-currency
 

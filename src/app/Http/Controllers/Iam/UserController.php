@@ -25,7 +25,9 @@ class UserController extends Controller
 {
     public function index(UserIndexRequest $request): AnonymousResourceCollection
     {
-        $search = $request->validated('search');
+        // ?q= is the Motivation Cards AutoComplete alias for ?search= — coalesce
+        // so both keys drive the same name/email filter (contract §6.5 / §7.2).
+        $search = $request->validated('search') ?? $request->validated('q');
         $role = $request->validated('role');
         $managedBy = $request->validated('managed_by');
 

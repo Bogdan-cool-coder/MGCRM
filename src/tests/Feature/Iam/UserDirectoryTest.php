@@ -96,6 +96,21 @@ class UserDirectoryTest extends TestCase
             ->assertJsonPath('data.0.email', 'finder@mgcrm.test');
     }
 
+    public function test_q_alias_filters_like_search(): void
+    {
+        // The Motivation Cards AutoComplete sends the typed term as ?q= (not
+        // ?search=). Both must resolve to the same name/email filter, otherwise
+        // the constructor lists every manager regardless of input.
+        $me = User::factory()->create(['full_name' => 'Elena Ross', 'role' => Role::Manager]);
+        User::factory()->create(['full_name' => 'Frank Castle', 'role' => Role::Manager]);
+        Sanctum::actingAs($me, ['*']);
+
+        $this->getJson('/api/users?role=manager&q=elena')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.full_name', 'Elena Ross');
+    }
+
     public function test_index_never_exposes_secrets(): void
     {
         $me = User::factory()
