@@ -1,0 +1,176 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Sales;
+
+use App\Domain\Activity\Models\Activity;
+use App\Domain\Iam\Enums\Role;
+use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Models\DealStageHistory;
+use App\Domain\Sales\Models\Pipeline;
+use App\Domain\Sales\Models\PipelineStage;
+use App\Domain\Sales\Models\PlanTarget;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+/**
+ * Feature tests for GET /api/reports/conversions (R5, contract §6.8):
+ * custom task/deal pairs (from plan_targets.config) — the honest stage block
+ * is covered separately by StageConversionReportTest.
+ */
+class ConversionReportTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function makeManager(): User
+    {
+        return User::factory()->create(['role' => Role::Manager, 'is_active' => true, 'is_service' => false]);
+    }
+
+    public function test_task_over_task_pair_computes_fact_pct_from_completed_activity_counts(): void
+    {
+        $manager = $this->makeManager();
+
+        PlanTarget::factory()->forUser($manager->id)->forPeriod(2026, 3)
+            ->conversion(
+                ['type' => 'task', 'kind' => 'meeting'],
+                ['type' => 'task', 'kind' => 'call'],
+                50,
+            )->create();
+
+        // 2 calls, 1 meeting → fact 50%.
+        Activity::factory()->call()->responsibleOf($manager)->completed()->create(['completed_at' => '2026-03-01']);
+        Activity::factory()->call()->responsibleOf($manager)->completed()->create(['completed_at' => '2026-03-02']);
+        Activity::factory()->meeting()->responsibleOf($manager)->completed()->create(['completed_at' => '2026-03-03']);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/conversions?year=2026&layer=operative')->assertOk();
+
+        $pair = collect($response->json('custom'))->first();
+        $this->assertNotNull($pair);
+        $this->assertSame(1, $pair['cells']['3']['num_count']);
+        $this->assertSame(2, $pair['cells']['3']['den_count']);
+        $this->assertSame(50, $pair['cells']['3']['fact_pct']);
+        $this->assertSame(50, $pair['cells']['3']['plan_pct']);
+        // fact matches plan exactly → scorePct(50,50) = 100 → success.
+        $this->assertSame(100, $pair['cells']['3']['pct']);
+        $this->assertSame('success', $pair['cells']['3']['badge']);
+    }
+
+    public function test_task_over_deal_pair_uses_won_deal_count_as_denominator(): void
+    {
+        $manager = $this->makeManager();
+        $wonStage = PipelineStage::factory()->create(['is_won' => true, 'is_lost' => false]);
+
+        PlanTarget::factory()->forUser($manager->id)->forPeriod(2026, 4)
+            ->conversion(
+                ['type' => 'task', 'kind' => 'presentation'],
+                ['type' => 'deal', 'status' => 'won'],
+                25,
+            )->create();
+
+        Deal::factory()->forOwner($manager)->inStage($wonStage)->create([
+            'amount' => 100_000_00, 'currency' => 'RUB', 'stage_changed_at' => '2026-04-10',
+        ]);
+        Activity::factory()->presentation()->responsibleOf($manager)->completed()->create(['completed_at' => '2026-04-05']);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/conversions?year=2026&layer=operative')->assertOk();
+
+        $pair = collect($response->json('custom'))->first();
+        $this->assertSame(1, $pair['cells']['4']['num_count']);
+        $this->assertSame(1, $pair['cells']['4']['den_count']);
+        $this->assertSame(100, $pair['cells']['4']['fact_pct']);
+    }
+
+    public function test_zero_denominator_yields_null_fact_pct(): void
+    {
+        $manager = $this->makeManager();
+
+        PlanTarget::factory()->forUser($manager->id)->forPeriod(2026, 5)
+            ->conversion(
+                ['type' => 'task', 'kind' => 'meeting'],
+                ['type' => 'task', 'kind' => 'call'],
+                50,
+            )->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/conversions?year=2026&layer=operative')->assertOk();
+
+        $pair = collect($response->json('custom'))->first();
+        $this->assertNull($pair['cells']['5']['fact_pct']);
+        $this->assertSame(0, $pair['cells']['5']['den_count']);
+    }
+
+    public function test_no_custom_pairs_returns_empty_custom_array(): void
+    {
+        $manager = $this->makeManager();
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/conversions?year=2026&layer=operative')->assertOk();
+
+        $this->assertSame([], $response->json('custom'));
+    }
+
+    public function test_no_pipeline_id_returns_empty_stage_block(): void
+    {
+        $manager = $this->makeManager();
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/conversions?year=2026&layer=operative')->assertOk();
+
+        $this->assertSame([], $response->json('stage'));
+    }
+
+    public function test_pipeline_id_embeds_the_honest_stage_chain(): void
+    {
+        $manager = $this->makeManager();
+        $pipeline = Pipeline::factory()->create();
+        $stageA = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'sort_order' => 1, 'is_won' => false, 'is_lost' => false]);
+        $stageB = PipelineStage::factory()->create(['pipeline_id' => $pipeline->id, 'sort_order' => 2, 'is_won' => true, 'is_lost' => false]);
+
+        $deal = Deal::factory()->forOwner($manager)->inStage($stageA)->create();
+        DealStageHistory::create([
+            'deal_id' => $deal->id, 'from_stage_id' => null, 'to_stage_id' => $stageA->id,
+            'user_id' => $manager->id, 'created_at' => '2026-06-01 09:00:00',
+        ]);
+        DealStageHistory::create([
+            'deal_id' => $deal->id, 'from_stage_id' => $stageA->id, 'to_stage_id' => $stageB->id,
+            'user_id' => $manager->id, 'created_at' => '2026-06-02 09:00:00',
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/conversions?year=2026&layer=operative&pipeline_id='.$pipeline->id)->assertOk();
+
+        $stage = collect($response->json('stage'));
+        $pair = $stage->firstWhere('from_stage_id', $stageA->id);
+
+        $this->assertNotNull($pair);
+        $this->assertSame(1, $pair['den_count']);
+        $this->assertSame(1, $pair['num_count']);
+        $this->assertSame(100, $pair['fact_pct']);
+    }
+
+    public function test_invalid_layer_is_rejected(): void
+    {
+        $manager = $this->makeManager();
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/reports/conversions?year=2026&layer=bogus')->assertStatus(422);
+    }
+
+    public function test_company_scope_type_is_rejected_for_conversion_metric(): void
+    {
+        $manager = $this->makeManager();
+        Sanctum::actingAs($manager, ['*']);
+
+        $this->getJson('/api/reports/conversions?year=2026&layer=operative&scope_type=company')->assertStatus(422);
+    }
+}

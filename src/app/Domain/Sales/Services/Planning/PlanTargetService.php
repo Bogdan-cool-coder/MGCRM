@@ -52,7 +52,7 @@ class PlanTargetService
         $canEdit = $viewer->can('plans.manage');
         $multiCurrencyWarning = false;
 
-        $rowsMeta = $this->resolveScopeRows($query, $viewer);
+        $rowsMeta = $this->resolveScopeRows($query->scopeType, $viewer);
 
         $columns = $this->buildColumns();
 
@@ -507,11 +507,16 @@ class PlanTargetService
      * not personal data — every authed user may see the row list, matrix READ
      * access is governed by can_edit for writes only, contract §8.2).
      *
+     * Public so the R4/R5 report aggregators (TaskMatrixService,
+     * ConversionReportService) expand the IDENTICAL scope-axis population as
+     * the P-1 matrix instead of re-deriving a second, potentially drifting
+     * row list (reuse-gate, contract §5/§9).
+     *
      * @return list<array{id: int, label: string}>
      */
-    private function resolveScopeRows(PlanMatrixQuery $query, User $viewer): array
+    public function resolveScopeRows(PlanScopeType $scopeType, User $viewer): array
     {
-        if ($query->scopeType === PlanScopeType::User) {
+        if ($scopeType === PlanScopeType::User) {
             return User::query()
                 ->whereIn('id', $this->scopedUserIds($viewer))
                 ->orderBy('full_name')
@@ -521,7 +526,7 @@ class PlanTargetService
                 ->all();
         }
 
-        if ($query->scopeType === PlanScopeType::Pipeline) {
+        if ($scopeType === PlanScopeType::Pipeline) {
             return Pipeline::query()
                 ->orderBy('sort_order')
                 ->get()

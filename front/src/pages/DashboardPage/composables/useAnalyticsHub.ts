@@ -50,6 +50,15 @@ export const HUB_REGISTER_LEAVE_GUARD: InjectionKey<
   (guard: HubLeaveGuard | null) => void
 > = Symbol('hubRegisterLeaveGuard')
 
+/**
+ * Provide/inject key inside the «Планы» tab: an editable metric panel (Поступления
+ * / Задачи) registers its leave-guard with `TabPlans`, which consults it on an
+ * inner metric switch and forwards it to the hub guard for outer tab switches.
+ */
+export const PLANS_REGISTER_METRIC_GUARD: InjectionKey<
+  (guard: HubLeaveGuard | null) => void
+> = Symbol('plansRegisterMetricGuard')
+
 export const useAnalyticsHub = () => {
   const { t } = useI18n()
   const toast = useToast()

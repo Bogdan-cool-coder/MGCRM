@@ -70,6 +70,16 @@ class ActivityFactory extends Factory
         return $this->state(['kind' => ActivityType::Note->value, 'due_at' => null]);
     }
 
+    public function presentation(): static
+    {
+        return $this->state(['kind' => ActivityType::Presentation->value]);
+    }
+
+    public function followUp(): static
+    {
+        return $this->state(['kind' => ActivityType::FollowUp->value]);
+    }
+
     public function overdue(): static
     {
         return $this->state([

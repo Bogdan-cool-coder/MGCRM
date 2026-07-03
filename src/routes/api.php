@@ -607,12 +607,15 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
             ->middleware('can:plans.manage')->name('copy-previous');
     });
 
-    // Reports (read, visibility-scoped in the aggregator) — Ф2 R1/R2, Ф3 R3
-    // (contract §6.4/§6.5/§6.6).
+    // Reports (read, visibility-scoped in the aggregator) — Ф2 R1/R2, Ф3 R3,
+    // Ф4 R4/R5 + honest stage-conversions (contract §6.4-§6.8).
     Route::prefix('reports')->name('reports.')->group(function (): void {
         Route::get('registry', [ReportsController::class, 'registry'])->name('registry');
         Route::get('income-schedule', [ReportsController::class, 'incomeSchedule'])->name('income-schedule');
         Route::get('best-manager', [ReportsController::class, 'bestManager'])->name('best-manager');
+        Route::get('task-matrix', [ReportsController::class, 'taskMatrix'])->name('task-matrix');
+        Route::get('conversions', [ReportsController::class, 'conversions'])->name('conversions');
+        Route::get('stage-conversions', [ReportsController::class, 'stageConversions'])->name('stage-conversions');
     });
 
     // =========================================================================

@@ -99,4 +99,37 @@ class PlanTargetFactory extends Factory
             'layer' => PlanLayer::Annual,
         ]);
     }
+
+    /**
+     * R4 task-matrix plan cell — count metric, config carries the activity
+     * kind being planned (contract §3.5). Clears the money columns.
+     */
+    public function tasksCompleted(string $activityKind, int $count): static
+    {
+        return $this->state([
+            'metric' => PlanMetric::TasksCompleted,
+            'value_kopecks' => null,
+            'currency' => null,
+            'value_count' => $count,
+            'config' => ['activity_kind' => $activityKind],
+        ]);
+    }
+
+    /**
+     * R5 conversion plan cell — the plan value is a TARGET PERCENT (contract
+     * §3.5/§O4), config carries the numerator/denominator pair definition.
+     *
+     * @param  array<string, mixed>  $numerator
+     * @param  array<string, mixed>  $denominator
+     */
+    public function conversion(array $numerator, array $denominator, int $targetPct): static
+    {
+        return $this->state([
+            'metric' => PlanMetric::Conversion,
+            'value_kopecks' => null,
+            'currency' => null,
+            'value_count' => $targetPct,
+            'config' => ['numerator' => $numerator, 'denominator' => $denominator, 'unit' => 'pct'],
+        ]);
+    }
 }

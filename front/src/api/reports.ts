@@ -1,7 +1,8 @@
 /**
- * Sales-analytics reports API — R1 Registry, R2 Income schedule.
+ * Sales-analytics reports API — R1 Registry, R2 Income schedule, R3 Best manager,
+ * R4 Task matrix, R5 Conversions.
  *
- * Contract: `docs/contracts/plan-targets-api-contract.md` §6.4/§6.5. All under
+ * Contract: `docs/contracts/plan-targets-api-contract.md` §6.4–§6.8. All under
  * /api, auth:sanctum (Bearer). Reads are visibility-scoped server-side (the
  * aggregator applies VisibilityResolver). Backend is built in parallel — until
  * it ships, these calls return 404 (graceful-degrade handled in the composables).
@@ -14,6 +15,10 @@ import type {
   IncomeScheduleResponse,
   BestManagerQuery,
   BestManagerResponse,
+  TaskMatrixQuery,
+  TaskMatrixResponse,
+  ConversionReportQuery,
+  ConversionReportResponse,
 } from '@/entities/reports'
 
 /** R1 · GET /api/reports/registry — expected + squeeze registry. */
@@ -55,5 +60,35 @@ export const getBestManagerReport = (
   if (query.pipeline_id != null) params.pipeline_id = query.pipeline_id
   return apiClient
     .get<BestManagerResponse>('/api/reports/best-manager', { params })
+    .then((r) => r.data)
+}
+
+/** R4 · GET /api/reports/task-matrix — completed-tasks matrix (kind × user × 12 мес). */
+export const getTaskMatrix = (
+  query: TaskMatrixQuery,
+): Promise<TaskMatrixResponse> => {
+  const params: Record<string, unknown> = {
+    year: query.year,
+    layer: query.layer,
+  }
+  if (query.pipeline_id != null) params.pipeline_id = query.pipeline_id
+  if (query.kind != null) params.kind = query.kind
+  return apiClient
+    .get<TaskMatrixResponse>('/api/reports/task-matrix', { params })
+    .then((r) => r.data)
+}
+
+/** R5 · GET /api/reports/conversions — конверсии (pairs + honest stage layer). */
+export const getConversionsReport = (
+  query: ConversionReportQuery,
+): Promise<ConversionReportResponse> => {
+  const params: Record<string, unknown> = {
+    year: query.year,
+    layer: query.layer,
+  }
+  if (query.pipeline_id != null) params.pipeline_id = query.pipeline_id
+  if (query.scope_type != null) params.scope_type = query.scope_type
+  return apiClient
+    .get<ConversionReportResponse>('/api/reports/conversions', { params })
     .then((r) => r.data)
 }

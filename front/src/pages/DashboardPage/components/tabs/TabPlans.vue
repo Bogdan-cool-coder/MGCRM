@@ -1,101 +1,44 @@
 <template>
   <div class="tab-plans">
-    <!-- Metric sub-tabs. Ф1 wires «Поступления» (income); Задачи/Конверсии are
-         disabled shells (Ф4/Ф5) — the sub-navigation scaffolding is live. -->
+    <!-- Metric sub-tabs. Все три метрики включены: Поступления (P-1), Задачи (R4),
+         Конверсии (R5). Каждая монтирует свою панель — dirty-guard активной
+         панели прерывает и переключение метрики, и переключение таба хаба. -->
     <div class="tab-plans__metrics">
       <SelectButton
+        :key="metricStripKey"
         :model-value="metricTab"
         :options="metricOptions"
         option-label="label"
         option-value="value"
-        option-disabled="disabled"
         :allow-empty="false"
-        @update:model-value="(v: PlanMetricTab | null) => v && (metricTab = v)"
-      >
-        <template #option="{ option }">
-          <span
-            v-tooltip.top="(option as MetricOption).disabled ? t('common.coming_soon') : undefined"
-          >{{ (option as MetricOption).label }}</span>
-        </template>
-      </SelectButton>
-    </div>
-
-    <!-- Endpoint not yet deployed (parallel backend) -->
-    <Message
-      v-if="endpointMissing && !loading"
-      severity="info"
-      :closable="false"
-      icon="pi pi-info-circle"
-      class="mb-4"
-    >
-      {{ t('dashboard.plans.endpoint_missing') }}
-    </Message>
-
-    <!-- Multi-currency warning -->
-    <Message
-      v-else-if="matrix?.meta?.multi_currency_warning"
-      severity="warn"
-      :closable="false"
-      icon="pi pi-info-circle"
-      class="mb-4"
-    >
-      {{ t('dashboard.multiCurrencyWarning') }}
-    </Message>
-
-    <!-- Loading skeleton shaped like the grid -->
-    <div v-if="loading" class="tab-plans__skeleton">
-      <Skeleton v-for="n in 6" :key="n" height="2.5rem" class="mb-2" />
-    </div>
-
-    <!-- Empty (no employees in scope) -->
-    <div
-      v-else-if="!matrix || matrix.rows.length === 0"
-      class="tab-plans__empty"
-    >
-      <i class="pi pi-users tab-plans__empty-icon" aria-hidden="true" />
-      <h3 class="tab-plans__empty-title">{{ t('dashboard.plans.empty_title') }}</h3>
-      <p class="tab-plans__empty-hint">{{ t('dashboard.plans.empty_hint') }}</p>
-    </div>
-
-    <!-- Matrix + save bar -->
-    <template v-else>
-      <PlanMatrix
-        :matrix="matrix"
-        :is-money="isMoney"
-        :can-edit="canEdit"
-        :cell-value="cellValue"
-        :is-cell-dirty="isCellDirty"
-        :row-total="rowTotal"
-        @cell-input="onCellInput"
-        @update:row-currency="onRowCurrency"
+        @update:model-value="onMetric"
       />
+    </div>
 
-      <PlanSaveBar
-        v-if="canEdit"
-        :dirty-count="dirtyCount"
-        :saving="saving"
-        :copying="copying"
-        :can-edit="canEdit"
-        @save="save"
-        @copy-prev="copyPrevious"
-      />
-    </template>
+    <component
+      :is="metricComponent"
+      :year="year"
+      :layer="layer"
+      :pipeline-id="pipelineId"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, onActivated, onDeactivated, onBeforeUnmount } from 'vue'
+import { ref, computed, provide, nextTick, inject, onMounted, onActivated, onDeactivated, onBeforeUnmount, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SelectButton from 'primevue/selectbutton'
-import Message from 'primevue/message'
-import Skeleton from 'primevue/skeleton'
-import PlanMatrix from '../plans/PlanMatrix.vue'
-import PlanSaveBar from '../plans/PlanSaveBar.vue'
-import { usePlansTab, type PlanMetricTab } from '../../composables/usePlansTab'
-import { HUB_REGISTER_LEAVE_GUARD } from '../../composables/useAnalyticsHub'
-import type { PlanLayer, PlanMatrixRow } from '@/entities/planTargets'
+import MetricIncome from '../plans/MetricIncome.vue'
+import MetricTasks from '../plans/MetricTasks.vue'
+import MetricConversions from '../plans/MetricConversions.vue'
+import {
+  HUB_REGISTER_LEAVE_GUARD,
+  PLANS_REGISTER_METRIC_GUARD,
+  type HubLeaveGuard,
+} from '../../composables/useAnalyticsHub'
+import type { PlanLayer } from '@/entities/planTargets'
 
-const props = defineProps<{
+defineProps<{
   year: number
   layer: PlanLayer
   pipelineId: number | null
@@ -103,68 +46,64 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
+/** Metric sub-tab (local state — the metric panel owns its own data/dirty-set). */
+type PlanMetricTab = 'income' | 'tasks' | 'conversions'
+const metricTab = ref<PlanMetricTab>('income')
+
 interface MetricOption {
   label: string
   value: PlanMetricTab
-  disabled: boolean
 }
-
-const {
-  metricTab,
-  matrix,
-  loading,
-  endpointMissing,
-  isMoney,
-  cellValue,
-  setCellValue,
-  isCellDirty,
-  rowTotal,
-  dirtyCount,
-  confirmLeave,
-  save,
-  saving,
-  copyPrevious,
-  copying,
-} = usePlansTab({
-  year: () => props.year,
-  layer: () => props.layer,
-  pipelineId: () => props.pipelineId,
-})
-
-// Register the dirty-guard with the hub shell so an in-hub tab switch (via the
-// SelectButton strip) prompts before losing unsaved edits — route-leave and
-// beforeunload are already covered inside usePlansTab. Under <keep-alive> the
-// guard is scoped to while THIS tab is active (activated/deactivated), so it
-// only gates switches AWAY from «Планы», never other tabs' switches.
-const registerLeaveGuard = inject(HUB_REGISTER_LEAVE_GUARD, null)
-const attachGuard = (): void => registerLeaveGuard?.(confirmLeave)
-const detachGuard = (): void => registerLeaveGuard?.(null)
-onMounted(attachGuard)
-onActivated(attachGuard)
-onDeactivated(detachGuard)
-onBeforeUnmount(detachGuard)
-
-const canEdit = computed<boolean>(() => matrix.value?.meta.can_edit ?? false)
 
 const metricOptions = computed<MetricOption[]>(() => [
-  { label: t('dashboard.plans.metric_income'), value: 'income', disabled: false },
-  { label: t('dashboard.plans.metric_tasks'), value: 'tasks', disabled: true },
-  { label: t('dashboard.plans.metric_conversions'), value: 'conversions', disabled: true },
+  { label: t('dashboard.plans.metric_income'), value: 'income' },
+  { label: t('dashboard.plans.metric_tasks'), value: 'tasks' },
+  { label: t('dashboard.plans.metric_conversions'), value: 'conversions' },
 ])
 
-const onCellInput = (row: PlanMatrixRow, columnKey: string, value: number | null): void => {
-  setCellValue(row, columnKey, value)
+const METRIC_COMPONENTS: Record<PlanMetricTab, Component> = {
+  income: MetricIncome,
+  tasks: MetricTasks,
+  conversions: MetricConversions,
 }
 
-// Ф1: currency change is a per-row visual change; persisted with the cells on
-// save (the backend takes currency alongside value_kopecks). Marking the row's
-// month cells dirty happens on value edit — the currency select updates the
-// stored ref via the matrix cell, applied on the next save/reload.
-const onRowCurrency = (row: PlanMatrixRow, currency: string): void => {
-  for (const key of Object.keys(row.cells)) {
-    const cell = row.cells[key]
-    if (cell) cell.currency = currency
+const metricComponent = computed<Component>(() => METRIC_COMPONENTS[metricTab.value])
+
+// ─── Dirty-guard bridge ─────────────────────────────────────────────────────
+// The active metric panel (Поступления / Задачи) registers its leave-guard here.
+// TabPlans (a) forwards it to the hub so an OUTER tab switch prompts, and (b)
+// consults it on an INNER metric switch so changing метрику with unsaved edits
+// prompts too. Only one panel is mounted at a time → one guard at a time.
+const activeGuard = ref<HubLeaveGuard | null>(null)
+const registerMetricGuard = (guard: HubLeaveGuard | null): void => {
+  activeGuard.value = guard
+}
+provide(PLANS_REGISTER_METRIC_GUARD, registerMetricGuard)
+
+// Forward the active panel's guard to the hub (outer tab-strip switch).
+const hubRegister = inject(HUB_REGISTER_LEAVE_GUARD, null)
+const forwardGuard: HubLeaveGuard = () => (activeGuard.value ? activeGuard.value() : true)
+onMounted(() => hubRegister?.(forwardGuard))
+onActivated(() => hubRegister?.(forwardGuard))
+onDeactivated(() => hubRegister?.(null))
+onBeforeUnmount(() => hubRegister?.(null))
+
+// PrimeVue SelectButton toggles its checked-state optimistically before the async
+// guard resolves; on a veto we bump this key to re-create the strip so the
+// highlight snaps back to the unchanged metric (same trick as the hub tab-strip).
+const metricStripKey = ref(0)
+
+const onMetric = async (v: PlanMetricTab | null): Promise<void> => {
+  if (v == null || v === metricTab.value) return
+  if (activeGuard.value) {
+    const ok = await activeGuard.value()
+    if (!ok) {
+      await nextTick()
+      metricStripKey.value += 1
+      return
+    }
   }
+  metricTab.value = v
 }
 </script>
 
@@ -176,50 +115,5 @@ const onRowCurrency = (row: PlanMatrixRow, currency: string): void => {
 
 .tab-plans__metrics {
   margin-bottom: $space-4;
-}
-
-.tab-plans__skeleton {
-  padding: $space-2 0;
-}
-
-.tab-plans__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $space-2;
-  min-height: 260px;
-  padding: $space-8 $space-6;
-  text-align: center;
-}
-
-.tab-plans__empty-icon {
-  font-size: $font-size-icon-xl;
-  color: $surface-400;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
-}
-
-.tab-plans__empty-title {
-  margin: 0;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $surface-800;
-
-  .app-dark & {
-    color: var(--p-surface-700);
-  }
-}
-
-.tab-plans__empty-hint {
-  margin: 0;
-  font-size: $font-size-sm;
-  color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 </style>

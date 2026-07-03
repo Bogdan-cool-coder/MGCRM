@@ -9,6 +9,15 @@
  * the aggregators ship these calls 404 and the composables degrade gracefully
  * to an empty report (the established graceful-404 pattern, same as the plans tab).
  */
+import type { PctBadge } from '@/entities/motivation'
+import type {
+  PlanLayer,
+  PlanScopeType,
+  PlanMatrixColumn,
+  PlanMatrixRow,
+  PlanMatrixTotals,
+  PlanMatrixResponse,
+} from '@/entities/planTargets'
 
 // --- Shared report meta -------------------------------------------------------
 
@@ -190,4 +199,150 @@ export interface BestManagerQuery {
   year: number
   mode?: BestManagerMode
   pipeline_id?: number | null
+}
+
+// --- R4 · Task matrix (kind × user × 12 мес) (§6.7) ---------------------------
+
+export interface TaskMatrixMeta {
+  year: number
+  layer: PlanLayer
+  /** Always "count" for task matrices. */
+  value_kind: 'count'
+  /** $user->can('plans.manage') — FE renders inputs only when true. */
+  can_edit: boolean
+  base_currency?: string
+  multi_currency_warning?: boolean
+}
+
+/**
+ * One activity-kind matrix. Shape is the P-1 matrix restricted to that kind, so
+ * a group adapts 1:1 to a `PlanMatrixResponse` (count cells) — the PlanMatrix
+ * component + editing core are reused per selected kind.
+ */
+export interface TaskMatrixGroup {
+  /** Activity kind key: call|meeting|task|note|follow_up|presentation, or "all". */
+  kind: string
+  /** RU label from the backend (no FE kind-label map needed). */
+  label: string
+  columns: PlanMatrixColumn[]
+  rows: PlanMatrixRow[]
+  totals: PlanMatrixTotals
+}
+
+export interface TaskMatrixResponse {
+  meta: TaskMatrixMeta
+  groups: TaskMatrixGroup[]
+}
+
+export interface TaskMatrixQuery {
+  year: number
+  layer: PlanLayer
+  pipeline_id?: number | null
+  /** Optional server-side kind filter (the FE selects a kind client-side too). */
+  kind?: string | null
+}
+
+/**
+ * Adapt one R4 group to a `PlanMatrixResponse` so the shared PlanMatrix component
+ * and matrix-editing core render/edit it exactly like the income grid (count mode).
+ */
+export const taskGroupToMatrix = (
+  group: TaskMatrixGroup,
+  meta: TaskMatrixMeta,
+): PlanMatrixResponse => ({
+  meta: {
+    metric: 'tasks_completed',
+    scope_type: 'user',
+    layer: meta.layer,
+    year: meta.year,
+    pipeline_id: null,
+    value_kind: 'count',
+    base_currency: meta.base_currency ?? 'RUB',
+    fact_source: 'activities',
+    multi_currency_warning: meta.multi_currency_warning ?? false,
+    can_edit: meta.can_edit,
+  },
+  columns: group.columns,
+  rows: group.rows,
+  totals: group.totals,
+})
+
+// --- R5 · Conversions (§6.8) --------------------------------------------------
+
+export interface ConversionReportMeta {
+  year: number
+  layer: PlanLayer
+  pipeline_id: number | null
+}
+
+/** Numerator / denominator descriptor for a conversion pair (labels for the UI). */
+export interface ConversionSide {
+  /** "task" | "deal" | "stage". */
+  type: string
+  /** Activity kind (task numerator/denominator). */
+  kind?: string | null
+  /** Deal status (deal denominator, e.g. "won"). */
+  status?: string | null
+  /** Stage id (stage-based side). */
+  stage_id?: number | null
+}
+
+/** One conversion-pair cell (plan% / fact% / raw counts + scored badge). */
+export interface ConversionCell {
+  /** Target % (null for stage-honest blocks — fact-only). */
+  plan_pct?: number | null
+  fact_pct: number | null
+  num_count: number
+  den_count: number
+  /** scorePct(fact_pct, plan_pct) — null for fact-only stage block. */
+  pct?: number | null
+  badge?: PctBadge
+}
+
+/** A conversion pair (general/custom): plan-scored, keyed by column. */
+export interface ConversionPair {
+  plan_id?: number | null
+  name: string
+  numerator: ConversionSide
+  denominator: ConversionSide
+  columns: PlanMatrixColumn[]
+  /** Keyed by column.key ("1".."12" | "annual"). */
+  cells: Record<string, ConversionCell>
+}
+
+/**
+ * A stage-honest conversion (fact-only, no plan) between two adjacent stages.
+ *
+ * As-built (R5): the backend ships this as a **period-aggregate** — one honest
+ * first-entry conversion for the whole selected period (num/den/fact_pct flat on
+ * the row), NOT a per-month `cells` map. There is no monthly breakdown by design
+ * (first-entry counts across the period are the honest chain semantics).
+ */
+export interface StageConversion {
+  name: string
+  from_stage_id: number
+  to_stage_id: number
+  /** Reached the to-stage (numerator) across the period. */
+  num_count: number
+  /** Entered the from-stage (denominator) across the period. */
+  den_count: number
+  /** num_count / den_count × 100 (may be null when den_count = 0). */
+  fact_pct: number | null
+}
+
+export interface ConversionReportResponse {
+  meta: ConversionReportMeta
+  /** Auto task-ratio pairs (SpaceCRM «Конверсии» general). */
+  general?: ConversionPair[]
+  /** User-defined pairs from plan_targets.config. */
+  custom?: ConversionPair[]
+  /** Honest stage conversions from deal_stage_history (fact-only, our advantage). */
+  stage?: StageConversion[]
+}
+
+export interface ConversionReportQuery {
+  year: number
+  layer: PlanLayer
+  pipeline_id?: number | null
+  scope_type?: PlanScopeType
 }

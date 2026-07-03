@@ -7,6 +7,7 @@
 
     <div class="plan-save-bar__actions">
       <Button
+        v-if="showCopy"
         severity="secondary"
         icon="pi pi-copy"
         :label="t('dashboard.plans.copy_prev')"
@@ -30,12 +31,17 @@
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 
-defineProps<{
-  dirtyCount: number
-  saving: boolean
-  copying: boolean
-  canEdit: boolean
-}>()
+withDefaults(
+  defineProps<{
+    dirtyCount: number
+    saving: boolean
+    canEdit: boolean
+    /** Whether to render the «Копировать пред. период» button (tasks hide it). */
+    showCopy?: boolean
+    copying?: boolean
+  }>(),
+  { showCopy: true, copying: false },
+)
 
 const emit = defineEmits<{
   save: []
