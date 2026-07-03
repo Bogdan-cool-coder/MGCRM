@@ -244,8 +244,7 @@
       "tab_plans": "Plans",
       "tab_registry": "Registry",
       "tab_schedule": "Schedule",
-      "tab_rating": "Rating",
-      "wip_hint": "This section is under construction — coming in an upcoming release"
+      "tab_rating": "Rating"
     },
     "plans": {
       "metric_income": "Income",
@@ -319,6 +318,25 @@
       "empty": "No data for the period",
       "empty_hint": "There is no income to chart for the selected period",
       "endpoint_missing": "The schedule is not yet available on the server — data will appear after the backend update"
+    },
+    "rating": {
+      "year": "Year",
+      "mode_standard": "Standard scoring",
+      "mode_absolute": "Absolute scoring",
+      "leader_of": "Best manager {year}",
+      "points": "Points",
+      "col_rank": "#",
+      "col_manager": "Manager",
+      "col_deals": "Deals",
+      "col_escort": "Supports",
+      "col_income": "New income",
+      "col_avg_check": "Average check",
+      "col_points_income": "Income points",
+      "col_points_total": "Total points",
+      "col_division": "Division",
+      "empty": "Not enough data for the year",
+      "empty_hint": "There is no manager-rating data for the selected year",
+      "endpoint_missing": "The rating is not yet available on the server — data will appear after the backend update"
     }
   },
   "roles": {

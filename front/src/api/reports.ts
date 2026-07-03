@@ -12,6 +12,8 @@ import type {
   RegistryReportResponse,
   IncomeScheduleQuery,
   IncomeScheduleResponse,
+  BestManagerQuery,
+  BestManagerResponse,
 } from '@/entities/reports'
 
 /** R1 · GET /api/reports/registry — expected + squeeze registry. */
@@ -41,5 +43,17 @@ export const getIncomeSchedule = (
   if (query.pipeline_id != null) params.pipeline_id = query.pipeline_id
   return apiClient
     .get<IncomeScheduleResponse>('/api/reports/income-schedule', { params })
+    .then((r) => r.data)
+}
+
+/** R3 · GET /api/reports/best-manager — yearly manager rating + leader. */
+export const getBestManagerReport = (
+  query: BestManagerQuery,
+): Promise<BestManagerResponse> => {
+  const params: Record<string, unknown> = { year: query.year }
+  if (query.mode != null) params.mode = query.mode
+  if (query.pipeline_id != null) params.pipeline_id = query.pipeline_id
+  return apiClient
+    .get<BestManagerResponse>('/api/reports/best-manager', { params })
     .then((r) => r.data)
 }

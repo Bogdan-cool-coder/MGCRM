@@ -140,3 +140,54 @@ export interface IncomeScheduleQuery {
   month: number
   pipeline_id?: number | null
 }
+
+// --- R3 · Best manager (yearly rating) (§6.6) --------------------------------
+
+/** Scoring mode: `standard` excludes out-of-standings accounts from ranking. */
+export type BestManagerMode = 'standard' | 'absolute'
+
+export interface BestManagerMeta {
+  year: number
+  mode: BestManagerMode
+  base_currency: string
+  multi_currency_warning: boolean
+}
+
+/** One rated manager (yearly aggregates + points). */
+export interface BestManagerRow {
+  /** Rank in the standings; may be null for out-of-standings accounts. */
+  rank: number | null
+  user: RegistryOwner
+  /** Division/pipeline label, e.g. «MACRO Global». */
+  division: string
+  won_deals: number
+  supports: number
+  new_income_base_kopecks: number
+  avg_check_base_kopecks: number
+  income_points: number
+  total_points: number
+  /** False → excluded from ranking (service/admin accounts) → «вне зачёта». */
+  in_standings: boolean
+}
+
+/** The year's leader (hero card). Absent when there is no data. */
+export interface BestManagerLeader {
+  user: RegistryOwner
+  division: string
+  won_deals: number
+  total_points: number
+  new_income_base_kopecks: number
+}
+
+export interface BestManagerResponse {
+  meta: BestManagerMeta
+  rows: BestManagerRow[]
+  /** Null when the year has no rated managers (empty state). */
+  leader: BestManagerLeader | null
+}
+
+export interface BestManagerQuery {
+  year: number
+  mode?: BestManagerMode
+  pipeline_id?: number | null
+}

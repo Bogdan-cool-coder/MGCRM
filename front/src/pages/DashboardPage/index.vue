@@ -99,6 +99,7 @@ const {
   granularity,
   stepPeriod,
   setGranularity,
+  setYear,
   layer,
   setLayer,
   pipelineId,
@@ -143,8 +144,7 @@ const TAB_COMPONENTS: Record<HubTab, Component> = {
 const activeComponent = computed<Component>(() => TAB_COMPONENTS[activeTab.value])
 
 // Each report/plan tab reads the cross-cutting hub filters through props (single
-// source of truth, TZ §1.1). Обзор owns its own filters; Рейтинг (Ф3) is still a
-// stub — pass nothing so no stray DOM attributes land on its root.
+// source of truth, TZ §1.1). Обзор owns its own filters, so it receives nothing.
 const activeProps = computed<Record<string, unknown>>(() => {
   switch (activeTab.value) {
     case 'plans':
@@ -158,6 +158,14 @@ const activeProps = computed<Record<string, unknown>>(() => {
       }
     case 'schedule':
       return { year: year.value, month: month.value, pipelineId: pipelineId.value }
+    case 'rating':
+      // Рейтинг is annual: its year-selector drives the shared hub year via setYear
+      // (kept as the single period source, §1.1), not a tab-local year.
+      return {
+        year: year.value,
+        pipelineId: pipelineId.value,
+        'onUpdate:year': setYear,
+      }
     default:
       return {}
   }

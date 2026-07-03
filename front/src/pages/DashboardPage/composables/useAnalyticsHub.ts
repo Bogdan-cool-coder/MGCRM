@@ -38,9 +38,6 @@ export interface HubTabOption {
   label: string
 }
 
-/** Tabs still under construction — rendered as «в разработке» stubs (Ф3 rating). */
-export const HUB_WIP_TABS: readonly HubTab[] = ['rating']
-
 /** A tab-registered leave guard: returns `false` to veto an in-hub tab switch. */
 export type HubLeaveGuard = () => boolean | Promise<boolean>
 
@@ -151,6 +148,15 @@ export const useAnalyticsHub = () => {
 
   const setGranularity = (g: PeriodGranularity): void => {
     granularity.value = g
+  }
+
+  /**
+   * Set the shared period year directly (used by the Рейтинг year-selector, which
+   * is annual-granularity). Reuses the same `year` ref every tab reads, so the
+   * hub period stays a single source of truth (§1.1) instead of a tab-local year.
+   */
+  const setYear = (value: number): void => {
+    year.value = value
   }
 
   // ─── Layer (URL `?layer=`) ─────────────────────────────────────────────────
@@ -270,6 +276,7 @@ export const useAnalyticsHub = () => {
     granularity,
     stepPeriod,
     setGranularity,
+    setYear,
     // layer
     layer,
     setLayer,
