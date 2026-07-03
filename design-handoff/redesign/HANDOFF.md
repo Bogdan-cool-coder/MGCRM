@@ -213,6 +213,23 @@
   (2) `DS_STAGE_PALETTE` — 5 сырых hex продублированы литералами в JS (1:1 совпадают с `$stage-color-*`,
   но дрейф-риск от `_colors.scss`).
 
+## Analytics-hub (`analytics-hub-tz.md`) — РЕАЛИЗОВАН Ф1-скоупом, reviewer PASS-with-nits (2026-07-03)
+- **Что сделано:** `DashboardPage/index.vue` переписан в хаб аналитики (таб-стрип `SelectButton` +
+  `<keep-alive>` + `?tab=` + `AnalyticsFilterBar` сквозные фильтры). Старый Обзор перенесён **без
+  изменений** в `TabOverview.vue` (те же 5 виджетов + `useDashboardPage` + `DashboardToolbar` — регресса
+  нет). Живой таб «Планы» (`TabPlans` + `plans/PlanMatrix|PlanMatrixCurrencyCell|PlanSaveBar`,
+  композаблы `useAnalyticsHub`/`usePlansTab`): inline-грид ввода плана НП, план/факт/%, мультивалюта,
+  copy-previous, dirty-guard (route-leave + beforeunload + in-hub tab-switch через provide/inject).
+  Таб «Планы» гейтится `plans.manage` (admin/director). Report-табы (Реестр/График/Рейтинг) — стабы
+  `TabComingSoon` до Ф2–Ф5. Бэкенд — контракт `docs/contracts/plan-targets-api-contract.md` (Ф1
+  `new_income scope=user` e2e). `type-check` + `lint:ds` зелёные.
+- **Dark-nit к правке (frontender, параллельно):** `plans/PlanMatrix.vue` (~стр. 274-280) — `.app-dark &`
+  вложен **внутри** `:deep(.plan-matrix__input-el--dirty)` = мёртвый dark-селектор (закон charter §«Обе
+  темы», dead-pattern #1): navy-бордер dirty-инпута в тёмной теме не применяется. `lint:ds` это не ловит.
+  Фикс — theme-reactive токен или non-scoped namespaced-блок.
+- **Заметка по ТЗ:** `analytics-hub-tz.md` в шапке помечен «Ф0» (spec-фаза) — реализация закрывает
+  Ф1-скоуп; остальные табы по ТЗ (реестр/дожим/NpCalendar/LeaderCard/RatingTable) ждут Ф2–Ф5.
+
 ## QA-напоминание
 Проверяй ВИЗУАЛЬНОЕ соответствие эталону (а не только функциональность): отступы, цвета токенов,
 светлая+тёмная темы, скрытые скроллбары, поведение интерактивных элементов из §11.

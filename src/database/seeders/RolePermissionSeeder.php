@@ -143,6 +143,13 @@ class RolePermissionSeeder extends Seeder
      *                                  accountant can move status but cannot edit
      *                                  the plan.               accountant, director, admin
      *
+     *   --- Plans & Reports (Sales Analytics, plan_targets) ---
+     *   plans.manage                 — author/edit plan_targets cells (matrix
+     *                                  bulk-upsert, copy-previous). Reports/matrix
+     *                                  READS are visibility-scoped, not gated —
+     *                                  any authed user may call them.
+     *                                                               admin, director
+     *
      * @var list<string>
      */
     private const DOMAIN_PERMISSIONS = [
@@ -162,6 +169,7 @@ class RolePermissionSeeder extends Seeder
         'automation.webhook.configure',
         'motivation.manage',
         'motivation.status',
+        'plans.manage',
     ];
 
     /**
@@ -259,6 +267,7 @@ class RolePermissionSeeder extends Seeder
                 'pipelines.manage', 'pipelines.view-all', 'manager-cabinet.view-all',
                 'onboarding.manage',
                 'motivation.manage', 'motivation.status',
+                'plans.manage',
             ],
 
             // Contracts / legal, elevated read across operations. No operational

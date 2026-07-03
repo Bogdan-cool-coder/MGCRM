@@ -104,6 +104,7 @@ use App\Http\Controllers\Sales\Motivation\MotivationCardController;
 use App\Http\Controllers\Sales\Motivation\MotivationPlanController;
 use App\Http\Controllers\Sales\PipelineController;
 use App\Http\Controllers\Sales\PipelineStageController;
+use App\Http\Controllers\Sales\Planning\PlanMatrixController;
 use App\Http\Controllers\System\SystemResetController;
 use Illuminate\Support\Facades\Route;
 
@@ -590,6 +591,19 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     Route::prefix('admin/motivation')->name('admin.motivation.')->group(function (): void {
         Route::post('plans/{card}/finalize', [MotivationPlanController::class, 'finalize'])->name('plans.finalize');
         Route::post('plans/{card}/mark-paid', [MotivationPlanController::class, 'markPaid'])->name('plans.mark-paid');
+    });
+
+    // =========================================================================
+    // Plans & Reports (Sales Analytics, plan_targets — Ф1 new_income only)
+    // =========================================================================
+    // Read (matrix) = any authed user, visibility-scoped inside the Service.
+    // Write (cells/copy-previous) = plans.manage (admin/director), contract §8.
+    Route::prefix('plans')->name('plans.')->group(function (): void {
+        Route::get('matrix', [PlanMatrixController::class, 'index'])->name('matrix');
+        Route::post('cells', [PlanMatrixController::class, 'bulkUpsert'])
+            ->middleware('can:plans.manage')->name('cells.upsert');
+        Route::post('copy-previous', [PlanMatrixController::class, 'copyPrevious'])
+            ->middleware('can:plans.manage')->name('copy-previous');
     });
 
     // =========================================================================

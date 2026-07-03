@@ -171,7 +171,14 @@
       "pipeline": "Воронка",
       "manager": "Менеджер",
       "allPipelines": "Все воронки",
-      "allManagers": "Все менеджеры"
+      "allManagers": "Все менеджеры",
+      "granularity_month": "Месяц",
+      "granularity_year": "Год",
+      "layer_operative": "Оперативный",
+      "layer_annual": "Годовой",
+      "layer_hint": "Влияет только на планы",
+      "prev_period": "Предыдущий период",
+      "next_period": "Следующий период"
     },
     "periods": {
       "currentMonth": "Текущий месяц",
@@ -229,7 +236,43 @@
     },
     "loading": "Загрузка данных...",
     "welcome": "Добро пожаловать",
-    "coming_soon": "Здесь появятся виджеты и аналитика"
+    "coming_soon": "Здесь появятся виджеты и аналитика",
+    "hub": {
+      "title": "Аналитика продаж",
+      "export": "Экспорт в Excel",
+      "tab_overview": "Обзор",
+      "tab_plans": "Планы",
+      "tab_registry": "Реестр",
+      "tab_schedule": "График",
+      "tab_rating": "Рейтинг",
+      "wip_hint": "Раздел в разработке — появится в ближайших обновлениях"
+    },
+    "plans": {
+      "metric_income": "Поступления",
+      "metric_tasks": "Задачи",
+      "metric_conversions": "Конверсии",
+      "col_employee": "Сотрудник",
+      "col_currency": "Валюта",
+      "col_total": "Всего",
+      "col_fact": "факт",
+      "row_total": "ИТОГО",
+      "dirty_count": "Изменено ячеек: {n}",
+      "no_changes": "Нет изменений",
+      "copy_prev": "Копировать пред. период",
+      "copy_unavailable": "Копирование пока недоступно",
+      "copied": "Скопировано планов: {n}",
+      "save": "Сохранить",
+      "saved": "Планы сохранены",
+      "leave_header": "Несохранённые изменения",
+      "leave_confirm": "Есть несохранённые изменения планов. Уйти без сохранения?",
+      "rate_on_first": "Курс на 1-е число месяца",
+      "in_base": "В базовой валюте",
+      "currency_info": "Разбивка по валютам",
+      "endpoint_missing": "Раздел планов ещё не подключён на сервере — данные появятся после обновления бэкенда",
+      "empty_title": "Нет сотрудников",
+      "empty_hint": "В вашей зоне видимости нет сотрудников для планирования",
+      "copy_nothing": "Нет данных за предыдущий период для копирования"
+    }
   },
   "roles": {
     "admin": "Администратор",
@@ -834,7 +877,9 @@
     "accessDenied": "Доступ запрещён",
     "errorLoad": "Не удалось загрузить данные",
     "email": "Email",
-    "locale": "ru-RU"
+    "locale": "ru-RU",
+    "stay": "Остаться",
+    "leave": "Покинуть"
   },
   "contacts": {
     "page": {

@@ -171,7 +171,14 @@
       "pipeline": "Pipeline",
       "manager": "Manager",
       "allPipelines": "All pipelines",
-      "allManagers": "All managers"
+      "allManagers": "All managers",
+      "granularity_month": "Month",
+      "granularity_year": "Year",
+      "layer_operative": "Operative",
+      "layer_annual": "Annual",
+      "layer_hint": "Affects plans only",
+      "prev_period": "Previous period",
+      "next_period": "Next period"
     },
     "periods": {
       "currentMonth": "Current month",
@@ -229,7 +236,43 @@
     },
     "loading": "Loading data...",
     "welcome": "Welcome",
-    "coming_soon": "Widgets and analytics will appear here"
+    "coming_soon": "Widgets and analytics will appear here",
+    "hub": {
+      "title": "Sales analytics",
+      "export": "Export to Excel",
+      "tab_overview": "Overview",
+      "tab_plans": "Plans",
+      "tab_registry": "Registry",
+      "tab_schedule": "Schedule",
+      "tab_rating": "Rating",
+      "wip_hint": "This section is under construction — coming in an upcoming release"
+    },
+    "plans": {
+      "metric_income": "Income",
+      "metric_tasks": "Tasks",
+      "metric_conversions": "Conversions",
+      "col_employee": "Employee",
+      "col_currency": "Currency",
+      "col_total": "Total",
+      "col_fact": "fact",
+      "row_total": "TOTAL",
+      "dirty_count": "Changed cells: {n}",
+      "no_changes": "No changes",
+      "copy_prev": "Copy previous period",
+      "copy_unavailable": "Copy is not available yet",
+      "copied": "Plans copied: {n}",
+      "save": "Save",
+      "saved": "Plans saved",
+      "leave_header": "Unsaved changes",
+      "leave_confirm": "You have unsaved plan changes. Leave without saving?",
+      "rate_on_first": "Rate on the 1st of the month",
+      "in_base": "In base currency",
+      "currency_info": "Per-currency breakdown",
+      "endpoint_missing": "The plans section is not yet available on the server — data will appear after the backend update",
+      "empty_title": "No employees",
+      "empty_hint": "There are no employees in your visibility scope to plan for",
+      "copy_nothing": "No data in the previous period to copy"
+    }
   },
   "roles": {
     "admin": "Administrator",
@@ -834,7 +877,9 @@
     "accessDenied": "Access denied",
     "errorLoad": "Failed to load data",
     "email": "Email",
-    "locale": "en-US"
+    "locale": "en-US",
+    "stay": "Stay",
+    "leave": "Leave"
   },
   "contacts": {
     "page": {

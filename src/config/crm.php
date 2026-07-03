@@ -292,4 +292,39 @@ return [
         'max_size_kb' => (int) env('CRM_FILES_MAX_SIZE_KB', 20 * 1024),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Planning (Sales Analytics — «Планы и отчёты», plan_targets)
+    |--------------------------------------------------------------------------
+    |
+    | fact_source: interim money-fact source until Finance ships (mirrors МК).
+    | 'won_deals' | 'payments'. Flips to 'payments' post-Finance with no schema
+    | change (docs/contracts/plan-targets-api-contract.md §4.2/§4.4).
+    |
+    | best_manager: R3 «Лучший менеджер» points formula weights — config, not
+    | code, so product can tune without a logic deploy (contract §4.4/§O5).
+    | points = income_points + deal_points + support_points, where
+    | income_points = round(new_income_base_kopecks / best_manager.income_divisor_kopecks).
+    |
+    | conversions.default_pairs: R5 canonical default конверсия pairs seeded
+    | into the matrix as suggestions; custom pairs live in plan_targets.config.
+    |
+    */
+    'plans' => [
+        'fact_source' => env('CRM_PLANS_FACT_SOURCE', 'won_deals'),
+
+        'best_manager' => [
+            'income_divisor_kopecks' => 100_000_00,
+            'points_per_won_deal' => 10,
+            'points_per_support' => 5,
+        ],
+
+        'conversions' => [
+            'default_pairs' => [
+                ['num' => ['type' => 'task', 'kind' => 'meeting'], 'den' => ['type' => 'task', 'kind' => 'call']],
+                ['num' => ['type' => 'task', 'kind' => 'presentation'], 'den' => ['type' => 'deal', 'status' => 'won']],
+            ],
+        ],
+    ],
+
 ];
