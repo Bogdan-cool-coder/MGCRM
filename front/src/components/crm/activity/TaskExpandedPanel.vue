@@ -594,15 +594,11 @@ async function doDelete() {
 
 .open-tasks__due {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   display: inline-flex;
   align-items: center;
   gap: 3px;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
 
   &--overdue {
     color: var(--p-red-500);
@@ -621,14 +617,10 @@ async function doDelete() {
 
 .open-tasks__responsible {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   display: inline-flex;
   align-items: center;
   gap: 3px;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
 
   &--static {
     cursor: default;
@@ -738,8 +730,8 @@ async function doDelete() {
   transition: all var(--app-transition-fast);
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-400);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-500);
   }
 
   &:hover {
@@ -1060,10 +1052,7 @@ async function doDelete() {
   justify-content: space-between;
   padding-top: $space-2;
   border-top: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-top-color: var(--p-surface-700);
-  }
+  // border-top var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 .task-window__footer-right {

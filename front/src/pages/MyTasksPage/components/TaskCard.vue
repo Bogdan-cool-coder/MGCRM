@@ -256,9 +256,9 @@ function onCompleteBtn() {
     box-shadow: 0 0 0 1px $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
+      border-color: var(--p-primary-color);
       // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      box-shadow: 0 0 0 1px $primary-300;
+      box-shadow: 0 0 0 1px var(--p-primary-color);
     }
   }
 }
@@ -292,9 +292,9 @@ function onCompleteBtn() {
     color: $surface-0;
 
     .app-dark & {
-      background: $primary-300;
-      border-color: $primary-300;
-      color: $surface-800;
+      background: var(--p-primary-color);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
     }
 
     .pi {
@@ -324,10 +324,7 @@ function onCompleteBtn() {
   font-size: $font-size-3xs; // 10px — snap from literal
   color: $surface-400;
   flex-shrink: 0;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-400 theme-reactive icon tier — no dark override
 }
 
 .task-card__deal-link {
@@ -337,10 +334,7 @@ function onCompleteBtn() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 
   &:hover {
     color: $primary-color;
@@ -370,11 +364,7 @@ function onCompleteBtn() {
 
   &--done {
     text-decoration: line-through;
-    color: $surface-400;
-
-    .app-dark & {
-      color: var(--p-surface-500);
-    }
+    color: var(--p-text-muted-color);
   }
 }
 
@@ -516,10 +506,7 @@ function onCompleteBtn() {
 .task-card__assignee-name {
   font-size: $font-size-xs;
   color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 }
 
 // ── Health strip ──────────────────────────────────────────────────────────────

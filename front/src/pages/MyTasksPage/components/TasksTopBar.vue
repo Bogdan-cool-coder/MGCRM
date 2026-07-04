@@ -197,10 +197,7 @@ function onMoreClick(e: MouseEvent) {
   background: $surface-card;
   flex-wrap: wrap;
   flex-shrink: 0;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border $surface-200 theme-reactive soft border — no dark override
 }
 
 .tasks-top-bar__icon-tile {
@@ -214,14 +211,17 @@ function onMoreClick(e: MouseEvent) {
   flex-shrink: 0;
 
   .app-dark & {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    background: rgba(23, 39, 71, 0.3); // primary-100 dark equivalent — alpha on dark surface
+    background: color-mix(in srgb, $primary-900 30%, transparent); // navy tint on dark surface
   }
 }
 
 .tasks-top-bar__section-icon {
   font-size: $font-size-icon-sm; // 18px — snap from 17px spec
   color: $primary-900;
+
+  .app-dark & {
+    color: var(--p-primary-color); // navy accent lightens to #4C7DF0 on dark tile
+  }
 }
 
 .tasks-top-bar__title-block {
@@ -295,8 +295,8 @@ function onMoreClick(e: MouseEvent) {
     color: $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
-      color: $primary-300;
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-color);
     }
   }
 
@@ -306,10 +306,9 @@ function onMoreClick(e: MouseEvent) {
     color: $primary-900;
 
     .app-dark & {
-      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: rgba(23, 39, 71, 0.2);
-      border-color: $primary-300;
-      color: $primary-300;
+      background: color-mix(in srgb, $primary-900 20%, transparent);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-color);
     }
   }
 }
@@ -472,9 +471,8 @@ function onMoreClick(e: MouseEvent) {
     color: $primary-900;
 
     .app-dark & {
-      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: rgba(23, 39, 71, 0.3);
-      color: $primary-300;
+      background: color-mix(in srgb, $primary-900 30%, transparent);
+      color: var(--p-primary-color);
     }
   }
 }
@@ -506,8 +504,8 @@ function onMoreClick(e: MouseEvent) {
     color: $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
-      color: $primary-300;
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-color);
     }
   }
 }

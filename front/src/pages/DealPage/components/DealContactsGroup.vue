@@ -638,11 +638,8 @@ async function submitAddChannel(contactId: number) {
 
 .deal-contacts-group__item {
   padding: $space-2 $space-4;
-  border-bottom: 1px solid var(--p-surface-100);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-800);
-  }
+  border-bottom: 1px solid var(--p-surface-200);
+  // var(--p-surface-200) theme-reactive soft separator — no dark override
 
   &:last-child {
     border-bottom: none;
@@ -719,20 +716,14 @@ async function submitAddChannel(contactId: number) {
     opacity: 0.4;
     cursor: not-allowed;
   }
-
-  .app-dark & {
-    color: var(--p-primary-300);
-  }
+  // color var(--p-primary-color) theme-reactive accent — no dark override
 }
 
 .deal-contacts-group__position {
   font-size: $font-size-xs;
   color: $surface-500;
   margin: 2px 0 $space-1;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 }
 
 // ── ⋮ Menu ────────────────────────────────────────────────────────────────────
@@ -752,18 +743,15 @@ async function submitAddChannel(contactId: number) {
   align-items: center;
   border-radius: $radius-sm;
   transition: color var(--app-transition-fast), background var(--app-transition-fast);
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
+  // color $surface-400 theme-reactive icon tier — no dark override
 
   &:hover {
     color: $surface-700;
     background: var(--p-surface-100);
 
     .app-dark & {
-      color: var(--p-surface-200);
-      background: var(--p-surface-700);
+      color: var(--p-surface-800);
+      background: var(--p-surface-200);
     }
   }
 
@@ -783,10 +771,7 @@ async function submitAddChannel(contactId: number) {
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
   padding: $space-1;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 .deal-contacts-group__menu-item {
@@ -803,16 +788,13 @@ async function submitAddChannel(contactId: number) {
   border-radius: $radius-sm;
   text-align: left;
   transition: background var(--app-transition-fast);
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
+  // color $surface-700 theme-reactive secondary text — no dark override
 
   &:hover {
     background: var(--p-surface-100);
 
     .app-dark & {
-      background: var(--p-surface-700);
+      background: var(--p-surface-200);
     }
   }
 
@@ -855,7 +837,7 @@ async function submitAddChannel(contactId: number) {
 
 .deal-contacts-group__spinner {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 
 .deal-contacts-group__channel-tag {
@@ -872,9 +854,9 @@ async function submitAddChannel(contactId: number) {
   transition: border-color var(--app-transition-fast);
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    background: var(--p-surface-800);
-    color: var(--p-surface-300);
+    border-color: var(--p-surface-300);
+    background: var(--p-surface-200);
+    color: var(--p-surface-700);
   }
 
   &:hover {
@@ -941,10 +923,7 @@ async function submitAddChannel(contactId: number) {
   display: flex;
   flex-direction: column;
   gap: $space-2;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) theme-reactive soft popover border — no dark override
 }
 
 .deal-contacts-group__add-ch-type-row {
@@ -964,8 +943,8 @@ async function submitAddChannel(contactId: number) {
   transition: all var(--app-transition-fast);
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-700);
   }
 
   &:hover {
@@ -979,7 +958,7 @@ async function submitAddChannel(contactId: number) {
     color: var(--p-primary-color);
 
     .app-dark & {
-      background: var(--p-primary-900);
+      background: var(--p-primary-950);
     }
   }
 
@@ -1006,10 +985,7 @@ async function submitAddChannel(contactId: number) {
 .deal-contacts-group__edit-label {
   font-size: $font-size-xs;
   color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 }
 
 .deal-contacts-group__edit-channels {
@@ -1028,10 +1004,7 @@ async function submitAddChannel(contactId: number) {
   font-size: $font-size-xs;
   color: $surface-400;
   flex-shrink: 0;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
+  // $surface-400 theme-reactive icon tier — no dark override
 }
 
 .deal-contacts-group__ch-input {
@@ -1069,8 +1042,8 @@ async function submitAddChannel(contactId: number) {
   border-radius: $radius-sm;
 
   .app-dark & {
-    background: var(--p-surface-800);
-    border-color: var(--p-surface-600);
+    background: var(--p-surface-50);
+    border-color: var(--p-surface-300);
   }
 }
 
@@ -1094,12 +1067,8 @@ async function submitAddChannel(contactId: number) {
   align-items: center;
   gap: $space-2;
   padding: $space-1 0;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   font-size: $font-size-xs;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 
 .deal-contacts-group__orphan-icon {

@@ -716,10 +716,7 @@ onMounted(async () => {
     border: 1px solid var(--p-surface-200);
     border-radius: $radius-md;
     padding: $space-3;
-
-    .app-dark & {
-      border-color: var(--p-surface-200);
-    }
+    // theme-reactive soft border — no dark override
   }
 
   &__section-label {
@@ -759,8 +756,8 @@ onMounted(async () => {
     width: 24px;
     height: 24px;
     border-radius: $radius-circle;
-    background: $primary-900;
-    color: $surface-0;
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
     font-size: $font-size-2xs;
     font-weight: $font-weight-semibold;
     display: flex;
@@ -812,10 +809,7 @@ onMounted(async () => {
     &--pending {
       background: var(--p-surface-100);
       color: var(--p-text-muted-color);
-
-      .app-dark & {
-        background: var(--p-surface-100);
-      }
+      // var(--p-surface-100) theme-reactive — no dark override
     }
   }
 
@@ -879,10 +873,7 @@ onMounted(async () => {
     &:focus {
       border-color: var(--p-primary-color);
     }
-
-    .app-dark & {
-      border-color: var(--p-surface-600);
-    }
+    // border var(--p-surface-300) theme-reactive default border — no dark override
   }
 
   &__no-approval {
@@ -911,10 +902,7 @@ onMounted(async () => {
     border-radius: $radius-sm;
     background: var(--p-surface-50);
     font-size: $font-size-sm;
-
-    .app-dark & {
-      background: var(--p-surface-50);
-    }
+    // var(--p-surface-50) theme-reactive — no dark override
   }
 
   &__att-icon {

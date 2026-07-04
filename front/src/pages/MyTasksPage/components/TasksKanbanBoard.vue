@@ -481,15 +481,14 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   border-radius: $radius-lg;
 
   .app-dark & {
-    outline-color: $primary-300;
+    outline-color: var(--p-primary-color);
   }
 
   .task-board__col-body {
     background: $primary-50;
 
     .app-dark & {
-      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-      background: rgba(23, 39, 71, 0.18);
+      background: color-mix(in srgb, $primary-900 18%, transparent);
     }
   }
 }

@@ -65,10 +65,7 @@ function getCount(preset: TaskPreset): number {
   gap: 0;
   border-bottom: 2px solid $surface-200;
   flex-shrink: 0;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // $surface-200 theme-reactive soft border — no dark override
 }
 
 .my-tasks-preset-tabs__tab {
@@ -104,8 +101,8 @@ function getCount(preset: TaskPreset): number {
     border-bottom-color: $primary-900;
 
     .app-dark & {
-      color: $primary-300;
-      border-bottom-color: $primary-300;
+      color: var(--p-primary-color);
+      border-bottom-color: var(--p-primary-color);
     }
   }
 }
@@ -125,8 +122,8 @@ function getCount(preset: TaskPreset): number {
   color: $surface-500;
 
   .app-dark & {
-    background: var(--p-surface-700);
-    color: var(--p-surface-400);
+    background: var(--p-surface-200);
+    color: var(--p-surface-700);
   }
 
   &--active {
@@ -134,8 +131,8 @@ function getCount(preset: TaskPreset): number {
     color: $primary-900;
 
     .app-dark & {
-      background: var(--p-surface-700);
-      color: $primary-300;
+      background: color-mix(in srgb, $primary-900 30%, transparent);
+      color: var(--p-primary-color);
     }
   }
 }

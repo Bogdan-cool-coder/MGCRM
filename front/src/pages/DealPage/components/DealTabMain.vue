@@ -601,10 +601,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
 .deal-tab-main__quick-fields {
   padding: $space-3 0 $space-2;
   border-bottom: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
+  // theme-reactive soft border — no dark override
 }
 
 .deal-tab-main__quick-row {
@@ -650,7 +647,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
     background: var(--p-surface-100);
 
     .app-dark & {
-      background: var(--p-surface-700);
+      background: var(--p-surface-200);
     }
   }
 }
@@ -659,8 +656,8 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   width: 22px;
   height: 22px;
   border-radius: $radius-circle;
-  background: $primary-900;
-  color: rgba(255, 255, 255, 1);
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
   font-size: $font-size-2xs;
   font-weight: $font-weight-semibold;
   display: flex;
@@ -672,10 +669,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
 .deal-tab-main__owner-name {
   font-size: $font-size-sm;
   color: $surface-800;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
+  // $surface-800 theme-reactive strong text — no dark override
 }
 
 // ── Owner picker popover ──────────────────────────────────────────────────────
@@ -691,10 +685,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
   overflow: hidden;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 .deal-tab-main__owner-picker-search {
@@ -703,10 +694,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   gap: $space-1;
   padding: $space-2 $space-3;
   border-bottom: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
+  // theme-reactive soft border — no dark override
 }
 
 .deal-tab-main__owner-picker-icon {
@@ -721,10 +709,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   background: transparent;
   font-size: $font-size-sm;
   color: $surface-800;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
+  // $surface-800 theme-reactive strong text — no dark override
 
   &::placeholder {
     color: $surface-400;
@@ -754,16 +739,13 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   font-size: $font-size-sm;
   color: $surface-700;
   transition: background var(--app-transition-fast);
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
+  // color theme-reactive secondary text — no dark override
 
   &:hover {
     background: var(--p-surface-50);
 
     .app-dark & {
-      background: var(--p-surface-700);
+      background: var(--p-surface-200);
     }
   }
 
@@ -772,7 +754,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
     color: var(--p-primary-color);
 
     .app-dark & {
-      background: var(--p-primary-900);
+      background: var(--p-primary-950);
     }
   }
 }
@@ -789,7 +771,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
 
 .deal-tab-main__owner-saving {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   flex-shrink: 0;
 }
 
@@ -797,7 +779,7 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   padding: $space-3;
   text-align: center;
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 
 // ── Company field ─────────────────────────────────────────────────────────────
@@ -814,7 +796,9 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
 
 .deal-tab-main__company-link {
   font-size: $font-size-sm;
-  color: $primary-color;
+  // theme-reactive primary — light #172747 / dark #4C7DF0; static $primary-color
+  // rendered ~1.1:1 on the dark #111E38 card (invisible). --p-primary-color inverts.
+  color: var(--p-primary-color);
   text-decoration: none;
   font-weight: $font-weight-medium;
   padding: $space-1 $space-2;
@@ -826,13 +810,9 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
 
 .deal-tab-main__company-deleted {
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   font-style: italic;
   padding: $space-1 $space-2;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 
 .deal-tab-main__company-edit-btn {
@@ -853,15 +833,12 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   &:hover {
     color: var(--p-primary-color);
   }
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
+  // base color $surface-400 theme-reactive (dark #3A4F78 faint icon) — hover primary wins in both themes
 }
 
 .deal-tab-main__company-saving {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   flex-shrink: 0;
 }
 
@@ -876,9 +853,6 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
   overflow: hidden;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) theme-reactive soft border — no dark override
 }
 </style>

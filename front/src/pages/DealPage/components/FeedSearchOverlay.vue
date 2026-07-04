@@ -96,10 +96,7 @@ function onReset() {
   display: flex;
   flex-direction: column;
   gap: $space-2;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 .feed-search-overlay__input-wrap {
@@ -122,10 +119,7 @@ function onReset() {
   font-weight: $font-weight-semibold;
   color: $surface-600;
   flex: 1;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-600 theme-reactive secondary-muted text — no dark override
 }
 
 .feed-search-overlay__reset {
@@ -158,8 +152,8 @@ function onReset() {
   white-space: nowrap;
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-700);
   }
 
   &:hover:not(.feed-search-overlay__chip--active) {
@@ -176,8 +170,8 @@ function onReset() {
     border-color: transparent;
 
     .app-dark & {
-      background: $primary-900;
-      color: $sidebar-text-active;
+      background: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
     }
   }
 }

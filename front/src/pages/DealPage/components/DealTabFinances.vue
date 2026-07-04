@@ -227,10 +227,7 @@ async function handleFixPayment() {
     border: 1px solid var(--p-surface-200);
     border-radius: $radius-md;
     padding: $space-3;
-
-    .app-dark & {
-      border-color: var(--p-surface-200);
-    }
+    // theme-reactive soft border — no dark override
   }
 
   &__section-label {
@@ -273,10 +270,7 @@ async function handleFixPayment() {
     &:focus {
       border-color: var(--p-primary-color);
     }
-
-    .app-dark & {
-      border-color: var(--p-surface-600);
-    }
+    // border var(--p-surface-300) theme-reactive default border — no dark override
   }
 
   &__currency-select {
@@ -295,10 +289,7 @@ async function handleFixPayment() {
     &:focus {
       border-color: var(--p-primary-color);
     }
-
-    .app-dark & {
-      border-color: var(--p-surface-600);
-    }
+    // border var(--p-surface-300) theme-reactive default border — no dark override
   }
 
   &__saved-note {

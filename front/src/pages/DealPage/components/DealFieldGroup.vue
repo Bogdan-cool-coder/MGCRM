@@ -97,10 +97,7 @@ defineExpose({ collapse, expand })
 <style lang="scss" scoped>
 .deal-field-group {
   border-bottom: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
+  // theme-reactive soft border — no dark override
 }
 
 .deal-field-group__header {
@@ -123,7 +120,7 @@ defineExpose({ collapse, expand })
     background: var(--p-surface-50);
 
     .app-dark & {
-      background: var(--p-surface-800);
+      background: var(--p-surface-100);
     }
   }
 }
@@ -149,8 +146,8 @@ defineExpose({ collapse, expand })
   flex-shrink: 0;
 
   .app-dark & {
-    background: var(--p-primary-900);
-    color: var(--p-primary-300);
+    background: color-mix(in srgb, $primary-900 35%, transparent);
+    color: var(--p-primary-color);
   }
 
   i {
@@ -175,10 +172,7 @@ defineExpose({ collapse, expand })
 
 .deal-field-group--accent .deal-field-group__title {
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
+  // $surface-700 theme-reactive secondary text — no dark override
 }
 
 .deal-field-group__count-badge {

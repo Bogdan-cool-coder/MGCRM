@@ -349,10 +349,7 @@ defineExpose({ setTab })
   background: var(--p-card-background);
   border-top: 1px solid var(--p-surface-200);
   flex-shrink: 0;
-
-  .app-dark & {
-    border-top-color: var(--p-surface-700);
-  }
+  // border-top var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 // ─── LEFT: two stacked mode buttons ──────────────────────────────────────────
@@ -382,9 +379,9 @@ defineExpose({ setTab })
   white-space: nowrap;
 
   .app-dark & {
-    background: var(--p-surface-100);
-    border-color: var(--p-surface-700);
-    color: var(--p-surface-300);
+    background: var(--p-surface-200);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-700);
   }
 
   &:hover:not(.deal-composer__mode-btn--active) {
@@ -392,8 +389,8 @@ defineExpose({ setTab })
     border-color: var(--p-surface-300);
 
     .app-dark & {
-      background: var(--p-surface-200);
-      border-color: var(--p-surface-600);
+      background: var(--p-surface-300);
+      border-color: var(--p-surface-400);
     }
   }
 
@@ -403,9 +400,9 @@ defineExpose({ setTab })
     color: $sidebar-text-active;
 
     .app-dark & {
-      background: $primary-900;
-      border-color: $primary-900;
-      color: $sidebar-text-active;
+      background: var(--p-primary-color);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
     }
   }
 
@@ -432,10 +429,7 @@ defineExpose({ setTab })
   // Right padding leaves room for «Добавить» button (~90px + gap)
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
   padding-right: 100px;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 // Task top row — order B2: Тип · Дата · Ответственный

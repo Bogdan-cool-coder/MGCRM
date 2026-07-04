@@ -866,10 +866,7 @@ onMounted(async () => {
   border: 1px solid $surface-200;
   box-shadow: $shadow-card;
   overflow: hidden;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // $surface-200 theme-reactive soft card border — no dark override
 }
 
 // ── Slide transitions for QuickCreate / FilterPanel / BulkBar ─────────────────

@@ -578,10 +578,7 @@ function confirmDelete() {
   display: flex;
   flex-direction: column;
   gap: 1px;
-
-  .app-dark & {
-    border-color: var(--p-surface-600);
-  }
+  // border var(--p-surface-200) theme-reactive soft popover border — no dark override
 }
 
 .deal-header__menu-backdrop {
@@ -610,7 +607,7 @@ function confirmDelete() {
     background: var(--p-surface-100);
 
     .app-dark & {
-      background: var(--p-surface-700);
+      background: var(--p-surface-200);
     }
   }
 
@@ -641,10 +638,7 @@ function confirmDelete() {
   height: 1px;
   background: var(--p-surface-200);
   margin: $space-1 0;
-
-  .app-dark & {
-    background: var(--p-surface-700);
-  }
+  // theme-reactive soft divider — no dark override
 }
 
 // ── Dialog body ───────────────────────────────────────────────────────────────

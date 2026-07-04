@@ -391,10 +391,7 @@ async function onPin(id: number, isPinned: boolean) {
   background: var(--p-card-background);
   flex-shrink: 0;
   position: relative;
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
+  // border-bottom var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 // Key-action chips (neutral, scroll-to only)
@@ -421,9 +418,9 @@ async function onPin(id: number, isPinned: boolean) {
   font-size: $font-size-xs;
 
   .app-dark & {
-    background: var(--p-surface-700);
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
+    background: var(--p-surface-200);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-700);
   }
 
   &:hover {
@@ -431,7 +428,7 @@ async function onPin(id: number, isPinned: boolean) {
     border-color: var(--p-surface-300);
 
     .app-dark & {
-      background: var(--p-surface-600);
+      background: var(--p-surface-300);
     }
   }
 }
@@ -440,10 +437,7 @@ async function onPin(id: number, isPinned: boolean) {
   font-size: $font-size-3xs;
   color: $surface-400;
   flex-shrink: 0;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-400 theme-reactive icon tier — no dark override
 }
 
 .deal-feed__topbar-chip-label {
@@ -508,7 +502,7 @@ async function onPin(id: number, isPinned: boolean) {
 
 .deal-feed__empty-icon {
   font-size: $font-size-icon-2xl;
-  color: $surface-300;
+  color: $surface-400;
 }
 
 .deal-feed__empty-title {
@@ -516,15 +510,12 @@ async function onPin(id: number, isPinned: boolean) {
   font-weight: $font-weight-semibold;
   color: $surface-600;
   margin: 0;
-
-  .app-dark & {
-    color: var(--p-surface-300);
-  }
+  // $surface-600 theme-reactive secondary-muted text — no dark override
 }
 
 .deal-feed__empty-hint {
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   margin: 0;
 }
 
@@ -559,10 +550,7 @@ async function onPin(id: number, isPinned: boolean) {
   flex: 1;
   height: 1px;
   background: var(--p-surface-200);
-
-  .app-dark & {
-    background: var(--p-surface-700);
-  }
+  // theme-reactive soft divider — no dark override
 }
 
 .deal-feed__date-label {
@@ -570,13 +558,9 @@ async function onPin(id: number, isPinned: boolean) {
   font-weight: $font-weight-medium;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   white-space: nowrap;
   flex-shrink: 0;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 
 // ─── List (vertical line) ────────────────────────────────────────────────────
@@ -595,10 +579,7 @@ async function onPin(id: number, isPinned: boolean) {
     bottom: 8px;
     width: 2px;
     background: var(--p-surface-200);
-
-    .app-dark & {
-      background: var(--p-surface-700);
-    }
+    // theme-reactive soft timeline line — no dark override
   }
 }
 

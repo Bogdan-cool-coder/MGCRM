@@ -82,12 +82,9 @@ const subLine = computed(() => {
   align-items: center;
   gap: $space-2;
   padding: $space-2 $space-4;
-  border-bottom: 1px solid var(--p-surface-100);
+  border-bottom: 1px solid var(--p-surface-200);
   min-height: 36px;
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
+  // var(--p-surface-200) theme-reactive soft row separator — no dark override
 
   &:last-child {
     border-bottom: none;
@@ -112,10 +109,7 @@ const subLine = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
+  // $surface-800 theme-reactive strong text — no dark override
 }
 
 .deal-product-row__sub {
@@ -124,10 +118,7 @@ const subLine = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink (dark #647294) — no dark override
 }
 
 .deal-product-row__amount {
@@ -140,22 +131,14 @@ const subLine = computed(() => {
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
-
-  .app-dark & {
-    // navy primary is invisible on dark surfaces — use light primary-300
-    color: var(--p-primary-300);
-  }
+  // var(--p-primary-color) is theme-reactive: light navy #172747, dark accent #4C7DF0 — no dark override
 }
 
 .deal-product-row__amount-original {
   font-size: $font-size-2xs;
   font-weight: $font-weight-normal;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   text-decoration: line-through;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 
 .deal-product-row__remove {

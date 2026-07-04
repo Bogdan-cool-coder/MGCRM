@@ -107,10 +107,8 @@ function onSelectAllClick() {
   flex-shrink: 0;
 
   .app-dark & {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    background: rgba(23, 39, 71, 0.25); // dark mode primary-100 alpha — no dedicated dark token
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    border-bottom-color: rgba(23, 39, 71, 0.6);
+    background: color-mix(in srgb, $primary-900 25%, transparent); // navy tint on dark surface
+    border-bottom-color: color-mix(in srgb, $primary-900 60%, transparent);
   }
 }
 
@@ -135,7 +133,7 @@ function onSelectAllClick() {
     background: $surface-100;
 
     .app-dark & {
-      background: var(--p-surface-700);
+      background: var(--p-surface-200);
     }
   }
 
@@ -165,13 +163,19 @@ function onSelectAllClick() {
 
   .app-dark & {
     border-color: var(--p-surface-500);
-    background: var(--p-surface-700);
+    background: var(--p-surface-100);
   }
 
   &--checked {
     background: $primary-900;
     border-color: $primary-900;
     color: $surface-0;
+
+    .app-dark & {
+      background: var(--p-primary-color);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
+    }
 
     .pi {
       font-size: $font-size-3xs;
@@ -180,6 +184,10 @@ function onSelectAllClick() {
 
   &--indeterminate {
     border-color: $primary-900;
+
+    .app-dark & {
+      border-color: var(--p-primary-color);
+    }
   }
 }
 
@@ -188,6 +196,10 @@ function onSelectAllClick() {
   height: 2px;
   background: $primary-900;
   border-radius: $radius-2xs; // 2px — snap from 1px
+
+  .app-dark & {
+    background: var(--p-primary-color);
+  }
 }
 
 .tasks-bulk-bar__count {
@@ -195,6 +207,10 @@ function onSelectAllClick() {
   font-weight: $font-weight-semibold;
   color: $primary-900;
   white-space: nowrap;
+
+  .app-dark & {
+    color: var(--p-primary-color); // navy accent on navy-tint bar
+  }
 }
 
 .tasks-bulk-bar__divider {
@@ -223,9 +239,9 @@ function onSelectAllClick() {
   height: 31px;
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    background: var(--p-surface-700);
-    color: var(--p-surface-200);
+    border-color: var(--p-surface-300);
+    background: var(--p-surface-100);
+    color: var(--p-surface-800);
   }
 
   &:hover:not(:disabled) {
@@ -233,8 +249,8 @@ function onSelectAllClick() {
     color: $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
-      color: $primary-300;
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-color);
     }
   }
 

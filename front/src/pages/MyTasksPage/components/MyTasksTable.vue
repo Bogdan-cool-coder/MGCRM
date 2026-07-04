@@ -746,13 +746,19 @@ onMounted(() => {
 
   .app-dark & {
     border-color: var(--p-surface-500);
-    background: var(--p-surface-700);
+    background: var(--p-surface-100);
   }
 
   &--checked {
     background: $primary-900;
     border-color: $primary-900;
     color: $surface-0;
+
+    .app-dark & {
+      background: var(--p-primary-color);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
+    }
 
     .pi {
       font-size: $font-size-3xs;
@@ -761,6 +767,10 @@ onMounted(() => {
 
   &--indeterminate {
     border-color: $primary-900;
+
+    .app-dark & {
+      border-color: var(--p-primary-color);
+    }
   }
 }
 
@@ -769,6 +779,10 @@ onMounted(() => {
   height: 2px;
   background: $primary-900;
   border-radius: $radius-2xs; // 2px — snap from 1px
+
+  .app-dark & {
+    background: var(--p-primary-color);
+  }
 }
 
 .tasks-cell__row-select {
@@ -785,13 +799,19 @@ onMounted(() => {
 
   .app-dark & {
     border-color: var(--p-surface-500);
-    background: var(--p-surface-700);
+    background: var(--p-surface-100);
   }
 
   &--checked {
     background: $primary-900;
     border-color: $primary-900;
     color: $surface-0;
+
+    .app-dark & {
+      background: var(--p-primary-color);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
+    }
 
     .pi {
       font-size: $font-size-3xs;
@@ -820,8 +840,8 @@ onMounted(() => {
       background-color: $surface-50;
 
       .app-dark & {
-        border-color: var(--p-surface-600);
-        background-color: var(--p-surface-800);
+        border-color: var(--p-surface-300);
+        background-color: var(--p-surface-100);
       }
 
       .tasks-cell__edit-icon {
@@ -946,8 +966,10 @@ onMounted(() => {
       color: $surface-600;
 
       .app-dark & {
-        background: var(--p-surface-200);
-        color: var(--p-surface-400);
+        // neutral slate badge — reactive surface-500 color-mix for ≥4.5:1 (was surface-400 on surface-200 = 1.8:1)
+        background: color-mix(in srgb, var(--p-surface-500) 18%, var(--p-surface-100));
+        // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+        color: color-mix(in srgb, white 55%, var(--p-surface-500));
       }
     }
 
@@ -980,8 +1002,10 @@ onMounted(() => {
       color: $task-tag-note-text;
 
       .app-dark & {
-        background: var(--p-surface-200);
-        color: var(--p-surface-400);
+        // neutral slate badge — reactive surface-500 color-mix for ≥4.5:1 (was surface-400 on surface-200 = 1.8:1)
+        background: color-mix(in srgb, var(--p-surface-500) 18%, var(--p-surface-100));
+        // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+        color: color-mix(in srgb, white 55%, var(--p-surface-500));
       }
     }
 
@@ -1075,8 +1099,8 @@ onMounted(() => {
       color: $surface-500;
 
       .app-dark & {
-        background: var(--p-surface-700);
-        color: var(--p-surface-400);
+        background: var(--p-surface-200);
+        color: var(--p-surface-600);
       }
     }
   }

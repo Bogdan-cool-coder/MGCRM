@@ -496,7 +496,7 @@ function onActivityUpdated(activity: ActivityDto) {
 
     .app-dark & {
       background: var(--p-surface-200);
-      color: var(--p-surface-400);
+      // color $surface-500 (dark #647294) — readable event icon on surface-200; surface-400 was too dark
     }
   }
 
@@ -555,10 +555,7 @@ function onActivityUpdated(activity: ActivityDto) {
   display: flex;
   flex-direction: column;
   gap: $space-1;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) theme-reactive soft card border — no dark override
 
   // System events: no background, no border (spec §7.2)
   &--no-bg {
@@ -696,11 +693,7 @@ function onActivityUpdated(activity: ActivityDto) {
   }
 
   &--done {
-    color: $surface-400;
-
-    .app-dark & {
-      color: var(--p-surface-500);
-    }
+    color: var(--p-text-muted-color);
   }
 }
 
@@ -721,7 +714,7 @@ function onActivityUpdated(activity: ActivityDto) {
 }
 
 .feed-item__due {
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   display: inline-flex;
   align-items: center;
 
@@ -751,7 +744,7 @@ function onActivityUpdated(activity: ActivityDto) {
 
 .feed-item__author {
   font-size: $font-size-2xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   margin-top: $space-1;
 }
 

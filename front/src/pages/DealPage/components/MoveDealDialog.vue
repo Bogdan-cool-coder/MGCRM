@@ -274,10 +274,7 @@ async function onSubmit() {
   font-weight: $font-weight-medium;
   color: $surface-500;
   margin-bottom: $space-2;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 }
 
 // Current stage row
@@ -363,7 +360,7 @@ async function onSubmit() {
 
     .app-dark & {
       background: var(--p-primary-950);
-      color: var(--p-primary-300);
+      color: var(--p-primary-color);
     }
   }
 }

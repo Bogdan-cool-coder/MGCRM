@@ -718,7 +718,7 @@ onMounted(async () => {
   justify-content: center;
   gap: $space-3;
   padding: $space-8;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 
   @media (min-width: 1024px) {
     display: flex;
@@ -753,11 +753,7 @@ onMounted(async () => {
     overflow-y: auto;
     border-right: 1px solid var(--p-surface-200);
     background: var(--p-card-background);
-
-    // Correct dark-theme idiom (no :global())
-    .app-dark & {
-      border-right-color: var(--p-surface-700);
-    }
+    // border-right var(--p-surface-200) theme-reactive soft border — no dark override
 
     // Hidden scrollbar
     scrollbar-width: none;
@@ -840,11 +836,7 @@ onMounted(async () => {
     border-bottom: 1px solid var(--p-surface-200);
     background: var(--p-card-background);
     flex-shrink: 0;
-
-    // Correct dark-theme idiom (no :global())
-    .app-dark & {
-      border-bottom-color: var(--p-surface-700);
-    }
+    // border-bottom var(--p-surface-200) theme-reactive soft border — no dark override
   }
 
   &__mobile-switch {

@@ -336,11 +336,7 @@ watch(() => form.value.title, () => {
   border-bottom: 1px solid $surface-200;
   background: $surface-50;
   padding: 14px $space-5;
-
-  .app-dark & {
-    background: var(--p-surface-800);
-    border-color: var(--p-surface-700);
-  }
+  // $surface-50 (dark #0F1F3D recessed) + $surface-200 border theme-reactive — no dark override
 }
 
 .tasks-qc__row {
@@ -376,15 +372,15 @@ watch(() => form.value.title, () => {
   transition: border-color var(--app-transition-fast);
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    background: var(--p-surface-700);
+    border-color: var(--p-surface-300);
+    background: var(--p-surface-100);
   }
 
   &:focus-within {
     border-color: $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
+      border-color: var(--p-primary-color);
     }
   }
 
@@ -392,7 +388,7 @@ watch(() => form.value.title, () => {
     border-color: $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
+      border-color: var(--p-primary-color);
     }
   }
 }
@@ -406,7 +402,7 @@ watch(() => form.value.title, () => {
     color: $primary-900;
 
     .app-dark & {
-      color: $primary-300;
+      color: var(--p-primary-color);
     }
   }
 }
@@ -452,8 +448,8 @@ watch(() => form.value.title, () => {
     background: $surface-100;
 
     .app-dark & {
-      color: var(--p-surface-200);
-      background: var(--p-surface-600);
+      color: var(--p-surface-800);
+      background: var(--p-surface-200);
     }
   }
 
@@ -477,15 +473,15 @@ watch(() => form.value.title, () => {
   z-index: 100;
 
   .app-dark & {
-    background: var(--p-surface-700);
-    border-color: var(--p-surface-600);
+    background: var(--p-card-background);
+    border-color: var(--p-surface-300);
   }
 }
 
 .tasks-qc__entity-loading {
   padding: $space-2;
   text-align: center;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   font-size: $font-size-sm;
 }
 
@@ -506,7 +502,7 @@ watch(() => form.value.title, () => {
     background: $surface-50;
 
     .app-dark & {
-      background: var(--p-surface-600);
+      background: var(--p-surface-100);
     }
   }
 
@@ -517,7 +513,7 @@ watch(() => form.value.title, () => {
     font-weight: $font-weight-medium;
 
     .app-dark & {
-      color: $primary-300;
+      color: var(--p-primary-color);
     }
   }
 }
@@ -533,8 +529,7 @@ watch(() => form.value.title, () => {
   flex-shrink: 0;
 
   .app-dark & {
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    background: rgba(23, 39, 71, 0.3);
+    background: color-mix(in srgb, $primary-900 30%, transparent);
   }
 
   &--contact {
@@ -546,7 +541,7 @@ watch(() => form.value.title, () => {
     color: $primary-900;
 
     .app-dark & {
-      color: $primary-300;
+      color: var(--p-primary-color);
     }
   }
 }
@@ -574,10 +569,7 @@ watch(() => form.value.title, () => {
 .tasks-qc__entity-sub {
   font-size: $font-size-2xs;
   color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 }
 
 // ── Title input ───────────────────────────────────────────────────────────────
@@ -596,9 +588,9 @@ watch(() => form.value.title, () => {
   transition: border-color var(--app-transition-fast);
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    background: var(--p-surface-700);
-    color: var(--p-surface-100);
+    border-color: var(--p-surface-300);
+    background: var(--p-surface-100);
+    color: var(--p-surface-800);
   }
 
   &::placeholder {
@@ -613,7 +605,7 @@ watch(() => form.value.title, () => {
     border-color: $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
+      border-color: var(--p-primary-color);
     }
   }
 

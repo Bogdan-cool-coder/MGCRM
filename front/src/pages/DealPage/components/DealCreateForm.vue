@@ -488,10 +488,7 @@ watch(
   margin: 0 0 $space-1;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
+  // $surface-700 is theme-reactive: light #404040, dark #B4C2DA (secondary text) — no dark override needed
 }
 
 .deal-create-form__field {
@@ -504,10 +501,7 @@ watch(
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
+  // theme-reactive secondary text — no dark override
 }
 
 .deal-create-form__req {
@@ -516,7 +510,7 @@ watch(
 
 .deal-create-form__hint {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 
 .deal-create-form__company-create-btn {
@@ -540,7 +534,7 @@ watch(
   }
 
   .app-dark & {
-    border-top-color: var(--p-surface-700);
+    border-top-color: var(--p-surface-300);
 
     &:hover {
       background: var(--p-surface-100);

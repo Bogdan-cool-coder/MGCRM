@@ -190,11 +190,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: $space-3;
-
-  .app-dark & {
-    background: var(--p-surface-800);
-    border-color: var(--p-surface-700);
-  }
+  // $surface-50 (dark #0F1F3D recessed) + $surface-200 border are theme-reactive — no dark override
 }
 
 // ── Search row ────────────────────────────────────────────────────────────────
@@ -219,15 +215,15 @@ onMounted(() => {
   transition: border-color var(--app-transition-fast);
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    background: var(--p-surface-700);
+    border-color: var(--p-surface-300);
+    background: var(--p-surface-100);
   }
 
   &:focus-within {
     border-color: $primary-900;
 
     .app-dark & {
-      border-color: $primary-300;
+      border-color: var(--p-primary-color);
     }
   }
 }
@@ -272,18 +268,15 @@ onMounted(() => {
   border-radius: $radius-sm;
   transition: all var(--app-transition-fast);
   margin-left: auto;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // color $surface-500 theme-reactive muted icon — no dark override
 
   &:hover {
     color: $surface-800;
     background: $surface-100;
 
     .app-dark & {
-      color: var(--p-surface-200);
-      background: var(--p-surface-700);
+      color: var(--p-surface-800);
+      background: var(--p-surface-200);
     }
   }
 }
@@ -310,10 +303,7 @@ onMounted(() => {
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
   color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-600 theme-reactive secondary-muted text — no dark override
 }
 
 .tasks-filter-panel__control {

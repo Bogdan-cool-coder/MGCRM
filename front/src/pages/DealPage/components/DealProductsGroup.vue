@@ -255,10 +255,7 @@ defineExpose({ collapse, expand })
   gap: $space-2;
   padding: $space-2 $space-4;
   border-bottom: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
+  // theme-reactive soft border — no dark override
 }
 
 // ── Segmented control ─────────────────────────────────────────────────────────
@@ -289,7 +286,7 @@ defineExpose({ collapse, expand })
   white-space: nowrap;
 
   .app-dark & {
-    color: var(--p-surface-300);
+    color: var(--p-surface-700);
   }
 
   &--active {
@@ -320,10 +317,7 @@ defineExpose({ collapse, expand })
   color: $surface-500;
   white-space: nowrap;
   margin-left: auto; // pushes "Скидка [input] %" group to right
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 }
 
 .deal-products-group__discount-field {
@@ -344,10 +338,7 @@ defineExpose({ collapse, expand })
 .deal-products-group__discount-pct {
   font-size: $font-size-xs;
   color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink — no dark override
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────

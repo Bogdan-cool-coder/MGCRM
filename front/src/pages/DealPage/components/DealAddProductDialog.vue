@@ -398,10 +398,7 @@ async function onSubmit() {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: $surface-700;
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
+  // theme-reactive secondary text — no dark override
 }
 
 // ── Product SearchPicker ──────────────────────────────────────────────────────
@@ -424,10 +421,10 @@ async function onSubmit() {
   color: $surface-700;
   text-align: left;
   transition: border-color var(--app-transition-fast);
+  // color theme-reactive (secondary text)
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-200);
+    border-color: var(--p-surface-300);
   }
 
   &:hover {
@@ -474,10 +471,7 @@ async function onSubmit() {
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
   overflow: hidden;
-
-  .app-dark & {
-    border-color: var(--p-surface-700);
-  }
+  // border var(--p-surface-200) is theme-reactive soft border — no dark override
 }
 
 .add-product-dialog__picker-search {
@@ -486,10 +480,7 @@ async function onSubmit() {
   gap: $space-1;
   padding: $space-2 $space-3;
   border-bottom: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-  }
+  // theme-reactive soft border — no dark override
 }
 
 .add-product-dialog__picker-search-icon {
@@ -506,10 +497,7 @@ async function onSubmit() {
   font-size: $font-size-sm;
   color: $surface-800;
   min-width: 0;
-
-  .app-dark & {
-    color: var(--p-surface-100);
-  }
+  // $surface-800 theme-reactive strong text — no dark override
 
   &::placeholder {
     color: $surface-400;
@@ -540,10 +528,7 @@ async function onSubmit() {
   font-size: $font-size-sm;
   color: $surface-700;
   transition: background var(--app-transition-fast);
-
-  .app-dark & {
-    color: var(--p-surface-200);
-  }
+  // color theme-reactive secondary text — no dark override
 
   &:hover {
     background: var(--p-surface-50);
@@ -559,7 +544,7 @@ async function onSubmit() {
 
     .app-dark & {
       background: var(--p-primary-950);
-      color: var(--p-primary-300);
+      color: var(--p-primary-color);
     }
   }
 }
@@ -586,7 +571,7 @@ async function onSubmit() {
 
 .add-product-dialog__picker-option-code {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 
 .add-product-dialog__picker-hint,
@@ -594,7 +579,7 @@ async function onSubmit() {
   padding: $space-3;
   text-align: center;
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 
 // Sum block (read-only)
@@ -616,10 +601,7 @@ async function onSubmit() {
 .add-product-dialog__sum-label {
   font-size: $font-size-sm;
   color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // $surface-500 theme-reactive muted ink (dark #647294) — no dark override
 }
 
 .add-product-dialog__sum-value {
