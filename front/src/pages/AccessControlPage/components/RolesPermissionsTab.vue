@@ -44,8 +44,6 @@
         />
       </div>
     </template>
-
-    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -54,10 +52,10 @@ import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
-import Toast from 'primevue/toast'
 import PermissionMatrix from './PermissionMatrix.vue'
 import { useRolesPermissions } from '../composables/useRolesPermissions'
 
+// `embedded` kept as public prop (parent passes it); Toast now covered by layout global.
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const { t } = useI18n()

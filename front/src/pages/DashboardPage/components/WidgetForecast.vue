@@ -129,17 +129,14 @@ const forecastItems = computed(() => {
 
 .forecast-kpi {
   border: 1px solid $surface-200;
+  // theme-reactive: $surface-50 = #F9FAFB (light) / #0F1F3D (navy dark). Dead
+  // `:global(.app-dark) &` override removed — $surface-50 is already dark in navy dark.
   background-color: $surface-50;
   border-radius: $radius-md;
   padding: $space-3;
   display: flex;
   flex-direction: column;
   gap: $space-2;
-
-  // Dark mode override — $surface-50 is very light in dark themes
-  :global(.app-dark) & {
-    background-color: $surface-card;
-  }
 }
 
 .forecast-kpi__header {

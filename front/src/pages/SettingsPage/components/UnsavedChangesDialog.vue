@@ -66,7 +66,7 @@ function onStay() {
     line-height: $line-height-normal;
 
     .app-dark & {
-      color: var(--p-surface-300);
+      color: var(--p-surface-700); // secondary navy text (was surface-300 = dark border = low contrast)
     }
   }
 

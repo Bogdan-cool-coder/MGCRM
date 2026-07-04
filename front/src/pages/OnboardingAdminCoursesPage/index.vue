@@ -168,8 +168,6 @@
       v-model:visible="showCreateDialog"
       @create="onCreate"
     />
-
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -179,7 +177,6 @@ import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
-import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import CourseStatusTag from '@/components/shared/CourseStatusTag.vue'
 import CoursesFilterPanel from './components/CoursesFilterPanel.vue'

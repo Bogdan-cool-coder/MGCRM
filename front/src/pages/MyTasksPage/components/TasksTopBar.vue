@@ -238,7 +238,7 @@ function onMoreClick(e: MouseEvent) {
   line-height: 1.2;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800); // dark surface-800 = light navy text (was surface-100 = dark-on-dark)
   }
 }
 
@@ -249,7 +249,7 @@ function onMoreClick(e: MouseEvent) {
   line-height: 1.4;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500); // dark surface-500 = muted navy text (was surface-400 = too dark)
   }
 }
 
@@ -286,8 +286,8 @@ function onMoreClick(e: MouseEvent) {
   white-space: nowrap;
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-700); // muted navy text on dark card (was surface-300 = dark-on-dark)
   }
 
   &:hover {
@@ -497,8 +497,8 @@ function onMoreClick(e: MouseEvent) {
   flex-shrink: 0;
 
   .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-700); // muted navy icon on dark card (was surface-300 = dark-on-dark)
   }
 
   &:hover {

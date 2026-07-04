@@ -137,8 +137,6 @@
       :loading="saveMutation.isPending.value"
       @save="save"
     />
-
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -154,7 +152,6 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
-import ConfirmDialog from 'primevue/confirmdialog'
 import FieldKindTag from '@/components/crm/FieldKindTag.vue'
 import CustomFieldDialog from './components/CustomFieldDialog.vue'
 import DirRowActionsMenu from '@/pages/SettingsPage/components/sections/directories/DirRowActionsMenu.vue'
@@ -275,7 +272,7 @@ defineExpose({ canManage, openCreate, rowCount })
   color: $surface-800;
 
   .app-dark & {
-    color: var(--p-surface-200);
+    color: var(--p-surface-800); // strong navy text (was surface-200 = dark border = invisible)
   }
 }
 

@@ -1473,6 +1473,7 @@
           "basePriceRow": "Base",
           "emptyPlans": "No pricing plans added",
           "inlineEditHint": "Double-click to edit price",
+          "deleteHint": "Remove price for this currency",
           "save": "Save",
           "cancel": "Cancel",
           "saved": "Price updated",

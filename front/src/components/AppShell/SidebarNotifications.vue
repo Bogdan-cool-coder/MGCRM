@@ -514,7 +514,10 @@ function formatTime(iso: string): string {
   }
 
   &--unread {
-    background: rgba($primary, 0.07);
+    // theme-reactive: brand navy #172747 (light) vs accent #4C7DF0 (dark). --app-primary
+    // is the static brand constant and its 7% tint is invisible on dark surfaces; the
+    // reactive token also removes the need for the former rgba(255,255,255,.05) dark override.
+    background: color-mix(in srgb, var(--p-primary-color) 7%, transparent);
 
     &::before {
       content: '';
@@ -524,18 +527,10 @@ function formatTime(iso: string): string {
       transform: translateY(-50%);
       width: 3px;
       height: 60%;
-      background: $primary;
+      // Reactive accent: navy #172747 (light) is invisible on dark surface-100 (#444547);
+      // --p-primary-color lightens to #4C7DF0 in dark and reads on both.
+      background: var(--p-primary-color);
       border-radius: 0 $radius-2xs $radius-2xs 0;
-
-      .app-dark & {
-        // Navy $primary (#172747) is invisible on dark surface-100 (#444547);
-        // use a lighter accent that reads on dark bg.
-        background: var(--p-primary-400);
-      }
-    }
-
-    .app-dark & {
-      background: rgba(255, 255, 255, 0.05);
     }
   }
 }

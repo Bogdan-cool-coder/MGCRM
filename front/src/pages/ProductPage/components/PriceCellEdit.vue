@@ -120,8 +120,10 @@ function onKeydown(e: KeyboardEvent) {
       cursor: pointer;
 
       &:hover {
+        // reactive raised step (light grey / navy #172847) — visible hover in both themes.
+        // Was surface-50 + a dead `:global(.app-dark) .class:hover` override (class dropped).
         border-color: $surface-300;
-        background-color: $surface-50;
+        background-color: $surface-200;
       }
     }
   }
@@ -152,9 +154,7 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-// Dark mode: InputNumber visible
-:global(.app-dark) .price-cell__display--clickable:hover {
-  background-color: var(--p-surface-800);
-  border-color: var(--p-surface-600);
-}
+// Dark hover handled reactively in the base `&--clickable:hover` rule above.
+// Removed dead `:global(.app-dark) .price-cell__display--clickable:hover` (class after
+// the paren is dropped by the scoped compiler → bare `.app-dark{}`).
 </style>

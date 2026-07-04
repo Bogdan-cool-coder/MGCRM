@@ -169,9 +169,6 @@
       :required="true"
       @confirm="confirmDecide"
     />
-
-    <ConfirmDialog />
-    <Toast />
   </div>
 </template>
 
@@ -189,8 +186,6 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Badge from 'primevue/badge'
 import Menu from 'primevue/menu'
-import ConfirmDialog from 'primevue/confirmdialog'
-import Toast from 'primevue/toast'
 
 import DocumentStatusTag from '@/components/shared/DocumentStatusTag.vue'
 import DecideDialog from '@/components/shared/DecideDialog.vue'

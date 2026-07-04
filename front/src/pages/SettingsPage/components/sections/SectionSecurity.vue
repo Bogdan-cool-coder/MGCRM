@@ -286,7 +286,7 @@ async function copySecret(): Promise<void> {
   color: $surface-500;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-600); // 4.83:1 on card bg (was surface-400 = 2.03:1 FAIL)
   }
 }
 
@@ -350,7 +350,7 @@ async function copySecret(): Promise<void> {
     margin: 0 0 $space-2;
 
     .app-dark & {
-      color: var(--p-surface-400);
+      color: var(--p-surface-600); // 4.83:1 on card bg (was surface-400 = 2.03:1 FAIL)
     }
   }
 }
@@ -394,7 +394,7 @@ async function copySecret(): Promise<void> {
   .app-dark & {
     background-color: var(--p-surface-100);
     border-color: var(--p-surface-200);
-    color: var(--p-surface-50);
+    color: var(--p-surface-900); // primary navy text on dark code block (was surface-50 = invisible)
   }
 }
 </style>

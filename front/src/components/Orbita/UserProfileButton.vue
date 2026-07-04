@@ -190,7 +190,8 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
 
   &:hover {
     background: $surface-100;
-    border-color: rgba($surface-900, 0.08);
+    // rgba($surface-900, …) was invalid (var-hex dropped). color-mix.
+    border-color: color-mix(in srgb, var(--app-surface-900) 8%, transparent);
   }
 
   &:focus-visible {
@@ -210,8 +211,10 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   width: 28px;
   height: 28px;
   border-radius: $radius-sm;
-  background: rgba($primary, 0.15);
-  color: $primary;
+  // theme-reactive: brand navy #172747 (light) vs accent #4C7DF0 (dark). --app-primary
+  // is the static brand constant — navy fill + navy initials both sink into the dark surface.
+  background: color-mix(in srgb, var(--p-primary-color) 15%, transparent);
+  color: var(--p-primary-color);
   font-size: $font-size-2xs;
   font-weight: $font-weight-bold;
   display: inline-flex;
@@ -220,19 +223,9 @@ defineExpose<OrbitaOverlayControl>({ syncPopover, realign })
   line-height: 1;
 }
 
-// ─── Dark mode ────────────────────────────────────────────────────────────────
-:global(.app-dark) {
-  .orbita-action-btn__label {
-    color: $surface-300;
-  }
-
-  .user-profile-btn__trigger {
-    &:hover {
-      background: $surface-800;
-      border-color: rgba($surface-100, 0.1);
-    }
-  }
-}
+// Dark mode: base rules already theme-reactive ($surface-*). Removed dead
+// `:global(.app-dark) { .child {} }` block — Vue scoped-compiler drops the child
+// selectors, leaving bare `.app-dark{}` rules that never matched these elements.
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
 @media (prefers-reduced-motion: reduce) {

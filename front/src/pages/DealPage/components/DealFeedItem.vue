@@ -588,7 +588,7 @@ function onActivityUpdated(activity: ActivityDto) {
   line-height: $line-height-tight;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500); // muted navy ink (was surface-400 = too dark)
   }
 }
 
@@ -598,7 +598,7 @@ function onActivityUpdated(activity: ActivityDto) {
   white-space: nowrap;
 
   .app-dark & {
-    color: var(--p-surface-200);
+    color: var(--p-surface-700); // secondary navy text (was surface-200 = dark border = invisible)
   }
 }
 
@@ -607,7 +607,7 @@ function onActivityUpdated(activity: ActivityDto) {
   color: $surface-500;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500); // muted navy ink (was surface-400 = too dark)
   }
 }
 
@@ -615,7 +615,7 @@ function onActivityUpdated(activity: ActivityDto) {
   color: $surface-500;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500); // muted navy ink (was surface-400 = too dark)
   }
 }
 
@@ -641,7 +641,7 @@ function onActivityUpdated(activity: ActivityDto) {
   font-weight: $font-weight-medium;
 
   .app-dark & {
-    color: var(--p-surface-200);
+    color: var(--p-surface-700); // secondary navy text (was surface-200 = dark border = invisible)
   }
 }
 
@@ -745,7 +745,7 @@ function onActivityUpdated(activity: ActivityDto) {
   word-break: break-word;
 
   .app-dark & {
-    color: var(--p-surface-300);
+    color: var(--p-surface-700); // readable body text (was surface-300 = dark border = low contrast)
   }
 }
 

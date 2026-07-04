@@ -205,9 +205,6 @@
       :saving="saveMutation.isPending.value"
       @submit="saveRate"
     />
-
-    <Toast v-if="!embedded" position="top-right" />
-    <ConfirmDialog v-if="!embedded" />
   </div>
 </template>
 
@@ -222,8 +219,6 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Menu from 'primevue/menu'
 import Paginator from 'primevue/paginator'
-import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import { useUserStore } from '@/stores/user'
 import { CURRENCY_WHITELIST } from '@/utils/currency'

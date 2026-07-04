@@ -199,7 +199,8 @@ defineExpose({ panelRef, labelSide })
       background: $surface-100;
       color: $surface-900;
       transform: translateY(-1px);
-      border-color: rgba($surface-900, 0.08);
+      // rgba($surface-900, …) was invalid (var-hex arg dropped → no border). color-mix.
+      border-color: color-mix(in srgb, var(--app-surface-900) 8%, transparent);
 
       .orbita-panel__btn-label {
         max-width: 10rem;
@@ -214,13 +215,15 @@ defineExpose({ panelRef, labelSide })
     }
 
     &.is-active {
-      background: rgba($primary, 0.12);
-      border-color: rgba($primary, 0.18);
-      color: $primary;
+      // theme-reactive: brand navy #172747 (light) vs accent #4C7DF0 (dark). --app-primary
+      // is the static brand constant and its tint/text is invisible on the dark panel surface.
+      background: color-mix(in srgb, var(--p-primary-color) 12%, transparent);
+      border-color: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
+      color: var(--p-primary-color);
     }
 
     &.is-active:hover {
-      background: rgba($primary, 0.18);
+      background: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
     }
   }
 }

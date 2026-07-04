@@ -73,8 +73,6 @@
       </div>
     </template>
 
-    <ConfirmDialog />
-
     <!-- Edit dialog — wired to patchTemplate -->
     <TemplateEditDialog
       v-model="editDialogVisible"
@@ -91,7 +89,6 @@ import { useI18n } from 'vue-i18n'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
-import ConfirmDialog from 'primevue/confirmdialog'
 import TemplateUploadCard from './components/TemplateUploadCard.vue'
 import TemplateAiCheckCard from './components/TemplateAiCheckCard.vue'
 import TemplateVersionsCard from './components/TemplateVersionsCard.vue'

@@ -484,11 +484,13 @@ const _localeRef = locale
 
   &:hover,
   &.is-active {
-    background: $surface-100;
+    background: $surface-200; // reactive raised step (light grey / navy #172847) — was surface-100
   }
 
   &.is-active {
-    background: rgba($primary, 0.08);
+    // theme-reactive: brand navy #172747 (light) vs accent #4C7DF0 (dark). --app-primary
+    // is the static brand constant and its 8% tint is invisible on the dark palette surface.
+    background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
   }
 }
 
@@ -536,22 +538,7 @@ const _localeRef = locale
   text-align: center;
 }
 
-// ─── Dark mode ────────────────────────────────────────────────────────────────
-:global(.app-dark) {
-  .command-palette__esc-hint {
-    border-color: $surface-600;
-    background: $surface-800;
-  }
-
-  .command-palette__item {
-    &:hover,
-    &.is-active {
-      background: $surface-800;
-    }
-
-    &.is-active {
-      background: rgba($primary, 0.18);
-    }
-  }
-}
+// Dark mode: base rules already theme-reactive ($surface-* / rgba($primary)).
+// Removed dead `:global(.app-dark) { .child {} }` block — Vue scoped-compiler drops
+// the child selectors, leaving bare `.app-dark{}` rules (never matched the elements).
 </style>

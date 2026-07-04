@@ -128,7 +128,7 @@ function onSelectAllClick() {
   transition: background-color var(--app-transition-fast);
 
   .app-dark & {
-    color: var(--p-surface-300);
+    color: var(--p-surface-700); // readable on navy-tint bulk bar (was surface-300 = dark-on-dark)
   }
 
   &:hover {

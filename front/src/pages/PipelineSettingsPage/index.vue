@@ -166,12 +166,6 @@
       @update:model-visible="showWizard = $event"
       @saved="handleAutomationSaved"
     />
-
-    <!-- Confirm Dialog -->
-    <ConfirmDialog />
-
-    <!-- Toast -->
-    <Toast />
   </div>
 </template>
 
@@ -180,8 +174,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
-import ConfirmDialog from 'primevue/confirmdialog'
-import Toast from 'primevue/toast'
 import SelectButton from 'primevue/selectbutton'
 import Select from 'primevue/select'
 import type { SelectChangeEvent } from 'primevue/select'

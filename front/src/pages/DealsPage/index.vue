@@ -121,9 +121,6 @@
       :lost-reasons="salesStore.lostReasonsCache"
       @moved="onDealMoved"
     />
-
-    <Toast position="top-right" />
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -133,8 +130,6 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import DealsKanbanBoard from './components/DealsKanbanBoard.vue'
 import DealsListView from './components/DealsListView.vue'
 import DealsToolbar from './components/DealsToolbar.vue'

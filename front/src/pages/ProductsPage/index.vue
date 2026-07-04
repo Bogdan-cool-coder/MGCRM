@@ -291,9 +291,6 @@
       v-model="importDialogOpen"
       @imported="load"
     />
-
-    <Toast v-if="!embedded" position="top-right" />
-    <ConfirmDialog v-if="!embedded" />
   </div>
 </template>
 
@@ -311,8 +308,6 @@ import InputIcon from 'primevue/inputicon'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Menu from 'primevue/menu'
 import Paginator from 'primevue/paginator'
-import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import { useUserStore } from '@/stores/user'
 import { useProductsPageData } from './composables/useProductsPageData'

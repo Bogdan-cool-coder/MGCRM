@@ -155,7 +155,7 @@ function onTabChange(value: string | number) {
   margin: 0 0 $space-1;
 
   .app-dark & {
-    color: var(--p-surface-50);
+    color: var(--p-surface-900); // primary navy text (was surface-50 = darkest = invisible)
   }
 }
 
@@ -165,7 +165,9 @@ function onTabChange(value: string | number) {
   margin: 0;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    // surface-600 (#8593B0) on card bg surface-100 (#111E38) = 4.83:1 → AA at 12.25px.
+    // surface-500 was 3.46:1 (FAIL for small text). Inverted dark scale: 600 is LIGHTER.
+    color: var(--p-surface-600);
   }
 }
 

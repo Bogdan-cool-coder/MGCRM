@@ -151,8 +151,6 @@
       v-model="createDialogVisible"
       @created="onDocumentCreated"
     />
-
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -166,7 +164,6 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Paginator from 'primevue/paginator'
 import Menu from 'primevue/menu'
-import ConfirmDialog from 'primevue/confirmdialog'
 import DocumentStatusTag from '@/components/shared/DocumentStatusTag.vue'
 import DocumentsFilterPanel from './components/DocumentsFilterPanel.vue'
 import CreateDocumentDialog from './components/CreateDocumentDialog.vue'

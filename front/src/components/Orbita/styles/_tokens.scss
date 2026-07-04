@@ -7,8 +7,10 @@
 
 // Surface adapts to theme (white in light, dark in dark)
 $orbita-surface-bg: $surface-0;
-$orbita-surface-border: 1px solid rgba($surface-900, 0.08);
-$orbita-surface-border-hover: rgba($surface-900, 0.16);
+// rgba($surface-900, …) was invalid: $surface-900 = var(--app-surface-900) (hex string),
+// and rgba() drops a var-hex arg → borders rendered transparent. color-mix is the fix.
+$orbita-surface-border: 1px solid color-mix(in srgb, var(--app-surface-900) 8%, transparent);
+$orbita-surface-border-hover: color-mix(in srgb, var(--app-surface-900) 16%, transparent);
 
 // Control sizes
 $orbita-control-size: 2.75rem;       // 44px — nav buttons

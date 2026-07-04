@@ -247,7 +247,7 @@ onMounted(() => {
   outline: none;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800); // strong navy input text (was surface-100 = card bg = invisible)
   }
 
   &::placeholder {
@@ -343,14 +343,14 @@ onMounted(() => {
   transition: color var(--app-transition-fast);
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500); // muted navy ink (was surface-400 = too dark)
   }
 
   &:hover {
     color: $surface-800;
 
     .app-dark & {
-      color: var(--p-surface-200);
+      color: var(--p-surface-800); // strong navy on hover (was surface-200 = invisible)
     }
   }
 }

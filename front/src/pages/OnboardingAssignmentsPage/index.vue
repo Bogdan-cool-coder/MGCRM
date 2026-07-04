@@ -124,8 +124,6 @@
       v-model:visible="showAssignDrawer"
       @assigned="onAssigned"
     />
-
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -136,7 +134,6 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import ProgressBar from 'primevue/progressbar'
-import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import AssignmentStatusTag from '@/components/shared/AssignmentStatusTag.vue'
 import AssignmentsFilterPanel from './components/AssignmentsFilterPanel.vue'

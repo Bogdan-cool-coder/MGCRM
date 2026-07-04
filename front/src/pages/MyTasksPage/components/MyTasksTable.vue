@@ -922,7 +922,7 @@ onMounted(() => {
     white-space: nowrap;
 
     .app-dark & {
-      color: var(--p-surface-200);
+      color: var(--p-surface-700); // secondary navy text (was surface-200 = dark border = invisible)
     }
   }
 

@@ -259,7 +259,7 @@ function onReprocess() {
     color: $surface-900;
 
     .app-dark & {
-      color: var(--p-surface-0);
+      color: var(--p-surface-900); // light navy text in dark (was surface-0 = black = invisible)
     }
   }
 
@@ -268,7 +268,7 @@ function onReprocess() {
     color: $surface-600;
 
     .app-dark & {
-      color: var(--p-surface-400);
+      color: var(--p-surface-600); // muted navy text in dark (was surface-400 = dark-on-dark)
     }
   }
 }
@@ -300,7 +300,7 @@ function onReprocess() {
     color: $surface-900;
 
     .app-dark & {
-      color: var(--p-surface-0);
+      color: var(--p-surface-900); // light navy text in dark (was surface-0 = black = invisible)
     }
   }
 
@@ -309,7 +309,7 @@ function onReprocess() {
     color: $surface-600;
 
     .app-dark & {
-      color: var(--p-surface-400);
+      color: var(--p-surface-600); // muted navy text in dark (was surface-400 = dark-on-dark)
     }
   }
 }

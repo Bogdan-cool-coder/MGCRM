@@ -209,9 +209,11 @@ defineExpose({ toggle, hide, show })
     object-fit: cover;
   }
 
-  // Dark mode: slightly different placeholder bg
-  :global(.app-dark) & {
-    background-color: rgba(255, 255, 255, 0.15);
+  // Dark mode: slightly different placeholder bg.
+  // `.app-dark &` (live idiom) — NOT `:global(.app-dark) &` (dead: compiler drops `&`).
+  .app-dark & {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background-color: rgba(255, 255, 255, 0.15); // translucent white on navy avatar placeholder
   }
 }
 

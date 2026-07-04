@@ -189,7 +189,7 @@ async function cropAndUpload() {
   text-align: center;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-600); // 4.83:1 on card bg (was surface-400 = 2.03:1 FAIL)
   }
 }
 </style>

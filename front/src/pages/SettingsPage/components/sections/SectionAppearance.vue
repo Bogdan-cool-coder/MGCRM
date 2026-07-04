@@ -361,13 +361,15 @@ const currentQuickActions = computed(() =>
   }
 
   &:hover {
-    border-color: $primary;
-    background: rgba($primary, 0.03);
+    // theme-reactive: brand navy #172747 (light) vs accent #4C7DF0 (dark). --app-primary
+    // is the static brand constant (#172747 both themes) and is invisible on dark surfaces.
+    border-color: var(--p-primary-color);
+    background: color-mix(in srgb, var(--p-primary-color) 3%, transparent);
   }
 
   &--active {
-    border-color: $primary;
-    background: rgba($primary, 0.06);
+    border-color: var(--p-primary-color);
+    background: color-mix(in srgb, var(--p-primary-color) 6%, transparent);
   }
 
   &__icon {
@@ -381,7 +383,7 @@ const currentQuickActions = computed(() =>
     color: $surface-900;
 
     .app-dark & {
-      color: var(--p-surface-50);
+      color: var(--p-surface-900); // primary navy text (was surface-50 = darkest = invisible)
     }
   }
 
@@ -453,7 +455,7 @@ const currentQuickActions = computed(() =>
   color: $surface-900;
 
   .app-dark & {
-    color: var(--p-surface-50);
+    color: var(--p-surface-900); // primary navy text (was surface-50 = darkest = invisible)
   }
 }
 

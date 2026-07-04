@@ -63,9 +63,8 @@
       </keep-alive>
     </div>
 
-    <!-- ConfirmDialog is the global singleton in DefaultLayout (ConfirmService is
-         app-wide) — a local one here rendered TWO alertdialogs per confirm.require. -->
-    <Toast position="top-right" />
+    <!-- Toast & ConfirmDialog are app-wide singletons in DefaultLayout — a local
+         instance rendered each toast/alertdialog twice. -->
   </div>
 </template>
 
@@ -74,7 +73,6 @@ import { computed, provide, ref, nextTick, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import SelectButton from 'primevue/selectbutton'
-import Toast from 'primevue/toast'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import AnalyticsFilterBar from './components/AnalyticsFilterBar.vue'
 import TabOverview from './components/tabs/TabOverview.vue'

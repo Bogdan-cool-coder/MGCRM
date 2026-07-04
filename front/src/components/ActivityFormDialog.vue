@@ -577,11 +577,8 @@ function onHide() {
   &__label {
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
+    // theme-reactive (dark = #B4C2DA). Dead `:global(.app-dark) &` override removed.
     color: $surface-700;
-
-    :global(.app-dark) & {
-      color: var(--p-surface-300);
-    }
   }
 
   &__req {
@@ -599,6 +596,7 @@ function onHide() {
     align-items: center;
     gap: $space-1;
     padding: $space-1 $space-3;
+    // theme-reactive: navy card bg + soft border + muted text in dark. Dead override removed.
     border: 1px solid $surface-300;
     border-radius: $radius-md;
     background: $surface-card;
@@ -607,12 +605,6 @@ function onHide() {
     cursor: pointer;
     transition: all var(--app-transition-fast);
 
-    :global(.app-dark) & {
-      border-color: var(--p-surface-600);
-      background: var(--p-surface-800);
-      color: var(--p-surface-300);
-    }
-
     &:hover:not(:disabled) {
       border-color: $primary-color;
       color: $primary-color;
@@ -620,12 +612,15 @@ function onHide() {
 
     &--active {
       border-color: $primary-color;
-      background: rgba($primary-color, 0.08);
+      // rgba($primary-color, …) was invalid (var-hex dropped → transparent). color-mix.
+      background: color-mix(in srgb, var(--app-primary-color) 8%, transparent);
       color: $primary-color;
       font-weight: $font-weight-semibold;
 
-      :global(.app-dark) & {
-        background: rgba(23, 39, 71, 0.4);
+      // Live idiom `.app-dark &` (was dead `:global(.app-dark) &`).
+      .app-dark & {
+        // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+        background: rgba(23, 39, 71, 0.4); // navy-tint active bg on dark
       }
     }
 

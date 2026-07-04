@@ -88,14 +88,14 @@ function getCount(preset: TaskPreset): number {
   white-space: nowrap;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500); // muted navy tab label (was surface-400 = too dark)
   }
 
   &:hover {
     color: $surface-700;
 
     .app-dark & {
-      color: var(--p-surface-200);
+      color: var(--p-surface-700); // secondary navy on hover (was surface-200 = invisible)
     }
   }
 

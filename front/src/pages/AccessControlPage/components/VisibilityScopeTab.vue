@@ -75,8 +75,6 @@
         />
       </div>
     </template>
-
-    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -90,10 +88,10 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
-import Toast from 'primevue/toast'
 import { useVisibilityConfig } from '../composables/useVisibilityConfig'
 import type { UserRole } from '@/entities/user'
 
+// `embedded` kept as public prop (parent passes it); Toast now covered by layout global.
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const { t } = useI18n()

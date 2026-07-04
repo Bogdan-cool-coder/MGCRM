@@ -414,11 +414,29 @@ $font-size-xl   // ~18px — заголовок PageHeader
 
 > **Инвертированная navy-шкала dark-темы (MSales 2.0):** в `.app-dark` шкала surface инвертирована, значения — navy. `surface-100` в dark = `#111E38` (тёмный card), `surface-200` = `#172847` (raised / soft-border), `surface-900` = `#EAF0FA` (светлый текст). Для текста в dark бери `surface-800`/`surface-900` (светлые), для raised-hover — `surface-200`. НЕ `surface-700`/`surface-800` для фона и НЕ `surface-200`/`surface-300` для текста (это dark-on-dark). Акцент в dark светлеет `#172747 → #4C7DF0` (читай через `--p-primary-color`).
 
-**⛔ Мёртвые dark-селекторы (закон — эти 3 варианта НИКОГДА не пиши):**
+**⛔ Мёртвые dark-селекторы (закон — эти 4 варианта НИКОГДА не пиши):**
 
 1. `.app-dark &` **внутри** `:deep(...)` — компилируется в `.app-dark[data-v-x] …`; `.app-dark` сидит на `<html>` (вне scope компонента) → **никогда не матчит**.
 2. top-level `:deep(.app-dark …)` в scoped-блоке — Vue всё равно эмитит leftmost `[data-v]` атрибут → **мёртв**.
 3. `:deep(.app-dark) &` и вариации — та же причина.
+4. **`:global(.app-dark) &`** (и любой селектор ПОСЛЕ закрывающей скобки `:global()`) в scoped-блоке — scoped-компилятор **отбрасывает всё, что стоит после `:global(...)`**: и `&`, и класс, и вложенные `{ .child {} }`. Результат — голое правило `.app-dark { … }`, которое красит весь dark-рут, а нужный элемент не трогает → **мёртв + побочный ущерб**.
+
+   ```scss
+   // ⛔ ВСЕ мертвы — компилируются в `.app-dark { color: red }`:
+   .foo { :global(.app-dark) & { color: red; } }          // & отброшен
+   :global(.app-dark) .foo { color: red; }                // .foo отброшен
+   :global(.app-dark) { .foo { color: red; } }            // .foo (child) отброшен
+   :global(.app-dark) &__table { … }                      // &__table отброшен
+
+   // ✅ ЖИВ — весь селектор ВНУТРИ скобок :global() (нужно для эл-тов вне scope,
+   //    напр. внутренности PrimeVue/Vue Flow без [data-v]):
+   :global(.app-dark .vue-flow__minimap-mask) { fill: var(--p-surface-0); }
+   ```
+
+   Fix для вариантов из этого пункта: если базовое правило уже theme-reactive
+   (`$surface-*`/`var(--p-*)`) — просто **удали** мёртвый оверрайд; если нужен разный вид по
+   темам на СОБСТВЕННОМ scoped-элементе — перепиши на `.app-dark &` (без `:global`, live);
+   если цель — эл-т вне scope (PrimeVue/Vue Flow) — весь селектор внутрь `:global(.app-dark …)`.
 
 **✅ 2 рабочих паттерна для dark-override:**
 

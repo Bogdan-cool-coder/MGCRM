@@ -587,8 +587,6 @@
       :loading="bulk.bulkDeleteLoading.value"
       @confirm="bulk.executeBulkDelete()"
     />
-
-    <Toast position="top-right" />
   </div>
 </template>
 
@@ -600,7 +598,6 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
-import Toast from 'primevue/toast'
 
 import MergeDialog from '@/components/crm/dedup/MergeDialog.vue'
 import EntityAvatar from '@/components/crm/entity/EntityAvatar.vue'

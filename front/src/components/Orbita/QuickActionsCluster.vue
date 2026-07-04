@@ -174,7 +174,8 @@ function execute(action: QuickActionDef): void {
 
   &:hover {
     background: $surface-100;
-    border-color: rgba($surface-900, 0.08);
+    // rgba($surface-900, …) was invalid (var-hex dropped). color-mix.
+    border-color: color-mix(in srgb, var(--app-surface-900) 8%, transparent);
   }
 
   &:focus-visible {
@@ -189,23 +190,9 @@ function execute(action: QuickActionDef): void {
   }
 }
 
-// ─── Dark mode ────────────────────────────────────────────────────────────────
-:global(.app-dark) {
-  .orbita-action-btn__label {
-    color: $surface-300;
-  }
-
-  .quick-action-btn {
-    &:hover {
-      background: $surface-800;
-      border-color: rgba($surface-100, 0.1);
-    }
-
-    &__icon {
-      color: $surface-300;
-    }
-  }
-}
+// Dark mode: base rules already theme-reactive ($surface-*). Removed dead
+// `:global(.app-dark) { .child {} }` block — Vue scoped-compiler drops the child
+// selectors, leaving bare `.app-dark{}` rules that never matched these elements.
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
 @media (prefers-reduced-motion: reduce) {

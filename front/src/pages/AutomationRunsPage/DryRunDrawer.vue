@@ -135,8 +135,6 @@
       </div>
     </template>
   </Drawer>
-
-  <ConfirmDialog />
 </template>
 
 <script setup lang="ts">
@@ -150,7 +148,6 @@ import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
 import ProgressSpinner from 'primevue/progressspinner'
 import Message from 'primevue/message'
-import ConfirmDialog from 'primevue/confirmdialog'
 import { automationsApi } from '@/api/automation'
 import { salesApi } from '@/api/sales'
 import type { AutomationDto, DryRunResponse } from '@/entities/automation'

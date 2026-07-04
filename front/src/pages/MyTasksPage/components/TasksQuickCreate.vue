@@ -421,7 +421,7 @@ watch(() => form.value.title, () => {
   min-width: 0;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800); // strong navy input text (was surface-100 = card bg = invisible)
   }
 
   &::placeholder {
@@ -567,7 +567,7 @@ watch(() => form.value.title, () => {
   text-overflow: ellipsis;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800); // strong navy text (was surface-100 = card bg = invisible)
   }
 }
 
@@ -670,14 +670,14 @@ watch(() => form.value.title, () => {
   transition: color var(--app-transition-fast);
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-600); // muted navy label (was surface-400 = too dark)
   }
 
   &:hover {
     color: $surface-800;
 
     .app-dark & {
-      color: var(--p-surface-200);
+      color: var(--p-surface-800); // strong navy on hover (was surface-200 = invisible)
     }
   }
 }

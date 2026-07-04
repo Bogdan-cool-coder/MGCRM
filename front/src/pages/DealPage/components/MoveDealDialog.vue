@@ -305,7 +305,7 @@ async function onSubmit() {
   color: $surface-800;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800); // strong navy text (was surface-100 = card bg = invisible)
   }
 }
 
@@ -346,7 +346,7 @@ async function onSubmit() {
   transition: background var(--app-transition-fast);
 
   .app-dark & {
-    color: var(--p-surface-200);
+    color: var(--p-surface-700); // secondary navy text (was surface-200 = dark border = invisible)
   }
 
   &:hover {
@@ -395,7 +395,7 @@ async function onSubmit() {
   color: $surface-700;
 
   .app-dark & {
-    color: var(--p-surface-200);
+    color: var(--p-surface-700); // secondary navy text (was surface-200 = dark border = invisible)
   }
 }
 

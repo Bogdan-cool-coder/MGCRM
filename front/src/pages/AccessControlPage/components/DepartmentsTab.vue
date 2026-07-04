@@ -218,10 +218,9 @@
       </template>
     </Dialog>
 
-    <!-- ConfirmDialog for delete -->
+    <!-- Grouped ConfirmDialog — kept: the global singleton has no group and can't
+         render group="dept-delete" confirms. Toast removed (layout global covers it). -->
     <ConfirmDialog group="dept-delete" />
-
-    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -238,7 +237,6 @@ import Skeleton from 'primevue/skeleton'
 import Dialog from 'primevue/dialog'
 import MultiSelect from 'primevue/multiselect'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Toast from 'primevue/toast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'

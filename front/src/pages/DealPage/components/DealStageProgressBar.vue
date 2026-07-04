@@ -57,7 +57,7 @@ const segments = computed((): Segment[] => {
 
     let bg: string
     if (stage.is_won) {
-      bg = '#A7EFAA'
+      bg = 'var(--p-green-300)' // was literal #A7EFAA — use theme token (matches --p-green-300)
     } else if (isPast || isActive) {
       bg = stage.color ?? 'var(--p-primary-400)'
     } else {

@@ -278,8 +278,6 @@
         </div>
       </div>
     </template>
-
-    <Toast position="top-right" />
   </div>
 </template>
 
@@ -289,7 +287,6 @@ import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import FileUpload, { type FileUploadUploaderEvent } from 'primevue/fileupload'
-import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import SearchPicker from '@/components/crm/SearchPicker.vue'
 import DateField from '@/components/crm/DateField.vue'

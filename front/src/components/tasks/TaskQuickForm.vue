@@ -476,15 +476,14 @@ onMounted(async () => {
   gap: $space-2;
   transition: box-shadow var(--app-transition-fast);
 
-  :global(.app-dark) & {
-    background: var(--p-surface-900);
-    border-color: var(--p-surface-700);
-  }
+  // theme-reactive: $surface-card = navy card, $surface-200 = soft navy border in dark.
+  // Dead `:global(.app-dark) &` override removed (compiled to bare .app-dark{}).
 
   &:focus-within {
+    // rgba($primary-color, …) was invalid (var-hex dropped → no focus ring). color-mix.
     // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    box-shadow: 0 0 0 2px rgba($primary-color, 0.18); // focus ring alpha blend from $primary-color token
-    border-color: rgba($primary-color, 0.4);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-primary-color) 18%, transparent);
+    border-color: color-mix(in srgb, var(--app-primary-color) 40%, transparent);
   }
 
   &--completing {
@@ -515,11 +514,7 @@ onMounted(async () => {
   transition: all var(--app-transition-fast);
   flex-shrink: 0;
 
-  :global(.app-dark) & {
-    border-color: var(--p-surface-600);
-    background: var(--p-surface-800);
-    color: var(--p-surface-300);
-  }
+  // theme-reactive base tokens read correctly in navy dark. Dead override removed.
 
   &:hover:not(&--static) {
     border-color: $primary-color;
@@ -592,12 +587,9 @@ onMounted(async () => {
 
   &:hover {
     color: $surface-700;
-    background: $surface-100;
-
-    :global(.app-dark) & {
-      color: var(--p-surface-200);
-      background: var(--p-surface-700);
-    }
+    // reactive raised step (light grey / navy #172847) — visible on both card bgs.
+    // Was dead `:global(.app-dark) &` override; base surface-100 = card bg (no hover in dark).
+    background: $surface-200;
   }
 }
 
@@ -617,13 +609,11 @@ onMounted(async () => {
 .tqf__task-title {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
+  // theme-reactive (dark = #C6D0E2 strong text). Dead override to surface-100 removed
+  // (surface-100 = card bg in dark = invisible title).
   color: $surface-800;
   margin: 0;
   line-height: 1.4;
-
-  :global(.app-dark) & {
-    color: var(--p-surface-100);
-  }
 }
 
 .tqf__error {
@@ -704,20 +694,19 @@ onMounted(async () => {
   white-space: nowrap;
   line-height: 1.4;
 
-  :global(.app-dark) & {
-    border-color: var(--p-surface-600);
-    color: var(--p-surface-300);
-  }
+  // theme-reactive base tokens read correctly in navy dark. Dead override removed.
 
   &:hover {
     border-color: $primary-color;
     color: $primary-color;
-    background: rgba($primary-color, 0.06);
+    // rgba($primary-color, …) was invalid (var-hex dropped → transparent). color-mix.
+    background: color-mix(in srgb, var(--app-primary-color) 6%, transparent);
   }
 
   &--active {
     border-color: $primary-color;
-    background: rgba($primary-color, 0.1);
+    // rgba($primary-color, …) was invalid (var-hex dropped → transparent). color-mix.
+    background: color-mix(in srgb, var(--app-primary-color) 10%, transparent);
     color: $primary-color;
     font-weight: $font-weight-medium;
   }

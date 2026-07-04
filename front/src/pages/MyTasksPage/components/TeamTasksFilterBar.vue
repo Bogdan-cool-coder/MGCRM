@@ -136,7 +136,7 @@ onMounted(() => {
   min-width: 0;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800); // strong navy input text (was surface-100 = card bg = invisible)
   }
 
   &::placeholder {

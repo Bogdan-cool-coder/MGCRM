@@ -117,9 +117,6 @@
       :saving="planMutation.isPending.value"
       @submit="onPlanSubmit"
     />
-
-    <Toast position="top-right" />
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -135,8 +132,6 @@ import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
-import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import { useUserStore } from '@/stores/user'
 import { catalogApi } from '@/api/catalog'

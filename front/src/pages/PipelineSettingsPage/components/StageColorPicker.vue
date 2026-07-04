@@ -114,7 +114,9 @@ const SOFT_COLORS = [
     background: var(--p-surface-200);
     border-color: var(--p-surface-300);
 
-    :global(.app-dark) & {
+    // Live idiom `.app-dark &` (was dead `:global(.app-dark) &`). Lighter mid-tone so the
+    // neutral swatch stays visible on navy dark (surface-200 = #172847 too dark).
+    .app-dark & {
       background: var(--p-surface-600);
       border-color: var(--p-surface-500);
     }

@@ -160,8 +160,6 @@
       :automation="page.selectedAutomation.value"
       @ran="() => page.fetchRuns()"
     />
-
-    <Toast v-if="!embedded" />
   </div>
 </template>
 
@@ -175,7 +173,6 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import DatePicker from 'primevue/datepicker'
 import Message from 'primevue/message'
-import Toast from 'primevue/toast'
 import { PageHeader } from '@/components/AppShell'
 import type { AutomationRunDto, RunStatus, ActionKind } from '@/entities/automation'
 import { useAutomationRuns } from './composables/useAutomationRuns'
@@ -293,14 +290,11 @@ function truncate(s: string, len: number): string {
   }
 
   &__table {
+    // var(--p-surface-50) is theme-reactive: #F9FAFB (light) / #0F1F3D (navy dark) —
+    // already a correct dark table-header bg. Dead `:global(.app-dark) &__table` block
+    // removed (interpolated `&__table` inside :global() is dropped by the compiler).
     :deep(th) {
       background-color: var(--p-surface-50);
-    }
-  }
-
-  :global(.app-dark) &__table {
-    :deep(th) {
-      background-color: var(--p-surface-900);
     }
   }
 

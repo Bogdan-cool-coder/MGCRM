@@ -89,8 +89,6 @@
         />
       </div>
     </template>
-
-    <Toast position="top-right" />
   </div>
 </template>
 
@@ -99,7 +97,6 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
-import Toast from 'primevue/toast'
 import MkBuilderHeader from './MkBuilderHeader.vue'
 import MkPositionToggles from './MkPositionToggles.vue'
 import MkPlanTable from './MkPlanTable.vue'

@@ -716,8 +716,8 @@ function onDrop(event: DragEvent): void {
     align-items: center;
     justify-content: center;
     gap: $space-4;
-    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-    background: rgba($surface-0, 0.85);
+    // rgba($surface-0, …) was invalid (var-hex dropped → transparent scrim). color-mix.
+    background: color-mix(in srgb, var(--app-surface-0) 85%, transparent);
     pointer-events: none;
 
     .app-dark & {
@@ -780,9 +780,12 @@ function onDrop(event: DragEvent): void {
 // Background is handled via --p-card-background (auto-switches light/dark).
 // Mask fill is an SVG attribute — CSS custom properties don't propagate into SVG
 // fill attributes set inline; we override via a global rule.
+// NOTE: the whole selector must live INSIDE :global(...) — `:global(.app-dark) .class`
+// (class after the paren) is dropped by the scoped compiler → bare `.app-dark{}` (dead).
+// vue-flow__minimap-mask is a Vue Flow internal element with no scope attribute anyway.
 
-:global(.app-dark) .vue-flow__minimap-mask {
-  fill: var(--p-surface-800);
-  fill-opacity: 0.7;
+:global(.app-dark .vue-flow__minimap-mask) {
+  fill: var(--p-surface-0); // darkest navy dim overlay (#0A1426) — was surface-800 (light = wrong)
+  fill-opacity: 0.6;
 }
 </style>

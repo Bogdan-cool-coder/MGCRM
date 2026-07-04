@@ -313,33 +313,28 @@ const {
 // ─── Form panel (right, adaptive) ────────────────────────────────────────────
 .login-panel {
   flex: 1 1 56%;
+  // theme-reactive: dark = surface-100 (#111E38 navy panel). Dead :global(.app-dark) &
+  // override removed (compiled to bare .app-dark{} — painted whole dark root).
   background-color: $surface-100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: $space-8 $space-4;
-
-  :global(.app-dark) & {
-    background-color: var(--p-surface-900);
-  }
 }
 
 .login-panel__card {
   width: 100%;
   max-width: 420px;
+  // theme-reactive: $surface-card = navy card (#111E38) in dark. Dead :global(.app-dark) &
+  // override removed (was bare .app-dark{}).
   background-color: $surface-card;
+  border: 1px solid $surface-200;
   border-radius: $radius-lg;
   box-shadow: var(--app-shadow-lg);
   padding: $space-8;
   display: flex;
   flex-direction: column;
   gap: $space-5;
-
-  :global(.app-dark) & {
-    background-color: var(--p-surface-800);
-    border: 1px solid var(--p-surface-700);
-    box-shadow: $shadow-elevated;
-  }
 }
 
 // Mobile-only logo (hidden on desktop where brand panel is visible)

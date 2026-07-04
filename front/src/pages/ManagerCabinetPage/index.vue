@@ -123,8 +123,6 @@
       </div>
       </template>
     </div>
-
-    <Toast position="top-right" />
   </div>
 </template>
 
@@ -136,7 +134,6 @@ import Card from 'primevue/card'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
-import Toast from 'primevue/toast'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import CabinetHeader from './components/CabinetHeader.vue'
 import MonthStepper from './components/MonthStepper.vue'

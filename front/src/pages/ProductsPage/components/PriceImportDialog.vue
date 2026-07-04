@@ -358,14 +358,8 @@ async function downloadTemplate() {
   margin-top: $space-3;
 }
 
-// Dark mode
-:global(.app-dark) .import-dialog__dropzone {
-  background: var(--p-surface-900);
-  border-color: var(--p-surface-700);
-}
-
-:global(.app-dark) .p-dialog {
-  background: var(--p-surface-card);
-  color: var(--p-text-color);
-}
+// Dropzone base ($surface-50 bg / $surface-300 border) is theme-reactive — navy dark
+// resolves correctly. Dialog bg/text are theme-managed by PrimeVue. Removed dead
+// `:global(.app-dark) .class` rules (class dropped by compiler → bare `.app-dark{}`;
+// they also referenced non-existent var --p-surface-card and wrongly used surface-900).
 </style>

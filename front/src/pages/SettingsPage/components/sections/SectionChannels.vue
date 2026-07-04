@@ -198,7 +198,7 @@ function onUnlinkTelegram() {
     margin: 0 0 $space-1;
 
     .app-dark & {
-      color: var(--p-surface-50);
+      color: var(--p-surface-900); // primary navy text (was surface-50 = darkest = invisible)
     }
   }
 
@@ -211,7 +211,8 @@ function onUnlinkTelegram() {
     gap: $space-2;
 
     .app-dark & {
-      color: var(--p-surface-400);
+      // surface-500 was only 3.46:1 (FAIL for 14px). surface-600 = 4.83:1 → true AA.
+      color: var(--p-surface-600);
     }
   }
 

@@ -125,11 +125,8 @@ const otherEntries = computed(() =>
   }
 }
 
-:global(.app-dark) .hotkeys-cheatsheet__kbd {
-  border-color: $surface-600;
-  background: $surface-800;
-  color: $surface-200;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  box-shadow: 0 1px 0 $surface-600; // custom divider shadow, uses surface tokens
-}
+// Dark mode: __kbd base is theme-reactive ($surface-300 border / $surface-50 bg /
+// $surface-700 text — all read correctly in navy dark). Removed dead
+// `:global(.app-dark) .hotkeys-cheatsheet__kbd` rule (scoped-compiler drops the class,
+// leaving a bare `.app-dark{}` rule that painted the whole dark root).
 </style>

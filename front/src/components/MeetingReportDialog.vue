@@ -354,11 +354,8 @@ async function onSubmit() {
   &__label {
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
+    // theme-reactive (dark = #B4C2DA). Dead `:global(.app-dark) &` override removed.
     color: $surface-700;
-
-    :global(.app-dark) & {
-      color: var(--p-surface-300);
-    }
   }
 
   &__req {
@@ -370,21 +367,15 @@ async function onSubmit() {
     flex-direction: column;
     gap: $space-3;
     padding-top: $space-3;
+    // theme-reactive soft border (dark = #172847). Dead override removed.
     border-top: 1px solid $surface-200;
-
-    :global(.app-dark) & {
-      border-color: var(--p-surface-700);
-    }
   }
 
   &__ftm-title {
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
+    // theme-reactive (dark = #B4C2DA). Dead override removed.
     color: $surface-700;
-
-    :global(.app-dark) & {
-      color: var(--p-surface-200);
-    }
   }
 
   &__ftm-row {
@@ -395,12 +386,9 @@ async function onSubmit() {
 
   &__ftm-label {
     font-size: $font-size-sm;
+    // theme-reactive (dark = #B4C2DA). Dead override removed.
     color: $surface-700;
     cursor: pointer;
-
-    :global(.app-dark) & {
-      color: var(--p-surface-300);
-    }
   }
 
   &__options {
@@ -411,6 +399,7 @@ async function onSubmit() {
 
   &__opt-btn {
     padding: $space-1 $space-3;
+    // theme-reactive: navy card bg + soft border + muted text in dark. Dead override removed.
     border: 1px solid $surface-300;
     border-radius: $radius-md;
     background: $surface-card;
@@ -419,15 +408,10 @@ async function onSubmit() {
     cursor: pointer;
     transition: all var(--app-transition-fast);
 
-    :global(.app-dark) & {
-      border-color: var(--p-surface-600);
-      background: var(--p-surface-800);
-      color: var(--p-surface-300);
-    }
-
     &--active {
       border-color: $primary-color;
-      background: rgba($primary-color, 0.08);
+      // rgba($primary-color, …) was invalid (var-hex dropped → transparent). color-mix.
+      background: color-mix(in srgb, var(--app-primary-color) 8%, transparent);
       color: $primary-color;
       font-weight: $font-weight-semibold;
     }

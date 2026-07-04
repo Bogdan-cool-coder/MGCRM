@@ -442,8 +442,6 @@
         />
       </template>
     </Dialog>
-
-    <Toast position="top-right" />
   </div>
 </template>
 
@@ -461,7 +459,6 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Skeleton from 'primevue/skeleton'
 import Select from 'primevue/select'
-import Toast from 'primevue/toast'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'

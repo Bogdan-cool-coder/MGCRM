@@ -115,6 +115,9 @@ function unitLabel(unit: string): string {
 <style lang="scss" scoped>
 .plans-price-table {
   padding: $space-3 $space-4;
+  // theme-reactive: $surface-50 = #F9FAFB (light) / #0F1F3D (navy dark). Dead
+  // `:global(.app-dark) .plans-price-table` rule removed (class dropped → bare .app-dark{};
+  // it also wrongly wanted surface-900 = light in dark).
   background: $surface-50;
 
   &__plan-name {
@@ -137,10 +140,5 @@ function unitLabel(unit: string): string {
   &__dt {
     font-size: $font-size-sm;
   }
-}
-
-// Dark mode
-:global(.app-dark) .plans-price-table {
-  background: var(--p-surface-900);
 }
 </style>

@@ -418,10 +418,9 @@ function onHide() {
   color: $surface-500;
 }
 
-// Dark mode
-:global(.app-dark) .p-drawer {
-  background: var(--p-surface-card);
-}
+// Drawer bg is theme-managed by PrimeVue overlay tokens (navy card in dark).
+// Removed dead `:global(.app-dark) .p-drawer` rule (class dropped by compiler → bare
+// `.app-dark{}`; also referenced non-existent var --p-surface-card).
 
 :deep(.p-drawer-close-button) {
   display: none !important;

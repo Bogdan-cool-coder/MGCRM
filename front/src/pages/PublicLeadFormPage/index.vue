@@ -131,11 +131,9 @@ onMounted(() => {
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
+  // theme-reactive: dark = surface-100 (#111E38 navy page). Dead `:global(.app-dark) &`
+  // override removed (compiled to bare .app-dark{} — painted whole dark root).
   background-color: $surface-100;
-
-  :global(.app-dark) & {
-    background-color: var(--p-surface-900);
-  }
 }
 
 .public-form__brand {
@@ -163,19 +161,15 @@ onMounted(() => {
 .public-form__card {
   width: 100%;
   max-width: 480px;
+  // theme-reactive: $surface-card = navy card (#111E38) in dark. Dead override removed.
   background-color: $surface-card;
+  border: 1px solid $surface-200;
   border-radius: $radius-lg;
   box-shadow: var(--app-shadow-lg);
   padding: $space-8;
   display: flex;
   flex-direction: column;
   gap: $space-5;
-
-  :global(.app-dark) & {
-    background-color: var(--p-surface-800);
-    border: 1px solid var(--p-surface-700);
-    box-shadow: $shadow-elevated;
-  }
 }
 
 .public-form__state {

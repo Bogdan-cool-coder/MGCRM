@@ -400,8 +400,12 @@ function onCompleteBtn() {
     color: $surface-600;
 
     .app-dark & {
-      background: var(--p-surface-200);
-      color: var(--p-surface-400);
+      // Neutral slate badge — mirror --call/--meeting color-mix pattern using the
+      // reactive surface-500 base so text↔bg contrast lands ≥4.5:1 (was surface-400
+      // text on surface-200 bg = 1.8:1, invisible). Result ≈ #B9C0CF on #202D49 = 7.5:1.
+      background: color-mix(in srgb, var(--p-surface-500) 18%, var(--p-surface-100));
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: color-mix(in srgb, white 55%, var(--p-surface-500));
     }
   }
 
@@ -434,8 +438,11 @@ function onCompleteBtn() {
     color: $task-tag-note-text;
 
     .app-dark & {
-      background: var(--p-surface-200);
-      color: var(--p-surface-400);
+      // Same neutral-slate fix as --task/--unknown (note has no vivid brand hue):
+      // surface-400 text on surface-200 bg was 1.8:1 (invisible) → 7.5:1.
+      background: color-mix(in srgb, var(--p-surface-500) 18%, var(--p-surface-100));
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: color-mix(in srgb, white 55%, var(--p-surface-500));
     }
   }
 
@@ -568,8 +575,8 @@ function onCompleteBtn() {
     color: $surface-600;
 
     .app-dark & {
-      background: var(--p-surface-50);
-      color: var(--p-surface-300);
+      background: var(--p-surface-200);
+      color: var(--p-surface-700); // readable on dark chip (was surface-300 = dark-on-dark)
     }
   }
 }

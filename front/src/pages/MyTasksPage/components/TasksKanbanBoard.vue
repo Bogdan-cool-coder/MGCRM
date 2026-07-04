@@ -407,9 +407,9 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   justify-self: start;
 
   .app-dark & {
-    background: var(--p-surface-50);
-    border-color: var(--p-surface-200);
-    color: var(--p-surface-300);
+    background: var(--p-surface-200);
+    border-color: var(--p-surface-300);
+    color: var(--p-surface-700); // readable count on dark chip (was surface-300 = dark-on-dark)
   }
 }
 
@@ -422,7 +422,7 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   color: $surface-800;
 
   .app-dark & {
-    color: var(--p-surface-100);
+    color: var(--p-surface-800); // strong navy column title (was surface-100 = card bg = invisible)
   }
 }
 
@@ -433,7 +433,7 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   text-align: center;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500); // muted navy ink (was surface-400 = too dark)
   }
 }
 

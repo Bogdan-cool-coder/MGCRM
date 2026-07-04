@@ -127,8 +127,6 @@
       :deadline-days="course.deadline_days"
       @assigned="loadCourseAssignments"
     />
-
-    <ConfirmDialog />
   </div>
 </template>
 
@@ -139,7 +137,6 @@ import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Message from 'primevue/message'
-import ConfirmDialog from 'primevue/confirmdialog'
 import CourseStatusTag from '@/components/shared/CourseStatusTag.vue'
 import { useCourseBuilder } from './composables/useCourseBuilder'
 import { useCourseModules } from './composables/useCourseModules'
