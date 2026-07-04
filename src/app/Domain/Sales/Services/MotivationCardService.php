@@ -29,6 +29,11 @@ use Illuminate\Support\Facades\DB;
  * commissionKopecks / teamBonusPoolKopecks / teamBonusShares / gatePassed take
  * no DB dependency and are directly unit-testable. Money is integer kopecks
  * throughout; #DIV/0 guards return 0 everywhere a denominator can be zero.
+ *
+ * TODO: params.kpi_type is compared here as raw string literals
+ * ('count'/'amount'/'manual'). Adopting a backed enum for these values is a
+ * behavioural change (out of dead-code-removal scope) and is deferred as a
+ * future hardening step.
  */
 class MotivationCardService
 {

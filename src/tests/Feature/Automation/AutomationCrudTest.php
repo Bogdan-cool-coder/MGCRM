@@ -202,23 +202,6 @@ class AutomationCrudTest extends TestCase
         $this->getJson('/api/automations')->assertForbidden();
     }
 
-    // ---- show ----
-
-    public function test_show_returns_automation_with_runs_count(): void
-    {
-        $this->actingAsAdmin();
-        [$pipeline, $stage] = $this->pipelineWithStage();
-        $automation = PipelineAutomation::factory()->create([
-            'pipeline_id' => $pipeline->id,
-            'stage_id' => $stage->id,
-        ]);
-
-        $this->getJson("/api/automations/{$automation->id}")
-            ->assertOk()
-            ->assertJsonPath('data.id', $automation->id)
-            ->assertJsonPath('data.runs_count', 0);
-    }
-
     // ---- update ----
 
     public function test_admin_can_update_automation(): void

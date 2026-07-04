@@ -48,6 +48,14 @@ abstract class TestCase extends BaseTestCase
             'BROADCAST_CONNECTION' => 'null',
             'TELESCOPE_ENABLED' => 'false',
             'PULSE_ENABLED' => 'false',
+            // Destructive selective-reset feature flag. It is ENABLED in the
+            // dev/prod .env (by user choice) and docker-compose injects that
+            // value into the container OS-env. Like DB_CONNECTION, only putenv()
+            // before bootstrap reliably beats the OS-env (the phpunit.xml <env>
+            // force alone loses to an existing getenv value). Force it back to
+            // the production DEFAULT so the suite never runs with the destructive
+            // feature silently on (SystemResetTest asserts it is false).
+            'SYSTEM_RESET_ENABLED' => 'false',
         ];
 
         foreach ($forced as $key => $value) {

@@ -38,7 +38,6 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  * Status stays 'draft' throughout.
  *
  * Sync execution — ~5–15 seconds, fits within HTTP timeout.
- * GenerateContractJob wraps this for future bulk dispatch (not used from HTTP).
  */
 class ContractGenerationService
 {

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Catalog\Services;
 
 use App\Domain\Catalog\Models\ExchangeRate;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -133,28 +132,6 @@ class ExchangeRateService
         return (int) (bccomp($scaled, '0', 6) >= 0
             ? bcadd($scaled, '0.5', 0)
             : bcsub($scaled, '0.5', 0));
-    }
-
-    /**
-     * Return rates ordered by date descending, then pair ascending.
-     *
-     * NOTE: this returns ALL historical rows (multiple rows per pair when more
-     * than one date exists). It does NOT guarantee one row per (from_code, to_code)
-     * pair. Callers that need the latest-per-pair rate should use getRate() or
-     * ExchangeRate::scopeLatestForPair() instead.
-     */
-    public function latestRates(?int $limit = null): Collection
-    {
-        $query = ExchangeRate::query()
-            ->orderByDesc('date')
-            ->orderBy('from_code')
-            ->orderBy('to_code');
-
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-
-        return $query->get();
     }
 
     /**

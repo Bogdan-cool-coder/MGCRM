@@ -700,7 +700,9 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // =========================================================================
     Route::post('automations/{automation}/test', [AutomationController::class, 'test'])->name('automations.test');
     Route::post('automations/{automation}/execute', [AutomationController::class, 'execute'])->name('automations.execute');
-    Route::apiResource('automations', AutomationController::class);
+    // show is unused by the SPA (list/create/update/delete only); excluded to
+    // keep the surface honest and avoid an orphan single-resource endpoint.
+    Route::apiResource('automations', AutomationController::class)->except(['show']);
     Route::get('automation-runs', [AutomationRunController::class, 'index'])->name('automation-runs.index');
 
     // =========================================================================

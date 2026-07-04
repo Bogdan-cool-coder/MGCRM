@@ -12,7 +12,6 @@ use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Sales\Data\CopyPeriodData;
 use App\Domain\Sales\Data\PlanMatrixQuery;
 use App\Domain\Sales\Data\UpsertCellData;
-use App\Domain\Sales\Enums\PlanMetric;
 use App\Domain\Sales\Enums\PlanScopeType;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\Pipeline;
@@ -463,18 +462,6 @@ class PlanTargetService
         }
 
         return $converted;
-    }
-
-    /**
-     * count fact for tasks_completed(kind) / expected_deals — stubbed until Ф4.
-     * Validated by the FormRequest but the fact helper is not wired for these
-     * metrics yet (contract §9 Ф1 scope: new_income scope=user end-to-end only).
-     *
-     * @param  array<string, mixed>  $config
-     */
-    public function countFact(PlanMetric $metric, array $config, PlanScopeType $scope, ?int $scopeId, int $year, int $month): int
-    {
-        return 0;
     }
 
     // -------------------------------------------------------------------------

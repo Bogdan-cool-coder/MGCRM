@@ -8,7 +8,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * GET /api/motivation/cards/me (contract §6.1). Auth enforced by middleware;
- * visibility (own vs subordinate vs any) resolved in MotivationCardPolicy::view.
+ * visibility (own vs subordinate vs any) is resolved in the controller via
+ * ManagerKpiService::resolveTargetUser (the same gate as the S1.8 cabinet).
  */
 class MotivationCabinetRequest extends FormRequest
 {

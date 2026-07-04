@@ -44,6 +44,13 @@
         <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
+        <!-- Destructive selective-reset feature flag. It is ENABLED in the dev/prod
+             .env (by user choice) and docker-compose injects that value into the
+             container OS-env, which overrides .env.testing. Force it back to false so
+             the suite exercises the real production DEFAULT (SystemResetTest asserts
+             config('system.reset_enabled') === false) and never runs with the
+             destructive feature silently on. -->
+        <env name="SYSTEM_RESET_ENABLED" value="false" force="true"/>
         <env name="PULSE_ENABLED" value="false" force="true"/>
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>
         <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>

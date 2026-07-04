@@ -56,15 +56,6 @@ class AutomationController extends Controller
         return AutomationResource::make($automation->load(['pipeline:id,name', 'stage:id,name']));
     }
 
-    public function show(PipelineAutomation $automation): JsonResource
-    {
-        $this->authorize('view', $automation);
-
-        return AutomationResource::make(
-            $automation->load(['pipeline:id,name', 'stage:id,name'])->loadCount('runs'),
-        );
-    }
-
     public function update(UpdateAutomationRequest $request, PipelineAutomation $automation): JsonResource
     {
         $this->authorize('update', $automation);

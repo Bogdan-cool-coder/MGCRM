@@ -8,7 +8,6 @@ use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\CompanyService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
-use App\Domain\Inbox\Enums\ChannelKind;
 use App\Domain\Inbox\Enums\RoutingStatus;
 use App\Domain\Inbox\Models\Channel;
 use App\Domain\Inbox\Models\InboundMessage;
@@ -358,11 +357,5 @@ class InboundRoutingService
         $user = $ownerId !== null ? User::find($ownerId) : null;
 
         return $user ?? User::query()->orderBy('id')->firstOrFail();
-    }
-
-    /** Allowed channel kinds (referenced for completeness / future use). */
-    public static function channelKinds(): array
-    {
-        return array_map(static fn (ChannelKind $k): string => $k->value, ChannelKind::cases());
     }
 }

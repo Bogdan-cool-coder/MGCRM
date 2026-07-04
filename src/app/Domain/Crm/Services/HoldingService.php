@@ -252,60 +252,6 @@ class HoldingService
     }
 
     /**
-     * Recursively build the nested children array from the in-memory map.
-     * Zero DB calls — pure PHP traversal.
-     *
-     * @param  array<int, Company>  $byId
-     * @return array<int, array<string, mixed>>
-     */
-    private function buildChildrenFromMap(int $parentId, int $focalId, array $byId, int $depth): array
-    {
-        if ($depth >= self::MAX_DEPTH) {
-            return [];
-        }
-
-        $result = [];
-        foreach ($byId as $company) {
-            if ((int) $company->holding_id !== $parentId) {
-                continue;
-            }
-
-            $result[] = [
-                'company' => $this->companyNode($company, $company->id === $focalId),
-                'children' => $this->buildChildrenFromMap($company->id, $focalId, $byId, $depth + 1),
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * Get the chain of ancestors from $company up to the group root.
-     * Used externally; internally buildTree() uses ancestorsFromMap() instead.
-     * Stops at MAX_DEPTH to prevent infinite loops in corrupted data.
-     *
-     * @return Collection<int, Company>
-     */
-    public function ancestors(Company $company): Collection
-    {
-        $chain = collect();
-        $current = $company;
-        $depth = 0;
-
-        while ($current->holding_id !== null && $depth < self::MAX_DEPTH) {
-            $parent = Company::find($current->holding_id);
-            if ($parent === null) {
-                break;
-            }
-            $chain->prepend($parent); // root first
-            $current = $parent;
-            $depth++;
-        }
-
-        return $chain;
-    }
-
-    /**
      * Set (or clear) the parent of a company within a holding group.
      * Throws InvalidArgumentException (→ 422) if a cycle is detected.
      */

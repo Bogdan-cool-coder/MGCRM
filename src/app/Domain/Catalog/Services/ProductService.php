@@ -236,14 +236,6 @@ class ProductService
     }
 
     /**
-     * Alias: get price for currency (used by DealProduct in S1.3).
-     */
-    public function getPriceForCurrency(int $productId, ?int $planId, string $currencyCode): ?int
-    {
-        return $this->getPriceSnapshot($productId, $planId, $currencyCode);
-    }
-
-    /**
      * Permanently purge ALL catalog products, groups, plans and prices.
      *
      * Used ONLY by the system-reset `directories` category
