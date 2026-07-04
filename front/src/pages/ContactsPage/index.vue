@@ -533,7 +533,7 @@
     </div>
 
     <!-- ── Dedup dialog ────────────────────────────────────────────────────── -->
-    <MergeDialog v-model:visible="dedupOpen" mode="dedup" @merged="load" />
+    <MergeDialog v-model:visible="dedupOpen" mode="dedup" @merged="refresh" />
     <!-- ── Bulk merge dialog ─────────────────────────────────────────────── -->
     <MergeDialog
       v-model:visible="bulkMergeOpen"
@@ -710,8 +710,43 @@ async function loadKpi() {
   }
 }
 
+// Combined refresh — reload BOTH the list and the KPI bar. Local mutations (delete,
+// bulk delete, merge, assign-owner) go through this so the KPI counters can't drift
+// out of sync with the table when realtime (Echo/Reverb) is a no-op.
+async function refresh() {
+  await Promise.all([load(), loadKpi()])
+}
+
 watch(entityType, () => {
   void loadKpi()
+})
+
+// ── Route ⇄ entityType sync ────────────────────────────────────────────────────
+// Both /contacts (name 'Contacts') and /companies (name 'Companies') render THIS
+// same component, so Vue reuses the instance on navigation between them: onMounted
+// does NOT re-run and entityType would keep the previous section's value. These two
+// watchers keep route.name and entityType in lock-step in both directions.
+//
+//   route.name → entityType : SPA nav / command palette / hotkey / F5 opens the
+//     right list (list + KPI reload is driven by the existing watch(entityType)).
+//   entityType → route.name : toolbar segment switch pushes the URL via
+//     router.replace so a shared/refreshed link resolves to the correct section.
+const entityTypeForRoute = (name: unknown): EntityType =>
+  name === 'Companies' ? 'company' : 'contact'
+
+watch(
+  () => route.name,
+  (name) => {
+    const next = entityTypeForRoute(name)
+    if (next !== entityType.value) entityType.value = next
+  },
+)
+
+watch(entityType, (type) => {
+  const targetName = type === 'company' ? 'Companies' : 'Contacts'
+  if (route.name !== targetName) {
+    void router.replace({ name: targetName })
+  }
 })
 
 // ── View (columns, density) ───────────────────────────────────────────────────
@@ -727,7 +762,8 @@ const visibleColumnDefs = computed(() =>
 const bulk = useContactsBulk({
   entityType,
   allIds: allItemIds,
-  reload: load,
+  // refresh (not load) so bulk delete/merge/assign-owner also refresh the KPI bar.
+  reload: refresh,
 })
 
 // Sync DataTable v-model:selection ↔ bulk.selectedIds
@@ -764,7 +800,7 @@ const {
   openDedup,
   openCard,
   executeDelete,
-} = useContactsPageActions({ reload: load, entityType })
+} = useContactsPageActions({ reload: refresh, entityType })
 
 // ── Create navigation ─────────────────────────────────────────────────────────
 function onCreateEntity() {
@@ -795,7 +831,7 @@ function onMergeClick() {
 
 function onBulkMerged() {
   bulk.exitBulk()
-  void load()
+  void refresh()
 }
 
 // ── Paginator callbacks ───────────────────────────────────────────────────────

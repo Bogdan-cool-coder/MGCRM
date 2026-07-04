@@ -31,32 +31,44 @@ export function useEntityLog(
   const hasMore = ref(false)
   const total = ref(0)
   let currentPage = 1
+  // Out-of-order / cross-entity guard. Every load()/loadMore() takes a token; a
+  // response is committed only if it is still the newest request. On rapid entity
+  // A→B navigation (this composable is reused, id changes) a late /A/log response
+  // is dropped instead of overwriting entity B's timeline. `entityKey` also pins the
+  // response to the id it was requested for.
+  let requestToken = 0
 
   async function load(): Promise<void> {
     const id = getId()
     if (!id) return
+    const token = ++requestToken
     loading.value = true
     error.value = null
     currentPage = 1
     try {
       const res = await logApi.getLog(target, id, { page: 1, per_page: PER_PAGE })
+      if (token !== requestToken) return
       entries.value = res.data
       total.value = res.meta.total
       hasMore.value = res.meta.current_page < res.meta.last_page
     } catch (e) {
+      if (token !== requestToken) return
       error.value = e
     } finally {
-      loading.value = false
+      if (token === requestToken) loading.value = false
     }
   }
 
   async function loadMore(): Promise<void> {
     const id = getId()
     if (!id || !hasMore.value || loadingMore.value) return
+    const token = ++requestToken
     loadingMore.value = true
     try {
       const nextPage = currentPage + 1
       const res = await logApi.getLog(target, id, { page: nextPage, per_page: PER_PAGE })
+      // If a newer load()/navigation happened mid-flight, drop this stale page.
+      if (token !== requestToken) return
       entries.value = [...entries.value, ...res.data]
       total.value = res.meta.total
       hasMore.value = res.meta.current_page < res.meta.last_page
@@ -64,17 +76,21 @@ export function useEntityLog(
     } catch {
       // non-critical
     } finally {
-      loadingMore.value = false
+      if (token === requestToken) loadingMore.value = false
     }
   }
 
-  // Auto-reload when ID changes
+  // Auto-reload when ID changes. load() bumps the request token, so any in-flight
+  // request for the previous id is invalidated and cannot overwrite the new entity.
   watch(getId, (id) => {
     if (id) void load()
     else {
+      // Invalidate so a late response for the previous id can't repopulate the list.
+      requestToken++
       entries.value = []
       hasMore.value = false
       total.value = 0
+      loading.value = false
     }
   })
 

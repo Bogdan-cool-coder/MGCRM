@@ -90,25 +90,27 @@ const formError = ref<string | null>(null)
 
 // ─── Search ───────────────────────────────────────────────────────────────────
 
-let searchTimer: ReturnType<typeof setTimeout> | null = null
+// Out-of-order guard: only the newest query's response may write suggestions.
+// No local debounce — AutoComplete already debounces @complete by 300ms.
+let searchToken = 0
 
 async function onSearch(query: string) {
-  if (searchTimer) clearTimeout(searchTimer)
   if (!query || query.length < 1) {
     dealSuggestions.value = []
     return
   }
-  searchTimer = setTimeout(async () => {
-    searching.value = true
-    try {
-      const result = await salesApi.getDeals({ q: query, per_page: 20, status: 'open' })
-      dealSuggestions.value = result.data
-    } catch {
-      dealSuggestions.value = []
-    } finally {
-      searching.value = false
-    }
-  }, 250)
+  const token = ++searchToken
+  searching.value = true
+  try {
+    const result = await salesApi.getDeals({ q: query, per_page: 20, status: 'open' })
+    if (token !== searchToken) return
+    dealSuggestions.value = result.data
+  } catch {
+    if (token !== searchToken) return
+    dealSuggestions.value = []
+  } finally {
+    if (token === searchToken) searching.value = false
+  }
 }
 
 function onSelect(deal: DealDto) {

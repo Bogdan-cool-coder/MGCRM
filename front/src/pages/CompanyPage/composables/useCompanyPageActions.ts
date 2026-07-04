@@ -13,6 +13,8 @@ export const useCompanyPageActions = (opts: {
   company: { value: Company | null }
   employees: { value: ContactCompanyLink[] }
   loadEmployees: () => Promise<void>
+  /** Silent refetch of the company resource so KPI chips (employees_count) stay in sync. */
+  reloadKpi?: () => void
 }) => {
   const { t } = useI18n()
   const toast = useToast()
@@ -28,7 +30,9 @@ export const useCompanyPageActions = (opts: {
   const addEmployeePosition = ref('')
   const addEmployeeStatus = ref<EmploymentStatus>('works')
   const addEmployeeSuggestions = ref<Contact[]>([])
-  let searchTimer: ReturnType<typeof setTimeout> | null = null
+  // Out-of-order guard: only the newest query's response may write suggestions.
+  // No local debounce — AutoComplete already debounces @complete by 300ms.
+  let employeeSearchToken = 0
 
   async function patchField(fieldKey: string, value: unknown) {
     if (!opts.companyId.value) return
@@ -82,20 +86,20 @@ export const useCompanyPageActions = (opts: {
     addEmployeeOpen.value = false
   }
 
-  function searchEmployeeContacts(query: string) {
-    if (searchTimer) clearTimeout(searchTimer)
+  async function searchEmployeeContacts(query: string) {
     if (!query || query.length < 2) {
       addEmployeeSuggestions.value = []
       return
     }
-    searchTimer = setTimeout(async () => {
-      try {
-        const result = await contactsApi.list({ search: query, per_page: 10 })
-        addEmployeeSuggestions.value = result.data
-      } catch {
-        addEmployeeSuggestions.value = []
-      }
-    }, 300)
+    const token = ++employeeSearchToken
+    try {
+      const result = await contactsApi.list({ search: query, per_page: 10 })
+      if (token !== employeeSearchToken) return
+      addEmployeeSuggestions.value = result.data
+    } catch {
+      if (token !== employeeSearchToken) return
+      addEmployeeSuggestions.value = []
+    }
   }
 
   function onEmployeeSelect(contact: Contact) {
@@ -116,6 +120,7 @@ export const useCompanyPageActions = (opts: {
         onSuccess() {
           addEmployeeOpen.value = false
           void opts.loadEmployees()
+          opts.reloadKpi?.()
           toast.add({
             severity: 'success',
             summary: t('company.page.employees.addSuccess', 'Сотрудник добавлен'),
@@ -162,6 +167,7 @@ export const useCompanyPageActions = (opts: {
       accept: async () => {
         await companiesApi.detachEmployee(opts.companyId.value, contactId)
         opts.employees.value = opts.employees.value.filter((e) => e.contact_id !== contactId)
+        opts.reloadKpi?.()
         toast.add({ severity: 'success', summary: t('contacts.page.delete.success'), life: 3000 })
       },
     })

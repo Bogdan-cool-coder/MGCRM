@@ -15,6 +15,8 @@ export const useContactPageActions = (opts: {
   relations: { value: ContactRelation[] }
   loadCompanies: () => Promise<void>
   loadRelations: () => Promise<void>
+  /** Silent refetch of the contact resource so KPI chips (companies_count) stay in sync. */
+  reloadKpi?: () => void
 }) => {
   const { t } = useI18n()
   const toast = useToast()
@@ -67,7 +69,10 @@ export const useContactPageActions = (opts: {
   const attachCompanyPosition = ref('')
   const attachCompanyStatus = ref<'works' | 'left'>('works')
   const attachCompanySuggestions = ref<Company[]>([])
-  let attachCompanyTimer: ReturnType<typeof setTimeout> | null = null
+  // Out-of-order guard: only the latest query's response is allowed to write suggestions.
+  // No local debounce timer — PrimeVue AutoComplete already debounces @complete by 300ms
+  // (delay prop default); a second setTimeout(300) only doubled perceived lag (~0.6s).
+  let attachCompanyQueryToken = 0
 
   function openAttachCompany() {
     attachCompanyOpen.value = true
@@ -82,20 +87,21 @@ export const useContactPageActions = (opts: {
     attachCompanyOpen.value = false
   }
 
-  function searchAttachCompany(query: string) {
-    if (attachCompanyTimer) clearTimeout(attachCompanyTimer)
+  async function searchAttachCompany(query: string) {
     if (!query || query.length < 2) {
       attachCompanySuggestions.value = []
       return
     }
-    attachCompanyTimer = setTimeout(async () => {
-      try {
-        const result = await companiesApi.list({ search: query, per_page: 10 })
-        attachCompanySuggestions.value = result.data
-      } catch {
-        attachCompanySuggestions.value = []
-      }
-    }, 300)
+    const token = ++attachCompanyQueryToken
+    try {
+      const result = await companiesApi.list({ search: query, per_page: 10 })
+      // Drop stale responses so a slow earlier query can't overwrite fresher results.
+      if (token !== attachCompanyQueryToken) return
+      attachCompanySuggestions.value = result.data
+    } catch {
+      if (token !== attachCompanyQueryToken) return
+      attachCompanySuggestions.value = []
+    }
   }
 
   function onAttachCompanySelect(company: Company) {
@@ -116,6 +122,7 @@ export const useContactPageActions = (opts: {
         onSuccess() {
           attachCompanyOpen.value = false
           void opts.loadCompanies()
+          opts.reloadKpi?.()
           toast.add({ severity: 'success', summary: t('contact.page.companies.add'), life: 3000 })
         },
         onError(err) {
@@ -154,6 +161,7 @@ export const useContactPageActions = (opts: {
       await contactsApi.detachCompany(opts.contactId.value, pendingDetachCompanyId.value)
       opts.companies.value = opts.companies.value.filter((c) => c.company_id !== pendingDetachCompanyId.value)
       detachCompanyDialogOpen.value = false
+      opts.reloadKpi?.()
       toast.add({ severity: 'success', summary: t('contacts.page.delete.success'), life: 3000 })
     } catch (err) {
       toast.add({

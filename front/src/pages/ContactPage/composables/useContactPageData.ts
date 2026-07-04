@@ -21,10 +21,16 @@ export const useContactPageData = () => {
   const dealsPage = ref(1)
   const dealsLastPage = ref(1)
 
-  async function loadContact() {
+  /**
+   * @param silent — background refetch: keep the current contact on screen (no
+   * full-page skeleton) and quietly swap in the fresh copy. Used after activity
+   * mutations that only need to refresh KPI counters.
+   */
+  async function loadContact(silent = false) {
     if (!contactId.value) return
-    await contactResource.run(() =>
-      contactsApi.get(contactId.value) as Promise<ContactExtended>,
+    await contactResource.run(
+      () => contactsApi.get(contactId.value) as Promise<ContactExtended>,
+      { silent },
     )
     if (!directoriesStore.loaded) {
       void directoriesStore.fetchAll()
@@ -58,6 +64,15 @@ export const useContactPageData = () => {
     }
   }
 
+  /**
+   * Load the next page of deals, tracking the page counter internally so the
+   * "load more" button never skips pages after navigation or a page-1 reload.
+   */
+  async function loadMoreDeals() {
+    if (dealsPage.value >= dealsLastPage.value) return
+    await loadDeals(dealsPage.value + 1)
+  }
+
   async function loadAll() {
     await Promise.all([loadContact(), loadCompanies(), loadRelations(), loadDeals(1)])
   }
@@ -85,6 +100,7 @@ export const useContactPageData = () => {
     loadCompanies,
     loadRelations,
     loadDeals,
+    loadMoreDeals,
     directoriesStore,
   }
 }

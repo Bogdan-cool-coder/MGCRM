@@ -218,10 +218,26 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
     return params
   }
 
+  /**
+   * If the current page overshoots the real last_page (e.g. rows were deleted by
+   * this user or another manager via realtime while we sat on the last page), clamp
+   * to last_page and reload once — avoids a spuriously empty table with a non-zero
+   * total. Returns true when it re-issued a load (caller should stop).
+   */
+  function clampPageAfterLoad(meta: PaginatedResponse<Contact | Company>['meta']): boolean {
+    if (meta.total > 0 && page.value > meta.last_page) {
+      page.value = meta.last_page
+      void load()
+      return true
+    }
+    return false
+  }
+
   async function load() {
     if (entityType.value === 'contact') {
       try {
-        await contactsResource.run(() => contactsApi.list(buildContactParams()))
+        const res = await contactsResource.run(() => contactsApi.list(buildContactParams()))
+        if (res && clampPageAfterLoad(res.meta)) return
       } catch (err) {
         toast.add({
           severity: 'error',
@@ -232,7 +248,8 @@ export const useContactsPageData = ({ initialType = 'contact' }: UseContactsPage
       }
     } else {
       try {
-        await companiesResource.run(() => companiesApi.list(buildCompanyParams()))
+        const res = await companiesResource.run(() => companiesApi.list(buildCompanyParams()))
+        if (res && clampPageAfterLoad(res.meta)) return
       } catch (err) {
         toast.add({
           severity: 'error',

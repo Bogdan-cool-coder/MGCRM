@@ -23,5 +23,22 @@ export function useUsersCache() {
     }
   }
 
-  return { users, loading, load }
+  /**
+   * Drop the cache so the next `load()` refetches. Call after admin CRUD on
+   * users (create / update / deactivate / reactivate) so owner/assignee selects
+   * across the app pick up new / renamed / deactivated users without a full SPA
+   * reload. Also called from resetAllStores on logout (this is a module-level
+   * singleton, not a Pinia store, so it must be reset explicitly).
+   */
+  function invalidate(): void {
+    loaded.value = false
+  }
+
+  /** Force an immediate refetch (invalidate + load). */
+  async function reload(): Promise<void> {
+    invalidate()
+    await load()
+  }
+
+  return { users, loading, load, invalidate, reload }
 }

@@ -5,6 +5,22 @@ type InitialValueFactory<T> = T | (() => T)
 
 interface RunAsyncResourceOptions<T> {
   commit?: AsyncResourceCommit<T>
+  /**
+   * Background (silent) refetch. When true, `loading` is NOT toggled as long as the
+   * resource already holds data (`data !== null` / non-empty) — the previous value stays
+   * on screen and is quietly swapped in on resolve, so consumers that gate a full-page
+   * skeleton on `loading` don't flash on refetch. If the resource is still empty
+   * (first load), `silent` is ignored and `loading` behaves normally so the initial
+   * skeleton still shows. The stale-request token gate is applied in BOTH modes.
+   */
+  silent?: boolean
+}
+
+/** True when the resource holds no meaningful data yet (null / undefined / empty array). */
+const isEmptyResourceValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) return true
+  if (Array.isArray(value)) return value.length === 0
+  return false
 }
 
 const resolveInitialValue = <T>(initialValue: InitialValueFactory<T>): T => {
@@ -44,7 +60,13 @@ export const useAsyncResource = <T>(initialValue: InitialValueFactory<T>): Async
     options?: RunAsyncResourceOptions<T>,
   ): Promise<T | undefined> => {
     const requestToken = requestGate.next()
-    loading.value = true
+    // In silent mode, suppress the loading flag ONLY while data is already present.
+    // On the very first load (still empty), fall through to normal loading so the
+    // initial skeleton still renders.
+    const suppressLoading = options?.silent === true && !isEmptyResourceValue(data.value)
+    if (!suppressLoading) {
+      loading.value = true
+    }
     error.value = null
 
     try {
@@ -69,7 +91,7 @@ export const useAsyncResource = <T>(initialValue: InitialValueFactory<T>): Async
       error.value = nextError
       throw nextError
     } finally {
-      if (requestGate.isCurrent(requestToken)) {
+      if (!suppressLoading && requestGate.isCurrent(requestToken)) {
         loading.value = false
       }
     }

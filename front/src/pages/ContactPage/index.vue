@@ -84,7 +84,7 @@
           />
         </div>
 
-        <Tabs v-model:value="activeTab" class="contact-page-v2__tabs">
+        <Tabs v-model:value="activeTab" lazy class="contact-page-v2__tabs">
           <TabList v-if="!isMobile" :class="{ 'contact-page-v2__tablist--scroll': isTablet }">
             <Tab value="overview">{{ t('contact.page.tabs.overview') }}</Tab>
             <Tab value="activity">{{ t('crm.contact.tabs.activity') }}</Tab>
@@ -523,6 +523,7 @@ const {
   loadCompanies,
   loadRelations,
   loadDeals,
+  loadMoreDeals: loadMoreDealsData,
   contactId,
 } = useContactPageData()
 
@@ -557,7 +558,15 @@ const {
   onChannelsUpdated,
   onRelationsUpdated,
   copyLink,
-} = useContactPageActions({ contactId, contact, companies, relations, loadCompanies, loadRelations })
+} = useContactPageActions({
+  contactId,
+  contact,
+  companies,
+  relations,
+  loadCompanies,
+  loadRelations,
+  reloadKpi: () => { void loadContact(true) },
+})
 
 // ── Entity log ────────────────────────────────────────────────────────────────
 
@@ -568,8 +577,11 @@ const contactLog = useEntityLog('contact', () => contactId.value ?? null)
 // comes from ContactController::show, so we re-fetch the contact resource).
 
 function onActivityChanged() {
+  // Background refresh: the log timeline + the open-tasks KPI chip (from the show
+  // endpoint). `silent` keeps the loaded contact on screen so the whole card does
+  // NOT flash a full-page skeleton and the Tabs are not torn down / refetched.
   void contactLog.load()
-  void loadContact()
+  void loadContact(true)
 }
 
 // ── Computed ──────────────────────────────────────────────────────────────────
@@ -671,14 +683,15 @@ const contactKpiItems = computed((): KpiItem[] => {
 })
 
 // ── Deals pagination ──────────────────────────────────────────────────────────
+// Page counter lives in useContactPageData (loadMoreDealsData), so it resets on
+// contact→contact navigation and after loadDeals(1); no local page cursor that
+// could skip pages across navigation.
 
 const dealsLoadingMore = ref(false)
-let currentDealsPage = 1
 
 async function loadMoreDeals() {
   dealsLoadingMore.value = true
-  currentDealsPage += 1
-  await loadDeals(currentDealsPage)
+  await loadMoreDealsData()
   dealsLoadingMore.value = false
 }
 
@@ -793,7 +806,8 @@ watch(
     if (prevId === id) return
     if (!directoriesStore.loaded) void directoriesStore.fetchAll()
     await loadAll()
-    if (contactId.value) void contactLog.load()
+    // NOTE: contactLog reloads itself via its own watch(getId) inside useEntityLog —
+    // calling contactLog.load() here would fire a duplicate /log request per nav.
   },
 )
 

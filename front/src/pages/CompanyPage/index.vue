@@ -98,7 +98,7 @@
           />
         </div>
 
-        <Tabs v-model:value="activeTab" class="company-page-v2__tabs">
+        <Tabs v-model:value="activeTab" lazy class="company-page-v2__tabs">
           <!-- Desktop: tab list hidden on mobile -->
           <TabList
             v-if="!isMobile"
@@ -116,7 +116,7 @@
             </Tab>
             <Tab value="documents">
               {{ t('company.page.tabs.documents') }}
-              <Badge v-if="documents.length" :value="documents.length" severity="secondary" size="small" class="ms-1" />
+              <Badge v-if="documentsCount" :value="documentsCount" severity="secondary" size="small" class="ms-1" />
             </Tab>
             <!-- spec §3: tab order — Файлы before Холдинг; NO «Платежи» tab -->
             <Tab value="files">{{ t('crm.company.tabs.files') }}</Tab>
@@ -620,8 +620,10 @@ const holdingRoleOptions = computed(() => [
 ])
 
 // ── Channels state ─────────────────────────────────────────────────────────────
+// Channels now live in useCompanyPageData (companyChannels ← channelsResource.data),
+// so they inherit the stale-request token guard and can't be overwritten by a late
+// response from a previously-viewed company.
 
-const companyChannels = ref<CompanyChannel[]>([])
 const channelsBlockRef = ref<{ openAdd: () => void } | null>(null)
 
 function onChannelsUpdated(updated: CompanyChannel[]) {
@@ -644,6 +646,7 @@ const {
   deals,
   dealsLoading,
   documents,
+  channels: companyChannels,
   loadAll,
   loadCompany,
   loadEmployees,
@@ -674,6 +677,7 @@ const {
   company,
   employees,
   loadEmployees,
+  reloadKpi: () => { void loadCompany(true) },
 })
 
 // ── Entity log ─────────────────────────────────────────────────────────────────
@@ -685,8 +689,11 @@ const companyLog = useEntityLog('company', () => companyId.value ?? null)
 // deal/employee counters come from CompanyController::show).
 
 function onActivityChanged() {
+  // Background refresh: log timeline + KPI strip (last_activity_at / counters from the
+  // show endpoint). `silent` keeps the loaded company on screen so the whole card does
+  // NOT flash a full-page skeleton and the Tabs are not torn down / refetched.
   void companyLog.load()
-  void loadCompany()
+  void loadCompany(true)
 }
 
 // ── Computed ───────────────────────────────────────────────────────────────────
@@ -700,6 +707,15 @@ const companySourceLabel = computed((): string | null => {
 })
 
 const openDealsCount = computed(() => deals.value.filter((d) => d.status === 'open').length)
+
+// Single source of truth for the documents count shown on the tab badge: prefer the
+// authoritative kpi.documents_count from the show endpoint, fall back to the parent
+// documents list length. The Documents tab itself lazy-loads its own paginated list
+// only when opened (Tabs lazy), so there is no eager double-fetch on card open.
+const documentsCount = computed(() => {
+  const kpiCount = (company.value as (CompanyExtended & { kpi?: { documents_count?: number } | null }) | null)?.kpi?.documents_count
+  return kpiCount ?? documents.value.length
+})
 
 // ── KPI strip ──────────────────────────────────────────────────────────────────
 
@@ -908,32 +924,53 @@ async function executeDeleteCompany() {
   }
 }
 
+// Custom-field saves are serialized AND optimistic (mirrors the contact card).
+// Two problems this guards against when the user edits field A then field B before
+// A's PATCH returns:
+//   1) Optimistic write into company.extra_fields BEFORE the request, so B's payload
+//      (built from company.extra_fields) already contains A — the whole-object PATCH
+//      no longer drops A (last-write-wins over the full JSON blob).
+//   2) A chained promise queue so PATCH B waits for PATCH A, keeping server order
+//      deterministic even under a slow network.
+let customFieldSaveChain: Promise<void> = Promise.resolve()
+
 async function saveCustomField(code: string, value: unknown) {
   if (!company.value) return
-  const updated = await companiesApi.update(company.value.id, {
-    extra_fields: { ...company.value.extra_fields, [code]: value },
-  })
-  Object.assign(company.value, updated)
+  // Optimistic local write first — subsequent saves read the merged state.
+  company.value.extra_fields = { ...(company.value.extra_fields ?? {}), [code]: value }
+
+  const run = async () => {
+    if (!company.value) return
+    const updated = await companiesApi.update(company.value.id, {
+      extra_fields: { ...(company.value.extra_fields ?? {}), [code]: value },
+    })
+    if (company.value) Object.assign(company.value, updated)
+  }
+
+  customFieldSaveChain = customFieldSaveChain.then(run, run)
+  await customFieldSaveChain
 }
 
 // ── Holding attach/detach ──────────────────────────────────────────────────────
 
-let holdingSearchTimer: ReturnType<typeof setTimeout> | null = null
+// Out-of-order guard: only the newest query's response may write suggestions.
+// No local debounce — AutoComplete already debounces @complete by 300ms.
+let holdingSearchToken = 0
 
-function searchHoldingParent(query: string) {
-  if (holdingSearchTimer) clearTimeout(holdingSearchTimer)
+async function searchHoldingParent(query: string) {
   if (!query || query.length < 2) {
     holdingParentSuggestions.value = []
     return
   }
-  holdingSearchTimer = setTimeout(async () => {
-    try {
-      const result = await companiesApi.list({ search: query, per_page: 10 })
-      holdingParentSuggestions.value = result.data.map((c: Company) => ({ id: c.id, name: c.name }))
-    } catch {
-      holdingParentSuggestions.value = []
-    }
-  }, 300)
+  const token = ++holdingSearchToken
+  try {
+    const result = await companiesApi.list({ search: query, per_page: 10 })
+    if (token !== holdingSearchToken) return
+    holdingParentSuggestions.value = result.data.map((c: Company) => ({ id: c.id, name: c.name }))
+  } catch {
+    if (token !== holdingSearchToken) return
+    holdingParentSuggestions.value = []
+  }
 }
 
 async function onAttachHolding() {
@@ -1016,6 +1053,7 @@ async function onInlineEmployeeCreated(contact: Contact, position: string, _isPr
       is_primary: _isPrimary,
     })
     await loadEmployees()
+    void loadCompany(true)
     toast.add({
       severity: 'success',
       summary: t('company.page.employees.addSuccess', 'Сотрудник добавлен'),
@@ -1082,17 +1120,10 @@ onMounted(async () => {
     return
   }
   if (!directoriesStore.loaded) void directoriesStore.fetchAll()
+  // loadAll now also loads channels (token-guarded inside the data composable).
   await loadAll()
   // Load entity log (company may now be loaded)
   if (companyId.value) void companyLog.load()
-  // Load company channels
-  if (companyId.value) {
-    try {
-      companyChannels.value = await companiesApi.getChannels(companyId.value)
-    } catch {
-      // non-critical: channels panel will show empty state
-    }
-  }
 })
 
 // ── Watch for SPA navigation: create → detail (same component instance reused)
@@ -1104,14 +1135,9 @@ watch(
     if (prevId === id) return
     if (!directoriesStore.loaded) void directoriesStore.fetchAll()
     await loadAll()
-    if (companyId.value) void companyLog.load()
-    if (companyId.value) {
-      try {
-        companyChannels.value = await companiesApi.getChannels(companyId.value)
-      } catch {
-        // non-critical
-      }
-    }
+    // NOTE: companyLog reloads itself via its own watch(getId) inside useEntityLog —
+    // calling companyLog.load() here would fire a duplicate /log request per nav.
+    // Channels are refreshed inside loadAll() (token-guarded).
   },
 )
 </script>

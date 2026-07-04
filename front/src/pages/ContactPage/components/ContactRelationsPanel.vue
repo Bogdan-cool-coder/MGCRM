@@ -251,19 +251,25 @@ const formError = ref<string | null>(null)
 // Contact autocomplete for the related-contact picker
 const contactSearch = ref<string | { label: string; value: number } | null>(null)
 const contactSuggestions = ref<Array<{ value: number; label: string }>>([])
+// Out-of-order guard: only the newest query's response may write suggestions
+// (AutoComplete already debounces @complete, so no local timer is needed here).
+let contactSearchToken = 0
 
 async function searchContacts(query: string) {
   if (!query || query.trim().length < 1) {
     contactSuggestions.value = []
     return
   }
+  const token = ++contactSearchToken
   try {
     const res = await contactsApi.list({ search: query.trim(), per_page: 20 })
+    if (token !== contactSearchToken) return
     const existing = new Set(props.relations.flatMap((r) => [r.contact.id, r.related_contact.id]))
     contactSuggestions.value = (res.data ?? [])
       .filter((c) => c.id !== props.contactId && !existing.has(c.id))
       .map((c) => ({ value: c.id, label: c.full_name }))
   } catch {
+    if (token !== contactSearchToken) return
     contactSuggestions.value = []
   }
 }
