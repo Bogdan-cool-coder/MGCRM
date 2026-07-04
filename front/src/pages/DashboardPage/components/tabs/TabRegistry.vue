@@ -64,6 +64,32 @@
         </div>
       </Message>
 
+      <!-- StatCard summary strip: expected (info) + squeeze (danger). Reuses the
+           tab-schedule__kpi tile so the two report totals read at a glance (§3.2). -->
+      <div class="tab-registry__stats">
+        <div class="tab-registry__stat">
+          <span class="tab-registry__stat-label">
+            <i class="pi pi-wallet tab-registry__stat-icon" aria-hidden="true" />
+            {{ t('dashboard.registry.stat_expected') }}
+          </span>
+          <span class="tab-registry__stat-value">
+            {{ formatMkMoney(report.expected.total_base_kopecks, baseCurrency) }}
+          </span>
+        </div>
+        <div class="tab-registry__stat">
+          <span class="tab-registry__stat-label">
+            <i
+              class="pi pi-exclamation-triangle tab-registry__stat-icon tab-registry__stat-icon--danger"
+              aria-hidden="true"
+            />
+            {{ t('dashboard.registry.stat_squeeze') }}
+          </span>
+          <span class="tab-registry__stat-value tab-registry__stat-value--danger">
+            {{ formatMkMoney(report.squeeze.total_base_kopecks, baseCurrency) }}
+          </span>
+        </div>
+      </div>
+
       <!-- Expected income -->
       <RegistryTable
         :rows="report.expected.rows"
@@ -152,6 +178,74 @@ const noDateOpen = ref(false)
 
 .tab-registry__skeleton {
   padding: $space-2 0;
+}
+
+// ── StatCard summary strip (§3.2) — reuses the tab-schedule__kpi tile style ────
+.tab-registry__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $space-3;
+}
+
+.tab-registry__stat {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-3 $space-4;
+  border-radius: $radius-lg;
+  border: 1px solid $surface-200;
+  background: $surface-card;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
+}
+
+.tab-registry__stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $surface-500;
+}
+
+.tab-registry__stat-icon {
+  font-size: $font-size-sm;
+  color: var(--p-blue-500);
+
+  &--danger {
+    color: var(--p-red-500);
+  }
+
+  .app-dark & {
+    color: var(--p-blue-400);
+  }
+
+  .app-dark &--danger {
+    color: var(--p-red-400);
+  }
+}
+
+.tab-registry__stat-value {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  font-variant-numeric: tabular-nums;
+  color: $surface-900;
+
+  &--danger {
+    color: var(--p-red-500);
+  }
+
+  .app-dark &--danger {
+    color: var(--p-red-400);
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-registry__stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 // ── No-date banner (expandable) ──────────────────────────────────────────────

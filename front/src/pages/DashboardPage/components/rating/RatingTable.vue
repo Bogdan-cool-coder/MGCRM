@@ -1,12 +1,15 @@
 <template>
-  <DataTable
-    :value="rows"
-    size="small"
-    scrollable
-    scroll-height="flex"
-    :row-class="rowClass"
-    class="rating-table"
-  >
+  <div class="rating-table-card">
+    <DataTable
+      :value="rows"
+      size="small"
+      :striped-rows="true"
+      row-hover
+      scrollable
+      scroll-height="flex"
+      :row-class="rowClass"
+      class="rating-table"
+    >
     <!-- Rank (#) — medal for the top three -->
     <Column
       :header="t('dashboard.rating.col_rank')"
@@ -102,7 +105,8 @@
         <span class="rating-table__division">{{ (data as BestManagerRow).division }}</span>
       </template>
     </Column>
-  </DataTable>
+    </DataTable>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -162,6 +166,20 @@ const rowClass = (row: BestManagerRow): string | undefined =>
 </script>
 
 <style lang="scss" scoped>
+// Widget-card подложка (§5.3) — reactive $surface-card fill, $surface-200 border
+// (dark override on this scoped element), $radius-lg, $shadow-sm.
+.rating-table-card {
+  padding: $space-4;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
+}
+
 // $surface-* / $primary-color alias to --p-* which PrimeVue inverts on .app-dark,
 // so surfaces/text are theme-reactive from the BASE rule — only the medal accents
 // (orange/primary) need a dark override.
@@ -178,6 +196,12 @@ const rowClass = (row: BestManagerRow): string | undefined =>
   // Out-of-standings rows — muted (SpaceCRM «вне зачёта»).
   :deep(.rating-table__row--out > td) {
     color: $surface-400;
+  }
+
+  // Frozen ранг + менеджер columns OPAQUE so scrolled number columns don't bleed
+  // through in dark (reactive table surface, consistent with the striped rows).
+  :deep(.p-datatable-frozen-column) {
+    background: var(--p-datatable-header-cell-background, var(--p-card-background));
   }
 }
 

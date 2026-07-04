@@ -1,19 +1,15 @@
 <template>
   <div class="tab-rating">
-    <!-- Year + scoring-mode controls -->
+    <!-- Year + scoring-mode as a compact filter strip, visually identical to the
+         hub's AnalyticsFilterBar (widget-card подложка, one row) — restyle §5.1. -->
     <div class="tab-rating__controls">
-      <div class="tab-rating__control">
-        <label class="tab-rating__control-label" :for="yearSelectId">
-          {{ t('dashboard.rating.year') }}
-        </label>
-        <Select
-          :input-id="yearSelectId"
-          :model-value="year"
-          :options="yearOptions"
-          class="tab-rating__year"
-          @update:model-value="onYearChange"
-        />
-      </div>
+      <Select
+        :input-id="yearSelectId"
+        :model-value="year"
+        :options="yearOptions"
+        class="tab-rating__year"
+        @update:model-value="onYearChange"
+      />
       <SelectButton
         :model-value="mode"
         :options="modeOptions"
@@ -145,24 +141,21 @@ const onModeChange = (value: BestManagerMode | null): void => {
   gap: $space-4;
 }
 
-// ── Controls (year + mode) ───────────────────────────────────────────────────
+// ── Controls (year + mode) — filter strip on widget-card подложка (§5.1) ──────
 .tab-rating__controls {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
-  gap: $space-4;
-}
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
 
-.tab-rating__control {
-  display: flex;
-  flex-direction: column;
-  gap: $space-1;
-}
-
-.tab-rating__control-label {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  color: $surface-500;
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
 }
 
 .tab-rating__year {
@@ -208,14 +201,15 @@ const onModeChange = (value: BestManagerMode | null): void => {
   color: $surface-500;
 }
 
-// ── Adaptive (≤1280) ─────────────────────────────────────────────────────────
-@media (max-width: 1280px) {
+// ── Adaptive (≤768) ──────────────────────────────────────────────────────────
+@media (max-width: 768px) {
   .tab-rating__controls {
     align-items: stretch;
   }
 
+  .tab-rating__year,
   .tab-rating__mode {
-    align-self: flex-start;
+    width: 100%;
   }
 }
 </style>

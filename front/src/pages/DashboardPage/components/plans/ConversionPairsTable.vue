@@ -3,7 +3,8 @@
     <DataTable
       :value="pairs"
       size="small"
-      show-gridlines
+      :striped-rows="true"
+      row-hover
       scrollable
       scroll-height="flex"
       class="conv-pairs__table"
@@ -122,6 +123,12 @@ const cellTooltip = (pair: ConversionPair, key: string): string => {
 
   :deep(.p-datatable-thead > tr > th) {
     white-space: nowrap;
+  }
+
+  // Frozen «Пара» column opaque so scrolled month columns don't bleed through
+  // (reactive table surface — consistent across both themes).
+  :deep(.p-datatable-frozen-column) {
+    background: var(--p-datatable-header-cell-background, var(--p-card-background));
   }
 }
 

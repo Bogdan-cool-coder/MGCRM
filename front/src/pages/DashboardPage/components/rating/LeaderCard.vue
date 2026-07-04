@@ -77,8 +77,12 @@ const formatCount = (n: number): string =>
   border: 1px solid $surface-200;
   border-left: 3px solid $primary-color;
   border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
 
+  // The base $surface-200 border needs the dark override on this scoped element;
+  // the brand-navy left accent lifts to the theme-reactive primary in dark.
   .app-dark & {
+    border-color: var(--p-surface-200);
     border-left-color: var(--p-primary-color);
   }
 }

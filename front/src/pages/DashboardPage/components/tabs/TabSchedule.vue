@@ -68,6 +68,13 @@
             :month="month"
             :base-currency="baseCurrency"
           />
+          <!-- Mini-legend for the calendar squeeze-dot (§4.2). -->
+          <div class="tab-schedule__cal-legend">
+            <span class="tab-schedule__cal-legend-item">
+              <span class="tab-schedule__cal-legend-dot" aria-hidden="true" />
+              {{ t('dashboard.schedule.legend_squeeze_dot') }}
+            </span>
+          </div>
         </template>
       </Card>
     </template>
@@ -315,6 +322,34 @@ const chartOption = computed<EChartsOption>(() => {
 .tab-schedule__chart {
   height: 300px;
   width: 100%;
+}
+
+// ── Calendar mini-legend (§4.2) ──────────────────────────────────────────────
+.tab-schedule__cal-legend {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  margin-top: $space-3;
+}
+
+.tab-schedule__cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  color: $surface-600;
+}
+
+.tab-schedule__cal-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-circle;
+  flex-shrink: 0;
+  background: var(--p-red-500);
+
+  .app-dark & {
+    background: var(--p-red-400);
+  }
 }
 
 // ── Empty state ──────────────────────────────────────────────────────────────

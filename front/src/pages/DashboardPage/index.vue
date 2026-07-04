@@ -1,21 +1,18 @@
 <template>
   <div class="dashboard-page">
-    <PageHeader :title="t('dashboard.hub.title')" icon="pi pi-chart-bar">
-      <template #actions>
-        <!-- Excel export lives on the report tabs. Backend export endpoints are
-             built in parallel — a 404 degrades to an info-toast «скоро» (live but
-             graceful), so the button is enabled on report tabs. -->
-        <Button
-          v-if="showExport"
-          icon="pi pi-file-excel"
-          :label="t('dashboard.hub.export')"
-          severity="secondary"
-          outlined
-          :loading="exporting"
-          @click="onExport"
-        />
-      </template>
-    </PageHeader>
+    <!-- Unified hub toolbar: icon-tile + title + segmented tabs + Excel.
+         Excel export lives on the report/plans tabs; backend export endpoints are
+         built in parallel — a 404 degrades to an info-toast «скоро» (live but
+         graceful), so the button is enabled on those tabs. -->
+    <HubToolbar
+      :active-tab="activeTab"
+      :tab-options="tabOptions"
+      :tab-strip-key="tabStripKey"
+      :show-export="showExport"
+      :exporting="exporting"
+      @update:active-tab="onTabSelect"
+      @export="onExport"
+    />
 
     <!-- Cross-cutting filter bar (period/layer · funnel · manager) -->
     <div class="dashboard-page__filters">
@@ -39,19 +36,6 @@
       />
     </div>
 
-    <!-- Tab strip -->
-    <div class="dashboard-page__tabs">
-      <SelectButton
-        :key="tabStripKey"
-        :model-value="activeTab"
-        :options="tabOptions"
-        option-label="label"
-        option-value="value"
-        :allow-empty="false"
-        @update:model-value="onTabSelect"
-      />
-    </div>
-
     <!-- Active tab body (keep-alive so scroll/input survive tab switches) -->
     <div class="dashboard-page__content">
       <keep-alive>
@@ -70,10 +54,7 @@
 
 <script setup lang="ts">
 import { computed, provide, ref, nextTick, type Component } from 'vue'
-import { useI18n } from 'vue-i18n'
-import Button from 'primevue/button'
-import SelectButton from 'primevue/selectbutton'
-import PageHeader from '@/components/AppShell/PageHeader.vue'
+import HubToolbar from './components/HubToolbar.vue'
 import AnalyticsFilterBar from './components/AnalyticsFilterBar.vue'
 import TabOverview from './components/tabs/TabOverview.vue'
 import TabPlans from './components/tabs/TabPlans.vue'
@@ -89,8 +70,6 @@ import {
 } from './composables/useAnalyticsHub'
 import { useAnalyticsExport } from './composables/useAnalyticsExport'
 import type { ReportExportParams } from '@/api/reportsExport'
-
-const { t } = useI18n()
 
 const {
   activeTab,
@@ -227,17 +206,8 @@ const activeProps = computed<Record<string, unknown>>(() => {
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
 }
 
-.dashboard-page__filters,
-.dashboard-page__tabs {
-  padding: 0 $space-6;
-}
-
 .dashboard-page__filters {
-  padding-top: $space-4;
-}
-
-.dashboard-page__tabs {
-  margin-bottom: $space-2;
+  padding: $space-4 $space-6 0;
 }
 
 .dashboard-page__content {

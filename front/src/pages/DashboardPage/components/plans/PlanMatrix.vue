@@ -3,7 +3,8 @@
     <DataTable
       :value="matrix.rows"
       size="small"
-      show-gridlines
+      :striped-rows="true"
+      row-hover
       scrollable
       scroll-height="flex"
       class="plan-matrix__table"
@@ -312,6 +313,14 @@ const grandTotalLabel = computed<string>(() => {
 
   :deep(.p-datatable-thead > tr > th) {
     white-space: nowrap;
+  }
+
+  // Frozen «Сотрудник» column must be OPAQUE so scrolled month columns never show
+  // through it (transparent frozen cells read as bleed-through on the navy card in
+  // dark). --p-datatable-*-cell-background is the reactive table surface, so it
+  // stays consistent with the striped rows in both themes.
+  :deep(.p-datatable-frozen-column) {
+    background: var(--p-datatable-header-cell-background, var(--p-card-background));
   }
 }
 

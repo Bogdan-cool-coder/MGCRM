@@ -1,9 +1,13 @@
 <template>
+  <!-- Whole tab on a widget-card подложка (restyle §2.1). div-based (ОВ-1) so the
+       matrix keeps its scroll-height="flex" + sticky footer inside a flex column. -->
   <div class="tab-plans">
-    <!-- Metric sub-tabs. Все три метрики включены: Поступления (P-1), Задачи (R4),
+    <!-- Card header: dynamic metric title (left) + metric segmented (right).
+         Все метрики включены: Поступления (P-1), Продукты (R6), Задачи (R4),
          Конверсии (R5). Каждая монтирует свою панель — dirty-guard активной
          панели прерывает и переключение метрики, и переключение таба хаба. -->
-    <div class="tab-plans__metrics">
+    <header class="tab-plans__head">
+      <span class="tab-plans__head-title">{{ metricTitle }}</span>
       <SelectButton
         :key="metricStripKey"
         :model-value="metricTab"
@@ -11,16 +15,19 @@
         option-label="label"
         option-value="value"
         :allow-empty="false"
+        class="tab-plans__metrics"
         @update:model-value="onMetric"
       />
-    </div>
+    </header>
 
-    <component
-      :is="metricComponent"
-      :year="year"
-      :layer="layer"
-      :pipeline-id="pipelineId"
-    />
+    <div class="tab-plans__body">
+      <component
+        :is="metricComponent"
+        :year="year"
+        :layer="layer"
+        :pipeline-id="pipelineId"
+      />
+    </div>
   </div>
 </template>
 
@@ -73,6 +80,11 @@ const METRIC_COMPONENTS: Record<PlanMetricTab, Component> = {
 }
 
 const metricComponent = computed<Component>(() => METRIC_COMPONENTS[metricTab.value])
+
+/** Card-header title mirrors the active metric (restyle §2.1). */
+const metricTitle = computed<string>(
+  () => metricOptions.value.find((o) => o.value === metricTab.value)?.label ?? '',
+)
 
 // ─── Dirty-guard bridge ─────────────────────────────────────────────────────
 // The active metric panel (Поступления / Задачи) registers its leave-guard here.
@@ -140,12 +152,41 @@ const onMetric = async (v: PlanMetricTab | null): Promise<void> => {
 </script>
 
 <style lang="scss" scoped>
+// widget-card подложка (= Card.widget-card в Обзоре), но div-based (ОВ-1) чтобы
+// матрица сохранила scroll-height="flex" и sticky-футер внутри flex-колонки.
 .tab-plans {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
 }
 
-.tab-plans__metrics {
-  margin-bottom: $space-4;
+.tab-plans__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: $space-3;
+  padding: $space-4 $space-4 $space-3;
+}
+
+.tab-plans__head-title {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $surface-800;
+}
+
+.tab-plans__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 $space-4 $space-4;
 }
 </style>

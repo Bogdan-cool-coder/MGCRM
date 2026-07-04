@@ -1,92 +1,85 @@
 <template>
-  <Card class="analytics-filter-bar mb-4">
-    <template #content>
-      <div class="analytics-filter-bar__grid">
-        <!-- Row 1: period granularity + stepper + layer -->
-        <div class="analytics-filter-bar__row">
-          <SelectButton
-            :model-value="granularity"
-            :options="granularityOptions"
-            option-label="label"
-            option-value="value"
-            :allow-empty="false"
-            class="analytics-filter-bar__granularity"
-            @update:model-value="(v: PeriodGranularity) => emit('update:granularity', v)"
-          />
+  <!-- Compact single-row filter strip on a widget-card surface (restyle §1.3). -->
+  <div class="analytics-filter-bar">
+    <SelectButton
+      :model-value="granularity"
+      :options="granularityOptions"
+      option-label="label"
+      option-value="value"
+      :allow-empty="false"
+      class="analytics-filter-bar__granularity"
+      @update:model-value="(v: PeriodGranularity) => emit('update:granularity', v)"
+    />
 
-          <div class="analytics-filter-bar__stepper">
-            <Button
-              text
-              rounded
-              severity="secondary"
-              icon="pi pi-chevron-left"
-              :aria-label="t('dashboard.filters.prev_period')"
-              @click="emit('step', -1)"
-            />
-            <span class="analytics-filter-bar__period-label">{{ periodLabel }}</span>
-            <Button
-              text
-              rounded
-              severity="secondary"
-              icon="pi pi-chevron-right"
-              :aria-label="t('dashboard.filters.next_period')"
-              @click="emit('step', 1)"
-            />
-          </div>
+    <div class="analytics-filter-bar__stepper">
+      <Button
+        text
+        rounded
+        severity="secondary"
+        icon="pi pi-chevron-left"
+        :aria-label="t('dashboard.filters.prev_period')"
+        @click="emit('step', -1)"
+      />
+      <span class="analytics-filter-bar__period-label">{{ periodLabel }}</span>
+      <Button
+        text
+        rounded
+        severity="secondary"
+        icon="pi pi-chevron-right"
+        :aria-label="t('dashboard.filters.next_period')"
+        @click="emit('step', 1)"
+      />
+    </div>
 
-          <!-- Layer (Operative | Annual) — affects Plans + plan-columns.
-               On tabs where it does not apply it is dimmed with a tooltip (ОВ-3). -->
-          <div
-            class="analytics-filter-bar__layer"
-            :class="{ 'analytics-filter-bar__layer--dimmed': !layerActive }"
-          >
-            <SelectButton
-              v-tooltip.top="layerActive ? undefined : t('dashboard.filters.layer_hint')"
-              :model-value="layer"
-              :options="layerOptions"
-              option-label="label"
-              option-value="value"
-              :allow-empty="false"
-              @update:model-value="(v: PlanLayer) => emit('update:layer', v)"
-            />
-          </div>
-        </div>
+    <!-- Layer (Operative | Annual) — affects Plans + plan-columns.
+         On tabs where it does not apply it is dimmed with a tooltip (ОВ-3). -->
+    <div
+      class="analytics-filter-bar__layer"
+      :class="{ 'analytics-filter-bar__layer--dimmed': !layerActive }"
+    >
+      <SelectButton
+        v-tooltip.top="layerActive ? undefined : t('dashboard.filters.layer_hint')"
+        :model-value="layer"
+        :options="layerOptions"
+        option-label="label"
+        option-value="value"
+        :allow-empty="false"
+        @update:model-value="(v: PlanLayer) => emit('update:layer', v)"
+      />
+    </div>
 
-        <!-- Row 2: pipeline + manager -->
-        <div class="analytics-filter-bar__row">
-          <Select
-            :model-value="pipelineId"
-            :options="pipelines"
-            option-label="name"
-            option-value="id"
-            :loading="pipelinesLoading"
-            show-clear
-            :placeholder="t('dashboard.filters.allPipelines')"
-            class="analytics-filter-bar__select"
-            @update:model-value="(v: number | null) => emit('update:pipelineId', v)"
-          />
-          <Select
-            v-if="canSeeAllManagers"
-            :model-value="managerId"
-            :options="managers"
-            option-label="full_name"
-            option-value="id"
-            filter
-            show-clear
-            :placeholder="t('dashboard.filters.allManagers')"
-            class="analytics-filter-bar__select"
-            @update:model-value="(v: number | null) => emit('update:managerId', v)"
-          />
-        </div>
-      </div>
-    </template>
-  </Card>
+    <!-- Vertical divider separates period controls from scope filters (§1.3). -->
+    <span class="analytics-filter-bar__divider" aria-hidden="true" />
+
+    <Select
+      :model-value="pipelineId"
+      :options="pipelines"
+      option-label="name"
+      option-value="id"
+      :loading="pipelinesLoading"
+      show-clear
+      :placeholder="t('dashboard.filters.allPipelines')"
+      class="analytics-filter-bar__select"
+      @update:model-value="(v: number | null) => emit('update:pipelineId', v)"
+    />
+    <Select
+      v-if="canSeeAllManagers"
+      :model-value="managerId"
+      :options="managers"
+      option-label="full_name"
+      option-value="id"
+      filter
+      show-clear
+      :placeholder="t('dashboard.filters.allManagers')"
+      class="analytics-filter-bar__select"
+      @update:model-value="(v: number | null) => emit('update:managerId', v)"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Card from 'primevue/card'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import Button from 'primevue/button'
@@ -142,29 +135,41 @@ const periodLabel = computed<string>(() => {
 </script>
 
 <style lang="scss" scoped>
+// Widget-card surface (= Card.widget-card in Обзор): reactive $surface-card fill,
+// $surface-200 border (dark override on this scoped element), $radius-lg, $shadow-sm.
 .analytics-filter-bar {
-  :deep(.p-card-body) {
-    padding: $space-3;
-  }
-}
-
-.analytics-filter-bar__grid {
-  display: flex;
-  flex-direction: column;
-  gap: $space-3;
-}
-
-.analytics-filter-bar__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: $space-3;
+  padding: $space-3 $space-4;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  margin-bottom: $space-4;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
 }
 
 .analytics-filter-bar__stepper {
   display: flex;
   align-items: center;
   gap: $space-2;
+}
+
+// Thin vertical rule between period controls and scope filters (§1.3).
+.analytics-filter-bar__divider {
+  width: 1px;
+  height: 20px;
+  flex-shrink: 0;
+  background: $surface-200;
+
+  .app-dark & {
+    background: var(--p-surface-200);
+  }
 }
 
 .analytics-filter-bar__period-label {
@@ -189,7 +194,7 @@ const periodLabel = computed<string>(() => {
 }
 
 @media (max-width: 768px) {
-  .analytics-filter-bar__row {
+  .analytics-filter-bar {
     flex-direction: column;
     align-items: stretch;
   }
@@ -202,6 +207,11 @@ const periodLabel = computed<string>(() => {
 
   .analytics-filter-bar__stepper {
     justify-content: space-between;
+  }
+
+  // Divider is a horizontal-row device; drop it in the stacked layout.
+  .analytics-filter-bar__divider {
+    display: none;
   }
 }
 </style>

@@ -33,6 +33,8 @@
       v-else
       :value="rows"
       size="small"
+      :striped-rows="true"
+      row-hover
       scrollable
       scroll-height="flex"
       :row-class="rowClass"
@@ -236,10 +238,21 @@ const relativeTime = (iso: string): string => {
 </script>
 
 <style lang="scss" scoped>
+// Section on a widget-card подложка (§3.3) — reactive $surface-card fill,
+// $surface-200 border (dark override on this scoped element), $radius-lg, $shadow-sm.
 .registry-table {
   display: flex;
   flex-direction: column;
   gap: $space-3;
+  padding: $space-4;
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
 }
 
 .registry-table__header {
@@ -286,6 +299,8 @@ const relativeTime = (iso: string): string => {
 }
 
 // ── Empty state ──────────────────────────────────────────────────────────────
+// The section now sits on its own widget-card подложка (§3.3), so the empty state
+// no longer needs its own card fill — it inherits the section surface.
 .registry-table__empty {
   display: flex;
   flex-direction: column;
@@ -295,8 +310,6 @@ const relativeTime = (iso: string): string => {
   min-height: 140px;
   padding: $space-6;
   text-align: center;
-  background: $surface-card;
-  border-radius: $radius-lg;
 }
 
 .registry-table__empty-icon {
