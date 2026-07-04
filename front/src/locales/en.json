@@ -2339,6 +2339,7 @@
         "searchTooltip": "Search feed",
         "filterType": "Type",
         "reset": "Reset",
+        "done": "Done",
         "loadMore": "Load more",
         "changedField": "changed field",
         "viewMenu": {
@@ -2370,6 +2371,7 @@
           "dealCreated": "Deal created",
           "dealCreatedVerb": "created the deal",
           "fieldsChanged": "Fields changed",
+          "fieldsChangedVerb": "changed",
           "moreChanges": "{n} more",
           "paymentFixedVerb": "fixed payment",
           "paymentFixedOn": "on {date}"
@@ -3370,6 +3372,8 @@
     },
     "coursePage": {
       "back": "My courses",
+      "notFound": "Course not found",
+      "notFoundHint": "The course may have been deleted or you don't have access to it.",
       "prev": "Previous lesson",
       "next": "Next lesson",
       "completeBtn": "Complete course",
@@ -4543,6 +4547,7 @@
         "responsible_user_id": "Responsible",
         "owner_user_id": "Owner",
         "owner_id": "Owner",
+        "department_id": "Department",
         "acquisition_channel_id": "Acquisition channel"
       }
     },

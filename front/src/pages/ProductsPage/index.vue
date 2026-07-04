@@ -248,9 +248,7 @@
           class="products-page__paginator"
           @page="onPageChange"
         />
-        <div v-if="total > 0" class="products-page__total">
-          {{ t('common.total', { count: total }) }}
-        </div>
+        <PaginatorCaption :page="page" :per-page="perPage" :total="total" />
       </div>
     </div>
 
@@ -281,6 +279,7 @@ import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Menu from 'primevue/menu'
 import Paginator from 'primevue/paginator'
+import PaginatorCaption from '@/components/shared/PaginatorCaption.vue'
 import { useUserStore } from '@/stores/user'
 import { useProductsPageData, type ProductsFilter } from './composables/useProductsPageData'
 import { useProductsPageActions } from './composables/useProductsPageActions'

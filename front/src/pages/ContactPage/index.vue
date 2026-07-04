@@ -37,22 +37,12 @@
 
     <!-- ── Error ─────────────────────────────────────────────────────────────── -->
     <template v-else-if="!isCreateMode && (contactError || !contact)">
-      <div class="contact-page-v2__error">
-        <i
-          class="contact-page-v2__error-icon"
-          :class="isForbiddenError ? 'pi pi-lock' : 'pi pi-exclamation-triangle'"
-        />
-        <p class="contact-page-v2__error-title">
-          {{ isForbiddenError ? t('contact.page.errors.forbidden') : t('contact.page.errors.load') }}
-        </p>
-        <Button
-          icon="pi pi-arrow-left"
-          :label="t('contact.page.back')"
-          severity="secondary"
-          outlined
-          @click="router.push('/contacts')"
-        />
-      </div>
+      <NotFoundState
+        :icon="isForbiddenError ? 'pi pi-lock' : 'pi pi-exclamation-triangle'"
+        :title="isForbiddenError ? t('contact.page.errors.forbidden') : t('contact.page.errors.load')"
+        :cta-label="t('contact.page.back')"
+        to="/contacts"
+      />
     </template>
 
     <!-- ── Main content ───────────────────────────────────────────────────────── -->
@@ -450,6 +440,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { getApiErrorStatus } from '@/utils/errors'
+import { formatMoney } from '@/utils/chartFormatters'
 import Button from 'primevue/button'
 import Badge from 'primevue/badge'
 import Tabs from 'primevue/tabs'
@@ -464,6 +455,7 @@ import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
 import ToggleSwitch from 'primevue/toggleswitch'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
+import NotFoundState from '@/components/shared/NotFoundState.vue'
 import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
 import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
@@ -487,7 +479,7 @@ import { useBreakpoints } from '@/composables/useBreakpoints'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import type { MenuItem } from 'primevue/menuitem'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const directoriesStore = useDirectoriesStore()
@@ -613,22 +605,6 @@ function formatRelativeContact(lastAt: string | null): string {
   return t('crm.entity.kpiStrip.daysAgo', { n: days }, `${days}д`)
 }
 
-function formatMoney(kopecks: number | null | undefined, currency?: string | null): string {
-  if (kopecks == null) return '0 ₽'
-  const units = Math.round(kopecks / 100)
-  const cur = currency ?? 'RUB'
-  try {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: cur,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(units)
-  } catch {
-    return `${units.toLocaleString('ru-RU')} ${cur}`
-  }
-}
-
 const contactKpiItems = computed((): KpiItem[] => {
   const ext = contact.value as (typeof contact.value & {
     last_activity_at?: string | null
@@ -666,7 +642,7 @@ const contactKpiItems = computed((): KpiItem[] => {
       key: 'deals_sum',
       icon: 'pi-wallet',
       label: 'contact.kpi.dealsSum',
-      value: formatMoney(dealsSum, dealsSumCurrency),
+      value: dealsSum == null ? '0 ₽' : formatMoney(dealsSum, locale.value, dealsSumCurrency ?? 'RUB'),
       accent: 'brand',
     },
     {
@@ -840,26 +816,6 @@ void attachCompanyStatus
 .contact-page-v2__header-skeleton {
   flex-shrink: 0;
   border-radius: 0;
-}
-
-.contact-page-v2__error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-4;
-  padding: $space-8;
-  text-align: center;
-}
-
-.contact-page-v2__error-icon {
-  font-size: $font-size-icon-lg;
-  color: var(--p-red-400);
-}
-
-.contact-page-v2__error-title {
-  font-size: $font-size-base;
-  color: $surface-600;
-  margin: 0;
 }
 
 // ── Body ─────────────────────────────────────────────────────────────────────

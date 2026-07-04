@@ -192,9 +192,7 @@
           class="rates-page__paginator"
           @page="onPageChange"
         />
-        <div v-if="total > 0" class="rates-page__total">
-          {{ t('common.total', { count: total }) }}
-        </div>
+        <PaginatorCaption :page="page" :per-page="perPage" :total="total" />
       </div>
     </div>
 
@@ -220,6 +218,7 @@ import DatePicker from 'primevue/datepicker'
 import Menu from 'primevue/menu'
 import Paginator from 'primevue/paginator'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
+import PaginatorCaption from '@/components/shared/PaginatorCaption.vue'
 import { useUserStore } from '@/stores/user'
 import { CURRENCY_WHITELIST } from '@/utils/currency'
 import { useExchangeRatesPage } from './composables/useExchangeRatesPage'
@@ -396,10 +395,4 @@ defineExpose({ canWrite, refreshRates, refreshing, openCreateDialog, rowCount })
   border-top: 1px solid $surface-200;
 }
 
-.rates-page__total {
-  padding: $space-2 $space-4;
-  font-size: $font-size-sm;
-  color: $surface-500;
-  text-align: right;
-}
 </style>

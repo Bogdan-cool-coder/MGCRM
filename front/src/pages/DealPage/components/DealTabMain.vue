@@ -4,46 +4,27 @@
     <div class="deal-tab-main__quick-fields">
 
       <!-- Ответственный — avatar circle + name → SearchPicker -->
-      <div class="deal-tab-main__quick-row" @click="ownerPickerOpen = true">
+      <div class="deal-tab-main__quick-row">
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.owner') }}</span>
-        <div class="deal-tab-main__quick-value deal-tab-main__quick-value--owner" @click.stop>
-          <div class="deal-tab-main__owner-row" @click="ownerPickerOpen = !ownerPickerOpen">
-            <span class="deal-tab-main__owner-avatar">{{ ownerInitials }}</span>
-            <span class="deal-tab-main__owner-name">{{ deal.owner.name }}</span>
-          </div>
-          <!-- Owner SearchPicker popover -->
-          <div
-            v-if="ownerPickerOpen"
-            v-click-outside="() => { ownerPickerOpen = false }"
-            class="deal-tab-main__owner-picker"
-            @click.stop
+        <div class="deal-tab-main__quick-value deal-tab-main__quick-value--owner">
+          <SearchPicker
+            :model-value="deal.owner.id"
+            :options="usersList"
+            option-label="name"
+            option-value="id"
+            :display-label="deal.owner.name"
+            class="deal-tab-main__owner-picker-ctl"
+            @select="selectOwner"
           >
-            <div class="deal-tab-main__owner-picker-search">
-              <i class="pi pi-search deal-tab-main__owner-picker-icon" />
-              <input
-                ref="ownerSearchRef"
-                v-model="ownerQuery"
-                class="deal-tab-main__owner-picker-input"
-                :placeholder="t('common.search_placeholder')"
-              />
-            </div>
-            <div class="deal-tab-main__owner-picker-options">
-              <div
-                v-for="u in filteredUsers"
-                :key="u.id"
-                class="deal-tab-main__owner-option"
-                :class="{ 'deal-tab-main__owner-option--active': u.id === deal.owner.id }"
-                @click="selectOwner(u)"
-              >
-                <i v-if="u.id === deal.owner.id" class="pi pi-check deal-tab-main__owner-check" />
-                <span class="deal-tab-main__owner-option-name">{{ u.name }}</span>
-                <i v-if="ownerSaving && ownerPendingId === u.id" class="pi pi-spin pi-spinner deal-tab-main__owner-saving" />
-              </div>
-              <div v-if="filteredUsers.length === 0" class="deal-tab-main__owner-empty">
-                {{ t('common.no_results') }}
-              </div>
-            </div>
-          </div>
+            <template #trigger-content>
+              <span class="deal-tab-main__owner-avatar">{{ ownerInitials }}</span>
+              <span class="deal-tab-main__owner-name">{{ deal.owner.name }}</span>
+              <i v-if="ownerSaving" class="pi pi-spin pi-spinner deal-tab-main__owner-saving" />
+            </template>
+            <template #option="{ option }">
+              <span class="deal-tab-main__owner-option-name">{{ String(option.name ?? '') }}</span>
+            </template>
+          </SearchPicker>
         </div>
       </div>
 
@@ -51,7 +32,7 @@
       <div class="deal-tab-main__quick-row">
         <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.company') }}</span>
         <div class="deal-tab-main__quick-value deal-tab-main__quick-value--company" @click.stop>
-          <div class="deal-tab-main__company-row">
+          <div v-if="!companyPickerOpen" class="deal-tab-main__company-row">
             <RouterLink v-if="deal.company" :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
               {{ deal.company.name }}
             </RouterLink>
@@ -60,49 +41,31 @@
               class="deal-tab-main__company-edit-btn"
               type="button"
               :title="t('sales.deal.info.fields.changeCompany')"
-              @click="companyPickerOpen = !companyPickerOpen"
+              @click="openCompanyPicker"
             >
               <i class="pi pi-pencil" />
             </button>
             <i v-if="companySaving" class="pi pi-spin pi-spinner deal-tab-main__company-saving" />
           </div>
-          <!-- Company search popover -->
-          <div
-            v-if="companyPickerOpen"
-            v-click-outside="() => { companyPickerOpen = false }"
-            class="deal-tab-main__company-picker"
-            @click.stop
-          >
-            <div class="deal-tab-main__owner-picker-search">
-              <i class="pi pi-search deal-tab-main__owner-picker-icon" />
-              <input
-                ref="companySearchRef"
-                v-model="companyQuery"
-                class="deal-tab-main__owner-picker-input"
-                :placeholder="t('common.search_placeholder')"
-                @input="onCompanyQueryInput"
-              />
-            </div>
-            <div class="deal-tab-main__owner-picker-options">
-              <div v-if="companySearching" class="deal-tab-main__owner-empty">
-                <i class="pi pi-spin pi-spinner" />
-              </div>
-              <template v-else>
-                <div
-                  v-for="c in companyOptions"
-                  :key="c.id"
-                  class="deal-tab-main__owner-option"
-                  :class="{ 'deal-tab-main__owner-option--active': c.id === deal.company?.id }"
-                  @click="selectCompany(c)"
-                >
-                  <i v-if="c.id === deal.company?.id" class="pi pi-check deal-tab-main__owner-check" />
-                  <span class="deal-tab-main__owner-option-name">{{ c.name }}</span>
-                </div>
-                <div v-if="!companySearching && companyOptions.length === 0" class="deal-tab-main__owner-empty">
-                  {{ t('common.no_results') }}
-                </div>
-              </template>
-            </div>
+          <!-- Company remote search (PrimeVue AutoComplete) -->
+          <div v-else ref="companyAcWrap" class="deal-tab-main__company-ac-wrap">
+            <AutoComplete
+              v-model="companySelection"
+              :suggestions="companyOptions"
+              option-label="name"
+              class="deal-tab-main__company-ac"
+              dropdown
+              complete-on-focus
+              force-selection
+              :loading="companySearching"
+              :min-length="0"
+              :delay="250"
+              append-to="body"
+              :placeholder="t('common.search_placeholder')"
+              @complete="onCompanyComplete($event.query)"
+              @option-select="selectCompany($event.value)"
+              @blur="companyPickerOpen = false"
+            />
           </div>
         </div>
       </div>
@@ -204,36 +167,13 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
-
-// ── Click-outside directive ───────────────────────────────────────────────────
-
-const vClickOutside = {
-  mounted(el: HTMLElement, binding: { value: () => void }) {
-    el.__clickOutsideHandlerTab = (event: MouseEvent) => {
-      if (!el.contains(event.target as Node)) {
-        binding.value()
-      }
-    }
-    document.addEventListener('click', el.__clickOutsideHandlerTab)
-  },
-  unmounted(el: HTMLElement) {
-    if (el.__clickOutsideHandlerTab) {
-      document.removeEventListener('click', el.__clickOutsideHandlerTab)
-      delete el.__clickOutsideHandlerTab
-    }
-  },
-}
-
-declare global {
-  interface HTMLElement {
-    __clickOutsideHandlerTab?: (event: MouseEvent) => void
-  }
-}
+import AutoComplete from 'primevue/autocomplete'
 import DealFieldGroup from './DealFieldGroup.vue'
 import DealFieldRow from './DealFieldRow.vue'
 import DealProductsGroup from './DealProductsGroup.vue'
 import DealContactsGroup from './DealContactsGroup.vue'
 import DealCompanyGroup from './DealCompanyGroup.vue'
+import SearchPicker from '@/components/crm/SearchPicker.vue'
 import DateField from '@/components/crm/DateField.vue'
 import { salesApi } from '@/api/sales'
 import { companiesApi, type CompanyListParams } from '@/api/crm/companies'
@@ -311,11 +251,6 @@ watch(
 
 // ── Owner SearchPicker ─────────────────────────────────────────────────────────
 
-const ownerPickerOpen = ref(false)
-const ownerQuery = ref('')
-const ownerSearchRef = ref<HTMLInputElement | null>(null)
-const ownerPendingId = ref<number | null>(null)
-
 const ownerInitials = computed(() => {
   const name = props.deal.owner.name ?? ''
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -323,26 +258,17 @@ const ownerInitials = computed(() => {
   return name.slice(0, 2).toUpperCase()
 })
 
-const filteredUsers = computed(() => {
-  const q = ownerQuery.value.toLowerCase()
-  return props.usersList.filter((u) => u.name.toLowerCase().includes(q))
-})
-
 const ownerMutation = useMutation<DealDto>()
 const ownerSaving = computed(() => ownerMutation.isPending.value)
 
-async function selectOwner(u: { id: number; name: string }) {
-  if (u.id === props.deal.owner.id) {
-    ownerPickerOpen.value = false
-    return
-  }
-  ownerPendingId.value = u.id
+async function selectOwner(option: Record<string, unknown>) {
+  const id = Number(option.id)
+  if (!id || id === props.deal.owner.id) return
   try {
     const updated = await ownerMutation.run(() =>
-      salesApi.updateDeal(props.deal.id, { owner_user_id: u.id }),
+      salesApi.updateDeal(props.deal.id, { owner_user_id: id }),
     )
     emit('dealUpdated', { owner: updated.owner })
-    ownerPickerOpen.value = false
     toast.add({ severity: 'success', summary: t('sales.deal.page.menu.changeOwner'), life: 2000 })
   } catch (err) {
     toast.add({
@@ -351,35 +277,34 @@ async function selectOwner(u: { id: number; name: string }) {
       detail: getApiErrorMessage(err, t('errors.server_error')),
       life: 4000,
     })
-  } finally {
-    ownerPendingId.value = null
   }
 }
 
-watch(ownerPickerOpen, (open) => {
-  if (open) {
-    ownerQuery.value = ''
-    nextTick(() => ownerSearchRef.value?.focus())
-  }
-})
-
-// ── Company picker ─────────────────────────────────────────────────────────────
+// ── Company picker (PrimeVue AutoComplete, remote debounced search) ─────────────
 
 const companyPickerOpen = ref(false)
-const companyQuery = ref('')
-const companySearchRef = ref<HTMLInputElement | null>(null)
+const companyAcWrap = ref<HTMLElement | null>(null)
+const companySelection = ref<{ id: number; name: string } | null>(null)
 const companyOptions = ref<Array<{ id: number; name: string }>>([])
 const companySearching = ref(false)
 const companyMutation = useMutation<DealDto>()
 const companySaving = computed(() => companyMutation.isPending.value)
 
-let companySearchTimer: ReturnType<typeof setTimeout> | null = null
+function openCompanyPicker() {
+  companyPickerOpen.value = true
+  companySelection.value = null
+  companyOptions.value = []
+  // Focus the field once mounted; complete-on-focus then loads the initial list.
+  nextTick(() => {
+    companyAcWrap.value?.querySelector('input')?.focus()
+  })
+}
 
-async function doCompanySearch(q: string) {
+async function onCompanyComplete(query: string) {
   companySearching.value = true
   try {
     const params: CompanyListParams = { per_page: 20 }
-    if (q.trim()) params.search = q.trim()
+    if (query.trim()) params.search = query.trim()
     const res = await companiesApi.list(params)
     companyOptions.value = res.data.map((c: Company) => ({ id: c.id, name: c.name }))
   } catch {
@@ -389,18 +314,9 @@ async function doCompanySearch(q: string) {
   }
 }
 
-function onCompanyQueryInput() {
-  if (companySearchTimer) clearTimeout(companySearchTimer)
-  companySearchTimer = setTimeout(() => {
-    void doCompanySearch(companyQuery.value)
-  }, 250)
-}
-
 async function selectCompany(c: { id: number; name: string }) {
-  if (c.id === props.deal.company?.id) {
-    companyPickerOpen.value = false
-    return
-  }
+  companyPickerOpen.value = false
+  if (c.id === props.deal.company?.id) return
   try {
     const updated = await companyMutation.run(() =>
       salesApi.updateDeal(props.deal.id, { company_id: c.id }),
@@ -409,7 +325,6 @@ async function selectCompany(c: { id: number; name: string }) {
       company: updated.company,
       department_id: updated.department_id,
     })
-    companyPickerOpen.value = false
     toast.add({ severity: 'success', summary: t('sales.deal.info.fields.changeCompany'), life: 2000 })
   } catch (err) {
     toast.add({
@@ -420,17 +335,6 @@ async function selectCompany(c: { id: number; name: string }) {
     })
   }
 }
-
-watch(companyPickerOpen, (open) => {
-  if (open) {
-    companyQuery.value = ''
-    companyOptions.value = []
-    void doCompanySearch('')
-    nextTick(() => companySearchRef.value?.focus())
-  } else {
-    if (companySearchTimer) clearTimeout(companySearchTimer)
-  }
-})
 
 // ── Discount update ───────────────────────────────────────────────────────────
 
@@ -634,24 +538,6 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   position: relative;
 }
 
-.deal-tab-main__owner-row {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: $radius-sm;
-  transition: background var(--app-transition-fast);
-
-  &:hover {
-    background: var(--p-surface-100);
-
-    .app-dark & {
-      background: var(--p-surface-200);
-    }
-  }
-}
-
 .deal-tab-main__owner-avatar {
   width: 22px;
   height: 22px;
@@ -672,101 +558,11 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   // $surface-800 theme-reactive strong text — no dark override
 }
 
-// ── Owner picker popover ──────────────────────────────────────────────────────
-
-.deal-tab-main__owner-picker {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 200;
-  min-width: 220px;
-  background: var(--p-card-background);
-  border: 1px solid var(--p-surface-200);
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
-  overflow: hidden;
-  // border var(--p-surface-200) theme-reactive soft border — no dark override
-}
-
-.deal-tab-main__owner-picker-search {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-  padding: $space-2 $space-3;
-  border-bottom: 1px solid var(--p-surface-200);
-  // theme-reactive soft border — no dark override
-}
-
-.deal-tab-main__owner-picker-icon {
-  font-size: $font-size-xs;
-  color: $surface-400;
-}
-
-.deal-tab-main__owner-picker-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: $font-size-sm;
-  color: $surface-800;
-  // $surface-800 theme-reactive strong text — no dark override
-
-  &::placeholder {
-    color: $surface-400;
-  }
-}
-
-.deal-tab-main__owner-picker-options {
-  max-height: 200px;
-  overflow-y: auto;
-  padding: $space-1;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-
-  &::-webkit-scrollbar {
-    width: 0;
-    display: none;
-  }
-}
-
-.deal-tab-main__owner-option {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  padding: $space-2 $space-3;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  font-size: $font-size-sm;
-  color: $surface-700;
-  transition: background var(--app-transition-fast);
-  // color theme-reactive secondary text — no dark override
-
-  &:hover {
-    background: var(--p-surface-50);
-
-    .app-dark & {
-      background: var(--p-surface-200);
-    }
-  }
-
-  &--active {
-    background: var(--p-primary-50);
-    color: var(--p-primary-color);
-
-    .app-dark & {
-      background: var(--p-primary-950);
-    }
-  }
-}
-
 .deal-tab-main__owner-option-name {
   flex: 1;
-}
-
-.deal-tab-main__owner-check {
-  font-size: $font-size-xs;
-  color: var(--p-primary-color);
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .deal-tab-main__owner-saving {
@@ -775,11 +571,14 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   flex-shrink: 0;
 }
 
-.deal-tab-main__owner-empty {
-  padding: $space-3;
-  text-align: center;
-  font-size: $font-size-sm;
-  color: var(--p-text-muted-color);
+// Trigger fills the quick-field cell (SearchPicker is inline-flex by default).
+.deal-tab-main__owner-picker-ctl {
+  display: flex;
+
+  :deep(.search-picker__trigger) {
+    gap: $space-2;
+    padding: 2px 6px;
+  }
 }
 
 // ── Company field ─────────────────────────────────────────────────────────────
@@ -842,17 +641,16 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   flex-shrink: 0;
 }
 
-.deal-tab-main__company-picker {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 200;
-  min-width: 260px;
-  background: var(--p-card-background);
-  border: 1px solid var(--p-surface-200);
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
-  overflow: hidden;
-  // border var(--p-surface-200) theme-reactive soft border — no dark override
+.deal-tab-main__company-ac-wrap {
+  width: 100%;
+  max-width: 260px;
+}
+
+.deal-tab-main__company-ac {
+  width: 100%;
+
+  :deep(.p-autocomplete-input) {
+    width: 100%;
+  }
 }
 </style>

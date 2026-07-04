@@ -43,7 +43,7 @@
         </div>
         <!-- Show saved value as formatted money -->
         <small v-if="props.deal.paid_amount != null" class="deal-tab-finances__saved-note">
-          {{ t('sales.deal.finances.savedAmount') }}: {{ formatMoney(props.deal.paid_amount, props.deal.payment_currency) }}
+          {{ t('sales.deal.finances.savedAmount') }}: {{ formatCurrency(props.deal.paid_amount, props.deal.payment_currency ?? 'RUB') }}
         </small>
       </div>
 
@@ -88,6 +88,7 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import DateField from '@/components/crm/DateField.vue'
 import { salesApi } from '@/api/sales'
+import { formatCurrency } from '@/utils/currency'
 import type { DealDto } from '@/entities/sales'
 
 const props = defineProps<{
@@ -100,24 +101,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
-
-// ── Currency helpers ──────────────────────────────────────────────────────────
-
-const currencySymbols: Record<string, string> = {
-  KZT: '₸',
-  RUB: '₽',
-  USD: '$',
-  EUR: '€',
-  UZS: 'сум',
-  AED: 'AED',
-}
-
-function formatMoney(kopecks: number, currency: string | null | undefined): string {
-  const sym = currencySymbols[currency ?? ''] ?? (currency ?? '')
-  const units = Math.round(kopecks / 100)
-  const formatted = units.toLocaleString('ru-RU')
-  return `${formatted} ${sym}`.trim()
-}
 
 // ── Payment amount display (user-facing roubles/units, stored as kopecks) ─────
 

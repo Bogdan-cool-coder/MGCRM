@@ -9,19 +9,15 @@
       </div>
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="p-4">
-      <Message severity="error" :closable="false">
-        {{ t('common.loadError') }}
-      </Message>
-      <Button
-        :label="t('onboarding.coursePage.back')"
-        icon="pi pi-arrow-left"
-        text
-        class="mt-2"
-        @click="$router.push({ name: 'MyCourses' })"
-      />
-    </div>
+    <!-- Error / not found — shared canon column -->
+    <NotFoundState
+      v-else-if="error"
+      icon="pi pi-book"
+      :title="t('onboarding.coursePage.notFound')"
+      :hint="t('onboarding.coursePage.notFoundHint')"
+      :cta-label="t('onboarding.coursePage.back')"
+      :to="{ name: 'MyCourses' }"
+    />
 
     <!-- Main layout -->
     <template v-else-if="assignment">
@@ -161,6 +157,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import ProgressBar from 'primevue/progressbar'
 import AssignmentStatusTag from '@/components/shared/AssignmentStatusTag.vue'
+import NotFoundState from '@/components/shared/NotFoundState.vue'
 import CourseSidebar from './components/CourseSidebar.vue'
 import LessonView from './components/LessonView.vue'
 import AiTutorDrawer from './components/AiTutorDrawer.vue'

@@ -2339,6 +2339,7 @@
         "searchTooltip": "Поиск в ленте",
         "filterType": "Тип",
         "reset": "Сбросить",
+        "done": "Готово",
         "loadMore": "Загрузить ещё",
         "changedField": "изменил поле",
         "viewMenu": {
@@ -2370,6 +2371,7 @@
           "dealCreated": "Сделка создана",
           "dealCreatedVerb": "создал сделку",
           "fieldsChanged": "Изменены поля",
+          "fieldsChangedVerb": "изменил",
           "moreChanges": "ещё {n} изм.",
           "paymentFixedVerb": "зафиксировал оплату",
           "paymentFixedOn": "на {date}"
@@ -3370,6 +3372,8 @@
     },
     "coursePage": {
       "back": "Мои курсы",
+      "notFound": "Курс не найден",
+      "notFoundHint": "Курс мог быть удалён или у вас нет к нему доступа.",
       "prev": "Предыдущий урок",
       "next": "Следующий урок",
       "completeBtn": "Завершить курс",
@@ -4543,6 +4547,7 @@
         "responsible_user_id": "Ответственный",
         "owner_user_id": "Владелец",
         "owner_id": "Владелец",
+        "department_id": "Отдел",
         "acquisition_channel_id": "Канал привлечения"
       }
     },

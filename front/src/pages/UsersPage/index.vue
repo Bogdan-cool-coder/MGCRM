@@ -207,6 +207,7 @@
             @page="onPageChange"
           />
         </div>
+        <PaginatorCaption :page="currentPage" :per-page="perPage" :total="total" />
       </template>
     </Card>
 
@@ -246,6 +247,7 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
+import PaginatorCaption from '@/components/shared/PaginatorCaption.vue'
 import type { PageState } from 'primevue/paginator'
 import CreateUserDialog from './components/CreateUserDialog.vue'
 import ResetPasswordResultDialog from './components/ResetPasswordResultDialog.vue'

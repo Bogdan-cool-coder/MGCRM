@@ -51,40 +51,15 @@
                 {{ t('sales.deal.page.contacts.setPrimary') }}
               </button>
             </div>
-            <!-- ⋮ menu trigger -->
-            <div class="deal-contacts-group__menu-wrap">
-              <button
-                class="deal-contacts-group__menu-btn"
-                type="button"
-                @click.stop="toggleMenu(link.contact.id)"
-              >
-                <i class="pi pi-ellipsis-v" />
-              </button>
-              <!-- Inline popover menu -->
-              <div
-                v-if="openMenuId === link.contact.id"
-                class="deal-contacts-group__menu-popover"
-                @click.stop
-              >
-                <button
-                  class="deal-contacts-group__menu-item"
-                  type="button"
-                  @click="startEdit(link)"
-                >
-                  <i class="pi pi-pencil" />
-                  {{ t('common.edit') }}
-                </button>
-                <button
-                  class="deal-contacts-group__menu-item deal-contacts-group__menu-item--danger"
-                  type="button"
-                  :disabled="removingId === link.contact.id"
-                  @click="doUnlink(link.contact.id)"
-                >
-                  <i class="pi pi-times-circle" />
-                  {{ t('sales.deal.info.contacts.unlink') }}
-                </button>
-              </div>
-            </div>
+            <!-- ⋮ menu trigger (PrimeVue Menu popup) -->
+            <button
+              class="deal-contacts-group__menu-btn"
+              type="button"
+              :aria-label="t('common.actions')"
+              @click.stop="toggleMenu($event, link)"
+            >
+              <i class="pi pi-ellipsis-v" />
+            </button>
           </div>
 
           <!-- Position -->
@@ -274,17 +249,22 @@
         {{ t('sales.deal.info.contacts.addContact') }}
       </button>
     </div>
+
+    <!-- ⋮ contact actions (PrimeVue Menu popup — etalon DealFeedItem) -->
+    <Menu ref="menuRef" :model="menuItems" popup />
   </DealFieldGroup>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
+import Menu from 'primevue/menu'
+import type { MenuItem } from 'primevue/menuitem'
 import DealFieldGroup from './DealFieldGroup.vue'
 import { contactsApi } from '@/api/crm/contacts'
 import { salesApi } from '@/api/sales'
@@ -392,26 +372,41 @@ function channelUrl(ch: ContactChannel): string | null {
   }
 }
 
-// ── ⋮ Menu state ──────────────────────────────────────────────────────────────
+// ── ⋮ Menu (PrimeVue Menu popup) ────────────────────────────────────────────────
 
-const openMenuId = ref<number | null>(null)
+const menuRef = ref<InstanceType<typeof Menu> | null>(null)
+const activeLink = ref<DealContactDto | null>(null)
 
-function toggleMenu(id: number) {
-  openMenuId.value = openMenuId.value === id ? null : id
-}
+const menuItems = computed<MenuItem[]>(() => {
+  const link = activeLink.value
+  if (!link || !link.contact) return []
+  return [
+    {
+      label: t('common.edit'),
+      icon: 'pi pi-pencil',
+      command: () => startEdit(link),
+    },
+    {
+      label: t('sales.deal.info.contacts.unlink'),
+      icon: 'pi pi-times-circle',
+      class: 'deal-contacts-group__menu-item--danger',
+      disabled: props.removingId === link.contact.id,
+      command: () => doUnlink(link.contact!.id),
+    },
+  ]
+})
 
-function closeMenu() {
-  openMenuId.value = null
+function toggleMenu(event: MouseEvent, link: DealContactDto) {
+  activeLink.value = link
+  menuRef.value?.toggle(event)
 }
 
 function doUnlink(contactId: number) {
-  openMenuId.value = null
   emit('removeContact', contactId)
 }
 
-// Close menus on any document click (not inside popover — popover itself has @click.stop)
+// Close the add-channel popover on any document click (its own body has @click.stop)
 function onDocClick() {
-  if (openMenuId.value !== null) closeMenu()
   if (addChContactId.value !== null) closeAddChannelPopover()
 }
 
@@ -470,7 +465,6 @@ const editSaving = ref(false)
 
 function startEdit(link: DealContactDto) {
   if (!link.contact) return
-  openMenuId.value = null
   editingContactId.value = link.contact.id
   editForm.value = {
     full_name: link.contact.full_name,
@@ -666,7 +660,9 @@ async function submitAddChannel(contactId: number) {
 .deal-contacts-group__link {
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
-  color: $primary-color;
+  // color var(--p-primary-color) theme-reactive accent — no dark override
+  // (static $primary-color navy #172747 is invisible on navy dark surface)
+  color: var(--p-primary-color);
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -726,14 +722,10 @@ async function submitAddChannel(contactId: number) {
   // $surface-500 theme-reactive muted ink — no dark override
 }
 
-// ── ⋮ Menu ────────────────────────────────────────────────────────────────────
-
-.deal-contacts-group__menu-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
+// ── ⋮ Menu trigger ──────────────────────────────────────────────────────────────
 
 .deal-contacts-group__menu-btn {
+  flex-shrink: 0;
   background: none;
   border: none;
   cursor: pointer;
@@ -757,71 +749,6 @@ async function submitAddChannel(contactId: number) {
 
   .pi {
     font-size: $font-size-xs;
-  }
-}
-
-.deal-contacts-group__menu-popover {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 100;
-  min-width: 160px;
-  background: var(--p-card-background);
-  border: 1px solid var(--p-surface-200);
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
-  padding: $space-1;
-  // border var(--p-surface-200) theme-reactive soft border — no dark override
-}
-
-.deal-contacts-group__menu-item {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  width: 100%;
-  padding: $space-2 $space-3;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: $font-size-sm;
-  color: $surface-700;
-  border-radius: $radius-sm;
-  text-align: left;
-  transition: background var(--app-transition-fast);
-  // color $surface-700 theme-reactive secondary text — no dark override
-
-  &:hover {
-    background: var(--p-surface-100);
-
-    .app-dark & {
-      background: var(--p-surface-200);
-    }
-  }
-
-  &--danger {
-    color: var(--p-red-600);
-
-    .app-dark & {
-      color: var(--p-red-400);
-    }
-
-    &:hover {
-      background: var(--p-red-50);
-
-      .app-dark & {
-        background: var(--p-red-950);
-      }
-    }
-  }
-
-  .pi {
-    font-size: $font-size-xs;
-    flex-shrink: 0;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 }
 
@@ -861,7 +788,7 @@ async function submitAddChannel(contactId: number) {
 
   &:hover {
     border-color: var(--p-primary-400);
-    color: $primary-color;
+    color: var(--p-primary-color);
   }
 
   .pi {
@@ -901,7 +828,7 @@ async function submitAddChannel(contactId: number) {
 
   &:hover {
     border-color: var(--p-primary-400);
-    color: $primary-color;
+    color: var(--p-primary-color);
   }
 
   .pi {
@@ -949,7 +876,7 @@ async function submitAddChannel(contactId: number) {
 
   &:hover {
     border-color: var(--p-primary-400);
-    color: $primary-color;
+    color: var(--p-primary-color);
   }
 
   &--active {
@@ -1104,6 +1031,27 @@ async function submitAddChannel(contactId: number) {
 
   .pi {
     font-size: $font-size-xs;
+  }
+}
+</style>
+
+<!-- Danger tint for the unlink item in the teleported PrimeVue Menu popup.
+     The overlay renders outside this scoped subtree, so the danger colour is
+     applied via a non-scoped rule keyed on the item class. -->
+<style lang="scss">
+.p-menu .deal-contacts-group__menu-item--danger .p-menu-item-link {
+  color: var(--p-red-600);
+
+  .p-menu-item-icon {
+    color: var(--p-red-600);
+  }
+
+  .app-dark & {
+    color: var(--p-red-400);
+
+    .p-menu-item-icon {
+      color: var(--p-red-400);
+    }
   }
 }
 </style>

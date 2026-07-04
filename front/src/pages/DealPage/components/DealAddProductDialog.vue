@@ -38,66 +38,34 @@
         </div>
       </div>
 
-      <!-- Продукт: async SearchPicker -->
+      <!-- Продукт: async AutoComplete -->
       <div class="add-product-dialog__field">
         <label class="add-product-dialog__label">
           {{ t('sales.deal.page.products.addDialog.fields.product') }} <span class="req">*</span>
         </label>
-        <div
-          class="add-product-dialog__product-picker"
-          :class="{ 'add-product-dialog__product-picker--open': productPickerOpen, 'p-invalid': !!errors.product_id }"
+        <AutoComplete
+          v-model="selectedProduct"
+          :suggestions="productSuggestions"
+          option-label="name"
+          class="add-product-dialog__product-ac"
+          dropdown
+          complete-on-focus
+          force-selection
+          :invalid="!!errors.product_id"
+          :placeholder="t('sales.deal.page.products.addDialog.fields.productPlaceholder')"
+          :min-length="0"
+          :delay="300"
+          append-to="body"
+          @complete="onProductComplete($event.query)"
+          @option-select="onProductSelect($event.value)"
         >
-          <!-- Trigger -->
-          <button
-            type="button"
-            class="add-product-dialog__picker-trigger"
-            @click="openProductPicker"
-          >
-            <span class="add-product-dialog__picker-value">
-              {{ selectedProduct ? selectedProduct.name : t('sales.deal.page.products.addDialog.fields.productPlaceholder') }}
-            </span>
-            <i class="pi pi-chevron-down add-product-dialog__picker-chevron" />
-          </button>
-
-          <!-- Search popover -->
-          <div
-            v-if="productPickerOpen"
-            ref="productPopoverRef"
-            class="add-product-dialog__picker-popover"
-          >
-            <div class="add-product-dialog__picker-search">
-              <i class="pi pi-search add-product-dialog__picker-search-icon" />
-              <input
-                ref="productSearchRef"
-                v-model="productQuery"
-                class="add-product-dialog__picker-search-input"
-                :placeholder="t('common.search_placeholder')"
-                @input="onProductSearch"
-              />
+          <template #option="{ option }">
+            <div class="add-product-dialog__ac-option">
+              <span class="add-product-dialog__ac-option-name">{{ option.name }}</span>
+              <span v-if="option.code" class="add-product-dialog__ac-option-code">{{ option.code }}</span>
             </div>
-            <div class="add-product-dialog__picker-options">
-              <div
-                v-for="opt in productSuggestions"
-                :key="opt.id"
-                class="add-product-dialog__picker-option"
-                :class="{ 'add-product-dialog__picker-option--selected': selectedProduct?.id === opt.id }"
-                @click="onProductSelect(opt)"
-              >
-                <i
-                  v-if="selectedProduct?.id === opt.id"
-                  class="pi pi-check add-product-dialog__picker-check"
-                />
-                <div class="add-product-dialog__picker-option-content">
-                  <span class="add-product-dialog__picker-option-name">{{ opt.name }}</span>
-                  <span v-if="opt.code" class="add-product-dialog__picker-option-code">{{ opt.code }}</span>
-                </div>
-              </div>
-              <div v-if="productSuggestions.length === 0" class="add-product-dialog__picker-empty">
-                {{ t('common.no_results') }}
-              </div>
-            </div>
-          </div>
-        </div>
+          </template>
+        </AutoComplete>
         <small v-if="errors.product_id" class="p-error">{{ errors.product_id }}</small>
         <!-- No-price hint shown inline below the picker -->
         <small v-if="selectedProduct && !hasPriceForCurrency" class="p-error">
@@ -132,11 +100,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
+import AutoComplete from 'primevue/autocomplete'
 import { catalogApi, type ProductListParams } from '@/api/catalog'
 import { useMutation } from '@/composables/async/useMutation'
 import { formatCurrency } from '@/utils/currency'
@@ -209,17 +178,13 @@ watch(() => props.currency, (c) => {
   form.value.currency = c || 'KZT'
 }, { immediate: true })
 
-// ── Product async SearchPicker ─────────────────────────────────────────────────
+// ── Product async AutoComplete ─────────────────────────────────────────────────
+// Empty/short query → full active list (spec §8.2: dropdown/focus shows the list);
+// query ≥ 2 chars → server-side filter. AutoComplete debounces via :delay.
 
-const productPickerOpen = ref(false)
-const productQuery = ref('')
 const productSuggestions = ref<ProductDto[]>([])
-const productSearchRef = ref<HTMLInputElement | null>(null)
-const productPopoverRef = ref<HTMLElement | null>(null)
 
-let searchTimer: ReturnType<typeof setTimeout> | null = null
-
-async function loadProducts(query: string) {
+async function onProductComplete(query: string) {
   try {
     const params: ProductListParams = { active_only: true, per_page: 30 }
     if (query.trim().length >= 2) params.q = query.trim()
@@ -230,51 +195,10 @@ async function loadProducts(query: string) {
   }
 }
 
-function openProductPicker() {
-  productPickerOpen.value = !productPickerOpen.value
-  if (productPickerOpen.value) {
-    productQuery.value = ''
-    // Load full list immediately on open (spec §8.2: clicking shows the list)
-    void loadProducts('')
-    nextTick(() => productSearchRef.value?.focus())
-  }
-}
-
-function onProductSearch() {
-  if (searchTimer) clearTimeout(searchTimer)
-  // Load instantly with no filter when query is short; debounce typed searches
-  if (productQuery.value.trim().length < 2) {
-    searchTimer = setTimeout(() => void loadProducts(''), 150)
-    return
-  }
-  searchTimer = setTimeout(() => void loadProducts(productQuery.value), 300)
-}
-
 function onProductSelect(opt: ProductDto) {
   selectedProduct.value = opt
-  productPickerOpen.value = false
   errors.value = {}
 }
-
-// Click outside to close product picker
-function onDocClick(e: MouseEvent) {
-  const pop = productPopoverRef.value
-  if (pop && !pop.contains(e.target as Node)) {
-    const btn = (e.target as HTMLElement).closest('.add-product-dialog__picker-trigger')
-    if (!btn) {
-      productPickerOpen.value = false
-    }
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', onDocClick, true)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', onDocClick, true)
-  if (searchTimer) clearTimeout(searchTimer)
-})
 
 // ── Unit price preview (product + currency, display only) ────────────────────
 // Priority: base price (plan_id=null) → first plan-attached price → plan.prices.
@@ -353,7 +277,6 @@ async function onSubmit() {
     // Reset
     selectedProduct.value = null
     form.value = { period: 12, currency: props.currency || 'KZT' }
-    productQuery.value = ''
     productSuggestions.value = []
   } catch (err) {
     const status = getApiErrorStatus(err)
@@ -401,184 +324,32 @@ async function onSubmit() {
   // theme-reactive secondary text — no dark override
 }
 
-// ── Product SearchPicker ──────────────────────────────────────────────────────
+// ── Product AutoComplete ──────────────────────────────────────────────────────
 
-.add-product-dialog__product-picker {
-  position: relative;
-}
-
-.add-product-dialog__picker-trigger {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
+.add-product-dialog__product-ac {
   width: 100%;
-  padding: 6px $space-3;
-  border: 1px solid var(--p-surface-300);
-  border-radius: $radius-sm;
-  background: var(--p-card-background);
-  cursor: pointer;
-  font-size: $font-size-sm;
-  color: $surface-700;
-  text-align: left;
-  transition: border-color var(--app-transition-fast);
-  // color theme-reactive (secondary text)
 
-  .app-dark & {
-    border-color: var(--p-surface-300);
-  }
-
-  &:hover {
-    border-color: var(--p-primary-400);
-  }
-
-  .add-product-dialog__product-picker--open & {
-    border-color: var(--p-primary-color);
-  }
-
-  .p-invalid & {
-    border-color: var(--p-red-400);
+  :deep(.p-autocomplete-input) {
+    width: 100%;
   }
 }
 
-// Picker value: semantic text token — readable in both themes, no dark override needed.
-.add-product-dialog__picker-value {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--p-text-color);
-}
-
-.add-product-dialog__picker-chevron {
-  font-size: $font-size-3xs;
-  color: $surface-400;
-  flex-shrink: 0;
-  transition: transform var(--app-transition-fast);
-
-  .add-product-dialog__product-picker--open & {
-    transform: rotate(180deg);
-  }
-}
-
-.add-product-dialog__picker-popover {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 300;
-  background: var(--p-card-background);
-  border: 1px solid var(--p-surface-200);
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
-  overflow: hidden;
-  // border var(--p-surface-200) is theme-reactive soft border — no dark override
-}
-
-.add-product-dialog__picker-search {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-  padding: $space-2 $space-3;
-  border-bottom: 1px solid var(--p-surface-200);
-  // theme-reactive soft border — no dark override
-}
-
-.add-product-dialog__picker-search-icon {
-  font-size: $font-size-xs;
-  color: $surface-400;
-  flex-shrink: 0;
-}
-
-.add-product-dialog__picker-search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: $font-size-sm;
-  color: $surface-800;
-  min-width: 0;
-  // $surface-800 theme-reactive strong text — no dark override
-
-  &::placeholder {
-    color: $surface-400;
-  }
-}
-
-.add-product-dialog__picker-options {
-  max-height: 200px;
-  overflow-y: auto;
-  padding: $space-1;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-
-  &::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
-  }
-}
-
-.add-product-dialog__picker-option {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  padding: $space-2 $space-3;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  font-size: $font-size-sm;
-  color: $surface-700;
-  transition: background var(--app-transition-fast);
-  // color theme-reactive secondary text — no dark override
-
-  &:hover {
-    background: var(--p-surface-50);
-
-    .app-dark & {
-      background: var(--p-surface-100);
-    }
-  }
-
-  &--selected {
-    background: var(--p-primary-50);
-    color: var(--p-primary-color);
-
-    .app-dark & {
-      background: var(--p-primary-950);
-      color: var(--p-primary-color);
-    }
-  }
-}
-
-.add-product-dialog__picker-check {
-  font-size: $font-size-xs;
-  color: var(--p-primary-color);
-  flex-shrink: 0;
-}
-
-.add-product-dialog__picker-option-content {
-  flex: 1;
-  min-width: 0;
+// Custom option template (name + code) rendered inside the teleported overlay.
+.add-product-dialog__ac-option {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
 }
 
-.add-product-dialog__picker-option-name {
+.add-product-dialog__ac-option-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.add-product-dialog__picker-option-code {
+.add-product-dialog__ac-option-code {
   font-size: $font-size-xs;
-  color: var(--p-text-muted-color);
-}
-
-.add-product-dialog__picker-hint,
-.add-product-dialog__picker-empty {
-  padding: $space-3;
-  text-align: center;
-  font-size: $font-size-sm;
   color: var(--p-text-muted-color);
 }
 

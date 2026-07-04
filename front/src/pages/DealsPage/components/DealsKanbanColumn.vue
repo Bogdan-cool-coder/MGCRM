@@ -116,6 +116,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Popover from 'primevue/popover'
 import DealsKanbanCard from './DealsKanbanCard.vue'
+import { formatMoney } from '@/utils/chartFormatters'
 import type { BoardColumnDto, DealCardDto } from '@/entities/sales'
 
 const props = defineProps<{
@@ -132,7 +133,7 @@ const emit = defineEmits<{
   createInStage: [stageId: number]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // ── Local deals (vuedraggable) ─────────────────────────────────────────────────
 
@@ -190,18 +191,8 @@ const headerStyle = computed(() => {
 // ── Sum formatting ─────────────────────────────────────────────────────────────
 
 const plainSum = computed(() => {
-  const kopecks = props.column.sum_amount
-  const rub = kopecks / 100
   const cur = props.column.base_currency || props.column.currency || 'RUB'
-  const sign = cur === 'RUB' ? '₽' : cur === 'KZT' ? '₸' : cur === 'USD' ? '$' : cur
-
-  if (rub >= 1_000_000) {
-    return `${(rub / 1_000_000).toFixed(1)} млн ${sign}`
-  }
-  if (rub >= 1_000) {
-    return `${Math.round(rub / 1_000)} тыс. ${sign}`
-  }
-  return `${Math.round(rub)} ${sign}`
+  return formatMoney(props.column.sum_amount, locale.value, cur)
 })
 
 const formattedSum = computed(() => {

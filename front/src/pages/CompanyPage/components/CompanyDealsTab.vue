@@ -61,7 +61,7 @@
 
       <Column :header="t('sales.deal.list.columns.amount')" style="width: 150px">
         <template #body="{ data }">
-          <span class="company-deals-tab__amount">{{ formatKopecks(data.amount, data.currency) }}</span>
+          <span class="company-deals-tab__amount">{{ formatCurrency(data.amount, data.currency) }}</span>
         </template>
       </Column>
 
@@ -102,6 +102,7 @@ import Tag from 'primevue/tag'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import type { DealDto } from '@/entities/sales'
+import { formatCurrency } from '@/utils/currency'
 
 defineProps<{
   deals: DealDto[]
@@ -115,20 +116,6 @@ defineEmits<{
 }>()
 
 const { t } = useI18n()
-
-function formatKopecks(kopecks: number, currency: string): string {
-  const units = Math.round(kopecks / 100)
-  try {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(units)
-  } catch {
-    return `${units.toLocaleString('ru-RU')} ${currency}`
-  }
-}
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—'

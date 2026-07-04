@@ -40,19 +40,14 @@
       </div>
     </template>
 
-    <!-- ── Error ────────────────────────────────────────────────────────────── -->
+    <!-- ── Error / not found — shared canon column ──────────────────────────── -->
     <template v-else-if="!isCreateMode && (companyError || !company)">
-      <div class="company-page-v2__error">
-        <i class="pi pi-exclamation-triangle company-page-v2__error-icon" />
-        <p class="company-page-v2__error-title">{{ t('company.page.errors.load') }}</p>
-        <Button
-          icon="pi pi-arrow-left"
-          :label="t('company.page.back')"
-          severity="secondary"
-          outlined
-          @click="router.push('/contacts')"
-        />
-      </div>
+      <NotFoundState
+        icon="pi pi-exclamation-triangle"
+        :title="t('company.page.errors.load')"
+        :cta-label="t('company.page.back')"
+        to="/contacts"
+      />
     </template>
 
     <!-- ── Main content ──────────────────────────────────────────────────────── -->
@@ -535,6 +530,7 @@ import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import CompanyCreateForm from './components/CompanyCreateForm.vue'
 import EntityInfoHeader from '@/components/crm/entity/EntityInfoHeader.vue'
+import NotFoundState from '@/components/shared/NotFoundState.vue'
 import EntityKpiStrip, { type KpiItem } from '@/components/crm/entity/EntityKpiStrip.vue'
 import EntityMiniTimeline from '@/components/crm/entity/EntityMiniTimeline.vue'
 import InfoPanel from '@/components/crm/entity/InfoPanel.vue'
@@ -559,12 +555,13 @@ import { useCompanyPageActions } from './composables/useCompanyPageActions'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
+import { formatMoney } from '@/utils/chartFormatters'
 import type { CompanyExtended, EmploymentStatus, Company, Contact, CompanyChannel } from '@/entities/crm'
 import type { DocumentDto } from '@/entities/document'
 import type { MenuItem } from 'primevue/menuitem'
 import { useUserStore } from '@/stores/user'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
@@ -722,14 +719,6 @@ function formatRelativeActivity(lastAt: string | null): string {
   return t('crm.entity.kpiStrip.daysAgo', { n: days }, `${days}д`)
 }
 
-function formatKopecks(kopecks: number | null | undefined): string {
-  if (kopecks == null) return '—'
-  const units = Math.round(kopecks / 100)
-  if (units >= 1_000_000) return `${(units / 1_000_000).toFixed(1)}M`
-  if (units >= 1_000) return `${(units / 1_000).toFixed(0)}K`
-  return units.toLocaleString('ru-RU')
-}
-
 const companyKpiItems = computed((): KpiItem[] => {
   const ext = company.value as CompanyExtended | null
   const lastAt = ext?.last_activity_at ?? null
@@ -757,7 +746,7 @@ const companyKpiItems = computed((): KpiItem[] => {
       key: 'deals_sum',
       icon: 'pi-wallet', // spec §2: pi-wallet (not pi-chart-line)
       label: 'company.kpi.dealsSum',
-      value: formatKopecks(dealsSum),
+      value: dealsSum == null ? '—' : formatMoney(dealsSum, locale.value, 'RUB'),
       accent: 'brand',
     },
     {
@@ -1141,26 +1130,6 @@ watch(
 }
 
 // ── Error state ────────────────────────────────────────────────────────────────
-.company-page-v2__error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-4;
-  padding: $space-8 * 1.5;
-  text-align: center;
-}
-
-.company-page-v2__error-icon {
-  font-size: $font-size-icon-2xl;
-  color: $surface-300;
-}
-
-.company-page-v2__error-title {
-  font-size: $font-size-base;
-  color: $surface-600;
-  margin: 0;
-}
-
 // ── Body — hidden scrollbar (spec §13 global rule) ────────────────────────────
 .company-page-v2__body {
   flex: 1;

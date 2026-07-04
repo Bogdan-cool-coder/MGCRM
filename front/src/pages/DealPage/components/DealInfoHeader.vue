@@ -7,7 +7,7 @@
         <button class="deal-header__btn-icon" :aria-label="t('common.back')" @click="$emit('back')">
           <i class="pi pi-arrow-left" />
         </button>
-        <button ref="menuBtnRef" class="deal-header__btn-icon" :aria-label="t('sales.deal.page.menu.copyLink')" @click="toggleMenu">
+        <button class="deal-header__btn-icon" :aria-label="t('sales.deal.page.menu.copyLink')" @click="toggleMenu">
           <i class="pi pi-ellipsis-v" />
         </button>
       </div>
@@ -65,52 +65,8 @@
       @stage-click="onSegmentClick"
     />
 
-    <!-- ── ⋮ Menu popover (opens RIGHT of button) ─────────────────────────────── -->
-    <Teleport to="body">
-      <Transition name="deal-menu-fade">
-        <div
-          v-if="menuOpen"
-          ref="menuPanelRef"
-          class="deal-header__menu-panel"
-          :style="menuPanelStyle"
-          role="menu"
-          @click.stop
-        >
-          <button class="deal-header__menu-item" role="menuitem" @click="copyLink">
-            <i class="pi pi-link deal-header__menu-icon" />
-            {{ t('sales.deal.page.menu.copyLink') }}
-          </button>
-          <div class="deal-header__menu-sep" />
-          <button class="deal-header__menu-item" role="menuitem" @click="openRenameDialog">
-            <i class="pi pi-pencil deal-header__menu-icon" />
-            {{ t('sales.deal.page.menu.rename') }}
-          </button>
-          <button class="deal-header__menu-item" role="menuitem" @click="openTagsDialog">
-            <i class="pi pi-tag deal-header__menu-icon" />
-            {{ t('sales.deal.page.menu.editTags') }}
-          </button>
-          <div class="deal-header__menu-sep" />
-          <button class="deal-header__menu-item" role="menuitem" @click="onCollapseAll">
-            <i class="pi pi-arrows-v deal-header__menu-icon" />
-            {{ t('sales.deal.page.menu.collapseAll') }}
-          </button>
-          <button class="deal-header__menu-item" role="menuitem" @click="onExpandAll">
-            <i class="pi pi-arrows-v deal-header__menu-icon" />
-            {{ t('sales.deal.page.menu.expandAll') }}
-          </button>
-          <div class="deal-header__menu-sep" />
-          <button class="deal-header__menu-item deal-header__menu-item--danger" role="menuitem" @click="confirmDelete">
-            <i class="pi pi-trash deal-header__menu-icon" />
-            {{ t('sales.deal.page.menu.delete') }}
-          </button>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Backdrop to close menu -->
-    <Teleport to="body">
-      <div v-if="menuOpen" class="deal-header__menu-backdrop" @click="menuOpen = false" />
-    </Teleport>
+    <!-- ── ⋮ Menu (PrimeVue Menu popup — etalon DealFeedItem/DealsToolbar) ─────── -->
+    <Menu ref="menuRef" :model="menuItems" popup />
 
     <!-- ── Dialogs: rename, tags ─────────────────────────────────────────────── -->
     <Dialog
@@ -161,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -170,6 +126,8 @@ import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
+import Menu from 'primevue/menu'
+import type { MenuItem } from 'primevue/menuitem'
 import { Tooltip } from 'primevue'
 import DealStageTag from './DealStageTag.vue'
 import DealStageProgressBar from './DealStageProgressBar.vue'
@@ -223,75 +181,52 @@ const categoryLabel = computed((): string => {
   return cat
 })
 
-// ── Right-positioned menu popover ───────────────────────────────────────────────
+// ── ⋮ Menu (PrimeVue Menu popup) ───────────────────────────────────────────────
 
-const menuOpen = ref(false)
-const menuBtnRef = ref<HTMLElement | null>(null)
-const menuPanelRef = ref<HTMLElement | null>(null)
+const menuRef = ref<InstanceType<typeof Menu> | null>(null)
 
-const menuPanelStyle = ref<Record<string, string>>({})
+const menuItems = computed<MenuItem[]>(() => [
+  { label: t('sales.deal.page.menu.copyLink'), icon: 'pi pi-link', command: copyLink },
+  { separator: true },
+  { label: t('sales.deal.page.menu.rename'), icon: 'pi pi-pencil', command: openRenameDialog },
+  { label: t('sales.deal.page.menu.editTags'), icon: 'pi pi-tag', command: openTagsDialog },
+  { separator: true },
+  { label: t('sales.deal.page.menu.collapseAll'), icon: 'pi pi-arrows-v', command: onCollapseAll },
+  { label: t('sales.deal.page.menu.expandAll'), icon: 'pi pi-arrows-v', command: onExpandAll },
+  { separator: true },
+  {
+    label: t('sales.deal.page.menu.delete'),
+    icon: 'pi pi-trash',
+    class: 'deal-header__menu-item--danger',
+    command: confirmDelete,
+  },
+])
 
-async function toggleMenu() {
-  menuOpen.value = !menuOpen.value
-  if (menuOpen.value) {
-    await nextTick()
-    positionMenu()
-  }
+function toggleMenu(event: MouseEvent) {
+  menuRef.value?.toggle(event)
 }
-
-function positionMenu() {
-  const btn = menuBtnRef.value
-  if (!btn) return
-  const rect = btn.getBoundingClientRect()
-  // Position panel to the right of the button, aligned to top
-  menuPanelStyle.value = {
-    position: 'fixed',
-    top: `${rect.top}px`,
-    left: `${rect.right + 6}px`,
-    zIndex: '9999',
-  }
-}
-
-function onKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && menuOpen.value) {
-    menuOpen.value = false
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', onKeyDown)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onKeyDown)
-})
 
 function copyLink() {
   void navigator.clipboard.writeText(window.location.href)
   toast.add({ severity: 'success', summary: t('sales.deal.page.menu.copyLink'), life: 2000 })
-  menuOpen.value = false
 }
 
 function openRenameDialog() {
   renameForm.value.title = props.deal.title
   renameDialogVisible.value = true
-  menuOpen.value = false
 }
 
 function openTagsDialog() {
   tagsForm.value.tags = [...(props.deal.tags ?? [])]
   tagsDialogVisible.value = true
-  menuOpen.value = false
 }
 
 function onCollapseAll() {
   emit('collapseAllGroups')
-  menuOpen.value = false
 }
 
 function onExpandAll() {
   emit('expandAllGroups')
-  menuOpen.value = false
 }
 
 // ── Rename dialog ─────────────────────────────────────────────────────────────────
@@ -365,11 +300,12 @@ function onSegmentClick(stageId: number) {
 const deleteMutation = useMutation()
 
 function confirmDelete() {
-  menuOpen.value = false
   confirm.require({
     header: t('sales.deal.page.menu.deleteConfirm'),
     message: t('sales.deal.page.menu.deleteDetail'),
     icon: 'pi pi-trash',
+    acceptLabel: t('common.delete'),
+    rejectLabel: t('common.cancel'),
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
@@ -567,80 +503,6 @@ function confirmDelete() {
   margin-top: $space-1;
 }
 
-// ── Menu panel (Teleport, right-side popover) ─────────────────────────────────
-.deal-header__menu-panel {
-  background: var(--p-card-background);
-  border: 1px solid var(--p-surface-200);
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
-  min-width: 210px;
-  padding: $space-1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  // border var(--p-surface-200) theme-reactive soft popover border — no dark override
-}
-
-.deal-header__menu-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-}
-
-.deal-header__menu-item {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  width: 100%;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 7px $space-3;
-  border-radius: $radius-sm;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: var(--p-text-color);
-  text-align: left;
-  transition: background 0.12s;
-
-  &:hover {
-    background: var(--p-surface-100);
-
-    .app-dark & {
-      background: var(--p-surface-200);
-    }
-  }
-
-  &--danger {
-    color: var(--p-red-500);
-
-    .app-dark & {
-      color: var(--p-red-400);
-    }
-  }
-}
-
-.deal-header__menu-icon {
-  font-size: $font-size-sm;
-  flex-shrink: 0;
-  color: $surface-500;
-
-  .deal-header__menu-item--danger & {
-    color: var(--p-red-500);
-
-    .app-dark & {
-      color: var(--p-red-400);
-    }
-  }
-}
-
-.deal-header__menu-sep {
-  height: 1px;
-  background: var(--p-surface-200);
-  margin: $space-1 0;
-  // theme-reactive soft divider — no dark override
-}
-
 // ── Dialog body ───────────────────────────────────────────────────────────────
 .deal-header__dialog-body {
   padding: $space-2 0 $space-4;
@@ -648,16 +510,25 @@ function confirmDelete() {
   flex-direction: column;
   gap: $space-3;
 }
+</style>
 
-// ── Fade transition ───────────────────────────────────────────────────────────
-.deal-menu-fade-enter-active,
-.deal-menu-fade-leave-active {
-  transition: opacity 0.12s, transform 0.12s;
-}
+<!-- Danger tint for the delete item in the teleported PrimeVue Menu popup.
+     The overlay renders outside this scoped subtree (appendTo body), so the
+     danger colour is applied via a non-scoped rule keyed on the item class. -->
+<style lang="scss">
+.p-menu .deal-header__menu-item--danger .p-menu-item-link {
+  color: var(--p-red-500);
 
-.deal-menu-fade-enter-from,
-.deal-menu-fade-leave-to {
-  opacity: 0;
-  transform: translateX(-4px);
+  .p-menu-item-icon {
+    color: var(--p-red-500);
+  }
+
+  .app-dark & {
+    color: var(--p-red-400);
+
+    .p-menu-item-icon {
+      color: var(--p-red-400);
+    }
+  }
 }
 </style>

@@ -1,6 +1,9 @@
+<!-- Feed search + type filter — PrimeVue Popover (Inbox pattern A canon):
+     search input → uppercase section-label + reset → pill chips → footer (Reset + Done).
+     Exposes toggle(event) so the parent search button can open/close it. -->
 <template>
-  <Transition name="feed-search">
-    <div v-if="open" class="feed-search-overlay">
+  <Popover ref="panelRef" class="feed-search-overlay">
+    <div class="feed-search-overlay__body">
       <!-- Search input -->
       <div class="feed-search-overlay__input-wrap">
         <InputText
@@ -13,15 +16,9 @@
         />
       </div>
 
-      <!-- Type filter — label + reset link + pill chips (A2, spec §7.1) -->
+      <!-- Type filter — uppercase section-label + reset link (A2, spec §7.1) -->
       <div class="feed-search-overlay__type-header">
         <span class="feed-search-overlay__type-label">{{ t('sales.deal.feed.filterType') }}</span>
-        <button
-          v-if="localType !== 'all'"
-          type="button"
-          class="feed-search-overlay__reset"
-          @click="onReset"
-        >{{ t('common.reset') }}</button>
       </div>
 
       <div class="feed-search-overlay__chips">
@@ -34,18 +31,34 @@
           @click="toggleType(opt.value)"
         >{{ opt.label }}</button>
       </div>
+
+      <!-- Footer actions -->
+      <div class="feed-search-overlay__footer">
+        <Button
+          v-if="hasActiveFilters"
+          :label="t('common.reset')"
+          severity="secondary"
+          text
+          size="small"
+          @click="onReset"
+        />
+        <Button
+          :label="t('sales.deal.feed.done')"
+          severity="primary"
+          size="small"
+          @click="closePanel"
+        />
+      </div>
     </div>
-  </Transition>
+  </Popover>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
-
-defineProps<{
-  open: boolean
-}>()
+import Button from 'primevue/button'
+import Popover from 'primevue/popover'
 
 const emit = defineEmits<{
   search: [query: string]
@@ -55,8 +68,11 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+const panelRef = ref<InstanceType<typeof Popover> | null>(null)
 const localSearch = ref('')
 const localType = ref<string>('all')
+
+const hasActiveFilters = computed(() => localSearch.value.trim() !== '' || localType.value !== 'all')
 
 const feedTypeOptions = computed(() => [
   { value: 'all', label: t('sales.deal.feed.types.all') },
@@ -78,25 +94,28 @@ function onReset() {
   localType.value = 'all'
   emit('reset')
 }
+
+function toggle(event: Event) {
+  panelRef.value?.toggle(event)
+}
+
+function closePanel() {
+  panelRef.value?.hide()
+}
+
+defineExpose({ toggle })
 </script>
 
 <style lang="scss" scoped>
 .feed-search-overlay {
-  position: absolute;
-  top: 44px;
-  right: $space-3;
-  z-index: 20;
-  background: var(--p-card-background);
-  border: 1px solid var(--p-surface-200);
-  border-radius: $radius-md;
-  padding: $space-3;
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
   width: 320px;
-  box-shadow: $shadow-md;
+}
+
+.feed-search-overlay__body {
   display: flex;
   flex-direction: column;
   gap: $space-2;
-  // border var(--p-surface-200) theme-reactive soft border — no dark override
 }
 
 .feed-search-overlay__input-wrap {
@@ -117,19 +136,10 @@ function onReset() {
 .feed-search-overlay__type-label {
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $surface-600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
   flex: 1;
-  // $surface-600 theme-reactive secondary-muted text — no dark override
-}
-
-.feed-search-overlay__reset {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-size: $font-size-xs;
-  color: var(--p-primary-color);
-  text-decoration: underline;
 }
 
 .feed-search-overlay__chips {
@@ -150,11 +160,7 @@ function onReset() {
   cursor: pointer;
   transition: background var(--app-transition-fast), color var(--app-transition-fast), border-color var(--app-transition-fast);
   white-space: nowrap;
-
-  .app-dark & {
-    border-color: var(--p-surface-300);
-    color: var(--p-surface-700);
-  }
+  // color $surface-700 + border var(--p-surface-300) theme-reactive — no dark override
 
   &:hover:not(.feed-search-overlay__chip--active) {
     background: var(--p-surface-100);
@@ -176,14 +182,13 @@ function onReset() {
   }
 }
 
-.feed-search-enter-active,
-.feed-search-leave-active {
-  transition: opacity 0.15s, transform 0.15s;
-}
-
-.feed-search-enter-from,
-.feed-search-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
+.feed-search-overlay__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+  margin-top: $space-1;
+  padding-top: $space-2;
+  border-top: 1px solid var(--p-surface-200);
+  // theme-reactive soft divider — no dark override
 }
 </style>

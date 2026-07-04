@@ -30,7 +30,7 @@
           :style="deal.stage?.color ? { background: deal.stage.color + '22', color: deal.stage.color } : {}"
         />
         <span v-else class="contact-deals-panel__stage-empty">—</span>
-        <span class="contact-deals-panel__amount">{{ formatKopecks(deal.amount, deal.currency) }}</span>
+        <span class="contact-deals-panel__amount">{{ formatCurrency(deal.amount, deal.currency) }}</span>
       </div>
 
       <!-- Empty -->
@@ -59,6 +59,7 @@ import { RouterLink } from 'vue-router'
 import Tag from 'primevue/tag'
 import Skeleton from 'primevue/skeleton'
 import type { DealDto } from '@/entities/sales'
+import { formatCurrency } from '@/utils/currency'
 
 defineProps<{
   deals: DealDto[]
@@ -73,19 +74,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-function formatKopecks(kopecks: number, currency: string): string {
-  const units = Math.round(kopecks / 100)
-  try {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(units)
-  } catch {
-    return `${units.toLocaleString('ru-RU')} ${currency}`
-  }
-}
 </script>
 
 <style lang="scss" scoped>

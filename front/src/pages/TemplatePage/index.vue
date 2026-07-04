@@ -15,17 +15,12 @@
     </template>
 
     <template v-else-if="loadError || !template">
-      <div class="template-page__error">
-        <i class="pi pi-file-edit template-page__error-icon" />
-        <p class="template-page__error-title">{{ t('templates.card.notFound') }}</p>
-        <Button
-          icon="pi pi-arrow-left"
-          :label="t('templates.card.back')"
-          severity="secondary"
-          outlined
-          @click="router.back()"
-        />
-      </div>
+      <NotFoundState
+        icon="pi pi-file-edit"
+        :title="t('templates.card.notFound')"
+        :cta-label="t('templates.card.back')"
+        @cta="router.back()"
+      />
     </template>
 
     <template v-else>
@@ -96,6 +91,7 @@ import { useI18n } from 'vue-i18n'
 import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
+import NotFoundState from '@/components/shared/NotFoundState.vue'
 import TemplateUploadCard from './components/TemplateUploadCard.vue'
 import TemplateAiCheckCard from './components/TemplateAiCheckCard.vue'
 import TemplateVersionsCard from './components/TemplateVersionsCard.vue'

@@ -23,10 +23,10 @@
         text
         size="small"
         v-tooltip.left="t('sales.deal.feed.searchTooltip')"
-        @click="searchOverlayOpen = !searchOverlayOpen"
+        @click="feedSearchRef?.toggle($event)"
       />
       <FeedSearchOverlay
-        :open="searchOverlayOpen"
+        ref="feedSearchRef"
         @search="onSearch"
         @filter="onFilter"
         @reset="onReset"
@@ -156,7 +156,7 @@ const toast = useToast()
 
 const completingId = ref<number | null>(null)
 const reopeningId = ref<number | null>(null)
-const searchOverlayOpen = ref(false)
+const feedSearchRef = ref<InstanceType<typeof FeedSearchOverlay> | null>(null)
 const scrollEl = ref<HTMLElement | null>(null)
 const highlightedItemId = ref<string | null>(null)
 
@@ -325,7 +325,6 @@ function onFilter(type: string) {
 
 function onReset() {
   props.feed.resetFilter()
-  searchOverlayOpen.value = false
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

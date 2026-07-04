@@ -14,19 +14,15 @@
       </div>
     </div>
 
-    <!-- Error / not found — canon column (icon + title + hint + CTA) -->
-    <div v-else-if="error && !loading" class="product-page__error">
-      <i class="pi pi-box product-page__error-icon" />
-      <p class="product-page__error-title">{{ t('catalog.product.page.errors.notFound') }}</p>
-      <p class="product-page__error-hint">{{ t('catalog.product.page.errors.notFoundHint') }}</p>
-      <Button
-        icon="pi pi-arrow-left"
-        :label="t('catalog.product.page.errors.backToCatalog')"
-        severity="secondary"
-        outlined
-        @click="router.push('/admin/products')"
-      />
-    </div>
+    <!-- Error / not found — shared canon column (icon + title + hint + CTA) -->
+    <NotFoundState
+      v-else-if="error && !loading"
+      icon="pi pi-box"
+      :title="t('catalog.product.page.errors.notFound')"
+      :hint="t('catalog.product.page.errors.notFoundHint')"
+      :cta-label="t('catalog.product.page.errors.backToCatalog')"
+      to="/admin/products"
+    />
 
     <!-- Main content -->
     <template v-else-if="product">
@@ -139,6 +135,7 @@ import { catalogApi } from '@/api/catalog'
 import { useProductPageData } from './composables/useProductPageData'
 import { useProductPageActions } from './composables/useProductPageActions'
 import ProductPricingTypeTag from '@/pages/ProductsPage/components/ProductPricingTypeTag.vue'
+import NotFoundState from '@/components/shared/NotFoundState.vue'
 import ProductRightRail from './components/ProductRightRail.vue'
 import ProductPricesTab from './components/ProductPricesTab.vue'
 import ProductDealsTab from './components/ProductDealsTab.vue'
@@ -222,36 +219,6 @@ onMounted(async () => {
 
 .product-page__skeleton {
   padding: $space-4 $space-6;
-}
-
-.product-page__error {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $space-3;
-  padding: $space-8;
-  text-align: center;
-}
-
-.product-page__error-icon {
-  font-size: $font-size-icon-2xl;
-  color: $surface-400;
-  opacity: 0.4;
-}
-
-.product-page__error-title {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $surface-800;
-  margin: 0;
-}
-
-.product-page__error-hint {
-  font-size: $font-size-sm;
-  color: $surface-500;
-  margin: 0;
 }
 
 .product-page__content {
