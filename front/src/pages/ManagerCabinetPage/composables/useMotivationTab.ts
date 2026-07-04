@@ -89,6 +89,25 @@ export const useMotivationTab = (viewedUserId: () => number | null) => {
   const cardResource = useAsyncResource<MotivationCard | null>(() => null)
 
   const loadCard = async (silent = false): Promise<void> => {
+    // Silent background poll (30s forecast refresh): never route through
+    // cardResource.run — that would flip loading/error and, on a transient
+    // network blip, drop the UI into an error state over an already-loaded card.
+    // Instead fetch directly and commit only on success; on failure keep the
+    // last good card untouched and stay quiet.
+    if (silent) {
+      try {
+        const fresh = await getMotivationCard({
+          year: period.value.year,
+          month: period.value.month,
+          user_id: viewedUserId() ?? undefined,
+        })
+        cardResource.data.value = fresh
+      } catch {
+        // Keep the last successful card; a failed background poll is non-fatal.
+      }
+      return
+    }
+
     try {
       await cardResource.run(() =>
         getMotivationCard({
@@ -98,7 +117,6 @@ export const useMotivationTab = (viewedUserId: () => number | null) => {
         }),
       )
     } catch (err) {
-      if (silent) return
       const msg = err instanceof Error ? err.message : String(err)
       toast.add({
         severity: 'error',

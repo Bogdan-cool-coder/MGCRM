@@ -132,21 +132,6 @@ export async function downloadAttachmentBlob(docId: number, attachmentId: number
   )
 }
 
-/** @deprecated Use downloadDocx() — returns URL only, no Bearer auth */
-export function getDownloadDocxUrl(id: number): string {
-  return `/api/documents/${id}/download/docx`
-}
-
-/** @deprecated Use downloadPdf() — returns URL only, no Bearer auth */
-export function getDownloadPdfUrl(id: number): string {
-  return `/api/documents/${id}/download/pdf`
-}
-
-/** @deprecated Use downloadAttachmentBlob() — returns URL only, no Bearer auth */
-export function getAttachmentDownloadUrl(docId: number, attachmentId: number): string {
-  return `/api/documents/${docId}/attachments/${attachmentId}/download`
-}
-
 // ─── Document Items ───────────────────────────────────────────────────────────
 
 export async function getDocumentItems(docId: number): Promise<DocumentItemDto[]> {
@@ -297,9 +282,6 @@ export const documentsApi = {
   downloadDocx,
   downloadPdf,
   downloadAttachmentBlob,
-  getDownloadDocxUrl,
-  getDownloadPdfUrl,
-  getAttachmentDownloadUrl,
   getDocumentItems,
   createDocumentItem,
   updateDocumentItem,

@@ -73,7 +73,11 @@ const router = useRouter()
 const layoutStore = useLayoutStore()
 const activityStore = useActivityStore()
 
-const showLayout = computed(() => route.name !== 'Login')
+// Shell (sidebar / Orbita / notifications poll / hotkeys) is mounted ONLY for
+// authenticated routes. Public routes (Login, PublicLeadForm — anything without
+// meta.requiresAuth) render bare so an anonymous visitor is never wrapped in the
+// authenticated shell (whose notifications poll would 401 → redirect to /login).
+const showLayout = computed(() => route.meta.requiresAuth === true)
 
 const quickAddOpen = ref(false)
 watch(

@@ -18,7 +18,8 @@
 
     <LessonViewPdf
       v-else-if="lesson.kind === 'pdf'"
-      :pdf-url="pdfPath"
+      :external-url="pdfExternalUrl"
+      :player-src="lesson.player_src ?? null"
       :completed="completed"
       :completing="completing"
       @complete="$emit('complete')"
@@ -65,8 +66,12 @@ const videoUrl = computed<string | null>(() => {
   return (c && 'url' in c ? (c.url as string) : null) ?? null
 })
 
-const pdfPath = computed<string | null>(() => {
+// External (hosted) PDF URL, if the lesson was configured with content.url.
+// Such a URL is safe to embed in the iframe directly (no Bearer needed).
+// A disk-stored PDF (content.path) is served via the authenticated player_src
+// streaming route instead — resolved to a blob inside LessonViewPdf.
+const pdfExternalUrl = computed<string | null>(() => {
   const c = props.lesson.content as Record<string, unknown> | null
-  return (c && 'path' in c ? (c.path as string) : null) ?? null
+  return (c && 'url' in c ? (c.url as string) : null) ?? null
 })
 </script>

@@ -50,7 +50,7 @@
               severity="secondary"
               size="small"
               :title="t('common.download')"
-              @click="download(data.id)"
+              @click="download(data)"
             />
             <Button
               v-if="canEdit"
@@ -222,9 +222,13 @@ async function removeAttachment(id: number) {
   }
 }
 
-function download(attachmentId: number) {
-  const url = documentsApi.getAttachmentDownloadUrl(props.docId, attachmentId)
-  window.open(url, '_blank')
+async function download(attachment: DocumentAttachmentDto) {
+  // Blob download via apiClient (Bearer auth) — window.open() can't carry the token.
+  try {
+    await documentsApi.downloadAttachmentBlob(props.docId, attachment.id, attachment.original_name)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+  }
 }
 
 function kindSeverity(kind: AttachmentKind): TagSeverity {

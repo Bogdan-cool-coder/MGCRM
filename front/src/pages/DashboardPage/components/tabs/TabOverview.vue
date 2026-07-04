@@ -86,7 +86,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import Message from 'primevue/message'
-import { useMacroCrmEchartsTheme } from '@/composables/useMacroCrmEchartsTheme'
 import { useDashboardPage } from '../../composables/useDashboardPage'
 import DashboardToolbar from '../DashboardToolbar.vue'
 import WidgetStatusGroups from '../WidgetStatusGroups.vue'
@@ -97,8 +96,7 @@ import WidgetDealsWithoutTasks from '../WidgetDealsWithoutTasks.vue'
 
 const { t } = useI18n()
 
-// Register reactive ECharts theme (dark-mode aware) — once per tab mount.
-useMacroCrmEchartsTheme()
+// ECharts dark-theme is registered app-wide in App.vue (useMacroCrmEchartsTheme).
 
 const {
   filters,

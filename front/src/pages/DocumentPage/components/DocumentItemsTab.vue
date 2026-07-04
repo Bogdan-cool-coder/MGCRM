@@ -162,7 +162,7 @@ import Skeleton from 'primevue/skeleton'
 import { useToast } from 'primevue/usetoast'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { documentsApi } from '@/api/documents'
-import { apiClient } from '@/api/client'
+import { catalogApi } from '@/api/catalog'
 import { formatMoney } from '@/utils/chartFormatters'
 import type { DocumentItemDto } from '@/entities/document'
 
@@ -245,10 +245,8 @@ const productOptions = ref<ProductOption[]>([])
 watch(addDialogVisible, async (open) => {
   if (open && productOptions.value.length === 0) {
     try {
-      const resp = await apiClient.get<{ data: ProductOption[] }>('/api/admin/products', {
-        params: { per_page: 100 },
-      })
-      productOptions.value = resp.data.data
+      const resp = await catalogApi.getProducts({ per_page: 100, active_only: true })
+      productOptions.value = resp.data.map((p) => ({ id: p.id, name: p.name }))
     } catch {
       productOptions.value = []
     }

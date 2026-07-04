@@ -111,12 +111,14 @@ import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
 import { useLayoutStore } from '@/stores/layout'
 import { useThemeStore } from '@/stores/theme'
-import { allNavItems, adminNavItems } from '@/shared/nav/navItems'
+import { useUserStore } from '@/stores/user'
+import { allNavItems, adminNavItems, filterNavByRole } from '@/shared/nav/navItems'
 
 const { t, locale } = useI18n()
 const router = useRouter()
 const layoutStore = useLayoutStore()
 const themeStore = useThemeStore()
+const userStore = useUserStore()
 
 // Controlled by layoutStore.commandPaletteOpen
 const visible = computed({
@@ -203,18 +205,24 @@ const builtinActions = computed<PaletteItem[]>(() => [
   },
 ])
 
-// ─── Pages catalog (navItems + adminNavItems) ─────────────────────────────────
-const allPageItems = computed<PaletteItem[]>(() => {
-  const allPages = [...allNavItems, ...adminNavItems]
-  return allPages.map((item) => ({
+// ─── Pages catalog (navItems + adminNavItems), role-filtered ──────────────────
+// Only surface pages the current role can actually reach — otherwise admin-only
+// pages (Users, Access Control, …) would be searchable/clickable for everyone
+// and then bounce off the router guard. Same filterNavByRole reuse as AppSidebar.
+const visiblePageNavItems = computed(() =>
+  filterNavByRole([...allNavItems, ...adminNavItems], userStore.getUserRole ?? null),
+)
+
+const allPageItems = computed<PaletteItem[]>(() =>
+  visiblePageNavItems.value.map((item) => ({
     id: `page:${item.key}`,
     label: t(item.labelKey),
     icon: item.icon,
     meta: item.route,
     type: 'page' as const,
     action: () => router.push(item.route),
-  }))
-})
+  })),
+)
 
 // ─── Fuzzy filter ─────────────────────────────────────────────────────────────
 function fuzzyMatch(text: string, q: string): boolean {
@@ -282,21 +290,30 @@ function flatResultIndex(sectionKey: string, itemIdx: number): number {
 }
 
 // ─── Recent routes converted to PaletteItems ─────────────────────────────────
+// Resolve labels/icons against the role-filtered nav set and drop any recent
+// route that maps to a nav item the current role can't reach (guards against a
+// stale persisted recentRoutes surviving into a lower-privilege session).
 const recentItems = computed<PaletteItem[]>(() => {
+  const visible = visiblePageNavItems.value
   return layoutStore.recentRoutes
     .map((routePath) => {
-      // Find matching navItem
-      const all = [...allNavItems, ...adminNavItems]
-      const match = all.find((item) => item.route === routePath)
-      return {
-        id: `recent:${routePath}`,
-        label: match ? t(match.labelKey) : routePath,
-        icon: match?.icon ?? 'pi pi-clock',
-        meta: routePath,
-        type: 'recent' as const,
-        action: () => router.push(routePath),
-      }
+      const match = visible.find((item) => item.route === routePath)
+      return { routePath, match }
     })
+    .filter(({ routePath, match }) => {
+      // Keep routes that resolve to a visible nav item, or that aren't nav
+      // targets at all (e.g. detail pages like /deals/42 — never role-gated here).
+      const isNavTarget = [...allNavItems, ...adminNavItems].some((i) => i.route === routePath)
+      return match !== undefined || !isNavTarget
+    })
+    .map(({ routePath, match }) => ({
+      id: `recent:${routePath}`,
+      label: match ? t(match.labelKey) : routePath,
+      icon: match?.icon ?? 'pi pi-clock',
+      meta: routePath,
+      type: 'recent' as const,
+      action: () => router.push(routePath),
+    }))
 })
 
 // Active count for keyboard nav

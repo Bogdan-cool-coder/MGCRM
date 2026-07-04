@@ -59,6 +59,13 @@ export interface Lesson {
   duration_minutes: number | null
   is_published: boolean
   content: LessonContent
+  /**
+   * Canonical player source for kind=pdf lessons (student assignment-detail view).
+   * Points at the authenticated streaming route /api/onboarding/lessons/{id}/pdf,
+   * which streams a disk-stored PDF (content.path) or 302-redirects to an external
+   * one (content.url). null for non-PDF kinds and admin lesson responses.
+   */
+  player_src?: string | null
   created_at: string
 }
 

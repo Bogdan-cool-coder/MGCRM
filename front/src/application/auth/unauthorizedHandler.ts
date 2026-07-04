@@ -2,6 +2,7 @@ import type { Router } from 'vue-router'
 import type { Pinia } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { destroyEcho } from '@/composables/realtime/echo'
+import { resetAllStores } from '@/application/session'
 
 /**
  * Обработчик 401 от axios middleware.
@@ -10,6 +11,9 @@ import { destroyEcho } from '@/composables/realtime/echo'
 export const createUnauthorizedHandler = (pinia: Pinia, router: Router) => {
   return () => {
     const userStore = useUserStore(pinia)
+    // Полный сброс user-scoped сторов + persisted recentRoutes, чтобы данные
+    // истёкшей сессии не протекли в следующую (единая точка teardown).
+    resetAllStores(pinia)
     userStore.clearAuthenticatedUserState()
     // Закрыть Echo WebSocket при истечении токена
     destroyEcho()

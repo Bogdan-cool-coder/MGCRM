@@ -215,16 +215,26 @@ export const useDocumentPage = () => {
   }
 
   // ─── Download helpers ──────────────────────────────────────────────────────
-  function downloadDocx() {
-    if (!document.value) return
-    const url = documentsApi.getDownloadDocxUrl(docId.value)
-    window.open(url, '_blank')
+  // Blob-based downloads via apiClient (Bearer auth). A bare window.open()
+  // cannot carry the Authorization header → 401 on the download endpoint.
+  async function downloadDocx() {
+    const doc = document.value
+    if (!doc) return
+    try {
+      await documentsApi.downloadDocx(docId.value, `${doc.number ?? `document-${docId.value}`}.docx`)
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    }
   }
 
-  function downloadPdf() {
-    if (!document.value) return
-    const url = documentsApi.getDownloadPdfUrl(docId.value)
-    window.open(url, '_blank')
+  async function downloadPdf() {
+    const doc = document.value
+    if (!doc) return
+    try {
+      await documentsApi.downloadPdf(docId.value, `${doc.number ?? `document-${docId.value}`}.pdf`)
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    }
   }
 
   // ─── Role / permission checks ──────────────────────────────────────────────

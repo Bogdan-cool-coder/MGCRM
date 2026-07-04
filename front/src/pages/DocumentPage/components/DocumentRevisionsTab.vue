@@ -69,12 +69,14 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
+import { useToast } from 'primevue/usetoast'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { documentsApi } from '@/api/documents'
 import type { DocumentRevisionDto } from '@/entities/document'
 
 const props = defineProps<{ docId: number }>()
 const { t } = useI18n()
+const toast = useToast()
 
 const resource = useAsyncResource<DocumentRevisionDto[]>(() => [])
 const revisions = computed(() => resource.data.value)
@@ -88,15 +90,26 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
 }
 
-/** Download via the served API endpoint (not raw storage path). */
-function downloadDocx(documentId: number | undefined) {
+/**
+ * Download via the served API endpoint (Bearer auth blob) — window.open()
+ * can't carry the Authorization header and would 401.
+ */
+async function downloadDocx(documentId: number | undefined) {
   if (!documentId) return
-  window.open(`/api/documents/${documentId}/download/docx`, '_blank')
+  try {
+    await documentsApi.downloadDocx(documentId)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+  }
 }
 
-function downloadPdf(documentId: number | undefined) {
+async function downloadPdf(documentId: number | undefined) {
   if (!documentId) return
-  window.open(`/api/documents/${documentId}/download/pdf`, '_blank')
+  try {
+    await documentsApi.downloadPdf(documentId)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+  }
 }
 </script>
 

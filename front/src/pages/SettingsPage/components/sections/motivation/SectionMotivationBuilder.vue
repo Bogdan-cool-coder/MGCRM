@@ -55,6 +55,7 @@
           :team-rule="builder.teamRule"
           :split-equal-pct="builder.splitEqualPct.value"
           :currency-options="builder.currencyOptions"
+          :pipeline-options="builder.pipelineOptions.value"
           :errors="builder.errors"
           :disabled="builder.isReadOnly.value"
           class="section-mkb__block"

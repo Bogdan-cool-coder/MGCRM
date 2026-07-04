@@ -51,8 +51,13 @@ export const useDocumentAttachments = (docId: Ref<number>) => {
     }
   }
 
-  function getDownloadUrl(attachmentId: number): string {
-    return documentsApi.getAttachmentDownloadUrl(docId.value, attachmentId)
+  /** Download an attachment through the Bearer-auth blob helper (no bare URL). */
+  async function downloadAttachment(attachmentId: number, filename?: string) {
+    try {
+      await documentsApi.downloadAttachmentBlob(docId.value, attachmentId, filename)
+    } catch {
+      toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+    }
   }
 
   const hasSignedScan = computed(() =>
@@ -68,7 +73,7 @@ export const useDocumentAttachments = (docId: Ref<number>) => {
     uploadKind,
     uploadAttachment,
     deleteAttachment,
-    getDownloadUrl,
+    downloadAttachment,
     hasSignedScan,
   }
 }

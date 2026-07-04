@@ -46,16 +46,16 @@
               <code>{{ data.code }}</code>
             </template>
           </Column>
-          <Column header="Название">
+          <Column :header="t('templates.list.columns.name')">
             <template #body="{ data }">{{ data.title }}</template>
           </Column>
           <Column :header="t('documents.list.filters.kind')" style="width: 110px">
             <template #body="{ data }">{{ t(`documents.kinds.${data.kind}`, data.kind) }}</template>
           </Column>
-          <Column header="Продукты">
+          <Column :header="t('templates.list.columns.products')">
             <template #body="{ data }">{{ data.product_codes.join(', ') || '—' }}</template>
           </Column>
-          <Column header="AI-статус" style="width: 140px">
+          <Column :header="t('templates.list.columns.aiStatus')" style="width: 140px">
             <template #body="{ data }">
               <Tag
                 v-if="data.current_version?.ai_check_status"
@@ -65,12 +65,12 @@
               <span v-else class="text-secondary">—</span>
             </template>
           </Column>
-          <Column header="Версия" style="width: 80px">
+          <Column :header="t('templates.list.columns.version')" style="width: 80px">
             <template #body="{ data }">
               {{ data.current_version != null ? `v${data.current_version.version_number}` : '—' }}
             </template>
           </Column>
-          <Column header="Дата" style="width: 100px">
+          <Column :header="t('templates.list.columns.date')" style="width: 100px">
             <template #body="{ data }">
               {{ new Date(data.created_at).toLocaleDateString('ru-RU') }}
             </template>

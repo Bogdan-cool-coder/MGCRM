@@ -80,7 +80,7 @@
       <div class="contacts-page__body">
         <!-- Empty: no records -->
         <div
-          v-if="!loading && items.length === 0 && !isFiltered && activeView !== 'duplicates'"
+          v-if="!loading && items.length === 0 && !isFiltered"
           class="contacts-page__empty"
         >
           <i
@@ -97,7 +97,7 @@
 
         <!-- Empty: filter has no results -->
         <div
-          v-else-if="!loading && items.length === 0 && isFiltered && activeView !== 'duplicates'"
+          v-else-if="!loading && items.length === 0 && isFiltered"
           class="contacts-page__empty"
         >
           <i class="pi pi-filter-slash contacts-page__empty-icon" />
@@ -107,15 +107,6 @@
             :label="t('contacts.page.empty.resetFilters')"
             @click="resetFilter"
           />
-        </div>
-
-        <!-- Empty: duplicates not found -->
-        <div
-          v-else-if="!loading && items.length === 0 && activeView === 'duplicates'"
-          class="contacts-page__empty"
-        >
-          <i class="pi pi-check-circle contacts-page__empty-icon contacts-page__empty-icon--success" />
-          <p class="contacts-page__empty-title">{{ t('crm.contacts_page.empty.duplicates') }}</p>
         </div>
 
         <!-- DataTable -->
@@ -610,7 +601,6 @@ import { useContactsPageData, CONTACT_SORT_MAP, COMPANY_SORT_MAP } from './compo
 import { useContactsPageActions } from './composables/useContactsPageActions'
 import { useContactsView } from './composables/useContactsView'
 import { useContactsBulk } from './composables/useContactsBulk'
-import { useSavedViews } from './composables/useSavedViews'
 import { contactsApi } from '@/api/crm/contacts'
 import { useContactsRealtime } from '@/composables/realtime/useContactsRealtime'
 
@@ -744,13 +734,6 @@ const selectedRows = computed({
     bulk.selectedIds.value = new Set(rows.map((r) => r.id))
   },
 })
-
-// ── Saved views ───────────────────────────────────────────────────────────────
-// The saved-views UI control is not shown in this list (D3 fix: removed from toolbar).
-// The composable is kept so that saved-view state (duplicates view, etc.) still works.
-
-const savedViews = useSavedViews({ entityType })
-const activeView = ref<string>('default')
 
 // ── Filter overlay ────────────────────────────────────────────────────────────
 
@@ -919,7 +902,6 @@ onMounted(() => {
   void loadUsers()
   void load()
   void loadKpi()
-  void savedViews.load()
 
   // ── Realtime: subscribe to live contact/company list events ──────────────────
   useContactsRealtime(

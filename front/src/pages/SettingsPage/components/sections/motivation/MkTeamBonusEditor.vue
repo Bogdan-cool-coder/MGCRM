@@ -148,12 +148,14 @@ import { useI18n } from 'vue-i18n'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
-import { PIPELINE_OPTIONS, type TeamRuleForm } from './useMotivationBuilder'
+import { type TeamRuleForm } from './useMotivationBuilder'
 
 defineProps<{
   teamRule: TeamRuleForm
   splitEqualPct: number
   currencyOptions: { label: string; value: string }[]
+  // Live pipelines loaded from /api/pipelines (owned by useMotivationBuilder).
+  pipelineOptions: { label: string; value: number }[]
   errors: Record<string, string>
   disabled: boolean
 }>()
@@ -165,8 +167,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-
-const pipelineOptions = PIPELINE_OPTIONS
 </script>
 
 <style lang="scss" scoped>

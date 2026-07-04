@@ -1,4 +1,8 @@
 {
+  "app": {
+    "title": "MACRO Global CRM",
+    "titleTemplate": "{page} — MACRO Global CRM"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "contacts": "Contacts",
@@ -919,6 +923,8 @@
     "edit": "Edit",
     "create": "Create",
     "search": "Search",
+    "select_placeholder": "Select…",
+    "date_placeholder": "DD.MM.YYYY",
     "filter": "Filter",
     "back": "Back",
     "next": "Next",
@@ -2840,7 +2846,14 @@
     "list": {
       "title": "Document templates",
       "create": "Create template",
-      "empty": "No templates"
+      "empty": "No templates",
+      "columns": {
+        "name": "Name",
+        "products": "Products",
+        "aiStatus": "AI status",
+        "version": "Version",
+        "date": "Date"
+      }
     },
     "create": {
       "title": "New document template",
@@ -3269,6 +3282,7 @@
       "lessonDone": "Lesson completed!",
       "openPdf": "Open PDF",
       "downloadPdf": "Download PDF",
+      "pdfUnavailable": "PDF unavailable",
       "unsupportedVideo": "Unsupported video format",
       "quiz": {
         "title": "Quiz",

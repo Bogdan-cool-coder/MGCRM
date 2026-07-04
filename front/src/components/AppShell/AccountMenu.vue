@@ -89,8 +89,10 @@ import { useThemeStore } from '@/stores/theme'
 import { localeManager } from '@/application/locale'
 import { getI18nLocale } from '@/plugins/i18n'
 import type { AvailableLocales } from '@/plugins/i18n'
+import { getActivePinia } from 'pinia'
 import { authApi } from '@/api/auth'
 import { destroyEcho } from '@/composables/realtime/echo'
+import { resetAllStores } from '@/application/session'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -154,6 +156,10 @@ async function handleLogout() {
   try {
     await authApi.logout()
   } finally {
+    // Единая точка teardown: сброс всех user-scoped сторов + persisted
+    // recentRoutes, чтобы данные не протекли в следующую сессию.
+    const pinia = getActivePinia()
+    if (pinia) resetAllStores(pinia)
     userStore.clearAuthenticatedUserState()
     // Закрыть Echo WebSocket при выходе из системы
     destroyEcho()

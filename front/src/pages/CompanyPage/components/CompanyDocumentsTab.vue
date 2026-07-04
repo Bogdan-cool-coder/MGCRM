@@ -103,6 +103,7 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Skeleton from 'primevue/skeleton'
+import { useToast } from 'primevue/usetoast'
 import DocumentStatusTag from '@/components/shared/DocumentStatusTag.vue'
 import GenerateDocumentDialog from '@/pages/DocumentPage/components/GenerateDocumentDialog.vue'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
@@ -115,6 +116,7 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const router = useRouter()
+const toast = useToast()
 const generateDialogOpen = ref(false)
 
 const resource = useAsyncResource<DocumentListItemDto[]>(() => [])
@@ -139,8 +141,13 @@ function onRowClick(event: { data: DocumentListItemDto }) {
   void router.push(`/documents/${event.data.id}`)
 }
 
-function downloadPdf(docId: number) {
-  window.open(documentsApi.getDownloadPdfUrl(docId), '_blank')
+async function downloadPdf(docId: number) {
+  // Blob download via apiClient (Bearer auth) — window.open() can't carry the token.
+  try {
+    await documentsApi.downloadPdf(docId)
+  } catch {
+    toast.add({ severity: 'error', summary: t('errors.unknown', 'Ошибка'), life: 3000 })
+  }
 }
 
 function onCreated(docId: number) {

@@ -280,6 +280,10 @@ const { prefetch } = useNavPrefetch()
 
 // ─── Init badge counts ────────────────────────────────────────────────────────
 onMounted(() => {
+  // Never fetch/poll without a token: on a public route an anonymous visitor
+  // would 401 and be bounced to /login. Fail-closed on getIsAuthenticated.
+  if (!userStore.getIsAuthenticated) return
+
   if (userStore.getUser) {
     void activityStore.fetchMyOpenCount()
     void approvalsStore.fetchPendingCount()

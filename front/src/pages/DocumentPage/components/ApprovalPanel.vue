@@ -38,8 +38,12 @@
               <span v-if="stage.is_active" class="approval-panel__stage-badge approval-panel__stage-badge--active">
                 {{ t('documents.approval.pending') }}
               </span>
-              <span v-else-if="stage.is_done" class="approval-panel__stage-badge approval-panel__stage-badge--done">
-                ✓
+              <span
+                v-else-if="stage.is_done"
+                class="approval-panel__stage-badge approval-panel__stage-badge--done"
+                :aria-label="t('documents.approval.approved')"
+              >
+                <i class="pi pi-check" aria-hidden="true" />
               </span>
             </div>
 

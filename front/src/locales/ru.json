@@ -1,4 +1,8 @@
 {
+  "app": {
+    "title": "MACRO Global CRM",
+    "titleTemplate": "{page} — MACRO Global CRM"
+  },
   "nav": {
     "dashboard": "Дашборд",
     "contacts": "Контакты",
@@ -919,6 +923,8 @@
     "edit": "Редактировать",
     "create": "Создать",
     "search": "Поиск",
+    "select_placeholder": "Выберите…",
+    "date_placeholder": "ДД.ММ.ГГГГ",
     "filter": "Фильтр",
     "back": "Назад",
     "next": "Далее",
@@ -2840,7 +2846,14 @@
     "list": {
       "title": "Шаблоны документов",
       "create": "Создать шаблон",
-      "empty": "Нет шаблонов"
+      "empty": "Нет шаблонов",
+      "columns": {
+        "name": "Название",
+        "products": "Продукты",
+        "aiStatus": "AI-статус",
+        "version": "Версия",
+        "date": "Дата"
+      }
     },
     "create": {
       "title": "Новый шаблон документа",
@@ -3269,6 +3282,7 @@
       "lessonDone": "Урок пройден!",
       "openPdf": "Открыть PDF",
       "downloadPdf": "Скачать PDF",
+      "pdfUnavailable": "PDF недоступен",
       "unsupportedVideo": "Неподдерживаемый формат видео",
       "quiz": {
         "title": "Квиз",

@@ -67,21 +67,23 @@
         <!-- Generated: PDF / DOCX links -->
         <div v-else-if="generateDone" class="termination-drawer__pdf-block">
           <Button
-            v-if="pdfUrl"
+            v-if="pdfAvailable"
             icon="pi pi-external-link"
             :label="t('crm.termination.openPdf')"
             severity="secondary"
             outlined
             size="small"
+            :loading="downloading"
             @click="openPdf"
           />
           <Button
-            v-if="docxUrl"
+            v-if="docxAvailable"
             icon="pi pi-download"
             :label="t('crm.termination.downloadDocx')"
             severity="secondary"
             text
             size="small"
+            :loading="downloading"
             @click="openDocx"
           />
           <div v-if="generateWarnings.length" class="termination-drawer__warnings">
@@ -170,7 +172,7 @@ import Divider from 'primevue/divider'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 import FileUpload, { type FileUploadUploaderEvent } from 'primevue/fileupload'
-import { generateDocument, uploadAttachment } from '@/api/documents'
+import { generateDocument, uploadAttachment, downloadPdf, downloadDocx } from '@/api/documents'
 
 const props = defineProps<{
   companyName: string
@@ -189,9 +191,13 @@ const { t } = useI18n()
 const generating = ref(false)
 const generateDone = ref(false)
 const generateError = ref('')
-const pdfUrl = ref<string | null>(null)
-const docxUrl = ref<string | null>(null)
+// Availability flags — the generate response reports whether each format was
+// produced. Downloads go through the Bearer-auth blob helpers by document id
+// (the raw pdf_url/docx_url can't carry the Authorization header → 401).
+const pdfAvailable = ref(false)
+const docxAvailable = ref(false)
 const generateWarnings = ref<string[]>([])
+const downloading = ref(false)
 
 const uploading = ref(false)
 const uploadError = ref('')
@@ -204,8 +210,8 @@ watch(visible, (val) => {
     generating.value = false
     generateDone.value = false
     generateError.value = ''
-    pdfUrl.value = null
-    docxUrl.value = null
+    pdfAvailable.value = false
+    docxAvailable.value = false
     generateWarnings.value = []
     uploading.value = false
     uploadError.value = ''
@@ -219,8 +225,8 @@ async function onGenerate() {
   generateError.value = ''
   try {
     const result = await generateDocument(props.documentId)
-    pdfUrl.value = result.data.pdf_url ?? null
-    docxUrl.value = result.data.docx_url ?? null
+    pdfAvailable.value = !!result.data.pdf_url
+    docxAvailable.value = !!result.data.docx_url
     generateWarnings.value = result.warnings ?? []
     generateDone.value = true
   } catch {
@@ -230,12 +236,28 @@ async function onGenerate() {
   }
 }
 
-function openPdf() {
-  if (pdfUrl.value) globalThis.window.open(pdfUrl.value, '_blank')
+async function openPdf() {
+  if (!pdfAvailable.value) return
+  downloading.value = true
+  try {
+    await downloadPdf(props.documentId)
+  } catch {
+    generateError.value = t('crm.termination.generateError')
+  } finally {
+    downloading.value = false
+  }
 }
 
-function openDocx() {
-  if (docxUrl.value) globalThis.window.open(docxUrl.value, '_blank')
+async function openDocx() {
+  if (!docxAvailable.value) return
+  downloading.value = true
+  try {
+    await downloadDocx(props.documentId)
+  } catch {
+    generateError.value = t('crm.termination.generateError')
+  } finally {
+    downloading.value = false
+  }
 }
 
 async function onUploadScan(event: FileUploadUploaderEvent) {

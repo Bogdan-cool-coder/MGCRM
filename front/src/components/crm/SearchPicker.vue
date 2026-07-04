@@ -10,7 +10,7 @@
     >
       <slot name="trigger-content">
         <span class="search-picker__trigger-value">
-          {{ displayValue || placeholder }}
+          {{ displayValue || resolvedPlaceholder }}
         </span>
       </slot>
       <i class="pi pi-chevron-down search-picker__chevron" />
@@ -78,7 +78,7 @@ const props = withDefaults(
     modelValue: undefined,
     optionLabel: 'name',
     optionValue: 'id',
-    placeholder: 'Выберите…',
+    placeholder: undefined,
     displayLabel: undefined,
   },
 )
@@ -89,6 +89,12 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+// Prop wins; otherwise fall back to the localised default (a prop default can't
+// call t() reactively inside withDefaults).
+const resolvedPlaceholder = computed<string>(
+  () => props.placeholder ?? t('common.select_placeholder'),
+)
 
 const isOpen = ref(false)
 const query = ref('')

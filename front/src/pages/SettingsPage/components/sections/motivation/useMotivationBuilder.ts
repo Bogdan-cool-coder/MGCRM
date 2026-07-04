@@ -9,7 +9,7 @@
  * Live ЗП-план total is computed on the frontend (SPEC save-bar) — sum of each
  * enabled position's `salary_plan_kopecks` (commission derived from % × plan).
  */
-import { ref, reactive, computed, watch, inject } from 'vue'
+import { ref, reactive, computed, watch, inject, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useMutation } from '@/composables/async/useMutation'
@@ -21,6 +21,7 @@ import {
   markMotivationCardPaid,
 } from '@/api/motivation'
 import { catalogApi } from '@/api/catalog'
+import { salesApi } from '@/api/sales'
 import { toKopecks, fromKopecks } from '@/utils/currency'
 import {
   MK_POSITION_ORDER,
@@ -88,7 +89,12 @@ const DEFAULT_POSITION_NAMES: Record<MotivationItemKind, string> = {
   team_kpi: 'Командный бонус',
 }
 
-/** Pipelines the МК team-target can anchor on (contract §1.3 — pipeline, not dept). */
+/**
+ * Static fallback pipelines the МК team-target can anchor on (contract §1.3 —
+ * pipeline, not dept). Used only for instant first paint / when the pipelines
+ * endpoint is unavailable; the live list is loaded from /api/pipelines and
+ * exposed as the reactive `pipelineOptions` from useMotivationBuilder().
+ */
 export const PIPELINE_OPTIONS = [
   { label: 'MACRO Global', value: 1 },
   { label: 'MACRO AI Global', value: 2 },
@@ -159,6 +165,24 @@ export const useMotivationBuilder = () => {
   }
 
   const currencyOptions = CURRENCIES.map((c) => ({ label: c, value: c }))
+
+  // ─── Pipeline options (live, not hardcoded) ──────────────────────────────
+  // Seed with the static fallback for instant paint, then replace with the real
+  // pipelines from /api/pipelines so the team-target anchors on actual pipelines.
+  const pipelineOptions = ref<{ label: string; value: number }[]>([...PIPELINE_OPTIONS])
+
+  const loadPipelines = async (): Promise<void> => {
+    try {
+      const pipelines = await salesApi.getPipelines()
+      const active = pipelines.filter((p) => p.is_active)
+      if (active.length > 0) {
+        pipelineOptions.value = active.map((p) => ({ label: p.name, value: p.id }))
+      }
+    } catch {
+      // Keep the static fallback on failure.
+    }
+  }
+  void loadPipelines()
 
   // ─── Auto exchange rates (read-only, ОВ-1) ───────────────────────────────
   const autoRates = ref<AutoRate[]>([])
@@ -235,14 +259,22 @@ export const useMotivationBuilder = () => {
   )
 
   // ─── Dirty tracking ──────────────────────────────────────────────────────
+  // Hydration guard: applyPlan() mutates rows/teamRule, and the deep watch below
+  // flushes on the NEXT tick — after applyPlan has already set loaded=true. Without
+  // this flag the post-hydration watch fire would flip the card dirty on load.
+  const hydrating = ref(false)
   const touch = (): void => {
-    if (loaded.value) markDirty()
+    if (loaded.value && !hydrating.value) markDirty()
   }
   // Any form field change flips dirty (deep watch on the reactive rows/teamRule).
   watch([() => JSON.stringify(rows), () => JSON.stringify(teamRule), baseCurrency], touch)
 
   // ─── Load / hydrate ──────────────────────────────────────────────────────
   const applyPlan = (plan: MotivationPlan | null): void => {
+    // Mark hydration in progress so the deep dirty-watch (which flushes next tick)
+    // doesn't treat this programmatic mutation as a user edit.
+    hydrating.value = true
+
     // Reset rows to defaults first (in place — rows are index-aligned to kinds).
     rows.forEach((row) => {
       Object.assign(row, makeEmptyRow(row.kind, baseCurrency.value))
@@ -253,6 +285,7 @@ export const useMotivationBuilder = () => {
     if (!plan) {
       loaded.value = true
       markClean()
+      void nextTick(() => { hydrating.value = false })
       return
     }
 
@@ -296,6 +329,7 @@ export const useMotivationBuilder = () => {
 
     loaded.value = true
     markClean()
+    void nextTick(() => { hydrating.value = false })
   }
 
   const loadState = useMutation<void>()
@@ -495,6 +529,7 @@ export const useMotivationBuilder = () => {
     splitEqualPct,
     baseCurrency,
     currencyOptions,
+    pipelineOptions,
     loaded,
     status,
     isReadOnly,

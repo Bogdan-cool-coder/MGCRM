@@ -13,7 +13,7 @@
       ref="inputRef"
       v-model="displayValue"
       class="date-field__input"
-      :placeholder="placeholder"
+      :placeholder="resolvedPlaceholder"
       maxlength="10"
       inputmode="numeric"
       @input="onInput"
@@ -45,6 +45,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DatePicker from 'primevue/datepicker'
 import { parseDateLocal } from '@/utils/activity'
 
@@ -57,7 +58,7 @@ const props = withDefaults(
   }>(),
   {
     modelValue: null,
-    placeholder: 'ДД.ММ.ГГГГ',
+    placeholder: undefined,
     min: null,
   },
 )
@@ -65,6 +66,14 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:modelValue': [value: string | null]
 }>()
+
+const { t } = useI18n()
+
+// Prop wins; otherwise fall back to the localised ДД.ММ.ГГГГ mask (a prop default
+// can't call t() reactively inside withDefaults).
+const resolvedPlaceholder = computed<string>(
+  () => props.placeholder ?? t('common.date_placeholder'),
+)
 
 // ── State ─────────────────────────────────────────────────────────────────────
 

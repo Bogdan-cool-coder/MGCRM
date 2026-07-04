@@ -196,7 +196,7 @@
         <i class="pi pi-eye-slash filter-overlay__hidden-eye" />
         <span class="filter-overlay__hidden-label">{{ t('sales.deals.page.filters.hiddenStages') }}</span>
         <span class="filter-overlay__hidden-count-pill">
-          {{ revealedCount }} вкл.
+          {{ t('sales.deals.page.filters.hiddenStagesCount', { n: revealedCount }) }}
         </span>
         <i :class="['pi', hiddenExpanded ? 'pi-chevron-up' : 'pi-chevron-down', 'filter-overlay__hidden-chevron']" />
       </button>

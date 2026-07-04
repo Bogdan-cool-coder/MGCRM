@@ -5,6 +5,7 @@ import { waitForBootstrapSession } from '@/application/bootstrap'
 import { useUserStore } from '@/stores/user'
 import { resolveNavigation } from '@/router/policy'
 import { isUnauthorizedError } from '@/utils/errors'
+import { i18n } from '@/plugins/i18n'
 
 export const createAppRouter = (pinia: Pinia) => {
   const userStore = useUserStore(pinia)
@@ -32,6 +33,16 @@ export const createAppRouter = (pinia: Pinia) => {
     const isAuthenticated = !!user
 
     return resolveNavigation({ to, isAuthenticated, user })
+  })
+
+  // Set document.title from the route's meta.title (an i18n key). Falls back to
+  // the plain app name when a route declares no title.
+  router.afterEach((to) => {
+    const { t } = i18n.global
+    const titleKey = to.meta.title
+    document.title = titleKey
+      ? t('app.titleTemplate', { page: t(titleKey) })
+      : t('app.title')
   })
 
   return router

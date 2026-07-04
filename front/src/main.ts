@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { persistPlugin } from '@/plugins/persist'
+import { storeResetPlugin } from '@/plugins/storeReset'
 import { i18n } from '@/plugins/i18n'
 import './plugins/echarts'
 import * as Sentry from '@sentry/vue'
@@ -32,6 +33,9 @@ import { useDensityStore } from '@/stores/density'
 
 const app = createApp(App)
 const pinia = createPinia()
+// storeResetPlugin BEFORE persistPlugin: it snapshots the code-initial state
+// before persist hydrates from localStorage, so $reset() restores clean defaults.
+pinia.use(storeResetPlugin)
 pinia.use(persistPlugin)
 
 app.use(pinia)
