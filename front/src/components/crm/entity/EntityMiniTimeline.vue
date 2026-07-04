@@ -145,12 +145,10 @@ function truncateDesc(desc: string): string {
 
 .entity-mini-timeline__empty-text {
   font-size: $font-size-sm;
-  color: $surface-400;
+  // muted body text — reactive token (dark → surface-600 #8593B0, 5.4:1); was
+  // static surface-400 + dark surface-500 override (#647294 ~3.6:1, sub-AA)
+  color: var(--p-text-muted-color);
   margin: 0;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 
 .entity-mini-timeline__list {
@@ -205,31 +203,21 @@ function truncateDesc(desc: string): string {
 }
 
 .entity-mini-timeline__event {
-  color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // muted event label — reactive muted (dark → surface-600); dropped dark
+  // surface-400 override (#3A4F78 ~2:1, invisible ink on navy card)
+  color: var(--p-text-muted-color);
 }
 
 .entity-mini-timeline__desc {
-  color: $surface-500;
+  color: var(--p-text-muted-color);
   font-style: italic;
   font-size: $font-size-2xs;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 
 .entity-mini-timeline__time {
   font-size: $font-size-2xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   white-space: nowrap;
   flex-shrink: 0;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
 }
 </style>

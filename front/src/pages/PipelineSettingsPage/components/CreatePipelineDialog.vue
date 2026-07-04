@@ -3,6 +3,7 @@
     v-model:visible="visible"
     :header="t('sales.pipelineEditor.createPipelineDialog.title')"
     modal
+    :draggable="false"
     style="width: 460px"
     :closable="!saving"
   >

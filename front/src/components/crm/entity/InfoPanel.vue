@@ -146,12 +146,10 @@ defineExpose({ collapse, expand, collapsed })
   flex: 1;
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
+  // reactive: light surface-700 #7E7F82, dark surface-700 #B4C2DA (~9:1). The old
+  // dark override (surface-400) resolved to navy #3A4F78 (~2:1) — panel titles were
+  // near-invisible; comment claimed #9b9c9e (that's the LIGHT surface-400).
   color: $surface-700;
-
-  .app-dark & {
-    // surface-400 = #9b9c9e — sufficiently bright against dark surfaces (50/100/200/300)
-    color: var(--p-surface-400);
-  }
 }
 
 // spec §4: count pill — raw span styled as lightweight chip (not PrimeVue Badge)
@@ -167,7 +165,9 @@ defineExpose({ collapse, expand, collapsed })
 
   .app-dark & {
     background: var(--p-surface-200);
-    color: var(--p-surface-400);
+    // readable count on dark chip: surface-700 #B4C2DA; was surface-400 #3A4F78
+    // (dark ink on dark #172847 chip — count invisible)
+    color: var(--p-surface-700);
   }
 }
 

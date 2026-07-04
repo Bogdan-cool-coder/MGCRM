@@ -258,7 +258,7 @@ function onTagClick(event: Event) {
   align-items: center;
   gap: $space-2;
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   padding: $space-2 0;
 }
 
@@ -281,7 +281,8 @@ function onTagClick(event: Event) {
   gap: $space-1;
 
   .app-dark & {
-    border-color: var(--p-surface-700);
+    // subtle dark border (surface-200 #172847); surface-700 #B4C2DA is a bright line
+    border-color: var(--p-surface-200);
   }
 }
 
@@ -303,7 +304,7 @@ function onTagClick(event: Event) {
   flex-wrap: wrap;
   gap: $space-3;
   font-size: $font-size-xs;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
 }
 
 .client-status-badge__log-meta-icon {
@@ -313,7 +314,7 @@ function onTagClick(event: Event) {
 
 .client-status-badge__log-date {
   margin-left: auto;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   font-size: $font-size-xs;
 }
 </style>

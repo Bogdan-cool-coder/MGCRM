@@ -89,9 +89,11 @@ const tooltipText = computed((): string => {
     background: rgba(239, 68, 68, 0.15);
   }
 
-  // Neutral: cold tier but never contacted — no alarm styling
+  // Neutral: cold tier but never contacted — no alarm styling.
+  // muted-neutral token stays readable in dark (surface-600); surface-400 was
+  // #3A4F78 (~2:1) — the neutral dot/label vanished on the navy card.
   &--neutral {
-    color: var(--p-surface-400);
+    color: var(--p-text-muted-color);
     background: transparent;
   }
 

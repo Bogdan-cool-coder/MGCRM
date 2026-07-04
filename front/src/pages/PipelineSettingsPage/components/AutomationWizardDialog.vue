@@ -4,6 +4,7 @@
     :header="isEdit ? t('automation.wizard.titleEdit') : t('automation.wizard.titleNew')"
     :style="{ width: '640px' }"
     modal
+    :draggable="false"
     :closable="true"
     @hide="onDialogHide"
   >

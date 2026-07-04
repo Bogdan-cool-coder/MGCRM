@@ -191,7 +191,7 @@ const { t } = useI18n()
 
 .entity-row__subtitle {
   font-size: $font-size-xs;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

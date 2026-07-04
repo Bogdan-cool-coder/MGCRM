@@ -3,6 +3,7 @@
     v-model:visible="visible"
     :header="t('sales.stageEditor.createDialog.title')"
     modal
+    :draggable="false"
     style="width: 480px"
     :closable="!saving"
   >

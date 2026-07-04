@@ -161,6 +161,7 @@
       v-model:visible="showCreateFolderDialog"
       :header="t('crm.files.createFolder')"
       modal
+      :draggable="false"
       :style="{ width: '360px' }"
     >
       <div class="entity-files-tab__dialog-body">
@@ -434,7 +435,7 @@ function mimeIcon(mime: string | null | undefined): string {
   font-weight: $font-weight-bold;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
 }
 
 .entity-files-tab__head-actions {
@@ -551,7 +552,8 @@ function mimeIcon(mime: string | null | undefined): string {
 
   .app-dark & {
     background: var(--p-surface-200);
-    color: var(--p-surface-400);
+    // readable count on dark chip: surface-700 #B4C2DA (was surface-400 #3A4F78 — invisible)
+    color: var(--p-surface-700);
   }
 }
 
@@ -612,7 +614,7 @@ function mimeIcon(mime: string | null | undefined): string {
 
   p {
     font-size: $font-size-sm;
-    color: $surface-400;
+    color: var(--p-text-muted-color);
     margin: 0;
   }
 }
@@ -681,7 +683,7 @@ function mimeIcon(mime: string | null | undefined): string {
 
 .entity-files-tab__file-meta {
   font-size: $font-size-2xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 
 .entity-files-tab__file-btn {
@@ -752,7 +754,7 @@ function mimeIcon(mime: string | null | undefined): string {
 
   p {
     font-size: $font-size-sm;
-    color: $surface-400;
+    color: var(--p-text-muted-color);
     margin: 0;
   }
 }

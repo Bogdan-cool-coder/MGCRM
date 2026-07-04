@@ -18,16 +18,13 @@ defineProps<{
 .key-facts-item__label {
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
-  color: $surface-500;
+  // reactive muted (dark → surface-600); was static surface-500 + dark surface-400 (~2:1)
+  color: var(--p-text-muted-color);
   white-space: nowrap;
   padding: $space-1 0;
   display: flex;
   align-items: center;
   min-height: 32px;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
 }
 
 .key-facts-item__req {

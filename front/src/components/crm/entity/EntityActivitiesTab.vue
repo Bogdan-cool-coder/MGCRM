@@ -480,10 +480,8 @@ defineExpose({
       background: var(--p-surface-200);
     }
   }
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // chip label: reactive muted base (surface-600) reads both themes; dropped the
+  // dark surface-400 override (#3A4F78 ~2:1 — inactive chips were near-invisible)
 }
 
 .entity-activities__chip--active {
@@ -561,7 +559,7 @@ defineExpose({
 
 .entity-activities__empty-hint {
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   margin: 0;
 }
 
@@ -603,7 +601,7 @@ defineExpose({
   font-weight: $font-weight-medium;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -691,15 +689,12 @@ defineExpose({
 // Meta line — ONE line «дата · время · ответственный», spec DealCard §12
 .entity-activities__activity-meta {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 
 .entity-activities__activity-meta-line {
-  color: $surface-400;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
+  // reactive muted (dark → surface-600); dropped static surface-400 + surface-500 override
+  color: var(--p-text-muted-color);
 }
 
 // ─── Field change (лог-строка §5) ────────────────────────────────────────────
@@ -709,7 +704,7 @@ defineExpose({
   align-items: center;
   gap: $space-2;
   font-size: $font-size-xs;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
   padding: $space-1 $space-2;
 }
 
@@ -771,7 +766,7 @@ defineExpose({
 
 .entity-activities__fc-time {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
   flex-shrink: 0;
   white-space: nowrap;
 }

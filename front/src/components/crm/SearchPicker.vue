@@ -223,7 +223,8 @@ onUnmounted(() => {
   overflow: hidden;
 
   .app-dark & {
-    border-color: var(--p-surface-700);
+    // subtle dark border (surface-200 #172847); surface-700 #B4C2DA is a bright line
+    border-color: var(--p-surface-200);
   }
 }
 
@@ -235,7 +236,8 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--p-surface-200);
 
   .app-dark & {
-    border-bottom-color: var(--p-surface-700);
+    // subtle dark border (surface-200 #172847); surface-700 #B4C2DA is a bright line
+    border-bottom-color: var(--p-surface-200);
   }
 }
 
@@ -290,7 +292,9 @@ onUnmounted(() => {
     background: var(--p-surface-50);
 
     .app-dark & {
-      background: var(--p-surface-700);
+      // raised hover (surface-200 #172847); surface-700 #B4C2DA was a near-white
+      // plate under light option text → light-on-light
+      background: var(--p-surface-200);
     }
   }
 
@@ -325,6 +329,6 @@ onUnmounted(() => {
   padding: $space-3;
   text-align: center;
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: var(--p-text-muted-color);
 }
 </style>

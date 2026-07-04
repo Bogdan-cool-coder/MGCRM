@@ -457,7 +457,7 @@ onMounted(() => {
 
 .custom-field-renderer__empty-text {
   font-size: $font-size-sm;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
   margin: 0;
 }
 
@@ -472,14 +472,12 @@ onMounted(() => {
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: $surface-500;
+  // reactive muted (dark → surface-600); was static surface-500 + dark surface-400 (~2:1)
+  color: var(--p-text-muted-color);
   padding-bottom: $space-1;
+  // reactive border (surface-200 = #172847 in dark); dropped surface-700 override
+  // (#B4C2DA — a bright LIGHT line on the navy card)
   border-bottom: 1px solid var(--p-surface-200);
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-700);
-    color: var(--p-surface-400);
-  }
 }
 
 // ── URL field ──────────────────────────────────────────────────────────────────

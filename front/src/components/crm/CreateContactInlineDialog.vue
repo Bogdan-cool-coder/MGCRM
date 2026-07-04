@@ -3,6 +3,7 @@
     v-model:visible="visible"
     :header="t('contacts.inline_create.title')"
     modal
+    :draggable="false"
     style="width: 520px"
     :closable="!saving"
     @hide="onHide"

@@ -661,7 +661,8 @@ async function onDelete(id: number) {
 
   .app-dark & {
     background: var(--p-surface-100);
-    border-top-color: var(--p-surface-700);
+    // subtle dark border (surface-200 #172847); surface-700 is #B4C2DA — a bright light line
+    border-top-color: var(--p-surface-200);
   }
 }
 
@@ -683,7 +684,8 @@ async function onDelete(id: number) {
 
   .app-dark & {
     background: var(--p-surface-100);
-    border-bottom-color: var(--p-surface-700);
+    // subtle dark border (surface-200 #172847); surface-700 is #B4C2DA — a bright light line
+    border-bottom-color: var(--p-surface-200);
   }
 }
 
@@ -697,13 +699,10 @@ async function onDelete(id: number) {
   flex: 1;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $surface-500;
+  // reactive muted (dark → surface-600); was static surface-500 + dark surface-400 (~2:1)
+  color: var(--p-text-muted-color);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
 }
 
 .open-tasks__header-chevron {
@@ -866,7 +865,9 @@ async function onDelete(id: number) {
 .open-tasks__due,
 .open-tasks__responsible {
   font-size: $font-size-xs;
-  color: $surface-400;
+  // reactive muted meta button (dark → surface-600); was static surface-400 +
+  // dark surface-400 override (#3A4F78 ~2:1 — due/responsible near-invisible)
+  color: var(--p-text-muted-color);
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -877,12 +878,8 @@ async function onDelete(id: number) {
   cursor: pointer;
   transition: color var(--app-transition-fast);
 
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
-
   &:hover {
-    color: $surface-600;
+    color: var(--p-text-color);
   }
 
   &--static {
@@ -895,7 +892,7 @@ async function onDelete(id: number) {
   color: var(--p-red-500);
   font-weight: $font-weight-medium;
 
-  // Dark mode: surface-400 from parent .open-tasks__due beats red-500 here
+  // Dark mode: muted color from parent .open-tasks__due beats red-500 here
   // (specificity: .app-dark .open-tasks__due > .open-tasks__due--overdue).
   // Explicit dark override restores readable red — red-400 has better contrast
   // on dark surfaces than red-500.
@@ -1003,13 +1000,10 @@ async function onDelete(id: number) {
   margin: 0 0 $space-1;
   font-size: $font-size-2xs;
   font-weight: $font-weight-semibold;
-  color: $surface-400;
+  // reactive muted (dark → surface-600); was static surface-400 + dark surface-400 (~2:1)
+  color: var(--p-text-muted-color);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
 }
 
 .open-tasks__picker-search {
@@ -1021,7 +1015,8 @@ async function onDelete(id: number) {
   margin-bottom: $space-1;
 
   .app-dark & {
-    border-bottom-color: var(--p-surface-700);
+    // subtle dark border (surface-200 #172847); surface-700 #B4C2DA is a bright line
+    border-bottom-color: var(--p-surface-200);
   }
 }
 
@@ -1230,7 +1225,9 @@ async function onDelete(id: number) {
     background: var(--p-surface-100);
 
     .app-dark & {
-      color: var(--p-surface-200);
+      // icon must contrast the raised hover bg: surface-700 #B4C2DA (was surface-200,
+      // identical to the hover background → collapse icon vanished on hover in dark)
+      color: var(--p-surface-700);
       background: var(--p-surface-200);
     }
   }

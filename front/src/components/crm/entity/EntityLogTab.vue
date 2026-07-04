@@ -177,7 +177,7 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
 // label: 11px muted (A1)
 .entity-log-tab__metric-label {
   font-size: $font-size-2xs;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
   line-height: $line-height-tight;
 }
 
@@ -201,14 +201,11 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
 .entity-log-tab__header-title {
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
-  color: $surface-600;
+  // reactive muted (dark → surface-600 #8593B0); dropped surface-400 override (#3A4F78 ~2:1)
+  color: var(--p-text-muted-color);
   display: flex;
   align-items: center;
   gap: $space-1;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
 }
 
 .entity-log-tab__count {
@@ -220,8 +217,9 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
   font-weight: $font-weight-normal;
 
   .app-dark & {
-    background: var(--p-surface-700);
-    color: var(--p-surface-300);
+    // keep dark navy chip bg + readable light count (was surface-700 light chip
+    // + surface-300 text — low-contrast count on a bright plate)
+    color: var(--p-surface-700);
   }
 }
 
@@ -253,7 +251,7 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
 
 .entity-log-tab__empty-hint {
   font-size: $font-size-sm;
-  color: $surface-500;
+  color: var(--p-text-muted-color);
   margin: 0;
 }
 
@@ -272,12 +270,9 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
   align-items: baseline;
   gap: $space-2;
   font-size: $font-size-xs;
-  color: $surface-600;
+  // reactive muted (dark → surface-600); dropped surface-400 override (~2:1)
+  color: var(--p-text-muted-color);
   line-height: $line-height-normal;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
 }
 
 .entity-log-tab__line-body {
@@ -297,11 +292,8 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
 }
 
 .entity-log-tab__event {
-  color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // reactive muted (dark → surface-600); dropped surface-400 override (~2:1)
+  color: var(--p-text-muted-color);
 }
 
 // strikethrough old value (A1)
@@ -323,17 +315,15 @@ const { eventLabel, detailText, formatDate } = useEntityLogFormat()
 }
 
 .entity-log-tab__desc-inline {
-  color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // reactive muted (dark → surface-600); dropped surface-400 override (~2:1)
+  color: var(--p-text-muted-color);
 }
 
 .entity-log-tab__time {
   flex-shrink: 0;
   font-size: $font-size-xs;
-  color: $surface-400;
+  // muted timestamp — reactive (dark → surface-600); was static surface-400 (~2:1)
+  color: var(--p-text-muted-color);
   white-space: nowrap;
 }
 
