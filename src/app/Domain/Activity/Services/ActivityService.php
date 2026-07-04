@@ -404,25 +404,34 @@ class ActivityService
      * update on the task, gated by the update policy in the FormRequest). Notes
      * (no deadline) are rejected via assertCompletable. Returns the activity.
      *
-     * The relative presets are anchored on the task's EXISTING due date (its
-     * calendar day in the operational timezone), NOT on "today": "+1d" on a task
-     * due tomorrow means the day AFTER tomorrow, not a reset to today+1 (BUG: a
-     * future task's +1d jumped backwards to start-of-today). A task with no due
-     * date falls back to anchoring on today.
+     * `tomorrow` is an ABSOLUTE shortcut anchored on NOW (today's operational
+     * calendar day + 1), matching the kanban board's "Завтра" column and user intent
+     * ("perенести на завтра" = tomorrow from today) — it is NOT anchored on the
+     * task's existing due date (BUG: a task overdue from March hit with "tomorrow"
+     * used to resolve to March+1day instead of tomorrow-from-today).
      *
-     * The existing TIME-OF-DAY is PRESERVED (10.3): shifting a task due 2026-07-01
-     * 15:30 by +1d lands on 2026-07-02 15:30, not midnight — only the calendar day
-     * changes, the wall-clock deadline stays. A deadline-less task falls back to the
-     * start of the target day in the operational timezone (there is no time to keep).
+     * Every OTHER relative preset (+1d/+1w/next_monday/next_week/next_month) stays
+     * anchored on the task's EXISTING due date (its calendar day in the operational
+     * timezone), NOT on "today": "+1d" on a task due tomorrow means the day AFTER
+     * tomorrow, not a reset to today+1 (BUG: a future task's +1d jumped backwards to
+     * start-of-today). A task with no due date falls back to anchoring on today for
+     * these too.
      *
-     * Presets (operational TZ, anchored on the existing due day or today when unset;
-     * time-of-day preserved from the existing due_at, else start of day):
-     *   tomorrow     → anchor day + 1 day
-     *   +1d          → alias of tomorrow (anchor day + 1 day)
-     *   +1w          → anchor day + 1 week
-     *   next_monday  → the next Monday strictly after the anchor day
-     *   next_week    → anchor day + 1 week (legacy alias of +1w)
-     *   next_month   → anchor day + 1 month (legacy)
+     * The existing TIME-OF-DAY is PRESERVED (10.3) in every preset: shifting a task
+     * due 2026-07-01 15:30 by +1d lands on 2026-07-02 15:30, not midnight — only the
+     * calendar day changes, the wall-clock deadline stays. A deadline-less task falls
+     * back to the start of the target day in the operational timezone (there is no
+     * time to keep).
+     *
+     * Presets (operational TZ; time-of-day preserved from the existing due_at, else
+     * start of day):
+     *   tomorrow     → TODAY (now, operational TZ) + 1 day — never anchored on the
+     *                  task's existing due date
+     *   +1d          → existing-due anchor day + 1 day
+     *   +1w          → existing-due anchor day + 1 week
+     *   next_monday  → the next Monday strictly after the existing-due anchor day
+     *   next_week    → existing-due anchor day + 1 week (legacy alias of +1w)
+     *   next_month   → existing-due anchor day + 1 month (legacy)
      */
     public function reschedule(Activity $activity, ?string $preset = null, ?CarbonInterface $dueAt = null): Activity
     {
@@ -441,18 +450,43 @@ class ActivityService
     /**
      * Map a quick-reschedule preset to an absolute due_at instant (returned in UTC).
      *
-     * The math runs on the existing due date's day in the operational timezone (so
-     * the shortcut shifts the REAL deadline forward, never resetting to today), and
-     * the existing TIME-OF-DAY is carried onto the new calendar day (10.3): a task
-     * due 15:30 that is bumped +1d stays due at 15:30 the next day, not midnight.
+     * `tomorrow` anchors on TODAY (now, operational TZ) regardless of the task's
+     * existing due date — it is the absolute "move to tomorrow" shortcut mirrored by
+     * the kanban board's "Завтра" column drop (which computes now+1 day client-side).
+     * Anchoring it on the existing due date instead used to send an overdue task's
+     * "tomorrow" click back into the past (e.g. March due date → March+1day).
      *
-     * When the task has no deadline yet there is no time to preserve, so the anchor
-     * is today's operational start-of-day and the result lands at 00:00 of the
-     * target day (the previous behaviour for a deadline-less task).
+     * Every other preset's math runs on the existing due date's day in the
+     * operational timezone (so the shortcut shifts the REAL deadline forward, never
+     * resetting to today) — this is intentional and covered by its own regression
+     * (a future task's +1d must never jump backwards to start-of-today).
+     *
+     * In both cases the existing TIME-OF-DAY is carried onto the new calendar day
+     * (10.3): a task due 15:30 that is bumped stays due at 15:30 on the new day, not
+     * midnight. When the task has no deadline yet there is no time to preserve, so
+     * the anchor is today's operational start-of-day and the result lands at 00:00 of
+     * the target day (the previous behaviour for a deadline-less task).
      */
     private function resolveReschedulePreset(string $preset, ?CarbonInterface $currentDue): Carbon
     {
         $tz = $this->operationalTimezone();
+
+        // `tomorrow` is absolute: always today (now, operational TZ) + 1 day, no
+        // matter how stale the task's existing due date is. The existing due
+        // TIME-OF-DAY is still preserved (10.3) — only the calendar day resets to
+        // today's before the +1 day shift.
+        if ($preset === 'tomorrow') {
+            $todayKeepingTime = $currentDue !== null
+                ? $this->operationalLocalDayStart()->setTime(
+                    Carbon::instance($currentDue)->setTimezone($tz)->hour,
+                    Carbon::instance($currentDue)->setTimezone($tz)->minute,
+                    Carbon::instance($currentDue)->setTimezone($tz)->second,
+                    Carbon::instance($currentDue)->setTimezone($tz)->microsecond,
+                )
+                : $this->operationalLocalDayStart();
+
+            return $todayKeepingTime->addDay()->utc();
+        }
 
         // Anchor on the existing due date in the operational timezone — KEEPING its
         // wall-clock time so the deadline's time-of-day survives the shift. A
@@ -463,7 +497,7 @@ class ActivityService
             : $this->operationalLocalDayStart();
 
         return match ($preset) {
-            'tomorrow', '+1d' => $anchor->copy()->addDay()->utc(),
+            '+1d' => $anchor->copy()->addDay()->utc(),
             '+1w', 'next_week' => $anchor->copy()->addWeek()->utc(),
             'next_monday' => $this->nextMondayKeepingTime($anchor)->utc(),
             'next_month' => $anchor->copy()->addMonthNoOverflow()->utc(),

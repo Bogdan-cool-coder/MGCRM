@@ -374,8 +374,8 @@ function onMoreClick(e: MouseEvent) {
     box-shadow: $shadow-sm;
 
     .app-dark & {
-      background: var(--p-surface-600);
-      color: var(--p-primary-300);
+      background: var(--p-surface-600); // #8593B0 — light-pair plate in dark
+      color: var(--p-surface-100); // #111E38 — dark navy ink on light plate (5.37:1; was primary-300 #9fb0d4 = 1.42:1)
     }
   }
 }
@@ -418,8 +418,8 @@ function onMoreClick(e: MouseEvent) {
     box-shadow: $shadow-sm;
 
     .app-dark & {
-      background: var(--p-surface-600);
-      color: var(--p-primary-300);
+      background: var(--p-surface-600); // #8593B0 — light-pair plate in dark
+      color: var(--p-surface-100); // #111E38 — dark navy ink on light plate (5.37:1; was primary-300 #9fb0d4 = 1.42:1)
     }
   }
 }

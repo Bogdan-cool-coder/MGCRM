@@ -69,7 +69,7 @@
         @complete="onKanbanComplete"
         @task-deleted="onKanbanTaskDeleted"
         @task-completed-dialog="onKanbanTaskCompletedDialog"
-        @reschedule="onKanbanRescheduleGuarded"
+        @reschedule="onKanbanReschedule"
       />
     </div>
 
@@ -770,23 +770,28 @@ function onKanbanTaskCompletedDialog(id: number) {
 
 /**
  * Board drag-and-drop reschedule — lifted from TasksKanbanBoard.
+ *
+ * Works in BOTH modes: in «Мои» it moves the actor's own task; in «Команда» a
+ * manager-tier actor may reschedule a colleague's task (the backend gates
+ * POST /reschedule by the same `update` policy that already granted this actor
+ * department/All-scope write access). Each mode drives its own isolated board
+ * state — personal → taskBoard, team → teamBoard — so the correct one is
+ * optimistically updated and rolled back on error.
  */
 async function onKanbanReschedule(taskId: number, targetBucket: MyBoardBucket) {
+  const board = taskMode.value === 'team' ? teamBoard : taskBoard
   try {
-    await taskBoard.rescheduleTask(taskId, targetBucket)
+    await board.rescheduleTask(taskId, targetBucket)
     onKanbanTaskRescheduled()
-  } catch {
-    onKanbanError(t('tasks.board.reschedule.error'))
+  } catch (err) {
+    // 403 → the task moved out of the actor's scope (rare; board already rolled back)
+    const status = (err as { response?: { status?: number } })?.response?.status
+    onKanbanError(
+      status === 403
+        ? t('tasks.board.reschedule.forbidden')
+        : t('tasks.board.reschedule.error'),
+    )
   }
-}
-
-/**
- * Reschedule guard — only allowed in personal mode. In team mode drag is
- * silently ignored (directors shouldn't reschedule other people's tasks).
- */
-async function onKanbanRescheduleGuarded(taskId: number, targetBucket: MyBoardBucket) {
-  if (taskMode.value !== 'my') return
-  await onKanbanReschedule(taskId, targetBucket)
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────

@@ -430,18 +430,21 @@ class ActivityTaskListTest extends TestCase
             ->assertJsonPath('data.status', 'done');
     }
 
-    public function test_reschedule_tomorrow_moves_due_to_day_after_existing_due_keeping_time(): void
+    public function test_reschedule_tomorrow_anchors_on_today_not_existing_due_date(): void
     {
+        // Regression: `tomorrow` must mean "tomorrow from TODAY", not "existing due
+        // date + 1 day". A task overdue since March hit with `preset: 'tomorrow'`
+        // used to resolve to March+1day (still in the past) instead of the actual
+        // tomorrow relative to now — this test fails on the pre-fix behaviour.
+        //
         // Freeze the clock so the service and the test resolve the operational day
         // start from the same instant (the boundary math is otherwise racy at a
         // Dubai-midnight crossing). 10:00 UTC = 14:00 Dubai — mid-day in both.
-        Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-07-04 10:00:00', 'UTC'));
 
         $manager = $this->manager();
 
-        // A task already due 3 days ago: "+1d / tomorrow" anchors on its EXISTING
-        // due day and adds a day — it must NOT reset to today+1 (the bug a future
-        // task hit, jumping backwards).
+        // A task overdue since March — far in the past relative to "now".
         $existingDue = Carbon::parse('2026-03-12 10:00:00', 'UTC'); // 14:00 Dubai
         $activity = Activity::factory()
             ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
@@ -451,16 +454,58 @@ class ActivityTaskListTest extends TestCase
 
         Sanctum::actingAs($manager, ['*']);
 
-        // The day AFTER the existing due day, KEEPING its time-of-day (10.3): +1d on
-        // a task due 14:00 Dubai stays due at 14:00 Dubai the next day, not midnight.
-        $expected = $existingDue->copy()->addDay();
+        // Expected: TODAY (operational TZ) + 1 day, keeping the existing due's
+        // time-of-day (14:00 Dubai) — NOT March 13th.
+        $tz = config('salespulse.timezone', 'Asia/Dubai');
+        $expected = Carbon::now($tz)->startOfDay()
+            ->setTime(14, 0, 0)
+            ->addDay()
+            ->utc();
 
         $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => 'tomorrow'])
             ->assertOk();
 
+        $due = Carbon::parse($res->json('data.due_at'));
+
+        $this->assertTrue(
+            $due->equalTo($expected),
+            'reschedule tomorrow must anchor on today, not the stale existing due date',
+        );
+        $this->assertTrue(
+            $due->greaterThan(Carbon::now()),
+            'reschedule tomorrow must always land in the future relative to now',
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_reschedule_plus1d_still_anchors_on_existing_due_date(): void
+    {
+        // +1d is the RELATIVE shortcut (distinct from the absolute `tomorrow`): it
+        // must keep anchoring on the task's existing due date, adding a day — this
+        // guards the original fix (a future task's +1d must not jump backwards to
+        // start-of-today) from regressing while `tomorrow` becomes absolute.
+        Carbon::setTestNow(Carbon::parse('2026-03-15 10:00:00', 'UTC'));
+
+        $manager = $this->manager();
+
+        $existingDue = Carbon::parse('2026-03-12 10:00:00', 'UTC'); // 14:00 Dubai
+        $activity = Activity::factory()
+            ->state(['kind' => ActivityType::Task->value, 'due_at' => $existingDue])
+            ->responsibleOf($manager)
+            ->createdByUser($manager)
+            ->create();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $expected = $existingDue->copy()->addDay();
+
+        $res = $this->postJson("/api/activities/{$activity->id}/reschedule", ['preset' => '+1d'])
+            ->assertOk();
+
         $this->assertTrue(
             Carbon::parse($res->json('data.due_at'))->equalTo($expected),
-            'reschedule tomorrow should keep the time-of-day and move to the next day',
+            '+1d should keep anchoring on the existing due date (unlike tomorrow)',
         );
 
         Carbon::setTestNow();

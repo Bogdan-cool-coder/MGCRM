@@ -83,169 +83,171 @@
   </div>
 
   <!-- ── DIALOG MODE ────────────────────────────────────────────────────────── -->
-  <Dialog
-    v-else
-    v-model:visible="dialogVisible"
-    :style="{ width: '540px' }"
-    :modal="true"
-    :draggable="false"
-    :show-header="false"
-    class="task-window-dialog"
-    @hide="emit('close')"
-  >
-    <div class="task-window">
-      <!-- Header -->
-      <div class="task-window__header">
-        <div class="task-window__header-left">
-          <i class="pi pi-check-square task-window__header-icon" />
-          <div>
-            <h3 class="task-window__title">{{ task.title }}</h3>
-            <div class="task-window__header-meta">
-              <span class="task-window__type-chip" :style="typeChipStyle">
-                <i :class="['pi', resolvedKindIcon]" />
-                {{ kindLabel }}
-              </span>
-              <span
-                class="task-window__due-chip"
-                :class="{ 'task-window__due-chip--overdue': taskIsOverdue }"
-              >
-                <i class="pi pi-clock" />
-                {{ dueAtFormatted }}
-              </span>
-            </div>
+  <!--
+    Dialog lives in the HOST (TasksKanbanBoard / MyTasksPage) — this component is
+    only its content + close button. Visibility is driven by the host via v-if.
+  -->
+  <div v-else class="task-window">
+    <!-- Header -->
+    <div class="task-window__header">
+      <div class="task-window__header-left">
+        <span class="task-window__header-tile" :style="headerTileStyle">
+          <i :class="['pi', resolvedKindIcon]" />
+        </span>
+        <div class="task-window__header-text">
+          <h3 class="task-window__title">{{ task.title }}</h3>
+          <div class="task-window__header-meta">
+            <span class="task-window__type-chip" :style="typeChipStyle">
+              <i :class="['pi', resolvedKindIcon]" />
+              {{ kindLabel }}
+            </span>
+            <span
+              class="task-window__due-chip"
+              :class="{ 'task-window__due-chip--overdue': taskIsOverdue }"
+            >
+              <i class="pi pi-clock" />
+              {{ dueAtFormatted }}
+            </span>
           </div>
         </div>
-        <button type="button" class="task-window__close-btn" @click="emit('close')">
-          <i class="pi pi-times" />
-        </button>
       </div>
+      <button type="button" class="task-window__close-btn" @click="emit('close')">
+        <i class="pi pi-times" />
+      </button>
+    </div>
 
-      <!-- Related entity -->
-      <div v-if="relatedEntity" class="task-window__related">
-        <div class="task-window__related-inner">
-          <i :class="['pi', relatedEntity.icon, 'task-window__related-icon']" />
-          <span class="task-window__related-label">{{ relatedEntity.label }}</span>
-          <RouterLink
-            v-if="relatedEntity.to"
-            :to="relatedEntity.to"
-            class="task-window__related-link"
-            @click="emit('close')"
-          >
-            <i class="pi pi-external-link task-window__related-ext" />
-          </RouterLink>
-        </div>
+    <!-- Related entity -->
+    <div v-if="relatedEntity" class="task-window__related">
+      <div class="task-window__related-inner">
+        <i :class="['pi', relatedEntity.icon, 'task-window__related-icon']" />
+        <span class="task-window__related-label">{{ relatedEntity.label }}</span>
+        <RouterLink
+          v-if="relatedEntity.to"
+          :to="relatedEntity.to"
+          class="task-window__related-link"
+          @click="emit('close')"
+        >
+          <i class="pi pi-external-link task-window__related-ext" />
+        </RouterLink>
       </div>
+    </div>
 
-      <!-- Fields grid -->
-      <div class="task-window__fields">
-        <div class="task-window__field">
-          <span class="task-window__field-label">{{ t('tasks.window.fields.responsible') }}</span>
-          <span class="task-window__field-value">
-            <span v-if="responsibleName" class="task-window__avatar-chip">
-              <span class="task-window__avatar">{{ responsibleInitial }}</span>
-              {{ responsibleShortName }}
-            </span>
-            <span v-else class="task-window__field-empty">—</span>
+    <!-- Fields grid -->
+    <div class="task-window__fields">
+      <div class="task-window__field">
+        <span class="task-window__field-label">{{ t('tasks.window.fields.responsible') }}</span>
+        <span class="task-window__field-value">
+          <span v-if="responsibleName" class="task-window__avatar-chip">
+            <EntityAvatar :name="responsibleName" :pixel-size="20" />
+            {{ responsibleShortName }}
           </span>
-        </div>
-        <div class="task-window__field">
-          <span class="task-window__field-label">{{ t('tasks.window.fields.kind') }}</span>
+          <span v-else class="task-window__field-empty">—</span>
+        </span>
+      </div>
+      <div class="task-window__field">
+        <span class="task-window__field-label">{{ t('tasks.window.fields.kind') }}</span>
+        <span class="task-window__field-value">
           <span class="task-window__type-chip" :style="typeChipStyle">
             <i :class="['pi', resolvedKindIcon]" />
             {{ kindLabel }}
           </span>
-        </div>
-        <div class="task-window__field">
-          <span class="task-window__field-label">{{ t('tasks.window.fields.dueAt') }}</span>
-          <span
-            class="task-window__due-chip"
-            :class="{ 'task-window__due-chip--overdue': taskIsOverdue }"
-          >
-            <i class="pi pi-clock" />
-            {{ dueAtFormatted }}
-          </span>
-        </div>
-        <div class="task-window__field">
-          <span class="task-window__field-label">{{ t('tasks.window.fields.status') }}</span>
-          <Tag :severity="statusSeverity" :value="t(`activity.statuses.${task.status}`)" />
-        </div>
-      </div>
-
-      <!-- Task description (read-only) -->
-      <div v-if="taskBody" class="task-window__section">
-        <span class="task-window__section-label">{{ t('tasks.window.fields.description') }}</span>
-        <p class="task-window__description">{{ taskBody }}</p>
-      </div>
-
-      <!-- Result textarea (hidden when task is already done) -->
-      <div v-if="task.status !== 'done'" class="task-window__section">
-        <span class="task-window__section-label">
-          {{ t('tasks.window.fields.result') }}
-          <span class="task-window__required-star">*</span>
         </span>
-        <textarea
-          :ref="(el) => { resultInputEl = el as HTMLTextAreaElement | null }"
-          v-model="resultDraft"
-          class="task-window__result-textarea"
-          :class="{ 'task-window__result-textarea--required': resultRequired }"
-          :placeholder="t('tasks.window.fields.resultPlaceholder')"
-          rows="3"
-          @input="onResultInput"
-        />
-        <p v-if="resultRequired" class="task-window__result-error">
-          {{ t('tasks.window.fields.resultRequired') }}
-        </p>
       </div>
-
-      <!-- Footer -->
-      <div class="task-window__footer">
-        <button
-          type="button"
-          class="task-window__delete-btn"
-          :class="{
-            'task-window__delete-btn--warn': deleteCount === 1,
-            'task-window__delete-btn--danger': deleteCount >= 2,
-          }"
-          :title="deleteTooltip"
-          @click="handleDeleteClick"
+      <div class="task-window__field">
+        <span class="task-window__field-label">{{ t('tasks.window.fields.dueAt') }}</span>
+        <span
+          class="task-window__due-chip task-window__field-value"
+          :class="{ 'task-window__due-chip--overdue': taskIsOverdue }"
         >
-          <i class="pi pi-trash" />
-          {{ t('tasks.window.actions.delete') }}
-        </button>
-        <div class="task-window__footer-right">
-          <button type="button" class="task-window__cancel-btn" @click="emit('close')">
-            {{ t('tasks.window.actions.cancel') }}
-          </button>
-          <button
-            v-if="task.status !== 'done'"
-            type="button"
-            class="task-window__complete-btn"
-            :class="{ 'task-window__complete-btn--loading': completing }"
-            :disabled="completing"
-            @click="onCompleteSubmit"
-          >
-            <i v-if="completing" class="pi pi-spin pi-spinner" />
-            <i v-else class="pi pi-check" />
-            {{ t('tasks.window.actions.complete') }}
-          </button>
-        </div>
+          <i class="pi pi-clock" />
+          {{ dueAtFormatted }}
+        </span>
+      </div>
+      <div class="task-window__field">
+        <span class="task-window__field-label">{{ t('tasks.window.fields.status') }}</span>
+        <span class="task-window__field-value">
+          <Tag :severity="statusSeverity" :value="t(`activity.statuses.${task.status}`)" />
+        </span>
       </div>
     </div>
-  </Dialog>
+
+    <!-- Task description (read-only) -->
+    <div v-if="taskBody" class="task-window__section">
+      <span class="task-window__section-label">{{ t('tasks.window.fields.description') }}</span>
+      <p class="task-window__description">{{ taskBody }}</p>
+    </div>
+
+    <!-- Result textarea (hidden when task is already done) -->
+    <div v-if="task.status !== 'done'" class="task-window__section">
+      <span class="task-window__section-label">
+        {{ t('tasks.window.fields.result') }}
+        <span class="task-window__required-star">*</span>
+      </span>
+      <Textarea
+        ref="resultTextareaRef"
+        v-model="resultDraft"
+        class="w-full"
+        :rows="3"
+        auto-resize
+        :placeholder="t('tasks.window.fields.resultPlaceholder')"
+        :class="{ 'p-invalid': resultRequired }"
+        @input="onResultInput"
+      />
+      <small v-if="resultRequired" class="p-error">
+        {{ t('tasks.window.fields.resultRequired') }}
+      </small>
+    </div>
+
+    <!-- Footer -->
+    <div class="task-window__footer">
+      <Button
+        icon="pi pi-trash"
+        :label="t('tasks.window.actions.delete')"
+        severity="danger"
+        text
+        class="task-window__delete-btn"
+        :class="{
+          'task-window__delete-btn--warn': deleteCount === 1,
+          'task-window__delete-btn--danger': deleteCount >= 2,
+        }"
+        :title="deleteTooltip"
+        @click="handleDeleteClick"
+      />
+      <div class="task-window__footer-right">
+        <Button
+          :label="t('tasks.window.actions.cancel')"
+          severity="secondary"
+          text
+          @click="emit('close')"
+        />
+        <Button
+          v-if="task.status !== 'done'"
+          icon="pi pi-check"
+          :label="t('tasks.window.actions.complete')"
+          severity="success"
+          :loading="completing"
+          :disabled="completing"
+          @click="onCompleteSubmit"
+        />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
-import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
+import Textarea from 'primevue/textarea'
+import Button from 'primevue/button'
 import { RouterLink } from 'vue-router'
 import { kindIcon, todayInOperationalTz, dateInOperationalTz } from '@/utils/activity'
 import { activityApi } from '@/api/activity'
 import type { ActivityDto, ActivityKind, ActivityStatus, MyBoardActivityDto } from '@/entities/activity'
 import { taskKindChipStyle } from '@/shared/taskKindColors'
 import { useThemeStore } from '@/stores/theme'
+import EntityAvatar from '@/components/crm/entity/EntityAvatar.vue'
 
 // ─── Props / emits ─────────────────────────────────────────────────────────────
 
@@ -270,17 +272,20 @@ const toast = useToast()
 const themeStore = useThemeStore()
 const isDark = computed(() => themeStore.theme === 'dark')
 
-// dialog visibility (mode=dialog only) — keeps Dialog visible when parent controls it
-const dialogVisible = ref(true)
-watch(dialogVisible, (v) => {
-  if (!v) emit('close')
-})
-
 // result draft
 const resultDraft = ref('')
 const resultRequired = ref(false)
 const completing = ref(false)
+// inline mode uses a native <textarea> (direct DOM ref);
+// dialog mode uses PrimeVue <Textarea> (component ref, focus via $el).
 const resultInputEl = ref<HTMLTextAreaElement | null>(null)
+const resultTextareaRef = ref<{ $el: HTMLTextAreaElement } | null>(null)
+
+/** Focus the result field regardless of mode (native vs PrimeVue Textarea). */
+function focusResultInput() {
+  resultInputEl.value?.focus()
+  resultTextareaRef.value?.$el?.focus()
+}
 
 // 3-step delete
 const deleteCount = ref(0)
@@ -295,7 +300,7 @@ watch(
     if (v) {
       nextTick(() => {
         resultRequired.value = true
-        resultInputEl.value?.focus()
+        focusResultInput()
       })
     }
   },
@@ -306,7 +311,7 @@ watch(
 function focusResultField() {
   nextTick(() => {
     resultRequired.value = true
-    resultInputEl.value?.focus()
+    focusResultInput()
   })
 }
 defineExpose({ focusResultField })
@@ -321,6 +326,13 @@ function resolveKindIcon(kind: ActivityKind | null | undefined): string {
 const resolvedKindIcon = computed(() => resolveKindIcon(props.task.kind))
 
 const typeChipStyle = computed((): Record<string, string> => taskKindChipStyle(props.task.kind, isDark.value))
+
+// Header tile (dialog mode): tinted square with the kind icon — reuses the same
+// branded tint/foreground as the type chip so the window matches the kanban card.
+const headerTileStyle = computed((): Record<string, string> => {
+  const chip = taskKindChipStyle(props.task.kind, isDark.value)
+  return { background: chip.background ?? '', color: chip.color ?? '' }
+})
 
 const kindLabel = computed((): string => {
   const kind = props.task.kind
@@ -360,12 +372,6 @@ const responsibleName = computed((): string => {
   // ActivityDto has `responsible`, MyBoardActivityDto has `assigned_to` or `responsible`
   const r = (task as ActivityDto).responsible ?? (task as MyBoardActivityDto).assigned_to ?? null
   return r?.full_name ?? ''
-})
-
-const responsibleInitial = computed((): string => {
-  const n = responsibleName.value
-  if (!n) return '?'
-  return n.charAt(0).toUpperCase()
 })
 
 const responsibleShortName = computed((): string => {
@@ -433,7 +439,7 @@ async function onCompleteSubmit() {
   if (!text) {
     resultRequired.value = true
     await nextTick()
-    resultInputEl.value?.focus()
+    focusResultInput()
     return
   }
   if (completing.value) return
@@ -761,7 +767,7 @@ async function doDelete() {
   display: flex;
   flex-direction: column;
   gap: $space-4;
-  padding: $space-4;
+  padding: $space-5;
   min-height: 0;
 }
 
@@ -774,27 +780,38 @@ async function doDelete() {
 .task-window__header-left {
   display: flex;
   align-items: flex-start;
-  gap: $space-2;
+  gap: $space-3;
   flex: 1;
   min-width: 0;
 }
 
-.task-window__header-icon {
-  font-size: $font-size-base;
-  color: $primary-900;
+.task-window__header-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  width: 36px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  height: 36px;
+  border-radius: $radius-md;
   flex-shrink: 0;
-  margin-top: 2px;
+  // background + color come from headerTileStyle (branded tint via taskKindChipStyle)
 
-  .app-dark & {
-    color: var(--p-surface-600);
+  i {
+    font-size: $font-size-base;
   }
+}
+
+.task-window__header-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .task-window__title {
   margin: 0 0 $space-1;
-  font-size: $font-size-base;
+  font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $surface-700;
+  color: $surface-800;
   line-height: $line-height-tight;
   // max 2 lines
   display: -webkit-box;
@@ -868,10 +885,10 @@ async function doDelete() {
   align-items: center;
   gap: 3px;
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: $surface-700;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-800);
   }
 
   &--overdue {
@@ -904,11 +921,11 @@ async function doDelete() {
 
 .task-window__related-icon {
   font-size: $font-size-sm;
-  color: $surface-400;
+  color: $surface-500;
   flex-shrink: 0;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500);
   }
 }
 
@@ -928,13 +945,9 @@ async function doDelete() {
 .task-window__related-link {
   display: inline-flex;
   align-items: center;
-  color: $primary-900;
+  color: var(--p-primary-color);
   text-decoration: none;
   flex-shrink: 0;
-
-  .app-dark & {
-    color: var(--p-primary-300);
-  }
 
   &:hover {
     opacity: 0.8;
@@ -960,18 +973,20 @@ async function doDelete() {
 }
 
 .task-window__field-label {
-  font-size: $font-size-xs;
+  font-size: $font-size-2xs;
   font-weight: $font-weight-semibold;
-  color: $surface-400;
+  color: $surface-600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500);
   }
 }
 
 .task-window__field-value {
+  display: inline-flex;
+  align-items: center;
   font-size: $font-size-sm;
   color: $surface-700;
 
@@ -981,7 +996,7 @@ async function doDelete() {
 }
 
 .task-window__field-empty {
-  color: $surface-300;
+  color: $surface-400;
 
   .app-dark & {
     color: var(--p-surface-500);
@@ -1000,27 +1015,6 @@ async function doDelete() {
   }
 }
 
-.task-window__avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  width: 20px;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  height: 20px;
-  border-radius: $radius-circle;
-  background: $primary-900;
-  color: $surface-0;
-  font-size: $font-size-3xs;
-  font-weight: $font-weight-bold;
-  flex-shrink: 0;
-
-  .app-dark & {
-    background: $primary-300;
-    color: $surface-900;
-  }
-}
-
 // ─── Section (description / result) ──────────────────────────────────────────
 
 .task-window__section {
@@ -1030,14 +1024,14 @@ async function doDelete() {
 }
 
 .task-window__section-label {
-  font-size: $font-size-xs;
+  font-size: $font-size-2xs;
   font-weight: $font-weight-semibold;
-  color: $surface-400;
+  color: $surface-600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-500);
   }
 }
 
@@ -1054,44 +1048,8 @@ async function doDelete() {
   word-break: break-word;
 }
 
-.task-window__result-textarea {
+.w-full {
   width: 100%;
-  font-size: $font-size-sm;
-  color: $surface-700;
-  font-family: inherit;
-  border: 1px solid var(--p-surface-300);
-  border-radius: $radius-sm;
-  padding: $space-2 $space-3;
-  background: var(--p-surface-0);
-  resize: none;
-  outline: none;
-  line-height: $line-height-normal;
-  transition: border-color var(--app-transition-fast);
-  box-sizing: border-box;
-
-  .app-dark & {
-    background: var(--p-surface-100);
-    color: var(--p-surface-800);
-    border-color: var(--p-surface-300);
-  }
-
-  &:focus {
-    border-color: var(--p-primary-color);
-  }
-
-  &--required {
-    border-color: var(--p-red-500);
-
-    &:focus {
-      border-color: var(--p-red-500);
-    }
-  }
-}
-
-.task-window__result-error {
-  font-size: $font-size-xs;
-  color: var(--p-red-500);
-  margin: 0;
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
@@ -1114,102 +1072,37 @@ async function doDelete() {
   gap: $space-2;
 }
 
+// Delete button — PrimeVue Button (severity="danger" text). The 3-step delete
+// escalation is layered on top: step 1 = scale + amber; step 2 = solid red.
 .task-window__delete-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-1;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  padding: 6px 12px;
-  border: 1px solid var(--p-surface-300);
-  border-radius: $radius-md;
-  background: transparent;
-  color: $color-danger;
-  font-size: $font-size-sm;
-  cursor: pointer;
-  transition: all var(--app-transition-fast);
+  transition: transform var(--app-transition-fast);
 
-  .app-dark & {
-    border-color: var(--p-surface-600);
-    color: var(--p-red-400);
-  }
+  // Step 1 — amber warning + slight scale
+  &--warn {
+    transform: scale(1.05);
 
-  &:hover {
-    background: var(--p-red-50);
-    border-color: var(--p-red-300);
-
-    .app-dark & {
-      background: var(--p-surface-200);
+    :deep(.p-button-label),
+    :deep(.p-button-icon) {
+      color: var(--p-orange-500);
     }
   }
 
-  &--warn {
-    border-color: var(--p-orange-400);
-    color: var(--p-orange-500);
-  }
-
+  // Step 2 — solid red, final confirmation
   &--danger {
-    border-color: var(--p-red-500);
-    color: $surface-0;
+    transform: scale(1.1);
     background: var(--p-red-500);
+    border-color: var(--p-red-500);
+
+    :deep(.p-button-label),
+    :deep(.p-button-icon) {
+      // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+      color: #fff; // solid-red destructive button: white text is a brand invariant
+    }
 
     &:hover {
       background: var(--p-red-600);
       border-color: var(--p-red-600);
-
-      .app-dark & {
-        background: var(--p-red-600);
-      }
     }
-  }
-}
-
-.task-window__cancel-btn {
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  padding: 6px 16px;
-  border: 1px solid var(--p-surface-300);
-  border-radius: $radius-md;
-  background: transparent;
-  color: $surface-600;
-  font-size: $font-size-sm;
-  cursor: pointer;
-  transition: all var(--app-transition-fast);
-
-  .app-dark & {
-    border-color: var(--p-surface-600);
-  }
-
-  &:hover {
-    background: var(--p-surface-100);
-
-    .app-dark & {
-      background: var(--p-surface-200);
-    }
-  }
-}
-
-.task-window__complete-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-1;
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  padding: 6px 16px;
-  border: none;
-  border-radius: $radius-md;
-  background: var(--p-green-500);
-  color: $surface-0;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  cursor: pointer;
-  transition: all var(--app-transition-fast);
-
-  &:hover:not(:disabled) {
-    background: var(--p-green-600);
-  }
-
-  &:disabled,
-  &--loading {
-    opacity: 0.6;
-    cursor: not-allowed;
   }
 }
 </style>

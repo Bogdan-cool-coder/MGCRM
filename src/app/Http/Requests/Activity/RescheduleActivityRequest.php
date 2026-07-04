@@ -9,9 +9,11 @@ use Illuminate\Validation\Rule;
 
 /**
  * Quick due-date shift from the task list. The body carries EXACTLY ONE of:
- *  - preset  — a relative shortcut resolved server-side in the operational
- *              timezone (tomorrow / +1d / +1w / next_monday; next_week/next_month
- *              kept as legacy aliases), or
+ *  - preset  — a shortcut resolved server-side in the operational timezone:
+ *              `tomorrow` is ABSOLUTE (today + 1 day, ignoring the task's existing
+ *              due date — mirrors the kanban board's "Завтра" column); +1d / +1w /
+ *              next_monday (next_week/next_month kept as legacy aliases) stay
+ *              RELATIVE to the task's existing due date, or
  *  - due_at  — an explicit absolute date(time) chosen in the picker.
  *
  * Rescheduling only moves due_at (status/engagement are untouched) and is gated by
