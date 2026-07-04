@@ -79,6 +79,11 @@ class SalesDashboardService
                 'period' => [
                     'from' => $filters->dateFrom->toDateString(),
                     'to' => $filters->dateTo->toDateString(),
+                    // Ф8: present only when the caller selected explicit months[]
+                    // (null for legacy period=... requests) — echoes back the
+                    // exact YYYY-MM set so the FE month-picker can restore state.
+                    'months' => $this->monthsMeta($filters),
+                    'trend_available' => $filters->prevPeriod() !== null,
                 ],
                 'base_currency' => config('crm.currencies.default', 'RUB'),
                 'multi_currency_warning' => $multiCurrencyWarning,
@@ -158,9 +163,13 @@ class SalesDashboardService
 
         // Previous period for trend — built through the SAME scoped query as the
         // current period (SoftDeletes + visibility + manager_id) so numerator and
-        // denominator measure the same population.
+        // denominator measure the same population. A non-contiguous months[]
+        // selection has no honest "previous period" (Ф8) — prevPeriod() returns
+        // null and every trend is reported as null rather than a misleading number.
         $prevFilters = $filters->prevPeriod();
-        $prevTrends = $this->computeTrendsFromPrev($pipelineId, $scope, $user, $prevFilters, $grouped);
+        $prevTrends = $prevFilters === null
+            ? ['active' => null, 'won' => null, 'lost' => null, 'total' => null]
+            : $this->computeTrendsFromPrev($pipelineId, $scope, $user, $prevFilters, $grouped);
 
         $total = [
             'count' => $grouped['active']['count'] + $grouped['won']['count'] + $grouped['lost']['count'],
@@ -628,6 +637,14 @@ class SalesDashboardService
      * join (alias «dps») provides the is_won/is_lost flags for the CASE and is
      * reused by statusGroups so no second join is needed.
      *
+     * The date filter walks `monthRanges` — a list of [start, end] pairs — and
+     * ORs a BETWEEN clause per pair (Ф8). For legacy period-mode and a single
+     * selected month this list has exactly one entry, so the SQL degenerates to
+     * the original plain range. For a non-contiguous months[] selection (e.g.
+     * Jan + Mar) this correctly excludes the Feb rows a naive min/max range
+     * would have pulled in — aggregates key on the IN-set of months, not the
+     * envelope between the earliest and latest pick.
+     *
      * Eloquent's SoftDeletes global scope keeps deleted_at IS NULL applied
      * (Deal::query()), and the visibility match below scopes the population — both
      * are inherited by every aggregator and by the previous-period trend builder.
@@ -645,8 +662,11 @@ class SalesDashboardService
             // convention); without this they would leak into every aggregate and the
             // previous-period trend.
             ->whereNull('deals.archived_at')
-            ->whereRaw($effectiveDate.' >= ?', [$filters->dateFrom])
-            ->whereRaw($effectiveDate.' <= ?', [$filters->dateTo]);
+            ->where(function (Builder $q) use ($effectiveDate, $filters): void {
+                foreach ($filters->ranges() as [$from, $to]) {
+                    $q->orWhereRaw("({$effectiveDate} BETWEEN ? AND ?)", [$from, $to]);
+                }
+            });
 
         if ($filters->managerId !== null) {
             $query->where('deals.owner_user_id', $filters->managerId);
@@ -815,6 +835,24 @@ class SalesDashboardService
     }
 
     /**
+     * Echo back the selected months[] as "YYYY-MM" strings, or null when the
+     * request used the legacy `period` enum (Ф8).
+     *
+     * @return ?list<string>
+     */
+    private function monthsMeta(DashboardFilters $filters): ?array
+    {
+        if (! str_starts_with($filters->period, 'months:')) {
+            return null;
+        }
+
+        return array_map(
+            static fn (array $range): string => $range[0]->format('Y-m'),
+            $filters->monthRanges,
+        );
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function emptyPayload(DashboardFilters $filters): array
@@ -825,6 +863,8 @@ class SalesDashboardService
                 'period' => [
                     'from' => $filters->dateFrom->toDateString(),
                     'to' => $filters->dateTo->toDateString(),
+                    'months' => $this->monthsMeta($filters),
+                    'trend_available' => $filters->prevPeriod() !== null,
                 ],
                 'base_currency' => config('crm.currencies.default', 'RUB'),
                 'multi_currency_warning' => false,

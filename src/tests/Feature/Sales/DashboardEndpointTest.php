@@ -15,6 +15,7 @@ use App\Domain\Sales\Models\DealProduct;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -305,6 +306,289 @@ class DashboardEndpointTest extends TestCase
         $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
         $this->assertSame(1, $activeGroup['count']);
         $this->assertSame(77_000, $activeGroup['amount_kopecks']);
+    }
+
+    // =========================================================================
+    // Ф8: months[] selection
+    // =========================================================================
+
+    public function test_months_single_matches_period_current_month_equivalent(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $stage = $this->openStage($pipeline);
+
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 100_000,
+            'stage_changed_at' => now(),
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $thisMonth = now()->format('Y-m');
+
+        $viaMonths = $this->getJson('/api/sales/dashboard?months[]='.$thisMonth.'&pipeline_id='.$pipeline->id)
+            ->assertOk();
+        $viaPeriod = $this->getJson('/api/sales/dashboard?period=current_month&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $activeMonths = collect($viaMonths->json('status_groups'))->firstWhere('key', 'active');
+        $activePeriod = collect($viaPeriod->json('status_groups'))->firstWhere('key', 'active');
+
+        $this->assertSame($activePeriod['count'], $activeMonths['count']);
+        $this->assertSame($activePeriod['amount_kopecks'], $activeMonths['amount_kopecks']);
+        $this->assertSame(1, $activeMonths['count']);
+    }
+
+    public function test_months_meta_echoes_selected_months(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $this->openStage($pipeline);
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?months[]=2026-04&months[]=2026-05&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $this->assertSame(['2026-04', '2026-05'], $response->json('meta.period.months'));
+        $this->assertSame('2026-04-01', $response->json('meta.period.from'));
+        $this->assertSame('2026-05-31', $response->json('meta.period.to'));
+    }
+
+    public function test_months_null_in_meta_for_legacy_period_requests(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $this->openStage($pipeline);
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?period=current_month&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $this->assertNull($response->json('meta.period.months'));
+        $this->assertTrue($response->json('meta.period.trend_available'));
+    }
+
+    public function test_months_multi_aggregates_both_months(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $stage = $this->openStage($pipeline);
+
+        // April deal.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 100_000,
+            'stage_changed_at' => Carbon::parse('2026-04-15'),
+        ]);
+
+        // May deal.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 50_000,
+            'stage_changed_at' => Carbon::parse('2026-05-10'),
+        ]);
+
+        // June deal — must be excluded when only Apr+May are selected.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 999_999,
+            'stage_changed_at' => Carbon::parse('2026-06-05'),
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?months[]=2026-04&months[]=2026-05&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
+        $this->assertSame(2, $activeGroup['count']);
+        $this->assertSame(150_000, $activeGroup['amount_kopecks']);
+    }
+
+    public function test_months_non_contiguous_excludes_the_gap_month(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $stage = $this->openStage($pipeline);
+
+        // January deal — included.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 40_000,
+            'stage_changed_at' => Carbon::parse('2026-01-15'),
+        ]);
+
+        // February deal — the gap month, must be EXCLUDED.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 999_999,
+            'stage_changed_at' => Carbon::parse('2026-02-15'),
+        ]);
+
+        // March deal — included.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $stage->id,
+            'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id,
+            'currency' => 'RUB',
+            'amount' => 60_000,
+            'stage_changed_at' => Carbon::parse('2026-03-15'),
+        ]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?months[]=2026-01&months[]=2026-03&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
+        $this->assertSame(2, $activeGroup['count']);
+        $this->assertSame(100_000, $activeGroup['amount_kopecks']);
+    }
+
+    public function test_months_non_contiguous_trend_pct_is_null(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $stage = $this->openStage($pipeline);
+        $this->deal($director, $pipeline, $stage);
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?months[]=2026-01&months[]=2026-03&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $groups = collect($response->json('status_groups'));
+        foreach (['active', 'won', 'lost', 'total'] as $key) {
+            $this->assertNull($groups->firstWhere('key', $key)['trend_pct'], "trend_pct for {$key} must be null");
+        }
+        $this->assertFalse($response->json('meta.period.trend_available'));
+    }
+
+    public function test_months_contiguous_trend_pct_computed_against_prior_months(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $stage = $this->openStage($pipeline);
+
+        // Current selection: Apr + May, 4 deals total.
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id, 'stage_id' => $stage->id, 'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id, 'currency' => 'RUB', 'amount' => 100_000,
+            'stage_changed_at' => Carbon::parse('2026-04-10'),
+        ]);
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id, 'stage_id' => $stage->id, 'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id, 'currency' => 'RUB', 'amount' => 100_000,
+            'stage_changed_at' => Carbon::parse('2026-04-11'),
+        ]);
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id, 'stage_id' => $stage->id, 'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id, 'currency' => 'RUB', 'amount' => 100_000,
+            'stage_changed_at' => Carbon::parse('2026-05-10'),
+        ]);
+        Deal::factory()->create([
+            'pipeline_id' => $pipeline->id, 'stage_id' => $stage->id, 'owner_user_id' => $director->id,
+            'company_id' => Company::factory()->create()->id, 'currency' => 'RUB', 'amount' => 100_000,
+            'stage_changed_at' => Carbon::parse('2026-05-11'),
+        ]);
+
+        // Previous window (Feb + Mar — the 2 months right before Apr): 3 deals.
+        foreach (['2026-02-10', '2026-02-11', '2026-03-10'] as $date) {
+            Deal::factory()->create([
+                'pipeline_id' => $pipeline->id, 'stage_id' => $stage->id, 'owner_user_id' => $director->id,
+                'company_id' => Company::factory()->create()->id, 'currency' => 'RUB', 'amount' => 100_000,
+                'stage_changed_at' => Carbon::parse($date),
+            ]);
+        }
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/sales/dashboard?months[]=2026-04&months[]=2026-05&pipeline_id='.$pipeline->id)
+            ->assertOk();
+
+        $activeGroup = collect($response->json('status_groups'))->firstWhere('key', 'active');
+        $this->assertSame(4, $activeGroup['count']);
+        // 4 (current) vs 3 (prev) → +33.3%.
+        $this->assertEquals(33.3, $activeGroup['trend_pct']);
+        $this->assertTrue($response->json('meta.period.trend_available'));
+    }
+
+    // =========================================================================
+    // Ф8: months[] validation
+    // =========================================================================
+
+    public function test_months_invalid_format_returns_422(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson('/api/sales/dashboard?months[]=not-a-month&pipeline_id='.$pipeline->id)
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('months.0');
+    }
+
+    public function test_months_wrong_month_number_returns_422(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson('/api/sales/dashboard?months[]=2026-13')
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('months.0');
+    }
+
+    public function test_months_over_limit_returns_422(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        Sanctum::actingAs($director, ['*']);
+
+        $months = array_map(static fn (int $m): string => sprintf('2026-%02d', $m), range(1, 13));
+
+        $query = collect($months)->map(static fn (string $m): string => 'months[]='.$m)->implode('&');
+
+        $this->getJson('/api/sales/dashboard?'.$query)
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('months');
+    }
+
+    public function test_months_empty_array_falls_back_to_default_period(): void
+    {
+        // months[] present but empty must behave like no months[] at all
+        // (defaults to current_month), not a validation error.
+        $director = User::factory()->create(['role' => Role::Director]);
+        $pipeline = $this->salesPipeline();
+        $this->openStage($pipeline);
+        Sanctum::actingAs($director, ['*']);
+
+        $this->getJson('/api/sales/dashboard?months[]=&pipeline_id='.$pipeline->id)
+            ->assertOk();
     }
 
     // =========================================================================

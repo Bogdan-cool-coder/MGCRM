@@ -1,21 +1,16 @@
 <template>
   <!-- Compact single-row filter strip on a widget-card surface (restyle §1.3).
-       Tab-aware: the Обзор tab uses a named-period Select + Edit/Done toggle
-       (its widget data speaks a `current_month | last_month | current_quarter |
-       current_year` enum the hub month-stepper cannot express), while report
-       tabs use the granularity + month-stepper + layer. Pipeline / manager are
-       SHARED across both — the single source of those filters (audit §3в: legacy
+       Tab-aware: the Обзор tab uses a month-picker (one OR several months → the
+       dashboard `months[]` query, Ф8) + Edit/Done toggle, while report tabs use
+       the granularity + month-stepper + layer. Pipeline / manager are SHARED
+       across both — the single source of those filters (audit §3в: legacy
        DashboardToolbar removed, no duplicate pickers). -->
   <div class="analytics-filter-bar">
-    <!-- ── Обзор period: named enum (unique to the overview widgets) ─────────── -->
+    <!-- ── Обзор period: multi-month picker (unique to the overview widgets) ──── -->
     <template v-if="overviewMode">
-      <Select
-        :model-value="overviewPeriod"
-        :options="overviewPeriodOptions"
-        option-label="label"
-        option-value="value"
-        class="analytics-filter-bar__period-select"
-        @update:model-value="(v: DashboardPeriod) => emit('update:overviewPeriod', v)"
+      <MonthRangePicker
+        :model-value="overviewMonths"
+        @update:model-value="(v: string[]) => emit('update:overviewMonths', v)"
       />
     </template>
 
@@ -117,17 +112,17 @@ import { useI18n } from 'vue-i18n'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import Button from 'primevue/button'
+import MonthRangePicker from './MonthRangePicker.vue'
 import type { PipelineDto } from '@/entities/sales'
 import type { UserOptionDto } from '@/api/users'
 import type { PlanLayer } from '@/entities/planTargets'
-import type { DashboardPeriod } from '@/entities/salesDashboard'
 import type { PeriodGranularity } from '../composables/useAnalyticsHub'
 
 const props = defineProps<{
-  /** Обзор uses its own named-period model + edit toggle instead of the stepper. */
+  /** Обзор uses its own month-picker + edit toggle instead of the stepper. */
   overviewMode: boolean
-  /** Обзор-only: named period enum driving the widget data. */
-  overviewPeriod: DashboardPeriod
+  /** Обзор-only: explicit month selection ("YYYY-MM") driving the widget data (Ф8). */
+  overviewMonths: string[]
   /** Обзор-only: widget-grid edit mode (Редактировать/Готово). */
   editMode: boolean
   granularity: PeriodGranularity
@@ -145,7 +140,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:overviewPeriod': [value: DashboardPeriod]
+  'update:overviewMonths': [value: string[]]
   'toggle-edit': []
   'update:granularity': [value: PeriodGranularity]
   step: [dir: -1 | 1]
@@ -164,13 +159,6 @@ const granularityOptions = computed(() => [
 const layerOptions = computed(() => [
   { label: t('dashboard.filters.layer_operative'), value: 'operative' as const },
   { label: t('dashboard.filters.layer_annual'), value: 'annual' as const },
-])
-
-const overviewPeriodOptions = computed(() => [
-  { value: 'current_month' as DashboardPeriod, label: t('dashboard.periods.currentMonth') },
-  { value: 'last_month' as DashboardPeriod, label: t('dashboard.periods.lastMonth') },
-  { value: 'current_quarter' as DashboardPeriod, label: t('dashboard.periods.currentQuarter') },
-  { value: 'current_year' as DashboardPeriod, label: t('dashboard.periods.currentYear') },
 ])
 
 const periodLabel = computed<string>(() => {
@@ -222,6 +210,17 @@ const periodLabel = computed<string>(() => {
   }
 }
 
+// The bar (esp. report tabs) starts wrapping to a second line well before the
+// stacked ≤768 layout — around ≤1400 the controls no longer fit one row. Hide
+// the vertical rule across that wrap range so it never dangles at a line break
+// («палка в никуда», audit L1). Below 768 the stacked media query already hides
+// it (that block wins at equal specificity — declared later in source).
+@media (max-width: 1400px) {
+  .analytics-filter-bar__divider {
+    display: none;
+  }
+}
+
 .analytics-filter-bar__period-label {
   min-width: 130px;
   text-align: center;
@@ -237,10 +236,6 @@ const periodLabel = computed<string>(() => {
 
 .analytics-filter-bar__layer--dimmed {
   opacity: 0.55;
-}
-
-.analytics-filter-bar__period-select {
-  min-width: 180px;
 }
 
 .analytics-filter-bar__select {
@@ -259,9 +254,14 @@ const periodLabel = computed<string>(() => {
   }
 
   .analytics-filter-bar__select,
-  .analytics-filter-bar__period-select,
   .analytics-filter-bar__granularity,
   .analytics-filter-bar__stepper {
+    width: 100%;
+  }
+
+  // The month-picker (Обзор) fills the stacked row like the other controls.
+  :deep(.month-range-picker),
+  :deep(.month-range-picker__trigger) {
     width: 100%;
   }
 

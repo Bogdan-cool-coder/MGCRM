@@ -18,13 +18,12 @@ import { getDashboardData, exportDashboardXlsx } from '@/api/salesDashboard'
 import { triggerBlobDownload } from '@/utils/download'
 import type {
   DashboardFilters,
-  DashboardPeriod,
   DashboardResponse,
 } from '@/entities/salesDashboard'
 
 export interface DashboardPageOptions {
-  /** Named period enum (Месяц/Прошлый месяц/Квартал/Год) from the hub filter bar. */
-  period: () => DashboardPeriod
+  /** Explicit month selection ("YYYY-MM") from the hub month-picker (Ф8). */
+  months: () => string[]
   /** Selected funnel from the hub filter bar (shared across all tabs). */
   pipelineId: () => number | null
   /** Cross-user manager filter from the hub filter bar (admin/director only). */
@@ -35,9 +34,12 @@ export const useDashboardPage = (options: DashboardPageOptions) => {
   const { t } = useI18n()
   const toast = useToast()
 
-  // Snapshot the hub-driven filters into the API request shape.
+  // Snapshot the hub-driven filters into the API request shape. `months[]` drives
+  // the window (Ф8); `period` stays a harmless default the API ignores when months
+  // is present (buildDashboardParams sends months INSTEAD of period).
   const currentFilters = (): DashboardFilters => ({
-    period: options.period(),
+    period: 'current_month',
+    months: options.months(),
     pipeline_id: options.pipelineId(),
     manager_id: options.managerId(),
   })
@@ -72,7 +74,9 @@ export const useDashboardPage = (options: DashboardPageOptions) => {
   const initialized = ref(false)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   watch(
-    () => [options.period(), options.pipelineId(), options.managerId()],
+    // Join months into a stable string so the array identity does not defeat the
+    // watch's value comparison (a fresh array each getter call would always differ).
+    () => [options.months().join(','), options.pipelineId(), options.managerId()],
     () => {
       if (!initialized.value) return
       if (debounceTimer) clearTimeout(debounceTimer)

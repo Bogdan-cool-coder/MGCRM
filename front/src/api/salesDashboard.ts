@@ -5,14 +5,31 @@
 import { apiClient } from '@/api/client'
 import type { DashboardFilters, DashboardResponse } from '@/entities/salesDashboard'
 
+/**
+ * Build the query params for a dashboard request. When `months[]` is non-empty it
+ * is sent INSTEAD of `period` (the backend gives months priority, but we omit the
+ * enum entirely to keep the request unambiguous — Ф8). Otherwise the legacy named
+ * period drives the window, exactly as before.
+ */
+const buildDashboardParams = (filters: DashboardFilters): Record<string, unknown> => {
+  const params: Record<string, unknown> = {}
+  if (filters.months != null && filters.months.length > 0) {
+    params.months = filters.months
+  } else {
+    params.period = filters.period
+  }
+  if (filters.pipeline_id != null) params.pipeline_id = filters.pipeline_id
+  if (filters.manager_id != null) params.manager_id = filters.manager_id
+  return params
+}
+
 export const getDashboardData = (
   filters: DashboardFilters,
 ): Promise<DashboardResponse> => {
-  const params: Record<string, unknown> = { period: filters.period }
-  if (filters.pipeline_id != null) params.pipeline_id = filters.pipeline_id
-  if (filters.manager_id != null) params.manager_id = filters.manager_id
   return apiClient
-    .get<DashboardResponse>('/api/sales/dashboard', { params })
+    .get<DashboardResponse>('/api/sales/dashboard', {
+      params: buildDashboardParams(filters),
+    })
     .then((r) => r.data)
 }
 
@@ -24,10 +41,11 @@ export const getDashboardData = (
  * (same pattern as salesApi.exportDeals / companies.exportCompanies).
  */
 export const exportDashboardXlsx = (filters: DashboardFilters): Promise<Blob> => {
-  const params: Record<string, unknown> = { period: filters.period }
-  if (filters.pipeline_id != null) params.pipeline_id = filters.pipeline_id
-  if (filters.manager_id != null) params.manager_id = filters.manager_id
+  // Same DashboardRequest binds both routes, so months[] is honoured on export too.
   return apiClient
-    .get<Blob>('/api/sales/dashboard.xlsx', { params, responseType: 'blob' })
+    .get<Blob>('/api/sales/dashboard.xlsx', {
+      params: buildDashboardParams(filters),
+      responseType: 'blob',
+    })
     .then((r) => r.data)
 }

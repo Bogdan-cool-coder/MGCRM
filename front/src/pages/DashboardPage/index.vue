@@ -21,7 +21,7 @@
     <div class="dashboard-page__filters">
       <AnalyticsFilterBar
         :overview-mode="activeTab === 'overview'"
-        :overview-period="overviewPeriod"
+        :overview-months="overviewMonths"
         :edit-mode="overviewEditMode"
         :granularity="granularity"
         :year="year"
@@ -34,7 +34,7 @@
         :managers="managers"
         :pipelines-loading="pipelinesLoading"
         :can-see-all-managers="canSeeAllManagers"
-        @update:overview-period="setOverviewPeriod"
+        @update:overview-months="setOverviewMonths"
         @toggle-edit="toggleOverviewEdit"
         @update:granularity="setGranularity"
         @step="stepPeriod"
@@ -91,8 +91,8 @@ const {
   stepPeriod,
   setGranularity,
   setYear,
-  overviewPeriod,
-  setOverviewPeriod,
+  overviewMonths,
+  setOverviewMonths,
   overviewEditMode,
   toggleOverviewEdit,
   layer,
@@ -207,7 +207,7 @@ const activeProps = computed<Record<string, unknown>>(() => {
       }
     default:
       return {
-        period: overviewPeriod.value,
+        months: overviewMonths.value,
         pipelineId: pipelineId.value,
         managerId: managerId.value,
         editMode: overviewEditMode.value,

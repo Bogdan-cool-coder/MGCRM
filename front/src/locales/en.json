@@ -184,11 +184,13 @@
       "prev_period": "Previous period",
       "next_period": "Next period"
     },
-    "periods": {
-      "currentMonth": "Current month",
-      "lastMonth": "Last month",
-      "currentQuarter": "Current quarter",
-      "currentYear": "Current year"
+    "monthPicker": {
+      "aria_open": "Select months",
+      "prev_year": "Previous year",
+      "next_year": "Next year",
+      "current_month": "Current month",
+      "scattered": "{month} {year} +{rest}",
+      "selected_count": "Selected: {count}"
     },
     "statusGroups": {
       "title": "Deal status",

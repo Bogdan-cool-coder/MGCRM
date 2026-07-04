@@ -11,7 +11,16 @@ export type DashboardPeriod =
   | 'current_year'
 
 export interface DashboardFilters {
+  /**
+   * Named-period enum (Месяц/Прошлый месяц/Квартал/Год). Sent only when `months`
+   * is empty — the backend gives `months[]` priority over `period` (Ф8).
+   */
   period: DashboardPeriod
+  /**
+   * Explicit month selection as "YYYY-MM" strings (1..12). When non-empty this is
+   * what the Обзор month-picker sends and it overrides `period` on the backend.
+   */
+  months?: string[]
   pipeline_id?: number | null
   manager_id?: number | null
 }
@@ -69,7 +78,20 @@ export interface DealsWithoutTasksData {
 
 export interface DashboardMeta {
   pipeline: { id: number; name: string; kind: string } | null
-  period: { from: string; to: string }
+  period: {
+    from: string
+    to: string
+    /**
+     * Echo of the selected `months[]` ("YYYY-MM"), or null for a legacy
+     * named-period request (Ф8) — lets the picker restore its state.
+     */
+    months: string[] | null
+    /**
+     * false when no honest previous period exists (a non-contiguous months[]
+     * selection): every `trend_pct` is null and the KPI cards show «без сравнения».
+     */
+    trend_available: boolean
+  }
   base_currency: string
   multi_currency_warning: boolean
   generated_at: string

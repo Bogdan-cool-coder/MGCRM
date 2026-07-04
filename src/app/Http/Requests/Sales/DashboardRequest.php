@@ -11,18 +11,43 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * DashboardRequest — validates the sales dashboard query parameters (S1.7).
+ * DashboardRequest — validates the sales dashboard query parameters (S1.7,
+ * extended Ф8 with explicit months[] selection).
  *
  * Authorization: any authenticated user may view their own scope.
  * manager_id filter: only admin/director may specify a foreign manager_id;
  * a manager submitting someone else's id receives a 422 (not a 403, so the
  * filter-url doesn't leak role information in status codes).
+ *
+ * `months[]` (Ф8): 1..12 "YYYY-MM" strings. When present it takes priority
+ * over `period` — DashboardFilters::fromRequest() checks months first. Both
+ * params stay independently valid so existing period-only callers keep
+ * working unchanged.
  */
 class DashboardRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return $this->user()->can('viewAny', Deal::class);
+    }
+
+    /**
+     * Strip blank entries from months[] before validation — a stray
+     * `months[]=` (e.g. a cleared FE multiselect serialized naively) must be
+     * treated as "no months[]" and fall back to `period`, not fail validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! is_array($this->months)) {
+            return;
+        }
+
+        $filtered = array_values(array_filter(
+            $this->months,
+            static fn ($m): bool => is_string($m) && $m !== '',
+        ));
+
+        $this->merge(['months' => $filtered === [] ? null : $filtered]);
     }
 
     public function rules(): array
@@ -33,6 +58,8 @@ class DashboardRequest extends FormRequest
                 'string',
                 Rule::in(['current_month', 'last_month', 'current_quarter', 'current_year']),
             ],
+            'months' => ['nullable', 'array', 'min:1', 'max:12'],
+            'months.*' => ['string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
             'pipeline_id' => ['nullable', 'integer', 'exists:pipelines,id'],
             'manager_id' => ['nullable', 'integer', 'exists:users,id'],
         ];

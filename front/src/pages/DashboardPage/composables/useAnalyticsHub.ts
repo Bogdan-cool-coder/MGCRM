@@ -28,7 +28,6 @@ import { usersApi } from '@/api/users'
 import type { PipelineDto } from '@/entities/sales'
 import type { UserOptionDto } from '@/api/users'
 import type { PlanLayer } from '@/entities/planTargets'
-import type { DashboardPeriod } from '@/entities/salesDashboard'
 
 export type HubTab = 'overview' | 'plans' | 'registry' | 'schedule' | 'rating'
 
@@ -181,15 +180,40 @@ export const useAnalyticsHub = () => {
     granularity.value = g
   }
 
-  // ─── Обзор named period (unique to the overview widgets) ────────────────────
-  // The overview widget endpoint speaks a named-period enum the month-stepper
-  // model above cannot express (last_month / current_quarter). It lives here so
-  // the single AnalyticsFilterBar can render it, and so it survives tab switches
-  // (the hub filter bar is not remounted between tabs).
-  const overviewPeriod = ref<DashboardPeriod>('current_month')
+  // ─── Обзор month selection (unique to the overview widgets) ─────────────────
+  // The overview widgets used to speak a named-period enum; Ф8 replaces that with
+  // an explicit months[] selection driving the dashboard `months[]` query. The
+  // state lives in the shell (so the single AnalyticsFilterBar renders it and it
+  // survives tab switches — the bar is not remounted between tabs) and mirrors
+  // into the URL as `?months=YYYY-MM,YYYY-MM` so an Обзор view is shareable.
+  // Default = the current calendar month.
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  const setOverviewPeriod = (value: DashboardPeriod): void => {
-    overviewPeriod.value = value
+  /** Parse `?months=` (comma-separated "YYYY-MM"); fall back to the current month. */
+  const parseMonthsQuery = (): string[] => {
+    const raw = route.query.months
+    const csv = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw.join(',') : ''
+    const parsed = csv
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => /^\d{4}-(0[1-9]|1[0-2])$/.test(s))
+    // De-dupe + sort + cap at 12 (matches the backend max:12).
+    const unique = [...new Set(parsed)].sort().slice(0, 12)
+    return unique.length > 0 ? unique : [currentMonthKey]
+  }
+
+  const overviewMonths = ref<string[]>(parseMonthsQuery())
+
+  const setOverviewMonths = (value: string[]): void => {
+    const next = value.length > 0 ? value : [currentMonthKey]
+    overviewMonths.value = next
+    // Persist to the URL only when it differs from the default single current month
+    // (a clean `/dashboard` stays clean; a non-default selection is shareable).
+    const query = { ...route.query }
+    const isDefault = next.length === 1 && next[0] === currentMonthKey
+    if (isDefault) delete query.months
+    else query.months = next.join(',')
+    void router.replace({ query })
   }
 
   // ─── Обзор widget-grid edit mode (Редактировать/Готово) ─────────────────────
@@ -335,9 +359,9 @@ export const useAnalyticsHub = () => {
     stepPeriod,
     setGranularity,
     setYear,
-    // overview-specific (named period + widget-grid edit)
-    overviewPeriod,
-    setOverviewPeriod,
+    // overview-specific (month selection + widget-grid edit)
+    overviewMonths,
+    setOverviewMonths,
     overviewEditMode,
     toggleOverviewEdit,
     // layer

@@ -184,11 +184,13 @@
       "prev_period": "Предыдущий период",
       "next_period": "Следующий период"
     },
-    "periods": {
-      "currentMonth": "Текущий месяц",
-      "lastMonth": "Прошлый месяц",
-      "currentQuarter": "Текущий квартал",
-      "currentYear": "Текущий год"
+    "monthPicker": {
+      "aria_open": "Выбрать месяцы",
+      "prev_year": "Предыдущий год",
+      "next_year": "Следующий год",
+      "current_month": "Текущий месяц",
+      "scattered": "{month} {year} +{rest}",
+      "selected_count": "Выбрано: {count}"
     },
     "statusGroups": {
       "title": "Статус сделок",

@@ -143,11 +143,11 @@ import WidgetFunnelTable from '../WidgetFunnelTable.vue'
 import WidgetTopBar from '../WidgetTopBar.vue'
 import WidgetForecast from '../WidgetForecast.vue'
 import WidgetDealsWithoutTasks from '../WidgetDealsWithoutTasks.vue'
-import type { DashboardPeriod, StatusGroup } from '@/entities/salesDashboard'
+import type { StatusGroup } from '@/entities/salesDashboard'
 
 const props = defineProps<{
-  /** Named period enum from the shared hub filter bar. */
-  period: DashboardPeriod
+  /** Explicit month selection ("YYYY-MM") from the shared hub month-picker (Ф8). */
+  months: string[]
   /** Selected funnel from the shared hub filter bar. */
   pipelineId: number | null
   /** Cross-user manager filter from the shared hub filter bar. */
@@ -165,7 +165,7 @@ const router = useRouter()
 
 // Filters are hub-owned; this tab feeds them in as getters and refetches on change.
 const { data, loading, start } = useDashboardPage({
-  period: () => props.period,
+  months: () => props.months,
   pipelineId: () => props.pipelineId,
   managerId: () => props.managerId,
 })
