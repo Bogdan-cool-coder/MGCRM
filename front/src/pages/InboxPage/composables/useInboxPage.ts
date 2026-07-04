@@ -160,13 +160,26 @@ export const useInboxPage = () => {
   // ─── Counts (folder + channel badges) ──────────────────────────────────────────
   const counts = ref<InboxCounts | null>(null)
 
+  // Single-flight guard: on mount the initial `fetchMessages()` and the explicit
+  // init call both trigger a counts refresh on the same tick — two identical
+  // `/api/inbox/counts` requests. Concurrent callers now share one in-flight
+  // request; sequential post-mutation refetches (each awaits the prior settle)
+  // are unaffected and still update badges after every triage/read action.
+  let countsInFlight: Promise<void> | null = null
+
   /** Cheap single call; refetched after list load + any triage/read mutation. */
-  async function fetchCounts() {
-    try {
-      counts.value = await inboxApi.counts()
-    } catch {
-      // non-critical — badges just stay stale
-    }
+  function fetchCounts(): Promise<void> {
+    if (countsInFlight) return countsInFlight
+    countsInFlight = (async () => {
+      try {
+        counts.value = await inboxApi.counts()
+      } catch {
+        // non-critical — badges just stay stale
+      } finally {
+        countsInFlight = null
+      }
+    })()
+    return countsInFlight
   }
 
   async function fetchMessages() {
@@ -267,9 +280,11 @@ export const useInboxPage = () => {
     void fetchMessages()
   })
 
-  // Initial load
+  // Initial load. `fetchMessages()` refreshes folder/channel counts on
+  // completion (both the list and drafts paths call `fetchCounts()`), so we do
+  // NOT fire a separate counts request here — that produced a redundant second
+  // `/api/inbox/counts` on every page entry.
   void fetchMessages()
-  void fetchCounts()
 
   // ─── Reading pane (selection + detail) ─────────────────────────────────────────
   const mobileView = ref<InboxMobileView>('list')

@@ -102,7 +102,7 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import { useMutation } from '@/composables/async/useMutation'
 import { activityApi } from '@/api/activity'
-import { usersApi, type UserOptionDto } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import type { ActivityKind } from '@/entities/activity'
 
 interface BulkTaskForm {
@@ -138,8 +138,10 @@ const visible = computed({
 
 const form = ref<BulkTaskForm>(defaultForm())
 const errors = ref<Record<string, string>>({})
-const users = ref<UserOptionDto[]>([])
-const loadingUsers = ref(false)
+
+// Responsible select options come from the shared users cache — one `/api/users`
+// fetch reused across the deals page + all bulk dialogs (no per-dialog storm).
+const { users, loading: loadingUsers, load: loadUsers } = useUsersCache()
 
 const mutation = useMutation()
 const saving = computed(() => mutation.isPending.value)
@@ -150,16 +152,6 @@ const kindOptions = computed(() => [
   { value: 'meeting' as ActivityKind, label: t('sales.deals.page.taskTypes.meeting'), icon: 'pi pi-users' },
   { value: 'follow_up' as ActivityKind, label: t('sales.deals.page.taskTypes.follow_up'), icon: 'pi pi-reply' },
 ])
-
-async function loadUsers() {
-  if (users.value.length > 0) return
-  loadingUsers.value = true
-  try {
-    users.value = await usersApi.getUsers()
-  } finally {
-    loadingUsers.value = false
-  }
-}
 
 onMounted(() => {
   void loadUsers()

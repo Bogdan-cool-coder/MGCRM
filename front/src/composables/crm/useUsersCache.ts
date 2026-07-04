@@ -9,18 +9,29 @@ const users = ref<UserOptionDto[]>([])
 const loading = ref(false)
 const loaded = ref(false)
 
+// The single in-flight fetch. Concurrent callers (multiple selects mounting on
+// the same tick) all await THIS promise instead of each firing their own GET —
+// true single-flight, so a page never produces a `/api/users` request storm.
+let inFlight: Promise<void> | null = null
+
 export function useUsersCache() {
-  async function load(): Promise<void> {
-    if (loaded.value || loading.value) return
+  function load(): Promise<void> {
+    if (loaded.value) return Promise.resolve()
+    if (inFlight) return inFlight
+
     loading.value = true
-    try {
-      users.value = await usersApi.getUsers()
-      loaded.value = true
-    } catch {
-      // non-critical — leave empty list, component renders without options
-    } finally {
-      loading.value = false
-    }
+    inFlight = (async () => {
+      try {
+        users.value = await usersApi.getUsers()
+        loaded.value = true
+      } catch {
+        // non-critical — leave empty list, component renders without options
+      } finally {
+        loading.value = false
+        inFlight = null
+      }
+    })()
+    return inFlight
   }
 
   /**

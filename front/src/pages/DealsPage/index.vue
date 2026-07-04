@@ -151,7 +151,7 @@ import { useDealsKpi } from './composables/useDealsKpi'
 import { useSalesStore } from '@/stores/salesStore'
 import { useDirectoriesStore } from '@/stores/directories'
 import { salesApi } from '@/api/sales'
-import { usersApi } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { useMutation } from '@/composables/async/useMutation'
 import { getApiErrorMessage } from '@/utils/errors'
@@ -170,6 +170,7 @@ const confirm = useConfirm()
 const salesStore = useSalesStore()
 const directoriesStore = useDirectoriesStore()
 const userStore = useUserStore()
+const { users: usersCache, load: loadUsers } = useUsersCache()
 
 // ── Filter overlay ─────────────────────────────────────────────────────────────
 
@@ -184,9 +185,11 @@ const pipelines = computed(() => pipelinesResource.data.value)
 // ── Filter option sources (owners + tags) ────────────────────────────────────────
 
 // Owner MultiSelect options — visible users mapped to the {id, name} shape the
-// overlay binds (option-label="name"). Mirrors DealPage's usersApi mapping.
-const ownersResource = useAsyncResource<UserRefDto[]>(() => [])
-const ownerOptions = computed(() => ownersResource.data.value)
+// overlay binds (option-label="name"). Sourced from the shared users cache so
+// the page and its bulk dialogs share a single `/api/users` fetch.
+const ownerOptions = computed<UserRefDto[]>(() =>
+  usersCache.value.map((u) => ({ id: u.id, name: u.full_name, avatar_path: u.avatar_path })),
+)
 
 // Tag checklist options — distinct tags drawn from the currently-loaded deals
 // (board cards + list rows). There is no tags endpoint; the set is data-driven
@@ -711,12 +714,8 @@ onMounted(async () => {
     void directoriesStore.fetchAll()
   }
 
-  // Owner filter options — load once; maps full_name → name for the MultiSelect.
-  void ownersResource.run(() =>
-    usersApi.getUsers().then((users) =>
-      users.map((u) => ({ id: u.id, name: u.full_name, avatar_path: u.avatar_path })),
-    ),
-  )
+  // Owner filter options — shared cache; single fetch reused by bulk dialogs.
+  void loadUsers()
 
   // Load pipelines
   await pipelinesResource.run(() => salesApi.getPipelines('sales'), {

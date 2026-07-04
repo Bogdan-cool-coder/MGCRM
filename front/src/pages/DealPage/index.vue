@@ -310,7 +310,7 @@ import { useDealFeed } from './composables/useDealFeed'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import { useSalesStore } from '@/stores/salesStore'
 import { salesApi } from '@/api/sales'
-import { usersApi } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import type { DealDto, DealProductDto, DealContactDto, PipelineStageDto, KeyActionType } from '@/entities/sales'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
@@ -485,9 +485,13 @@ const allStagesResource = useAsyncResource<PipelineStageDto[]>(() => [])
 const allStages = computed(() => allStagesResource.data.value)
 
 // ── Users list ─────────────────────────────────────────────────────────────────────
-
-const usersListResource = useAsyncResource<{ id: number; name: string }[]>(() => [])
-const usersList = computed(() => usersListResource.data.value)
+//
+// Sourced from the shared users cache so the deal card reuses the single
+// `/api/users` fetch instead of issuing its own on every bootstrap.
+const { users: usersCache, load: loadUsersCache } = useUsersCache()
+const usersList = computed<{ id: number; name: string }[]>(() =>
+  usersCache.value.map((u) => ({ id: u.id, name: u.full_name })),
+)
 
 // ── Days in stage ──────────────────────────────────────────────────────────────────
 
@@ -614,14 +618,7 @@ async function bootstrapDeal() {
       feedComposable.load(),
     ])
 
-    try {
-      await usersListResource.run(async () => {
-        const users = await usersApi.getUsers()
-        return users.map((u) => ({ id: u.id, name: u.full_name }))
-      })
-    } catch {
-      // non-critical
-    }
+    void loadUsersCache()
   }
 }
 

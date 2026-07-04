@@ -57,7 +57,7 @@ import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
-import { usersApi, type UserOptionDto } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useMutation } from '@/composables/async/useMutation'
 import { salesApi } from '@/api/sales'
 
@@ -80,21 +80,13 @@ const visible = computed({
 
 const selectedUserId = ref<number | null>(null)
 const hasError = ref(false)
-const users = ref<UserOptionDto[]>([])
-const loadingUsers = ref(false)
+
+// Owner select options come from the shared users cache — a single `/api/users`
+// fetch reused across the deals page + all bulk dialogs (no per-dialog storm).
+const { users, loading: loadingUsers, load: loadUsers } = useUsersCache()
 
 const mutation = useMutation()
 const saving = computed(() => mutation.isPending.value)
-
-async function loadUsers() {
-  if (users.value.length > 0) return
-  loadingUsers.value = true
-  try {
-    users.value = await usersApi.getUsers()
-  } finally {
-    loadingUsers.value = false
-  }
-}
 
 onMounted(() => {
   void loadUsers()
