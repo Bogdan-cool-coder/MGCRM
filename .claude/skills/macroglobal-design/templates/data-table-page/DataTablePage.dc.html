@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Data Table Page" description="Страница-список: KPI-плитки, панель фильтров, DataTable и пагинация" -->
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+<script src="./ds-base.js"></script>
+<style>
+.page{height:100vh;overflow:auto;padding:24px;background:var(--mg-surface-page);font-family:var(--mg-font-sans);display:flex;flex-direction:column;gap:18px}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hd h1{margin:0;font-size:20px;font-weight:600;color:var(--mg-text-primary)}
+.hd p{margin:2px 0 0;font-size:13px;color:var(--mg-text-muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--mg-surface-card);border:1px solid var(--mg-border-default);border-radius:var(--mg-radius-lg);padding:12px 14px;box-shadow:var(--mg-shadow-sm)}
+.search{flex:1;min-width:240px;display:flex;align-items:center;gap:9px;height:38px;padding:0 12px;border:1px solid var(--mg-input-border);border-radius:var(--mg-radius-md);background:var(--mg-input-bg);color:var(--mg-input-placeholder);font-size:13px}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.foot span{font-size:13px;color:var(--mg-text-muted)}
+</style>
+</helmet>
+<div class="page">
+<div class="hd">
+<div><h1>Контакты</h1><p>Физлица и компании · 96 записей</p></div>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="primary" icon="pi-plus" hint-size="150px,38px">Создать контакт</x-import>
+</div>
+<div class="kpis">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.StatCard" label="Всего" value="96" icon="pi-users" hint-size="100%,96px"></x-import>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.StatCard" label="Клиенты" value="58" icon="pi-verified" delta="+5" tone="success" hint-size="100%,96px"></x-import>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.StatCard" label="С задачами" value="21" icon="pi-check-square" tone="info" hint-size="100%,96px"></x-import>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.StatCard" label="Без задач" value="17" icon="pi-clock" tone="warning" hint-size="100%,96px"></x-import>
+</div>
+<div class="bar">
+<div class="search"><i class="pi pi-search"></i>Поиск по названию, БИН…</div>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="secondary" outlined="true" icon="pi-filter" hint-size="110px,38px">Фильтры</x-import>
+</div>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.DataTable" columns="{{ cols }}" rows="{{ rows }}" selectable="{{ true }}" hint-size="100%,300px"></x-import>
+<div class="foot">
+<span>Показано 1–7 из 96</span>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Pagination" page="{{ page }}" page-count="{{ pageCount }}" hint-size="240px,32px"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      page: 1,
+      pageCount: 14,
+      cols: [
+        { key: 'name', label: 'Название / ФИО', sortable: true },
+        { key: 'cat', label: 'Категория', align: 'center' },
+        { key: 'country', label: 'Страна' },
+        { key: 'deals', label: 'Сделки', align: 'center', sortable: true },
+        { key: 'contact', label: 'Посл. контакт' },
+        { key: 'owner', label: 'Ответственный' },
+      ],
+      rows: [
+        { id: 1, name: 'ООО «Ромашка»', cat: 'L', country: 'Казахстан', deals: 4, contact: 'Сегодня', owner: 'И. Петров' },
+        { id: 2, name: 'ТехноПарк', cat: 'M', country: 'Казахстан', deals: 3, contact: 'Вчера', owner: 'А. Сидорова' },
+        { id: 3, name: 'СтройИнвест', cat: 'M', country: 'Казахстан', deals: 2, contact: '6 дн назад', owner: 'И. Петров' },
+        { id: 4, name: 'Глобус Логистик', cat: 'S1', country: 'Россия', deals: 0, contact: '40 дн назад', owner: 'А. Сидорова' },
+        { id: 5, name: 'Альфа Ритейл', cat: 'L', country: 'ОАЭ', deals: 6, contact: 'Сегодня', owner: 'К. Хапкинс' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="CRM Page" description="Каркас страницы MACRO CRM: navy-сайдбар + PageHeader + рабочая область. Тяните готовые компоненты из библиотеки — ничего не рисуйте с нуля." -->
+<helmet>
+<script src="./ds-base.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--mg-font-sans);background:var(--c-page);color:var(--c-text);-webkit-font-smoothing:antialiased}
+  .app{display:flex;height:100vh;overflow:hidden}
+  /* ── navy sidebar (brand-invariant chrome) ─────────────────────────── */
+  .sb{display:flex;flex-direction:column;width:240px;flex-shrink:0;height:100%;background:var(--mg-sidebar-bg);overflow:hidden}
+  .sb-brand{display:flex;align-items:center;height:60px;padding:0 16px;border-bottom:1px solid var(--mg-sidebar-divider);flex-shrink:0}
+  .sb-brand img{height:28px;filter:brightness(0) invert(1)}
+  .sb-nav{flex:1;overflow-y:auto;padding:8px 0;scrollbar-width:none}
+  .sb-nav::-webkit-scrollbar{width:0}
+  .sb-sec{padding:14px 16px 4px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35)}
+  .sb-item{position:relative;display:flex;align-items:center;gap:10px;margin:2px 8px;border-radius:9px;padding:8px 10px;min-height:36px;color:var(--mg-sidebar-text);cursor:pointer;white-space:nowrap;transition:background var(--mg-transition-fast),color var(--mg-transition-fast)}
+  .sb-item:hover{background:rgba(255,255,255,.05)}
+  .sb-item.on{color:var(--mg-sidebar-text-active);background:var(--mg-sidebar-active-bg)}
+  .sb-item.on::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--mg-sidebar-active-bar);border-radius:0 3px 3px 0}
+  .sb-item i{font-size:18px;width:18px;text-align:center;flex-shrink:0}
+  .sb-item span{font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis}
+  .sb-cnt{font-size:11px;font-weight:700;color:#fff;background:var(--mg-orange-600);border-radius:999px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+  .sb-foot{flex-shrink:0;border-top:1px solid var(--mg-sidebar-divider);padding:8px}
+  .sb-user{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer}
+  .sb-ava{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);color:#fff;font-size:12px;font-weight:600}
+  .sb-uname{font-size:14px;font-weight:500;color:var(--mg-sidebar-text-active);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb-urole{font-size:12px;color:rgba(255,255,255,.55)}
+  /* ── main column ───────────────────────────────────────────────────── */
+  .main{display:flex;flex-direction:column;flex:1;min-width:0}
+  .phead{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--c-border);background:var(--c-card);flex-shrink:0;flex-wrap:wrap}
+  .plaque{width:38px;height:38px;border-radius:var(--mg-radius-md);background:var(--mg-primary-100);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .plaque i{font-size:17px;color:var(--mg-primary-900)}
+  .phead h1{font-size:19px;font-weight:600;color:var(--c-text);margin:0;line-height:1.1}
+  .phead .sub{font-size:12px;color:var(--c-muted);margin-top:2px}
+  .phspring{flex:1;min-width:12px}
+  .work{flex:1;overflow:auto;padding:22px;background:var(--c-page)}
+  /* ── work-area placeholder (replace with your page content) ────────── */
+  .ph-card{max-width:560px;background:var(--c-card);border:1px solid var(--c-border);border-radius:var(--mg-radius-lg);box-shadow:var(--mg-shadow-sm);padding:26px}
+  .ph-card h2{margin:0 0 6px;font-size:16px;font-weight:600;color:var(--c-text)}
+  .ph-card p{margin:0 0 18px;font-size:13px;line-height:1.55;color:var(--c-text2)}
+  .ph-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .ph-lab{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--c-muted);font-weight:600;width:100%;margin-bottom:-4px}
+</style>
+</helmet>
+<div class="app surface {{ themeClass }}">
+  <aside class="sb">
+    <div class="sb-brand"><img src="../../assets/macroglobal-logo-primary-light.svg" alt="MACRO Global" /></div>
+    <nav class="sb-nav">
+      <div class="sb-item"><i class="pi pi-home"></i><span>Дашборд</span></div>
+      <div class="sb-item"><i class="pi pi-users"></i><span>Контакты</span></div>
+      <div class="sb-item"><i class="pi pi-building"></i><span>Компании</span></div>
+      <div class="sb-item on"><i class="pi pi-briefcase"></i><span>Сделки</span></div>
+      <div class="sb-item"><i class="pi pi-check-square"></i><span>Мои задачи</span><span class="sb-cnt">20</span></div>
+      <div class="sb-item"><i class="pi pi-id-card"></i><span>Кабинет</span></div>
+      <div class="sb-item"><i class="pi pi-box"></i><span>Каталог</span></div>
+      <div class="sb-item"><i class="pi pi-file-edit"></i><span>Документы</span></div>
+      <div class="sb-sec">Администрирование</div>
+      <div class="sb-item"><i class="pi pi-sliders-h"></i><span>Настройки воронки</span></div>
+      <div class="sb-item"><i class="pi pi-file"></i><span>Шаблоны</span></div>
+      <div class="sb-item"><i class="pi pi-sitemap"></i><span>Маршруты</span></div>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-user">
+        <span class="sb-ava">БМ</span>
+        <div style="flex:1;overflow:hidden">
+          <div class="sb-uname">Богдан Меркулов</div>
+          <div class="sb-urole">Администратор</div>
+        </div>
+        <i class="pi pi-ellipsis-h" style="font-size:14px;color:rgba(255,255,255,.4)"></i>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="phead">
+      <span class="plaque"><i class="pi pi-briefcase"></i></span>
+      <div>
+        <h1>Сделки</h1>
+        <div class="sub">MACRO Global · 248 активных · 12 воронок</div>
+      </div>
+      <span class="phspring"></span>
+      <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="secondary" outlined="{{ true }}" icon="pi-search" hint-size="150px,38px">Поиск и фильтр</x-import>
+      <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="primary" icon="pi-plus" hint-size="120px,38px">Создать</x-import>
+    </header>
+    <main class="work">
+      <section class="ph-card">
+        <h2>Рабочая область</h2>
+        <p>Это стартовый каркас страницы. Сайдбар и шапка — готовый фрейm; наполняйте область компонентами из библиотеки, а не рисуйте с нуля. Ниже — примеры готовых элементов, которые можно просто вставлять.</p>
+        <div class="ph-row"><span class="ph-lab">Статусы (Tag)</span>
+          <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Tag" severity="success" icon="pi-verified" hint-size="90px,22px">Активен</x-import>
+          <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Tag" severity="danger" hint-size="90px,22px">Просрочено</x-import>
+          <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Tag" severity="info" hint-size="80px,22px">Новый лид</x-import>
+        </div>
+        <div class="ph-row"><span class="ph-lab">Люди (Avatar)</span>
+          <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Avatar" name="Иван Петров" hint-size="36px,36px"></x-import>
+          <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Avatar" name="Анна Сидорова" hint-size="36px,36px"></x-import>
+          <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.AvatarGroup" max="{{ 3 }}" items="{{ team }}" hint-size="90px,36px"></x-import>
+        </div>
+        <div class="ph-row"><span class="ph-lab">Переключатель (Switch)</span>
+          <x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Switch" on="{{ notify }}" onChange="{{ toggleNotify }}" label="Уведомления" hint-size="150px,22px"></x-import>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:860},&quot;dark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Тема&quot;}}">
+class Component extends DCLogic {
+  state = { notify: true };
+  renderVals() {
+    return {
+      themeClass: this.props.dark ? 'dark' : '',
+      team: [{ name: 'Иван Петров' }, { name: 'Анна Сидорова' }, { name: 'Кевин Х' }, { name: 'Олег Л' }],
+      notify: this.state.notify,
+      toggleNotify: (v) => this.setState({ notify: v }),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -13,8 +13,7 @@
   body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
   .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
     --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-board:#ECEDEF; }
-  .surface.dark { --c-page:#272829; --c-card:#3a3b3d; --c-border:#54595E; --c-border2:#54595E;
-    --c-text:#F9FAFB; --c-text2:#E3E4E6; --c-muted:#9B9C9F; --c-hover:#444547; --c-board:#1f2021; }
+  /* .surface.dark navy palette comes from the DS tokens/dark.css bridge */
   * { scrollbar-width: none; -ms-overflow-style: none; }
   ::-webkit-scrollbar { width: 0; height: 0; display: none; }
   @keyframes qf-slide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
@@ -485,8 +484,10 @@ function App() {
   const [pinned, setPinned] = useState([]);
   const [removed, setRemoved] = useState([]);
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const accent = t.accent, dark = t.dark;
+  const dark = t.dark;
   const ACC = { '#172747': '#1f2f5a', '#2b2f36': '#3a3f47', '#312e81': '#3f3a9e', '#0f4d3a': '#13654c' };
+  const accent = dark ? '#4C7DF0' : t.accent;
+  const accentHover = dark ? '#6E99FF' : (ACC[t.accent] || '#1f2f5a');
   const moreRef = React.useRef(null);
   const onComplete = (id) => setDone((d) => d.includes(id) ? d.filter((x) => x !== id) : [...d, id]);
   const onPin = (id) => setPinned((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
@@ -500,7 +501,7 @@ function App() {
   const hasOverdue = tasks.some((x) => x.bucket === 'overdue' && x.status !== 'done');
   const shownBuckets = BUCKETS.filter((b) => visible.includes(b.key) && (b.key !== 'overdue' || hasOverdue));
   const boardTasks = tasks.filter((x) => shownBuckets.some((b) => b.key === x.bucket));
-  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': ACC[accent] || '#1f2f5a',
+  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': accentHover,
     height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--c-board)' }}>
     <TopBar view={view} setView={setView} scope={scope} setScope={setScope} onMore={() => setMore((m) => !m)} moreRef={moreRef}
       onFilter={() => setFilter((f) => !f)} filterOn={filter} fcount={1} onCreate={() => setQuick((q) => !q)} counts={counts} />

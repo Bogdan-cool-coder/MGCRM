@@ -71,6 +71,7 @@
   --mg-orange-100: #fff0e8;
   --mg-orange-300: #ffc8ad;
   --mg-orange-500: #FFB38A;
+  --mg-orange-600: #E8821E; /* warning-strong — count/notification badge fill (white text passes AA) */
   --mg-orange-700: #e6643a;
   --mg-orange-900: #9b4029;
 
@@ -89,7 +90,7 @@
   --mg-gold-900: #8A6A12;  /* marketing reserve — ink */
 
   --mg-pink-50:  #FBE7F3;  /* marketing deal — soft */
-  --mg-pink-300: #F4A6D7;
+  --mg-pink-300: #F6C4E1;  /* mid tint (was a dup of 500) */
   --mg-pink-500: #F4A6D7;  /* marketing deal — solid */
   --mg-pink-900: #A53B80;  /* marketing deal — ink */
 
@@ -103,4 +104,5 @@
   --mg-stage-amber: #EF9F27;
   --mg-stage-pink:  #D4537E;
   --mg-stage-purple:#7F77DD;
+  --mg-stage-amber-ink: #6B4A00; /* dark ink for the amber stage header (white fails contrast) */
 }

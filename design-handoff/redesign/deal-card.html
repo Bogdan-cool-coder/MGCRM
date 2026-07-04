@@ -13,8 +13,8 @@
   body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
   .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
     --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-feed:#F1F2F3; --c-sub:#FAFBFC; }
-  .surface.dark { --c-page:#272829; --c-card:#444547; --c-border:#616263; --c-border2:#54595E;
-    --c-text:#F9FAFB; --c-text2:#E3E4E6; --c-muted:#9B9C9F; --c-hover:#3a3b3d; --c-feed:#1f2021; --c-sub:#3a3b3d; }
+  .surface.dark { --c-page:#0A1426; --c-card:#12213E; --c-border:#243358; --c-border2:#2E3F6A;
+    --c-text:#E8EDF6; --c-text2:#AEBBD4; --c-muted:#7E8CA8; --c-hover:#182747; --c-feed:#0A1426; --c-sub:#182747; }
   .nv-dim { color: rgba(255,255,255,0.5); }
   * { scrollbar-width: none; -ms-overflow-style: none; }
   ::-webkit-scrollbar { width: 0; height: 0; display: none; }
@@ -894,10 +894,12 @@ function App() {
   const [menu, setMenu] = useState(false);
   const [dialog, setDialog] = useState(null);
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const accent = t.accent,dark = t.dark;
+  const dark = t.dark;
   const ACC = { '#172747': '#1f2f5a', '#2b2f36': '#3a3f47', '#312e81': '#3f3a9e', '#0f4d3a': '#13654c' };
+  const accent = dark ? '#4C7DF0' : t.accent;
+  const accentHover = dark ? '#6E99FF' : (ACC[t.accent] || '#1f2f5a');
   const menuRef = React.useRef(null);
-  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': ACC[accent] || '#1f2f5a', height: '100vh', display: 'flex', position: 'relative', background: 'var(--c-page)' }}>
+  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': accentHover, height: '100vh', display: 'flex', position: 'relative', background: 'var(--c-page)' }}>
     <LeftPanel tab={tab} setTab={setTab} onMenu={() => setMenu((m) => !m)} menuRef={menuRef} setDialog={setDialog} />
     {menu && <DealMenu onClose={() => setMenu(false)} />}
     <RightPanel />

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Kanban Board" description="Доска-воронка: колонки этапов с карточками сделок (KanbanCard)" -->
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+<script src="./ds-base.js"></script>
+<style>
+.board{height:100vh;overflow:auto;display:flex;align-items:flex-start;gap:12px;padding:20px;background:var(--mg-surface-page);font-family:var(--mg-font-sans)}
+.col{width:288px;flex-shrink:0;align-self:flex-start;max-height:100%;display:flex;flex-direction:column;background:var(--mg-surface-card);border:1px solid var(--mg-border-default);border-radius:var(--mg-radius-lg);box-shadow:var(--mg-shadow-sm);overflow:hidden}
+.col-h{padding:11px 14px 12px;color:#fff}
+.col-h.amber{color:var(--mg-stage-amber-ink)}
+.col-hr{display:flex;align-items:center;gap:8px}
+.col-n{min-width:24px;font-size:12px;font-weight:700;opacity:.85}
+.col-t{flex:1;text-align:center;font-size:15px;font-weight:700}
+.col-sum{text-align:center;font-size:12px;font-weight:600;opacity:.8;margin-top:3px}
+.col-b{padding:10px;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+</style>
+</helmet>
+<div class="board">
+<div class="col">
+<div class="col-h" style="background:var(--mg-stage-teal)"><div class="col-hr"><span class="col-n">2</span><span class="col-t">Новые лиды</span><i class="pi pi-plus" style="opacity:.8;cursor:pointer"></i></div><div class="col-sum">≈ 1,2 млн ₽</div></div>
+<div class="col-b">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.KanbanCard" title="ООО «Ромашка» — внедрение CRM" amount="1 200 000 ₽" product="MACRO AI Core" owner="Иван Петров" days-in-stage="2" health="ok" task="Задача · сегодня" hint-size="100%,140px"></x-import>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.KanbanCard" title="Acme Corp — пилот" amount="640 000 ₽" owner="Анна Сидорова" days-in-stage="0" health="no-task" hint-size="100%,120px"></x-import>
+</div>
+</div>
+<div class="col">
+<div class="col-h" style="background:var(--mg-stage-pink)"><div class="col-hr"><span class="col-n">1</span><span class="col-t">Квалификация</span><i class="pi pi-plus" style="opacity:.8;cursor:pointer"></i></div><div class="col-sum">≈ 3,5 млн ₽</div></div>
+<div class="col-b">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.KanbanCard" title="ТехноПарк — MACRO AI Core" amount="3 500 000 ₽" product="MACRO AI Core" owner="Анна Сидорова" days-in-stage="5" health="ok" task="Встреча · завтра 11:00" hint-size="100%,140px"></x-import>
+</div>
+</div>
+<div class="col">
+<div class="col-h" style="background:var(--mg-stage-blue)"><div class="col-hr"><span class="col-n">1</span><span class="col-t">Назначить встречу</span><i class="pi pi-plus" style="opacity:.8;cursor:pointer"></i></div><div class="col-sum">≈ 180 тыс. ₽</div></div>
+<div class="col-b">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.KanbanCard" title="Глобус Логистик — интеграция" amount="180 000 ₽" owner="Иван Петров" days-in-stage="21" health="overdue" task="Просрочено 6 дн." rotting="true" hint-size="100%,140px"></x-import>
+</div>
+</div>
+<div class="col">
+<div class="col-h amber" style="background:var(--mg-stage-amber)"><div class="col-hr"><span class="col-n">1</span><span class="col-t">Встреча</span><i class="pi pi-plus" style="opacity:.7;cursor:pointer"></i></div><div class="col-sum">≈ 1,9 млн ₽</div></div>
+<div class="col-b">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.KanbanCard" title="СтройИнвест — комплекс" amount="1 880 000 ₽" owner="Анна Сидорова" days-in-stage="4" health="ok" task="Презентация · 24.06" hint-size="100%,140px"></x-import>
+</div>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

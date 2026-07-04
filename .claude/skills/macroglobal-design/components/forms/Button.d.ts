@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 /**
- * @startingPoint section="Forms" subtitle="Brand button — primary / secondary / danger" viewport="700x150"
  */
 export interface ButtonProps {
   children?: React.ReactNode;
@@ -28,6 +27,5 @@ export interface ButtonProps {
  * Primary action button for the MACRO Global CRM. Navy primary, outlined
  * neutral secondary, red danger. Pair with PrimeIcons for leading/trailing glyphs.
  *
- * @startingPoint section="Forms" subtitle="Brand button — primary / secondary / danger" viewport="700x150"
  */
 export function Button(props: ButtonProps): React.ReactElement;

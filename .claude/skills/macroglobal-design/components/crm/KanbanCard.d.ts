@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 /**
- * @startingPoint section="CRM" subtitle="Pipeline deal card" viewport="320x150"
  */
 export interface KanbanCardProps {
   title: string;
@@ -26,6 +25,5 @@ export interface KanbanCardProps {
 /**
  * Deal card for the sales pipeline board — title, amount, product chip, owner,
  * days-in-stage, and a health strip (ok / no-task / overdue).
- * @startingPoint section="CRM" subtitle="Pipeline deal card" viewport="320x150"
  */
 export function KanbanCard(props: KanbanCardProps): React.ReactElement;

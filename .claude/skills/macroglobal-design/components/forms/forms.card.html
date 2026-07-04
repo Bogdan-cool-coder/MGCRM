@@ -19,9 +19,11 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-  const { Button, Input, Select, Checkbox } = window.MACROGlobalCRMDesignSystem_2f42e6;
+  const { Button, Input, Select, Checkbox, Switch } = window.MACROGlobalCRMDesignSystem_2f42e6;
   function Demo() {
     const [chk, setChk] = React.useState(true);
+    const [sw, setSw] = React.useState(true);
+    const [sw2, setSw2] = React.useState(false);
     return (
       <div className="wrap">
         <div className="grp">
@@ -52,6 +54,13 @@
           <Checkbox checked={chk} label="Только мои сделки" onChange={setChk} />
           <Checkbox checked={false} label="Архивные" onChange={()=>{}} />
           <Checkbox checked disabled label="Заблокировано" />
+        </div>
+        <div className="grp">
+          <span className="cap">Switch</span>
+          <Switch on={sw} label="Уведомления" onChange={setSw} />
+          <Switch on={sw2} label="Автоназначение" onChange={setSw2} />
+          <Switch on size="sm" onChange={()=>{}} />
+          <Switch on disabled onChange={()=>{}} />
         </div>
       </div>
     );

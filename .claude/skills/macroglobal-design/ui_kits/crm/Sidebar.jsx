@@ -60,9 +60,9 @@ function Sidebar({ active, onNavigate }) {
       </nav>
       <div style={{ flexShrink: 0, borderTop: '1px solid var(--mg-sidebar-divider)', padding: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>
-          <Avatar name="MG CRM Admin" size={32} color="rgba(255,255,255,0.15)" />
+          <Avatar name="Богдан Меркулов" size={32} color="rgba(255,255,255,0.15)" />
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <div style={{ fontSize: '14px', fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>MG CRM Admin</div>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--mg-sidebar-text-active)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Богдан Меркулов</div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>Администратор</div>
           </div>
           <i className="pi pi-ellipsis-h" style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)' }} />

@@ -15,8 +15,8 @@
   /* light/dark local surface vars — brand navy header stays invariant */
   .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
     --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-tile:#e3e8f3; }
-  .surface.dark { --c-page:#272829; --c-card:#444547; --c-border:#616263; --c-border2:#54595E;
-    --c-text:#F9FAFB; --c-text2:#E3E4E6; --c-muted:#9B9C9F; --c-hover:#3a3b3d; --c-tile:#1f2f5a; }
+  .surface.dark { --c-page:#0A1426; --c-card:#12213E; --c-border:#243358; --c-border2:#2E3F6A;
+    --c-text:#E8EDF6; --c-text2:#AEBBD4; --c-muted:#7E8CA8; --c-hover:#182747; --c-tile:#1B2E52; }
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -739,6 +739,7 @@ function App() {
     '--mg-radius-sm': s[0], '--mg-radius-md': s[1], '--mg-radius-lg': s[2], '--mg-radius-xl': s[3], minHeight: '100vh', background: 'var(--c-page)' };
   if (!dark && t.mood === 'Тёплый') vars['--c-page'] = '#f4f1ec';
   if (!dark && t.mood === 'Брендовый') vars['--c-page'] = a.tile;
+  if (dark) { vars['--mg-primary-900'] = '#4C7DF0'; vars['--mg-primary-800'] = '#6E99FF'; vars['--mg-primary-light'] = '#6E99FF'; vars['--mg-primary-100'] = 'rgba(76,125,240,0.16)'; vars['--c-tile'] = '#1F3157'; }
   const Seg = ({ v, label, icon }) => {const ac = which === v;
     return <button onClick={() => setWhich(v)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px',
       fontSize: '13px', fontWeight: 600, padding: '7px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',

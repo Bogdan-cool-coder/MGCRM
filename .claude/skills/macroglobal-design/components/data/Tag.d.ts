@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 /**
- * @startingPoint section="Data" subtitle="Status & category pills" viewport="700x140"
  */
 export interface TagProps {
   children?: React.ReactNode;
@@ -17,6 +16,5 @@ export interface TagProps {
 
 /**
  * Status / category pill (PrimeVue Tag severities + CRM deal colors).
- * @startingPoint section="Data" subtitle="Status & category pills" viewport="700x140"
  */
 export function Tag(props: TagProps): React.ReactElement;

@@ -1,0 +1,538 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1320x1080" name="Redesign — Дашборд продаж" subtitle="KPI · воронка · прогноз · топ-10 · внимание" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Дашборд продаж</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
+  .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
+    --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-board:#ECEDEF; }
+  .surface.dark { --c-page:#0A1426; --c-card:#12213E; --c-border:#243358; --c-border2:#2E3F6A;
+    --c-text:#E8EDF6; --c-text2:#AEBBD4; --c-muted:#7E8CA8; --c-hover:#182747; --c-board:#0A1426; }
+  * { scrollbar-width: none; -ms-overflow-style: none; }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .g-resize { opacity: .45; transition: opacity .12s; }
+  .grid-item:hover .g-resize { opacity: .8; }
+  .g-resize:hover { opacity: 1; }
+  .g-grip { opacity: .5; transition: opacity .12s; }
+  .grid-item:hover .g-grip { opacity: .9; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+
+const { useState } = React;
+
+/* ═══════════════════════════ data (по DashboardResponse) ═══════════════════════════ */
+/* Все суммы — казахстанский тенге, формат: пробел-разделитель тысяч, ₸ после числа */
+
+const STATUS = [
+{ key: 'active', label: 'Активные', icon: 'pi-briefcase', count: 42, amount: '≈ 148 млн ₸', trend: +12, hero: true },
+{ key: 'won', label: 'Выиграно', icon: 'pi-check-circle', count: 18, amount: '≈ 96 млн ₸', trend: +8 },
+{ key: 'lost', label: 'Проиграно', icon: 'pi-times-circle', count: 7, amount: '≈ 21 млн ₸', trend: +3, badTrend: true },
+{ key: 'total', label: 'Итого', icon: 'pi-chart-line', count: 67, amount: '≈ 265 млн ₸', trend: null }];
+
+
+/* воронка — count по стадиям, конверсия в следующую, средний срок */
+const FUNNEL = [
+{ name: 'Новая', color: 'var(--mg-stage-purple)', count: 42, conv: 74, days: 2.1 },
+{ name: 'Квалификация', color: 'var(--mg-stage-blue)', count: 31, conv: 68, days: 4.4 },
+{ name: 'Презентация', color: 'var(--mg-stage-teal)', count: 21, conv: 62, days: 6.0 },
+{ name: 'Переговоры', color: 'var(--mg-stage-amber)', count: 13, conv: 55, days: 8.7 },
+{ name: 'Договор', color: 'var(--mg-stage-pink)', count: 7, conv: 71, days: 5.2 },
+{ name: 'Успешно', color: 'var(--mg-green-700)', count: 18, conv: null, days: 1.4, won: true }];
+
+
+const FORECAST = {
+  weighted: '≈ 82,4 млн ₸',
+  parts: [
+  { key: 'hot', label: 'HOT-deals', amount: '38,1 млн ₸', pct: 46, color: 'var(--mg-orange-700)', icon: 'pi-fire' },
+  { key: 'warm', label: 'Warm', amount: '29,3 млн ₸', pct: 36, color: 'var(--mg-stage-amber)', icon: 'pi-sun' },
+  { key: 'trial', label: 'Trial / Переговоры', amount: '15,0 млн ₸', pct: 18, color: 'var(--mg-stage-blue)', icon: 'pi-clock' }]
+
+};
+
+/* разбивка взвешенного прогноза по исходным валютам (приведение к базовой ₸) */
+const FORECAST_CCY = [
+{ cur: 'Тенге (KZT)',  orig: '58 200 000 ₸',  conv: '58,2 млн ₸', rate: 'базовая валюта' },
+{ cur: 'Рубль (RUB)',  orig: '12 400 000 ₽',  conv: '≈ 18,1 млн ₸', rate: '1 ₽ = 1,46 ₸' },
+{ cur: 'Доллар (USD)', orig: '13 200 $',       conv: '≈ 6,1 млн ₸',  rate: '1 $ = 463 ₸' }];
+
+
+const TOP = {
+  products: [
+  { name: 'MACRO ERP', value: '64,2 млн ₸', pct: 100 },
+  { name: 'MACRO CRM', value: '48,7 млн ₸', pct: 76 },
+  { name: 'MACRO BI', value: '31,5 млн ₸', pct: 49 },
+  { name: 'MACRO DOC', value: '22,9 млн ₸', pct: 36 },
+  { name: 'MACRO Cloud', value: '14,1 млн ₸', pct: 22 }],
+
+  managers: [
+  { name: 'Богдан Меркулов', value: '58,4 млн ₸', pct: 100 },
+  { name: 'Игорь Волков', value: '46,0 млн ₸', pct: 79 },
+  { name: 'Алина Сергеева', value: '39,8 млн ₸', pct: 68 },
+  { name: 'Дамир Ахметов', value: '27,3 млн ₸', pct: 47 },
+  { name: 'Ольга Ким', value: '18,6 млн ₸', pct: 32 }]
+
+};
+
+const NO_TASK = [
+{ title: 'CRM для сети клиник «МедПлюс»', amount: '2 100 000 ₸', stage: 'Новая', days: 11 },
+{ title: 'BI-аналитика — «Финрезерв Банк»', amount: '6 400 000 ₸', stage: 'Презентация', days: 6 },
+{ title: 'ERP — «ЭнергоПром»', amount: '7 600 000 ₸', stage: 'Переговоры', days: 16 },
+{ title: 'Учёт для «АгроТрейд»', amount: '1 300 000 ₸', stage: 'Новая', days: 4 }];
+
+
+/* ═══════════════════════════ shared bits ═══════════════════════════ */
+function TrendPill({ t, bad }) {
+  if (t == null) return <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>без сравнения</span>;
+  const up = t >= 0;
+  const good = bad ? !up : up;
+  const col = good ? 'var(--mg-green-900)' : 'var(--mg-red-700)';
+  const bg = good ? 'var(--mg-green-100)' : 'var(--mg-red-50)';
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700,
+    color: col, background: bg, borderRadius: '999px', padding: '2px 9px' }}>
+    <i className={'pi ' + (up ? 'pi-arrow-up-right' : 'pi-arrow-down-right')} style={{ fontSize: '10px' }} />
+    {Math.abs(t)}% к прошлому периоду</span>;
+}
+
+function WidgetCard({ title, right, children, pad, onDragStart }) {
+  return <section style={{ height: '100%', background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)',
+    boxShadow: 'var(--mg-shadow-sm)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <header onMouseDown={onDragStart} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', borderBottom: '1px solid var(--c-border)',
+      cursor: onDragStart ? 'move' : 'default', userSelect: 'none' }}>
+      {onDragStart && <i className="pi pi-bars g-grip" title="Перетащите, чтобы переместить" style={{ fontSize: '12px', color: 'var(--c-muted)' }} />}
+      <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--c-text)', flex: 1 }}>{title}</h2>
+      {right}
+    </header>
+    <div style={{ padding: pad || '16px 18px', flex: 1, minHeight: 0, overflow: 'auto' }}>{children}</div>
+  </section>;
+}
+
+/* ═══════════════════════════ KPI row ═══════════════════════════ */
+function KpiCard({ g, onDragStart }) {
+  const [h, setH] = useState(false);
+  const iconTone = { active: ['var(--mg-primary-100)', 'var(--mg-primary-900)'], won: ['var(--mg-green-100)', 'var(--mg-green-900)'],
+    lost: ['var(--mg-red-50)', 'var(--mg-red-700)'], total: ['var(--mg-gray-100)', 'var(--c-text2)'] }[g.key];
+  return <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onMouseDown={onDragStart}
+  style={{ position: 'relative', height: '100%', cursor: onDragStart ? 'grab' : 'pointer', userSelect: 'none', background: 'var(--c-card)', border: '1px solid ' + (g.hero ? 'var(--mg-primary-900)' : 'var(--c-border)'),
+    borderRadius: 'var(--mg-radius-lg)', padding: '16px 18px', boxShadow: h ? 'var(--mg-shadow-md)' : 'var(--mg-shadow-sm)',
+    transition: 'box-shadow .15s', overflow: 'hidden' }}
+  title={g.key === 'total' ? 'Открыть все сделки' : 'Открыть сделки: ' + g.label}>
+    {g.hero && <span style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: 'var(--mg-primary-900)' }} />}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '14px' }}>
+      <span style={{ width: 28, height: 28, borderRadius: 'var(--mg-radius-md)', background: iconTone[0], color: iconTone[1],
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <i className={'pi ' + g.icon} style={{ fontSize: '14px' }} /></span>
+      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text2)' }}>{g.label}</span>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '3px' }}>
+      <span style={{ fontSize: '30px', fontWeight: 700, color: 'var(--c-text)', lineHeight: 1, letterSpacing: '-0.01em' }}>{g.count}</span>
+      <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--mg-primary-900)', whiteSpace: 'nowrap' }}>{g.amount}</span>
+    </div>
+    <div style={{ marginTop: '10px' }}><TrendPill t={g.trend} bad={g.badTrend} /></div>
+  </div>;
+}
+
+/* ═══════════════════════════ funnel widget ═══════════════════════════ */
+function FunnelRow({ s, max }) {
+  const [h, setH] = useState(false);
+  const w = Math.max(8, Math.round(s.count / max * 100));
+  return <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  title={s.won ? 'Открыть выигранные сделки' : 'Открыть сделки на стадии «' + s.name + '»'}
+  style={{ display: 'grid', gridTemplateColumns: '150px 1fr 96px', alignItems: 'center', gap: '14px', cursor: 'pointer',
+    padding: '8px 6px', borderRadius: 'var(--mg-radius-sm)', background: h ? 'var(--c-hover)' : 'transparent', transition: 'background .12s' }}>
+    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+      <span style={{ width: 9, height: 9, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+      <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+      {s.won && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--mg-green-900)', background: 'var(--mg-green-100)', borderRadius: '4px', padding: '1px 5px' }}>WON</span>}
+    </span>
+    {/* tapered bar */}
+    <span style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+      <span style={{ flex: 1, height: 22, background: 'var(--c-hover)', borderRadius: '5px', overflow: 'hidden', position: 'relative' }}>
+        <span style={{ position: 'absolute', inset: '0 auto 0 0', width: w + '%',
+          background: 'color-mix(in srgb, ' + s.color + ' 82%, transparent)', borderRadius: '5px',
+          display: 'flex', alignItems: 'center', paddingLeft: 9 }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{s.count}</span>
+        </span>
+      </span>
+      <span style={{ width: 66, textAlign: 'right', fontSize: '12px', fontWeight: 600, color: s.conv == null ? 'var(--c-muted)' : 'var(--c-text2)', flexShrink: 0 }}>
+        {s.conv == null ? '—' : '→ ' + s.conv + '%'}</span>
+    </span>
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: '12px', color: 'var(--c-muted)' }}>
+      <i className="pi pi-clock" style={{ fontSize: '11px' }} />{s.days} дн.</span>
+  </div>;
+}
+function FunnelWidget({ pipe, onDragStart }) {
+  const max = Math.max(...FUNNEL.map((s) => s.count));
+  const overall = 43; /* новая → успешно */
+  return <WidgetCard onDragStart={onDragStart}
+  title={<span>Конверсия по стадиям <span style={{ color: 'var(--c-muted)', fontWeight: 500 }}>· «{pipe}»</span></span>}
+  right={<span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--c-text2)' }}>
+      Сквозная конверсия <strong style={{ fontSize: '14px', fontWeight: 700, color: 'var(--mg-green-900)' }}>{overall}%</strong></span>}
+  pad="10px 14px 12px">
+    <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 96px', gap: '14px', padding: '2px 6px 8px', fontSize: '11px',
+      fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase', color: 'var(--c-muted)' }}>
+      <span>Стадия</span><span>Сделок · переход дальше</span><span style={{ textAlign: 'right' }}>Срок</span>
+    </div>
+    {FUNNEL.map((s) => <FunnelRow key={s.name} s={s} max={max} />)}
+  </WidgetCard>;
+}
+
+/* ═══════════════════════════ forecast widget ═══════════════════════════ */
+function CcyPopover({ onClose }) {
+  return <div onMouseLeave={onClose} style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 40, width: 330,
+    background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 14px', borderBottom: '1px solid var(--c-border)' }}>
+      <i className="pi pi-dollar" style={{ fontSize: '13px', color: 'var(--c-muted)' }} />
+      <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>Из чего сложилась сумма</span>
+      <i className="pi pi-times" onClick={onClose} title="Закрыть" style={{ fontSize: '12px', color: 'var(--c-muted)', cursor: 'pointer', padding: '2px' }} />
+    </div>
+    <div style={{ padding: '6px 8px' }}>
+      {FORECAST_CCY.map((c) => <div key={c.cur} style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '12px', rowGap: '2px', padding: '8px 6px' }}>
+        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)' }}>{c.cur}</span>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text)', textAlign: 'right' }}>{c.conv}</span>
+        <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{c.orig}</span>
+        <span style={{ fontSize: '11px', color: 'var(--c-muted)', textAlign: 'right' }}>{c.rate}</span>
+      </div>)}
+    </div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderTop: '1px solid var(--c-border)' }}>
+      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text2)' }}>Итого в базовой валюте</span>
+      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text)' }}>{FORECAST.weighted}</span>
+    </div>
+    <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', padding: '9px 14px', background: 'var(--c-hover)', fontSize: '11px', color: 'var(--c-muted)' }}>
+      <i className="pi pi-info-circle" style={{ fontSize: '11px', marginTop: '1px', flexShrink: 0 }} />
+      <span>2 сделки без заданного курса валюты в сумму не вошли. <a href="#" onClick={(e) => e.preventDefault()} title="Открыть в разделе «Сделки»"
+        style={{ color: 'var(--mg-primary-900)', fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Показать сделки →</a></span></div>
+  </div>;
+}
+function ForecastTotal() {
+  const [open, setOpen] = useState(false);
+  return <div style={{ position: 'relative', width: 'fit-content', marginBottom: '18px' }}>
+    <span onClick={() => setOpen((o) => !o)} title="Показать разбивку по валютам"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', cursor: 'pointer', fontSize: '30px', fontWeight: 700,
+        color: 'var(--c-text)', letterSpacing: '-0.01em', borderBottom: '2px dashed var(--c-border2)', paddingBottom: '2px' }}>
+      {FORECAST.weighted}
+      <i className="pi pi-info-circle" style={{ fontSize: '13px', color: 'var(--c-muted)' }} /></span>
+    {open && <CcyPopover onClose={() => setOpen(false)} />}
+  </div>;
+}
+function ForecastWidget({ pipe, onDragStart }) {
+  return <WidgetCard onDragStart={onDragStart}
+  title={<span>Прогноз по выручке <span style={{ color: 'var(--c-muted)', fontWeight: 500 }}>· «{pipe}»</span></span>}>
+    <div style={{ marginBottom: '4px', fontSize: '12px', color: 'var(--c-muted)' }}>Взвешенный прогноз на период</div>
+    <ForecastTotal />
+    {/* stacked composition bar */}
+    <div style={{ display: 'flex', height: 12, borderRadius: '999px', overflow: 'hidden', gap: 2, marginBottom: '18px' }}>
+      {FORECAST.parts.map((p) => <span key={p.key} title={p.label} style={{ width: p.pct + '%', background: p.color }} />)}
+    </div>
+    {/* legend rows */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {FORECAST.parts.map((p) => <ForecastRow key={p.key} p={p} />)}
+    </div>
+  </WidgetCard>;
+}
+function ForecastRow({ p }) {
+  const [h, setH] = useState(false);
+  return <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  title={'Открыть сделки: ' + p.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', margin: '0 -4px',
+    borderTop: '1px solid var(--c-border)', cursor: 'pointer', background: h ? 'var(--c-hover)' : 'transparent', transition: 'background .12s' }}>
+    <span style={{ width: 24, height: 24, borderRadius: 'var(--mg-radius-sm)', background: 'color-mix(in srgb, ' + p.color + ' 15%, var(--c-card))',
+      color: p.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <i className={'pi ' + p.icon} style={{ fontSize: '12px' }} /></span>
+    <span style={{ flex: 1, fontSize: '13px', color: 'var(--c-text)' }}>{p.label}</span>
+    <span style={{ fontSize: '12px', color: 'var(--c-muted)', width: 34, textAlign: 'right' }}>{p.pct}%</span>
+    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text)', width: 96, textAlign: 'right' }}>{p.amount}</span>
+  </div>;
+}
+
+/* ═══════════════════════════ top-10 widget ═══════════════════════════ */
+function TopWidget({ onDragStart }) {
+  const [tab, setTab] = useState('products');
+  const rows = TOP[tab];
+  const seg = (v, label) => <button key={v} onClick={() => setTab(v)} style={{ border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)',
+    fontSize: '12px', fontWeight: 600, padding: '5px 12px', borderRadius: '6px', background: tab === v ? 'var(--c-card)' : 'transparent',
+    color: tab === v ? 'var(--mg-primary-900)' : 'var(--c-muted)', boxShadow: tab === v ? 'var(--mg-shadow-sm)' : 'none', transition: 'all .12s' }}>{label}</button>;
+  return <WidgetCard title="Топ-10 по выручке" onDragStart={onDragStart}
+  right={<span onMouseDown={(e) => e.stopPropagation()} style={{ display: 'inline-flex', gap: '2px', background: 'var(--mg-gray-100)', borderRadius: '8px', padding: '3px' }}>
+      {seg('products', 'Продукты')}{seg('managers', 'Менеджеры')}</span>}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+      {rows.map((r, i) => <TopRow key={r.name} r={r} i={i} />)}
+    </div>
+  </WidgetCard>;
+}
+function TopRow({ r, i }) {
+  const [h, setH] = useState(false);
+  return <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  title={'Открыть: ' + r.name} style={{ display: 'grid', gridTemplateColumns: '20px 1fr 100px', alignItems: 'center', gap: '12px',
+    padding: '6px 8px', margin: '0 -8px', borderRadius: 'var(--mg-radius-sm)', cursor: 'pointer', background: h ? 'var(--c-hover)' : 'transparent', transition: 'background .12s' }}>
+    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-muted)', textAlign: 'center' }}>{i + 1}</span>
+    <span style={{ minWidth: 0 }}>
+      <span style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span></span>
+      <span style={{ display: 'block', height: 8, background: 'var(--c-hover)', borderRadius: '999px', overflow: 'hidden' }}>
+        <span style={{ display: 'block', height: '100%', width: r.pct + '%', background: 'var(--mg-primary-900)', borderRadius: '999px' }} /></span>
+    </span>
+    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text)', textAlign: 'right' }}>{r.value}</span>
+  </div>;
+}
+
+/* ═══════════════════════════ deals without tasks (attention) ═══════════════════════════ */
+function NoTaskRow({ d }) {
+  const [h, setH] = useState(false);
+  const late = d.days >= 14;
+  return <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 6px', borderTop: '1px solid var(--c-border)',
+    background: h ? 'var(--c-hover)' : 'transparent', transition: 'background .12s', cursor: 'pointer' }}>
+    <span style={{ flex: 1, minWidth: 0 }}>
+      <span style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title}</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '12px', color: 'var(--c-muted)' }}>
+        <span style={{ fontWeight: 600, color: 'var(--c-text2)' }}>{d.amount}</span>· {d.stage}
+        <span style={{ color: late ? 'var(--mg-red-700)' : 'var(--mg-orange-900)', fontWeight: 600 }}>· {d.days} дн. без задачи</span></span>
+    </span>
+    <button style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', border: '1px solid var(--mg-primary-900)', background: h ? 'var(--mg-primary-100)' : 'transparent',
+      color: 'var(--mg-primary-900)', borderRadius: 'var(--mg-radius-md)', padding: '5px 11px', fontSize: '12px', fontWeight: 600,
+      fontFamily: 'var(--mg-font-sans)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      <i className="pi pi-plus" style={{ fontSize: '10px' }} />Задача</button>
+  </div>;
+}
+function NoTaskWidget({ onDragStart }) {
+  const count = 9;
+  const [ch, setCh] = useState(false);
+  return <WidgetCard title="Сделки без задач" onDragStart={onDragStart}
+  right={<button onMouseDown={(e) => e.stopPropagation()} onMouseEnter={() => setCh(true)} onMouseLeave={() => setCh(false)} title={'Открыть все ' + count + ' сделок без задач'}
+    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--mg-orange-900)', fontFamily: 'var(--mg-font-sans)',
+      background: ch ? 'var(--mg-orange-100)' : 'var(--mg-orange-50)', border: '1px solid ' + (ch ? 'var(--mg-orange-300)' : 'transparent'),
+      borderRadius: '999px', padding: '4px 11px', cursor: 'pointer', transition: 'all .12s' }}>
+      <i className="pi pi-exclamation-triangle" style={{ fontSize: '11px' }} />{count} требуют внимания
+      <i className="pi pi-arrow-right" style={{ fontSize: '10px' }} /></button>}
+  pad="6px 18px 14px">
+    {NO_TASK.map((d) => <NoTaskRow key={d.title} d={d} />)}
+  </WidgetCard>;
+}
+
+/* ═══════════════════════════ multi-currency warning (по meta.multi_currency_warning) ═══════════════════════════ */
+function CurrencyBanner({ mb }) {
+  const [open, setOpen] = useState(true);
+  if (!open) return null;
+  return <div style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '11px 14px', marginBottom: mb,
+    background: 'color-mix(in srgb, var(--mg-orange-700) 12%, var(--c-card))', border: '1px solid color-mix(in srgb, var(--mg-orange-700) 32%, var(--c-card))',
+    borderRadius: 'var(--mg-radius-md)' }}>
+    <i className="pi pi-info-circle" style={{ fontSize: '15px', color: 'var(--mg-orange-700)', flexShrink: 0 }} />
+    <span style={{ flex: 1, fontSize: '13px', color: 'var(--mg-orange-900)', lineHeight: 1.4 }}>
+      Часть сделок в других валютах не включена в суммы. Суммы приведены к базовой валюте (₸); сделки без курса пропущены. Добавьте курсы валют в{' '}
+      <a href="#" onClick={(e) => e.preventDefault()} style={{ color: 'var(--mg-primary-900)', fontWeight: 600, textDecoration: 'underline' }}>Каталог → Курсы валют</a>.</span>
+    <i className="pi pi-times" onClick={() => setOpen(false)} title="Скрыть" style={{ fontSize: '13px', color: 'var(--c-muted)', cursor: 'pointer', flexShrink: 0, padding: '2px' }} />
+  </div>;
+}
+
+/* ═══════════════════════════ header (title + toolbar merged) ═══════════════════════════ */
+function Header({ pipe, setPipe, edit, setEdit }) {
+  const [period, setPeriod] = useState('month');
+  const [pipeOpen, setPipeOpen] = useState(false);
+  const periods = [['month', 'Месяц'], ['quarter', 'Квартал'], ['year', 'Год']];
+  return <header style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 22px',
+    borderBottom: '1px solid var(--c-border)', background: 'var(--c-card)', flexShrink: 0, flexWrap: 'wrap' }}>
+    <span style={{ width: 38, height: 38, borderRadius: 'var(--mg-radius-md)', background: 'var(--mg-primary-100)',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <i className="pi pi-chart-bar" style={{ fontSize: '17px', color: 'var(--mg-primary-900)' }} /></span>
+    <div>
+      <h1 style={{ fontSize: '19px', fontWeight: 600, color: 'var(--c-text)', margin: 0, lineHeight: 1.1 }}>Дашборд продаж</h1>
+      <div style={{ fontSize: '12px', color: 'var(--c-muted)', marginTop: '2px' }}>Воронка «{pipe}» · текущий месяц · обновлено сегодня 09:41</div>
+    </div>
+    <span style={{ flex: 1, minWidth: 12 }} />
+    {/* period segmented */}
+    <span style={{ display: 'inline-flex', gap: '2px', background: 'var(--mg-gray-100)', borderRadius: '8px', padding: '3px' }}>
+      {periods.map(([v, l]) => <button key={v} onClick={() => setPeriod(v)} style={{ border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)',
+        fontSize: '13px', fontWeight: 600, padding: '6px 13px', borderRadius: '6px', background: period === v ? 'var(--c-card)' : 'transparent',
+        color: period === v ? 'var(--mg-primary-900)' : 'var(--c-muted)', boxShadow: period === v ? 'var(--mg-shadow-sm)' : 'none', transition: 'all .12s' }}>{l}</button>)}
+    </span>
+    {/* pipeline switch */}
+    <span style={{ position: 'relative' }}>
+      <span onClick={() => setPipeOpen((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', color: 'var(--c-text2)',
+        padding: '0 12px', height: 38, border: '1px solid ' + (pipeOpen ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-md)', cursor: 'pointer', boxSizing: 'border-box' }}>
+        <i className="pi pi-sitemap" style={{ fontSize: '13px', color: 'var(--c-muted)' }} />{pipe}
+        <i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} /></span>
+      {pipeOpen && <div onMouseLeave={() => setPipeOpen(false)} style={{ position: 'absolute', top: 44, right: 0, zIndex: 30, background: 'var(--c-card)',
+        border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px', minWidth: 200 }}>
+        {['Продажи', 'Онбординг', 'Партнёрская'].map((p) => {
+          const on = p === pipe;
+          return <button key={p} onClick={() => {setPipe(p);setPipeOpen(false);}} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+            background: on ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px',
+            fontWeight: on ? 600 : 500, color: on ? 'var(--mg-primary-900)' : 'var(--c-text)', padding: '8px 10px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left' }}>
+            <i className="pi pi-sitemap" style={{ fontSize: '13px', color: on ? 'var(--mg-primary-900)' : 'var(--c-muted)' }} />{p}
+            {on && <i className="pi pi-check" style={{ fontSize: '12px', marginLeft: 'auto' }} />}</button>;
+        })}
+      </div>}
+    </span>
+    <button onClick={() => setEdit((e) => !e)} title="Настроить расположение виджетов"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', height: 38, padding: '0 15px', borderRadius: 'var(--mg-radius-md)',
+        border: '1px solid ' + (edit ? 'var(--mg-primary-900)' : 'var(--c-border2)'), background: edit ? 'var(--mg-primary-900)' : 'transparent',
+        color: edit ? '#fff' : 'var(--c-text2)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+      <i className={'pi ' + (edit ? 'pi-check' : 'pi-pencil')} style={{ fontSize: '13px' }} />{edit ? 'Готово' : 'Редактировать'}</button>
+    <button style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', height: 38, padding: '0 15px', borderRadius: 'var(--mg-radius-md)',
+      border: '1px solid var(--c-border2)', background: 'transparent', color: 'var(--c-text2)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+      <i className="pi pi-download" style={{ fontSize: '13px' }} />Экспорт Excel</button>
+  </header>;
+}
+
+/* ═══════════════════════════ grid layout (перетаскивание / размер / раскладка) ═══════════════════════════ */
+const GRID_COLS = 12, GRID_RH = 20, GRID_GAP = 14;
+const DEFAULT_LAYOUT = [
+{ i: 'kpi-active', x: 0, y: 0, w: 3, h: 5 },
+{ i: 'kpi-won', x: 3, y: 0, w: 3, h: 5 },
+{ i: 'kpi-lost', x: 6, y: 0, w: 3, h: 5 },
+{ i: 'kpi-total', x: 9, y: 0, w: 3, h: 5 },
+{ i: 'funnel', x: 0, y: 5, w: 7, h: 12 },
+{ i: 'forecast', x: 7, y: 5, w: 5, h: 12 },
+{ i: 'top', x: 0, y: 17, w: 7, h: 10 },
+{ i: 'notask', x: 7, y: 17, w: 5, h: 10 }];
+
+const LS_KEY = 'mg-dash-layout-v2';
+function loadLayout() {
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p) && p.length === DEFAULT_LAYOUT.length) return p; } } catch (e) {}
+  return DEFAULT_LAYOUT.map((l) => ({ ...l }));
+}
+function collides(a, b) { return a.i !== b.i && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+function compact(layout, activeId) {
+  const sorted = [...layout].sort((a, b) => a.i === activeId ? -1 : b.i === activeId ? 1 : a.y - b.y || a.x - b.x);
+  const placed = [];
+  for (let item of sorted) {
+    item = { ...item, y: Math.max(0, item.y) };
+    if (item.i !== activeId) {
+      while (item.y > 0 && !placed.some((p) => collides({ ...item, y: item.y - 1 }, p))) item.y--;
+    }
+    let guard = 0;
+    while (placed.some((p) => collides(item, p)) && guard < 500) { item.y++; guard++; }
+    placed.push(item);
+  }
+  return placed;
+}
+function GridLayout({ items, layout, setLayout, edit }) {
+  const ref = React.useRef(null);
+  const [cw, setCw] = useState(1200);
+  const [active, setActive] = useState(null);
+  React.useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const upd = () => setCw(el.clientWidth);
+    upd();
+    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', upd); return () => window.removeEventListener('resize', upd); }
+    const ro = new ResizeObserver(upd); ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const colW = (cw - (GRID_COLS - 1) * GRID_GAP) / GRID_COLS;
+  const unit = GRID_RH + GRID_GAP;
+  const boxOf = (it) => ({ left: it.x * (colW + GRID_GAP), top: it.y * unit,
+    width: it.w * colW + (it.w - 1) * GRID_GAP, height: it.h * GRID_RH + (it.h - 1) * GRID_GAP });
+  const maxRows = layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
+
+  const startDrag = (e, id) => {
+    if (e.button !== 0) return;
+    const it0 = layout.find((l) => l.i === id); if (!it0) return;
+    const mx = e.clientX, my = e.clientY; let moved = false;
+    const move = (ev) => {
+      const dx = ev.clientX - mx, dy = ev.clientY - my;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      if (!moved) { moved = true; setActive(id); document.body.style.userSelect = 'none'; }
+      const nx = Math.max(0, Math.min(GRID_COLS - it0.w, it0.x + Math.round(dx / (colW + GRID_GAP))));
+      const ny = Math.max(0, it0.y + Math.round(dy / unit));
+      setLayout((cur) => compact(cur.map((l) => l.i === id ? { ...l, x: nx, y: ny } : l), id));
+    };
+    const up = () => { setActive(null); document.body.style.userSelect = ''; window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  };
+  const startResize = (e, id) => {
+    e.stopPropagation(); e.preventDefault();
+    const it0 = layout.find((l) => l.i === id); if (!it0) return;
+    const mx = e.clientX, my = e.clientY;
+    setActive(id); document.body.style.userSelect = 'none';
+    const move = (ev) => {
+      const dx = ev.clientX - mx, dy = ev.clientY - my;
+      const nw = Math.max(3, Math.min(GRID_COLS - it0.x, it0.w + Math.round(dx / (colW + GRID_GAP))));
+      const nh = Math.max(4, it0.h + Math.round(dy / unit));
+      setLayout((cur) => compact(cur.map((l) => l.i === id ? { ...l, w: nw, h: nh } : l), id));
+    };
+    const up = () => { setActive(null); document.body.style.userSelect = ''; window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  };
+
+  return <div ref={ref} style={{ position: 'relative', width: '100%', height: Math.max(0, maxRows * unit - GRID_GAP) }}>
+    {layout.map((it) => {
+      const b = boxOf(it); const on = active === it.i;
+      return <div key={it.i} className="grid-item" style={{ position: 'absolute', left: b.left, top: b.top, width: b.width, height: b.height,
+        zIndex: on ? 20 : 1, transition: on ? 'none' : 'left .16s ease, top .16s ease, width .16s ease, height .16s ease' }}>
+        {items[it.i](edit ? (e) => startDrag(e, it.i) : null)}
+        {edit && <div className="g-resize" onMouseDown={(e) => startResize(e, it.i)} title="Потяните, чтобы изменить размер"
+          style={{ position: 'absolute', right: 4, bottom: 4, width: 16, height: 16, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
+            cursor: 'nwse-resize', color: 'var(--c-muted)' }}>
+          <i className="pi pi-angle-double-down" style={{ fontSize: '12px', transform: 'rotate(-45deg)' }} /></div>}
+      </div>;
+    })}
+  </div>;
+}
+
+/* ═══════════════════════════ app ═══════════════════════════ */
+const TWEAK_DEFAULTS = { accent: '#172747', dark: false, density: 'Обычная' };
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const dark = t.dark;
+  const ACC = { '#172747': '#1f2f5a', '#2b2f36': '#3a3f47', '#312e81': '#3f3a9e', '#0f4d3a': '#13654c' };
+  const accent = dark ? '#4C7DF0' : t.accent;
+  const accentHover = dark ? '#6E99FF' : ACC[t.accent] || '#1f2f5a';
+  const cozy = t.density === 'Просторная';
+  const pad = cozy ? '22px 26px' : '18px 22px';
+  const [pipe, setPipe] = useState('Продажи');
+  const [edit, setEdit] = useState(false);
+  const [layout, setLayout] = useState(loadLayout);
+  React.useEffect(() => { try { localStorage.setItem(LS_KEY, JSON.stringify(layout)); } catch (e) {} }, [layout]);
+  const items = {
+    'kpi-active': (h) => <KpiCard g={STATUS[0]} onDragStart={h} />,
+    'kpi-won': (h) => <KpiCard g={STATUS[1]} onDragStart={h} />,
+    'kpi-lost': (h) => <KpiCard g={STATUS[2]} onDragStart={h} />,
+    'kpi-total': (h) => <KpiCard g={STATUS[3]} onDragStart={h} />,
+    'funnel': (h) => <FunnelWidget pipe={pipe} onDragStart={h} />,
+    'forecast': (h) => <ForecastWidget pipe={pipe} onDragStart={h} />,
+    'top': (h) => <TopWidget onDragStart={h} />,
+    'notask': (h) => <NoTaskWidget onDragStart={h} /> };
+
+  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': accentHover,
+    height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--c-board)' }}>
+    <Header pipe={pipe} setPipe={setPipe} edit={edit} setEdit={setEdit} />
+    <div style={{ flex: 1, overflowY: 'auto', padding: pad, minHeight: 0 }}>
+      <CurrencyBanner mb={14} />
+      {edit && <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', marginBottom: '14px',
+        background: 'var(--mg-primary-100)', border: '1px solid color-mix(in srgb, var(--mg-primary-900) 30%, var(--c-card))', borderRadius: 'var(--mg-radius-md)' }}>
+        <i className="pi pi-arrows-alt" style={{ fontSize: '14px', color: 'var(--mg-primary-900)', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '13px', color: 'var(--mg-primary-900)' }}>Режим редактирования: перетаскивайте виджеты за шапку, меняйте размер за угол.</span>
+        <button onClick={() => setLayout(DEFAULT_LAYOUT.map((l) => ({ ...l })))} style={{ border: 'none', background: 'transparent', color: 'var(--mg-primary-900)',
+          fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+          <i className="pi pi-refresh" style={{ fontSize: '11px' }} />Сбросить</button>
+      </div>}
+      <GridLayout items={items} layout={layout} setLayout={setLayout} edit={edit} />
+    </div>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Бренд" />
+      <TweakColor label="Акцент" value={t.accent} options={['#172747', '#2b2f36', '#312e81', '#0f4d3a']} onChange={(v) => setTweak('accent', v)} />
+      <TweakSection label="Полотно" />
+      <TweakToggle label="Тёмная тема" value={t.dark} onChange={(v) => setTweak('dark', v)} />
+      <TweakRadio label="Плотность" value={t.density} options={['Обычная', 'Просторная']} onChange={(v) => setTweak('density', v)} />
+      <TweakSection label="Раскладка" />
+      <TweakButton label="Сбросить раскладку" secondary onClick={() => setLayout(DEFAULT_LAYOUT.map((l) => ({ ...l })))} />
+    </TweaksPanel>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

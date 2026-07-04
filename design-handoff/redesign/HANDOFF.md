@@ -213,6 +213,26 @@
   (2) `DS_STAGE_PALETTE` — 5 сырых hex продублированы литералами в JS (1:1 совпадают с `$stage-color-*`,
   но дрейф-риск от `_colors.scss`).
 
+### Обновление 2026-07-04 — DS2 (вторая генерация)
+- **3 новых мокапа** в `design-handoff/redesign/`: `manager-cabinet.html` — кабинет менеджера v2;
+  `dashboard.html` — виджет-сетка дашборда; `mail.html` — редизайн Inbox (почта).
+- **Navy-dark обновление 6 общих эталонов** (перезаписаны той же генерацией):
+  `contacts.html`, `deal-card.html`, `entity-card.html`, `sales-funnel.html`, `tasks.html`,
+  `pipeline.html`.
+- **Токены:** новый файл `tokens/surface.css` (слой поверхностей) + дельты в `tokens/colors.css`
+  (`--mg-orange-600` light/dark, фикс `--mg-pink-300`) и `tokens/dark.css` (`--mg-stage-amber-ink`);
+  `styles.css` обновлён (импорт `surface.css`). Зеркально обновлён skill
+  `.claude/skills/macroglobal-design/` (те же tokens/styles + манифест/бандл).
+- **Skill-компоненты:** 9 обновлённых + **18 новых** jsx+d.ts (AvatarGroup, DataTable,
+  NotificationBadge, StatCard, Stepper, EmptyState, Skeleton, Toast, Switch, PageHeader,
+  Pagination, SegmentedControl, Tabs, CommandPalette, Dialog, Menu, Tooltip, Tree) + card-витрины;
+  новая директория `templates/` (5 шаблонов: crm-shell, crm-page, data-table-page, kanban-board,
+  settings). UI-kit `ui_kits/crm/` сведён к `index.html` + `Sidebar.jsx` (iframe-ссылки ведут на
+  мокапы `design-handoff/redesign/` — без дублирования); retired Shell/DealsView/ContactsView/TasksView удалены.
+- **Статус:** мокапы приняты; кабинет — в реализации (Э10), dashboard (Э11) и mail (Э12) — в очереди.
+- **ВАЖНО:** литералы navy в мокапах DS2 (`#12213E`/`#243358`/`#E8EDF6`) — **reference-only**;
+  runtime-значения темы (`#111E38`/`#27395C`/`#EAF0FA` из `front/src/theme`) — **закон**.
+
 ## Analytics-hub (`analytics-hub-tz.md`) — СПРИНТ ЗАВЕРШЁН (Ф1–Ф5 DONE, reviewer PASS 2026-07-04)
 - **Итог спринта «Планы и отчёты»:** все report-табы теперь живые (не стабы `TabComingSoon`): «Планы» (P-1 матрица + 4 метрики: НП/Поступления-по-линейкам/Задачи/Конверсии), «Реестр+Дожим» (R1), «График НП» (R2), «Рейтинг» (R3), + R4 «Закрытие задач» / R5 «Конверсии» / R6 «Поступления по линейкам». Ф5 добавил R6 + **Excel-экспорт всех отчётов** (кнопка «Экспорт в Excel» на report-табах + «Планы»; 7 export-роутов, blob-download через `@/utils/download`). Полный статус фаз + as-built — контракт `docs/contracts/plan-targets-api-contract.md` §9 и `PLAN.md` (строка «Планы и отчёты»). Следующее по контуру: Ф6 МК-линк, Ф7 payment-fact (post-Finance). `type-check`+`lint:ds`+3944 PHPUnit зелёные, QA e2e PASS.
 - **Dark-nit из Ф1-снапшота ниже — статус:** мёртвый `.app-dark &`-внутри-`:deep()` в `plans/PlanMatrix.vue` был отдельным треком; при финальном ревью Ф5 новый код (`MetricProductIncome.vue`) закон dark-селекторов соблюдает (top-level `.app-dark &`). Если исходный nit ещё в дереве — остаётся на frontender (не блок Ф5).

@@ -1,0 +1,23 @@
+/* ===========================================================================
+   MACRO Global — Page surface bridge (--c-*)
+   Short, page-level aliases used by full-screen work surfaces (Deals, Contacts,
+   Tasks, Settings…) for the neutral chrome around DS components: page/board
+   background, card, borders, text tiers, hover. DS *components* speak --mg-*;
+   these --c-* names are the thin page layer so a new screen never re-declares
+   its own palette. Light values live here; the dark overrides live in dark.css
+   (.surface.dark / [data-theme="dark"] / .mg-dark).
+   =========================================================================== */
+
+:root,
+.surface {
+  --c-page:    #F1F2F3;  /* app / page background */
+  --c-board:   #ECEDEF;  /* kanban board backdrop (a touch darker than page) */
+  --c-card:    #FFFFFF;  /* card / column / panel surface */
+  --c-border:  #E3E4E6;  /* hairline separators */
+  --c-border2: #D5D6D8;  /* stronger control borders (inputs, outlined buttons) */
+  --c-text:    #272829;  /* primary text */
+  --c-text2:   #616263;  /* secondary text */
+  --c-muted:   #7E7F82;  /* muted / meta text */
+  --c-muted2:  #EDEEF0;  /* muted fill (subtle chips, empty rows) */
+  --c-hover:   #F9FAFB;  /* row / control hover */
+}

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="CRM Shell" description="Каркас приложения: левое меню (свёртка, уведомления, профиль) + шапка модуля + рабочая область" -->
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+<script src="./ds-base.js"></script>
+<style>
+.shell{display:flex;height:100vh;overflow:hidden;background:var(--mg-surface-page);font-family:var(--mg-font-sans)}
+.sb{width:240px;flex-shrink:0;background:var(--mg-sidebar-bg);display:flex;flex-direction:column}
+.sb-logo{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;border-bottom:1px solid var(--mg-sidebar-divider)}
+.sb-logo .wm{display:flex;flex-direction:column;line-height:1}
+.sb-logo .wm b{color:#fff;font-weight:800;font-size:17px;letter-spacing:.4px}
+.sb-logo .wm small{color:var(--mg-sidebar-text);font-weight:500;font-size:9px;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+.collapse{width:26px;height:26px;flex-shrink:0;border-radius:50%;border:1px solid var(--mg-sidebar-divider);background:transparent;color:var(--mg-sidebar-text);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.collapse:hover{background:var(--mg-sidebar-active-bg);color:#fff}
+.nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--mg-radius-md);color:var(--mg-sidebar-text);text-decoration:none;font-size:14px;position:relative}
+.nav a.on{background:var(--mg-sidebar-active-bg);color:var(--mg-sidebar-text-active)}
+.nav a.on::before{content:"";position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--mg-sidebar-active-bar)}
+.nav i{font-size:16px;width:18px}
+.nav a span.lbl{flex:1}
+.bdg{min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.bdg.warn{background:var(--mg-orange-600)}
+.bdg.dng{background:var(--mg-danger)}
+.eye{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mg-sidebar-text);opacity:.5;padding:14px 12px 6px}
+.notif{display:flex;align-items:center;gap:11px;margin:0 8px;padding:10px 12px;border-radius:var(--mg-radius-md);color:var(--mg-sidebar-text);font-size:14px;cursor:pointer}
+.notif:hover{background:var(--mg-sidebar-active-bg)}
+.notif i{font-size:16px;width:18px}
+.notif .lbl{flex:1}
+.acct{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--mg-sidebar-divider);cursor:pointer}
+.acct:hover{background:var(--mg-sidebar-active-bg)}
+.acct .av{width:32px;height:32px;flex-shrink:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.acct .txt{flex:1;min-width:0}
+.acct .nm{color:#fff;font-size:13px;font-weight:500;line-height:1.3;white-space:nowrap}
+.acct .rl{color:var(--mg-sidebar-text);font-size:12px;line-height:1.3;white-space:nowrap}
+.acct .more{color:var(--mg-sidebar-text);font-size:14px;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 24px;background:var(--mg-surface-card);border-bottom:1px solid var(--mg-border-default)}
+.ph-l{display:flex;align-items:center;gap:12px}
+.ph-ic{font-size:20px;color:var(--mg-primary-900)}
+.ph-t{margin:0;font-size:20px;font-weight:600;color:var(--mg-text-primary)}
+.ph-s{margin:2px 0 0;font-size:14px;color:var(--mg-text-muted)}
+.content{flex:1;overflow:auto;padding:24px}
+</style>
+</helmet>
+<div class="shell">
+<aside class="sb">
+<div class="sb-logo"><span class="wm"><b>MACRO</b><small>Global Technologies</small></span><button class="collapse"><i class="pi pi-angle-left"></i></button></div>
+<nav class="nav">
+<a href="#"><i class="pi pi-home"></i><span class="lbl">Дашборд</span></a>
+<a href="#"><i class="pi pi-users"></i><span class="lbl">Контакты</span></a>
+<a href="#" class="on"><i class="pi pi-briefcase"></i><span class="lbl">Сделки</span></a>
+<a href="#"><i class="pi pi-check-square"></i><span class="lbl">Задачи</span><span class="bdg warn">20</span></a>
+<a href="#"><i class="pi pi-id-card"></i><span class="lbl">Кабинет менеджера</span></a>
+<a href="#"><i class="pi pi-inbox"></i><span class="lbl">Входящие</span><span class="bdg dng">3</span></a>
+<div class="eye">Онбординг</div>
+<a href="#"><i class="pi pi-graduation-cap"></i><span class="lbl">Курсы (HR)</span></a>
+<a href="#"><i class="pi pi-users"></i><span class="lbl">Назначения</span></a>
+<a href="#"><i class="pi pi-chart-bar"></i><span class="lbl">Прогресс</span></a>
+</nav>
+<div class="notif"><i class="pi pi-bell"></i><span class="lbl">Уведомления</span><span class="bdg dng">1</span></div>
+<div class="acct"><span class="av">БЯ</span><div class="txt"><div class="nm">Богдан Ядыкин</div><div class="rl">Администратор</div></div><i class="pi pi-ellipsis-h more"></i></div>
+</aside>
+<div class="main">
+<header class="ph">
+<div class="ph-l"><i class="pi pi-briefcase ph-ic"></i><div><h1 class="ph-t">Сделки</h1><p class="ph-s">Воронка продаж · 6 сделок · ≈ 6,8 млн ₽</p></div></div>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="primary" icon="pi-plus" hint-size="150px,38px">Создать сделку</x-import>
+</header>
+<div class="content">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.EmptyState" icon="pi-briefcase" title="Рабочая область" description="Замените этот блок содержимым экрана — доской, таблицей или карточкой." hint-size="100%,240px"></x-import>
+</div>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

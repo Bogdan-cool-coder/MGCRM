@@ -6,7 +6,7 @@ import React from 'react';
  * danger red variant — matches the sidebar nav badges.
  */
 export function Badge({ value, variant = 'warning', dot = false, style }) {
-  const bg = variant === 'danger' ? 'var(--mg-danger)' : variant === 'primary' ? 'var(--mg-primary-900)' : '#E8821E';
+  const bg = variant === 'danger' ? 'var(--mg-danger)' : variant === 'primary' ? 'var(--mg-primary-900)' : 'var(--mg-orange-600)';
   if (dot) {
     return <span style={{ width: 7, height: 7, borderRadius: '50%', background: bg, display: 'inline-block', ...style }} />;
   }

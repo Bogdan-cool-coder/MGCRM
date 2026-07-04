@@ -18,7 +18,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-  const { Tabs, SegmentedControl, Pagination } = window.MACROGlobalCRMDesignSystem_2f42e6;
+  const { Tabs, SegmentedControl, Pagination, PageHeader, Button } = window.MACROGlobalCRMDesignSystem_2f42e6;
   function Demo() {
     const [tab, setTab] = React.useState('fields');
     const [view, setView] = React.useState('kanban');
@@ -26,6 +26,13 @@
     const [page, setPage] = React.useState(3);
     return (
       <div className="wrap">
+        <div>
+          <div className="cap">PageHeader</div>
+          <div style={{border:'1px solid var(--mg-border-default)',borderRadius:'var(--mg-radius-lg)',overflow:'hidden'}}>
+            <PageHeader icon="pi-briefcase" title="Сделки" subtitle="248 активных · 12 воронок"
+              actions={<><Button variant="secondary" outlined icon="pi-search">Поиск и фильтр</Button><Button variant="primary" icon="pi-plus">Создать</Button></>} />
+          </div>
+        </div>
         <div>
           <div className="cap">Tabs</div>
           <Tabs value={tab} onChange={setTab} items={[{key:'fields',label:'Поля'},{key:'steps',label:'Шаги сделки',count:4},{key:'chart',label:'График'},{key:'docs',label:'Документы',count:2}]} />

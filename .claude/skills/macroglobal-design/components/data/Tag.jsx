@@ -16,7 +16,16 @@ export function Tag({ children, severity = 'secondary', icon, size = 'md', solid
     secondary: ['var(--mg-gray-200)', 'var(--mg-gray-800)'],
   };
   let [bg, color] = map[severity] || map.secondary;
-  if (solid) { color = '#fff'; bg = `var(--mg-${severity === 'warn' ? 'warning' : severity === 'secondary' ? 'gray-600' : severity})`; }
+  if (solid) {
+    color = '#fff';
+    const solidBg = {
+      success: 'var(--mg-green-700)', danger: 'var(--mg-red-600)',
+      warning: 'var(--mg-orange-700)', warn: 'var(--mg-orange-700)',
+      info: 'var(--mg-blue-700)', primary: 'var(--mg-primary-900)',
+      secondary: 'var(--mg-gray-600)',
+    };
+    bg = solidBg[severity] || solidBg.secondary;
+  }
   const sizes = { sm: ['11px', '1px 6px'], md: ['12px', '2px 8px'], lg: ['13px', '3px 10px'] };
   const [fs, pad] = sizes[size] || sizes.md;
   return (

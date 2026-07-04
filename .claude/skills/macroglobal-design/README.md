@@ -77,10 +77,13 @@ brand-correct and consistent — but visually conservative (see the assessment b
   Gray-100 `#F1F2F3`; cards are pure white `#FFFFFF`; text is Gray-900 / 700 / 600.
 - **Status** colors are pastel solids from the brandbook — Success `#A7EFAA`, Danger
   `#FF5A44`, Warning `#FFB38A`, Info `#8DD9FF` — used as **soft-tinted pills** (light bg +
-  dark text), almost never as saturated fills.
+  dark text), almost never as saturated fills. Two exceptions carry white text and therefore
+  step to a darker tone: **count / notification badges** use the strong warning token
+  `--mg-orange-600` `#E8821E` (the spec's `$color-warning-badge`), and **solid pills**
+  (`Tag solid`) use the `-600/-700` step of their hue — never white-on-pastel.
 - **Pipeline stages** use a separate vivid palette (teal / blue / amber / pink / purple) for
-  kanban column headers only — full-color header fill with white text (amber gets dark text
-  for contrast).
+  kanban column headers only — full-color header fill with white text, exposed as
+  `--mg-stage-*` tokens (amber gets `--mg-stage-amber-ink` `#6B4A00` dark text for contrast).
 
 ### Type
 - **SF UI Display** is the brand typeface (brandbook §03). It is **not webfont-licensed**, so
@@ -158,8 +161,10 @@ brand-correct and consistent — but visually conservative (see the assessment b
 ## Professional assessment — Deals, Contacts, Tasks (what reads dated in 2026)
 
 > The user asked for a candid critique of where the current UI looks weak. This is an honest,
-> brand-respecting read of the three core pages. None of it is applied to the UI kit (which
-> faithfully recreates *today's* product) — it is the agenda for the next iteration.
+> brand-respecting read of the three core pages. It is **not** applied to `ui_kits/crm/`
+> (which faithfully recreates *today's* product) — it is the agenda that has since been
+> **realized in `redesign/` (the etalon above)**. Keep this section as the rationale; build
+> against `redesign/`.
 
 **Cross-cutting**
 1. **Sparse, low-density canvas.** Acres of empty Gray-100 on Deals/Contacts. A single-record
@@ -200,6 +205,10 @@ status treatment — all **within** the existing navy/white/14px brand, not a re
 - `styles.css` — the entry point consumers link (import-only).
 - `tokens/colors.css` · `typography.css` · `spacing.css` · `semantic.css` · `fonts.css` —
   all `--mg-*` custom properties + the Inter/Roboto webfont imports.
+- `tokens/surface.css` — **page surface bridge** (`--c-page/board/card/border/border2/text/text2/muted/muted2/hover`):
+  short neutral aliases full-screen work surfaces use for the chrome *around* DS components.
+  Components speak `--mg-*`; a new page never re-declares its own palette. Light values live
+  here (`:root, .surface`); dark overrides live in `tokens/dark.css`.
 - `tokens/dark.css` — **navy dark theme** (ported from MACROSALES 2.0). Opt-in via
   `data-theme="dark"` / `.mg-dark`; remaps every semantic role token + the `--c-*` page
   bridge. Bright accent `#4C7DF0`, soft-tint statuses, darkened navy sidebar.
@@ -219,27 +228,42 @@ status treatment — all **within** the existing navy/white/14px brand, not a re
 
 **Templates** (`templates/<slug>/`) — copyable starting points (Templates group in the picker)
 - `crm-shell/` — full app frame: navy sidebar + topbar + page header + work area.
-- `kanban-board/` — pipeline board with stage columns + KanbanCards.
+- `kanban-board/` — pipeline board with stage columns (`--mg-stage-*` tokens) + KanbanCards.
 - `data-table-page/` — list screen: KPI tiles + filter bar + DataTable + Pagination.
+- `settings/` — master-detail settings shell: 7 sections, light + dark, search, modals.
+- `crm-page/` — **blank new-page starter**: navy sidebar + PageHeader + work area, already
+  wired to the library — drop in DS components instead of hand-building. Start here for any new screen.
 - Each is a `.dc.html` that loads the system via a sibling `ds-base.js` and mounts components
   with `<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.*">`.
 - `assets/` — `macroglobal-logo-primary-light.svg` (primary wordmark),
   `macroglobal-logo.svg`, `oldcrm-logo-primary.svg`.
 
 **Components** (`components/`) — React primitives, `window.MACROGlobalCRMDesignSystem_2f42e6.*`
-- `forms/` — **Button**, **Input**, **Select**, **Checkbox**
+- `forms/` — **Button**, **Input**, **Select**, **Checkbox**, **Switch**
 - `data/` — **Tag**, **Badge**, **Avatar**, **AvatarGroup**, **NotificationBadge**, **Card**, **DataTable**, **StatCard**
 - `crm/` — **KanbanCard** (pipeline deal card), **Stepper** (deal stages / approval route)
 - `feedback/` — **Toast**, **Skeleton**, **EmptyState**
 - `overlay/` — **CommandPalette** (Cmd+K), **Tree**, **Menu** (dropdown/context), **Tooltip**, **Dialog**
-- `nav/` — **Tabs**, **SegmentedControl**, **Pagination**
+- `nav/` — **Tabs**, **SegmentedControl**, **Pagination**, **PageHeader**
 - Each has a `.d.ts` (props), and every group has a `*.card.html` specimen.
 
-**UI kit** (`ui_kits/crm/`) — faithful, interactive recreation of the product
-- `index.html` — full app shell; click **Контакты / Сделки / Мои задачи** in the sidebar to
-  switch surfaces; toggle Канбан/Список in the header.
-- `Sidebar.jsx`, `Shell.jsx` (TopBar + PageHeader + ViewSwitch), `DealsView.jsx`,
-  `ContactsView.jsx`, `TasksView.jsx`.
+**UI kit** (`ui_kits/crm/`) — full app shell that **reuses the current redesign surfaces**
+- `index.html` — brand-invariant navy sidebar + work area; the sidebar switches
+  **Сделки / Контакты / Мои задачи**, each rendered by embedding the live redesign
+  prototype (`redesign/sales-funnel.html`, `contacts.html`, `tasks.html`) — single source
+  of truth, no duplicated view code. There is **no top menu bar** (the product has none);
+  every surface carries its own one-line toolbar.
+- `Sidebar.jsx` — the navy sidebar (the only view code left here; the old
+  `Shell.jsx`/`DealsView`/`ContactsView`/`TasksView` were retired in favour of reusing the
+  redesign pages).
+
+**Redesign etalon** (`redesign/`) — the *modernized* reference the next iteration is built to
+- Hi-fi prototypes of the core surfaces — `deal-card.html`, `pipeline.html`,
+  `sales-funnel.html`, `contacts.html`, `tasks.html`, `dashboard.html`, `settings.html`,
+  `manager-cabinet.html`, `entity-card.html`, `mail.html` — plus per-surface visual specs
+  (`*-spec.md`) and `HANDOFF.md`. These realize the modernization agenda below (denser
+  layout, richer rows, board KPIs, higher-contrast status) **within** the navy/white/14px
+  brand. When building new MACRO work, match these, not the older UI kit.
 
 **Other**
 - `SKILL.md` — Agent-Skill manifest for using this system in Claude Code.

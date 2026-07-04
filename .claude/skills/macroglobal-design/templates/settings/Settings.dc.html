@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Settings" description="Двухпанельный экран настроек: список секций по группам + детальная панель с под-вкладками профиля" -->
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+<script src="./ds-base.js"></script>
+<style>
+.mod{height:100vh;display:flex;flex-direction:column;background:var(--mg-surface-page);font-family:var(--mg-font-sans)}
+.mh{display:flex;align-items:center;gap:12px;padding:16px 24px;background:var(--mg-surface-card);border-bottom:1px solid var(--mg-border-default)}
+.mh i{font-size:20px;color:var(--mg-primary-900)}
+.mh h1{margin:0;font-size:20px;font-weight:600;color:var(--mg-text-primary)}
+.body{flex:1;display:flex;min-height:0}
+.sset{width:250px;flex-shrink:0;overflow-y:auto;background:var(--mg-surface-card);border-inline-end:1px solid var(--mg-border-default);padding:10px 0}
+.grp{margin-bottom:6px}
+.grp-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mg-text-muted);padding:14px 16px 6px;margin:0}
+.si{display:flex;align-items:center;gap:11px;width:calc(100% - 16px);margin:2px 8px;padding:8px 12px;border:none;background:transparent;border-radius:var(--mg-radius-md);color:var(--mg-text-secondary);font:500 13px var(--mg-font-sans);cursor:pointer;text-align:start}
+.si:hover{background:var(--mg-surface-hover);color:var(--mg-text-primary)}
+.si.on{background:var(--mg-primary-100);color:var(--mg-primary-900);font-weight:600;box-shadow:inset 3px 0 0 var(--mg-primary-900)}
+.si i.ic{font-size:14px;opacity:.75;width:16px}
+.si .l{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si .ext{font-size:11px;opacity:.5}
+.detail{flex:1;overflow-y:auto;background:var(--mg-surface-muted);padding:24px}
+.dwrap{max-width:640px}
+.dh{font-size:18px;font-weight:600;color:var(--mg-text-primary);margin:0 0 4px}
+.dsub{font-size:13px;color:var(--mg-text-muted);margin:0 0 18px}
+.card{background:var(--mg-surface-card);border:1px solid var(--mg-border-default);border-radius:var(--mg-radius-lg);box-shadow:var(--mg-shadow-sm);padding:22px 24px;margin-top:16px}
+.ptop{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+.pmeta{flex:1}
+.pnm{font-size:16px;font-weight:600;color:var(--mg-text-primary)}
+.pemail{font-size:13px;color:var(--mg-text-muted);margin-top:2px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--mg-text-secondary);margin-bottom:7px}
+.inp{width:100%;height:var(--mg-control-h);padding:0 12px;border:1px solid var(--mg-input-border);border-radius:var(--mg-radius-md);background:var(--mg-input-bg);color:var(--mg-input-text);font:400 14px var(--mg-font-sans);box-sizing:border-box}
+.inp:focus{outline:none;border-color:var(--mg-input-focus-border);box-shadow:var(--mg-focus-ring)}
+.inp:disabled{background:var(--mg-input-disabled-bg);color:var(--mg-text-muted)}
+.row{display:flex;gap:14px}
+.row>*{flex:1}
+.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--mg-border-default)}
+.soon{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:48px 20px;color:var(--mg-text-muted)}
+.soon i{font-size:30px}
+</style>
+</helmet>
+<div class="mod">
+<header class="mh"><i class="pi pi-cog"></i><h1>Настройки</h1></header>
+<div class="body">
+<nav class="sset">
+<div class="grp"><p class="grp-l">Аккаунт</p>
+<button class="si on"><i class="pi pi-user ic"></i><span class="l">Профиль</span></button>
+</div>
+<div class="grp"><p class="grp-l">Интеграции</p>
+<button class="si"><i class="pi pi-share-alt ic"></i><span class="l">Каналы связи</span></button>
+</div>
+<div class="grp"><p class="grp-l">Справочники</p>
+<button class="si"><i class="pi pi-globe ic"></i><span class="l">Страны</span></button>
+<button class="si"><i class="pi pi-tags ic"></i><span class="l">Теги</span></button>
+<button class="si"><i class="pi pi-megaphone ic"></i><span class="l">Каналы привлечения</span></button>
+<button class="si"><i class="pi pi-ban ic"></i><span class="l">Причины отключения</span></button>
+<button class="si"><i class="pi pi-box ic"></i><span class="l">Каталог</span></button>
+<button class="si"><i class="pi pi-dollar ic"></i><span class="l">Курсы валют</span></button>
+<button class="si"><i class="pi pi-sliders-h ic"></i><span class="l">Настройки воронки</span><i class="pi pi-external-link ext"></i></button>
+<button class="si"><i class="pi pi-file-edit ic"></i><span class="l">Шаблоны документов</span></button>
+<button class="si"><i class="pi pi-list ic"></i><span class="l">Каталог меток</span></button>
+<button class="si"><i class="pi pi-sitemap ic"></i><span class="l">Маршруты согласования</span></button>
+<button class="si"><i class="pi pi-envelope ic"></i><span class="l">Рассылки</span></button>
+</div>
+<div class="grp"><p class="grp-l">Система</p>
+<button class="si"><i class="pi pi-users ic"></i><span class="l">Пользователи</span></button>
+<button class="si"><i class="pi pi-shield ic"></i><span class="l">Доступ и оргструктура</span></button>
+<button class="si"><i class="pi pi-clock ic"></i><span class="l">Журнал автоматизаций</span></button>
+<button class="si"><i class="pi pi-refresh ic"></i><span class="l">Сброс системы</span></button>
+</div>
+</nav>
+<div class="detail">
+<div class="dwrap">
+<h2 class="dh">Профиль</h2>
+<p class="dsub">Личные данные, безопасность, вид интерфейса и язык</p>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Tabs" items="{{ tabs }}" value="{{ tab }}" on-change="{{ setTab }}" hint-size="100%,44px"></x-import>
+<sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+<div class="card">
+<div class="ptop">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Avatar" name="Богдан Ядыкин" size="lg" hint-size="44px,44px"></x-import>
+<div class="pmeta"><div class="pnm">Богдан Ядыкин</div><div class="pemail">b.yadykin@macroglobal.tech</div></div>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="secondary" outlined="true" icon="pi-upload" hint-size="130px,38px">Загрузить фото</x-import>
+</div>
+<div class="row">
+<div class="field"><label>Имя</label><input class="inp" value="Богдан"></div>
+<div class="field"><label>Фамилия</label><input class="inp" value="Ядыкин"></div>
+</div>
+<div class="field"><label>Email</label><input class="inp" value="b.yadykin@macroglobal.tech" disabled></div>
+<div class="field"><label>Должность</label><input class="inp" value="Администратор" disabled></div>
+<div class="actions">
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="secondary" hint-size="90px,38px">Отмена</x-import>
+<x-import component-from-global-scope="MACROGlobalCRMDesignSystem_2f42e6.Button" variant="primary" icon="pi-check" hint-size="120px,38px">Сохранить</x-import>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ notProfile }}">
+<div class="card"><div class="soon"><i class="pi pi-sliders-v"></i><div>Раздел «{{ tabLabel }}»</div></div></div>
+</sc-if>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'profile' };
+  renderVals() {
+    const tab = this.state.tab;
+    const tabs = [
+      { key: 'profile', label: 'Профиль' },
+      { key: 'security', label: 'Безопасность' },
+      { key: 'appearance', label: 'Внешний вид' },
+      { key: 'language', label: 'Язык' },
+    ];
+    return {
+      tab, tabs,
+      setTab: (k) => this.setState({ tab: k }),
+      isProfile: tab === 'profile',
+      notProfile: tab !== 'profile',
+      tabLabel: (tabs.find((x) => x.key === tab) || {}).label || '',
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -24,7 +24,9 @@
               "components/nav/**",
               "components/overlay/**",
               "exports/design-handoff/redesign/**",
+              "exports/mgcrm-package/design-handoff/redesign/**",
               "redesign/**",
+              "redesign/_backup_2026-07-04/**",
               "redesign/_dh_update/redesign/**",
               "redesign/handoff_settings_redesign/design/**",
               "ui_kits/crm/**"
@@ -133,6 +135,10 @@
         "message": "<NotificationBadge> variant must be one of 'danger' | 'primary' | 'warning'."
       },
       {
+        "selector": "JSXOpeningElement[name.name='PageHeader'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|title|subtitle|actions|style|key|ref|className|style|children)$/]",
+        "message": "<PageHeader> doesn't accept that prop. Declared props: icon, title, subtitle, actions, style."
+      },
+      {
         "selector": "JSXOpeningElement[name.name='Pagination'] > JSXAttribute > JSXIdentifier[name!=/^(?:page|pageCount|onChange|siblings|style|key|ref|className|style|children)$/]",
         "message": "<Pagination> doesn't accept that prop. Declared props: page, pageCount, onChange, siblings, style."
       },
@@ -175,6 +181,14 @@
       {
         "selector": "JSXOpeningElement[name.name='Step'] > JSXAttribute[name.name='status'] > Literal[value!=/^(?:done|current|todo)$/]",
         "message": "<Step> status must be one of 'done' | 'current' | 'todo'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute > JSXIdentifier[name!=/^(?:on|onChange|disabled|size|label|style|key|ref|className|style|children)$/]",
+        "message": "<Switch> doesn't accept that prop. Declared props: on, onChange, disabled, size, label, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
+        "message": "<Switch> size must be one of 'sm' | 'md'."
       },
       {
         "selector": "JSXOpeningElement[name.name='TabItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:key|label|count|icon|key|ref|className|style|children)$/]",
@@ -268,6 +282,9 @@
       "NotificationBadge": {
         "replaces": []
       },
+      "PageHeader": {
+        "replaces": []
+      },
       "Pagination": {
         "replaces": []
       },
@@ -284,6 +301,9 @@
         "replaces": []
       },
       "Step": {
+        "replaces": []
+      },
+      "Switch": {
         "replaces": []
       },
       "TabItem": {
@@ -410,6 +430,7 @@
       "--mg-orange-300",
       "--mg-orange-50",
       "--mg-orange-500",
+      "--mg-orange-600",
       "--mg-orange-700",
       "--mg-orange-900",
       "--mg-pink-300",
@@ -468,6 +489,7 @@
       "--mg-space-7",
       "--mg-space-8",
       "--mg-stage-amber",
+      "--mg-stage-amber-ink",
       "--mg-stage-blue",
       "--mg-stage-pink",
       "--mg-stage-purple",
@@ -600,6 +622,7 @@
       "--mg-orange-100": "color",
       "--mg-orange-300": "color",
       "--mg-orange-500": "color",
+      "--mg-orange-600": "color",
       "--mg-orange-700": "color",
       "--mg-orange-900": "color",
       "--mg-blue-50": "color",
@@ -624,6 +647,7 @@
       "--mg-stage-amber": "color",
       "--mg-stage-pink": "color",
       "--mg-stage-purple": "color",
+      "--mg-stage-amber-ink": "color",
       "--mg-font-sans": "font",
       "--mg-font-docs": "font",
       "--mg-text-base": "font",
@@ -766,6 +790,16 @@
       "--mg-deal-hot-text": "font",
       "--mg-deal-lost-bg": "color",
       "--mg-deal-lost-text": "font",
+      "--c-page": "color",
+      "--c-board": "color",
+      "--c-card": "color",
+      "--c-border": "color",
+      "--c-border2": "color",
+      "--c-text": "font",
+      "--c-text2": "color",
+      "--c-muted": "color",
+      "--c-muted2": "color",
+      "--c-hover": "color",
       "--mg-z-base": "other",
       "--mg-z-sticky": "other",
       "--mg-z-dropdown": "other",
@@ -782,17 +816,7 @@
       "--mg-navy-border-strong": "color",
       "--mg-navy-accent": "color",
       "--mg-navy-accent-hover": "color",
-      "--mg-navy-accent-soft": "color",
-      "--c-page": "color",
-      "--c-board": "color",
-      "--c-card": "color",
-      "--c-border": "color",
-      "--c-border2": "color",
-      "--c-text": "font",
-      "--c-text2": "color",
-      "--c-muted": "color",
-      "--c-hover": "color",
-      "--c-muted2": "color"
+      "--mg-navy-accent-soft": "color"
     },
     "fontFamilies": [
       "Inter",

@@ -1,0 +1,561 @@
+<!-- @dsCard group="CRM UI Kit" viewport="1320x1080" name="Redesign — Кабинет менеджера" subtitle="облегчённый: герой-МК%, свёрнутые детали, тихий цвет" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MACRO CRM — Кабинет менеджера</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--mg-font-sans); background: #6b7280; -webkit-font-smoothing: antialiased; }
+  .surface { --c-page:#F1F2F3; --c-card:#FFFFFF; --c-border:#E3E4E6; --c-border2:#D5D6D8;
+    --c-text:#272829; --c-text2:#616263; --c-muted:#7E7F82; --c-hover:#F9FAFB; --c-board:#F1F2F3; }
+  .surface.dark { --c-page:#0A1426; --c-card:#12213E; --c-border:#243358; --c-border2:#2E3F6A;
+    --c-text:#E8EDF6; --c-text2:#AEBBD4; --c-muted:#7E8CA8; --c-hover:#182747; --c-board:#0A1426; }
+  * { scrollbar-width: none; -ms-overflow-style: none; }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+
+
+
+
+const { useState, useRef, useEffect } = React;
+
+/* ═══════════════════════════ data (по managerCabinet + motivation) ═══════════════════════════ */
+const PROFILE = { name: 'Богдан Меркулов', job: 'Старший менеджер по продажам', dept: 'Отдел продаж · Алматы',
+  manager: 'Алина Сергеева', subordinates: 3 };
+
+const MONTHS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл'];
+
+const KPI = { scorePct: 108, incomeFact: '8 420 000 ₸', incomePlan: '7 500 000 ₸',
+  ftmFact: 12, ftmPlan: 10, rank: 2, size: 6, avg: 84, hasPlan: true };
+
+const TEAM = [
+{ name: 'Богдан Меркулов', pct: 108, viewer: true },
+{ name: 'Игорь Волков', pct: 96 },
+{ name: 'Алина Сергеева', pct: 88 },
+{ name: 'Дамир Ахметов', pct: 72 },
+{ name: 'Ольга Ким', pct: 64 },
+{ name: 'Рустам Ниязов', pct: null }];
+
+
+const FEED = [
+{ id: 1, kind: 'call', title: 'Исходящий звонок — уточнение бюджета', date: '3 июл, 14:20', target: ['deal', 4812], tname: 'ERP — «ЭнергоПром»', ftm: false },
+{ id: 2, kind: 'meeting', title: 'Первая встреча — «Финрезерв Банк»', date: '3 июл, 11:00', target: ['company', 233], ftm: true },
+{ id: 3, kind: 'task', title: 'Подготовить КП по MACRO ERP', date: '2 июл, 18:30', target: ['deal', 4790], tname: 'MACRO ERP — «АгроТрейд»', ftm: false },
+{ id: 4, kind: 'note', title: 'Клиент просит демо на казахском', date: '2 июл, 10:05', target: ['contact', 1502], ftm: false },
+{ id: 5, kind: 'meeting', title: 'Демонстрация BI-модуля', date: '1 июл, 16:00', target: ['deal', 4771], tname: 'BI-аналитика — «Финрезерв Банк»', ftm: true },
+{ id: 6, kind: 'call', title: 'Согласование даты подписания', date: '1 июл, 09:40', target: ['deal', 4755], tname: 'Договор — «МедПлюс»', ftm: false }];
+
+const FEED_TOTAL = 34,FEED_PER = 6;
+
+const KINDS = [['all', 'Все', ''], ['call', 'Звонок', 'pi-phone'], ['meeting', 'Встреча', 'pi-users'],
+['task', 'Задача', 'pi-check-square'], ['note', 'Заметка', 'pi-pencil']];
+const KIND_ICON = { call: 'pi-phone', meeting: 'pi-users', task: 'pi-check-square', note: 'pi-pencil' };
+const KIND_COL = { call: 'var(--mg-blue-700)', meeting: 'var(--mg-primary-900)', task: 'var(--mg-orange-700)', note: 'var(--c-muted)' };
+const TARGET_LABEL = { deal: 'Сделка', contact: 'Контакт', company: 'Компания' };
+
+/* ── motivation card ── */
+const MK = {
+  status: 'draft', pipeline: 'Продажи', period: 'Июль 2026',
+  deptPlan: { target: '120 000 000 ₸', fact: '98 400 000 ₸', pct: 82 },
+  total: { plan: '450 000 ₸', fact: '512 400 ₸' },
+  forecast: { deptPct: 82, threshold: 85, gate: false, part1: '96 000 ₸', part2: '64 000 ₸', total: '160 000 ₸' },
+  rates: { date: '03.07.2026', pairs: ['1 USD = 463,20 ₸', '1 RUB = 5,18 ₸'] }
+};
+const MK_ITEMS = [
+{ icon: 'pi-wallet', name: 'Оклад', tag: null, planInd: '—', factInd: '—', salPlan: '250 000 ₸', salFact: '250 000 ₸', pct: 100,
+  note: 'Выплачивается в следующем месяце за текущим' },
+{ icon: 'pi-percentage', name: 'Комиссия с продаж', tag: '5%', planInd: '7 500 000 ₸', factInd: '8 420 000 ₸', salPlan: '150 000 ₸', salFact: '168 400 ₸', pct: 112,
+  note: 'Выплачивается сразу в момент поступления',
+  breakdown: [['ТОО «Финрезерв Банк»', '6 400 000 ₸'], ['АО «ЭнергоПром»', '1 200 000 ₸'], ['ТОО «АгроТрейд»', '820 000 ₸']] },
+{ icon: 'pi-chart-bar', name: 'Звонки', tag: 'шт.', planInd: '80', factInd: '92', salPlan: '30 000 ₸', salFact: '30 000 ₸', pct: 115 },
+{ icon: 'pi-chart-bar', name: 'Сумма новых сделок', tag: 'сумма', planInd: '5 000 000 ₸', factInd: '5 900 000 ₸', salPlan: '20 000 ₸', salFact: '23 600 ₸', pct: 118,
+  breakdown: [['Сделка #4771 (BI)', '≈ 2 900 000 ₸'], ['Сделка #4790 (ERP)', '3 000 000 ₸']] },
+{ icon: 'pi-chart-bar', name: 'Онбординг-курс пройден', manual: true, manualDone: true, salPlan: '15 000 ₸', salFact: '15 000 ₸', pct: null },
+{ icon: 'pi-star', name: 'Бонус за квартал', tag: null, planInd: '—', factInd: '—', salPlan: '0 ₸', salFact: '25 400 ₸', pct: null },
+{ icon: 'pi-users', name: 'Командный бонус', tag: null, planInd: '—', factInd: '—', salPlan: '0 ₸', salFact: '0 ₸', pct: null,
+  note: 'Начисляется при выполнении плана отдела ≥ 85%' }];
+
+const MK_MONTHS = ['Июль 2026', 'Июнь 2026', 'Май 2026', 'Апрель 2026', 'Март 2026', 'Февраль 2026'];
+const OV_MONTHS = ['Июль 2026', 'Июнь 2026', 'Май 2026', 'Апрель 2026', 'Март 2026', 'Февраль 2026', 'Январь 2026'];
+const MEMBERS = ['Богдан Меркулов', 'Игорь Волков', 'Алина Сергеева', 'Дамир Ахметов', 'Ольга Ким', 'Рустам Ниязов'];
+const MOOD_PHRASES = {
+  happy: ['Ты выше плана — так держать!', 'Отличный темп, продолжай!', 'План побит — ты в ударе!', 'Так держать, лидер команды!'],
+  ok: ['Почти у цели — поднажми!', 'Ещё чуть-чуть до плана!', 'Хороший ход, добери разрыв!', 'Ты близко — финишируй месяц!'],
+  low: ['Есть куда расти — вперёд!', 'Соберись, всё получится!', 'Небольшой рывок — и догонишь!', 'Начни с одной сделки сегодня!']
+};
+
+/* ═══════════════════════════ helpers ═══════════════════════════ */
+/* тихий цвет: зелёный только «в плюсе», приглушённый серый / красный — вне плана */
+function pctColor(v) {return v == null ? 'var(--c-muted)' : v >= 100 ? 'var(--mg-green-900)' : v >= 80 ? 'var(--c-text2)' : 'var(--mg-red-700)';}
+function Pct({ v, size }) {
+  if (v == null) return <span style={{ fontSize: (size || 13) + 'px', color: 'var(--c-muted)' }}>—</span>;
+  return <span style={{ fontSize: (size || 13) + 'px', fontWeight: 700, color: pctColor(v), fontVariantNumeric: 'tabular-nums' }}>{v}%</span>;
+}
+function Avatar({ name, size = 44, tone }) {
+  const init = name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  return <span style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: size * 0.36, fontWeight: 700, background: tone === 'solid' ? 'var(--mg-primary-900)' : 'var(--mg-primary-100)',
+    color: tone === 'solid' ? '#fff' : 'var(--mg-primary-900)' }}>{init}</span>;
+}
+function Panel({ children, style, pad }) {
+  return <section style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)',
+    boxShadow: 'var(--mg-shadow-sm)', overflow: 'hidden', ...style }}><div style={{ padding: pad ?? '18px 20px' }}>{children}</div></section>;
+}
+function Eyebrow({ children, style }) {
+  return <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--c-muted)', ...style }}>{children}</span>;
+}
+/* курсы валют — тихая иконка-подсказка вместо оранжевой плашки */
+function CcyNote({ inline }) {
+  return <i className="pi pi-info-circle" title="Суммы приведены к базовой валюте (₸); сделки без курса валют не учтены. Курсы валют — в Каталоге."
+  style={{ fontSize: '11px', color: 'var(--c-muted)', cursor: 'help', marginLeft: inline ? 6 : 0 }} />;
+}
+function usePop() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => {if (ref.current && !ref.current.contains(e.target)) setOpen(false);};
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  return [open, setOpen, ref];
+}
+function IconBtn({ icon, onClick, disabled }) {
+  const [h, setH] = useState(false);
+  return <button onClick={disabled ? undefined : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+  style={{ width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--mg-radius-md)',
+    border: '1px solid var(--c-border2)', background: h && !disabled ? 'var(--c-hover)' : 'transparent', color: 'var(--c-text2)',
+    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1 }}><i className={'pi ' + icon} style={{ fontSize: '12px' }} /></button>;
+}
+/* progress ring (only circles/svg — allowed) */
+function Ring({ pct, size = 104, stroke = 9, color }) {
+  const r = (size - stroke) / 2,c = 2 * Math.PI * r,val = Math.max(0, Math.min(pct, 100));
+  return <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--c-hover)" strokeWidth={stroke} />
+    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+    strokeDasharray={c} strokeDashoffset={c * (1 - val / 100)} style={{ transition: 'stroke-dashoffset .5s ease' }} /></svg>;
+}
+function InfoI({ text }) {
+  return <i className="pi pi-info-circle" title={text} style={{ fontSize: '11px', color: 'var(--c-muted)', cursor: 'help', marginLeft: 5 }} />;
+}
+/* мотивационная «голова»: мимика + фраза по проценту выполнения плана */
+function MoodHead({ score }) {
+  const mood = score >= 100 ? 'happy' : score >= 80 ? 'ok' : 'low';
+  const col = mood === 'happy' ? 'var(--mg-green-700)' : mood === 'ok' ? 'var(--mg-primary-900)' : 'var(--mg-orange-700)';
+  const phrases = MOOD_PHRASES[mood];
+  const [i, setI] = useState(0);
+  useEffect(() => {setI(0);const t = setInterval(() => setI((x) => (x + 1) % phrases.length), 4200);return () => clearInterval(t);}, [mood]);
+  const mouth = mood === 'happy' ? 'M17 29 Q26 39 35 29' : mood === 'low' ? 'M17 34 Q26 25 35 34' : 'M18 31 L34 31';
+  const word = mood === 'happy' ? 'выше плана' : mood === 'ok' ? 'в графике' : 'ниже плана';
+  return <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
+    <svg width="54" height="54" viewBox="0 0 52 52" style={{ flexShrink: 0 }}>
+      <circle cx="26" cy="26" r="23" fill="var(--mg-primary-100)" stroke={col} strokeWidth="2" />
+      <circle cx="19" cy="22" r="2.4" fill={col} /><circle cx="33" cy="22" r="2.4" fill={col} />
+      <path d={mouth} fill="none" stroke={col} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: '15px', fontWeight: 700, color: col }}>{word}</div>
+      <div onClick={() => setI((x) => (x + 1) % phrases.length)} title="Ещё фраза"
+      style={{ fontSize: '12px', color: 'var(--c-text2)', marginTop: '3px', maxWidth: 176, cursor: 'pointer' }}>{phrases[i]}</div>
+    </div>
+  </div>;
+}
+
+/* ═══════════════════════════ OVERVIEW: quiet toolbar ═══════════════════════════ */
+function UserPicker({ viewed, setViewed }) {
+  const [open, setOpen, ref] = usePop();
+  const [q, setQ] = useState('');
+  const list = MEMBERS.filter((m) => m.toLowerCase().includes(q.toLowerCase()));
+  return <div ref={ref} style={{ position: 'relative', minWidth: 210 }}>
+    <div onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', height: 34, padding: '0 9px 0 11px',
+      border: '1px solid ' + (open ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', cursor: 'pointer' }}>
+      <i className="pi pi-user" style={{ fontSize: '13px', color: 'var(--c-muted)' }} />
+      <span style={{ flex: 1, fontSize: '13px', color: viewed ? 'var(--c-text)' : 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewed || 'Мой кабинет'}</span>
+      {viewed && <i className="pi pi-times" onClick={(e) => {e.stopPropagation();setViewed(null);}} title="Сбросить" style={{ fontSize: '11px', color: 'var(--c-muted)', padding: '3px' }} />}
+      <i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} />
+    </div>
+    {open && <div style={{ position: 'absolute', top: 40, left: 0, right: 0, zIndex: 40, background: 'var(--c-card)', border: '1px solid var(--c-border)',
+      borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '6px', maxHeight: 280, overflowY: 'auto' }}>
+      <div style={{ position: 'relative', marginBottom: '6px' }}>
+        <i className="pi pi-search" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--c-muted)' }} />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск сотрудника…"
+        style={{ width: '100%', height: 32, padding: '0 10px 0 28px', border: '1px solid var(--c-border2)', borderRadius: 'var(--mg-radius-sm)',
+          background: 'var(--c-card)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', color: 'var(--c-text)' }} />
+      </div>
+      {list.map((m) => {
+        const on = m === viewed;
+        return <button key={m} onClick={() => {setViewed(m);setOpen(false);setQ('');}} style={{ display: 'flex', alignItems: 'center', gap: '9px', width: '100%',
+          background: on ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', padding: '7px 8px',
+          borderRadius: 'var(--mg-radius-sm)', textAlign: 'left' }} onMouseEnter={(e) => {if (!on) e.currentTarget.style.background = 'var(--c-hover)';}}
+        onMouseLeave={(e) => {if (!on) e.currentTarget.style.background = 'transparent';}}>
+          <Avatar name={m} size={26} />
+          <span style={{ flex: 1, fontSize: '13px', fontWeight: on ? 600 : 500, color: on ? 'var(--mg-primary-900)' : 'var(--c-text)' }}>{m}</span>
+          {on && <i className="pi pi-check" style={{ fontSize: '12px', color: 'var(--mg-primary-900)' }} />}</button>;
+      })}
+      {list.length === 0 && <div style={{ fontSize: '12px', color: 'var(--c-muted)', padding: '8px' }}>Ничего не найдено</div>}
+    </div>}
+  </div>;
+}
+
+/* ═══════════════════════════ OVERVIEW: results (hero МК% + team) ═══════════════════════════ */
+function SecStat({ label, value, sub, ccy, hint }) {
+  return <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', padding: '11px 0', borderTop: '1px solid var(--c-border)' }}>
+    <span style={{ fontSize: '13px', color: 'var(--c-text2)', display: 'inline-flex', alignItems: 'center' }}>{label}{hint && <InfoI text={hint} />}</span>
+    <span style={{ textAlign: 'right' }}>
+      <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      {ccy && <CcyNote inline />}
+      {sub && <span style={{ display: 'block', fontSize: '11px', color: 'var(--c-muted)', marginTop: '1px' }}>{sub}</span>}
+    </span></div>;
+}
+function ResultsHero({ name, empty }) {
+  if (empty) return <Panel><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '30px' }}>
+    <i className="pi pi-chart-pie" style={{ fontSize: '28px', color: 'var(--c-muted)' }} />
+    <span style={{ fontSize: '13px', color: 'var(--c-muted)' }}>Данные KPI недоступны</span></div></Panel>;
+  const score = KPI.scorePct;
+  const ringCol = score >= 100 ? 'var(--mg-green-700)' : score >= 80 ? 'var(--mg-primary-900)' : 'var(--mg-red-600)';
+  return <Panel pad="0" style={{ height: '100%' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+      {/* KPIs */}
+      <div style={{ padding: '18px 20px' }}>
+        <Eyebrow>Результаты · {MK.period}</Eyebrow>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', margin: '14px 0 6px' }}>
+          <div style={{ position: 'relative', width: 104, height: 104, flexShrink: 0 }}>
+            <Ring pct={KPI.hasPlan ? score : 0} color={ringCol} />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '26px', fontWeight: 700, color: 'var(--c-text)', lineHeight: 1 }}>{KPI.hasPlan ? score + '%' : '—'}</span>
+              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--c-muted)', marginTop: '2px' }}>МК%</span>
+            </div>
+          </div>
+          <MoodHead score={score} />
+        </div>
+        <SecStat label="Личные продажи" value={KPI.incomeFact} sub={'план ' + KPI.incomePlan} ccy />
+        <SecStat label="Первичные встречи" hint="Первая встреча с новым клиентом (First-Time Meeting). Зачитывается автоматически при проведении встречи с компанией, у которой ранее встреч не было." value={KPI.ftmFact + ' / ' + KPI.ftmPlan} sub="зачтённых встреч" />
+        <SecStat label="Ранг в команде" hint="Место по проценту выполнения мотивационной карты (МК%) среди сотрудников отдела за выбранный месяц. #1 — лучший результат." value={'#' + KPI.rank + ' из ' + KPI.size} sub={'среднее ' + KPI.avg + '%'} />
+      </div>
+      {/* team */}
+      <div style={{ padding: '18px 20px', borderLeft: '1px solid var(--c-border)' }}><TeamList empty={empty} /></div>
+    </div>
+  </Panel>;
+}
+function TeamList({ empty }) {
+  if (empty) return <><Eyebrow>Команда</Eyebrow><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '24px' }}>
+    <i className="pi pi-users" style={{ fontSize: '24px', color: 'var(--c-muted)' }} />
+    <span style={{ fontSize: '13px', color: 'var(--c-muted)' }}>Вы единственный в отделе</span></div></>;
+  const max = 120;
+  return <>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+      <Eyebrow>Команда</Eyebrow><span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>среднее {KPI.avg}%</span></div>
+    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {TEAM.map((m) => <div key={m.name} style={{ display: 'grid', gridTemplateColumns: '1fr 76px 42px', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontSize: '13px', fontWeight: m.viewer ? 700 : 500, color: m.viewer ? 'var(--mg-primary-900)' : 'var(--c-text)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.viewer && <i className="pi pi-user" style={{ fontSize: '10px', marginRight: 5 }} />}{m.name}</span>
+        <span style={{ position: 'relative', height: 6, background: 'var(--c-hover)', borderRadius: '999px', overflow: 'hidden' }}>
+          {m.pct != null && <><span style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, var(--mg-red-600) 0%, var(--mg-stage-amber) 52%, var(--mg-green-700) 100%)' }} />
+            <span style={{ position: 'absolute', top: 0, bottom: 0, left: Math.min(m.pct, max) / max * 100 + '%', right: 0, background: 'var(--c-hover)' }} /></>}</span>
+        <span style={{ textAlign: 'right' }}><Pct v={m.pct} size={12} /></span>
+      </div>)}
+    </div>
+  </>;
+}
+
+/* ═══════════════════════════ OVERVIEW: activity feed ═══════════════════════════ */
+function ActivityFeed({ empty }) {
+  const [kind, setKind] = useState('all');
+  const [page, setPage] = useState(1);
+  const pages = Math.ceil(FEED_TOTAL / FEED_PER);
+  const rows = FEED.filter((r) => kind === 'all' || r.kind === kind);
+  const isEmpty = empty || rows.length === 0;
+  const reset = () => {setKind('all');setPage(1);};
+  return <Panel pad="16px 20px">
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+      <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--c-text)', marginRight: '4px' }}>Активности за период</h2>
+      <div style={{ display: 'inline-flex', gap: '2px', flexWrap: 'wrap' }}>
+        {KINDS.map(([v, l, ic]) => {const on = kind === v;return <button key={v} onClick={() => {setKind(v);setPage(1);}}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', height: 28, padding: '0 10px', borderRadius: '999px', cursor: 'pointer',
+            fontFamily: 'var(--mg-font-sans)', fontSize: '12px', fontWeight: 600, border: 'none',
+            background: on ? 'var(--mg-primary-100)' : 'transparent', color: on ? 'var(--mg-primary-900)' : 'var(--c-muted)' }}>
+          {ic && <i className={'pi ' + ic} style={{ fontSize: '11px' }} />}{l}</button>;})}
+      </div>
+    </div>
+    {isEmpty ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '34px' }}>
+      <i className="pi pi-inbox" style={{ fontSize: '28px', color: 'var(--c-muted)' }} />
+      <span style={{ fontSize: '13px', color: 'var(--c-muted)' }}>Нет активностей за выбранный период</span>
+      {kind !== 'all' && <button onClick={reset} style={{ border: 'none', background: 'transparent', color: 'var(--mg-primary-900)', fontFamily: 'var(--mg-font-sans)',
+        fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Сбросить фильтры</button>}</div> :
+    <>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>{rows.map((r) => <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 0', borderTop: '1px solid var(--c-border)' }}>
+        <i className={'pi ' + KIND_ICON[r.kind]} style={{ fontSize: '14px', color: KIND_COL[r.kind], width: 16, flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '13px', color: 'var(--c-text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</span>
+        {r.ftm && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--mg-green-900)', background: 'var(--mg-green-100)', borderRadius: '4px', padding: '1px 6px' }}>Первичная</span>}
+        <a href="#" onClick={(e) => e.preventDefault()} style={{ fontSize: '12px', color: 'var(--mg-primary-900)', textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220, display: 'inline-block' }} title={r.tname || (TARGET_LABEL[r.target[0]] + ' #' + r.target[1])}>{r.tname || (TARGET_LABEL[r.target[0]] + ' #' + r.target[1])}</a>
+        <span style={{ fontSize: '12px', color: 'var(--c-muted)', whiteSpace: 'nowrap', width: 96, textAlign: 'right' }}>{r.date}</span>
+      </div>)}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', paddingTop: '2px' }}>
+        <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>Показано {rows.length} из {FEED_TOTAL}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <IconBtn icon="pi-chevron-left" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} />
+          {Array.from({ length: pages }, (_, i) => i + 1).slice(0, 5).map((p) => <button key={p} onClick={() => setPage(p)} style={{ width: 30, height: 30, borderRadius: 'var(--mg-radius-md)',
+            cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, background: p === page ? 'var(--mg-primary-900)' : 'transparent',
+            color: p === page ? '#fff' : 'var(--c-text2)', border: '1px solid ' + (p === page ? 'var(--mg-primary-900)' : 'var(--c-border2)') }}>{p}</button>)}
+          <IconBtn icon="pi-chevron-right" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page === pages} />
+        </span>
+      </div>
+    </>}
+  </Panel>;
+}
+
+/* ═══════════════════════════ OVERVIEW tab ═══════════════════════════ */
+function OverviewTab({ empty, viewed }) {
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <ResultsHero name={viewed || PROFILE.name} empty={empty} />
+    <ActivityFeed empty={empty} />
+  </div>;
+}
+
+/* ═══════════════════════════ MOTIVATION: month nav ═══════════════════════════ */
+function MonthNav({ months, idx, setIdx, noArrows }) {
+  const [open, setOpen, ref] = usePop();
+  const box = <div ref={ref} style={{ position: 'relative' }}>
+      <div onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', justifyContent: noArrows ? 'space-between' : 'center', gap: noArrows ? 8 : 0, minWidth: 150, height: 32, padding: noArrows ? '0 10px 0 12px' : '0 12px',
+        border: '1px solid ' + (open ? 'var(--mg-primary-900)' : 'var(--c-border2)'), borderRadius: 'var(--mg-radius-md)', background: 'var(--c-card)', cursor: 'pointer' }}>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text)' }}>{months[idx]}</span>
+        {noArrows && <i className="pi pi-chevron-down" style={{ fontSize: '10px', color: 'var(--c-muted)' }} />}</div>
+      {open && <div style={{ position: 'absolute', top: 38, left: 0, right: 0, zIndex: 40, background: 'var(--c-card)', border: '1px solid var(--c-border)',
+        borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', padding: '5px', maxHeight: 260, overflowY: 'auto' }}>
+        {months.map((m, i) => {const on = i === idx;return <button key={m} onClick={() => {setIdx(i);setOpen(false);}} style={{ display: 'flex', alignItems: 'center', width: '100%',
+            background: on ? 'var(--mg-primary-100)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: on ? 600 : 500,
+            color: on ? 'var(--mg-primary-900)' : 'var(--c-text)', padding: '8px 10px', borderRadius: 'var(--mg-radius-sm)', textAlign: 'left' }}>{m}
+          {on && <i className="pi pi-check" style={{ fontSize: '12px', marginLeft: 'auto' }} />}</button>;})}
+      </div>}
+    </div>;
+  if (noArrows) return box;
+  return <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+    <IconBtn icon="pi-chevron-left" onClick={() => setIdx((i) => Math.min(months.length - 1, i + 1))} disabled={idx === months.length - 1} />
+    {box}
+    <IconBtn icon="pi-chevron-right" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0} />
+  </div>;
+}
+
+/* ═══════════════════════════ MOTIVATION: pay hero + forecast ═══════════════════════════ */
+function PayHero() {
+  const f = MK.forecast;
+  return <Panel pad="0">
+    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr' }}>
+      <div style={{ padding: '20px 22px' }}>
+        <Eyebrow>Зарплата за {MK.period}</Eyebrow>
+        <div style={{ fontSize: '38px', fontWeight: 700, color: 'var(--mg-primary-900)', lineHeight: 1.05, margin: '8px 0 4px', letterSpacing: '-0.01em' }}>{MK.total.fact}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: 'var(--c-text2)' }}>план {MK.total.plan}</span>
+          <span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>считается по выигранным сделкам<InfoI text="Факт берётся по сумме сделок, выигранных (успешно закрытых) в этом месяце, а не по фактически поступившим оплатам от клиентов. Переход на расчёт по оплатам — в следующей фазе." /></span>
+        </div>
+      </div>
+      <div style={{ padding: '20px 22px', borderLeft: '1px solid var(--c-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <Eyebrow>Командный бонус · прогноз</Eyebrow><Pct v={f.deptPct} size={13} /></div>
+        <div style={{ margin: '10px 0', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <Kv k="Часть 1 (60%) — по вкладу" v={f.part1} muted /><Kv k="Часть 2 (40%) — поровну" v={f.part2} muted /></div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--c-border)' }}>
+          <span style={{ fontSize: '13px', color: 'var(--c-text2)' }}>Прогноз итого</span>
+          <span style={{ fontSize: '17px', fontWeight: 700, color: 'var(--c-text)' }}>{f.total}</span></div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px', fontSize: '12px', color: f.gate ? 'var(--mg-green-900)' : 'var(--mg-orange-900)' }}>
+          <i className={'pi ' + (f.gate ? 'pi-check-circle' : 'pi-lock')} style={{ fontSize: '13px' }} />
+          {f.gate ? 'Цель достигнута' : 'Цель не достигнута: ' + f.deptPct + '% из ≥ ' + f.threshold + '%'}</div>
+      </div>
+    </div>
+  </Panel>;
+}
+function Kv({ k, v, muted }) {
+  return <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px' }}>
+    <span style={{ fontSize: '13px', color: 'var(--c-text2)' }}>{k}</span>
+    <span style={{ fontSize: '13px', fontWeight: muted ? 600 : 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{v}</span></div>;
+}
+/* план/факт двумя столбиками: цифра прямо под своим заголовком */
+function PlanFact({ eyebrow, plan, fact, planLabel, factLabel, anchor }) {
+  return <div style={{ minWidth: 150 }}>
+    <div style={{ marginBottom: '7px' }}><Eyebrow>{eyebrow}</Eyebrow></div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: '3px 30px', justifyContent: 'start' }}>
+      <span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>{planLabel || 'План'}</span>
+      <span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>{factLabel || 'Факт'}</span>
+      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{plan}</span>
+      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }} data-comment-anchor={anchor}>{fact}</span>
+    </div>
+  </div>;
+}
+
+/* ═══════════════════════════ MOTIVATION: dept plan ═══════════════════════════ */
+function DeptPlan() {
+  const d = MK.deptPlan;
+  return <Panel>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}><Eyebrow>План отдела по новым поступлениям</Eyebrow><InfoI text="Сумма планов по новым поступлениям всех менеджеров отдела «Продажи» за месяц по выбранной воронке. Складывается из индивидуальных планов — их видно в мотивационных картах сотрудников." /></span>
+      <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>{MK.pipeline} · {MK.period}</span></div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexWrap: 'wrap' }}>
+      <div><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text)' }}>{d.fact}</span><Pct v={d.pct} /></div>
+        <span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>факт</span></div>
+      <div style={{ flex: 1, minWidth: 140 }}>
+        <div style={{ position: 'relative', height: 9, borderRadius: '999px', overflow: 'hidden', background: 'var(--c-hover)' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, var(--mg-red-600) 0%, var(--mg-stage-amber) 52%, var(--mg-green-700) 100%)' }} />
+          <div style={{ position: 'absolute', top: 0, bottom: 0, left: Math.min(d.pct, 100) + '%', right: 0, background: 'var(--c-hover)' }} />
+        </div></div>
+      <div style={{ textAlign: 'right' }}><div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--c-text)' }}>{d.target}</div><span style={{ fontSize: '11px', color: 'var(--c-muted)' }}>план</span></div>
+    </div>
+  </Panel>;
+}
+
+/* ═══════════════════════════ MOTIVATION: salary components (collapsed by default) ═══════════════════════════ */
+function BreakdownPop({ rows, onClose }) {
+  return <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 45, minWidth: 260, background: 'var(--c-card)',
+    border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-md)', boxShadow: 'var(--mg-shadow-lg)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid var(--c-border)' }}>
+      <span style={{ flex: 1, fontSize: '12px', fontWeight: 600, color: 'var(--c-text)' }}>Разбивка по сделкам</span>
+      <i className="pi pi-times" onClick={onClose} style={{ fontSize: '11px', color: 'var(--c-muted)', cursor: 'pointer' }} /></div>
+    <div style={{ padding: '4px' }}>{rows.map(([c, a]) => <a key={c} href="#" onClick={(e) => e.preventDefault()} style={{ display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: '16px', padding: '8px', borderRadius: 'var(--mg-radius-sm)', textDecoration: 'none' }}
+      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+      <span style={{ fontSize: '13px', color: 'var(--c-text)' }}>{c}</span>
+      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text)', whiteSpace: 'nowrap' }}>{a}</span></a>)}</div>
+  </div>;
+}
+function SalaryRow({ it, last }) {
+  const [open, setOpen] = useState(false);
+  const [bd, setBd, bdRef] = usePop();
+  return <div style={{ borderBottom: last ? 'none' : '1px solid var(--c-border)' }}>
+    <button onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: '11px', width: '100%', background: 'transparent',
+      border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', padding: '12px 0', textAlign: 'left' }}>
+      <span style={{ width: 26, height: 26, borderRadius: 'var(--mg-radius-sm)', background: 'var(--c-hover)', color: 'var(--c-text2)',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><i className={'pi ' + it.icon} style={{ fontSize: '13px' }} /></span>
+      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--c-text)' }}>{it.name}</span>
+      {it.tag && <span style={{ fontSize: '11px', color: 'var(--c-muted)', background: 'var(--c-hover)', borderRadius: '4px', padding: '1px 6px' }}>{it.tag}</span>}
+      <span style={{ flex: 1 }} />
+      {it.manual ? <span style={{ fontSize: '12px', fontWeight: 600, color: it.manualDone ? 'var(--mg-green-900)' : 'var(--mg-red-700)' }}>{it.manualDone ? 'Выполнено' : 'Не выполнено'}</span> : <Pct v={it.pct} size={12} />}
+      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text)', width: 96, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{it.salFact}</span>
+      <i className="pi pi-chevron-down" style={{ fontSize: '11px', color: 'var(--c-muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+    </button>
+    {open && <div style={{ padding: '0 0 14px 37px' }}>
+      <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+        <PlanFact eyebrow="Показатели" plan={it.planInd} fact={it.factInd} />
+        <PlanFact eyebrow="ЗП" plan={it.salPlan} fact={it.salFact} planLabel="ЗП план" factLabel="ЗП факт" anchor="46fb40ccec-span-370-5" />
+      </div>
+      {it.note && <p style={{ margin: '10px 0 0', fontSize: '12px', fontStyle: 'italic', color: 'var(--c-muted)' }}>{it.note}</p>}
+      {it.breakdown && <div ref={bdRef} style={{ position: 'relative', display: 'inline-block', marginTop: '8px' }}>
+        <button onClick={() => setBd((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', background: 'transparent',
+          color: 'var(--mg-primary-900)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+          <i className="pi pi-list" style={{ fontSize: '12px' }} />Разбивка по сделкам</button>
+        {bd && <BreakdownPop rows={it.breakdown} onClose={() => setBd(false)} />}</div>}
+    </div>}
+  </div>;
+}
+function SalaryComponents() {
+  const [allOpen, setAllOpen] = useState(false);
+  return <Panel pad="14px 20px">
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+      <Eyebrow style={{ flex: 1 }}>Компоненты зарплаты</Eyebrow>
+      <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>нажмите строку, чтобы раскрыть детали</span></div>
+    <div>{MK_ITEMS.map((it, i) => <SalaryRow key={i} it={it} last={i === MK_ITEMS.length - 1} />)}</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 -20px -14px', padding: '13px 20px', borderTop: '2px solid var(--c-border)', background: 'var(--c-hover)' }}>
+      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text)' }}>Итого ЗП</span>
+      <span style={{ flex: 1 }} />
+      <span style={{ fontSize: '13px', color: 'var(--c-muted)' }}>план {MK.total.plan}</span>
+      <i className="pi pi-arrow-right" style={{ fontSize: '11px', color: 'var(--c-muted)' }} />
+      <span style={{ fontSize: '17px', fontWeight: 700, color: 'var(--mg-primary-900)' }}>{MK.total.fact}</span>
+    </div>
+  </Panel>;
+}
+function MkRates() {
+  return <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: '2px 2px', fontSize: '12px', color: 'var(--c-muted)' }}>
+    <i className="pi pi-refresh" style={{ fontSize: '11px' }} /><span>Курсы на {MK.rates.date}:</span>
+    <span style={{ color: 'var(--c-text2)' }}>{MK.rates.pairs.join('  ·  ')}</span></div>;
+}
+
+/* ═══════════════════════════ MOTIVATION tab ═══════════════════════════ */
+function MotivationTab({ empty, idx }) {
+  const noCard = empty || idx >= 4;
+  const st = { draft: 'Черновик', finalized: 'Финализирована', paid: 'Выплачено' }[MK.status];
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+        <Avatar name={PROFILE.name} size={30} />
+        <strong style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text)' }}>{PROFILE.name}</strong>
+        <span style={{ fontSize: '12px', color: 'var(--c-muted)' }}>· {MK.pipeline}</span>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text2)', background: 'var(--c-hover)', borderRadius: '4px', padding: '2px 8px' }}>{st}</span></span>
+    </div>
+    {noCard ? <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '52px 20px', background: 'var(--c-card)',
+      border: '1px solid var(--c-border)', borderRadius: 'var(--mg-radius-lg)' }}>
+      <i className="pi pi-file-edit" style={{ fontSize: '30px', color: 'var(--c-muted)' }} />
+      <span style={{ fontSize: '14px', color: 'var(--c-text2)' }}>Мотивационная карта за этот месяц ещё не создана</span>
+      <button onClick={() => {}} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', height: 34, padding: '0 14px', borderRadius: 'var(--mg-radius-md)',
+        border: '1px solid var(--c-border2)', background: 'transparent', color: 'var(--c-text2)', fontFamily: 'var(--mg-font-sans)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+        Перейти в конструктор<i className="pi pi-arrow-right" style={{ fontSize: '11px' }} /></button></section> :
+    <>
+      <PayHero />
+      <DeptPlan />
+      <SalaryComponents />
+      <MkRates />
+    </>}
+  </div>;
+}
+
+/* ═══════════════════════════ app ═══════════════════════════ */
+const TWEAK_DEFAULTS = { accent: '#172747', dark: false, admin: true, empty: false };
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = useState('overview');
+  const [viewed, setViewed] = useState(null);
+  const [monthIdx, setMonthIdx] = useState(0);
+  const dark = t.dark;
+  const ACC = { '#172747': '#1f2f5a', '#2b2f36': '#3a3f47', '#312e81': '#3f3a9e', '#0f4d3a': '#13654c' };
+  const accent = dark ? '#4C7DF0' : t.accent;
+  const accentHover = dark ? '#6E99FF' : ACC[t.accent] || '#1f2f5a';
+  const TABS = [['overview', 'Кабинет менеджера'], ['motivation', 'Мотивационная карта']];
+  return <div className={'surface' + (dark ? ' dark' : '')} style={{ '--mg-primary-900': accent, '--mg-primary-800': accentHover,
+    height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--c-board)' }}>
+    <header style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 22px', borderBottom: '1px solid var(--c-border)', background: 'var(--c-card)', flexShrink: 0, flexWrap: 'wrap' }}>
+      <span style={{ width: 38, height: 38, borderRadius: 'var(--mg-radius-md)', background: 'var(--mg-primary-100)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <i className="pi pi-id-card" style={{ fontSize: '17px', color: 'var(--mg-primary-900)' }} /></span>
+      <div>
+        <h1 style={{ fontSize: '19px', fontWeight: 600, color: 'var(--c-text)', margin: 0, lineHeight: 1.1 }}>Кабинет менеджера</h1>
+        <div style={{ fontSize: '12px', color: 'var(--c-muted)', marginTop: '2px' }}>{PROFILE.name} · Отдел продаж</div>
+      </div>
+      <span style={{ flex: 1, minWidth: 12 }} />
+      {t.admin && <div style={{ minWidth: 210 }}><UserPicker viewed={viewed} setViewed={setViewed} /></div>}
+      <span style={{ display: 'inline-flex', gap: '2px', background: 'var(--mg-gray-100)', borderRadius: '9px', padding: '3px' }}>
+        {TABS.map(([v, l]) => <button key={v} onClick={() => setTab(v)} style={{ border: 'none', cursor: 'pointer', fontFamily: 'var(--mg-font-sans)', fontSize: '13px',
+          fontWeight: 600, padding: '7px 15px', borderRadius: '6px', background: tab === v ? 'var(--c-card)' : 'transparent',
+          color: tab === v ? 'var(--mg-primary-900)' : 'var(--c-muted)', boxShadow: tab === v ? 'var(--mg-shadow-sm)' : 'none', transition: 'all .12s' }}>{l}</button>)}
+      </span>
+      <MonthNav months={MK_MONTHS} idx={monthIdx} setIdx={setMonthIdx} noArrows />
+    </header>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px', minHeight: 0 }}>
+      {tab === 'overview' ? <OverviewTab empty={t.empty} viewed={viewed} /> : <MotivationTab empty={t.empty} idx={monthIdx} />}
+    </div>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Бренд" />
+      <TweakColor label="Акцент" value={t.accent} options={['#172747', '#2b2f36', '#312e81', '#0f4d3a']} onChange={(v) => setTweak('accent', v)} />
+      <TweakSection label="Полотно" />
+      <TweakToggle label="Тёмная тема" value={t.dark} onChange={(v) => setTweak('dark', v)} />
+      <TweakSection label="Демонстрация" />
+      <TweakToggle label="Роль: админ / директор" value={t.admin} onChange={(v) => setTweak('admin', v)} />
+      <TweakToggle label="Пустые состояния" value={t.empty} onChange={(v) => setTweak('empty', v)} />
+    </TweaksPanel>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+</body>
+</html>

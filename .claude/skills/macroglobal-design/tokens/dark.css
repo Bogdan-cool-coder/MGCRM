@@ -147,6 +147,7 @@
 
   --mg-orange-50:  rgba(214, 164, 110, 0.16);
   --mg-orange-100: rgba(214, 164, 110, 0.16);
+  --mg-orange-600: #DE8A3A; /* warning-strong badge — toned for dark, keeps white text readable */
   --mg-orange-700: #E6B98C;
   --mg-orange-900: #E6B98C;
 
