@@ -166,9 +166,12 @@ async function onComplete(query: string) {
       per_page: 15,
       company_id: props.companyId ?? undefined,
     })
+    // Out-of-order guard: drop this response if the user has typed on since —
+    // a slower request for a shorter prefix must not overwrite fresher results.
+    if (lastQuery.value !== query) return
     contactSuggestions.value = result.data as ContactOption[]
   } catch {
-    contactSuggestions.value = []
+    if (lastQuery.value === query) contactSuggestions.value = []
   }
 }
 

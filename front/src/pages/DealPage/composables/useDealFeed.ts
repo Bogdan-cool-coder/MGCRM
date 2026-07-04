@@ -304,20 +304,61 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
 
   const hasMore = computed(() => allItems.value.length < total.value)
 
+  // ── Open tasks — dedicated source, NOT derived from the (truncated) feed ──────
+  //
+  // Deriving open tasks from allItems only surfaced tasks within the loaded feed
+  // pages (first 30 events): an open task older than that vanished from the
+  // "open tasks" strip though it still existed. We fetch non-closed activities
+  // for the deal directly (a complete set), then layer feed-local mutations
+  // (optimistic create/complete/reopen/delete) on top so actions stay instant.
+  const openTasksBase = ref<ActivityDto[]>([])
+  let openTasksToken = 0
+  const OPEN_KINDS: ActivityKind[] = ['task', 'call', 'meeting', 'follow_up']
+
+  async function loadOpenTasks(): Promise<void> {
+    const token = ++openTasksToken
+    try {
+      // No `sort` param — openTasks sorts client-side (due_at asc, nulls last).
+      // per_page 100 comfortably covers a single deal's open tasks in one call.
+      const res = await activityApi.getActivities({
+        target_type: 'deal',
+        target_id: dealId(),
+        status: ['new', 'in_progress'],
+        per_page: 100,
+      })
+      if (token !== openTasksToken) return
+      openTasksBase.value = res.data.filter(
+        (a) => OPEN_KINDS.includes(a.kind) && !a.is_closed,
+      )
+    } catch {
+      // non-critical: keep whatever we had
+    }
+  }
+
   /** Open (non-closed) task/call/meeting/follow_up activities — shown above composer */
   const openTasks = computed((): ActivityDto[] => {
-    const result: ActivityDto[] = []
+    // Start from the authoritative fetched set, keyed by id.
+    const byId = new Map<number, ActivityDto>()
+    for (const a of openTasksBase.value) {
+      if (!a.is_closed) byId.set(a.id, a)
+    }
+    // Overlay feed-local activities: newly created open tasks appear immediately,
+    // and any that got closed locally are removed (their feed item flips
+    // is_closed → excluded here).
     for (const item of allItems.value) {
       if (
         (item.type === 'task' || item.type === 'call' || item.type === 'meeting' || item.type === 'follow_up') &&
-        item.activity &&
-        !item.activity.is_closed
+        item.activity
       ) {
-        result.push(item.activity)
+        if (item.activity.is_closed) {
+          byId.delete(item.activity.id)
+        } else {
+          byId.set(item.activity.id, item.activity)
+        }
       }
     }
     // Sort by due_at asc (nulls last), then created_at asc
-    return result.slice().sort((a, b) => {
+    return Array.from(byId.values()).sort((a, b) => {
       if (a.due_at && b.due_at) return a.due_at.localeCompare(b.due_at)
       if (a.due_at && !b.due_at) return -1
       if (!a.due_at && b.due_at) return 1
@@ -409,12 +450,20 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
 
   // ─── API load ─────────────────────────────────────────────────────────────────
 
+  // Last-wins gate: load() (page 1), loadMore() (next page) and refresh() (many
+  // pages) all race — realtime + panel updates fire load() while the user may be
+  // mid-loadMore. Without a token an out-of-order response (e.g. page 2 of an
+  // older set landing after a fresh page 1) corrupts the list.
+  let fetchToken = 0
+
   async function fetchPage(page: number): Promise<void> {
+    const token = ++fetchToken
     loading.value = true
     try {
       const res = await apiClient.get<FeedApiResponse>(`/api/deals/${dealId()}/feed`, {
         params: { page, per_page: PER_PAGE },
       })
+      if (token !== fetchToken) return
       const { data, meta } = res.data
       total.value = meta.total
       currentPage.value = meta.current_page
@@ -435,12 +484,58 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
       }
       recomputeGroups()
     } finally {
-      loading.value = false
+      if (token === fetchToken) loading.value = false
+    }
+  }
+
+  /**
+   * Refetch the feed for a background refresh (realtime / panel update) WITHOUT
+   * collapsing already-loaded history back to the first 30 events. Reloads as
+   * many pages as are currently displayed and rebuilds the list atomically, so
+   * the reader's scroll position and "показать ещё" progress are preserved.
+   */
+  async function refresh(): Promise<void> {
+    // Refresh the authoritative open-tasks set in parallel with the feed pages.
+    void loadOpenTasks()
+    const loadedNonSynthetic = allItems.value.filter((i) => i.type !== 'deal_created').length
+    const pagesToLoad = Math.max(1, Math.ceil(loadedNonSynthetic / PER_PAGE))
+    const token = ++fetchToken
+    loading.value = true
+    try {
+      const merged: FeedItem[] = []
+      const seen = new Set<string>()
+      let latestTotal = total.value
+      for (let page = 1; page <= pagesToLoad; page++) {
+        const res = await apiClient.get<FeedApiResponse>(`/api/deals/${dealId()}/feed`, {
+          params: { page, per_page: PER_PAGE },
+        })
+        if (token !== fetchToken) return
+        const { data, meta } = res.data
+        latestTotal = meta.total
+        for (const raw of data) {
+          const item = normaliseItem(raw)
+          if (item && !seen.has(item.id)) {
+            seen.add(item.id)
+            merged.push(item)
+          }
+        }
+        // Fewer pages available than expected → stop early.
+        if (data.length < PER_PAGE) break
+      }
+      if (token !== fetchToken) return
+      total.value = latestTotal
+      currentPage.value = pagesToLoad
+      const created = buildDealCreatedItem()
+      if (created && !seen.has(created.id)) merged.push(created)
+      allItems.value = merged
+      recomputeGroups()
+    } finally {
+      if (token === fetchToken) loading.value = false
     }
   }
 
   async function load(): Promise<void> {
-    await fetchPage(1)
+    await Promise.all([fetchPage(1), loadOpenTasks()])
   }
 
   async function loadMore(): Promise<void> {
@@ -533,9 +628,10 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
     )
 
     if (!exists) {
-      // Item not in local allItems — reload the feed so the updated/completed
-      // activity appears correctly (F3b: no silent no-op).
-      void load()
+      // Item not in local allItems — refresh the feed so the updated/completed
+      // activity appears correctly (F3b: no silent no-op). refresh() (not load())
+      // preserves already-loaded history instead of collapsing to page 1.
+      void refresh()
       return
     }
 
@@ -585,6 +681,9 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
           item.activity?.id === id
         ),
     )
+    // Also drop from the dedicated open-tasks source so a deleted task can't be
+    // resurrected in the strip when it lived outside the loaded feed pages.
+    openTasksBase.value = openTasksBase.value.filter((a) => a.id !== id)
     total.value = Math.max(0, total.value - 1)
     recomputeGroups()
   }
@@ -630,6 +729,8 @@ export function useDealFeed(dealId: () => number, dealCreatedAt: () => string | 
     // Load
     load,
     loadMore,
+    refresh,
+    loadOpenTasks,
     // Collapse
     collapseAll,
     expandAll,

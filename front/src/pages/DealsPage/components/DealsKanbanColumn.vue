@@ -82,6 +82,7 @@
       drag-class="kanban-card--dragging"
       class="kanban-col__list"
       :class="{ 'kanban-col__list--empty': localDeals.length === 0 }"
+      @start="emit('dragStart')"
       @end="onDragEnd"
     >
       <template #item="{ element }">
@@ -131,6 +132,8 @@ const emit = defineEmits<{
   titleChange: [cardId: number, title: string]
   loadMore: [stageId: number]
   createInStage: [stageId: number]
+  dragStart: []
+  dragEnd: []
 }>()
 
 const { t, locale } = useI18n()
@@ -145,6 +148,10 @@ watch(
 )
 
 function onDragEnd(event: { item: HTMLElement; from: HTMLElement; to: HTMLElement; oldIndex: number; newIndex: number }) {
+  // Always clear the page-level dragging flag, in every early-return path, so a
+  // deferred background refetch can proceed once the drag settles.
+  emit('dragEnd')
+
   const fromStageId = parseInt(
     (event.from as HTMLElement).closest('[data-stage-id]')?.getAttribute('data-stage-id') ?? '0',
     10,
@@ -156,7 +163,19 @@ function onDragEnd(event: { item: HTMLElement; from: HTMLElement; to: HTMLElemen
   if (!fromStageId || !toStageId) return
   if (fromStageId === toStageId) return
 
-  const movedCard = localDeals.value[event.newIndex]
+  // Identity by the DRAGGED DOM node's own id — never by index. @end fires on the
+  // SOURCE column, so localDeals[newIndex] would point at a *different* card
+  // (newIndex is an index in the TARGET column) — and if the board was reloaded
+  // by a realtime event between dragstart and drop, an index lookup can resolve a
+  // foreign deal entirely. event.item is the exact card being dragged; its
+  // data-deal-id survives any array reshuffle. We resolve the card object from
+  // props.column.deals (the source column's authoritative data, untouched by
+  // vuedraggable — only the v-model copy `localDeals` is spliced).
+  const draggedId = Number((event.item as HTMLElement).getAttribute('data-deal-id') ?? '0')
+  if (!draggedId) return
+  const movedCard =
+    props.column.deals.find((d) => d.id === draggedId) ??
+    localDeals.value.find((d) => d.id === draggedId)
   if (!movedCard) return
   emit('drop', movedCard, fromStageId, toStageId)
 }

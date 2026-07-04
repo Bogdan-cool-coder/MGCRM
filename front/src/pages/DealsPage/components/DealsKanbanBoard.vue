@@ -42,6 +42,8 @@
         @title-change="(cid: number, title: string) => emit('titleChange', cid, title)"
         @load-more="emit('loadMore', $event)"
         @create-in-stage="emit('createInStage', $event)"
+        @drag-start="emit('dragStart')"
+        @drag-end="emit('dragEnd')"
       />
     </template>
   </div>
@@ -65,6 +67,8 @@ const emit = defineEmits<{
   loadMore: [stageId: number]
   create: []
   createInStage: [stageId: number]
+  dragStart: []
+  dragEnd: []
 }>()
 
 const { t } = useI18n()

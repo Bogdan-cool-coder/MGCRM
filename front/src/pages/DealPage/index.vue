@@ -284,7 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
@@ -466,7 +466,9 @@ async function onTaskDeleted(activityId: number) {
  */
 function onDealUpdatedFromPanel(updates: Partial<DealDto>) {
   updateDealLocal(updates)
-  void feedComposable.load()
+  // refresh() preserves already-loaded feed history + scroll position (load()
+  // would collapse the feed back to the first 30 events).
+  void feedComposable.refresh()
   reloadInfoPanelLog()
 }
 
@@ -623,6 +625,47 @@ async function bootstrapDeal() {
   }
 }
 
+// ── Realtime: managed subscription that follows the deal id ─────────────────────
+//
+// useDealRealtime binds its channel name ONCE at call time. Subscribing only in
+// onMounted meant: (a) a deal created via /deals/new (onMounted returns early in
+// create mode) never got a subscription after router.replace('/deals/{id}'), and
+// (b) navigating deal→deal kept the stale channel. We manage the subscription's
+// lifecycle explicitly: tear down the previous channel and subscribe to the
+// current dealId after every bootstrap.
+let realtimeCleanup: (() => void) | null = null
+let feedDebounce: ReturnType<typeof setTimeout> | null = null
+
+function debouncedFeedLoad() {
+  if (feedDebounce !== null) clearTimeout(feedDebounce)
+  feedDebounce = setTimeout(() => {
+    feedDebounce = null
+    // Background realtime refresh — refresh() keeps loaded history + scroll
+    // (load() would snap the feed back to the last 30 events on every event).
+    void feedComposable.refresh()
+  }, 300)
+}
+
+function subscribeRealtime() {
+  // Drop the previous channel first (deal→deal navigation, create→detail).
+  if (realtimeCleanup) {
+    realtimeCleanup()
+    realtimeCleanup = null
+  }
+  realtimeCleanup = useDealRealtime(() => dealId.value, {
+    onFeedRefresh: debouncedFeedLoad,
+    onDealRefresh: () => { void reloadSilent() },
+  })
+}
+
+onBeforeUnmount(() => {
+  if (feedDebounce !== null) clearTimeout(feedDebounce)
+  if (realtimeCleanup) {
+    realtimeCleanup()
+    realtimeCleanup = null
+  }
+})
+
 // ── Watch for SPA navigation: create → detail (same component instance reused)
 watch(
   () => route.params['id'],
@@ -630,6 +673,9 @@ watch(
     if (!id || id === 'new') return
     if (prevId === id) return
     await bootstrapDeal()
+    // (Re)subscribe to the now-current deal — covers create→detail AND
+    // detail→detail navigation, where onMounted does not re-run.
+    subscribeRealtime()
   },
 )
 
@@ -642,22 +688,8 @@ onMounted(async () => {
   // Sentry events (audit N2).
   await bootstrapDeal()
 
-  // ── Realtime: subscribe to live deal-card events after initial load ──────────
-  // Debounced feed reload: avoids double-requests when multiple events arrive
-  // in quick succession (e.g. task completed + stage changed simultaneously).
-  let feedDebounce: ReturnType<typeof setTimeout> | null = null
-  function debouncedFeedLoad() {
-    if (feedDebounce !== null) clearTimeout(feedDebounce)
-    feedDebounce = setTimeout(() => {
-      feedDebounce = null
-      void feedComposable.load()
-    }, 300)
-  }
-
-  useDealRealtime(() => dealId.value, {
-    onFeedRefresh: debouncedFeedLoad,
-    onDealRefresh: () => { void reloadSilent() },
-  })
+  // Subscribe to live deal-card events after the initial load.
+  subscribeRealtime()
 })
 </script>
 

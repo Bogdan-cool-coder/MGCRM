@@ -1,6 +1,7 @@
 <template>
   <div
     class="kanban-card"
+    :data-deal-id="card.id"
     :class="[
       healthClass,
       { 'kanban-card--overdue': health === 'overdue' },

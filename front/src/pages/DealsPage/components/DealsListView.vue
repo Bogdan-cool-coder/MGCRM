@@ -9,6 +9,7 @@
       striped-rows
       lazy
       paginator
+      :first="(page - 1) * perPage"
       :rows="perPage"
       :rows-per-page-options="[25, 50, 100]"
       :total-records="total"
@@ -219,6 +220,8 @@ const props = defineProps<{
   deals: DealDto[]
   loading: boolean
   total: number
+  /** 1-based current page — drives the controlled paginator :first below. */
+  page: number
   perPage: number
   hasActiveFilters: boolean
   stages: PipelineStageDto[]

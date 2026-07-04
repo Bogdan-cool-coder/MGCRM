@@ -287,6 +287,7 @@ const companyAcWrap = ref<HTMLElement | null>(null)
 const companySelection = ref<{ id: number; name: string } | null>(null)
 const companyOptions = ref<Array<{ id: number; name: string }>>([])
 const companySearching = ref(false)
+const lastCompanyQuery = ref('')
 const companyMutation = useMutation<DealDto>()
 const companySaving = computed(() => companyMutation.isPending.value)
 
@@ -301,16 +302,20 @@ function openCompanyPicker() {
 }
 
 async function onCompanyComplete(query: string) {
+  lastCompanyQuery.value = query
   companySearching.value = true
   try {
     const params: CompanyListParams = { per_page: 20 }
     if (query.trim()) params.search = query.trim()
     const res = await companiesApi.list(params)
+    // Out-of-order guard: a slower response for an earlier prefix must not
+    // overwrite the suggestions for the text the user has actually typed.
+    if (lastCompanyQuery.value !== query) return
     companyOptions.value = res.data.map((c: Company) => ({ id: c.id, name: c.name }))
   } catch {
-    companyOptions.value = []
+    if (lastCompanyQuery.value === query) companyOptions.value = []
   } finally {
-    companySearching.value = false
+    if (lastCompanyQuery.value === query) companySearching.value = false
   }
 }
 
@@ -456,26 +461,63 @@ function buildSelectOptions(def: CustomFieldDef): Array<Record<string, unknown>>
   return def.options.map((opt) => ({ id: opt, name: opt }))
 }
 
+// Serialisation chain + live accumulator for custom-field saves.
+//
+// The API takes the WHOLE extra_fields object and last-write-wins on it. Saving
+// field A then field B before A's request returns would build B's payload from
+// stale props (without A) and silently overwrite A. We (1) keep a running
+// snapshot of extra_fields that each save mutates optimistically before its
+// PATCH, so a later payload always carries earlier edits, and (2) chain the
+// PATCHes so they hit the server in order.
+let pendingExtra: Record<string, unknown> = { ...(props.deal.extra_fields ?? {}) }
+let saveChain: Promise<void> = Promise.resolve()
+
+// Keep the accumulator in sync when the deal is (re)hydrated from the server
+// (initial load, reloadSilent, realtime deal.updated). Also reconcile the
+// displayed field values so a colleague's change surfaces without a full page
+// reload — but never clobber a field the local user is mid-saving.
+watch(
+  () => props.deal.extra_fields,
+  (next) => {
+    const server = { ...(next ?? {}) }
+    pendingExtra = { ...server }
+    for (const [code, value] of Object.entries(server)) {
+      if (customFieldSaving.value === code) continue
+      customFieldsComposable.updateLocalValue(code, value)
+    }
+  },
+)
+
 async function saveCustomField(code: string, value: string | number | null) {
+  // Fold this edit into the running snapshot immediately so the next save's
+  // payload includes it even if this request is still in flight.
+  pendingExtra = { ...pendingExtra, [code]: value }
+  const snapshot = { ...pendingExtra }
   customFieldSaving.value = code
-  try {
-    const extra = { ...(props.deal.extra_fields ?? {}), [code]: value }
-    const updated = await customFieldMutation.run(() =>
-      salesApi.updateDeal(props.deal.id, { extra_fields: extra }),
-    )
-    customFieldsComposable.updateLocalValue(code, value)
-    emit('dealUpdated', { extra_fields: updated.extra_fields })
-    toast.add({ severity: 'success', summary: t('common.saved'), life: 2000 })
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('errors.server_error'),
-      detail: getApiErrorMessage(err, t('errors.server_error')),
-      life: 4000,
+
+  saveChain = saveChain
+    .catch(() => {}) // don't let a prior failure break the chain
+    .then(async () => {
+      try {
+        const updated = await customFieldMutation.run(() =>
+          salesApi.updateDeal(props.deal.id, { extra_fields: snapshot }),
+        )
+        customFieldsComposable.updateLocalValue(code, value)
+        emit('dealUpdated', { extra_fields: updated.extra_fields })
+        toast.add({ severity: 'success', summary: t('common.saved'), life: 2000 })
+      } catch (err) {
+        toast.add({
+          severity: 'error',
+          summary: t('errors.server_error'),
+          detail: getApiErrorMessage(err, t('errors.server_error')),
+          life: 4000,
+        })
+      } finally {
+        if (customFieldSaving.value === code) customFieldSaving.value = null
+      }
     })
-  } finally {
-    customFieldSaving.value = null
-  }
+
+  await saveChain
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────────

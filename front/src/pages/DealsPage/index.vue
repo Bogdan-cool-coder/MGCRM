@@ -62,6 +62,8 @@
         @load-more="onLoadMore"
         @create="onCreateDeal()"
         @create-in-stage="onCreateDeal($event)"
+        @drag-start="onBoardDragStart"
+        @drag-end="onBoardDragEnd"
       />
     </div>
 
@@ -71,6 +73,7 @@
         :deals="deals"
         :loading="listLoading"
         :total="total"
+        :page="listPage"
         :per-page="perPage"
         :has-active-filters="hasActiveFilters()"
         :stages="currentStages"
@@ -227,11 +230,11 @@ const {
   toOverlayFilters,
   activeFilterCount,
 } = useDealsFilters(() => {
-  // KPI is funnel-wide — always reload regardless of view
-  void kpiComposable.load()
   if (salesStore.activeView === 'kanban') {
     void boardComposable.load()
   } else if (salesStore.activeView === 'list') {
+    // KPI chips render only in list view — reload KPI alongside the list query.
+    void kpiComposable.load()
     listFilters.resetPage()
     void listComposable.load()
   }
@@ -269,6 +272,9 @@ function onSetView(view: DealsView) {
   if (view === 'kanban') {
     void boardComposable.load()
   } else if (view === 'list') {
+    // KPI chips live only in list view — load them lazily on switch-in (kanban
+    // no longer keeps them warm, avoiding wasted requests there).
+    void kpiComposable.load()
     listFilters.resetPage()
     void listComposable.load()
   }
@@ -332,6 +338,7 @@ const {
   updateCardTitle,
   toggleHiddenStage,
   loadMoreInColumn,
+  loadSilent: boardLoadSilent,
 } = boardComposable
 
 /**
@@ -422,6 +429,7 @@ const {
   deals,
   total,
   loading: listLoading,
+  page: listPage,
   perPage,
   sortState,
   onPageChange,
@@ -457,6 +465,26 @@ function onDealMoved() {
 }
 
 // ── Board drag-and-drop ─────────────────────────────────────────────────────────
+
+// True while a kanban card is being dragged. A background (realtime) refetch
+// must NOT fire mid-drag — replacing the columns yanks the DOM out from under
+// vuedraggable's Sortable and aborts the gesture. Any refresh that arrives
+// during a drag is deferred until the drop settles.
+const dragging = ref(false)
+let pendingSilentRefresh = false
+
+function onBoardDragStart() {
+  dragging.value = true
+}
+
+function onBoardDragEnd() {
+  dragging.value = false
+  // Flush a refresh that was requested (by realtime) while the drag was active.
+  if (pendingSilentRefresh) {
+    pendingSilentRefresh = false
+    void reloadSilent()
+  }
+}
 
 async function onBoardDrop(card: DealCardDto, fromStageId: number, toStageId: number) {
   const toStage = currentStages.value.find((s) => s.id === toStageId)
@@ -640,11 +668,39 @@ async function onExport() {
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 
 async function reload() {
-  // KPI is funnel-wide — always reload alongside the view-specific query
-  void kpiComposable.load()
   if (salesStore.activeView === 'kanban') {
     void boardComposable.load()
   } else if (salesStore.activeView === 'list') {
+    // KPI chips render ONLY in list view — load KPI lazily here, not in kanban
+    // (where the extra request was pure waste on every reload/echo). reload() is
+    // called after material data-set changes (pipeline switch, bulk delete/move,
+    // deal moved) — reset to page 1 so a lingering high page number doesn't
+    // request past the (now shorter) result set and return an empty table while
+    // total>0. resetPage() also feeds the paginator's :first.
+    void kpiComposable.load()
+    listFilters.resetPage()
+    void listComposable.load()
+  }
+}
+
+/**
+ * Background refresh triggered by realtime events. Unlike reload() it never
+ * flips the board into a skeleton: the kanban swaps its columns in place once
+ * fresh data arrives (no flash, no scroll reset, no drag interruption). If a
+ * drag is currently in flight the refresh is deferred until the drop settles
+ * (see onBoardDragEnd). List view keeps its existing lazy-table behaviour.
+ */
+function reloadSilent() {
+  if (dragging.value) {
+    // Defer — refreshing now would abort the active drag gesture.
+    pendingSilentRefresh = true
+    return
+  }
+  if (salesStore.activeView === 'kanban') {
+    void boardLoadSilent()
+  } else if (salesStore.activeView === 'list') {
+    // KPI chips render only in list view — refresh them quietly here.
+    void kpiComposable.load()
     void listComposable.load()
   }
 }
@@ -690,9 +746,12 @@ onMounted(async () => {
   }
 
   // ── Realtime: subscribe to live board events ─────────────────────────────────
+  // Background refresh (no skeleton, no scroll jump, deferred during drag) —
+  // NOT the full reload() which flips the board into skeletons on every team
+  // event and after each of the user's own moves.
   useDealsListRealtime(
     () => userStore.getUser?.department_id ?? null,
-    () => { void reload() },
+    () => { reloadSilent() },
   )
 
   // Load deals

@@ -183,15 +183,19 @@ watch(() => props.currency, (c) => {
 // query ≥ 2 chars → server-side filter. AutoComplete debounces via :delay.
 
 const productSuggestions = ref<ProductDto[]>([])
+const lastProductQuery = ref('')
 
 async function onProductComplete(query: string) {
+  lastProductQuery.value = query
   try {
     const params: ProductListParams = { active_only: true, per_page: 30 }
     if (query.trim().length >= 2) params.q = query.trim()
     const res = await catalogApi.getProducts(params)
+    // Out-of-order guard: ignore a stale response for an earlier keystroke.
+    if (lastProductQuery.value !== query) return
     productSuggestions.value = res.data
   } catch {
-    productSuggestions.value = []
+    if (lastProductQuery.value === query) productSuggestions.value = []
   }
 }
 
