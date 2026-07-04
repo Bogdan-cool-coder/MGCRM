@@ -159,6 +159,24 @@ GOTENBERG_URL=http://gotenberg:3000
 
 # Log level for production
 LOG_LEVEL=warning
+
+# Reverb (realtime WebSockets) — server-side app credentials + connection coords.
+# REVERB_HOST is the reverb container's SERVICE NAME (the app publishes events to
+# it over the internal docker network) — do NOT set this to a public hostname.
+# VITE_REVERB_* are the browser-facing counterparts (public wss endpoint via
+# Traefik/frontend nginx) — baked into the frontend build at `docker compose build`.
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=<generate a random id>
+REVERB_APP_KEY=<generate a random key>
+REVERB_APP_SECRET=<generate a random secret>
+REVERB_HOST=reverb
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST=mgcrm.macroglobal.tech
+VITE_REVERB_PORT=443
+VITE_REVERB_SCHEME=https
 ```
 
 ---
@@ -218,6 +236,8 @@ Expected running containers:
 - `macro-crm-scheduler`
 - `macro-crm-gotenberg`
 - `macro-crm-bot`
+- `macro-crm-salespulse-bot`
+- `macro-crm-reverb`
 
 ```bash
 docker compose ps
@@ -294,6 +314,59 @@ If the bot is down, restart manually:
 docker compose up -d --force-recreate bot
 docker compose logs -f bot
 ```
+
+---
+
+## 15. Reverb service note (realtime WebSockets)
+
+`macro-crm-reverb` runs `php artisan reverb:start --host=0.0.0.0 --port=8080` —
+a long-running Laravel WebSocket server (Pusher-compatible protocol) that powers
+live UI updates (deals, contacts, tasks). It shares the same PHP app image as
+`app`/`queue-worker`/`scheduler` (built once, reused across services).
+
+**Traffic path:**
+```
+browser --wss--> Traefik --wss--> frontend:80 --ws--> reverb:8080
+                                        ^
+                      frontend.conf proxies /app/* (client subscribe)
+                                     + /apps/* (HTTP publish, internal)
+```
+`app` / `queue-worker` publish broadcast events to `http://reverb:8080` internally
+(pusher-protocol HTTP API) — this is `REVERB_HOST=reverb` in `src/.env` (see §5).
+The browser never talks to `reverb` directly; it connects to the public
+`wss://mgcrm.macroglobal.tech/app/{key}` endpoint, which `frontend.conf`
+(`docker/nginx/frontend.conf`) proxies to `reverb:8080` with the WebSocket
+Upgrade/Connection headers.
+
+**Restart / rolling-restart:**
+Reverb is part of the standard rolling-restart flow (`deploy/rolling-restart.sh`) —
+it is force-recreated alongside `app`/`nginx`/`frontend`/`queue-worker`, same as
+any other web-serving replica. No special single-instance caveat like the bot
+services (Reverb itself can be scaled behind a shared Redis-backed scaling channel
+if ever needed — see `REVERB_SCALING_ENABLED` in `config/reverb.php` — but this is
+**not** enabled in MGCRM; a single instance is sufficient at current load).
+
+Manual restart if needed:
+```bash
+docker compose up -d --force-recreate reverb
+docker compose logs -f reverb
+```
+
+**Health check:**
+Reverb has no HTTP health endpoint on 8080 by default, so the healthcheck is a
+plain TCP probe (`php -r fsockopen`) — same pattern as the `app` container's
+php-fpm healthcheck. To verify manually:
+```bash
+docker compose ps reverb                 # STATUS should show "healthy"
+docker compose logs reverb | grep "Starting server"   # confirms it bound 0.0.0.0:8080
+```
+A full WebSocket handshake check (from inside the `proxy`/frontend path, or
+locally against the published dev port) should return `HTTP/1.1 101 Switching
+Protocols` with header `X-Powered-By: Laravel Reverb`.
+
+**Env vars** — see §5 above (`REVERB_APP_ID/KEY/SECRET`, `REVERB_HOST/PORT/SCHEME`,
+`VITE_REVERB_*`). `REVERB_HOST` must stay the service name `reverb` in production
+(never a public hostname) — only the `VITE_REVERB_*` vars are public-facing.
 
 ---
 

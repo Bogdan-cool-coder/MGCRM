@@ -27,12 +27,16 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP extensions (identical to prod)
+# pcntl — required by `php artisan reverb:start` (signal handling for
+# graceful shutdown); without it Reverb crash-loops on boot with
+# "Undefined constant SIGINT" (see docker-compose.dev.yml `reverb` service).
 RUN docker-php-ext-install -j"$(nproc)" \
     pdo_pgsql \
     zip \
     intl \
     mbstring \
-    bcmath
+    bcmath \
+    pcntl
 
 RUN docker-php-ext-configure gd --with-jpeg --with-freetype \
     && docker-php-ext-install -j"$(nproc)" gd

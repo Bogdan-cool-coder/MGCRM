@@ -15,9 +15,23 @@
 #   - app: composer install --dev (includes Pint, PHPUnit, Pail)
 #   - app: opcache.validate_timestamps=1 (reloads changed files)
 #   - frontend: runs `vite` (HMR) instead of a static nginx build
-#   - No gotenberg, queue-worker, scheduler on startup — profile-gated:
+#   - No gotenberg, queue-worker, scheduler, reverb on startup — start on demand:
 #       docker compose -f docker-compose.dev.yml --profile worker up -d   # queue-worker + scheduler (M7 automation)
 #       docker compose -f docker-compose.dev.yml up -d gotenberg          # PDF generation
+#       docker compose -f docker-compose.dev.yml up -d reverb             # realtime WebSocket server
+#
+# Reverb wiring (dev):
+#   - src/.env REVERB_HOST must be the service name `reverb` (app/queue-worker
+#     publish events to it over the compose network, e.g. reverb:8080 —
+#     NOT localhost, which only works if reverb runs on the bare host).
+#   - VITE_REVERB_HOST must be a browser-reachable host (e.g. `localhost`,
+#     since the reverb port below is published to 127.0.0.1:6001). This is a
+#     DIFFERENT value than REVERB_HOST in dev — do not mirror one into the
+#     other like prod does (prod resolves both via Traefik/nginx path-routing;
+#     dev has no such proxy in front of the Vite dev server for WebSockets).
+#   - front/.env.local (Vite env, not docker env) needs VITE_REVERB_HOST=localhost
+#     + VITE_REVERB_PORT=6001 — Vite's dev proxy only forwards /api, not
+#     WebSocket upgrades, so Echo connects straight to the published host port.
 #
 # After first start run migrations + seed (wait ~30s for composer install to finish):
 #   docker compose -f docker-compose.dev.yml exec app php artisan migrate --force
@@ -343,6 +357,63 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Reverb — Laravel WebSocket server (long-running, single process).
+  # Mirrors the prod `reverb` service (docker-compose.yml) on the same PHP
+  # image family, but built from Dockerfile.dev + bind-mount, like the other
+  # dev worker services (queue-worker/scheduler/bot).
+  #
+  # Port is published to the host so the browser (Vite dev server has no
+  # WebSocket proxy) can connect directly — see the file-header note above
+  # on the REVERB_HOST vs VITE_REVERB_HOST split.
+  #
+  # Start manually when realtime features need to be exercised:
+  #   docker compose -f docker-compose.dev.yml up -d reverb
+  #
+  # No healthcheck-less long-worker pattern here on purpose — reverb has no
+  # HTTP health endpoint on 8080 (same TCP-probe reasoning as prod's reverb
+  # service; see docker-compose.yml comment above the prod block).
+  # ---------------------------------------------------------------------------
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile.dev
+    image: macro-crm-app-dev:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-macro-crm}-reverb-dev
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    restart: unless-stopped
+    profiles:
+      - reverb
+    ports:
+      # 6001 (not 8080) on the host — dev's `nginx` service already publishes
+      # 8080 for the API. 6001 is Laravel Reverb's own conventional local
+      # dev port; the container-internal port stays 8080 to match prod.
+      - "127.0.0.1:${REVERB_HOST_PORT:-6001}:8080"
+    env_file:
+      - src/.env
+    volumes:
+      - ./src:/var/www/html
+      - storage_app_dev:/var/www/html/storage/app
+      - storage_framework_dev:/var/www/html/storage/framework
+      - storage_logs_dev:/var/www/html/storage/logs
+      - vendor_dev:/var/www/html/vendor
+      - bootstrap_cache_dev:/var/www/html/bootstrap/cache
+    networks:
+      - macro-crm-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1',8080)?0:1);"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   pgdata:
