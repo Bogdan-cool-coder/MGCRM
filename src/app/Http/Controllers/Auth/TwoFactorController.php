@@ -104,15 +104,23 @@ class TwoFactorController extends Controller
             ]);
         }
 
+        // Brute-force gate (Э2): reject BEFORE checking the second factor once
+        // the cap of consecutive failed disable attempts is hit. Failures-only.
+        $this->throttle->ensureConfirmNotLocked($request, 'disable');
+
         if (! $this->twoFactor->confirmSecondFactor(
             $user,
             $request->validated('totp_code'),
             $request->validated('backup_code'),
         )) {
+            $this->throttle->hitConfirm($request, 'disable');
+
             throw ValidationException::withMessages([
                 'totp_code' => [__('auth.two_factor_invalid')],
             ]);
         }
+
+        $this->throttle->clearConfirm($request, 'disable');
 
         $this->twoFactor->disable($user);
 
@@ -138,15 +146,23 @@ class TwoFactorController extends Controller
             ]);
         }
 
+        // Brute-force gate (Э2): same failures-only lockout as /2fa/disable, on
+        // its own bucket so the two endpoints do not drain each other.
+        $this->throttle->ensureConfirmNotLocked($request, 'regenerate-backup-codes');
+
         if (! $this->twoFactor->confirmSecondFactor(
             $user,
             $request->validated('totp_code'),
             $request->validated('backup_code'),
         )) {
+            $this->throttle->hitConfirm($request, 'regenerate-backup-codes');
+
             throw ValidationException::withMessages([
                 'totp_code' => [__('auth.two_factor_invalid')],
             ]);
         }
+
+        $this->throttle->clearConfirm($request, 'regenerate-backup-codes');
 
         $backupCodes = $this->twoFactor->regenerateBackupCodes($user);
 

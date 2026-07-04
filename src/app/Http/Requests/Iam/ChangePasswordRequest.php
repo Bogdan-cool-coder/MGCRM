@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Iam;
 
+use App\Domain\Iam\Services\LoginThrottle;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -18,9 +20,18 @@ use Illuminate\Validation\Rules\Password;
  *
  * The route is already gated by auth:sanctum + 2fa and always targets
  * $request->user(), so authorize() only asserts an authenticated session.
+ *
+ * Brute-force lockout (Э2): current_password is a password oracle, so a
+ * failures-only LoginThrottle guards this endpoint on its own bucket (keyed by
+ * the authenticated user + IP). The throttle work lives in the FormRequest
+ * because current_password is verified during validation — the controller body
+ * never runs on a wrong current password. Gate BEFORE validation, count a
+ * failure only when current_password was wrong, clear on success.
  */
 class ChangePasswordRequest extends FormRequest
 {
+    private const ACTION = 'change-password';
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -38,5 +49,34 @@ class ChangePasswordRequest extends FormRequest
             'current_password' => ['required', 'string', 'current_password'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)],
         ];
+    }
+
+    /**
+     * Reject with 429 before any validation runs once the failure cap is hit —
+     * so a locked-out attacker never reaches the current_password Hash::check.
+     */
+    protected function prepareForValidation(): void
+    {
+        app(LoginThrottle::class)->ensureConfirmNotLocked($this, self::ACTION);
+    }
+
+    /**
+     * A wrong current password is the brute-force signal — count it. Other
+     * validation errors (short/unconfirmed new password) are user typos, not an
+     * oracle probe, so they do NOT consume the budget.
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        if ($validator->errors()->has('current_password')) {
+            app(LoginThrottle::class)->hitConfirm($this, self::ACTION);
+        }
+
+        parent::failedValidation($validator);
+    }
+
+    /** Correct current password — reset the budget. */
+    protected function passedValidation(): void
+    {
+        app(LoginThrottle::class)->clearConfirm($this, self::ACTION);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Crm;
 
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\CompanyService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\LinkContactCompanyRequest;
@@ -42,7 +43,15 @@ class CompanyEmployeeController extends Controller
     {
         $this->authorize('manageEmployees', $company);
 
-        $contactId = (int) $request->input('contact_id');
+        // contact_id is validated (exists) by the FormRequest. Authorize VIEW on
+        // the linked contact too (Э2): without this a caller who can manage the
+        // company's employees could attach a contact outside their visibility
+        // scope, leaking that the contact exists. findOrFail → 404 on unknown id
+        // (the FormRequest already 422s, this is belt-and-braces).
+        $contactId = (int) $request->validated('contact_id');
+        $contact = Contact::findOrFail($contactId);
+        $this->authorize('view', $contact);
+
         $link = $this->service->addEmployee($company, $contactId, $request->validated(), $request->user());
 
         return ContactCompanyLinkResource::make($link->load(['contact', 'company']));

@@ -31,12 +31,27 @@ class SeedQaStudentCommand extends Command
 {
     protected $signature = 'onboarding:seed-qa-student
                             {--course-id=1 : Course to assign (default: 1 — Introduction to MACRO CRM)}
-                            {--email=qa-student@mgcrm.test : Student email}';
+                            {--email=qa-student@mgcrm.test : Student email}
+                            {--force : Required to run in the production environment}';
 
     protected $description = '[DEV] Create/reset a QA student with a fresh pending assignment for the given course';
 
     public function handle(): int
     {
+        // ------------------------------------------------------------------
+        // 0. Production guard (Э2)
+        // ------------------------------------------------------------------
+        // This command seeds a well-known test account (qa-student@mgcrm.test /
+        // "password") — a live-account footgun. The docblock promised "dev only,
+        // never run on production" but nothing enforced it. Refuse to run under
+        // APP_ENV=production unless --force is passed explicitly (mirrors the
+        // convention of Laravel's own destructive artisan commands).
+        if ($this->getLaravel()->environment('production') && ! $this->option('force')) {
+            $this->error('Refusing to seed a QA student on production. Re-run with --force if you really mean it.');
+
+            return self::FAILURE;
+        }
+
         $courseId = (int) $this->option('course-id');
         $email = (string) $this->option('email');
 

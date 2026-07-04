@@ -31,7 +31,15 @@ class PasswordController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->passwords->change($user, $request->validated('password'));
+        // Preserve the acting device's session (currentAccessToken) and revoke
+        // every OTHER token — a password rotation logs out all other devices.
+        $currentTokenId = $user->currentAccessToken()?->getKey();
+
+        $this->passwords->change(
+            $user,
+            $request->validated('password'),
+            $currentTokenId !== null ? (int) $currentTokenId : null,
+        );
 
         return response()->json(['message' => __('admin.password.changed')]);
     }

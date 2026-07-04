@@ -36,11 +36,22 @@ class PasswordService
      * The caller's identity / current-password proof is enforced upstream in
      * ChangePasswordRequest; this just assigns the new plaintext, which the
      * `hashed` cast turns into a hash on save.
+     *
+     * SECURITY (Э2): rotating a credential invalidates every OTHER session. All
+     * of the user's Sanctum tokens are revoked EXCEPT the one that carried this
+     * request ($keepTokenId — the caller passes currentAccessToken()->id), so
+     * the acting device stays logged in while any leaked/older session on other
+     * devices is killed immediately. When no id is passed (e.g. a token-less
+     * call path) every token is revoked.
      */
-    public function change(User $user, string $newPassword): User
+    public function change(User $user, string $newPassword, ?int $keepTokenId = null): User
     {
         $user->password = $newPassword;
         $user->save();
+
+        $user->tokens()
+            ->when($keepTokenId !== null, fn ($query) => $query->where('id', '!=', $keepTokenId))
+            ->delete();
 
         return $user;
     }
@@ -62,6 +73,13 @@ class PasswordService
 
         $user->password = $plain;
         $user->save();
+
+        // SECURITY (Э2): an admin reset means the old credential is compromised
+        // or forgotten — revoke EVERY existing session for the target user so a
+        // stale/stolen Bearer token cannot outlive the reset. The user must
+        // re-login with the new password (no token is preserved: this is not the
+        // target's own request).
+        $user->tokens()->delete();
 
         return $plain;
     }

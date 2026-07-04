@@ -110,11 +110,22 @@ class UserService
      * Deactivated accounts cannot authenticate (AuthService rejects inactive
      * users) and are filtered out of owner/assignee dropdowns. The account is
      * preserved so historical ownership of deals/companies stays intact.
+     *
+     * SECURITY (Э2): revoke ALL of the user's Sanctum tokens on deactivation.
+     * `is_active = false` only blocks the /login credential flow; a deactivated
+     * employee who is already holding a Bearer token would otherwise keep full
+     * API access for the token's remaining TTL (up to 30 days). Killing the
+     * tokens here forces an immediate logout across every device. The Verify2FA
+     * middleware additionally re-checks `is_active` on each request as
+     * defense-in-depth, so even a token minted between this write and its own
+     * commit is rejected.
      */
     public function deactivate(User $user): User
     {
         $user->is_active = false;
         $user->save();
+
+        $user->tokens()->delete();
 
         return $user;
     }

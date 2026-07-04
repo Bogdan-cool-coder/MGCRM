@@ -40,6 +40,9 @@ class LoginThrottle
 
     private const PREFIX_TWO_FACTOR = '2fa';
 
+    /** Prefix for the authenticated secondary-confirm surface (Э2). */
+    private const PREFIX_CONFIRM = 'confirm';
+
     /**
      * Throw 429 if this credential key has already exceeded the failure cap.
      * Call BEFORE attempting authentication so a locked-out attacker never
@@ -89,6 +92,36 @@ class LoginThrottle
     }
 
     /**
+     * Throw 429 if the given authenticated confirm-action key is over the cap.
+     *
+     * Э2: the secondary re-confirm endpoints (POST /2fa/disable,
+     * /2fa/regenerate-backup-codes, /me/password) each verify a second factor /
+     * current password. IAM-2 only covered login + /2fa/validate, so these were
+     * an un-throttled password/TOTP oracle for a hijacked full token. Same
+     * failures-only design as the login surface. $action namespaces the bucket
+     * so the three endpoints do not drain each other's budget, and it is keyed
+     * by the authenticated user id + IP.
+     *
+     * @throws ValidationException 429 with Retry-After when locked out
+     */
+    public function ensureConfirmNotLocked(Request $request, string $action): void
+    {
+        $this->ensureNotLocked($this->confirmKey($request, $action));
+    }
+
+    /** Record one FAILED confirm attempt for the given action. */
+    public function hitConfirm(Request $request, string $action): void
+    {
+        RateLimiter::hit($this->confirmKey($request, $action), $this->decaySeconds());
+    }
+
+    /** Reset the confirm budget after a SUCCESSFUL confirmation. */
+    public function clearConfirm(Request $request, string $action): void
+    {
+        RateLimiter::clear($this->confirmKey($request, $action));
+    }
+
+    /**
      * Shared gate: if the key is over the cap, throw a 429 ValidationException
      * carrying Retry-After and a localized auth.throttle message. Modelled on
      * Laravel's own ThrottlesLogins so the response shape matches a FormRequest
@@ -131,6 +164,14 @@ class LoginThrottle
         $userId = $request->user()?->getAuthIdentifier() ?? $request->ip();
 
         return self::PREFIX_TWO_FACTOR.'|'.$userId.'|'.$request->ip();
+    }
+
+    /** Confirm-budget key: action + authenticated user id (fallback IP) + IP. */
+    private function confirmKey(Request $request, string $action): string
+    {
+        $userId = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+        return self::PREFIX_CONFIRM.'|'.$action.'|'.$userId.'|'.$request->ip();
     }
 
     private function maxAttempts(): int
