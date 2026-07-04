@@ -7,11 +7,13 @@ namespace App\Domain\Automation\Services;
 use App\Domain\Automation\Enums\AutomationTargetType;
 use App\Domain\Automation\Enums\RunStatus;
 use App\Domain\Automation\Enums\TriggerKind;
+use App\Domain\Automation\Jobs\ExecuteAutomationActionJob;
 use App\Domain\Automation\Models\AutomationRun;
 use App\Domain\Automation\Models\PipelineAutomation;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -138,6 +140,47 @@ class AutomationEngine
         }
 
         return ! $status->holdsIdemSlot();
+    }
+
+    /**
+     * Defensive safety net: re-dispatch the execution job for runs stuck in
+     * `pending` past $olderThanMinutes.
+     *
+     * A `pending` run is only ever transient — the slot is claimed synchronously,
+     * then ExecuteAutomationActionJob resolves it to a terminal status within
+     * seconds. A run left `pending` means the job never ran to completion: a worker
+     * that claimed the slot then died before/while running the job (OOM/SIGTERM),
+     * a queue that dropped the message, or the historical pre-commit dispatch race
+     * (a worker picked up the job before COMMIT, found no committed deal, and the
+     * run was never resolved). Left alone that run holds its idempotency slot
+     * forever and the action is lost silently.
+     *
+     * The sweep re-dispatches ExecuteAutomationActionJob for each stale run. That
+     * job is idempotent by construction: it is ShouldBeUnique on the run id and
+     * BAILS if the run is no longer `pending`, so re-dispatching a run that a slow
+     * worker is about to finish is a no-op, never a double side-effect. Runs whose
+     * target deal has since vanished are finalized `skipped` by the job.
+     *
+     * The age floor ($olderThanMinutes, default from config) MUST exceed the job's
+     * wall-clock timeout so an in-flight (legitimately still-running) job is never
+     * swept out from under itself. Returns the number of runs re-dispatched.
+     */
+    public function sweepStalePending(?int $olderThanMinutes = null): int
+    {
+        $minutes = max(1, $olderThanMinutes ?? (int) config('automation.stale_pending_minutes', 15));
+        $cutoff = Carbon::now()->subMinutes($minutes);
+
+        $staleIds = AutomationRun::query()
+            ->where('status', RunStatus::Pending->value)
+            ->where('started_at', '<', $cutoff)
+            ->orderBy('id')
+            ->pluck('id');
+
+        foreach ($staleIds as $runId) {
+            ExecuteAutomationActionJob::dispatch((int) $runId);
+        }
+
+        return $staleIds->count();
     }
 
     /**

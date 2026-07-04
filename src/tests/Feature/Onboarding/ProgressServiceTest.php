@@ -16,6 +16,7 @@ use App\Domain\Onboarding\Models\Quiz;
 use App\Domain\Onboarding\Models\QuizAttempt;
 use App\Domain\Onboarding\Services\ProgressService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -163,6 +164,36 @@ class ProgressServiceTest extends TestCase
         ]);
 
         Event::assertDispatched(CourseCompleted::class);
+    }
+
+    public function test_course_completed_is_deferred_until_transaction_commits(): void
+    {
+        // Э3 finding 3: CourseCompleted (→ GenerateCertificateJob) must be
+        // deferred to after-commit. Inside a transaction that ROLLS BACK, the
+        // event must never fire — otherwise a certificate would be generated for a
+        // completion that was rolled back.
+        Event::fake();
+
+        [$assignment, $lessons] = $this->makeCourseWithLessons(2);
+        foreach ($lessons as $lesson) {
+            LessonProgress::factory()->completed()->create([
+                'assignment_id' => $assignment->id,
+                'lesson_id' => $lesson->id,
+            ]);
+        }
+
+        try {
+            DB::transaction(function () use ($assignment): void {
+                $this->service->checkAndComplete($assignment);
+                // Force a rollback of the surrounding transaction: the deferred
+                // event must be dropped, not fired.
+                throw new \RuntimeException('rollback');
+            });
+        } catch (\RuntimeException) {
+            // expected — the transaction rolled back.
+        }
+
+        Event::assertNotDispatched(CourseCompleted::class);
     }
 
     public function test_check_and_complete_no_op_when_not_all_done(): void

@@ -77,6 +77,53 @@ class ApprovalListenersTest extends TestCase
         Bus::assertDispatched(SendTelegramDmJob::class);
     }
 
+    // Э3 finding 3 — both TG jobs are dispatched AFTER the surrounding
+    // transaction commits (queue.after_commit=false, so a bare dispatch could be
+    // run by a worker before COMMIT and read uncommitted state).
+
+    public function test_card_job_is_dispatched_after_commit(): void
+    {
+        Bus::fake();
+        $document = Document::factory()->inReview()->create();
+        $route = ApprovalRoute::factory()->create();
+
+        event(new DocumentSubmittedForApproval(
+            $document,
+            $route,
+            ['order' => 1, 'name' => 'Юрист', 'user_ids' => [1], 'min_required' => 1],
+            submittedBy: 1,
+            attempt: 1,
+        ));
+
+        Bus::assertDispatched(
+            SendTelegramApprovalCardJob::class,
+            fn (SendTelegramApprovalCardJob $job): bool => $job->afterCommit === true,
+        );
+    }
+
+    public function test_dm_job_is_dispatched_after_commit(): void
+    {
+        Bus::fake();
+        $author = User::factory()->create();
+        $document = Document::factory()->create(['author_user_id' => $author->id]);
+        $approval = Approval::factory()->create([
+            'document_id' => $document->id,
+            'decision' => ApprovalDecision::Approved->value,
+        ]);
+
+        event(new ApprovalDecisionMade(
+            $document,
+            $approval,
+            ApprovalDecision::Approved,
+            ContractStatus::Approved,
+        ));
+
+        Bus::assertDispatched(
+            SendTelegramDmJob::class,
+            fn (SendTelegramDmJob $job): bool => $job->afterCommit === true,
+        );
+    }
+
     public function test_intermediate_approve_does_not_dm_author(): void
     {
         Bus::fake();

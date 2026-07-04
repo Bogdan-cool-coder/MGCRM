@@ -6,6 +6,7 @@ namespace App\Domain\Inbox\Services;
 
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\CompanyService;
+use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Inbox\Enums\ChannelKind;
 use App\Domain\Inbox\Enums\RoutingStatus;
@@ -209,8 +210,13 @@ class InboundRoutingService
     /**
      * Resolve a concrete owner. deals.owner_user_id is NOT NULL, so when the
      * channel has no static default_owner_id we fall back to the first
-     * admin/director user (the same triage owner inbound triage lands on). Null
-     * only when no user exists at all (impossible in a seeded system).
+     * admin/director user (the same triage owner inbound triage lands on) — a
+     * privileged account is the correct default holder of an unrouted lead rather
+     * than whichever user happens to have the lowest id (which could be a
+     * manager/accountant). The role filter runs through spatie on the sanctum
+     * guard (no inline role column). If no admin/director exists yet (unseeded
+     * edge), degrade to the first user of any role so a NOT NULL owner is still
+     * resolvable; null only when the system has no users at all.
      */
     private function resolveOwnerId(Channel $channel): ?int
     {
@@ -218,6 +224,17 @@ class InboundRoutingService
             return (int) $channel->default_owner_id;
         }
 
+        $privileged = User::query()
+            ->role([Role::Admin->value, Role::Director->value], 'sanctum')
+            ->orderBy('id')
+            ->value('id');
+
+        if ($privileged !== null) {
+            return (int) $privileged;
+        }
+
+        // Fallback: no admin/director seeded — any user keeps the NOT NULL owner
+        // resolvable (mirrors the ownerUser()/firstOrFail defensive default).
         return User::query()->orderBy('id')->value('id');
     }
 

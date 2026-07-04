@@ -15,11 +15,12 @@ use Throwable;
  * RunOnCreateAutomations (M7 P2) — fires `on_create` automations when a deal is
  * created.
  *
- * Subscribes to Sales\Events\DealCreated (dispatched by DealService::createInbound
- * AFTER its transaction commits, so the deal is always persisted here). For every
- * active on_create automation matching the deal's pipeline, it claims an
- * idempotency slot and queues the action — it does NO network IO itself, so the
- * inbound flow that created the deal is never blocked.
+ * Subscribes to Sales\Events\DealCreated (dispatched by DealService::create AND
+ * DealService::createInbound, both AFTER their transaction commits — so the deal
+ * is always persisted here and a queue worker can never observe an uncommitted
+ * row). For every active on_create automation matching the deal's pipeline, it
+ * claims an idempotency slot and queues the action — it does NO network IO
+ * itself, so the flow that created the deal is never blocked.
  *
  * trigger_event_ts = deal.created_at: a stable, deterministic marker so a
  * re-dispatched DealCreated (retry, replay) re-claims the same slot and is

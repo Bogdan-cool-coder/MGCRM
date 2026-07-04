@@ -37,11 +37,17 @@ class ApprovalNotificationService
             return;
         }
 
+        // afterCommit: this runs inside a synchronous listener that fires from
+        // ApprovalService's DB::transaction (submit / stage-advance). With
+        // queue.after_commit=false a bare dispatch could be picked up by a worker
+        // before COMMIT and read a document whose telegram_message_id reset (below)
+        // or whose status transition has not yet landed. Deferring to after commit
+        // guarantees the job sees the committed state.
         SendTelegramApprovalCardJob::dispatch(
             documentId: (int) $document->id,
             chatId: $chatId,
             text: $this->buildCard($document, $stage),
-        );
+        )->afterCommit();
     }
 
     /**

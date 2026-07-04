@@ -8,6 +8,7 @@ use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Services\DocumentService;
 use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Models\Deal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -125,5 +126,70 @@ class DocumentStatusTransitionTest extends TestCase
         $fromDb = Document::query()->find($doc->id);
         $this->assertSame(ContractStatus::Submitted->value, $fromDb->status->value);
         $this->assertSame(ContractStatus::Submitted->value, $updated->status->value);
+    }
+
+    // -------------------------------------------------------------------------
+    // Э3 finding 5 — unsign() must obey the same safety envelope as the forward
+    // transitions: from-status guard, persisted state change, and an entity-log
+    // row on the source subject.
+    // -------------------------------------------------------------------------
+
+    public function test_unsign_moves_signed_to_approved_and_clears_signed_at(): void
+    {
+        $user = User::factory()->create();
+        $doc = Document::factory()->create([
+            'status' => ContractStatus::Signed->value,
+            'author_user_id' => $user->id,
+            'signed_at' => now(),
+        ]);
+
+        $result = $this->service->unsign($doc, $user->id);
+
+        $this->assertSame(ContractStatus::Approved->value, $result->status->value);
+        $this->assertNull($result->signed_at);
+
+        // Persisted, not just in-memory.
+        $fromDb = Document::query()->find($doc->id);
+        $this->assertSame(ContractStatus::Approved->value, $fromDb->status->value);
+        $this->assertNull($fromDb->signed_at);
+    }
+
+    public function test_unsign_rejects_non_signed_document(): void
+    {
+        $user = User::factory()->create();
+        $doc = Document::factory()->approved()->create(['author_user_id' => $user->id]);
+
+        try {
+            $this->service->unsign($doc, $user->id);
+            $this->fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $this->assertSame(422, $e->status);
+        }
+
+        // Unchanged.
+        $this->assertSame(ContractStatus::Approved->value, $doc->fresh()->status->value);
+    }
+
+    public function test_unsign_writes_entity_log_on_source_deal(): void
+    {
+        $user = User::factory()->create();
+        $deal = Deal::factory()->create();
+        $doc = Document::factory()->create([
+            'status' => ContractStatus::Signed->value,
+            'author_user_id' => $user->id,
+            'signed_at' => now(),
+            'source_deal_id' => $deal->id,
+        ]);
+
+        $this->service->unsign($doc, $user->id);
+
+        // The reversal is recorded on the deal timeline with status=approved —
+        // parity with every other transition of this service (previously unsign
+        // silently skipped the log).
+        $this->assertDatabaseHas('entity_logs', [
+            'subject_type' => 'deal',
+            'subject_id' => $deal->id,
+            'action' => 'contract_event',
+        ]);
     }
 }

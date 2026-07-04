@@ -370,6 +370,12 @@ class ApprovalService
                 ]);
             }
 
+            // The document stays in_review across a stage advance, so the
+            // leave-in_review reset in DocumentService::transition() never fires.
+            // Clear the approval-card idempotency key here so the NEXT stage can
+            // post its own card (Э3) — otherwise stage 2+ silently never notifies.
+            $this->documentService->resetApprovalCard($locked);
+
             event(new DocumentSubmittedForApproval($locked, $route, $nextStage, $user->id, $attempt));
 
             return $locked->fresh();

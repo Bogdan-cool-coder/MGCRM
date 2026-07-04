@@ -76,4 +76,20 @@ return [
     |
     */
     'retention_days' => (int) env('AUTOMATION_RUN_RETENTION_DAYS', 90),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stale-pending sweep window
+    |--------------------------------------------------------------------------
+    |
+    | How many minutes a run may sit in `pending` before the sweep
+    | (`automation:sweep-stale-runs`, routes/console.php) re-dispatches its
+    | execution job. A run is only ever transiently `pending`; anything older
+    | than this means the worker that claimed the slot never resolved it (crash,
+    | dropped message, pre-commit dispatch race). MUST exceed the execution job's
+    | wall-clock timeout (ExecuteAutomationActionJob::$timeout = 120s) so a run
+    | that is still legitimately in flight is never swept.
+    |
+    */
+    'stale_pending_minutes' => (int) env('AUTOMATION_STALE_PENDING_MINUTES', 15),
 ];

@@ -42,6 +42,15 @@ Schedule::command('onboarding:mark-overdue')->daily();
 Schedule::command('automation:scan-idle')->hourly()->withoutOverlapping();
 Schedule::command('automation:scan-date-field')->hourly()->withoutOverlapping();
 
+// Stale-pending sweep (Э3 side-effect hardening) — re-dispatch the execution job
+// for runs stuck in `pending` past config('automation.stale_pending_minutes') (15).
+// A run is only ever transiently `pending`; anything older means the worker that
+// claimed the slot never resolved it (crash / dropped message / pre-commit race),
+// leaving the idempotency slot held and the action lost. The re-dispatched job is
+// ShouldBeUnique + bails when no longer pending, so a run resolved between sweeps
+// is a no-op. Every 5 min, withoutOverlapping so a slow sweep never stacks.
+Schedule::command('automation:sweep-stale-runs')->everyFiveMinutes()->withoutOverlapping();
+
 // Automation retention (M7) — nightly prune of the automation_runs journal so the
 // audit / idempotency table stays bounded. Window is config('automation.retention_days')
 // (90); off-peak at 03:00, withoutOverlapping guards against a long delete stacking.

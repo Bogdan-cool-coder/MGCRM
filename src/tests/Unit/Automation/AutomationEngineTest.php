@@ -7,12 +7,14 @@ namespace Tests\Unit\Automation;
 use App\Domain\Automation\Enums\AutomationTargetType;
 use App\Domain\Automation\Enums\RunStatus;
 use App\Domain\Automation\Enums\TriggerKind;
+use App\Domain\Automation\Jobs\ExecuteAutomationActionJob;
 use App\Domain\Automation\Models\AutomationRun;
 use App\Domain\Automation\Models\PipelineAutomation;
 use App\Domain\Automation\Services\AutomationEngine;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AutomationEngineTest extends TestCase
@@ -253,5 +255,71 @@ class AutomationEngineTest extends TestCase
         $this->assertInstanceOf(AutomationRun::class, $run);
         $this->assertSame($automation->id, $run->automation->id);
         $this->assertTrue($automation->runs()->whereKey($run->id)->exists());
+    }
+
+    // ---- sweepStalePending (Э3 stale-run safety net) ----
+
+    public function test_sweep_redispatches_only_stale_pending_runs(): void
+    {
+        Queue::fake();
+        $automation = PipelineAutomation::factory()->create();
+
+        // Stale: pending, started_at well past the default 15-min window.
+        $stale = AutomationRun::factory()->status(RunStatus::Pending)->create([
+            'automation_id' => $automation->id,
+            'target_id' => 11,
+            'started_at' => now()->subMinutes(30),
+        ]);
+
+        // Fresh pending: within the window — a legitimately in-flight run.
+        AutomationRun::factory()->status(RunStatus::Pending)->create([
+            'automation_id' => $automation->id,
+            'target_id' => 12,
+            'started_at' => now()->subMinutes(2),
+        ]);
+
+        // Old but already terminal — never re-dispatched.
+        AutomationRun::factory()->status(RunStatus::Success)->create([
+            'automation_id' => $automation->id,
+            'target_id' => 13,
+            'started_at' => now()->subMinutes(30),
+        ]);
+
+        $count = $this->engine->sweepStalePending();
+
+        $this->assertSame(1, $count, 'Only the one stale pending run is swept.');
+        Queue::assertPushed(
+            ExecuteAutomationActionJob::class,
+            fn (ExecuteAutomationActionJob $job): bool => $job->uniqueId() === (string) $stale->id,
+        );
+        Queue::assertPushed(ExecuteAutomationActionJob::class, 1);
+    }
+
+    public function test_sweep_respects_custom_minutes_floor(): void
+    {
+        Queue::fake();
+        $automation = PipelineAutomation::factory()->create();
+
+        AutomationRun::factory()->status(RunStatus::Pending)->create([
+            'automation_id' => $automation->id,
+            'target_id' => 21,
+            'started_at' => now()->subMinutes(6),
+        ]);
+
+        // 10-minute floor: a 6-minute-old run is NOT yet stale.
+        $this->assertSame(0, $this->engine->sweepStalePending(10));
+        Queue::assertNothingPushed();
+
+        // 5-minute floor: now it qualifies.
+        $this->assertSame(1, $this->engine->sweepStalePending(5));
+        Queue::assertPushed(ExecuteAutomationActionJob::class, 1);
+    }
+
+    public function test_sweep_is_noop_when_nothing_stale(): void
+    {
+        Queue::fake();
+
+        $this->assertSame(0, $this->engine->sweepStalePending());
+        Queue::assertNothingPushed();
     }
 }

@@ -990,6 +990,15 @@ class DealService
         // Creating a deal is engagement on its company (contacts are linked later).
         $this->touchEngagement($deal);
 
+        // Post-commit: announce creation so on_create automations fire for
+        // manually / UI-created deals too — not just inbound leads. Dispatched
+        // outside the transaction (mirrors createInbound) so a queue worker never
+        // claims the idempotency slot before COMMIT. Idempotency is preserved:
+        // trigger_event_ts = deal.created_at, and inbound deals never reach this
+        // path (createInbound is a separate entry point), so a deal is announced
+        // through exactly one of the two paths — never both.
+        DealCreated::dispatch($deal);
+
         return $deal;
     }
 
@@ -1023,7 +1032,7 @@ class DealService
         int $pipelineId,
         int $stageId,
     ): Deal {
-        return DB::transaction(function () use ($company, $opts, $ownerId, $pipelineId, $stageId): Deal {
+        $deal = DB::transaction(function () use ($company, $opts, $ownerId, $pipelineId, $stageId): Deal {
             $owner = $ownerId !== null ? User::find($ownerId) : null;
 
             $deal = Deal::create([
@@ -1075,10 +1084,19 @@ class DealService
             // An inbound lead is fresh engagement on its company.
             $this->touchEngagement($deal);
 
-            DealCreated::dispatch($deal);
-
             return $deal;
         });
+
+        // Post-commit: announce creation only after the deal row is committed, so
+        // the queued on_create automation listener (RunOnCreateAutomations →
+        // ExecuteAutomationActionJob) and the realtime broadcast never observe an
+        // uncommitted deal. With queue.after_commit=false a pre-commit dispatch
+        // lets a worker claim the idempotency slot and run before COMMIT: the run
+        // sticks `pending` forever (slot consumed) and the on_create action is lost
+        // silently. Mirrors DealMoveService step 8 (post-commit DealStageChanged).
+        DealCreated::dispatch($deal);
+
+        return $deal;
     }
 
     /**

@@ -121,7 +121,18 @@ class ProgressService
                 'completed_at' => now(),
             ]);
 
-            event(new CourseCompleted($assignment->fresh()));
+            // Both callers (recordLessonDone / QuizAttemptService::submit) invoke
+            // this INSIDE a DB::transaction, and CourseCompleted → the listener
+            // queues GenerateCertificateJob. With queue.after_commit=false a
+            // pre-commit dispatch lets a worker pick up the job before COMMIT and
+            // read a not-yet-persisted `completed` assignment (or generate a
+            // certificate for a state that then rolls back). DB::afterCommit defers
+            // the event until the surrounding transaction commits; when no
+            // transaction is active (should not happen here) it fires immediately.
+            $completed = $assignment->fresh();
+            DB::afterCommit(static function () use ($completed): void {
+                event(new CourseCompleted($completed));
+            });
         }
     }
 

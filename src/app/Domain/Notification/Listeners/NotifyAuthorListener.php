@@ -64,10 +64,15 @@ class NotifyAuthorListener
             $event->newDocumentStatus,
         );
 
+        // afterCommit: ApprovalDecisionMade is fired from ApprovalService's
+        // DB::transaction, so this listener runs pre-commit. With
+        // queue.after_commit=false a bare dispatch could be run by a worker before
+        // COMMIT — reading a document/approval verdict that has not yet landed (or
+        // that then rolls back). Defer the DM until the transaction commits.
         SendTelegramDmJob::dispatch(
             userId: $authorId,
             text: $text,
-        );
+        )->afterCommit();
 
         $this->createInAppVerdict($event, $authorId);
     }

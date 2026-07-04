@@ -329,6 +329,16 @@ class DocumentService
             // Side effects
             $this->applySideEffects($locked, $from, $to, $userId, $note);
 
+            // Approval-card idempotency reset (Э3): the Telegram approval card keys
+            // its "already sent" guard on documents.telegram_message_id. Once set,
+            // no further card can post. When the document LEAVES in_review
+            // (needs_rework / rejected / approved) the current approval round is
+            // over, so clear the id — otherwise a later resubmit (needs_rework →
+            // submitted → in_review) can never re-post its stage-1 card.
+            if ($from === ContractStatus::InReview && $to !== ContractStatus::InReview) {
+                $locked->telegram_message_id = null;
+            }
+
             $locked->save();
 
             // Sync the in-memory model so $doc->fresh() returns current state.
@@ -397,6 +407,21 @@ class DocumentService
                 LogAction::ContractEvent,
                 $meta,
             );
+        }
+    }
+
+    /**
+     * Clear the Telegram approval-card idempotency key so the NEXT approval stage
+     * can post its own card (Э3). Called by ApprovalService when a stage quorum is
+     * reached and the document advances to a further stage while STAYING in_review
+     * — the transition-based reset in transition() only fires when the document
+     * leaves in_review, which a multi-stage advance never does. Idempotent no-op
+     * when already null. Intra-domain (Contracts) call, not a status write.
+     */
+    public function resetApprovalCard(Document $doc): void
+    {
+        if ($doc->telegram_message_id !== null) {
+            $doc->forceFill(['telegram_message_id' => null])->save();
         }
     }
 
@@ -685,19 +710,40 @@ class DocumentService
      * Unsign a document: Signed → Approved, signed_at = null.
      * Only admin/lawyer (enforced by Policy).
      *
+     * This is a deliberate REVERSE transition not present in the forward
+     * ContractStatus matrix (Signed → Uploaded is the only forward edge), so it
+     * cannot go through transition(); instead it reproduces that method's safety
+     * envelope: a lockForUpdate to serialise concurrent unsign/sign, an explicit
+     * from-status guard (the reverse-edge equivalent of canTransitionTo), and an
+     * entity-log row via recordContractEvent so the deal/company timeline records
+     * the reversal — exactly like every other transition of this service.
+     *
      * @throws ValidationException when document is not in Signed status
      */
     public function unsign(Document $doc, int $userId): Document
     {
-        if ($doc->status !== ContractStatus::Signed) {
-            throw ValidationException::withMessages([
-                'status' => "Document must be in 'signed' status to unsign (current: {$doc->status->value}).",
-            ])->status(422);
-        }
+        DB::transaction(function () use ($doc): void {
+            $locked = Document::query()->lockForUpdate()->findOrFail($doc->id);
 
-        $doc->status = ContractStatus::Approved;
-        $doc->signed_at = null;
-        $doc->save();
+            // Reverse-edge guard (mirrors the forward canTransitionTo check): only
+            // a Signed document can be unsigned back to Approved.
+            if ($locked->status !== ContractStatus::Signed) {
+                throw ValidationException::withMessages([
+                    'status' => "Document must be in 'signed' status to unsign (current: {$locked->status->value}).",
+                ])->status(422);
+            }
+
+            $locked->status = ContractStatus::Approved;
+            $locked->signed_at = null;
+            $locked->save();
+
+            // Keep the passed-in model in sync so $doc->fresh() reflects the change.
+            $doc->status = ContractStatus::Approved;
+        });
+
+        // Entity-log the reversal on the source deal/company timeline, outside the
+        // lock (row is committed) — same post-commit logging path transition() uses.
+        $this->recordContractEvent($doc->fresh(), ContractStatus::Approved, $userId, 'Unsigned');
 
         return $doc->fresh();
     }
