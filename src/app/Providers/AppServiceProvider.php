@@ -63,9 +63,11 @@ use App\Domain\Crm\Policies\SavedViewPolicy;
 use App\Domain\Inbox\Models\Channel;
 use App\Domain\Inbox\Models\Form;
 use App\Domain\Inbox\Models\InboundMessage;
+use App\Domain\Inbox\Models\InboxDraft;
 use App\Domain\Inbox\Policies\ChannelPolicy;
 use App\Domain\Inbox\Policies\FormPolicy;
 use App\Domain\Inbox\Policies\InboundMessagePolicy;
+use App\Domain\Inbox\Policies\InboxDraftPolicy;
 use App\Domain\Notification\Listeners\NotifyActivityAssigneeListener;
 use App\Domain\Notification\Listeners\NotifyApproversListener;
 use App\Domain\Notification\Listeners\NotifyAuthorListener;
@@ -210,6 +212,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Channel::class, ChannelPolicy::class);
         Gate::policy(Form::class, FormPolicy::class);
         Gate::policy(InboundMessage::class, InboundMessagePolicy::class);
+
+        // Inbox Policies — Mail СРЕЗ B (drafts, the one per-author Inbox entity)
+        Gate::policy(InboxDraft::class, InboxDraftPolicy::class);
 
         // Contracts Policies (S2.1)
         Gate::policy(LicensorEntity::class, LicensorPolicy::class);

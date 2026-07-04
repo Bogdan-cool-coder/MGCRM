@@ -32,6 +32,68 @@
               {{ t('inbox.reading.channelAndId', { channel: msg.channel.name, id: msg.id }) }}
             </div>
           </div>
+
+          <!-- Star -->
+          <button
+            type="button"
+            :class="['inbox-reading__icon-btn', { 'inbox-reading__icon-btn--star': isStarred }]"
+            :title="isStarred ? t('inbox.star.unset') : t('inbox.star.set')"
+            :aria-label="isStarred ? t('inbox.star.unset') : t('inbox.star.set')"
+            :aria-pressed="isStarred"
+            @click="emit('star', msg.id)"
+          >
+            <i :class="['pi', isStarred ? 'pi-star-fill' : 'pi-star']" />
+          </button>
+
+          <!-- Important flag -->
+          <button
+            type="button"
+            :class="['inbox-reading__icon-btn', { 'inbox-reading__icon-btn--important': msg.important }]"
+            :title="msg.important ? t('inbox.important.unset') : t('inbox.important.set')"
+            :aria-label="msg.important ? t('inbox.important.unset') : t('inbox.important.set')"
+            :aria-pressed="msg.important"
+            @click="emit('toggle-important')"
+          >
+            <i :class="['pi', msg.important ? 'pi-flag-fill' : 'pi-flag']" />
+          </button>
+
+          <!-- Snooze -->
+          <template v-if="isSnoozed">
+            <Button
+              icon="pi pi-clock"
+              :label="t('inbox.snooze.unsnooze')"
+              severity="secondary"
+              outlined
+              size="small"
+              class="inbox-reading__snooze-active"
+              @click="emit('unsnooze', msg.id)"
+            />
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              class="inbox-reading__icon-btn"
+              :title="t('inbox.snooze.button')"
+              :aria-label="t('inbox.snooze.button')"
+              @click="onSnoozeClick"
+            >
+              <i class="pi pi-clock" />
+            </button>
+            <InboxSnoozeMenu ref="snoozeMenuRef" @snooze="onSnoozePicked" />
+          </template>
+
+          <!-- Draft reply -->
+          <Button
+            icon="pi pi-file-edit"
+            :label="t('inbox.drafts.replyButton')"
+            severity="secondary"
+            outlined
+            size="small"
+            class="inbox-reading__draft-btn"
+            @click="emit('draft-reply')"
+          />
+
+          <!-- Read toggle -->
           <Button
             :icon="msg.read_at ? 'pi pi-envelope' : 'pi pi-envelope-open'"
             :label="msg.read_at ? t('inbox.detail.markUnread') : t('inbox.detail.markRead')"
@@ -184,10 +246,12 @@ import AccordionHeader from 'primevue/accordionheader'
 import AccordionContent from 'primevue/accordioncontent'
 import ChannelKindTag from '@/components/inbox/ChannelKindTag.vue'
 import InboxChannelDot from './InboxChannelDot.vue'
+import InboxSnoozeMenu from './InboxSnoozeMenu.vue'
 import { OPERATIONAL_TZ } from '@/utils/activity'
+import { computed, ref } from 'vue'
 import type { InboundMessage, RoutingStatus } from '@/api/inbox'
 
-defineProps<{
+const props = defineProps<{
   /** null = empty state ("select a message"). */
   selectedId: number | null
   msg: InboundMessage | null
@@ -204,9 +268,32 @@ const emit = defineEmits<{
   'toggle-read': []
   reprocess: [id: number]
   back: []
+  star: [id: number]
+  'toggle-important': []
+  snooze: [payload: { id: number; until: string }]
+  unsnooze: [id: number]
+  'draft-reply': []
 }>()
 
 const { t } = useI18n()
+
+const snoozeMenuRef = ref<InstanceType<typeof InboxSnoozeMenu> | null>(null)
+
+const isStarred = computed(() => props.msg?.starred_at != null)
+
+/** Actively snoozed = snoozed_until in the future. */
+const isSnoozed = computed(() => {
+  if (!props.msg?.snoozed_until) return false
+  return new Date(props.msg.snoozed_until).getTime() > Date.now()
+})
+
+function onSnoozeClick(event: Event) {
+  snoozeMenuRef.value?.toggle(event)
+}
+
+function onSnoozePicked(until: string) {
+  if (props.msg) emit('snooze', { id: props.msg.id, until })
+}
 
 function formatDatetime(iso: string): string {
   return new Intl.DateTimeFormat('ru-RU', {
@@ -273,10 +360,11 @@ function routingStatusSeverity(status: RoutingStatus): 'success' | 'info' | 'dan
 .inbox-reading__toolbar {
   display: flex;
   align-items: center;
-  gap: $space-3;
+  gap: $space-2;
   padding: $space-3 $space-5;
   border-bottom: 1px solid $surface-200;
   flex-shrink: 0;
+  flex-wrap: wrap;
 
   .app-dark & {
     border-bottom-color: var(--p-surface-200);
@@ -306,8 +394,66 @@ function routingStatusSeverity(status: RoutingStatus): 'success' | 'info' | 'dan
   color: var(--p-text-muted-color);
 }
 
-.inbox-reading__read-toggle {
+.inbox-reading__read-toggle,
+.inbox-reading__draft-btn,
+.inbox-reading__snooze-active {
   flex-shrink: 0;
+}
+
+// ── Toolbar icon buttons (star / important / snooze) ────────────────────────────
+.inbox-reading__icon-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid $surface-200;
+  border-radius: $radius-md;
+  background: transparent;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color $transition-fast, background-color $transition-fast, border-color $transition-fast;
+
+  .pi {
+    font-size: $font-size-sm;
+  }
+
+  .app-dark & {
+    border-color: var(--p-surface-300);
+  }
+
+  &:hover {
+    background: var(--mg-surface-hover);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary-color;
+    outline-offset: -1px;
+  }
+
+  // Starred (gold, identical both themes).
+  &--star {
+    color: $stage-color-amber;
+    border-color: $stage-color-amber;
+
+    .app-dark & {
+      color: $stage-color-amber;
+      border-color: $stage-color-amber;
+    }
+  }
+
+  // Important (orange flag).
+  &--important {
+    color: var(--p-orange-500);
+    border-color: var(--p-orange-400);
+
+    .app-dark & {
+      color: var(--p-orange-400);
+      border-color: var(--p-orange-400);
+    }
+  }
 }
 
 // ── Body ────────────────────────────────────────────────────────────────────

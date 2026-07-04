@@ -42,6 +42,9 @@ class InboundMessage extends Model
         'target_deal_created',
         'routing_status',
         'read_at',
+        'starred_at',
+        'important',
+        'snoozed_until',
         'received_at',
     ];
 
@@ -52,6 +55,9 @@ class InboundMessage extends Model
             'target_deal_created' => 'boolean',
             'routing_status' => RoutingStatus::class,
             'read_at' => 'datetime',
+            'starred_at' => 'datetime',
+            'important' => 'boolean',
+            'snoozed_until' => 'datetime',
             'received_at' => 'datetime',
         ];
     }

@@ -29,6 +29,9 @@ class InboundMessageResource extends JsonResource
             'target_deal_created' => $this->target_deal_created,
             'routing_status' => $this->routing_status?->value,
             'read_at' => $this->read_at?->toISOString(),
+            'starred_at' => $this->starred_at?->toISOString(),
+            'important' => (bool) $this->important,
+            'snoozed_until' => $this->snoozed_until?->toISOString(),
             'received_at' => $this->received_at?->toISOString(),
 
             // Embedded so the triage list/detail renders without extra calls.

@@ -16,12 +16,31 @@
       <span v-if="isUnread" class="inbox-row__dot" />
     </span>
 
+    <!-- Star toggle (contour / gold) -->
+    <button
+      type="button"
+      :class="['inbox-row__star', { 'inbox-row__star--on': isStarred }]"
+      :title="isStarred ? t('inbox.star.unset') : t('inbox.star.set')"
+      :aria-label="isStarred ? t('inbox.star.unset') : t('inbox.star.set')"
+      :aria-pressed="isStarred"
+      @click.stop="emit('star', msg.id)"
+      @keydown.enter.stop
+      @keydown.space.stop.prevent
+    >
+      <i :class="['pi', isStarred ? 'pi-star-fill' : 'pi-star']" />
+    </button>
+
     <!-- Channel dot -->
     <InboxChannelDot :kind="msg.channel.kind" :size="cozy ? 38 : 34" />
 
     <!-- Body: name/ident/time + subject·preview + deal chip -->
     <div class="inbox-row__main">
       <div class="inbox-row__top">
+        <i
+          v-if="msg.important"
+          v-tooltip.top="t('inbox.important.badge')"
+          class="pi pi-flag-fill inbox-row__important"
+        />
         <span class="inbox-row__name">
           {{ msg.from_name || msg.from_identifier || '—' }}
         </span>
@@ -44,6 +63,10 @@
           <span v-else-if="!msg.subject" class="inbox-row__preview--empty">
             {{ t('inbox.detail.bodyEmpty') }}
           </span>
+        </span>
+        <span v-if="snoozedLabel" class="inbox-row__snoozed" :title="snoozedFull">
+          <i class="pi pi-clock" />
+          {{ snoozedLabel }}
         </span>
         <InboxDealChip :msg="msg" :pending="reprocessPending" @reprocess="emit('reprocess', $event)" />
       </div>
@@ -70,11 +93,31 @@ const props = defineProps<{
 const emit = defineEmits<{
   open: [msg: InboundMessage]
   reprocess: [id: number]
+  star: [id: number]
 }>()
 
 const { t } = useI18n()
 
 const isUnread = computed(() => props.msg.read_at === null)
+const isStarred = computed(() => props.msg.starred_at !== null)
+
+/** Snoozed "until" clock label (shown in the Отложенные folder). */
+const snoozedLabel = computed(() => {
+  if (!props.msg.snoozed_until) return null
+  const d = new Date(props.msg.snoozed_until)
+  if (d.getTime() <= Date.now()) return null // already elapsed → back in Inbox
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: OPERATIONAL_TZ,
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d)
+})
+
+const snoozedFull = computed(() =>
+  props.msg.snoozed_until ? t('inbox.snooze.untilTooltip', { when: snoozedLabel.value ?? '' }) : '',
+)
 
 /** Relative time display (Dubai tz) */
 const relativeTime = computed(() => {
@@ -177,6 +220,61 @@ const fullDatetime = computed(() => {
   height: 8px;
   border-radius: $radius-circle;
   background-color: $primary-color;
+}
+
+// ── Star toggle ───────────────────────────────────────────────────────────────
+.inbox-row__star {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  // Empty-star colour: muted contour (theme-reactive).
+  color: $surface-300;
+  transition: color $transition-fast, background-color $transition-fast;
+
+  .pi {
+    font-size: $font-size-sm;
+  }
+
+  .app-dark & {
+    color: var(--p-surface-300);
+  }
+
+  &:hover {
+    color: $stage-color-amber;
+    background: var(--mg-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary-color;
+    outline-offset: -2px;
+  }
+
+  // Starred (gold, vivid brand amber — identical in both themes).
+  &--on {
+    color: $stage-color-amber;
+
+    .app-dark & {
+      color: $stage-color-amber;
+    }
+  }
+}
+
+// ── Important flag ──────────────────────────────────────────────────────────────
+.inbox-row__important {
+  flex-shrink: 0;
+  font-size: $font-size-xs;
+  color: var(--p-orange-500);
+
+  .app-dark & {
+    color: var(--p-orange-400);
+  }
 }
 
 // ── Main body ───────────────────────────────────────────────────────────────
@@ -299,5 +397,21 @@ const fullDatetime = computed(() => {
 
 .inbox-row__preview--empty {
   font-style: italic;
+}
+
+// ── Snoozed-until label (Отложенные folder) ─────────────────────────────────────
+.inbox-row__snoozed {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  color: var(--p-primary-color);
+
+  .pi {
+    font-size: $font-size-2xs;
+  }
 }
 </style>

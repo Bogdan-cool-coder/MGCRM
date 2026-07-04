@@ -71,6 +71,7 @@ use App\Http\Controllers\Iam\UserController;
 use App\Http\Controllers\Inbox\ChannelController;
 use App\Http\Controllers\Inbox\FormController;
 use App\Http\Controllers\Inbox\InboundMessageController;
+use App\Http\Controllers\Inbox\InboxDraftController;
 use App\Http\Controllers\Inbox\InboxWebhookController;
 use App\Http\Controllers\Inbox\PublicFormController;
 use App\Http\Controllers\Log\EntityLogController;
@@ -827,10 +828,25 @@ Route::middleware(['auth:sanctum', '2fa', 'locale', 'visibility'])->group(functi
     // Static segments MUST precede the {inboundMessage} route so they are not
     // swallowed as a message id.
     Route::get('inbox/unread-count', [InboundMessageController::class, 'unreadCount'])->name('inbox.unread-count');
-    Route::get('inbox/{inboundMessage}', [InboundMessageController::class, 'show'])->name('inbox.show');
-    Route::post('inbox/{inboundMessage}/read', [InboundMessageController::class, 'read'])->name('inbox.read');
-    Route::post('inbox/{inboundMessage}/unread', [InboundMessageController::class, 'unread'])->name('inbox.unread');
-    Route::post('inbox/{inboundMessage}/reroute', [InboundMessageController::class, 'reroute'])->name('inbox.reroute');
+    // Mail СРЕЗ B — counts + drafts, static segments before the {inboundMessage}
+    // wildcard (contract §4.6/§9). Drafts are per-author CRUD (the one per-user
+    // Inbox entity); Policy enforces owner-only view/update/delete.
+    Route::get('inbox/counts', [InboundMessageController::class, 'counts'])->name('inbox.counts');
+    Route::get('inbox/drafts', [InboxDraftController::class, 'index'])->name('inbox.drafts.index');
+    Route::post('inbox/drafts', [InboxDraftController::class, 'store'])->name('inbox.drafts.store');
+    Route::get('inbox/drafts/{draft}', [InboxDraftController::class, 'show'])->name('inbox.drafts.show');
+    Route::patch('inbox/drafts/{draft}', [InboxDraftController::class, 'update'])->name('inbox.drafts.update');
+    Route::delete('inbox/drafts/{draft}', [InboxDraftController::class, 'destroy'])->name('inbox.drafts.destroy');
+    Route::get('inbox/{inboundMessage}', [InboundMessageController::class, 'show'])->name('inbox.show')->whereNumber('inboundMessage');
+    Route::post('inbox/{inboundMessage}/read', [InboundMessageController::class, 'read'])->name('inbox.read')->whereNumber('inboundMessage');
+    Route::post('inbox/{inboundMessage}/unread', [InboundMessageController::class, 'unread'])->name('inbox.unread')->whereNumber('inboundMessage');
+    Route::post('inbox/{inboundMessage}/star', [InboundMessageController::class, 'star'])->name('inbox.star')->whereNumber('inboundMessage');
+    Route::delete('inbox/{inboundMessage}/star', [InboundMessageController::class, 'unstar'])->name('inbox.unstar')->whereNumber('inboundMessage');
+    Route::post('inbox/{inboundMessage}/important', [InboundMessageController::class, 'markImportant'])->name('inbox.important')->whereNumber('inboundMessage');
+    Route::delete('inbox/{inboundMessage}/important', [InboundMessageController::class, 'unmarkImportant'])->name('inbox.unimportant')->whereNumber('inboundMessage');
+    Route::post('inbox/{inboundMessage}/snooze', [InboundMessageController::class, 'snooze'])->name('inbox.snooze')->whereNumber('inboundMessage');
+    Route::delete('inbox/{inboundMessage}/snooze', [InboundMessageController::class, 'unsnooze'])->name('inbox.unsnooze')->whereNumber('inboundMessage');
+    Route::post('inbox/{inboundMessage}/reroute', [InboundMessageController::class, 'reroute'])->name('inbox.reroute')->whereNumber('inboundMessage');
 
     // =========================================================================
     // Contracts — S2.1: Licensors, Templates, Template Variables

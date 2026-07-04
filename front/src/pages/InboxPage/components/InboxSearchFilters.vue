@@ -46,6 +46,7 @@
           >
             <i :class="['pi', opt.icon]" />
             {{ opt.label }}
+            <span v-if="opt.count > 0" class="inbox-search__chip-count">· {{ opt.count }}</span>
           </button>
         </div>
 
@@ -63,8 +64,27 @@
           >
             <i :class="['pi', opt.icon]" />
             {{ opt.label }}
+            <span v-if="opt.count > 0" class="inbox-search__chip-count">· {{ opt.count }}</span>
           </button>
         </div>
+
+        <div class="inbox-search__divider" />
+
+        <!-- Received date range -->
+        <div class="inbox-search__section-label">{{ t('inbox.filters.dateRange') }}</div>
+        <DatePicker
+          :model-value="dateRange ?? undefined"
+          selection-mode="range"
+          :manual-input="false"
+          date-format="dd.mm.yy"
+          show-button-bar
+          show-icon
+          icon-display="input"
+          :placeholder="t('inbox.filters.dateRangePlaceholder')"
+          class="inbox-search__date"
+          append-to="self"
+          @update:model-value="onDateRange"
+        />
 
         <!-- Footer actions -->
         <div class="inbox-search__panel-footer">
@@ -93,7 +113,8 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Popover from 'primevue/popover'
 import Button from 'primevue/button'
-import type { ChannelKind } from '@/api/inbox'
+import DatePicker from 'primevue/datepicker'
+import type { ChannelKind, InboxCounts } from '@/api/inbox'
 import type { InboxFolder } from '../composables/useInboxPage'
 
 const props = defineProps<{
@@ -101,12 +122,15 @@ const props = defineProps<{
   folder: InboxFolder
   channel: ChannelKind | null
   hasActiveFilters: boolean
+  counts: InboxCounts | null
+  dateRange: [Date | null, Date | null] | null
 }>()
 
 const emit = defineEmits<{
   search: [value: string]
   'update:folder': [value: InboxFolder]
   'update:channel': [value: ChannelKind | null]
+  'update:dateRange': [value: [Date | null, Date | null] | null]
   reset: []
 }>()
 
@@ -114,27 +138,81 @@ const { t } = useI18n()
 
 const panelRef = ref<InstanceType<typeof Popover> | null>(null)
 
+const hasDateRange = computed(
+  () => !!props.dateRange && (props.dateRange[0] !== null || props.dateRange[1] !== null),
+)
+
 /** Count of non-default filters shown as a badge on the trigger. */
 const activeCount = computed(() => {
   let n = 0
   if (props.folder !== 'all') n += 1
   if (props.channel !== null) n += 1
+  if (hasDateRange.value) n += 1
   return n
 })
 
-const folderOptions = computed<{ value: InboxFolder; icon: string; label: string }[]>(() => [
-  { value: 'all', icon: 'pi-inbox', label: t('inbox.folders.all') },
-  { value: 'failed', icon: 'pi-exclamation-triangle', label: t('inbox.folders.failed') },
-  { value: 'deals', icon: 'pi-briefcase', label: t('inbox.folders.deals') },
-])
+/** Per-folder badge counts (0 when counts not yet loaded). */
+const folderOptions = computed<{ value: InboxFolder; icon: string; label: string; count: number }[]>(
+  () => {
+    const c = props.counts?.folders
+    return [
+      { value: 'all', icon: 'pi-inbox', label: t('inbox.folders.all'), count: c?.inbox_unread ?? 0 },
+      { value: 'starred', icon: 'pi-star', label: t('inbox.folders.starred'), count: c?.starred ?? 0 },
+      {
+        value: 'important',
+        icon: 'pi-flag',
+        label: t('inbox.folders.important'),
+        count: c?.important ?? 0,
+      },
+      {
+        value: 'failed',
+        icon: 'pi-exclamation-triangle',
+        label: t('inbox.folders.failed'),
+        count: c?.failed ?? 0,
+      },
+      { value: 'deals', icon: 'pi-briefcase', label: t('inbox.folders.deals'), count: c?.in_deals ?? 0 },
+      { value: 'snoozed', icon: 'pi-clock', label: t('inbox.folders.snoozed'), count: c?.snoozed ?? 0 },
+      {
+        value: 'drafts',
+        icon: 'pi-file-edit',
+        label: t('inbox.folders.drafts'),
+        count: c?.drafts ?? 0,
+      },
+    ]
+  },
+)
 
-const channelOptions = computed<{ value: ChannelKind; icon: string; label: string }[]>(() => [
-  { value: 'tg', icon: 'pi-telegram', label: t('inbox.channelKind.tg') },
-  { value: 'wa', icon: 'pi-whatsapp', label: t('inbox.channelKind.wa') },
-  { value: 'email', icon: 'pi-envelope', label: t('inbox.channelKind.email') },
-  { value: 'web_form', icon: 'pi-globe', label: t('inbox.channelKind.web_form') },
-  { value: 'api', icon: 'pi-code', label: t('inbox.channelKind.api') },
-])
+const channelOptions = computed<{ value: ChannelKind; icon: string; label: string; count: number }[]>(
+  () => {
+    const c = props.counts?.channels
+    return [
+      { value: 'tg', icon: 'pi-telegram', label: t('inbox.channelKind.tg'), count: c?.tg ?? 0 },
+      { value: 'wa', icon: 'pi-whatsapp', label: t('inbox.channelKind.wa'), count: c?.wa ?? 0 },
+      { value: 'email', icon: 'pi-envelope', label: t('inbox.channelKind.email'), count: c?.email ?? 0 },
+      {
+        value: 'web_form',
+        icon: 'pi-globe',
+        label: t('inbox.channelKind.web_form'),
+        count: c?.web_form ?? 0,
+      },
+      { value: 'api', icon: 'pi-code', label: t('inbox.channelKind.api'), count: c?.api ?? 0 },
+    ]
+  },
+)
+
+function onDateRange(value: unknown) {
+  // PrimeVue range mode emits (Date | null)[] | null. Normalize to a 2-tuple.
+  if (Array.isArray(value)) {
+    const [from = null, to = null] = value as (Date | null)[]
+    if (from === null && to === null) {
+      emit('update:dateRange', null)
+    } else {
+      emit('update:dateRange', [from, to])
+    }
+  } else {
+    emit('update:dateRange', null)
+  }
+}
 
 function onInput(event: Event) {
   emit('search', (event.target as HTMLInputElement).value)
@@ -344,6 +422,16 @@ function onReset() {
       color: var(--p-primary-color);
     }
   }
+}
+
+.inbox-search__chip-count {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  opacity: 0.9;
+}
+
+.inbox-search__date {
+  width: 100%;
 }
 
 .inbox-search__divider {

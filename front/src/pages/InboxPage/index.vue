@@ -15,6 +15,7 @@
       </div>
 
       <SelectButton
+        v-if="!isDraftsFolder"
         :model-value="filters.unreadOnly ? unreadOption : allOption"
         :options="unreadOptions"
         option-label="label"
@@ -28,9 +29,12 @@
         :folder="filters.folder"
         :channel="filters.channel"
         :has-active-filters="hasActiveFilters"
+        :counts="counts"
+        :date-range="filters.dateRange"
         @search="onSearchInput"
         @update:folder="setFolder"
         @update:channel="setChannel"
+        @update:date-range="setDateRange"
         @reset="resetFilters"
       />
 
@@ -46,43 +50,89 @@
 
     <!-- Two-pane body -->
     <div :class="['inbox-page__body', `inbox-page__body--${mobileView}`]">
-      <!-- List pane -->
-      <section class="inbox-page__pane inbox-page__pane--list">
-        <InboxList
-          :messages="messages"
-          :loading="listLoading"
-          :error="listError"
-          :total-records="totalRecords"
-          :per-page="perPage"
-          :selected-id="selectedId"
-          :cozy="cozy"
-          :is-failed-filter="filters.folder === 'failed'"
-          :has-active-filters="hasActiveFilters"
-          :active-reprocess-id="currentReprocessId"
-          @open="openMessage"
-          @reprocess="confirmReprocess"
-          @page="onPageChange"
-          @refresh="fetchMessages"
-          @reset="resetFilters"
-        />
-      </section>
+      <!-- ── Drafts folder: draft list + editor ─────────────────────────────── -->
+      <template v-if="isDraftsFolder">
+        <section class="inbox-page__pane inbox-page__pane--list">
+          <InboxDraftList
+            :drafts="drafts"
+            :loading="draftsLoading"
+            :error="draftsError"
+            :selected-draft-id="selectedDraftId"
+            @open="openDraft"
+            @new="startNewDraft"
+            @refresh="fetchMessages"
+          />
+        </section>
 
-      <!-- Reading pane -->
-      <section class="inbox-page__pane inbox-page__pane--reading">
-        <InboxReadingPane
-          :selected-id="selectedId"
-          :msg="selectedMessage"
-          :loading="detailLoading"
-          :load-error="detailError"
-          :reprocess-pending="reprocessPending"
-          :mark-read-pending="markReadPending"
-          :can-view-raw-payload="canViewRawPayload"
-          :show-back="true"
-          @toggle-read="toggleSelectedRead"
-          @reprocess="confirmReprocess"
-          @back="backToList"
-        />
-      </section>
+        <section class="inbox-page__pane inbox-page__pane--reading">
+          <InboxDraftEditor
+            v-if="selectedDraftId !== null || draftDirty"
+            :subject="draftForm.subject"
+            :body="draftForm.body"
+            :related-message-id="draftForm.related_message_id"
+            :is-new="selectedDraftId === null"
+            :dirty="draftDirty"
+            :save-pending="draftSavePending"
+            :show-back="true"
+            @update:subject="onDraftSubject"
+            @update:body="onDraftBody"
+            @save="saveDraft"
+            @delete="deleteDraft"
+            @back="backToList"
+          />
+          <div v-else class="inbox-page__draft-empty">
+            <i class="pi pi-file-edit inbox-page__draft-empty-icon" />
+            <p class="inbox-page__draft-empty-title">{{ t('inbox.drafts.pickTitle') }}</p>
+            <p class="inbox-page__draft-empty-hint">{{ t('inbox.drafts.pickHint') }}</p>
+          </div>
+        </section>
+      </template>
+
+      <!-- ── Message folders: message list + reading pane ───────────────────── -->
+      <template v-else>
+        <section class="inbox-page__pane inbox-page__pane--list">
+          <InboxList
+            :messages="messages"
+            :loading="listLoading"
+            :error="listError"
+            :total-records="totalRecords"
+            :per-page="perPage"
+            :selected-id="selectedId"
+            :cozy="cozy"
+            :is-failed-filter="filters.folder === 'failed'"
+            :has-active-filters="hasActiveFilters"
+            :folder="filters.folder"
+            :active-reprocess-id="currentReprocessId"
+            @open="openMessage"
+            @reprocess="confirmReprocess"
+            @star="toggleStar"
+            @page="onPageChange"
+            @refresh="fetchMessages"
+            @reset="resetFilters"
+          />
+        </section>
+
+        <section class="inbox-page__pane inbox-page__pane--reading">
+          <InboxReadingPane
+            :selected-id="selectedId"
+            :msg="selectedMessage"
+            :loading="detailLoading"
+            :load-error="detailError"
+            :reprocess-pending="reprocessPending"
+            :mark-read-pending="markReadPending"
+            :can-view-raw-payload="canViewRawPayload"
+            :show-back="true"
+            @toggle-read="toggleSelectedRead"
+            @reprocess="confirmReprocess"
+            @star="toggleStar"
+            @toggle-important="toggleSelectedImportant"
+            @snooze="onSnooze"
+            @unsnooze="unsnooze"
+            @draft-reply="draftReplyToSelected"
+            @back="backToList"
+          />
+        </section>
+      </template>
     </div>
   </div>
 </template>
@@ -98,6 +148,8 @@ import SelectButton from 'primevue/selectbutton'
 import InboxSearchFilters from './components/InboxSearchFilters.vue'
 import InboxList from './components/InboxList.vue'
 import InboxReadingPane from './components/InboxReadingPane.vue'
+import InboxDraftList from './components/InboxDraftList.vue'
+import InboxDraftEditor from './components/InboxDraftEditor.vue'
 import { useInboxPage } from './composables/useInboxPage'
 import { useDensityStore } from '@/stores/density'
 
@@ -113,13 +165,16 @@ const {
   listError,
   totalRecords,
   perPage,
+  counts,
   filters,
   hasActiveFilters,
+  isDraftsFolder,
   onSearchInput,
   resetFilters,
   setFolder,
   setChannel,
   setUnreadOnly,
+  setDateRange,
   selectedId,
   selectedMessage,
   mobileView,
@@ -129,14 +184,45 @@ const {
   backToList,
   toggleSelectedRead,
   markReadPending,
+  toggleStar,
+  toggleSelectedImportant,
+  snooze,
+  unsnooze,
   reprocessPending,
   currentReprocessId,
   confirmReprocess,
+  drafts,
+  draftsLoading,
+  draftsError,
+  selectedDraftId,
+  draftForm,
+  draftDirty,
+  draftSavePending,
+  openDraft,
+  startNewDraft,
+  markDraftDirty,
+  draftReplyToSelected,
+  saveDraft,
+  deleteDraft,
   onPageChange,
   fetchMessages,
   canViewRawPayload,
   inboxUnreadCount,
 } = useInboxPage()
+
+function onSnooze(payload: { id: number; until: string }) {
+  void snooze(payload.id, payload.until)
+}
+
+function onDraftSubject(value: string) {
+  draftForm.value.subject = value
+  markDraftDirty()
+}
+
+function onDraftBody(value: string) {
+  draftForm.value.body = value
+  markDraftDirty()
+}
 
 // ─── Segmented Unread / All ─────────────────────────────────────────────────
 interface UnreadOption {
@@ -246,6 +332,38 @@ function onRefresh() {
   .app-dark & {
     border-color: var(--p-surface-200);
   }
+}
+
+// ── Drafts: "pick a draft" empty state ──────────────────────────────────────────
+.inbox-page__draft-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-3;
+  padding: $space-8 $space-5;
+  text-align: center;
+}
+
+.inbox-page__draft-empty-icon {
+  font-size: $font-size-icon-lg;
+  color: var(--p-text-muted-color);
+  opacity: 0.5;
+}
+
+.inbox-page__draft-empty-title {
+  margin: 0;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--p-text-color);
+}
+
+.inbox-page__draft-empty-hint {
+  margin: 0;
+  max-width: 260px;
+  font-size: $font-size-sm;
+  color: var(--p-text-muted-color);
 }
 
 // ── Responsive: fold to a single pane below lg (992px) ─────────────────────────

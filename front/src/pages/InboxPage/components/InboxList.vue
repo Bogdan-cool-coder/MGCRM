@@ -34,10 +34,23 @@
           <p class="inbox-list__empty-title">{{ t('inbox.empty.failedTitle') }}</p>
           <p class="inbox-list__empty-body">{{ t('inbox.empty.failedBody') }}</p>
         </template>
-        <template v-else>
+        <template v-else-if="isPlainInbox">
           <i class="pi pi-inbox inbox-list__empty-icon" />
           <p class="inbox-list__empty-title">{{ t('inbox.empty.title') }}</p>
           <p class="inbox-list__empty-body">{{ t('inbox.empty.body') }}</p>
+          <Button
+            v-if="hasActiveFilters"
+            :label="t('inbox.filters.reset')"
+            text
+            size="small"
+            class="inbox-list__empty-reset"
+            @click="emit('reset')"
+          />
+        </template>
+        <template v-else>
+          <i :class="['pi', folderEmptyIcon, 'inbox-list__empty-icon']" />
+          <p class="inbox-list__empty-title">{{ t('inbox.empty.folderTitle') }}</p>
+          <p class="inbox-list__empty-body">{{ t('inbox.empty.folderBody') }}</p>
           <Button
             v-if="hasActiveFilters"
             :label="t('inbox.filters.reset')"
@@ -60,6 +73,7 @@
           :reprocess-pending="activeReprocessId === msg.id"
           @open="emit('open', $event)"
           @reprocess="emit('reprocess', $event)"
+          @star="emit('star', $event)"
         />
       </template>
     </div>
@@ -82,6 +96,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
@@ -89,8 +104,9 @@ import Skeleton from 'primevue/skeleton'
 import Paginator from 'primevue/paginator'
 import InboxMessageRow from './InboxMessageRow.vue'
 import type { InboundMessage } from '@/api/inbox'
+import type { InboxFolder } from '../composables/useInboxPage'
 
-defineProps<{
+const props = defineProps<{
   messages: InboundMessage[]
   loading: boolean
   error: unknown
@@ -100,6 +116,8 @@ defineProps<{
   cozy: boolean
   isFailedFilter: boolean
   hasActiveFilters: boolean
+  /** Current folder — drives the empty-state copy/icon. */
+  folder: InboxFolder
   /** ID of the row currently being reprocessed; spinner shows on that row only. */
   activeReprocessId?: number | null
 }>()
@@ -107,12 +125,26 @@ defineProps<{
 const emit = defineEmits<{
   open: [msg: InboundMessage]
   reprocess: [id: number]
+  star: [id: number]
   page: [event: { page: number; rows: number }]
   refresh: []
   reset: []
 }>()
 
 const { t } = useI18n()
+
+/** Plain "Входящие" (or a channel filter within it) → the generic inbox empty copy. */
+const isPlainInbox = computed(() => props.folder === 'all')
+
+const folderEmptyIcon = computed(() => {
+  const map: Partial<Record<InboxFolder, string>> = {
+    starred: 'pi-star',
+    important: 'pi-flag',
+    deals: 'pi-briefcase',
+    snoozed: 'pi-clock',
+  }
+  return map[props.folder] ?? 'pi-inbox'
+})
 </script>
 
 <style lang="scss" scoped>

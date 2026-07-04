@@ -12,23 +12,31 @@ import { useMutation } from '@/composables/async/useMutation'
 import { inboxApi } from '@/api/inbox'
 import { useInboxStore } from '@/stores/inboxStore'
 import { useUserStore } from '@/stores/user'
-import type { InboundMessage, ChannelKind } from '@/api/inbox'
+import { localDateString } from '@/utils/activity'
+import type { InboundMessage, ChannelKind, InboxCounts, InboxDraft } from '@/api/inbox'
 
 // ─── Filter state ─────────────────────────────────────────────────────────────
 
 /**
- * Folder selection (mutually exclusive, radio-like):
- * - `all`    → no status/has_deal filter (Inbox)
- * - `failed` → routing_status='failed' (Unrouted)
- * - `deals`  → has_deal=true (In deals)
+ * Folder selection (mutually exclusive, radio-like). Each maps to a param set on
+ * GET /api/inbox (СРЕЗ B — no server `folder` enum; the composable builds params):
+ * - `all`       → no status/has_deal filter (Inbox; server hides active-snoozed)
+ * - `starred`   → starred=1 (Помеченные)
+ * - `important` → important=1 (Важные)
+ * - `failed`    → routing_status='failed' (Не разобрано)
+ * - `deals`     → has_deal=true (В сделках)
+ * - `snoozed`   → snoozed=1 (Отложенные)
+ * - `drafts`    → SEPARATE endpoint /api/inbox/drafts + draft editor render
  */
-export type InboxFolder = 'all' | 'failed' | 'deals'
+export type InboxFolder = 'all' | 'starred' | 'important' | 'failed' | 'deals' | 'snoozed' | 'drafts'
 
 export interface InboxFilters {
   unreadOnly: boolean
   folder: InboxFolder
   channel: ChannelKind | null
   q: string
+  /** [from, to] received-date range; nulls = no bound. */
+  dateRange: [Date | null, Date | null] | null
 }
 
 /** Two-pane view mode on narrow screens (< lg): only one pane is visible. */
@@ -49,13 +57,21 @@ export const useInboxPage = () => {
   const isAdmin = role === 'admin' || role === 'director'
   const canViewRawPayload = isAdmin
 
+  // ─── Reading-pane selection (declared early so filter actions can clear it) ────
+  const selectedId = ref<number | null>(null)
+  const selectedMessage = ref<InboundMessage | null>(null)
+
   // ─── Filter state ─────────────────────────────────────────────────────────────
   const filters = ref<InboxFilters>({
     unreadOnly: true,
     folder: 'all',
     channel: null,
     q: '',
+    dateRange: null,
   })
+
+  /** Drafts is a distinct mode: separate endpoint + editor render, no message list. */
+  const isDraftsFolder = computed(() => filters.value.folder === 'drafts')
 
   // Debounce timer for search input
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -69,12 +85,18 @@ export const useInboxPage = () => {
     }, 300)
   }
 
+  const hasDateRange = computed(() => {
+    const r = filters.value.dateRange
+    return !!r && (r[0] !== null || r[1] !== null)
+  })
+
   const hasActiveFilters = computed(() => {
     return (
       !filters.value.unreadOnly ||
       filters.value.folder !== 'all' ||
       filters.value.channel !== null ||
-      filters.value.q.trim() !== ''
+      filters.value.q.trim() !== '' ||
+      hasDateRange.value
     )
   })
 
@@ -85,6 +107,7 @@ export const useInboxPage = () => {
       folder: 'all',
       channel: null,
       q: '',
+      dateRange: null,
     }
     debouncedQ.value = ''
     currentPage.value = 1
@@ -93,6 +116,11 @@ export const useInboxPage = () => {
   function setFolder(folder: InboxFolder) {
     filters.value.folder = folder
     currentPage.value = 1
+    // Leaving a message-list folder for drafts (or back) resets selection focus.
+    if (folder === 'drafts') {
+      selectedId.value = null
+      selectedMessage.value = null
+    }
   }
 
   function setChannel(channel: ChannelKind | null) {
@@ -105,6 +133,11 @@ export const useInboxPage = () => {
     currentPage.value = 1
   }
 
+  function setDateRange(range: [Date | null, Date | null] | null) {
+    filters.value.dateRange = range
+    currentPage.value = 1
+  }
+
   // ─── Pagination state ─────────────────────────────────────────────────────────
   const currentPage = ref(1)
   const perPage = ref(DEFAULT_PER_PAGE)
@@ -113,20 +146,56 @@ export const useInboxPage = () => {
   // ─── List resource ─────────────────────────────────────────────────────────────
   const listResource = useAsyncResource<InboundMessage[]>([])
 
+  // ─── Counts (folder + channel badges) ──────────────────────────────────────────
+  const counts = ref<InboxCounts | null>(null)
+
+  /** Cheap single call; refetched after list load + any triage/read mutation. */
+  async function fetchCounts() {
+    try {
+      counts.value = await inboxApi.counts()
+    } catch {
+      // non-critical — badges just stay stale
+    }
+  }
+
   async function fetchMessages() {
+    // Drafts is served by a separate endpoint (see fetchDrafts).
+    if (isDraftsFolder.value) {
+      void fetchDrafts()
+      return
+    }
+
     const params: Parameters<typeof inboxApi.list>[0] = {
       page: currentPage.value,
       per_page: perPage.value,
     }
 
     if (filters.value.unreadOnly) params.unread = true
-    if (filters.value.folder === 'failed') {
-      params.routing_status = 'failed'
-    } else if (filters.value.folder === 'deals') {
-      params.has_deal = true
+    switch (filters.value.folder) {
+      case 'starred':
+        params.starred = true
+        break
+      case 'important':
+        params.important = true
+        break
+      case 'failed':
+        params.routing_status = 'failed'
+        break
+      case 'deals':
+        params.has_deal = true
+        break
+      case 'snoozed':
+        params.snoozed = true
+        break
     }
     if (filters.value.channel) params.channel = filters.value.channel
     if (debouncedQ.value.trim()) params.q = debouncedQ.value.trim()
+
+    const range = filters.value.dateRange
+    if (range) {
+      if (range[0]) params.date_from = localDateString(range[0])
+      if (range[1]) params.date_to = localDateString(range[1])
+    }
 
     await listResource.run(async () => {
       const result = await inboxApi.list(params)
@@ -134,8 +203,9 @@ export const useInboxPage = () => {
       return result.data
     })
 
-    // Refresh the sidebar badge after each list load
+    // Refresh the sidebar badge + folder/channel counts after each list load.
     void inboxStore.fetchUnreadCount()
+    void fetchCounts()
   }
 
   // Refetch on filter changes (watch debounced q separately)
@@ -144,12 +214,14 @@ export const useInboxPage = () => {
       () => filters.value.unreadOnly,
       () => filters.value.folder,
       () => filters.value.channel,
+      () => filters.value.dateRange,
       currentPage,
       perPage,
     ],
     () => {
       void fetchMessages()
     },
+    { deep: true },
   )
 
   watch(debouncedQ, () => {
@@ -159,10 +231,9 @@ export const useInboxPage = () => {
 
   // Initial load
   void fetchMessages()
+  void fetchCounts()
 
   // ─── Reading pane (selection + detail) ─────────────────────────────────────────
-  const selectedId = ref<number | null>(null)
-  const selectedMessage = ref<InboundMessage | null>(null)
   const mobileView = ref<InboxMobileView>('list')
   const detailResource = useAsyncResource<InboundMessage | null>(null)
 
@@ -204,6 +275,7 @@ export const useInboxPage = () => {
       const updated = await markReadMutation.run(() => inboxApi.markRead(id))
       _updateRowInList(id, updated)
       if (selectedMessage.value?.id === id) selectedMessage.value = updated
+      void fetchCounts()
     } catch {
       // Revert optimistic update on failure
       _updateRowInList(id, { read_at: null })
@@ -226,6 +298,7 @@ export const useInboxPage = () => {
       const updated = await markReadMutation.run(() => inboxApi.markUnread(id))
       _updateRowInList(id, updated)
       if (selectedMessage.value?.id === id) selectedMessage.value = updated
+      void fetchCounts()
     } catch {
       // Revert
       const revertedAt = new Date().toISOString()
@@ -252,6 +325,114 @@ export const useInboxPage = () => {
     const idx = listResource.data.value.findIndex((m) => m.id === id)
     if (idx >= 0) {
       listResource.data.value[idx] = { ...listResource.data.value[idx]!, ...partial }
+    }
+  }
+
+  /** Drop a row from the visible list (e.g. it left the current folder's scope). */
+  function _removeRowFromList(id: number) {
+    const idx = listResource.data.value.findIndex((m) => m.id === id)
+    if (idx >= 0) {
+      listResource.data.value.splice(idx, 1)
+      totalRecords.value = Math.max(0, totalRecords.value - 1)
+    }
+  }
+
+  // ─── Star / Important / Snooze (СРЕЗ B triage flags — shared mailbox) ──────────
+  const starMutation = useMutation<InboundMessage>()
+  const importantMutation = useMutation<InboundMessage>()
+  const snoozeMutation = useMutation<InboundMessage>()
+
+  /** Toggle star on a message. Optimistic + idempotent; refetches counts. */
+  async function toggleStar(id: number) {
+    const current = _findMessage(id)
+    const nextStarred = !current?.starred_at
+    const optimistic = nextStarred ? new Date().toISOString() : null
+    _applyFlag(id, { starred_at: optimistic })
+
+    try {
+      const updated = await starMutation.run(() =>
+        nextStarred ? inboxApi.star(id) : inboxApi.unstar(id),
+      )
+      _applyFlag(id, updated)
+      // Un-starring inside the "Помеченные" folder removes the row.
+      if (!nextStarred && filters.value.folder === 'starred') _removeRowFromList(id)
+      void fetchCounts()
+    } catch {
+      _applyFlag(id, { starred_at: current?.starred_at ?? null })
+    }
+  }
+
+  /** Toggle "important" on a message. Optimistic + idempotent; refetches counts. */
+  async function toggleImportant(id: number) {
+    const current = _findMessage(id)
+    const next = !current?.important
+    _applyFlag(id, { important: next })
+
+    try {
+      const updated = await importantMutation.run(() =>
+        next ? inboxApi.markImportant(id) : inboxApi.unmarkImportant(id),
+      )
+      _applyFlag(id, updated)
+      if (!next && filters.value.folder === 'important') _removeRowFromList(id)
+      void fetchCounts()
+    } catch {
+      _applyFlag(id, { important: current?.important ?? false })
+    }
+  }
+
+  /** Toggle important flag of the currently-selected message (reading-pane toolbar). */
+  function toggleSelectedImportant() {
+    if (selectedMessage.value) void toggleImportant(selectedMessage.value.id)
+  }
+
+  /** Snooze the given message until an ISO-8601 timestamp. Optimistic; refetches counts. */
+  async function snooze(id: number, until: string) {
+    const current = _findMessage(id)
+    _applyFlag(id, { snoozed_until: until })
+    // In "Входящие" a newly-snoozed message disappears from the flow.
+    if (filters.value.folder === 'all') _removeRowFromList(id)
+
+    try {
+      const updated = await snoozeMutation.run(() => inboxApi.snooze(id, until))
+      _applyFlag(id, updated)
+      void fetchCounts()
+      void inboxStore.fetchUnreadCount()
+      toast.add({ severity: 'success', summary: t('inbox.snooze.toastSnoozed'), life: 3000 })
+    } catch {
+      _applyFlag(id, { snoozed_until: current?.snoozed_until ?? null })
+      // Snooze failed → refetch to restore the row we optimistically hid.
+      if (filters.value.folder === 'all') void fetchMessages()
+      toast.add({ severity: 'error', summary: t('inbox.snooze.toastFailed'), life: 4000 })
+    }
+  }
+
+  /** Un-snooze (early return). Optimistic; refetches counts. */
+  async function unsnooze(id: number) {
+    const current = _findMessage(id)
+    _applyFlag(id, { snoozed_until: null })
+    if (filters.value.folder === 'snoozed') _removeRowFromList(id)
+
+    try {
+      const updated = await snoozeMutation.run(() => inboxApi.unsnooze(id))
+      _applyFlag(id, updated)
+      void fetchCounts()
+      void inboxStore.fetchUnreadCount()
+    } catch {
+      _applyFlag(id, { snoozed_until: current?.snoozed_until ?? null })
+      if (filters.value.folder === 'snoozed') void fetchMessages()
+    }
+  }
+
+  function _findMessage(id: number): InboundMessage | undefined {
+    if (selectedMessage.value?.id === id) return selectedMessage.value
+    return listResource.data.value.find((m) => m.id === id)
+  }
+
+  /** Apply a triage-flag partial to both the list row and the open reading pane. */
+  function _applyFlag(id: number, partial: Partial<InboundMessage>) {
+    _updateRowInList(id, partial)
+    if (selectedMessage.value?.id === id) {
+      selectedMessage.value = { ...selectedMessage.value, ...partial }
     }
   }
 
@@ -291,6 +472,7 @@ export const useInboxPage = () => {
           summary: t('inbox.reprocess.successToast', { dealId, action }),
           life: 4000,
         })
+        void fetchCounts()
       } else {
         // Still failed — informational, not an error
         toast.add({
@@ -310,6 +492,125 @@ export const useInboxPage = () => {
     }
   }
 
+  // ─── Drafts (per-author saved reply notes; no send in СРЕЗ B) ──────────────────
+  const draftsResource = useAsyncResource<InboxDraft[]>([])
+  const selectedDraftId = ref<number | null>(null)
+  const draftDirty = ref(false)
+  /** Editor buffer for the currently-open / new draft. */
+  const draftForm = ref<{ subject: string; body: string; related_message_id: number | null }>({
+    subject: '',
+    body: '',
+    related_message_id: null,
+  })
+  const draftSaveMutation = useMutation<InboxDraft>()
+  const draftDeleteMutation = useMutation<void>()
+
+  async function fetchDrafts() {
+    await draftsResource.run(async () => {
+      const result = await inboxApi.listDrafts(1, DEFAULT_PER_PAGE)
+      totalRecords.value = result.meta.total
+      return result.data
+    })
+    void fetchCounts()
+  }
+
+  /** Open an existing draft into the editor. */
+  function openDraft(draft: InboxDraft) {
+    selectedDraftId.value = draft.id
+    draftForm.value = {
+      subject: draft.subject ?? '',
+      body: draft.body ?? '',
+      related_message_id: draft.related_message_id,
+    }
+    draftDirty.value = false
+    mobileView.value = 'detail'
+  }
+
+  /** Start a fresh blank draft (from the "Черновики" pane). */
+  function startNewDraft() {
+    selectedDraftId.value = null
+    draftForm.value = { subject: '', body: '', related_message_id: null }
+    draftDirty.value = true // new blank is "dirty" so Save is offered
+    mobileView.value = 'detail'
+  }
+
+  function markDraftDirty() {
+    draftDirty.value = true
+  }
+
+  /** Create a reply draft from the open message ("Черновик" button in reader). */
+  async function draftReplyToSelected() {
+    const msg = selectedMessage.value
+    if (!msg) return
+    const subject = msg.subject ? `Re: ${msg.subject}` : ''
+    try {
+      const created = await draftSaveMutation.run(() =>
+        inboxApi.createDraft({ related_message_id: msg.id, subject, body: '' }),
+      )
+      // Jump into the Drafts folder with the new draft open in the editor.
+      setFolder('drafts')
+      draftsResource.data.value = [created, ...draftsResource.data.value]
+      openDraft(created)
+      void fetchCounts()
+      toast.add({ severity: 'success', summary: t('inbox.drafts.toastCreated'), life: 3000 })
+    } catch {
+      toast.add({ severity: 'error', summary: t('inbox.drafts.toastSaveFailed'), life: 4000 })
+    }
+  }
+
+  /** Persist the editor buffer (create or update). */
+  async function saveDraft() {
+    const payload = {
+      subject: draftForm.value.subject.trim() || null,
+      body: draftForm.value.body.trim() || null,
+      related_message_id: draftForm.value.related_message_id,
+    }
+    try {
+      if (selectedDraftId.value === null) {
+        const created = await draftSaveMutation.run(() => inboxApi.createDraft(payload))
+        draftsResource.data.value = [created, ...draftsResource.data.value]
+        selectedDraftId.value = created.id
+      } else {
+        const id = selectedDraftId.value
+        const updated = await draftSaveMutation.run(() => inboxApi.updateDraft(id, payload))
+        const idx = draftsResource.data.value.findIndex((d) => d.id === id)
+        if (idx >= 0) draftsResource.data.value[idx] = updated
+      }
+      draftDirty.value = false
+      void fetchCounts()
+      toast.add({ severity: 'success', summary: t('inbox.drafts.toastSaved'), life: 2500 })
+    } catch {
+      toast.add({ severity: 'error', summary: t('inbox.drafts.toastSaveFailed'), life: 4000 })
+    }
+  }
+
+  /** Delete the currently-open draft. */
+  async function deleteDraft() {
+    const id = selectedDraftId.value
+    if (id === null) {
+      // Unsaved blank — just discard locally.
+      selectedDraftId.value = null
+      draftDirty.value = false
+      mobileView.value = 'list'
+      return
+    }
+    try {
+      await draftDeleteMutation.run(() => inboxApi.deleteDraft(id))
+      const idx = draftsResource.data.value.findIndex((d) => d.id === id)
+      if (idx >= 0) {
+        draftsResource.data.value.splice(idx, 1)
+        totalRecords.value = Math.max(0, totalRecords.value - 1)
+      }
+      selectedDraftId.value = null
+      draftDirty.value = false
+      mobileView.value = 'list'
+      void fetchCounts()
+      toast.add({ severity: 'success', summary: t('inbox.drafts.toastDeleted'), life: 2500 })
+    } catch {
+      toast.add({ severity: 'error', summary: t('inbox.drafts.toastDeleteFailed'), life: 4000 })
+    }
+  }
+
   // ─── Pagination handler ────────────────────────────────────────────────────────
   function onPageChange(event: { page: number; rows: number }) {
     currentPage.value = event.page + 1 // PrimeVue Paginator is 0-based
@@ -325,14 +626,19 @@ export const useInboxPage = () => {
     currentPage,
     perPage,
 
+    // Counts (folder + channel badges)
+    counts,
+
     // Filters
     filters,
     hasActiveFilters,
+    isDraftsFolder,
     onSearchInput,
     resetFilters,
     setFolder,
     setChannel,
     setUnreadOnly,
+    setDateRange,
 
     // Reading pane
     selectedId,
@@ -349,10 +655,35 @@ export const useInboxPage = () => {
     toggleSelectedRead,
     markReadPending: markReadMutation.isPending,
 
+    // Star / important / snooze
+    toggleStar,
+    toggleImportant,
+    toggleSelectedImportant,
+    snooze,
+    unsnooze,
+    starPending: starMutation.isPending,
+    importantPending: importantMutation.isPending,
+    snoozePending: snoozeMutation.isPending,
+
     // Reprocess
     reprocessPending: reprocessMutation.isPending,
     currentReprocessId,
     confirmReprocess,
+
+    // Drafts
+    drafts: draftsResource.data,
+    draftsLoading: draftsResource.loading,
+    draftsError: draftsResource.error,
+    selectedDraftId,
+    draftForm,
+    draftDirty,
+    draftSavePending: draftSaveMutation.isPending,
+    openDraft,
+    startNewDraft,
+    markDraftDirty,
+    draftReplyToSelected,
+    saveDraft,
+    deleteDraft,
 
     // Pagination
     onPageChange,
