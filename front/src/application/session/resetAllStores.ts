@@ -2,7 +2,7 @@
  * Session teardown — reset all user-scoped Pinia stores on logout / 401.
  *
  * Clearing only the user store leaked the previous user's data into the next
- * session: 12 other stores (tasks, deals, notifications, directories, inbox, …)
+ * session: the other data stores (tasks, deals, notifications, directories, inbox, …)
  * plus the persisted `recentRoutes` navigation history survived a logout.
  *
  * This is the single teardown point, called from BOTH the logout action and the
@@ -20,7 +20,6 @@ import { useMyTasksStore } from '@/stores/myTasksStore'
 import { useNotificationsStore } from '@/stores/notificationsStore'
 import { useOnboardingStore } from '@/stores/onboardingStore'
 import { useSalesStore } from '@/stores/salesStore'
-import { useUiTriggersStore } from '@/stores/uiTriggers'
 import { useLayoutStore } from '@/stores/layout'
 
 /**
@@ -44,7 +43,6 @@ export function resetAllStores(pinia: Pinia): void {
   notifications.$reset()
   useOnboardingStore(pinia).$reset()
   useSalesStore(pinia).$reset()
-  useUiTriggersStore(pinia).$reset()
 
   // Layout store is a preference store (sidebar/orbit/nav-mode are device-level
   // and should survive logout) — but recentRoutes is user navigation history and

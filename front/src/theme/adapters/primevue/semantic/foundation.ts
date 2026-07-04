@@ -111,14 +111,14 @@ export const primeVueFoundationSemantic = {
       //
       // Aura: Dialog + Drawer оба используют {overlay.modal.background}.
       // Aura dark-default: overlay.modal.background = {surface.900}.
-      // Наша dark-палитра ИНВЕРТИРОВАНА → dark.surface.900 = surfacePalette[50] = #F9FAFB (светло!).
+      // Наша dark-палитра ИНВЕРТИРОВАНА → dark.surface.900 = navyDarkSurfacePalette[900] = #EAF0FA (светло!).
       // Результат: Drawer/Dialog получали белый фон в dark-режиме.
       //
       // Фикс: явно задаём dark colorScheme overlay, используя {surface.X} ссылки, которые
-      // через нашу инвертированную dark.surface резолвятся в нужные тёмные hex-значения:
-      //   {surface.100} → surfacePalette[800] = #444547 (Card/Panel bg — канон §5.2)
-      //   {surface.200} → surfacePalette[700] = #616263 (Border — канон §5.2)
-      //   {surface.900} → surfacePalette[50]  = #F9FAFB (читабельный текст)
+      // через нашу инвертированную navy dark.surface резолвятся в нужные тёмные hex-значения:
+      //   {surface.100} → navyDarkSurfacePalette[100] = #111E38 (Card/Panel bg — MSales 2.0)
+      //   {surface.200} → navyDarkSurfacePalette[200] = #172847 (soft border — MSales 2.0)
+      //   {surface.900} → navyDarkSurfacePalette[900] = #EAF0FA (читабельный текст)
       //
       // То же самое для overlay.select (Select-дропдаун внутри Drawer/Dialog).
       overlay: {
@@ -144,12 +144,12 @@ export const primeVueFoundationSemantic = {
       // DARK TEXT COLOR (BUG: --p-text-color = #000 в dark-режиме).
       //
       // Aura dark задаёт text.color = {surface.0}. Наша dark-палитра ИНВЕРТИРОВАНА →
-      // dark.surface.0 = surfacePalette[950] = #000000 (чёрный на тёмном фоне → невидимый текст).
-      // Фикс: явно переопределяем text.color через {surface.900} = surfacePalette[50] = #F9FAFB.
+      // dark.surface.0 = navyDarkSurfacePalette[0] = #0A1426 (тёмный фон → невидимый текст).
+      // Фикс: явно переопределяем text.color через {surface.900} = navyDarkSurfacePalette[900] = #EAF0FA.
       text: {
-        color: '{surface.900}',        // #F9FAFB — читабельный светлый текст в dark
-        mutedColor: '{surface.400}',   // #9B9C9F — muted (как Aura: {surface.500})
-        hoverMutedColor: '{surface.300}', // #7E7F82
+        color: '{surface.900}',        // #EAF0FA — читабельный светлый текст в dark
+        mutedColor: '{surface.400}',   // #3A4F78 — muted
+        hoverMutedColor: '{surface.300}', // #27395C
       },
       // DARK FORM FIELDS (BUG-3: инпуты белые в dark-режиме).
       //
@@ -190,34 +190,10 @@ export const primeVueFoundationSemantic = {
       },
     },
   },
-  secondary: {
-    color: '{surface.700}',
-    contrastColor: '{monochrome.white}',
-    hoverColor: '{surface.800}',
-    activeColor: '{surface.900}',
-  },
-  success: {
-    color: '{primary.500}',
-    contrastColor: '{monochrome.white}',
-    hoverColor: '{primary.600}',
-    activeColor: '{primary.500}',
-  },
-  danger: {
-    color: '{red.500}',
-    contrastColor: '{monochrome.white}',
-    hoverColor: '{red.600}',
-    activeColor: '{red.500}',
-  },
-  warning: {
-    color: '{orange.500}',
-    contrastColor: '{monochrome.black}',
-    hoverColor: '{orange.600}',
-    activeColor: '{orange.500}',
-  },
-  info: {
-    color: '{blue.500}',
-    contrastColor: '{monochrome.white}',
-    hoverColor: '{blue.600}',
-    activeColor: '{blue.500}',
-  },
+  // NOTE: severity colours (secondary/success/danger/warning/info) are NOT valid
+  // top-level `semantic` keys in PrimeVue 4 Aura — the theme service only reads
+  // primary/colorScheme/formField/list/content/mask/navigation/overlay + the sizing
+  // tokens. Severity is driven per-component (button.*Button, tag.*, message.*,
+  // inline-message.*) in buttons.ts / dataDisplay.ts / feedback.ts. Former inert
+  // top-level blocks here emitted no CSS variables and were removed (dead code).
 } as const

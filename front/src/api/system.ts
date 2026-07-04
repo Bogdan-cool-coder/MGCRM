@@ -1,14 +1,5 @@
 import { apiClient } from '@/api/client'
 
-export interface SystemResetResponse {
-  reset: boolean
-  requires_relogin: boolean
-  message: string
-}
-
-/** Phrase the backend validates via Rule::in — must be sent verbatim. */
-export const SYSTEM_RESET_CONFIRMATION = 'СБРОСИТЬ НАСТРОЙКИ'
-
 /**
  * Selective reset confirmation phrase (hi-fi redesign — per
  * docs/contracts/system-reset-api-contract.md §6.2). Sent verbatim; the preview
@@ -67,22 +58,6 @@ export interface SelectiveResetPayload {
 }
 
 export const systemApi = {
-  /**
-   * POST /api/system/reset (legacy full-wipe).
-   * Admin-only + config-флаг allow_reset должен быть true.
-   * Тело запроса: { confirmation: 'СБРОСИТЬ НАСТРОЙКИ' } — backend валидирует через Rule::in.
-   * Ответ: { data: { reset: true, requires_relogin: true, message: string } }.
-   *
-   * NOTE: kept for backward compatibility; the redesigned Settings → «Сброс системы»
-   * uses the selective preview/reset methods below.
-   */
-  async resetDatabase(): Promise<SystemResetResponse> {
-    const response = await apiClient.post<{ data: SystemResetResponse }>('/api/system/reset', {
-      confirmation: SYSTEM_RESET_CONFIRMATION,
-    })
-    return response.data.data
-  },
-
   /**
    * GET /api/system/reset/preview — live per-category row counts + prerequisite matrix.
    * Admin-only; 403 if reset disabled for the environment.

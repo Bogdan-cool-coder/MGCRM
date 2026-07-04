@@ -69,9 +69,6 @@ function execute(action: QuickActionDef): void {
         layoutStore.openCommandPalette()
       }
       break
-    // 'drawer' type is deprecated (Wave 4). All creation actions in the registry
-    // now use actionType: 'route' with an explicit route — they fall through to
-    // the default branch. The 'drawer' branch is intentionally removed.
     case 'route':
     default:
       if (action.route) {

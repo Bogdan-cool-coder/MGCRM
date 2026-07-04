@@ -5,7 +5,6 @@ import type {
   HoldingTreeDto,
   PaginatedResponse,
   EmploymentStatus,
-  ChannelHistoryEntry,
   CompanyRequisite,
   CreateRequisitePayload,
   UpdateRequisitePayload,
@@ -212,15 +211,6 @@ export const companiesApi = {
       { responseType: 'blob' },
     )
     return res.data
-  },
-
-  // ── Channel History (N1) ──────────────────────────────────────────────────
-
-  async getChannelHistory(companyId: number): Promise<ChannelHistoryEntry[]> {
-    const res = await apiClient.get<{ data: ChannelHistoryEntry[] }>(
-      `/api/companies/${companyId}/channel-history`,
-    )
-    return res.data.data ?? []
   },
 
   // ── Requisites (N2) ───────────────────────────────────────────────────────

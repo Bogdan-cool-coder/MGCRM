@@ -82,7 +82,7 @@ $background-color: $surface-100;
 // kanban column header tint and list-view stage chip tint, so they render a
 // real (non-transparent) tinted color in BOTH light and dark themes.
 //   light: surface-0 = #FFFFFF (white card bg)
-//   dark:  surface-100 = #444547 (dark card bg per §5.2 canon)
+//   dark:  surface-100 = #111E38 (navy card bg — MSales 2.0)
 // Injected into :root / .app-dark via appVariables.ts or the index.scss block.
 :root {
   --mg-surface-card: var(--p-surface-0);

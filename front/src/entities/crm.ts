@@ -402,21 +402,6 @@ export interface DisconnectReason {
   is_active: boolean
 }
 
-// ─── Channel History ──────────────────────────────────────────────────────────
-
-/**
- * Wire shape of one AcquisitionChannelHistoryResource row.
- * Mirrors src/app/Http/Resources/Crm/AcquisitionChannelHistoryResource.php:
- * old/new channels are objects (eager-loaded relations), changed_by is the user.
- */
-export interface ChannelHistoryEntry {
-  id: number
-  old_channel: { id: number; name: string } | null
-  new_channel: { id: number; name: string } | null
-  changed_by: { id: number; full_name: string } | null
-  changed_at: string | null
-}
-
 // ─── Client status ────────────────────────────────────────────────────────────
 
 export type ClientStatus = 'prospect' | 'active' | 'disconnected'

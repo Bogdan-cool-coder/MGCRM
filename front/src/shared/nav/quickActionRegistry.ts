@@ -14,14 +14,6 @@
 export type QuickActionType =
   /** Navigate to a route */
   | 'route'
-  /**
-   * Open a page-level drawer via uiTriggersStore.
-   * @deprecated Wave 4: creation flows now use full-card routes.
-   * Kept for backwards-compat with any legacy catalogue entries that
-   * haven't been migrated yet; QuickActionsCluster maps drawerKey to
-   * the corresponding full-card route (DRAWER_KEY_ROUTES).
-   */
-  | 'drawer'
   /** Handled inline by the execute() switch (theme toggle, palette open, etc.) */
   | 'inline'
 
@@ -36,11 +28,6 @@ export interface QuickActionDef {
   actionType: QuickActionType
   /** Route to push (only for actionType 'route') */
   route?: string
-  /**
-   * Drawer trigger key — legacy field; QuickActionsCluster now maps this to
-   * a full-card route internally (DRAWER_KEY_ROUTES). See Wave 4.
-   */
-  drawerKey?: string
 }
 
 /**

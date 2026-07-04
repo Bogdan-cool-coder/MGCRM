@@ -281,7 +281,6 @@
       "metric_tasks": "Tasks",
       "metric_conversions": "Conversions",
       "breakdown": "Breakdown",
-      "breakdown_by_user": "By employee",
       "breakdown_by_product": "By product line",
       "col_employee": "Employee",
       "col_product_line": "Product line",
