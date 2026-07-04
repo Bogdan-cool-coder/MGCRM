@@ -44,7 +44,10 @@
             :entity-id="(data as BestManagerRow).user.id"
             :pixel-size="24"
           />
-          <span class="rating-table__manager-name">
+          <span
+            class="rating-table__manager-name"
+            :title="(data as BestManagerRow).user.full_name"
+          >
             {{ (data as BestManagerRow).user.full_name }}
           </span>
         </div>
@@ -102,7 +105,10 @@
     <!-- Division -->
     <Column :header="t('dashboard.rating.col_division')" class="rating-table__col-division">
       <template #body="{ data }">
-        <span class="rating-table__division">{{ (data as BestManagerRow).division }}</span>
+        <span
+          class="rating-table__division"
+          :title="(data as BestManagerRow).division"
+        >{{ (data as BestManagerRow).division }}</span>
       </template>
     </Column>
     </DataTable>
@@ -255,11 +261,17 @@ const rowClass = (row: BestManagerRow): string | undefined =>
   display: flex;
   align-items: center;
   gap: $space-2;
+  min-width: 0; // let the name ellipsize instead of widening the frozen column
 }
 
 .rating-table__manager-name {
   white-space: nowrap;
   font-weight: $font-weight-medium;
+  // Cap the frozen manager column so a long ФИО no longer eats the scroll
+  // viewport of the numeric columns on 1280 (audit L1). Full name in :title.
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // ── Numbers ──────────────────────────────────────────────────────────────────
@@ -289,7 +301,12 @@ const rowClass = (row: BestManagerRow): string | undefined =>
 }
 
 .rating-table__division {
+  display: block;
   color: $surface-600;
   white-space: nowrap;
+  // Cap + ellipsis so a long division name doesn't widen its column (audit L1).
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

@@ -381,7 +381,9 @@ const goto = (page: number): void => {
 
 .activity-feed__date {
   flex-shrink: 0;
-  width: 96px;
+  // min-width (not fixed): a wider locale date («Jul 5, 02:23 PM») grows the box
+  // instead of spilling into the card padding (audit L1). Row title/target flex.
+  min-width: 96px;
   text-align: right;
   font-size: $font-size-xs;
   color: $surface-600;

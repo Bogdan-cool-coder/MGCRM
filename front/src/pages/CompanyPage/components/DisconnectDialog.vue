@@ -3,7 +3,7 @@
     v-model:visible="visible"
     :header="t('crm.company.disconnect.title')"
     modal
-    style="width: 520px"
+    style="width: 520px; max-width: 95vw"
     :closable="!submitting"
   >
     <!-- Hint -->

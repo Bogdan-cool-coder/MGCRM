@@ -122,7 +122,11 @@ const periodLabel = computed<string>(() => kpi.value?.meta.period.label ?? '')
 }
 
 .manager-cabinet-page__content {
-  padding: $space-5 $space-5;
+  // $space-6 side padding matches the hub + the layout gutter that the negative
+  // margins cancel — removes the 4px horizontal shift when switching Дашборд ↔
+  // Кабинет (audit L1). $space-5 (20px) here was 4px short of the $space-6 (24px)
+  // used everywhere else.
+  padding: $space-4 $space-6;
   flex: 1;
   overflow-y: auto;
   min-height: 0;

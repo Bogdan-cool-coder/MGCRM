@@ -346,6 +346,12 @@ function roleSeverity(role: UserRole): 'success' | 'warn' | 'info' | 'secondary'
   }
 
   &__email {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
     color: var(--p-primary-color);
     text-decoration: none;
     font-size: $font-size-sm;

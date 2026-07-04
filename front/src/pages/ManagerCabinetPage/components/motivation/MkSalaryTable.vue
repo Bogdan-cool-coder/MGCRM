@@ -307,7 +307,11 @@ const openBreakdown = (event: Event, item: MkCardItem): void => {
 
 // Collapsed-row salary fact.
 .mk-salary__row-fact {
-  width: 96px;
+  // min-width (not fixed width) + nowrap: full-format money («40 000 000 UZS»)
+  // grows the cell instead of wrapping onto 2-3 lines and misaligning the row
+  // (audit L1). The __spacer flex-child absorbs the extra width.
+  min-width: 96px;
+  white-space: nowrap;
   text-align: right;
   font-size: $font-size-sm;
   font-weight: $font-weight-bold;

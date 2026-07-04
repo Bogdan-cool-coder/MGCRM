@@ -158,7 +158,9 @@ const teamKpiEnabled = computed<boolean>(
 .section-mkb__overlay {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  // Above the sticky MkSaveBar (z-index:10) so its Save/Copy/Finalize buttons
+  // are covered (not clickable) while the loading spinner is shown.
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -50,7 +50,7 @@
           </small>
         </div>
 
-        <div class="d-flex gap-2 mt-3">
+        <div class="d-flex deal-tab-docs__btn-row mt-3">
           <Button
             icon="pi pi-file-pdf"
             :label="t('sales.deal.documents.generate')"
@@ -133,7 +133,7 @@
               :placeholder="t('sales.deal.documents.rejectReasonPlaceholder')"
               rows="3"
             />
-            <div class="d-flex gap-2 mt-2">
+            <div class="d-flex deal-tab-docs__btn-row mt-2">
               <Button
                 :label="t('common.cancel')"
                 severity="secondary"
@@ -155,7 +155,7 @@
           <!-- Decision buttons -->
           <div
             v-else-if="approval.is_current_user_approver && !showRejectForm"
-            class="d-flex gap-2 mt-3 flex-wrap"
+            class="d-flex deal-tab-docs__btn-row mt-3 flex-wrap"
           >
             <Button
               icon="pi pi-check"
@@ -234,7 +234,7 @@
         <!-- Signed at DateField + Save -->
         <div class="deal-tab-docs__field-row mt-2">
           <label class="deal-tab-docs__label">{{ t('sales.deal.documents.contractFactDate') }}</label>
-          <div class="d-flex gap-2 align-items-center mt-1">
+          <div class="d-flex deal-tab-docs__btn-row align-items-center mt-1">
             <DateField
               v-model="signedAtIso"
               placeholder="ДД.ММ.ГГГГ"
@@ -639,6 +639,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: $space-3;
+
+  // bootstrap-grid.min.css ships no gap-* utilities → local token gap for the
+  // button rows that previously relied on the dead `gap-2` class.
+  &__btn-row {
+    gap: $space-2;
+  }
 
   &__doc-list {
     display: flex;

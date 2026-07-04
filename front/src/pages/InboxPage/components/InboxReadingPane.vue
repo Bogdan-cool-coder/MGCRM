@@ -462,10 +462,21 @@ function routingStatusSeverity(status: RoutingStatus): 'success' | 'info' | 'dan
   overflow-y: auto;
   padding: $space-4 $space-5;
   min-height: 0;
-  scrollbar-width: none;
+  // Thin themed scrollbar so long emails show scroll position (was fully hidden).
+  scrollbar-width: thin;
+  scrollbar-color: $surface-300 transparent;
 
   &::-webkit-scrollbar {
-    display: none;
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $surface-300;
+    border-radius: $radius-sm;
+
+    .app-dark & {
+      background: var(--p-surface-300);
+    }
   }
 }
 
@@ -658,10 +669,20 @@ function routingStatusSeverity(status: RoutingStatus): 'success' | 'info' | 'dan
   word-break: break-word;
   max-height: 260px;
   overflow-y: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: $surface-300 transparent;
 
   &::-webkit-scrollbar {
-    display: none;
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $surface-300;
+    border-radius: $radius-sm;
+
+    .app-dark & {
+      background: var(--p-surface-300);
+    }
   }
 
   .app-dark & {

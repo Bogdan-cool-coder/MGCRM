@@ -48,6 +48,15 @@ const renderedContent = computed(() => {
   line-height: 1.7;
   font-size: $font-size-sm; // snap from 0.9375rem (15px→14px)
   color: var(--p-text-color);
+  // Author-inserted markdown must not push the page into horizontal scroll:
+  // long unbreakable URLs/words wrap instead of widening .layout__content (audit L1).
+  overflow-wrap: anywhere;
+
+  // Images never exceed the content column width.
+  :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
 
   :deep(h1),
   :deep(h2),
@@ -58,6 +67,11 @@ const renderedContent = computed(() => {
     font-weight: 700;
     line-height: 1.3;
     color: var(--p-text-color);
+  }
+
+  :deep(p),
+  :deep(a) {
+    overflow-wrap: anywhere;
   }
 
   :deep(p) {
@@ -109,7 +123,11 @@ const renderedContent = computed(() => {
   }
 
   :deep(table) {
-    width: 100%;
+    // display:block + overflow-x:auto lets a wide table scroll inside the column
+    // instead of stretching the whole page (audit L1).
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
     border-collapse: collapse;
     margin-bottom: 1rem;
 

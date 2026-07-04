@@ -47,7 +47,7 @@
                 :invalid="!!fieldErrors['email']"
                 :disabled="isLoading"
                 autocomplete="email"
-                class="w-100"
+                class="w-full"
               />
               <small v-if="fieldErrors['email']" class="login-field__error">
                 {{ fieldErrors['email'] }}
@@ -67,9 +67,9 @@
                 :disabled="isLoading"
                 :feedback="false"
                 toggle-mask
+                fluid
                 autocomplete="current-password"
-                class="w-100"
-                input-class="w-100"
+                class="w-full"
               />
               <small v-if="fieldErrors['password']" class="login-field__error">
                 {{ fieldErrors['password'] }}
@@ -87,7 +87,7 @@
               :label="isLoading ? t('auth.login.submitting') : t('auth.login.submit')"
               :loading="isLoading"
               :disabled="isLoading"
-              class="w-100 login-form__submit"
+              class="w-full login-form__submit"
             />
           </form>
         </template>
@@ -112,7 +112,7 @@
                 inputmode="numeric"
                 autocomplete="one-time-code"
                 maxlength="6"
-                class="w-100"
+                class="w-full"
               />
               <small v-if="fieldErrors['totp_code']" class="login-field__error">
                 {{ fieldErrors['totp_code'] }}
@@ -131,7 +131,7 @@
                 :invalid="!!fieldErrors['backup_code']"
                 :disabled="isLoading"
                 autocomplete="off"
-                class="w-100"
+                class="w-full"
               />
               <small v-if="fieldErrors['backup_code']" class="login-field__error">
                 {{ fieldErrors['backup_code'] }}
@@ -149,7 +149,7 @@
               :label="isLoading ? t('auth.two_factor.submitting') : t('auth.two_factor.submit')"
               :loading="isLoading"
               :disabled="isLoading"
-              class="w-100 login-form__submit"
+              class="w-full login-form__submit"
             />
 
             <!-- Toggle backup / back links -->
@@ -382,6 +382,11 @@ const {
 }
 
 // ─── Field ────────────────────────────────────────────────────────────────────
+// bootstrap-grid bundle has no `w-100`; local full-width helper (house-style).
+.w-full {
+  width: 100%;
+}
+
 .login-field {
   display: flex;
   flex-direction: column;

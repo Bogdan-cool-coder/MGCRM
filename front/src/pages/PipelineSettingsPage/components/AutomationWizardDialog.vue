@@ -307,7 +307,9 @@ function extractMessage(e: unknown): string {
   display: flex;
   align-items: center;
   gap: $space-2;
-  flex-shrink: 0;
+  // Allow the item to shrink so long i18n step labels ellipsis instead of
+  // pushing the 3-step indicator past the 640px dialog (horizontal scroll/clip).
+  min-width: 0;
 
   &__circle {
     width: 28px;
@@ -338,6 +340,9 @@ function extractMessage(e: unknown): string {
     font-size: $font-size-sm;
     color: var(--p-text-muted-color);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
     transition: color var(--app-transition-fast);
   }
 

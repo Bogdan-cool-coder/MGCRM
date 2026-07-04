@@ -92,8 +92,12 @@ onMounted(async () => {
   gap: $space-4;
 }
 
+// Keep the default Bootstrap row negative gutters (do NOT reset to margin:0):
+// they pull the column padding back so KPI/chart outer edges align with the
+// matrix card edge below. margin:0 left a 12px inset mismatch (audit L1). The
+// body's side padding ($space-6) absorbs the -12px negative margin — no overflow.
 .hr-progress-page__charts {
-  margin: 0;
+  margin-block: 0;
 }
 
 .hr-progress-page__matrix {

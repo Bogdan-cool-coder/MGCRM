@@ -35,6 +35,7 @@
       :value="items"
       lazy
       paginator
+      scrollable
       :rows="perPage"
       :total-records="total"
       :rows-per-page-options="[25, 50, 100]"
@@ -919,6 +920,12 @@ onMounted(() => {
     text-decoration: none;
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
+    // Keep single-line, ellipsis long юрлицо names so the cell can't blow up the
+    // table min-content width (would push the right-hand columns off-screen).
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 
     &:hover {
       text-decoration: underline;
@@ -1111,6 +1118,26 @@ onMounted(() => {
     align-items: center;
     gap: $space-1;
     font-size: $font-size-sm;
+  }
+}
+
+// ── Horizontal scroll (8 columns ≈ 1190px on 1280 viewport) ───────────────────
+// `scrollable` gives .p-datatable-table-container overflow-x:auto; show a thin
+// themed scrollbar instead of the default chunky one (kanban col-body canon).
+:deep(.p-datatable-table-container) {
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $surface-300;
+    border-radius: $radius-sm;
+
+    .app-dark & {
+      background: var(--p-surface-300);
+    }
   }
 }
 

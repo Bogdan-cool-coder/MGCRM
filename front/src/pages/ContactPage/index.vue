@@ -331,7 +331,7 @@
       v-model:visible="attachCompanyOpen"
       :header="t('contact.page.companies.add')"
       modal
-      style="width: 480px"
+      style="width: 480px; max-width: 95vw"
     >
       <div class="contact-page-v2__dialog-form">
         <div class="contact-page-v2__dialog-field">
@@ -381,7 +381,7 @@
       :header="t('common.confirm')"
       modal
       :draggable="false"
-      :style="{ width: '28rem' }"
+      :style="{ width: '28rem', maxWidth: '95vw' }"
     >
       <div class="contact-page-v2__confirm-body">
         <i class="pi pi-exclamation-triangle contact-page-v2__confirm-icon" />
@@ -410,7 +410,7 @@
       :header="t('common.confirm')"
       modal
       :draggable="false"
-      :style="{ width: '28rem' }"
+      :style="{ width: '28rem', maxWidth: '95vw' }"
     >
       <div class="contact-page-v2__confirm-body">
         <i class="pi pi-exclamation-triangle contact-page-v2__confirm-icon" />

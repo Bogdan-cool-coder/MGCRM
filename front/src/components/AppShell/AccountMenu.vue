@@ -1,6 +1,7 @@
 <template>
   <!-- Popover provides portal + auto-flip + viewport clamp + Esc + focus return out of the box -->
-  <Popover ref="popoverRef" append-to="body" :pt="{ root: { style: 'z-index: 9999' } }" @hide="emit('hide')" @show="emit('show')">
+  <!-- z-index left to PrimeVue (overlay tier 1000+): above dock (900), below modal (2600) — audit L1 -->
+  <Popover ref="popoverRef" append-to="body" @hide="emit('hide')" @show="emit('show')">
     <div class="account-menu">
       <!-- Identity header -->
       <div class="account-menu__identity">

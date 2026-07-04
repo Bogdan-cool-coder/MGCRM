@@ -159,10 +159,22 @@ const folderEmptyIcon = computed(() => {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  scrollbar-width: none;
+  // Thin themed scrollbar so long message lists show scroll position/volume
+  // (was fully hidden — no indication of content below the fold).
+  scrollbar-width: thin;
+  scrollbar-color: $surface-300 transparent;
 
   &::-webkit-scrollbar {
-    display: none;
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $surface-300;
+    border-radius: $radius-sm;
+
+    .app-dark & {
+      background: var(--p-surface-300);
+    }
   }
 }
 
@@ -242,6 +254,9 @@ const folderEmptyIcon = computed(() => {
   padding: $space-2 $space-4;
   border-top: 1px solid $surface-200;
   flex-shrink: 0;
+  // Wrap when the narrow list panel (~370px) can't fit the full paginator +
+  // «Показано X из Y» count on one line (was crushing the count to 2-3 lines).
+  flex-wrap: wrap;
 
   .app-dark & {
     border-top-color: var(--p-surface-200);
@@ -251,6 +266,7 @@ const folderEmptyIcon = computed(() => {
 .inbox-list__count {
   font-size: $font-size-xs;
   color: var(--p-text-muted-color);
+  white-space: nowrap;
 }
 
 .inbox-list__paginator {

@@ -53,7 +53,7 @@
           </button>
         </template>
         <template #body="{ data }">
-          <RouterLink :to="`/deals/${data.id}`" class="deals-list__link" @click.stop>
+          <RouterLink :to="`/deals/${data.id}`" class="deals-list__link" :title="data.title" @click.stop>
             {{ data.title }}
           </RouterLink>
         </template>
@@ -454,6 +454,14 @@ function taskDateShort(dueAt: string | null): string {
 }
 
 .deals-list__link {
+  // table-layout:fixed gives the title column a bounded width — truncate long
+  // names (and unbreakable URLs) instead of wrapping onto 3–4 lines or bleeding
+  // into the next column.
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: $primary-color;
   font-weight: $font-weight-medium;
   text-decoration: none;

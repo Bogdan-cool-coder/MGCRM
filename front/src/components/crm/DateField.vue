@@ -28,6 +28,7 @@
       v-if="isOpen"
       ref="calendarWrapRef"
       class="date-field__calendar-wrap"
+      :class="{ 'date-field__calendar-wrap--up': flipUp }"
       @click.stop
     >
       <DatePicker
@@ -44,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import DatePicker from 'primevue/datepicker'
 import { parseDateLocal } from '@/utils/activity'
@@ -81,6 +82,23 @@ const rootRef = ref<HTMLElement | null>(null)
 const calendarWrapRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
 const isOpen = ref(false)
+// Reflect the inline calendar upward when there is not enough room below the
+// field (e.g. field near the bottom of an overflow:hidden container such as the
+// activity composer). Mirrors the SearchPicker up-flip pattern of the composer.
+const flipUp = ref(false)
+
+// Inline PrimeVue calendar is ~300px tall; open upward if the space below the
+// field is smaller than that (and there is more room above).
+const CALENDAR_HEIGHT = 320
+
+function updateFlip() {
+  const root = rootRef.value
+  if (!root) return
+  const rect = root.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  flipUp.value = spaceBelow < CALENDAR_HEIGHT && spaceAbove > spaceBelow
+}
 
 // ── Display value (ДД.ММ.ГГГГ) ───────────────────────────────────────────────
 
@@ -168,7 +186,10 @@ function onInput(e: Event) {
   if (raw.length === 8) {
     const iso = displayToIso(formatted)
     if (iso) emit('update:modelValue', iso)
-    isOpen.value = true
+    if (!isOpen.value) {
+      isOpen.value = true
+      void nextTick(updateFlip)
+    }
   }
 }
 
@@ -199,7 +220,10 @@ function onDateSelect(date: Date) {
 }
 
 function onFieldClick() {
-  isOpen.value = true
+  if (!isOpen.value) {
+    isOpen.value = true
+    void nextTick(updateFlip)
+  }
   inputRef.value?.focus()
 }
 
@@ -289,6 +313,13 @@ onUnmounted(() => {
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
   overflow: hidden;
+
+  // Reflect upward when there is no room below (e.g. field near the bottom edge
+  // of an overflow:hidden composer container) — mirrors the SearchPicker up-flip.
+  &--up {
+    top: auto;
+    bottom: calc(100% + 4px);
+  }
 
   .app-dark & {
     border-color: var(--p-surface-700);

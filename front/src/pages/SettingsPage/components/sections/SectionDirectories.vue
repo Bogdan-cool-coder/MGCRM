@@ -13,9 +13,10 @@
         <p class="dir-section__desc">{{ t('settings.directories.sectionDesc') }}</p>
       </div>
 
-      <!-- Tab bar (line-style) -->
+      <!-- Tab bar (line-style) — scrollable: prev/next buttons appear when the
+           11 tabs (~1400px) overflow the detail panel (~750px @ 1280). -->
       <div class="dir-tabs">
-        <Tabs :value="activeTab" @update:value="onTabChange">
+        <Tabs :value="activeTab" scrollable @update:value="onTabChange">
           <TabList>
             <Tab v-if="isAdminOrDirector" value="countries">{{ t('settings.directories.tabs.countries') }}</Tab>
             <Tab v-if="isAdminOrDirector" value="tags">{{ t('settings.directories.tabs.tags') }}</Tab>
@@ -179,9 +180,22 @@ function onTabChange(value: string | number) {
     padding: 0 $space-6;
     background: $surface-card;
     border-bottom: 1px solid $surface-200;
-    overflow-x: auto;
     // $surface-card / $surface-200 theme-reactive → base reads in dark (navy).
     // No dark branch: nested `.app-dark &` inside :deep() compiles dead.
+    // Overflow scroll is handled by the `scrollable` prop (p-tablist-viewport +
+    // prev/next buttons); no manual overflow-x needed.
+  }
+
+  // Scrollable prev/next nav buttons — align with the line-style bar surface.
+  :deep(.p-tablist-prev-button),
+  :deep(.p-tablist-next-button) {
+    background: $surface-card;
+    color: $surface-600;
+    border-bottom: 1px solid $surface-200;
+
+    &:hover {
+      color: $surface-900;
+    }
   }
 
   :deep(.p-tab) {

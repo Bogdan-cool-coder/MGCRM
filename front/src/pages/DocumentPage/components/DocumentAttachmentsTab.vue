@@ -32,8 +32,10 @@
           />
         </template>
       </Column>
-      <Column :header="t('documents.attachments.columns.file')">
-        <template #body="{ data }">{{ data.original_name }}</template>
+      <Column :header="t('documents.attachments.columns.file')" style="min-width: 200px">
+        <template #body="{ data }">
+          <span class="attachments-tab__file" :title="data.original_name">{{ data.original_name }}</span>
+        </template>
       </Column>
       <Column :header="t('documents.attachments.columns.uploader')" style="width: 160px">
         <template #body="{ data }">
@@ -256,6 +258,16 @@ function formatDate(dateStr: string): string {
 
   &__meta {
     color: var(--p-text-muted-color);
+  }
+
+  // Truncate long unbroken file names (underscores don't wrap) so a single
+  // attachment can't blow the table into horizontal scroll.
+  &__file {
+    display: block;
+    max-width: 340px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__row-actions {

@@ -49,16 +49,18 @@
         <i class="pi pi-angle-left" />
       </button>
 
-      <button
-        v-for="p in visiblePages"
-        :key="p"
-        class="contacts-paginator__page-btn"
-        :class="{ 'contacts-paginator__page-btn--active': p === page }"
-        type="button"
-        @click="goTo(p)"
-      >
-        {{ p }}
-      </button>
+      <template v-for="(p, i) in visiblePages" :key="p > 0 ? `p-${p}` : `gap-${i}`">
+        <button
+          v-if="p > 0"
+          class="contacts-paginator__page-btn"
+          :class="{ 'contacts-paginator__page-btn--active': p === page }"
+          type="button"
+          @click="goTo(p)"
+        >
+          {{ p }}
+        </button>
+        <span v-else class="contacts-paginator__ellipsis">…</span>
+      </template>
 
       <button
         class="contacts-paginator__nav-btn"
@@ -370,5 +372,16 @@ onBeforeUnmount(() => {
     font-weight: $font-weight-semibold;
     cursor: default;
   }
+}
+
+.contacts-paginator__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  color: $surface-400;
+  font-size: $font-size-sm;
+  user-select: none;
 }
 </style>

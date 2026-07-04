@@ -156,7 +156,6 @@ onBeforeUnmount(() => {
 }
 
 .mood-head__phrase {
-  display: block;
   margin-top: $space-1;
   padding: 0;
   border: none;
@@ -165,6 +164,15 @@ onBeforeUnmount(() => {
   text-align: left;
   font-family: $font-family-sans;
   font-size: $font-size-xs;
+  line-height: 1.35;
+  // Reserve 2 lines so rotating phrases of different length don't change the
+  // hero row height every 4.2s (align-items:center → the whole row jittered,
+  // audit L1). Clamp longer phrases to 2 lines.
+  min-height: calc(2 * 1.35em);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   color: $surface-700;
   cursor: pointer;
 

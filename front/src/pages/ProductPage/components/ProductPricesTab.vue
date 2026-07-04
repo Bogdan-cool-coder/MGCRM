@@ -32,11 +32,15 @@
       :value="tableRows"
       size="small"
       striped-rows
+      scrollable
       class="prices-tab__table"
     >
-      <!-- Plan name column -->
+      <!-- Plan name column (frozen: keeps tariff context + edit actions in view
+           while scrolling to the far currency columns AED/EUR) -->
       <Column
         :header="t('catalog.product.page.plan.fields.name')"
+        frozen
+        align-frozen="left"
         style="min-width: 180px"
       >
         <template #body="{ data }">
@@ -73,7 +77,7 @@
         v-for="currency in CURRENCY_WHITELIST"
         :key="currency"
         :header="currency"
-        style="min-width: 150px"
+        style="min-width: 170px"
       >
         <template #body="{ data }">
           <div class="prices-tab__price-cell-wrap">

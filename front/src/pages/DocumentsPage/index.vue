@@ -39,9 +39,17 @@
         </Column>
 
         <!-- Company -->
-        <Column :header="t('documents.list.columns.company', 'Компания')">
+        <Column
+          :header="t('documents.list.columns.company', 'Компания')"
+          style="min-width: 180px"
+        >
           <template #body="{ data }">
-            {{ data.source_company?.name ?? '—' }}
+            <span
+              class="documents-page__company"
+              :title="data.source_company?.name ?? undefined"
+            >
+              {{ data.source_company?.name ?? '—' }}
+            </span>
           </template>
         </Column>
 
@@ -277,6 +285,15 @@ function formatDate(dateStr: string): string {
     &--draft {
       color: var(--p-text-muted-color);
     }
+  }
+
+  // Single-line ellipsis: keeps rows uniform-height on 1280 (was wrapping long
+  // «ООО …» names to 2-4 lines and making the table look torn).
+  &__company {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__paginator {

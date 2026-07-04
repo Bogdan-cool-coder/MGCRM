@@ -469,6 +469,25 @@ function onHide(): void {
   // .border / .rounded are dead full-Bootstrap classes → surface frame via tokens.
   border: 1px solid var(--p-surface-200);
   border-radius: $radius-md;
+  // Preview mirrors LessonViewText: author content must not overflow the drawer
+  // width (long URLs/words wrap, images/tables clamp) — audit L1.
+  overflow-wrap: anywhere;
+
+  :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :deep(p),
+  :deep(a) {
+    overflow-wrap: anywhere;
+  }
+
+  :deep(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
 
   :deep(blockquote) {
     border-left: 4px solid var(--p-primary-color);

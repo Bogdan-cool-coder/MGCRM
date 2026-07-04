@@ -107,10 +107,21 @@ const { t } = useI18n()
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  scrollbar-width: none;
+  // Thin themed scrollbar so long draft lists show scroll position (was hidden).
+  scrollbar-width: thin;
+  scrollbar-color: $surface-300 transparent;
 
   &::-webkit-scrollbar {
-    display: none;
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $surface-300;
+    border-radius: $radius-sm;
+
+    .app-dark & {
+      background: var(--p-surface-300);
+    }
   }
 }
 

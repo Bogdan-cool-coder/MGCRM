@@ -440,9 +440,14 @@ defineExpose({
 .entity-activities {
   display: flex;
   flex-direction: column;
-  // spec §5: fixed ~68vh so filter chips + feed + composer fill the viewport
-  height: 68vh;
-  min-height: 400px;
+  // Fill the viewport minus the entity-card chrome (brand header + KPI strip +
+  // tablist + tab-content padding ≈ 300px) instead of a rigid 68vh that ignored
+  // the surrounding chrome and pushed the composer below the fold on ≤800px
+  // laptops. min-height keeps it usable; the feed (flex:1) absorbs the rest.
+  height: calc(100vh - 300px);
+  min-height: 360px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  max-height: 760px; // cap on tall monitors so the composer stays reachable
   overflow: hidden;
 }
 

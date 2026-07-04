@@ -13,10 +13,12 @@
         <tbody>
           <tr v-for="entry in navEntries" :key="entry.keys">
             <td class="hotkeys-cheatsheet__keys">
-              <template v-for="(part, idx) in entry.keys.split(' ')" :key="idx">
-                <kbd v-if="part !== '→'" class="hotkeys-cheatsheet__kbd">{{ part }}</kbd>
-                <span v-else class="hotkeys-cheatsheet__arrow" aria-hidden="true">→</span>
-              </template>
+              <span class="hotkeys-cheatsheet__keys-wrap">
+                <template v-for="(part, idx) in entry.keys.split(' ')" :key="idx">
+                  <kbd v-if="part !== '→'" class="hotkeys-cheatsheet__kbd">{{ part }}</kbd>
+                  <span v-else class="hotkeys-cheatsheet__arrow" aria-hidden="true">→</span>
+                </template>
+              </span>
             </td>
             <td class="hotkeys-cheatsheet__desc">{{ t(entry.descKey) }}</td>
           </tr>
@@ -30,10 +32,12 @@
         <tbody>
           <tr v-for="entry in otherEntries" :key="entry.keys">
             <td class="hotkeys-cheatsheet__keys">
-              <template v-for="(part, idx) in entry.keys.split(' ')" :key="idx">
-                <kbd v-if="part !== '→'" class="hotkeys-cheatsheet__kbd">{{ part }}</kbd>
-                <span v-else class="hotkeys-cheatsheet__arrow" aria-hidden="true">→</span>
-              </template>
+              <span class="hotkeys-cheatsheet__keys-wrap">
+                <template v-for="(part, idx) in entry.keys.split(' ')" :key="idx">
+                  <kbd v-if="part !== '→'" class="hotkeys-cheatsheet__kbd">{{ part }}</kbd>
+                  <span v-else class="hotkeys-cheatsheet__arrow" aria-hidden="true">→</span>
+                </template>
+              </span>
             </td>
             <td class="hotkeys-cheatsheet__desc">{{ t(entry.descKey) }}</td>
           </tr>
@@ -91,8 +95,14 @@ const otherEntries = computed(() =>
     }
   }
 
+  // Keep the cell as a real table-cell (width:140px, vertical-align:middle from td)
+  // — the flex layout lives on an inner wrapper so wrapping kbd combos no longer
+  // knock the description column off centre (audit L1).
   &__keys {
     width: 140px;
+  }
+
+  &__keys-wrap {
     display: flex;
     align-items: center;
     gap: $space-1;

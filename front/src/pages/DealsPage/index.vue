@@ -704,8 +704,11 @@ onMounted(async () => {
 .deals-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+  // Full-bleed over layout__content padding ($space-4 top/bottom, $space-6 sides).
+  // Negative bottom margin + the +$space-8 height reclaim the bottom padding so the
+  // board reaches the viewport bottom (no leftover surface-100/50 band in dark).
+  height: calc(100% + #{$space-8});
+  margin: calc(-1 * $space-4) calc(-1 * $space-6);
   background: var(--p-surface-100);
 
   .app-dark & {

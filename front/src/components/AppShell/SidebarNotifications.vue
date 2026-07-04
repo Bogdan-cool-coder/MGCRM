@@ -103,8 +103,12 @@ const badgeAriaLabel = computed(() => {
 })
 
 // ─── PrimeVue Popover pass-through ────────────────────────────────────────
+// z-index intentionally NOT overridden: PrimeVue layers the Popover on the
+// overlay tier (1000+) — above the Orbita dock (toolbox=900), below modal
+// (2600). Dropping the former hardcoded 9999 lets a Dialog opened on top of the
+// flyout cover it correctly (audit L1).
 const popoverPt = {
-  root: { style: 'z-index: 9999; padding: 0; overflow: hidden;' },
+  root: { style: 'padding: 0; overflow: hidden;' },
   content: { style: 'padding: 0;' },
 }
 

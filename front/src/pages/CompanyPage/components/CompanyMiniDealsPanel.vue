@@ -19,6 +19,7 @@
       <Tag
         v-if="deal.stage?.name"
         :value="deal.stage.name"
+        :title="deal.stage.name"
         severity="secondary"
         size="small"
         class="company-mini-deals__stage"
@@ -114,9 +115,17 @@ const { t } = useI18n()
 .company-mini-deals__stage {
   flex-shrink: 0;
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  width: 120px; // fixed width for alignment
+  max-width: 120px; // cap width; label ellipsis keeps rows equal-height
   overflow: hidden;
-  text-overflow: ellipsis;
+
+  // The clipped container alone lets a long stage name wrap inside the Tag and
+  // break row height — truncate the label itself instead.
+  :deep(.p-tag-label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
 }
 
 .company-mini-deals__stage-empty {

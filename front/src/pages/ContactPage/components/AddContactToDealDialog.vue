@@ -3,7 +3,7 @@
     v-model:visible="visible"
     :header="t('crm.contact.deals.addDialog.title')"
     modal
-    :style="{ width: '360px' }"
+    :style="{ width: '360px', maxWidth: '95vw' }"
     class="add-contact-to-deal-dialog"
     @hide="reset"
   >

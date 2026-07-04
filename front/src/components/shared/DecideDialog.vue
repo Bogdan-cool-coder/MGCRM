@@ -3,7 +3,7 @@
     v-model:visible="visible"
     :header="t('documents.approval.decide.title', 'Решение по документу')"
     modal
-    :style="{ width: '28rem' }"
+    :style="{ width: '28rem', maxWidth: '95vw' }"
     :draggable="false"
     class="decide-dialog"
   >
@@ -11,14 +11,15 @@
       <div class="mb-3">
         <label class="decide-dialog__label">
           {{ t('documents.approval.decide.commentPlaceholder') }}
-          <span v-if="required" class="text-danger ms-1">*</span>
+          <span v-if="required" class="decide-dialog__req ms-1">*</span>
         </label>
         <Textarea
           v-model="comment"
           :placeholder="t('documents.approval.decide.commentPlaceholder')"
           :rows="4"
           autoResize
-          class="w-100 mt-1"
+          fluid
+          class="mt-1"
           :class="{ 'p-invalid': showError }"
         />
         <small v-if="showError" class="p-error">
@@ -105,6 +106,11 @@ function confirm() {
     font-weight: $font-weight-medium;
     color: var(--p-text-color);
     display: block;
+  }
+
+  // bootstrap `text-danger` is not in the grid-only bundle; token-driven required mark.
+  &__req {
+    color: var(--p-red-500);
   }
 }
 </style>

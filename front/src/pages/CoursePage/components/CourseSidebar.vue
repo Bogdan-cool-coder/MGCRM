@@ -80,7 +80,9 @@ function kindIcon(kind: LessonKind): string {
   flex-shrink: 0;
   position: sticky;
   top: 0;
-  height: 100vh;
+  // Fill the layout row (parent is height:100% flex), not the full viewport —
+  // avoids the sidebar being clipped by the shell padding-top (audit L1).
+  height: 100%;
   overflow-y: auto;
   padding: 1.25rem 1rem;
   background: var(--p-card-background);

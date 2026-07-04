@@ -146,7 +146,9 @@ function onKeydown(e: KeyboardEvent) {
   }
 
   &__input {
-    width: 110px;
+    // Sized so the whole edit-row (input + save/cancel) fits the 170px currency
+    // column min-width → no horizontal layout shift on entering edit mode.
+    width: 92px;
   }
 
   &__btn-save {

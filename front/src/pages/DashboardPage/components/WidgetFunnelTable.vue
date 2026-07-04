@@ -36,7 +36,9 @@
           row-hover
           class="funnel-table"
         >
-          <Column :header="t('dashboard.funnel.stage')" style="min-width: 140px">
+          <!-- min-width trimmed 140→120 so the 4-column total fits the span-7 card
+               on 1280 without an inner horizontal scrollbar (audit L1). -->
+          <Column :header="t('dashboard.funnel.stage')" style="min-width: 120px">
             <template #body="{ data: row }">
               <div class="funnel-stage-cell">
                 <span
@@ -75,7 +77,7 @@
             </template>
           </Column>
 
-          <Column :header="t('dashboard.funnel.transition')" style="min-width: 160px">
+          <Column :header="t('dashboard.funnel.transition')" style="min-width: 140px">
             <template #body="{ data: row }">
               <template v-if="row.transition_to_next_pct != null">
                 <div class="funnel-progress">

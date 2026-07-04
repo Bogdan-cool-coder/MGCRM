@@ -837,9 +837,11 @@ onMounted(async () => {
 .my-tasks-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  // Pull page out of shell padding to fill edge-to-edge
-  margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+  // Pull page out of shell padding to fill edge-to-edge. Compensate the bottom
+  // padding too (was only top/sides) and grow height to cover it, so there's no
+  // ~32px dead background strip under the kanban board.
+  height: calc(100% + #{$space-4});
+  margin: calc(-1 * $space-4) calc(-1 * $space-6) calc(-1 * $space-4);
 }
 
 .my-tasks-page__kanban-wrap {

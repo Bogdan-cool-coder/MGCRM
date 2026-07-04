@@ -16,6 +16,7 @@
             option-value="value"
             :allow-empty="false"
             :disabled="disabled"
+            class="mkb-team__pipeline"
             @update:model-value="(v) => emit('update', 'pipelineId', v as number)"
           />
         </div>
@@ -177,10 +178,18 @@ const { t } = useI18n()
   flex-direction: column;
   gap: $space-2;
   margin-bottom: $space-4;
+  min-width: 0; // let the field shrink inside col-md-6 (was overflowing into sibling col)
 
   &--half {
     flex: 1;
   }
+}
+
+// SelectButton with ≥3 dynamic pipelines (or long names) overflows col-md-6 and
+// visually collides with the «Бонусный фонд» column — allow the segments to wrap.
+.mkb-team__pipeline {
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .mkb-team__money {

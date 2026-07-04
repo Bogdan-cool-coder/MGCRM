@@ -4,7 +4,7 @@
     :header="t('contacts.inline_create.title')"
     modal
     :draggable="false"
-    style="width: 520px"
+    style="width: 520px; max-width: 95vw"
     :closable="!saving"
     @hide="onHide"
   >

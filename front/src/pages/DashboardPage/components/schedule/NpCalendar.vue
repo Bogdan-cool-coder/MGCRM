@@ -152,6 +152,9 @@ const tileTooltip = (cell: IncomeScheduleDay): string => {
   border-radius: $radius-sm;
   border: 1px solid $surface-200;
   background: $surface-card;
+  // Clip money strings to the tile so a wide amount never spills onto the
+  // neighbouring tile on narrow layouts (audit L1).
+  overflow: hidden;
 
   // Weekend one step dimmer than a normal tile. Light: $surface-100 (#F1F2F3) is
   // dimmer than the white card. Dark navy: card is $surface-100 (#111E38) so a
@@ -187,15 +190,23 @@ const tileTooltip = (cell: IncomeScheduleDay): string => {
 }
 
 .np-calendar__day-fact {
+  max-width: 100%;
   font-size: $font-size-xs;
   font-variant-numeric: tabular-nums;
   color: $surface-800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .np-calendar__day-cumulative {
+  max-width: 100%;
   font-size: $font-size-2xs;
   font-variant-numeric: tabular-nums;
   color: $surface-500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .np-calendar__squeeze-dot {

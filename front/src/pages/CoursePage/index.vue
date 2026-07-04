@@ -243,10 +243,15 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .course-page {
   height: 100%;
+  // Flex column so the admin banner takes its natural height and the layout row
+  // fills the rest — no 100vh math, no phantom page scroll (audit L1).
+  display: flex;
+  flex-direction: column;
 
   &__layout {
     display: flex;
-    min-height: 100vh;
+    flex: 1;
+    min-height: 0;
   }
 
   &__content {

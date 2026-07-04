@@ -104,7 +104,10 @@ const barOption = computed<EChartsOption>(() => {
       valueFormatter: (v: unknown) =>
         formatFullNumber((v as number) / 100, locale.value, props.baseCurrency),
     },
-    grid: { left: 16, right: 24, top: 8, bottom: 8, containLabel: true },
+    // right:90 reserves room for the series value label (position:'right') so the
+    // longest bar's «47,6 млрд ₽» is not clipped by the canvas edge (audit L1).
+    // containLabel handles axis labels only, not series data labels.
+    grid: { left: 16, right: 90, top: 8, bottom: 8, containLabel: true },
     xAxis: {
       type: 'value',
       axisLabel: {

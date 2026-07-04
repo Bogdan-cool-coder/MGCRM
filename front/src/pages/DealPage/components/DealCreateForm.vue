@@ -463,6 +463,12 @@ watch(
   flex-direction: column;
   gap: $space-6;
   padding: $space-5;
+  // Give the form a stable column width in the create-body flex row instead of
+  // collapsing to the intrinsic width of its controls (a narrow strip hugging the
+  // left edge when the side hint is hidden below 1024px).
+  flex: 0 0 560px;
+  max-width: 560px;
+  width: 100%;
 }
 
 .deal-create-form__section {

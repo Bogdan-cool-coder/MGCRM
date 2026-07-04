@@ -107,49 +107,17 @@
               </template>
             </template>
 
-            <!-- Add channel button (inline popover) -->
+            <!-- Add channel button — opens the shared PrimeVue Popover (teleported
+                 to body + auto-flip) so it can't be clipped by the scroll panel. -->
             <div class="deal-contacts-group__add-ch-wrap">
               <button
                 class="deal-contacts-group__add-channel"
                 type="button"
-                @click.stop="openAddChannelPopover(link.contact.id)"
+                @click.stop="openAddChannelPopover(link.contact.id, $event)"
               >
                 <i class="pi pi-plus" />
                 {{ t('sales.deal.info.contacts.addChannel') }}
               </button>
-              <!-- Inline add-channel popover -->
-              <div
-                v-if="addChContactId === link.contact.id"
-                class="deal-contacts-group__add-ch-popover"
-                @click.stop
-              >
-                <div class="deal-contacts-group__add-ch-type-row">
-                  <button
-                    v-for="opt in channelTypeOptions"
-                    :key="opt.value"
-                    type="button"
-                    class="deal-contacts-group__type-btn"
-                    :class="{ 'deal-contacts-group__type-btn--active': addChType === opt.value }"
-                    @click="addChType = opt.value"
-                  >
-                    <i :class="['pi', opt.icon]" />
-                  </button>
-                </div>
-                <InputText
-                  v-model="addChValue"
-                  :placeholder="t('sales.deal.addChannel.valuePlaceholder')"
-                  size="small"
-                  fluid
-                  @keydown.enter="submitAddChannel(link.contact.id)"
-                />
-                <Button
-                  :label="t('common.add')"
-                  size="small"
-                  :loading="addChSaving"
-                  :disabled="!addChValue.trim()"
-                  @click="submitAddChannel(link.contact.id)"
-                />
-              </div>
             </div>
           </div>
         </template>
@@ -252,11 +220,44 @@
 
     <!-- ⋮ contact actions (PrimeVue Menu popup — etalon DealFeedItem) -->
     <Menu ref="menuRef" :model="menuItems" popup />
+
+    <!-- Shared add-channel Popover (teleported + auto-flip; single instance, only
+         one add-channel form open at a time — tracked via addChContactId). -->
+    <Popover ref="addChPopoverRef" @hide="closeAddChannelPopover">
+      <div v-if="addChContactId !== null" class="deal-contacts-group__add-ch-popover" @click.stop>
+        <div class="deal-contacts-group__add-ch-type-row">
+          <button
+            v-for="opt in channelTypeOptions"
+            :key="opt.value"
+            type="button"
+            class="deal-contacts-group__type-btn"
+            :class="{ 'deal-contacts-group__type-btn--active': addChType === opt.value }"
+            @click="addChType = opt.value"
+          >
+            <i :class="['pi', opt.icon]" />
+          </button>
+        </div>
+        <InputText
+          v-model="addChValue"
+          :placeholder="t('sales.deal.addChannel.valuePlaceholder')"
+          size="small"
+          fluid
+          @keydown.enter="submitAddChannel(addChContactId)"
+        />
+        <Button
+          :label="t('common.add')"
+          size="small"
+          :loading="addChSaving"
+          :disabled="!addChValue.trim()"
+          @click="submitAddChannel(addChContactId)"
+        />
+      </div>
+    </Popover>
   </DealFieldGroup>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { RouterLink } from 'vue-router'
@@ -264,6 +265,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Menu from 'primevue/menu'
+import Popover from 'primevue/popover'
 import type { MenuItem } from 'primevue/menuitem'
 import DealFieldGroup from './DealFieldGroup.vue'
 import { contactsApi } from '@/api/crm/contacts'
@@ -404,19 +406,6 @@ function toggleMenu(event: MouseEvent, link: DealContactDto) {
 function doUnlink(contactId: number) {
   emit('removeContact', contactId)
 }
-
-// Close the add-channel popover on any document click (its own body has @click.stop)
-function onDocClick() {
-  if (addChContactId.value !== null) closeAddChannelPopover()
-}
-
-onMounted(() => {
-  document.addEventListener('click', onDocClick)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', onDocClick)
-})
 
 // ── One-click set-primary ─────────────────────────────────────────────────────
 
@@ -564,11 +553,14 @@ const addChType = ref('tg')
 const addChValue = ref('')
 const addChMutation = useMutation<ContactChannel>()
 const addChSaving = ref(false)
+const addChPopoverRef = ref<InstanceType<typeof Popover> | null>(null)
 
-function openAddChannelPopover(contactId: number) {
+function openAddChannelPopover(contactId: number, event: MouseEvent) {
   addChContactId.value = contactId
   addChType.value = 'tg'
   addChValue.value = ''
+  // Popover toggles on the same anchor; align/flip + teleport handled by PrimeVue.
+  addChPopoverRef.value?.toggle(event)
 }
 
 function closeAddChannelPopover() {
@@ -589,6 +581,7 @@ async function submitAddChannel(contactId: number) {
       ...channelsMap.value,
       [contactId]: [...(channelsMap.value[contactId] ?? []), channel],
     }
+    addChPopoverRef.value?.hide()
     addChContactId.value = null
     toast.add({ severity: 'success', summary: t('sales.deal.addChannel.success'), life: 2000 })
   } catch (err) {
@@ -837,20 +830,12 @@ async function submitAddChannel(contactId: number) {
 }
 
 .deal-contacts-group__add-ch-popover {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  z-index: 100;
+  // Hosted inside a PrimeVue Popover (its panel supplies background/border/shadow
+  // and handles teleport + flip) — this is just the inner form layout.
   min-width: 220px;
-  background: var(--p-card-background);
-  border: 1px solid var(--p-surface-200);
-  border-radius: $radius-md;
-  box-shadow: $shadow-md;
-  padding: $space-3;
   display: flex;
   flex-direction: column;
   gap: $space-2;
-  // border var(--p-surface-200) theme-reactive soft popover border — no dark override
 }
 
 .deal-contacts-group__add-ch-type-row {

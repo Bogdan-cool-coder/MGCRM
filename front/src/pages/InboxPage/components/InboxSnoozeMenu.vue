@@ -137,7 +137,9 @@ defineExpose({ toggle })
 
 <style lang="scss" scoped>
 .inbox-snooze__body {
-  width: 260px;
+  // 340px fits the append-to="self" DatePicker calendar panel (~330px) inside the
+  // popover — was 260px, so the panel overflowed and could clip near the right edge.
+  width: 340px;
   max-width: 90vw;
 }
 

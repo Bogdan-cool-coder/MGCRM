@@ -101,7 +101,9 @@
           />
         </div>
 
-        <!-- DataTable -->
+        <!-- DataTable — embedded (/settings detail panel ~750px) forces a
+             conscious horizontal scroll with a frozen name column, so the RUB/USD
+             columns, Active toggle and kebab stay reachable. -->
         <DataTable
           v-else
           v-model:expanded-rows="expandedRows"
@@ -109,6 +111,7 @@
           :loading="loading"
           striped-rows
           lazy
+          :scrollable="embedded"
           data-key="id"
           class="products-page__table"
           @row-click="onRowClick"
@@ -133,6 +136,8 @@
             field="name"
             :header="t('catalog.products.page.columns.name')"
             sortable
+            :frozen="embedded"
+            align-frozen="left"
             style="min-width: 180px"
           >
             <template #body="{ data }">

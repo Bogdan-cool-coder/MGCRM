@@ -327,10 +327,23 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   overflow-x: auto;
   overflow-y: hidden;
   flex: 1;
-  scrollbar-width: none;
+  min-height: 0;
+  // Thin themed scrollbar so the off-screen columns (Month scope ≈ 1800px) are
+  // discoverable — was fully hidden (scrollbar-width:none + webkit display:none).
+  scrollbar-width: thin;
+  scrollbar-color: $surface-300 transparent;
 
   &::-webkit-scrollbar {
-    display: none;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $surface-300;
+    border-radius: $radius-sm;
+
+    .app-dark & {
+      background: var(--p-surface-300);
+    }
   }
 }
 
@@ -343,6 +356,10 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   display: flex;
   flex-direction: column;
   align-self: flex-start;
+  // Cap at the columns-container height (flex chain from .task-board height:100%)
+  // so the body scrolls internally regardless of open QuickCreate/Filter panels —
+  // replaces the brittle `calc(100vh - 280px)` magic constant on the body.
+  max-height: 100%;
   background: $surface-card;
   border: 1px solid $surface-200;
   border-radius: $radius-lg;
@@ -445,8 +462,10 @@ function onDrop(event: DragEvent, targetBucket: MyBoardBucket) {
   flex-direction: column;
   gap: $space-2;
   min-height: 60px;
+  // flex:1 + min-height:0 → body fills the remaining col height under the header
+  // and scrolls internally (col is capped at max-height:100% of the container).
+  flex: 1;
   overflow-y: auto;
-  max-height: calc(100vh - 280px);
   scrollbar-width: thin;
   scrollbar-color: $surface-200 transparent;
 }

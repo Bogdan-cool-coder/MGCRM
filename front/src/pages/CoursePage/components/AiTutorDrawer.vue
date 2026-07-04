@@ -165,6 +165,16 @@ function formatTime(iso: string): string {
 }
 
 .ai-tutor-drawer {
+  // Single scroll: make the drawer content a full-height flex column so the
+  // messages list is the ONLY scroller. Removes the `max-height: calc(100vh -
+  // 300px)` magic that produced a second nested scrollbar when the lesson title
+  // wrapped to 2-3 lines (audit L1).
+  :deep(.p-drawer-content) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
   // Theme-reactive muted text — replaces dead full-Bootstrap .text-muted.
   &__muted {
     color: var(--p-text-muted-color);
@@ -205,6 +215,7 @@ function formatTime(iso: string): string {
 
   &__lesson-title {
     font-size: $font-size-sm; // snap from 0.8125rem (15px→14px)
+    flex-shrink: 0;
   }
 
   &__empty-icon {
@@ -216,14 +227,15 @@ function formatTime(iso: string): string {
   }
 
   &__messages {
-    flex: 1;
+    flex: 1 1 auto;
+    // min-height:0 unlocks flex shrinking so this is the single scroll surface;
+    // no viewport math, no second scrollbar (audit L1).
+    min-height: 0;
     overflow-y: auto;
     padding-bottom: 0.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    min-height: 200px;
-    max-height: calc(100vh - 300px);
   }
 
   &__message {
@@ -275,6 +287,7 @@ function formatTime(iso: string): string {
   }
 
   &__input-area {
+    flex-shrink: 0;
     padding-top: 0.75rem;
     border-top: 1px solid var(--p-surface-200);
     margin-top: auto;

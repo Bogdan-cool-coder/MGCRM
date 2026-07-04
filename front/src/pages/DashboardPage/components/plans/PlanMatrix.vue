@@ -24,7 +24,10 @@
               :entity-id="(data as PlanMatrixRow).scope.id ?? undefined"
               :pixel-size="22"
             />
-            <span class="plan-matrix__employee-name">
+            <span
+              class="plan-matrix__employee-name"
+              :title="(data as PlanMatrixRow).scope.label"
+            >
               {{ (data as PlanMatrixRow).scope.label }}
             </span>
           </div>
@@ -328,11 +331,17 @@ const grandTotalLabel = computed<string>(() => {
   display: flex;
   align-items: center;
   gap: $space-2;
+  min-width: 0; // let the name ellipsize instead of widening the frozen column
 }
 
 .plan-matrix__employee-name {
   font-weight: $font-weight-medium;
   white-space: nowrap;
+  // Cap the frozen column: a long name/product line no longer bloats the sticky
+  // column and eats the scroll viewport on 1280 (audit L1). Full text in :title.
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .plan-matrix__total {

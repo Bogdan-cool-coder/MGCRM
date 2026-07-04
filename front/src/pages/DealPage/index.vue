@@ -741,7 +741,10 @@ onMounted(async () => {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
+  // Negative bottom margin cancels layout__content's padding-bottom so the page's
+  // footprint is exactly 100vh — otherwise the outer scrollHeight is 100vh+16px
+  // and the whole page rides 16px with the layout scrollbar showing.
+  margin: calc(-1 * $space-4) calc(-1 * $space-6);
 
   // ── Left panel: fixed 420px at ALL desktop widths ─────────────────────────
 

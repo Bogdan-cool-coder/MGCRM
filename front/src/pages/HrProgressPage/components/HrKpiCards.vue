@@ -66,8 +66,12 @@ const tiles = computed<{ key: TileKey; icon: string; label: string; value: numbe
 </script>
 
 <style lang="scss" scoped>
+// Keep the default row negative gutters (margin-block:0 only) so the KPI card
+// row aligns edge-to-edge with the matrix card in the parent page. Full margin:0
+// left a 12px inset mismatch (audit L1); the page body padding absorbs the
+// horizontal negative margin.
 .hr-kpi-cards {
-  margin: 0;
+  margin-block: 0;
 }
 
 .hr-kpi-card {

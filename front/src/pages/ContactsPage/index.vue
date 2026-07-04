@@ -137,7 +137,7 @@
               <Column
                 v-if="col.field === 'name'"
                 field="name"
-                style="min-width: 220px"
+                style="min-width: 220px; max-width: 380px"
               >
                 <template #header>
                   <span
@@ -162,6 +162,7 @@
                       <RouterLink
                         :to="`/companies/${data.id}`"
                         class="contacts-page__name-link"
+                        :title="(data as Company).name"
                         @click.stop
                       >
                         {{ (data as Company).name }}
@@ -190,7 +191,7 @@
               <Column
                 v-else-if="col.field === 'full_name'"
                 field="full_name"
-                style="min-width: 220px"
+                style="min-width: 220px; max-width: 380px"
               >
                 <template #header>
                   <span
@@ -214,6 +215,7 @@
                       <RouterLink
                         :to="`/contacts/${data.id}`"
                         class="contacts-page__name-link"
+                        :title="(data as Contact).full_name"
                         @click.stop
                       >
                         {{ (data as Contact).full_name }}
@@ -221,6 +223,7 @@
                       <span
                         v-if="(data as Contact).position"
                         class="contacts-page__name-position"
+                        :title="(data as Contact).position ?? undefined"
                       >{{ (data as Contact).position }}</span>
                       <!-- Tag chips below name/position -->
                       <div
@@ -477,7 +480,7 @@
                       :name="getOwnerColumnUser(data)!.full_name"
                       :pixel-size="22"
                     />
-                    <span class="contacts-page__owner-name">{{ getOwnerColumnUser(data)!.full_name }}</span>
+                    <span class="contacts-page__owner-name" :title="getOwnerColumnUser(data)!.full_name">{{ getOwnerColumnUser(data)!.full_name }}</span>
                   </div>
                   <span v-else class="contacts-page__na">—</span>
                 </template>
@@ -1073,6 +1076,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  // Allow children to shrink and ellipsis instead of forcing a horizontal scroll
+  // when a company name / position is very long. Cap keeps the column bounded.
+  min-width: 0;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  max-width: 320px; // upper bound for the name column content
 }
 
 .contacts-page__name-link {
@@ -1084,6 +1092,10 @@ onMounted(() => {
   text-decoration: none;
   font-weight: $font-weight-semibold;
   font-size: $font-size-sm;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 
   &:hover {
     text-decoration: underline;
@@ -1094,6 +1106,10 @@ onMounted(() => {
   font-size: $font-size-2xs;
   color: $surface-400;
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .contacts-page__company-link {
@@ -1178,11 +1194,17 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: $space-1;
+  min-width: 0;
+  max-width: 160px;
 }
 
 .contacts-page__owner-name {
   font-size: $font-size-xs;
   color: $surface-600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 // Tag chips inside the name cell (1.2)

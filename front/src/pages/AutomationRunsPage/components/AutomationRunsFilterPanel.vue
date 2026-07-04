@@ -128,7 +128,10 @@ const { t } = useI18n()
 
 .automation-runs-filter__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  // Container-responsive: auto-fit wraps columns by available WIDTH, so the
+  // embedded panel (~750px in /settings detail, viewport still >991px) reflows
+  // instead of squeezing 4 controls that clip date-range / long automation names.
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
   gap: 14px 18px; // matches DealsFilterOverlay grid gaps (no exact token pair)
   margin-bottom: $space-3;
@@ -184,12 +187,6 @@ $_filter-h: 38px;
 
   .app-dark & {
     border-top-color: var(--p-surface-700);
-  }
-}
-
-@media (max-width: 991px) {
-  .automation-runs-filter__grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

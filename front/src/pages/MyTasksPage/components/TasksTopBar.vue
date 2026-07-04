@@ -101,10 +101,11 @@
     <button
       type="button"
       class="tasks-top-bar__create-btn"
+      :title="t('tasks.topbar.createBtn')"
       @click="emit('toggleQuickCreate')"
     >
       <i class="pi pi-plus" />
-      {{ t('tasks.topbar.createBtn') }}
+      <span class="tasks-top-bar__create-label">{{ t('tasks.topbar.createBtn') }}</span>
     </button>
   </div>
 </template>
@@ -228,6 +229,7 @@ function onMoreClick(e: MouseEvent) {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0; // allow the block to shrink so the toolbar stays one row on 1280
 }
 
 .tasks-top-bar__title {
@@ -247,6 +249,9 @@ function onMoreClick(e: MouseEvent) {
   font-size: $font-size-xs;
   color: $surface-500;
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   .app-dark & {
     color: var(--p-surface-500); // dark surface-500 = muted navy text (was surface-400 = too dark)
@@ -535,6 +540,27 @@ function onMoreClick(e: MouseEvent) {
 
   .pi {
     font-size: $font-size-sm;
+  }
+}
+
+.tasks-top-bar__create-label {
+  white-space: nowrap;
+}
+
+// ── Compact toolbar (≤1440: with sidebar expanded the full one-row toolbar
+// overflows ~1000px available and wraps «Создать» onto a 2nd row). Drop the
+// growing subtitle and collapse Create to icon-only to keep a single row. ──────
+@media (max-width: 1440px) {
+  .tasks-top-bar__subtitle {
+    display: none;
+  }
+
+  .tasks-top-bar__create-btn {
+    padding: 0 $space-2;
+
+    .tasks-top-bar__create-label {
+      display: none;
+    }
   }
 }
 </style>

@@ -140,14 +140,14 @@
             v-model="localFilters.budget_from"
             suffix=" ₽"
             mode="decimal"
-            class="flex-1 filter-overlay__control"
+            class="filter-overlay__control"
           />
           <span class="filter-overlay__budget-sep">{{ t('sales.deals.page.filters.budgetTo') }}</span>
           <InputNumber
             v-model="localFilters.budget_to"
             suffix=" ₽"
             mode="decimal"
-            class="flex-1 filter-overlay__control"
+            class="filter-overlay__control"
           />
         </div>
       </div>
@@ -759,6 +759,18 @@ $_filter-h: 38px;
   display: flex;
   align-items: center;
   gap: $space-2;
+
+  // The two budget InputNumbers must share the row 50/50 (the old `flex-1` class
+  // was dead — bootstrap-grid ships no flex-1 utility). Flex the PrimeVue root and
+  // let its inner input fill so the row can't blow out the filter grid column.
+  :deep(.p-inputnumber) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :deep(.p-inputnumber-input) {
+    width: 100%;
+  }
 }
 
 .filter-overlay__budget-sep {

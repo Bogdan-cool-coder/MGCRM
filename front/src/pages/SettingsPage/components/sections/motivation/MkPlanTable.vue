@@ -4,7 +4,7 @@
       <span class="mkb-eyebrow">{{ t('motivation.builder.step_plan') }}</span>
     </header>
 
-    <DataTable :value="enabledRows" size="small" show-gridlines class="mkb-plan__table">
+    <DataTable :value="enabledRows" size="small" show-gridlines scrollable class="mkb-plan__table">
       <Column :header="t('motivation.card.salary_components')" style="width: 200px">
         <template #body="{ data }">
           <div class="mkb-plan__pos">

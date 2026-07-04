@@ -382,9 +382,12 @@ function onRefresh() {
   }
 }
 
-// On wide screens both panes are always visible (back button in pane is inert there).
+// On wide screens both panes are always visible, so the mobile-only «К списку»
+// back button in the reading pane AND the draft editor is inert — hide both
+// (the draft editor uses .inbox-draft-editor__back, previously not covered).
 @media (min-width: 992px) {
-  .inbox-page__pane--reading :deep(.inbox-reading__back) {
+  .inbox-page__pane--reading :deep(.inbox-reading__back),
+  .inbox-page__pane--reading :deep(.inbox-draft-editor__back) {
     display: none;
   }
 }

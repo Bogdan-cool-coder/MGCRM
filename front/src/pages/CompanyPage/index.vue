@@ -347,7 +347,7 @@
       v-model:visible="addEmployeeOpen"
       :header="t('company.page.employees.add')"
       modal
-      style="width: 480px"
+      style="width: 480px; max-width: 95vw"
     >
       <div class="company-page-v2__dialog-form">
         <div class="company-page-v2__field">
@@ -412,7 +412,7 @@
       v-model:visible="showAttachHolding"
       :header="t('crm.company.holding.addParent')"
       modal
-      style="width: 440px"
+      style="width: 440px; max-width: 95vw"
     >
       <div class="row g-3" style="padding-top: 4px">
         <div class="col-12">
@@ -485,7 +485,7 @@
       :header="t('common.confirm')"
       modal
       :draggable="false"
-      :style="{ width: '28rem' }"
+      :style="{ width: '28rem', maxWidth: '95vw' }"
     >
       <div class="company-page-v2__confirm-body">
         <i class="pi pi-exclamation-triangle company-page-v2__confirm-icon" />
@@ -1120,7 +1120,10 @@ watch(
 .company-page-v2 {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  // height:100% + overflow:hidden makes __body (flex:1, overflow-y:auto) the scroll
+  // container so the sticky tablist works — aligns with ContactPage's scroll model.
+  height: 100%;
+  overflow: hidden;
   margin: calc(-1 * $space-4) calc(-1 * $space-6) 0;
 }
 

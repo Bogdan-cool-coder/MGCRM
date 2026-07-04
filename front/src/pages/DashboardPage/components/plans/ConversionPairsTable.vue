@@ -18,8 +18,14 @@
       >
         <template #body="{ data }">
           <div class="conv-pairs__pair">
-            <span class="conv-pairs__pair-name">{{ (data as ConversionPair).name }}</span>
-            <span class="conv-pairs__pair-formula">{{ formula(data as ConversionPair) }}</span>
+            <span
+              class="conv-pairs__pair-name"
+              :title="(data as ConversionPair).name"
+            >{{ (data as ConversionPair).name }}</span>
+            <span
+              class="conv-pairs__pair-formula"
+              :title="formula(data as ConversionPair)"
+            >{{ formula(data as ConversionPair) }}</span>
           </div>
         </template>
       </Column>
@@ -137,17 +143,23 @@ const cellTooltip = (pair: ConversionPair, key: string): string => {
   flex-direction: column;
   gap: 2px;
   min-width: 180px;
+  // Cap so a long pair name doesn't bloat the frozen column (audit L1).
+  max-width: 240px;
 }
 
 .conv-pairs__pair-name {
   font-weight: $font-weight-medium;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .conv-pairs__pair-formula {
   font-size: $font-size-xs;
   color: $surface-500;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   .app-dark & {
     color: var(--p-surface-500);

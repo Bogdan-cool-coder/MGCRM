@@ -299,15 +299,29 @@ function formatTime(iso: string): string {
 }
 
 // ─── Section ───────────────────────────────────────────────────────────────
+// Sections must be able to SHRINK inside the fixed-height .nf column so their
+// own overflow-y:auto activates. min-height:0 unlocks flex shrinking; the last
+// section (feed) grows to take the leftover height and owns the scroll. Without
+// this both sections kept intrinsic height (flex-shrink:0) and the panel
+// silently clipped the tail of the list + «Загрузить ещё» (audit L1 HIGH).
 .nf__section {
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+// The feed section (last one, holds the long list + load-more) grows to fill
+// the remaining height so its own overflow-y:auto has room to scroll.
+.nf__section:last-child {
+  flex: 1 1 auto;
 }
 
 .nf__section + .nf__section {
   border-top: 1px solid $surface-100;
 }
 
-// Scrollable: last section with feed is scrollable
+// Scrollable: content sections scroll internally once they can shrink (min-height:0
+// above). «Загрузить ещё» sits at the end of the feed list and is reached by
+// scrolling — no longer clipped by the panel.
 .nf {
   > :not(.nf__header, .nf__digest, .nf__skeleton-list, .nf__empty) {
     overflow-y: auto;

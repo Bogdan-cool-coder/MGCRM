@@ -18,7 +18,10 @@
         >
           <span class="fw-medium">v{{ v.version_number }}</span>
           <span class="text-secondary ms-2">{{ formatDate(v.created_at) }}</span>
-          <span class="text-secondary ms-2">{{ v.created_by_name ?? '—' }}</span>
+          <span
+            class="text-secondary ms-2 template-versions-card__author"
+            :title="v.created_by_name ?? undefined"
+          >{{ v.created_by_name ?? '—' }}</span>
           <Tag
             v-if="v.ai_overridden"
             severity="warn"
@@ -72,6 +75,10 @@ function formatDate(dateStr: string): string {
   &__row {
     display: flex;
     align-items: center;
+    // Wrap in the narrow col-lg-4 (~280px) so a long author name + два тега can't
+    // push the status tag (ms-auto) out past the card edge.
+    flex-wrap: wrap;
+    gap: $space-1 0;
     font-size: $font-size-sm;
     padding: 0.35rem 0;
     border-bottom: 1px solid var(--p-surface-100);
@@ -79,6 +86,15 @@ function formatDate(dateStr: string): string {
     &:last-child {
       border-bottom: none;
     }
+  }
+
+  // Truncate the author so it yields width to the tags instead of overflowing.
+  &__author {
+    min-width: 0;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__ai-tag {

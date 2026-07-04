@@ -97,6 +97,21 @@ const deadlineText = computed<string | null>(() => {
 .my-course-card {
   // .h-100 is a dead full-Bootstrap class → equal-height cards via 100% here.
   height: 100%;
+  // PrimeVue Card body/content don't stretch by default, so the footer button
+  // floated at different heights across a row (audit L1). Make body a flex column
+  // and let content grow → footer pins to the bottom, buttons align across cards.
+  display: flex;
+  flex-direction: column;
+
+  :deep(.p-card-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  :deep(.p-card-content) {
+    flex: 1;
+  }
 
   &__meta {
     gap: $space-2;
@@ -153,6 +168,11 @@ const deadlineText = computed<string | null>(() => {
     font-weight: $font-weight-semibold;
     margin: 0 0 $space-2 0;
     line-height: 1.4;
+    // Clamp to 2 lines so cards in a row keep a consistent header height.
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   &__deadline {

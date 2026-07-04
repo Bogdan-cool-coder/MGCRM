@@ -274,10 +274,11 @@ function hidePopover() {
   flex-shrink: 0;
 }
 
-// Title row: grid 34px 1fr 34px
+// Title row: grid — side cells widen for large counts so a 4–5-digit counter
+// pill can't overrun its cell and overlap the centred stage name.
 .kanban-col__title-row {
   display: grid;
-  grid-template-columns: 34px 1fr 34px;
+  grid-template-columns: minmax(34px, auto) 1fr minmax(34px, auto);
   align-items: center;
   margin-bottom: $space-1;
 }

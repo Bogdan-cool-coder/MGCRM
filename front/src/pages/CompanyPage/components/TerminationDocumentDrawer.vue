@@ -2,7 +2,7 @@
   <Drawer
     v-model:visible="visible"
     position="right"
-    style="width: 520px"
+    style="width: 520px; max-width: 95vw"
     :modal="true"
     :pt="{ header: { class: 'termination-drawer__header' } }"
   >

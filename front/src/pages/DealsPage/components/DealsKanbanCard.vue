@@ -6,6 +6,7 @@
       { 'kanban-card--overdue': health === 'overdue' },
       { 'kanban-card--dragging': isDragging },
       { 'kanban-card--selected': isSelected },
+      { 'kanban-card--bulk': bulkMode },
     ]"
     @click="onClick"
   >
@@ -358,6 +359,13 @@ const ownerInitial = computed(() => {
 .kanban-card__body {
   // stylelint-disable-next-line scale-unlimited/declaration-strict-value
   padding: 11px 12px; // spec §4.2 exact: 11px top/bottom (no token for 11px), 12px = $space-3
+
+  // In bulk mode the absolute checkbox (~20px @ left $space-2) sits over the
+  // title — reserve room so it no longer overlaps the first characters.
+  .kanban-card--bulk & {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    padding-left: 36px; // 20px checkbox + 2× $space-2 gutter — layout compensation
+  }
 }
 
 .kanban-card__title {

@@ -20,7 +20,7 @@
       <i v-if="selected" class="pi pi-check" />
     </div>
 
-    <div class="task-card__body">
+    <div class="task-card__body" :class="{ 'task-card__body--select': selectMode }">
       <!-- Deal link -->
       <div v-if="task.deal" class="task-card__deal">
         <i class="pi pi-briefcase task-card__deal-icon" />
@@ -310,6 +310,12 @@ function onCompleteBtn() {
   display: flex;
   flex-direction: column;
   gap: $space-2;
+
+  // In select-mode, clear the absolute checkbox (18px @ right:8px) so a long
+  // deal-link / title first line isn't overlapped by the opaque checkbox square.
+  &--select {
+    padding-right: 34px;
+  }
 }
 
 // ── Deal link ─────────────────────────────────────────────────────────────────

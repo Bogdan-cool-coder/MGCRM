@@ -32,11 +32,16 @@ const stageStyle = computed(() => {
 <style lang="scss" scoped>
 .deal-stage-tag {
   display: inline-block;
+  max-width: 240px;
   padding: 3px 10px;
   border-radius: $radius-sm;
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
   white-space: nowrap;
+  // Very long user-defined stage names must not push the tag past the narrow
+  // left panel and give it a horizontal scrollbar.
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: 0.02em;
 }
 </style>

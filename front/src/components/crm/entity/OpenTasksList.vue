@@ -71,123 +71,133 @@
           <!-- Meta row: Тип chip · Дата · Ответственный — all clickable (spec §11).
                Clicks on picker buttons expand the card first, then the picker opens. -->
           <div class="open-tasks__meta">
-            <!-- Type chip — click expands card + opens type picker (spec §11) -->
+            <!-- Type chip — click opens type picker (compact inline edit, spec §11) -->
             <div class="open-tasks__picker-wrap">
               <button
                 type="button"
                 class="open-tasks__type-chip"
                 :style="typeChipStyle(task.kind)"
-                @click.stop="expandAndToggleTypePicker(task.id)"
+                @click.stop="expandAndToggleTypePicker(task.id, $event)"
               >
                 <i :class="['pi', resolvedKindIcon(task.kind)]" />
                 {{ kindLabel(task.kind) }}
               </button>
-              <!-- Type picker popover -->
-              <div
-                v-if="typePickerOpenId === task.id"
-                class="open-tasks__picker-popover"
-                @click.stop
-              >
-                <button
-                  v-for="opt in taskTypeOptions"
-                  :key="opt.value"
-                  type="button"
-                  class="open-tasks__picker-option"
-                  :class="{ 'open-tasks__picker-option--active': task.kind === opt.value }"
-                  @click.stop="patchKind(task, opt.value)"
+              <!-- Type picker popover — teleported to body so the scroll-list's
+                   overflow (max-height:260px) can't clip it. -->
+              <Teleport to="body">
+                <div
+                  v-if="typePickerOpenId === task.id"
+                  class="open-tasks__picker-popover open-tasks__picker-popover--floating"
+                  :style="pickerFloatStyle"
+                  @click.stop
                 >
-                  <i :class="['pi', opt.icon]" />
-                  {{ opt.label }}
-                </button>
-              </div>
+                  <button
+                    v-for="opt in taskTypeOptions"
+                    :key="opt.value"
+                    type="button"
+                    class="open-tasks__picker-option"
+                    :class="{ 'open-tasks__picker-option--active': task.kind === opt.value }"
+                    @click.stop="patchKind(task, opt.value)"
+                  >
+                    <i :class="['pi', opt.icon]" />
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </Teleport>
             </div>
 
-            <!-- Due date — click expands card + opens calendar (spec §11) -->
+            <!-- Due date — click opens calendar (compact inline edit, spec §11) -->
             <div class="open-tasks__picker-wrap">
               <button
                 type="button"
                 class="open-tasks__due"
                 :class="{ 'open-tasks__due--overdue': isTaskOverdue(task) }"
-                @click.stop="expandAndToggleDatePicker(task.id)"
+                @click.stop="expandAndToggleDatePicker(task.id, $event)"
               >
                 <i class="pi pi-clock open-tasks__meta-icon" />
                 {{ task.due_at ? formatDueDateShort(task.due_at) : t('activity.fields.dueAt') }}
               </button>
-              <!-- DatePicker inline + quick-reschedule shortcuts -->
-              <div
-                v-if="datePickerOpenId === task.id"
-                class="open-tasks__picker-popover open-tasks__picker-popover--date"
-                @click.stop
-              >
-                <!-- Quick shortcuts: «+1 день» / «+1 неделя» (server-side TZ-correct) -->
-                <div class="open-tasks__reschedule-quick">
-                  <button
-                    type="button"
-                    class="open-tasks__reschedule-btn"
-                    :disabled="reschedulingId === task.id"
-                    @click.stop="rescheduleTask(task, '+1d')"
-                  >
-                    <i class="pi pi-angle-right" />
-                    {{ t('activity.reschedule.plus1d') }}
-                  </button>
-                  <button
-                    type="button"
-                    class="open-tasks__reschedule-btn"
-                    :disabled="reschedulingId === task.id"
-                    @click.stop="rescheduleTask(task, '+1w')"
-                  >
-                    <i class="pi pi-angle-double-right" />
-                    {{ t('activity.reschedule.plus1w') }}
-                  </button>
+              <!-- DatePicker inline + quick-reschedule shortcuts (teleported) -->
+              <Teleport to="body">
+                <div
+                  v-if="datePickerOpenId === task.id"
+                  class="open-tasks__picker-popover open-tasks__picker-popover--date open-tasks__picker-popover--floating"
+                  :style="pickerFloatStyle"
+                  @click.stop
+                >
+                  <!-- Quick shortcuts: «+1 день» / «+1 неделя» (server-side TZ-correct) -->
+                  <div class="open-tasks__reschedule-quick">
+                    <button
+                      type="button"
+                      class="open-tasks__reschedule-btn"
+                      :disabled="reschedulingId === task.id"
+                      @click.stop="rescheduleTask(task, '+1d')"
+                    >
+                      <i class="pi pi-angle-right" />
+                      {{ t('activity.reschedule.plus1d') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="open-tasks__reschedule-btn"
+                      :disabled="reschedulingId === task.id"
+                      @click.stop="rescheduleTask(task, '+1w')"
+                    >
+                      <i class="pi pi-angle-double-right" />
+                      {{ t('activity.reschedule.plus1w') }}
+                    </button>
+                  </div>
+                  <p class="open-tasks__reschedule-label">{{ t('activity.reschedule.pickDate') }}</p>
+                  <DatePicker
+                    :model-value="taskDueDrafts[task.id] ?? (task.due_at ? new Date(task.due_at) : null)"
+                    inline
+                    show-time
+                    @date-select="(d: Date) => patchDueAt(task, d)"
+                  />
                 </div>
-                <p class="open-tasks__reschedule-label">{{ t('activity.reschedule.pickDate') }}</p>
-                <DatePicker
-                  :model-value="taskDueDrafts[task.id] ?? (task.due_at ? new Date(task.due_at) : null)"
-                  inline
-                  show-time
-                  @date-select="(d: Date) => patchDueAt(task, d)"
-                />
-              </div>
+              </Teleport>
             </div>
 
-            <!-- Responsible — click expands card + opens user search (spec §11) -->
+            <!-- Responsible — click opens user search (compact inline edit, spec §11) -->
             <div class="open-tasks__picker-wrap">
               <button
                 type="button"
                 class="open-tasks__responsible"
-                @click.stop="expandAndToggleResponsiblePicker(task.id)"
+                @click.stop="expandAndToggleResponsiblePicker(task.id, $event)"
               >
                 <i class="pi pi-user open-tasks__meta-icon" />
                 {{ task.responsible?.full_name ?? t('activity.fields.responsible') }}
               </button>
-              <!-- Responsible picker popover -->
-              <div
-                v-if="responsiblePickerOpenId === task.id"
-                class="open-tasks__picker-popover"
-                @click.stop
-              >
-                <div class="open-tasks__picker-search">
-                  <i class="pi pi-search open-tasks__picker-search-icon" />
-                  <input
-                    v-model="responsibleSearch"
-                    type="text"
-                    class="open-tasks__picker-search-input"
-                    :placeholder="t('common.search')"
-                    @click.stop
-                  />
-                </div>
-                <button
-                  v-for="user in filteredUsers"
-                  :key="user.id"
-                  type="button"
-                  class="open-tasks__picker-option"
-                  :class="{ 'open-tasks__picker-option--active': task.responsible?.id === user.id }"
-                  @click.stop="patchResponsible(task, user)"
+              <!-- Responsible picker popover (teleported) -->
+              <Teleport to="body">
+                <div
+                  v-if="responsiblePickerOpenId === task.id"
+                  class="open-tasks__picker-popover open-tasks__picker-popover--floating"
+                  :style="pickerFloatStyle"
+                  @click.stop
                 >
-                  <i v-if="task.responsible?.id === user.id" class="pi pi-check" />
-                  {{ user.name }}
-                </button>
-              </div>
+                  <div class="open-tasks__picker-search">
+                    <i class="pi pi-search open-tasks__picker-search-icon" />
+                    <input
+                      v-model="responsibleSearch"
+                      type="text"
+                      class="open-tasks__picker-search-input"
+                      :placeholder="t('common.search')"
+                      @click.stop
+                    />
+                  </div>
+                  <button
+                    v-for="user in filteredUsers"
+                    :key="user.id"
+                    type="button"
+                    class="open-tasks__picker-option"
+                    :class="{ 'open-tasks__picker-option--active': task.responsible?.id === user.id }"
+                    @click.stop="patchResponsible(task, user)"
+                  >
+                    <i v-if="task.responsible?.id === user.id" class="pi pi-check" />
+                    {{ user.name }}
+                  </button>
+                </div>
+              </Teleport>
             </div>
           </div>
 
@@ -307,6 +317,15 @@ function onDocumentClick(event: MouseEvent) {
     // Click was inside the open-tasks root — never collapse
     return
   }
+  // Teleported picker popovers live outside rootEl (in <body>) — a click inside
+  // one (search input, date cell, option) must NOT collapse the list/pickers.
+  const insideFloatingPicker = path.some(
+    (el) =>
+      el instanceof HTMLElement &&
+      (el.classList?.contains('open-tasks__picker-popover--floating') ||
+        el.classList?.contains('p-datepicker')),
+  )
+  if (insideFloatingPicker) return
   // Click was genuinely outside — collapse expanded task and close pickers
   collapseAll()
 }
@@ -352,6 +371,32 @@ async function saveEditTitle(task: ActivityDto) {
 function cancelEditTitle(taskId: number) {
   delete taskTitleDraft[taskId]
   editingTitleId.value = null
+}
+
+// ─── Teleported picker positioning ────────────────────────────────────────────
+// Popovers are teleported to <body> (so the scroll list's overflow can't clip
+// them). Position is anchored to the clicked trigger with a fixed-position style,
+// flipping below when there is not enough room above.
+
+const pickerFloatStyle = ref<Record<string, string>>({})
+
+function setPickerAnchor(event: MouseEvent, popoverHeight: number) {
+  const btn = (event.currentTarget as HTMLElement | null) ?? null
+  if (!btn) return
+  const rect = btn.getBoundingClientRect()
+  const spaceAbove = rect.top
+  const openUp = spaceAbove >= popoverHeight || spaceAbove > window.innerHeight - rect.bottom
+  const style: Record<string, string> = {
+    position: 'fixed',
+    left: `${Math.round(rect.left)}px`,
+    zIndex: '1200',
+  }
+  if (openUp) {
+    style.bottom = `${Math.round(window.innerHeight - rect.top + 4)}px`
+  } else {
+    style.top = `${Math.round(rect.bottom + 4)}px`
+  }
+  pickerFloatStyle.value = style
 }
 
 // ─── Type picker ──────────────────────────────────────────────────────────────
@@ -543,30 +588,27 @@ function collapseAll() {
   focusResultId.value = null
 }
 
-// ─── Expand-and-open picker helpers (meta row clicks in compact mode) ─────────
-// Spec §11: ONE click on the card expands it. Meta clicks should also expand
-// the card and then open the appropriate picker in the compact→expanded flow.
-// Since pickers are positioned relative to their wrapper, we expand first then
-// open the picker via the existing toggle functions (which work in both views).
+// ─── Meta-chip picker helpers (compact mode) ─────────────────────────────────
+// The type/date/responsible popovers live INSIDE the compact card (v-if
+// expandedId !== task.id). Expanding the card first unmounts the compact block
+// before the popover can render, so the inline pickers never appeared. Fix:
+// clicking a meta chip toggles its picker WITHOUT expanding — the compact card
+// stays mounted, the popover renders, and inline edit of type/date/responsible
+// works as documented. (Full expand still happens via title/body click or
+// «Выполнить».)
 
-function expandAndToggleTypePicker(taskId: number) {
-  if (expandedId.value !== taskId) {
-    expandedId.value = taskId
-  }
+function expandAndToggleTypePicker(taskId: number, event: MouseEvent) {
+  setPickerAnchor(event, 200)
   toggleTypePicker(taskId)
 }
 
-function expandAndToggleDatePicker(taskId: number) {
-  if (expandedId.value !== taskId) {
-    expandedId.value = taskId
-  }
+function expandAndToggleDatePicker(taskId: number, event: MouseEvent) {
+  setPickerAnchor(event, 340)
   toggleDatePicker(taskId)
 }
 
-function expandAndToggleResponsiblePicker(taskId: number) {
-  if (expandedId.value !== taskId) {
-    expandedId.value = taskId
-  }
+function expandAndToggleResponsiblePicker(taskId: number, event: MouseEvent) {
+  setPickerAnchor(event, 260)
   toggleResponsiblePicker(taskId)
 }
 
@@ -717,7 +759,9 @@ async function onDelete(id: number) {
   flex-direction: column;
   max-height: 260px;
   overflow-y: auto;
-  overflow-x: visible; // allow picker popovers to overflow
+  // Picker popovers are teleported to <body> so this scroll box no longer clips
+  // them (overflow-x computes to auto next to overflow-y:auto anyway).
+  overflow-x: hidden;
   padding: $space-2 $space-3 $space-1;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -943,6 +987,13 @@ async function onDelete(id: number) {
   &--date {
     min-width: 280px;
     padding: $space-2;
+  }
+
+  // Teleported to <body> — position comes from the inline fixed-position style
+  // (pickerFloatStyle); the base absolute bottom/left are neutralised so they
+  // don't fight the computed anchor.
+  &--floating {
+    bottom: auto;
   }
 }
 

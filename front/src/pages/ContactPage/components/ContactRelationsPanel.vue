@@ -46,8 +46,12 @@
         </button>
       </div>
 
-      <!-- Add button -->
-      <button class="contact-relations__add-btn" @click="openDialog = true">
+      <!-- Add button — only when there are relations; the empty state has its own CTA -->
+      <button
+        v-if="sortedRelations.length > 0"
+        class="contact-relations__add-btn"
+        @click="openDialog = true"
+      >
         <i class="pi pi-plus" />
         {{ t('crm.contact.relations.add') }}
       </button>
@@ -59,7 +63,7 @@
       :header="t('common.confirm')"
       modal
       :draggable="false"
-      :style="{ width: '28rem' }"
+      :style="{ width: '28rem', maxWidth: '95vw' }"
       class="contact-relations__delete-dialog"
     >
       <div class="contact-relations__delete-body">
@@ -88,7 +92,7 @@
       v-model:visible="openDialog"
       :header="t('crm.contact.relations.add')"
       modal
-      style="width: 460px"
+      style="width: 460px; max-width: 95vw"
     >
       <div class="contact-relations__dialog-form">
         <div class="contact-relations__dialog-field">

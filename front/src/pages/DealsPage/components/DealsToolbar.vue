@@ -37,7 +37,7 @@
         @click="emit('openPipelineMenu')"
       >
         <i class="pi pi-sitemap" />
-        <span class="deals-toolbar__pipeline-name">{{ pipelineName }}</span>
+        <span class="deals-toolbar__pipeline-name" :title="pipelineName">{{ pipelineName }}</span>
         <i class="pi pi-chevron-down deals-toolbar__pipeline-chevron" />
       </Button>
 
@@ -359,6 +359,12 @@ const menuItems = computed(() => [
 
 .deals-toolbar__pipeline-name {
   font-size: $font-size-sm;
+  // Long pipeline names must not wrap onto a 2nd line inside the fixed-height
+  // switcher button and spill over neighbouring toolbar controls.
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .deals-toolbar__pipeline-chevron {
