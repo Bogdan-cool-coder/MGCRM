@@ -7,9 +7,11 @@ namespace Tests\Feature\Sales;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Models\Deal;
+use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
 use App\Domain\Sales\Models\PlanTarget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -129,6 +131,102 @@ class PlanMatrixTest extends TestCase
         // 3M/4M*100 = 75%
         $this->assertSame(75, $ownRow['cells']['2']['pct']);
         $this->assertSame(0, $ownRow['cells']['1']['fact_kopecks'], 'won deal leaked into an unrelated month');
+    }
+
+    /**
+     * scope_type=pipeline coverage (was untested before this perf pass) plus
+     * the equivalence net for the batched fact query (audit §6 Э9, item 4):
+     * each pipeline's won-deal fact must land ONLY on its own row/month, never
+     * bleed into a sibling pipeline's row — the exact case a naive
+     * whereIn/groupBy batch across scope ids could get wrong.
+     */
+    public function test_matrix_pipeline_scope_keeps_each_pipelines_fact_on_its_own_row(): void
+    {
+        $admin = $this->makeAdmin();
+        $manager = $this->makeManager();
+
+        $pipelineA = Pipeline::factory()->create(['sort_order' => 1]);
+        $pipelineB = Pipeline::factory()->create(['sort_order' => 2]);
+        $wonStage = PipelineStage::factory()->won()->create();
+
+        Deal::factory()->forOwner($manager)->create([
+            'pipeline_id' => $pipelineA->id,
+            'stage_id' => $wonStage->id,
+            'amount' => 1_000_000_00,
+            'currency' => 'RUB',
+            'stage_changed_at' => '2026-03-10 10:00:00',
+        ]);
+        Deal::factory()->forOwner($manager)->create([
+            'pipeline_id' => $pipelineB->id,
+            'stage_id' => $wonStage->id,
+            'amount' => 2_000_000_00,
+            'currency' => 'RUB',
+            'stage_changed_at' => '2026-03-10 10:00:00',
+        ]);
+
+        PlanTarget::factory()->forPipeline($pipelineA->id)->forPeriod(2026, 3)
+            ->create(['value_kopecks' => 1_000_000_00, 'currency' => 'RUB']);
+        PlanTarget::factory()->forPipeline($pipelineB->id)->forPeriod(2026, 3)
+            ->create(['value_kopecks' => 2_000_000_00, 'currency' => 'RUB']);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $response = $this->getJson('/api/plans/matrix?metric=new_income&scope_type=pipeline&layer=operative&year=2026')
+            ->assertOk();
+
+        $rowA = collect($response->json('rows'))->firstWhere('scope.id', $pipelineA->id);
+        $rowB = collect($response->json('rows'))->firstWhere('scope.id', $pipelineB->id);
+
+        $this->assertSame(1_000_000_00, $rowA['cells']['3']['fact_kopecks']);
+        $this->assertSame(1_000_000_00, $rowA['cells']['3']['plan_kopecks']);
+        $this->assertSame(2_000_000_00, $rowB['cells']['3']['fact_kopecks']);
+        $this->assertSame(2_000_000_00, $rowB['cells']['3']['plan_kopecks']);
+    }
+
+    /**
+     * Perf (audit §6 Э9, item 4): query count must stay flat as the number of
+     * manager rows grows — before batching this was one GROUP BY fact query
+     * PER row. Seed many managers, each with a won deal, and assert the fact
+     * query count does not scale with row count.
+     */
+    public function test_matrix_query_count_stays_flat_across_many_manager_rows(): void
+    {
+        $director = $this->makeDirector();
+        $wonStage = PipelineStage::factory()->won()->create();
+
+        $managers = [];
+        for ($i = 0; $i < 8; $i++) {
+            $manager = $this->makeManager();
+            $managers[] = $manager;
+
+            Deal::factory()->forOwner($manager)->inStage($wonStage)->create([
+                'amount' => 500_000_00,
+                'currency' => 'RUB',
+                'stage_changed_at' => '2026-04-15 10:00:00',
+            ]);
+        }
+
+        Sanctum::actingAs($director, ['*']);
+
+        DB::enableQueryLog();
+        $response = $this->getJson('/api/plans/matrix?metric=new_income&scope_type=user&layer=operative&year=2026')
+            ->assertOk();
+        $queryCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // resolveScopeRows (2) + plans (1) + one batched fact query (1) +
+        // auth/2FA bookkeeping — flat regardless of manager count (would scale
+        // 1:1 with managers pre-batching).
+        $this->assertLessThan(
+            15,
+            $queryCount,
+            "Plan matrix should batch the fact query across all rows, not query per-row (ran {$queryCount} queries).",
+        );
+
+        foreach ($managers as $manager) {
+            $row = collect($response->json('rows'))->firstWhere('scope.id', $manager->id);
+            $this->assertSame(500_000_00, $row['cells']['4']['fact_kopecks']);
+        }
     }
 
     public function test_annual_column_is_derived_sum_when_no_authored_annual_cell(): void

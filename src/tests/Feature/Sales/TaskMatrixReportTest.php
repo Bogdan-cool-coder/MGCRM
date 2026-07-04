@@ -12,6 +12,7 @@ use App\Domain\Org\Models\Department;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\PlanTarget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -248,5 +249,60 @@ class TaskMatrixReportTest extends TestCase
         Sanctum::actingAs($manager, ['*']);
 
         $this->getJson('/api/reports/task-matrix?year=2026&layer=operative&kind=bogus')->assertStatus(422);
+    }
+
+    /**
+     * Perf (audit §6 Э9, item 2): the fact query count must stay flat as the
+     * number of manager rows grows — before batching this was one GROUP BY
+     * query PER (kind, manager) pair (5 kinds × N managers). With 8 managers
+     * and all 5 default kinds, the old code would run 40 fact queries; the
+     * batched version runs exactly one fact query PER kind (5), regardless of
+     * how many managers are on the grid.
+     */
+    public function test_task_matrix_query_count_stays_flat_across_many_managers(): void
+    {
+        $director = $this->makeDirector();
+
+        $managers = [];
+        for ($i = 0; $i < 8; $i++) {
+            $manager = $this->makeManager();
+            $managers[] = $manager;
+
+            Activity::factory()->meeting()->responsibleOf($manager)->completed()->create([
+                'completed_at' => '2026-09-0'.(($i % 9) + 1).' 10:00:00',
+            ]);
+            Activity::factory()->call()->responsibleOf($manager)->completed()->create([
+                'completed_at' => '2026-09-0'.(($i % 9) + 1).' 11:00:00',
+            ]);
+        }
+
+        Sanctum::actingAs($director, ['*']);
+
+        DB::enableQueryLog();
+        $response = $this->getJson('/api/reports/task-matrix?year=2026&layer=operative')->assertOk();
+        $queryCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // resolveScopeRows (2) + allCells (1) + one batched fact query per
+        // default kind (5) + auth/2FA bookkeeping — flat regardless of manager
+        // count (would scale with managers × kinds pre-batching).
+        $this->assertLessThan(
+            20,
+            $queryCount,
+            "Task matrix should batch facts per-kind, not per-(kind,manager) (ran {$queryCount} queries).",
+        );
+
+        // Sanity: every manager's September meeting/call fact is still correct
+        // after batching (data wasn't dropped to keep the count low).
+        $meetingGroup = collect($response->json('groups'))->firstWhere('kind', 'meeting');
+        $callGroup = collect($response->json('groups'))->firstWhere('kind', 'call');
+
+        foreach ($managers as $manager) {
+            $meetingRow = collect($meetingGroup['rows'])->firstWhere('scope.id', $manager->id);
+            $callRow = collect($callGroup['rows'])->firstWhere('scope.id', $manager->id);
+
+            $this->assertSame(1, $meetingRow['cells']['9']['fact_count']);
+            $this->assertSame(1, $callRow['cells']['9']['fact_count']);
+        }
     }
 }

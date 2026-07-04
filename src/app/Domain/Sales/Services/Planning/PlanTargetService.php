@@ -68,13 +68,18 @@ class PlanTargetService
             ->get()
             ->groupBy(fn (PlanTarget $p) => $this->rowKeyFor($p));
 
-        // ---- Fact per row × month, one batched query per row (GROUP BY month) ----
+        // ---- Fact for EVERY row × month, one batched query for the WHOLE
+        // matrix (GROUP BY scope row, month, currency) — was one query PER
+        // row (N rows = N queries); now exactly one regardless of row count.
+        $rowIds = array_column($rowsMeta, 'id');
+        $allMonthlyFacts = $this->monthlyMoneyFactsForRows($query->scopeType, $rowIds, $query->year, $multiCurrencyWarning);
+
         $rows = [];
 
         foreach ($rowsMeta as $rowMeta) {
             $rowPlans = $plans->get((string) $rowMeta['id'], collect());
             /** @var Collection<int, PlanTarget> $rowPlans */
-            $monthlyFacts = $this->monthlyMoneyFactFor($query->scopeType, $rowMeta['id'], $query->year, $multiCurrencyWarning);
+            $monthlyFacts = $allMonthlyFacts[$rowMeta['id']] ?? array_fill(1, 12, 0);
 
             $cells = [];
             $annualPlanKopecks = 0;
@@ -345,14 +350,20 @@ class PlanTargetService
     // -------------------------------------------------------------------------
 
     /**
-     * Money fact for one scope row across all 12 months of a year, in one
-     * batched GROUP BY query (no N+1 across rows or months). Currently only
-     * new_income / scope=user,pipeline,company is exercised end-to-end (Ф1);
-     * delegates to the same won-deal + FX pattern as ManagerKpiService.
+     * Money fact for EVERY scope row across all 12 months of a year, in ONE
+     * batched GROUP BY query for the whole matrix (was one query PER row — N
+     * rows = N queries; now exactly one regardless of row count). Currently
+     * only new_income / scope=user,pipeline,company is exercised end-to-end
+     * (Ф1); delegates to the same won-deal + FX pattern as ManagerKpiService.
      *
-     * @return array<int, int> month(1..12) => fact kopecks in base currency
+     * Company scope has a single synthetic row (id=0, no filter — company-wide
+     * total), so it is still one query; the batching payoff is for
+     * user/pipeline scope where the matrix can have many rows.
+     *
+     * @param  list<int>  $scopeIds
+     * @return array<int, array<int, int>> scope_id => [month(1..12) => fact kopecks in base currency]
      */
-    private function monthlyMoneyFactFor(PlanScopeType $scopeType, int $scopeId, int $year, bool &$multiCurrencyWarning): array
+    private function monthlyMoneyFactsForRows(PlanScopeType $scopeType, array $scopeIds, int $year, bool &$multiCurrencyWarning): array
     {
         $baseCurrency = config('crm.currencies.default', 'RUB');
 
@@ -370,26 +381,44 @@ class PlanTargetService
         $query = Deal::wonDealsBaseQuery()
             ->whereRaw($yearExpr.' = ?', [(string) $year]);
 
-        match ($scopeType) {
-            PlanScopeType::User => $query->where('deals.owner_user_id', $scopeId),
-            PlanScopeType::Pipeline => $query->where('deals.pipeline_id', $scopeId),
-            PlanScopeType::Company => null, // no filter — company-wide total
+        $scopeColumn = match ($scopeType) {
+            PlanScopeType::User => 'deals.owner_user_id',
+            PlanScopeType::Pipeline => 'deals.pipeline_id',
+            PlanScopeType::Company => null, // no filter/grouping column — company-wide total
         };
 
+        if ($scopeColumn !== null) {
+            $query->whereIn($scopeColumn, $scopeIds);
+        }
+
+        $selectColumns = [DB::raw($monthExpr.' as month'), DB::raw('SUM(deals.amount) as total_amount'), 'deals.currency'];
+        $groupColumns = [DB::raw($monthExpr), 'deals.currency'];
+
+        if ($scopeColumn !== null) {
+            $selectColumns[] = DB::raw($scopeColumn.' as scope_id');
+            $groupColumns[] = DB::raw($scopeColumn);
+        }
+
         $rows = $query
-            ->selectRaw($monthExpr.' as month, SUM(deals.amount) as total_amount, deals.currency')
-            ->groupBy(DB::raw($monthExpr), 'deals.currency')
+            ->select($selectColumns)
+            ->groupBy($groupColumns)
             ->get();
 
-        $totals = array_fill(1, 12, 0);
+        // scope_id => [month => kopecks]. Company scope collapses everything
+        // onto the single synthetic row id (scopeIds always [0] there).
+        $companyScopeId = $scopeColumn === null ? ($scopeIds[0] ?? 0) : null;
+        $totals = [];
 
         foreach ($rows as $row) {
+            $scopeId = $scopeColumn !== null ? (int) $row->scope_id : $companyScopeId;
             $month = (int) $row->month;
             $amount = (int) ($row->total_amount ?? 0);
             $currency = (string) ($row->currency ?? $baseCurrency);
 
+            $totals[$scopeId] ??= array_fill(1, 12, 0);
+
             if (strtoupper($currency) === strtoupper($baseCurrency)) {
-                $totals[$month] = ($totals[$month] ?? 0) + $amount;
+                $totals[$scopeId][$month] += $amount;
 
                 continue;
             }
@@ -403,7 +432,7 @@ class PlanTargetService
                 continue;
             }
 
-            $totals[$month] = ($totals[$month] ?? 0) + $converted;
+            $totals[$scopeId][$month] += $converted;
         }
 
         return $totals;

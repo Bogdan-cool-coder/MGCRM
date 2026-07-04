@@ -34,6 +34,7 @@ use App\Domain\Sales\Models\PipelineStage;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -734,42 +735,85 @@ class DealService
 
         $multiCurrencyWarning = false;
 
+        $visibleStageIds = $visibleStages->map(static fn (PipelineStage $stage): int => (int) $stage->id)->all();
+
         $rawColumns = [];
-        $allDealIds = [];
-
         foreach ($visibleStages as $stage) {
-            $base = $this->scopedQuery($scope, $user)
+            $rawColumns[(string) $stage->id] = [
+                'stage_id' => $stage->id,
+                'total' => 0,
+                'amounts_by_currency' => [],
+                'deals' => Collection::make(),
+            ];
+        }
+
+        if ($visibleStageIds !== []) {
+            // One filtered+scoped base query shared by both the per-stage
+            // totals/currency-sums aggregate and the per-stage card fetch below
+            // (board(): was 2 queries PER visible column — now 2 queries for the
+            // WHOLE board regardless of column count).
+            $columnsBase = $this->scopedQuery($scope, $user)
                 ->where('pipeline_id', $pipelineId)
-                ->where('stage_id', $stage->id);
+                ->whereIn('stage_id', $visibleStageIds);
+            $this->applyFilters($columnsBase, $columnFilters, $user);
 
-            $this->applyFilters($base, $columnFilters, $user);
+            // Per-stage, per-currency totals in one GROUP BY — total = SUM(currency
+            // buckets' counts), amounts_by_currency = the buckets themselves.
+            $aggregateRows = (clone $columnsBase)
+                ->selectRaw('stage_id, currency, COUNT(*) as row_count, SUM(amount) as total_amount')
+                ->groupBy('stage_id', 'currency')
+                ->get();
 
-            $total = (clone $base)->count();
+            foreach ($aggregateRows as $row) {
+                $stageKey = (string) $row->stage_id;
 
-            // Per-currency native sums (kopecks) — GROUP BY in SQL, no PHP loop.
-            $amountsByCurrency = (clone $base)
-                ->selectRaw('currency, SUM(amount) as total_amount')
-                ->groupBy('currency')
-                ->pluck('total_amount', 'currency')
-                ->map(static fn ($v): int => (int) $v)
-                ->all();
+                if (! isset($rawColumns[$stageKey])) {
+                    continue;
+                }
 
-            $deals = (clone $base)
+                $rawColumns[$stageKey]['total'] += (int) $row->row_count;
+                $rawColumns[$stageKey]['amounts_by_currency'][(string) $row->currency] = (int) $row->total_amount;
+            }
+
+            // Per-stage top-N cards (newest first, tiebreak by id) in one query via
+            // ROW_NUMBER() OVER (PARTITION BY stage_id ...) — replaces one
+            // ORDER BY/LIMIT query PER column. Both supported drivers (pgsql,
+            // sqlite >= 3.25) implement window functions, so no driver branch is
+            // needed here (unlike ActivityService's ranked-row helpers, which
+            // predate the sqlite window-function baseline in this codebase).
+            $rankedDeals = (clone $columnsBase)
+                ->select('deals.*')
+                ->selectRaw('ROW_NUMBER() OVER (PARTITION BY deals.stage_id ORDER BY deals.created_at DESC, deals.id DESC) as board_rn');
+
+            // The inner $columnsBase already carries the SoftDeletes global scope
+            // (deleted_at is null) — the outer wrapper must NOT re-apply it, since
+            // "ranked_deals" is a derived-table alias with no deleted_at column of
+            // its own (fromSub does not carry column-qualification rewriting).
+            $deals = Deal::query()
+                ->withoutGlobalScope(SoftDeletingScope::class)
+                ->fromSub($rankedDeals, 'ranked_deals')
+                ->where('board_rn', '<=', self::BOARD_COLUMN_LIMIT)
                 ->with(['company:id,name', 'owner:id,full_name'])
                 ->orderByDesc('created_at')
-                ->limit(self::BOARD_COLUMN_LIMIT)
+                ->orderByDesc('id')
                 ->get();
 
             foreach ($deals as $deal) {
+                $stageKey = (string) $deal->stage_id;
+
+                if (! isset($rawColumns[$stageKey])) {
+                    continue;
+                }
+
+                $rawColumns[$stageKey]['deals']->push($deal);
+            }
+        }
+
+        $allDealIds = [];
+        foreach ($rawColumns as $column) {
+            foreach ($column['deals'] as $deal) {
                 $allDealIds[] = (int) $deal->id;
             }
-
-            $rawColumns[(string) $stage->id] = [
-                'stage_id' => $stage->id,
-                'total' => $total,
-                'amounts_by_currency' => $amountsByCurrency,
-                'deals' => $deals,
-            ];
         }
 
         // Batched enrichment maps (two queries for the whole board).
@@ -818,23 +862,42 @@ class DealService
         // (in funnel order) with its scope+filter-aware deal count so the panel can
         // render "Reveal «Stage» (N)". A revealed hidden stage still appears here so
         // its toggle stays in the panel and shows the live count.
+        //
+        // Counts for ALL hidden stages are resolved in ONE GROUP BY query (was one
+        // COUNT query PER hidden stage) — same scope+filter set as the visible
+        // columns, just grouped by stage_id instead of counted per stage in a loop.
+        $hiddenStageIds = $pipeline->stages
+            ->filter(static fn (PipelineStage $stage): bool => (bool) $stage->hidden_by_default)
+            ->map(static fn (PipelineStage $stage): int => (int) $stage->id)
+            ->all();
+
+        $hiddenCounts = [];
+        if ($hiddenStageIds !== []) {
+            $hiddenBase = $this->scopedQuery($scope, $user)
+                ->where('pipeline_id', $pipelineId)
+                ->whereIn('stage_id', $hiddenStageIds);
+            $this->applyFilters($hiddenBase, $columnFilters, $user);
+
+            $hiddenCounts = $hiddenBase
+                ->selectRaw('stage_id, COUNT(*) as row_count')
+                ->groupBy('stage_id')
+                ->pluck('row_count', 'stage_id')
+                ->map(static fn ($v): int => (int) $v)
+                ->all();
+        }
+
         $hiddenStages = [];
         foreach ($pipeline->stages as $stage) {
             if (! $stage->hidden_by_default) {
                 continue;
             }
 
-            $count = $this->scopedQuery($scope, $user)
-                ->where('pipeline_id', $pipelineId)
-                ->where('stage_id', $stage->id);
-            $this->applyFilters($count, $columnFilters, $user);
-
             $hiddenStages[] = [
                 'id' => (int) $stage->id,
                 'name' => $stage->name,
                 'color' => $stage->color,
                 'sort_order' => (int) $stage->sort_order,
-                'deals_count' => (clone $count)->count(),
+                'deals_count' => $hiddenCounts[$stage->id] ?? 0,
             ];
         }
 

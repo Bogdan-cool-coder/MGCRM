@@ -113,11 +113,17 @@ class TaskMatrixService
         $columns = $this->buildColumns();
         $rows = [];
 
+        // One batched GROUP BY across every row/manager for this kind (was one
+        // query PER manager) — the fact map is keyed by user, so the per-row
+        // loop below is pure PHP lookups, no further queries.
+        $userIds = array_column($rowsMeta, 'id');
+        $allMonthlyFacts = $this->monthlyTaskFactsForUsers($kind, $userIds, $filters->year, $filters->pipelineId);
+
         foreach ($rowsMeta as $rowMeta) {
             $userId = $rowMeta['id'];
             /** @var Collection<int, PlanTarget> $userCells */
             $userCells = $kindCells->get($userId, collect());
-            $monthlyFacts = $this->monthlyTaskFactFor($kind, $userId, $filters->year, $filters->pipelineId);
+            $monthlyFacts = $allMonthlyFacts[$userId] ?? array_fill(1, 12, 0);
 
             $cells = [];
             $annualPlan = 0;
@@ -171,22 +177,29 @@ class TaskMatrixService
     }
 
     /**
-     * Completed-activity count per month for one user × kind × year, one
-     * batched GROUP BY query (no N+1 across months). "Completed" mirrors
-     * ActivityService's single predicate (status=done AND completed_at NOT
-     * NULL); `kind="ftm"` is a sentinel routing through
+     * Completed-activity count per (responsible_id, month) for a WHOLE kind ×
+     * year, across every row/manager the matrix renders — one batched GROUP BY
+     * query total per kind (was one query PER manager per kind: N managers ×
+     * K kinds queries; now K queries regardless of manager count). "Completed"
+     * mirrors ActivityService's single predicate (status=done AND completed_at
+     * NOT NULL); `kind="ftm"` is a sentinel routing through
      * Activity::scopeFtmCounted instead of a plain kind filter (contract §3.5).
      *
-     * @return array<int, int> month(1..12) => fact count
+     * @param  list<int>  $userIds
+     * @return array<int, array<int, int>> user_id => [month(1..12) => fact count]
      */
-    private function monthlyTaskFactFor(string $kind, int $userId, int $year, ?int $pipelineId): array
+    private function monthlyTaskFactsForUsers(string $kind, array $userIds, int $year, ?int $pipelineId): array
     {
+        if ($userIds === []) {
+            return [];
+        }
+
         $isPg = DB::connection()->getDriverName() === 'pgsql';
         $monthExpr = $isPg ? 'EXTRACT(MONTH FROM completed_at)' : "strftime('%m', completed_at)";
         $yearExpr = $isPg ? 'EXTRACT(YEAR FROM completed_at)' : "strftime('%Y', completed_at)";
 
         $query = Activity::query()
-            ->where('responsible_id', $userId)
+            ->whereIn('responsible_id', $userIds)
             ->where('status', ActivityStatus::Done->value)
             ->whereNotNull('completed_at')
             ->whereRaw($yearExpr.' = ?', [(string) $year]);
@@ -203,17 +216,19 @@ class TaskMatrixService
         }
 
         $rows = $query
-            ->selectRaw($monthExpr.' as month, COUNT(*) as cnt')
-            ->groupBy(DB::raw($monthExpr))
+            ->selectRaw('responsible_id, '.$monthExpr.' as month, COUNT(*) as cnt')
+            ->groupBy('responsible_id', DB::raw($monthExpr))
             ->get();
 
-        $totals = array_fill(1, 12, 0);
+        $facts = [];
 
         foreach ($rows as $row) {
-            $totals[(int) $row->month] = (int) $row->cnt;
+            $userId = (int) $row->responsible_id;
+            $facts[$userId] ??= array_fill(1, 12, 0);
+            $facts[$userId][(int) $row->month] = (int) $row->cnt;
         }
 
-        return $totals;
+        return $facts;
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PipelineStage;
 use App\Domain\Sales\Models\PlanTarget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -172,5 +173,59 @@ class ConversionReportTest extends TestCase
         Sanctum::actingAs($manager, ['*']);
 
         $this->getJson('/api/reports/conversions?year=2026&layer=operative&scope_type=company')->assertStatus(422);
+    }
+
+    /**
+     * Perf (audit §6 Э9, item 3): query count must stay flat as the number of
+     * MONTHS with data grows — before batching this was one COUNT query PER
+     * (side, month) = 24 queries per pair. Seed activity across all 12 months
+     * for TWO distinct pairs (48 old-style month-slots total) and assert the
+     * new per-side-per-year batching keeps the query count small and constant.
+     */
+    public function test_conversion_query_count_stays_flat_across_many_months_and_pairs(): void
+    {
+        $manager = $this->makeManager();
+
+        PlanTarget::factory()->forUser($manager->id)->forPeriod(2026, 1)
+            ->conversion(['type' => 'task', 'kind' => 'meeting'], ['type' => 'task', 'kind' => 'call'], 50)
+            ->create();
+        PlanTarget::factory()->forUser($manager->id)->forPeriod(2026, 2)
+            ->conversion(['type' => 'task', 'kind' => 'presentation'], ['type' => 'task', 'kind' => 'meeting'], 60)
+            ->create();
+
+        for ($month = 1; $month <= 12; $month++) {
+            $mm = str_pad((string) $month, 2, '0', STR_PAD_LEFT);
+            Activity::factory()->call()->responsibleOf($manager)->completed()->create(['completed_at' => "2026-{$mm}-05"]);
+            Activity::factory()->meeting()->responsibleOf($manager)->completed()->create(['completed_at' => "2026-{$mm}-06"]);
+            Activity::factory()->presentation()->responsibleOf($manager)->completed()->create(['completed_at' => "2026-{$mm}-07"]);
+        }
+
+        Sanctum::actingAs($manager, ['*']);
+
+        DB::enableQueryLog();
+        $response = $this->getJson('/api/reports/conversions?year=2026&layer=operative')->assertOk();
+        $queryCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // resolveScopeRows (2) + cells (1) + 2 pairs × 2 sides (4 batched
+        // queries) + auth/2FA bookkeeping — flat regardless of month count
+        // (would scale with months × sides × pairs pre-batching: 48 here).
+        $this->assertLessThan(
+            20,
+            $queryCount,
+            "Conversion report should batch fact queries per (pair,side), not per (pair,side,month) (ran {$queryCount} queries).",
+        );
+
+        // Sanity: every month's fact is still correct after batching.
+        $pairs = collect($response->json('custom'));
+        $callMeetingPair = $pairs->first(fn ($p) => $p['numerator']['kind'] === 'meeting' && $p['denominator']['kind'] === 'call');
+        $presentationMeetingPair = $pairs->first(fn ($p) => $p['numerator']['kind'] === 'presentation' && $p['denominator']['kind'] === 'meeting');
+
+        for ($month = 1; $month <= 12; $month++) {
+            $this->assertSame(1, $callMeetingPair['cells'][(string) $month]['num_count']);
+            $this->assertSame(1, $callMeetingPair['cells'][(string) $month]['den_count']);
+            $this->assertSame(1, $presentationMeetingPair['cells'][(string) $month]['num_count']);
+            $this->assertSame(1, $presentationMeetingPair['cells'][(string) $month]['den_count']);
+        }
     }
 }

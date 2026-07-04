@@ -21,6 +21,20 @@ use Illuminate\Support\Facades\Log;
 class ExchangeRateService
 {
     /**
+     * Per-instance rate memo, keyed by "FROM|TO|Y-m-d" (audit §6 Э9, item 5):
+     * getRate() was one SELECT per call with no caching, so an aggregator
+     * converting many rows for the same pair/date (a board column, a report
+     * grouping many deals of the same foreign currency) issued the identical
+     * query once per row. A rate is immutable for a given (pair, date) within
+     * the lifetime of one request/service instance — no invalidation is needed
+     * beyond upsertRate() clearing its own key, since the same instance never
+     * needs to observe an external write mid-request.
+     *
+     * @var array<string, string|null>
+     */
+    private array $rateMemo = [];
+
+    /**
      * Upsert a single rate. Guaranteed ON CONFLICT DO UPDATE via Eloquent upsert().
      * No duplicates on UNIQUE (from_code, to_code, date).
      *
@@ -54,6 +68,11 @@ class ExchangeRateService
             update: ['rate', 'source'],
         );
 
+        // Invalidate this pair/date's memo entry — a stale cached value (from a
+        // getRate() call earlier in the same request/instance lifetime, before
+        // this write) must never be served after an explicit upsert.
+        unset($this->rateMemo["{$fromCode}|{$toCode}|{$dateStr}"]);
+
         // Fetch the row after upsert (upsert() does not return the model).
         // Date is stored as plain Y-m-d string — plain = comparison works.
         return ExchangeRate::where('from_code', $fromCode)
@@ -66,6 +85,11 @@ class ExchangeRateService
      * Get the most recent rate for a currency pair on or before $date.
      * Returns a string with 6 decimal places (never float).
      * Returns null if no rate is found.
+     *
+     * Memoized per (fromCode, toCode, resolved date) on this instance — a rate
+     * is immutable for that key within a single request, so repeated lookups
+     * (e.g. many board/report rows sharing one foreign currency) cost one query
+     * total instead of one per lookup.
      */
     public function getRate(string $fromCode, string $toCode, ?string $date = null): ?string
     {
@@ -73,10 +97,17 @@ class ExchangeRateService
             ? Carbon::parse($date)->toDateString()
             : Carbon::today()->toDateString();
 
-        $row = ExchangeRate::latestForPair(strtoupper($fromCode), strtoupper($toCode), $dateStr)
-            ->first();
+        $fromCode = strtoupper($fromCode);
+        $toCode = strtoupper($toCode);
+        $memoKey = "{$fromCode}|{$toCode}|{$dateStr}";
 
-        return $row ? (string) $row->rate : null;
+        if (array_key_exists($memoKey, $this->rateMemo)) {
+            return $this->rateMemo[$memoKey];
+        }
+
+        $row = ExchangeRate::latestForPair($fromCode, $toCode, $dateStr)->first();
+
+        return $this->rateMemo[$memoKey] = ($row ? (string) $row->rate : null);
     }
 
     /**

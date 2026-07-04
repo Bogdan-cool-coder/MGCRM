@@ -119,6 +119,15 @@ class ConversionReportService
             $annualNum = 0;
             $annualDen = 0;
 
+            // Each side is fetched ONCE for the whole year (one query per side,
+            // grouped by month in SQL/PHP — was one query PER (side, month), i.e.
+            // 24 queries per pair). Mirrors TaskMatrixService's year-filter/
+            // group-by-month approach, which also sidesteps the sqlite
+            // strftime zero-padding pitfall entirely (no month-literal WHERE).
+            $userIds = array_column($rowsMeta, 'id');
+            $numMonthly = $this->monthlyPairSideCounts($numerator, $filters->year, $userIds);
+            $denMonthly = $this->monthlyPairSideCounts($denominator, $filters->year, $userIds);
+
             // scope_type=user for this pass — sum the pair's num/den counts
             // ACROSS every visibility-scoped row (company-wide conversion rate
             // for that pair) while the plan-% is read from ANY row's cell for
@@ -128,8 +137,8 @@ class ConversionReportService
                 $cellPlan = $pairCells->first(fn (PlanTarget $p): bool => (int) $p->period_month_key === $month);
                 $planPct = $cellPlan?->value_count;
 
-                $numCount = $this->countPairSide($numerator, $filters->year, $month, array_column($rowsMeta, 'id'));
-                $denCount = $this->countPairSide($denominator, $filters->year, $month, array_column($rowsMeta, 'id'));
+                $numCount = $numMonthly[$month] ?? 0;
+                $denCount = $denMonthly[$month] ?? 0;
                 $factPct = $denCount > 0 ? (int) round($numCount / $denCount * 100) : null;
                 $pct = $planPct !== null ? $this->kpiService->scorePct($factPct ?? 0, $planPct) : null;
 
@@ -178,38 +187,41 @@ class ConversionReportService
     }
 
     /**
-     * Count one side of a conversion pair for a month — {type:task, kind:X} =
-     * completed Activity count of that kind; {type:deal, status:won} = won
-     * deals in that month (effective recognition date, reusing the SAME
-     * COALESCE convention as PlanTargetService/BestManagerService so a won
-     * deal never lands in a different month here than everywhere else).
+     * Count one side of a conversion pair for EVERY month of a year in one
+     * batched GROUP BY query (was one query PER month — 12 calls per side, 24
+     * per pair). {type:task, kind:X} = completed Activity count of that kind;
+     * {type:deal, status:won} = won deals (effective recognition date, reusing
+     * the SAME COALESCE convention as PlanTargetService/BestManagerService so a
+     * won deal never lands in a different month here than everywhere else).
+     *
+     * Filters by YEAR only in SQL and groups by month in PHP after fetch — the
+     * same safe pattern TaskMatrixService/PlanTargetService/BestManagerService
+     * use, which sidesteps the sqlite strftime('%m', ...) zero-padding vs
+     * pgsql EXTRACT(MONTH...) mismatch entirely (no month-literal WHERE here).
      *
      * @param  array<string, mixed>  $side
      * @param  list<int>  $userIds
+     * @return array<int, int> month(1..12) => count
      */
-    private function countPairSide(array $side, int $year, int $month, array $userIds): int
+    private function monthlyPairSideCounts(array $side, int $year, array $userIds): array
     {
         $isPg = DB::connection()->getDriverName() === 'pgsql';
-
-        // sqlite's strftime('%m', ...) zero-pads ("03"); pgsql's EXTRACT(MONTH..)
-        // returns an unpadded numeric. Bind the driver-appropriate literal so the
-        // comparison matches on both (TaskMatrixService avoids this entirely by
-        // grouping in PHP instead of filtering by month in SQL — this query
-        // filters directly, so the padding must be explicit).
-        $monthParam = $isPg ? (string) $month : str_pad((string) $month, 2, '0', STR_PAD_LEFT);
 
         if (($side['type'] ?? null) === 'task') {
             $monthExpr = $isPg ? 'EXTRACT(MONTH FROM completed_at)' : "strftime('%m', completed_at)";
             $yearExpr = $isPg ? 'EXTRACT(YEAR FROM completed_at)' : "strftime('%Y', completed_at)";
 
-            return (int) Activity::query()
+            $rows = Activity::query()
                 ->whereIn('responsible_id', $userIds)
                 ->where('status', ActivityStatus::Done->value)
                 ->whereNotNull('completed_at')
                 ->where('kind', $side['kind'] ?? '')
                 ->whereRaw($yearExpr.' = ?', [(string) $year])
-                ->whereRaw($monthExpr.' = ?', [$monthParam])
-                ->count();
+                ->selectRaw($monthExpr.' as month, COUNT(*) as cnt')
+                ->groupBy(DB::raw($monthExpr))
+                ->get();
+
+            return $this->monthlyMapFromRows($rows);
         }
 
         if (($side['type'] ?? null) === 'deal') {
@@ -221,8 +233,7 @@ class ConversionReportService
                 ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
                 ->whereIn('deals.owner_user_id', $userIds)
                 ->whereNull('deals.archived_at')
-                ->whereRaw($yearExpr.' = ?', [(string) $year])
-                ->whereRaw($monthExpr.' = ?', [$monthParam]);
+                ->whereRaw($yearExpr.' = ?', [(string) $year]);
 
             match ($side['status'] ?? null) {
                 'won' => $query->where('ps.is_won', true),
@@ -230,10 +241,30 @@ class ConversionReportService
                 default => null,
             };
 
-            return (int) $query->count();
+            $rows = $query
+                ->selectRaw($monthExpr.' as month, COUNT(*) as cnt')
+                ->groupBy(DB::raw($monthExpr))
+                ->get();
+
+            return $this->monthlyMapFromRows($rows);
         }
 
-        return 0;
+        return [];
+    }
+
+    /**
+     * @param  Collection<int, object{month: mixed, cnt: mixed}>  $rows
+     * @return array<int, int> month(1..12) => count
+     */
+    private function monthlyMapFromRows(Collection $rows): array
+    {
+        $map = [];
+
+        foreach ($rows as $row) {
+            $map[(int) $row->month] = (int) $row->cnt;
+        }
+
+        return $map;
     }
 
     private function pairName(array $numerator, array $denominator): string
