@@ -82,7 +82,16 @@ class ContactService
         // contacts; Manager/Accountant/CFO see only contacts they own (owner_id).
         // This is the canonical scope — only_mine is an additive opt-in on top.
         $query = $this->visibility->applyScope(
-            Contact::query()->with(['owner', 'creator', 'companyLinks.company']),
+            // The LIST only renders a link's company NAME (+ its id/category as a
+            // safety margin via CompanyBriefResource), so constrain the eager-load
+            // to those columns instead of hydrating all ~60 Company fields per link
+            // (Data-Layer-Audit-2026-07 §3.5). The full company is loaded on the
+            // card path (ContactController::show) via its own ->load(), untouched.
+            Contact::query()->with([
+                'owner',
+                'creator',
+                'companyLinks.company' => static fn ($q) => $q->select(['id', 'name', 'country_code', 'category_code']),
+            ]),
             $actor,
             ['owner_id'],
         )
@@ -165,23 +174,36 @@ class ContactService
             ->when(isset($filters['last_touch_to']), function (Builder $q) use ($filters): void {
                 $q->where('last_activity_at', '<=', Carbon::parse((string) $filters['last_touch_to'])->endOfDay());
             })
-            // open_deals range: count deals via deal_contacts JOIN.
-            // Uses a subquery count for portability (no HAVING on agg in SQLite without subquery).
+            // open_deals range: filter by the count of OPEN (non-won, non-lost)
+            // deals linked to the contact via deal_contacts.
+            //
+            // Data-Layer-Audit-2026-07 §3.5: this was a correlated COUNT subquery
+            // evaluated per candidate row (twice when both bounds are set) —
+            // quadratic on a large contact base. It is now a SINGLE pre-aggregated
+            // LEFT JOIN: the open-deal count per contact is computed once (grouped),
+            // then compared with the bounds via COALESCE(count, 0). Semantics are
+            // byte-identical (same open predicate, contacts with zero open deals
+            // treated as 0). The join select is pinned to crm_contacts.* so the
+            // grouped column never multiplies rows or leaks into the payload.
             ->when(isset($filters['open_deals_min']) || isset($filters['open_deals_max']), function (Builder $q) use ($filters): void {
-                $sub = DB::table('deal_contacts')
+                $openDeals = DB::table('deal_contacts')
                     ->join('deals', 'deals.id', '=', 'deal_contacts.deal_id')
                     ->join('pipeline_stages', 'pipeline_stages.id', '=', 'deals.stage_id')
-                    ->whereColumn('deal_contacts.contact_id', 'crm_contacts.id')
                     ->whereNull('deals.deleted_at')
                     ->where('pipeline_stages.is_won', false)
                     ->where('pipeline_stages.is_lost', false)
-                    ->selectRaw('COUNT(*)');
+                    ->groupBy('deal_contacts.contact_id')
+                    ->select('deal_contacts.contact_id')
+                    ->selectRaw('COUNT(*) as open_deals_count');
+
+                $q->select('crm_contacts.*')
+                    ->leftJoinSub($openDeals, 'open_deals', 'open_deals.contact_id', '=', 'crm_contacts.id');
 
                 if (isset($filters['open_deals_min'])) {
-                    $q->whereRaw('('.$sub->toSql().') >= ?', [...$sub->getBindings(), (int) $filters['open_deals_min']]);
+                    $q->whereRaw('COALESCE(open_deals.open_deals_count, 0) >= ?', [(int) $filters['open_deals_min']]);
                 }
                 if (isset($filters['open_deals_max'])) {
-                    $q->whereRaw('('.$sub->toSql().') <= ?', [...$sub->getBindings(), (int) $filters['open_deals_max']]);
+                    $q->whereRaw('COALESCE(open_deals.open_deals_count, 0) <= ?', [(int) $filters['open_deals_max']]);
                 }
             })
             // Presets -----------------------------------------------------------

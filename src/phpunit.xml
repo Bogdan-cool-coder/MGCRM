@@ -34,6 +34,11 @@
         <env name="BCRYPT_ROUNDS" value="4" force="true"/>
         <env name="BROADCAST_CONNECTION" value="null" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>
+        <!-- Disable the sales-dashboard aggregate cache in tests so cases that
+             assert live post-mutation numbers stay deterministic. The cache path
+             itself is covered by SalesDashboardCacheTest, which sets a TTL > 0 at
+             runtime and flushes between assertions. -->
+        <env name="CRM_DASHBOARD_CACHE_TTL" value="0" force="true"/>
         <env name="DB_CONNECTION" value="sqlite" force="true"/>
         <env name="DB_DATABASE" value=":memory:" force="true"/>
         <env name="DB_URL" value="" force="true"/>

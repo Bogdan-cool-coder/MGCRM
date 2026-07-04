@@ -24,8 +24,13 @@ class ContactCompanyLinkResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
 
-            // Sideloaded when available
-            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            // Sideloaded when available. The nested company is a BRIEF shape only —
+            // the sole consumer of a link's company is its display name (contacts
+            // list column, contact-card companies panel), so the full ~60-field
+            // CompanyResource was pure payload overhead on every link
+            // (Data-Layer-Audit-2026-07 §3.5). The contact side stays FULL: the
+            // company-employees view reads its phone/email/channels.
+            'company' => $this->whenLoaded('company', fn () => new CompanyBriefResource($this->company)),
             'contact' => $this->whenLoaded('contact', fn () => new ContactResource($this->contact)),
         ];
     }

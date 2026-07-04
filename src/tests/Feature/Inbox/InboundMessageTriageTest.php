@@ -353,4 +353,64 @@ class InboundMessageTriageTest extends TestCase
         $this->postJson("/api/inbox/{$message->id}/reroute")->assertForbidden();
         $this->getJson('/api/inbox/unread-count')->assertForbidden();
     }
+
+    // -------------------------------------------------------------------------
+    // Payload diet (Д3) — Data-Layer-Audit-2026-07 §3.5
+    // -------------------------------------------------------------------------
+
+    /**
+     * The LIST row carries a truncated body excerpt (≤200 chars) and NO
+     * raw_payload; the full body + raw_payload come from show() when a message is
+     * opened. The `body` key stays present in both so the FE row binding is intact.
+     */
+    public function test_list_row_body_is_excerpted_and_raw_payload_is_omitted(): void
+    {
+        $this->actAsAdmin();
+        $longBody = str_repeat('word ', 200); // 1000 chars
+        InboundMessage::factory()->create([
+            'body' => $longBody,
+            'raw_payload' => ['headers' => ['x-secret' => 'envelope'], 'nested' => range(1, 50)],
+        ]);
+
+        $row = $this->getJson('/api/inbox')->assertOk()->json('data.0');
+
+        // body present but truncated to the excerpt cap (Str::limit adds '...').
+        $this->assertArrayHasKey('body', $row);
+        $this->assertNotNull($row['body']);
+        $this->assertLessThanOrEqual(210, mb_strlen($row['body']), 'list body must be an excerpt, not the full body');
+        $this->assertLessThan(mb_strlen($longBody), mb_strlen($row['body']));
+
+        // raw_payload never travels in the list.
+        $this->assertArrayNotHasKey('raw_payload', $row);
+    }
+
+    /**
+     * The DETAIL (show) endpoint keeps the FULL body and raw_payload for the
+     * reading pane — the list diet must not touch the detail response.
+     */
+    public function test_show_returns_full_body_and_raw_payload(): void
+    {
+        $this->actAsAdmin();
+        $longBody = str_repeat('word ', 200);
+        $message = InboundMessage::factory()->create([
+            'body' => $longBody,
+            'raw_payload' => ['headers' => ['x-secret' => 'envelope']],
+        ]);
+
+        $data = $this->getJson("/api/inbox/{$message->id}")->assertOk()->json('data');
+
+        $this->assertSame($longBody, $data['body'], 'show must return the full body');
+        $this->assertSame(['headers' => ['x-secret' => 'envelope']], $data['raw_payload']);
+    }
+
+    /** A null body stays null on the list row (the FE hides the snippet). */
+    public function test_list_row_null_body_stays_null(): void
+    {
+        $this->actAsAdmin();
+        InboundMessage::factory()->create(['body' => null]);
+
+        $row = $this->getJson('/api/inbox')->assertOk()->json('data.0');
+
+        $this->assertNull($row['body']);
+    }
 }

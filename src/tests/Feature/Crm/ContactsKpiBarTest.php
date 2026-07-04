@@ -8,10 +8,12 @@ use App\Domain\Crm\Enums\CategoryCode;
 use App\Domain\Crm\Enums\ClientStatus;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Services\ContactsKpiService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Org\Models\Department;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -663,5 +665,56 @@ class ContactsKpiBarTest extends TestCase
         $this->assertSame(2, $listTotal, 'Sanity: list must not show the colleague companies either');
         $this->assertSame($listTotal, $kpiTotal, 'KPI total must match list endpoint total — no department-scope drift');
         $this->assertSame(2, $kpiTotal);
+    }
+
+    // =========================================================================
+    // Perf (Д3) — Data-Layer-Audit-2026-07 §3.5
+    // =========================================================================
+
+    /**
+     * The six company chip COUNTs are folded into ONE conditional-aggregate scan.
+     * With the client_status column present, forCompanies() must issue exactly one
+     * aggregate query for the counters (the Schema::hasColumn probe is memoised for
+     * the request and the visibility scope resolves the role once) — a regression
+     * to per-chip counting would fire six aggregate queries.
+     */
+    public function test_for_companies_counters_run_in_a_single_aggregate_query(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Company::factory()->count(3)->create();
+
+        $service = app(ContactsKpiService::class);
+        // Warm the schema/role caches so the count isolates the aggregate query.
+        $service->forCompanies($admin);
+
+        DB::enableQueryLog();
+        $service->forCompanies($admin);
+        $aggregateQueries = collect(DB::getQueryLog())
+            ->filter(static fn (array $q): bool => str_contains($q['query'], 'from "crm_companies"'))
+            ->count();
+        DB::disableQueryLog();
+
+        $this->assertSame(1, $aggregateQueries, 'forCompanies must count every company chip in one aggregate query');
+    }
+
+    /**
+     * The four contact chip COUNTs are folded into ONE conditional-aggregate scan.
+     */
+    public function test_for_contacts_counters_run_in_a_single_aggregate_query(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        Contact::factory()->count(3)->create();
+
+        $service = app(ContactsKpiService::class);
+        $service->forContacts($admin); // warm role cache
+
+        DB::enableQueryLog();
+        $service->forContacts($admin);
+        $aggregateQueries = collect(DB::getQueryLog())
+            ->filter(static fn (array $q): bool => str_contains($q['query'], 'from "crm_contacts"'))
+            ->count();
+        DB::disableQueryLog();
+
+        $this->assertSame(1, $aggregateQueries, 'forContacts must count every contact chip in one aggregate query');
     }
 }

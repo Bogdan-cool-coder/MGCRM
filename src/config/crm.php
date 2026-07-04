@@ -118,6 +118,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Sales dashboard
+    |--------------------------------------------------------------------------
+    |
+    | Short TTL (seconds) for the memoised sales-dashboard aggregate payload
+    | (Data-Layer-Audit-2026-07 §3.5). The dashboard is tolerant of ~minute-fresh
+    | data (each response carries `generated_at`); the cache turns a repeat open
+    | or filter flip within the window into a hit instead of an 8-query rescan.
+    | Set to 0 to disable caching (always recompute) — e.g. for tests that assert
+    | on live post-mutation numbers.
+    |
+    */
+    'dashboard' => [
+        'cache_ttl' => (int) env('CRM_DASHBOARD_CACHE_TTL', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | VAT (РФ)
     |--------------------------------------------------------------------------
     |

@@ -19,9 +19,16 @@ use Illuminate\Support\Facades\Schema;
  * Used by GET /api/contacts/kpi?entity=company|contact to power the KPI-chip bar
  * in the redesigned ContactsPage (Contacts-spec.md §3).
  *
- * Counters are computed with a single Eloquent query each, scoped to the same
- * visibility rules as the list endpoints via VisibilityResolver::applyScope()
- * (owner/responsible filter for Manager role; global for Admin/Director).
+ * Counters are computed with a SINGLE conditional-aggregate query per tab, scoped
+ * to the same visibility rules as the list endpoints via
+ * VisibilityResolver::applyScope() (owner/responsible filter for Manager role;
+ * global for Admin/Director).
+ *
+ * Data-Layer-Audit-2026-07 §3.5: the six/four per-chip ->count() round-trips are
+ * folded into one COUNT(*) FILTER-style aggregate (portable COUNT(CASE WHEN …))
+ * over a single scan, and the Schema::hasColumn('crm_companies','client_status')
+ * catalog probe is memoised for the request lifetime instead of firing on every
+ * call. Every counter stays byte-identical to the previous per-chip COUNT.
  *
  * Definitions:
  *
@@ -46,6 +53,13 @@ use Illuminate\Support\Facades\Schema;
  */
 class ContactsKpiService
 {
+    /**
+     * Request-lifetime memo for the client_status column probe (an AMO N5 column,
+     * migration 2026_06_27_100001). Schema::hasColumn() is an uncached catalog
+     * round-trip on every call; the schema never changes within a request.
+     */
+    private ?bool $companyHasClientStatus = null;
+
     public function __construct(private readonly VisibilityResolver $visibility) {}
 
     /**
@@ -57,25 +71,45 @@ class ContactsKpiService
     {
         $weekAgo = now()->subDays(7);
 
-        // Use Eloquent builder so VisibilityResolver::applyScope() can be called
-        // directly (it types to Eloquent\Builder). onlyTrashed() guard via withoutTrashed()
-        // is not needed — Company uses SoftDeletes so the global scope already excludes
-        // deleted rows. If SoftDeletes is NOT on Company we guard via whereNull below.
         $base = $this->applyCompanyScope(Company::query(), $user);
 
-        // client_status is an AMO N5 column (migration 2026_06_27_100001); it may not
-        // exist on production yet. Guard gracefully: return 0 instead of 500-ing.
-        $clientsCount = Schema::hasColumn('crm_companies', 'client_status')
-            ? (int) (clone $base)->where('client_status', ClientStatus::Active->value)->count()
-            : 0;
+        // client_status is an AMO N5 column; it may not exist on production yet.
+        // Guard gracefully (return 0) and memoise the probe for the request.
+        $hasClientStatus = $this->companyHasClientStatus();
+
+        $clientsCase = $hasClientStatus
+            ? 'count(case when client_status = ? then 1 end)'
+            : '0';
+        $clientsBindings = $hasClientStatus ? [ClientStatus::Active->value] : [];
+
+        $selects = implode(', ', [
+            'count(*) as total',
+            $clientsCase.' as clients',
+            'count(case when category_code = ? then 1 end) as cat_l',
+            'count(case when category_code = ? then 1 end) as cat_m',
+            'count(case when category_code in (?, ?) then 1 end) as cat_s',
+            'count(case when created_at >= ? then 1 end) as new_week',
+        ]);
+
+        $bindings = [
+            ...$clientsBindings,
+            CategoryCode::L->value,
+            CategoryCode::M->value,
+            CategoryCode::S1->value,
+            CategoryCode::S2->value,
+            $weekAgo,
+        ];
+
+        /** @var object|null $row */
+        $row = (clone $base)->selectRaw($selects, $bindings)->first();
 
         return [
-            'total' => (int) (clone $base)->count(),
-            'clients' => $clientsCount,
-            'cat_l' => (int) (clone $base)->where('category_code', CategoryCode::L->value)->count(),
-            'cat_m' => (int) (clone $base)->where('category_code', CategoryCode::M->value)->count(),
-            'cat_s' => (int) (clone $base)->whereIn('category_code', [CategoryCode::S1->value, CategoryCode::S2->value])->count(),
-            'new_week' => (int) (clone $base)->where('created_at', '>=', $weekAgo)->count(),
+            'total' => (int) ($row?->total ?? 0),
+            'clients' => (int) ($row?->clients ?? 0),
+            'cat_l' => (int) ($row?->cat_l ?? 0),
+            'cat_m' => (int) ($row?->cat_m ?? 0),
+            'cat_s' => (int) ($row?->cat_s ?? 0),
+            'new_week' => (int) ($row?->new_week ?? 0),
         ];
     }
 
@@ -91,18 +125,31 @@ class ContactsKpiService
 
         $base = $this->applyContactScope(Contact::query(), $user);
 
+        $selects = implode(', ', [
+            'count(*) as total',
+            'count(case when last_activity_at >= ? then 1 end) as active',
+            'count(case when last_activity_at is null or last_activity_at < ? then 1 end) as no_touch_30',
+            'count(case when created_at >= ? then 1 end) as new_week',
+        ]);
+
+        /** @var object|null $row */
+        $row = (clone $base)->selectRaw($selects, [$monthAgo, $monthAgo, $weekAgo])->first();
+
         return [
-            'total' => (int) (clone $base)->count(),
-            'active' => (int) (clone $base)->where('last_activity_at', '>=', $monthAgo)->count(),
-            'no_touch_30' => (int) (clone $base)->where(function ($q) use ($monthAgo): void {
-                $q->whereNull('last_activity_at')
-                    ->orWhere('last_activity_at', '<', $monthAgo);
-            })->count(),
-            'new_week' => (int) (clone $base)->where('created_at', '>=', $weekAgo)->count(),
+            'total' => (int) ($row?->total ?? 0),
+            'active' => (int) ($row?->active ?? 0),
+            'no_touch_30' => (int) ($row?->no_touch_30 ?? 0),
+            'new_week' => (int) ($row?->new_week ?? 0),
         ];
     }
 
     // ---- Private ----
+
+    /** Memoised Schema::hasColumn probe for crm_companies.client_status. */
+    private function companyHasClientStatus(): bool
+    {
+        return $this->companyHasClientStatus ??= Schema::hasColumn('crm_companies', 'client_status');
+    }
 
     /**
      * Apply the EXACT same visibility scope as CompanyService::list() /

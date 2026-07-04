@@ -15,6 +15,7 @@ use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Services\DealKpiService;
 use App\Domain\Sales\Services\DealService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -416,5 +417,31 @@ class DealKpiTest extends TestCase
 
         $this->assertSame($expected, $this->kpi()['in_work']);
         $this->assertSame(6, $expected);
+    }
+
+    // ------------------------------------------------------------------ perf (Д3)
+
+    /**
+     * Data-Layer-Audit-2026-07 §3.5: the seven per-chip COUNTs are folded into a
+     * SINGLE conditional-aggregate scan of the scoped base. This locks in that
+     * forFunnel() is one DB round-trip when pipeline_id is supplied (no default
+     * lookup) — a regression to per-chip counting would fire seven queries here.
+     */
+    public function test_for_funnel_runs_a_single_aggregate_query(): void
+    {
+        for ($i = 0; $i < 4; $i++) {
+            $this->dealOn('new');
+        }
+        $this->dealOn('won');
+
+        $service = app(DealKpiService::class);
+        $filters = ['pipeline_id' => $this->pipeline->id];
+
+        DB::enableQueryLog();
+        $service->forFunnel($filters, VisibilityScope::All, $this->director);
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertSame(1, $count, 'forFunnel must count all seven chips in one aggregate query');
     }
 }

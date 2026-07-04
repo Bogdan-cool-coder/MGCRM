@@ -36,7 +36,10 @@ class InboundMessageController extends Controller
     {
         $this->authorize('viewAny', InboundMessage::class);
 
-        return InboundMessageResource::collection($this->service->paginate($request->validated()));
+        // LEAN list rows: truncated body excerpt, no raw_payload envelope. Full
+        // body/raw_payload are served by show() when a message is opened
+        // (Data-Layer-Audit-2026-07 §3.5).
+        return InboundMessageResource::listCollection($this->service->paginate($request->validated()));
     }
 
     public function show(Request $request, InboundMessage $inboundMessage): JsonResource

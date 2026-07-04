@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\IndexCompanyRequest;
 use App\Http\Requests\Crm\StoreCompanyRequest;
 use App\Http\Requests\Crm\UpdateCompanyRequest;
+use App\Http\Resources\Crm\CompanyListResource;
 use App\Http\Resources\Crm\CompanyResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +43,10 @@ class CompanyController extends Controller
 
         $companies = $this->service->list($filters, $request->user(), (int) ($filters['per_page'] ?? 25));
 
-        return CompanyResource::collection($companies);
+        // Lean list rows: drops the ~20 card-only legal/bank/requisite fields +
+        // notes + extra_fields the table never renders (Data-Layer-Audit-2026-07
+        // §3.5). The full CompanyResource still serves show/store/update.
+        return CompanyListResource::collection($companies);
     }
 
     public function store(StoreCompanyRequest $request): JsonResource

@@ -363,10 +363,12 @@ class CompanyKpiTest extends TestCase
 
         $response = $this->getJson('/api/companies')->assertOk();
 
-        // kpi is null on list responses (not computed)
+        // The lean list resource (Data-Layer-Audit-2026-07 §3.5) omits the KPI
+        // block entirely — it was always null on the list (computed only on show).
+        // Absence is the stronger guarantee: no KPI data ever ships with the list.
         foreach ($response->json('data') as $item) {
-            $this->assertNull($item['kpi']);
-            $this->assertNull($item['holding_company_count']);
+            $this->assertArrayNotHasKey('kpi', $item);
+            $this->assertArrayNotHasKey('holding_company_count', $item);
         }
     }
 }

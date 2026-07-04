@@ -40,6 +40,46 @@ class CompanyCrudTest extends TestCase
         $this->getJson('/api/companies')->assertUnauthorized();
     }
 
+    /**
+     * Data-Layer-Audit-2026-07 §3.5: the list uses the lean CompanyListResource —
+     * the fields the table renders (name/country/city/category/tags/engagement/
+     * owner/…) stay, the card-only legal/bank/requisite fields + notes +
+     * extra_fields are dropped from every row. The card path keeps them all.
+     */
+    public function test_list_row_is_lean_and_card_row_is_full(): void
+    {
+        $user = User::factory()->create(['role' => Role::Admin]);
+        Sanctum::actingAs($user, ['*']);
+
+        $company = Company::factory()->create([
+            'name' => 'Acme Corp',
+            'legal_name' => 'Acme LLC',
+            'tax_id' => '7700000000',
+            'bank' => 'Big Bank',
+            'account' => '40702810000000000000',
+            'notes' => 'internal note',
+            'country_code' => 'kz',
+        ]);
+
+        // LIST — lean: display fields present, card-only requisites absent.
+        $row = $this->getJson('/api/companies')->assertOk()->json('data.0');
+        $this->assertSame('Acme Corp', $row['name']);
+        $this->assertSame('kz', $row['country_code']);
+        $this->assertArrayHasKey('category_code', $row);
+        $this->assertArrayHasKey('engagement_tier', $row);
+        $this->assertArrayHasKey('client_status', $row);
+        foreach (['legal_name', 'tax_id', 'bank', 'account', 'notes', 'extra_fields', 'address', 'requisites', 'contact_links'] as $fat) {
+            $this->assertArrayNotHasKey($fat, $row, "list row must not carry {$fat}");
+        }
+
+        // CARD — full: the requisites the list dropped are back.
+        $card = $this->getJson("/api/companies/{$company->id}")->assertOk()->json('data');
+        $this->assertSame('Acme LLC', $card['legal_name']);
+        $this->assertSame('7700000000', $card['tax_id']);
+        $this->assertArrayHasKey('bank', $card);
+        $this->assertArrayHasKey('extra_fields', $card);
+    }
+
     // ---- store ----
 
     public function test_manager_can_create_company(): void

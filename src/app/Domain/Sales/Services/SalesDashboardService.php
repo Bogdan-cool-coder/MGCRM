@@ -14,6 +14,7 @@ use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\Pipeline;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -41,6 +42,16 @@ class SalesDashboardService
     /**
      * Build the complete dashboard payload (§В3).
      *
+     * Data-Layer-Audit-2026-07 §3.5: the ~8 aggregate blocks (status groups +
+     * prev-period trend + funnel + forecast + top products/managers +
+     * deals-without-tasks) each scan the whole pipeline through a non-indexable
+     * CASE period filter and were recomputed from scratch on EVERY open and every
+     * filter change. The dashboard is explicitly tolerant of ~minute-fresh data
+     * (each response already carries `generated_at`), so the whole payload is
+     * memoised for a short TTL keyed by every dimension that changes the numbers
+     * (user, resolved scope, pipeline, period, manager). A repeat open / filter
+     * flip within the window is a cache hit instead of a fresh 8-query scan.
+     *
      * @return array<string, mixed>
      */
     public function getDashboardData(DashboardFilters $filters, User $user): array
@@ -54,6 +65,27 @@ class SalesDashboardService
             return $this->emptyPayload($filters);
         }
 
+        $ttl = (int) config('crm.dashboard.cache_ttl', 60);
+
+        if ($ttl <= 0) {
+            return $this->computeDashboardData($filters, $user, $scope, $pipeline);
+        }
+
+        return Cache::remember(
+            $this->dashboardCacheKey($filters, $user, $scope, $pipeline->id),
+            $ttl,
+            fn (): array => $this->computeDashboardData($filters, $user, $scope, $pipeline),
+        );
+    }
+
+    /**
+     * The uncached aggregate build. Split out so getDashboardData() can wrap it in
+     * a short-TTL cache while keeping the aggregation logic identical.
+     *
+     * @return array<string, mixed>
+     */
+    private function computeDashboardData(DashboardFilters $filters, User $user, VisibilityScope $scope, Pipeline $pipeline): array
+    {
         // Eager-load stages for re-use across aggregators.
         $pipeline->loadMissing('stages');
 
@@ -102,6 +134,30 @@ class SalesDashboardService
                 'filter_url' => "/deals?pipeline_id={$pipeline->id}&only_no_task=1",
             ],
         ];
+    }
+
+    /**
+     * Deterministic cache key for the dashboard payload. Every dimension that can
+     * change the numbers is folded in: the acting user (scope is per-user), the
+     * resolved visibility scope, the resolved pipeline, the period window, the
+     * month-set (multi-month vs contiguous produce different trends) and the
+     * manager filter. Two users with the same filters but different scope get
+     * distinct keys, so the cache can never leak one scope's aggregates to another.
+     */
+    private function dashboardCacheKey(DashboardFilters $filters, User $user, VisibilityScope $scope, int $pipelineId): string
+    {
+        $parts = [
+            'sales_dashboard',
+            'u'.$user->id,
+            's'.$scope->value,
+            'p'.$pipelineId,
+            'from'.$filters->dateFrom->toDateString(),
+            'to'.$filters->dateTo->toDateString(),
+            'm'.($filters->managerId ?? 0),
+            'mm'.implode('.', $this->monthsMeta($filters) ?? []),
+        ];
+
+        return implode(':', $parts);
     }
 
     // -------------------------------------------------------------------------
