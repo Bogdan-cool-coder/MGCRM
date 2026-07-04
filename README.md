@@ -1,86 +1,63 @@
-# MGCRM — миграция MACRO Global CRM на Laravel 13 + PrimeVue
+# MACRO Global CRM
 
-Это рабочий репозиторий + «мозг» проекта: переписываем большую CRM (сейчас FastAPI+Next.js) на жёсткий стек **Laravel 13 / PHP 8.5 + Vue 3.5 / PrimeVue** по эталону **Vizion**, домен за доменом. Работа ведётся через **Claude Code** с командой из 17 специализированных агентов.
+CRM компании MACRO Global на стеке **Laravel 13 / PHP 8.5 + Vue 3.5 / PrimeVue 4.5**. Проект — strangler-переписывание большой CRM (исходно FastAPI + Next.js) на жёсткий, консистентный стек; backend организован по DDD (`app/Domain/<Context>`), фронт — Vue SPA. Разработка ведётся через **Claude Code** с флотом из 19 специализированных агентов.
 
----
+## Стек
 
-## 0. TL;DR — как запуститься
+- **Backend:** Laravel 13, PHP 8.5, PostgreSQL 16, Sanctum (Bearer-токен) + TOTP 2FA, RBAC на `spatie/laravel-permission` (guard `sanctum`), Redis (очереди/кэш, без Horizon), Prism (AI-каскады), PHPWord + Gotenberg (договоры→PDF), Reverb (realtime), Sentry.
+- **Frontend:** Vue 3.5 (TS strict) + Vite, Pinia, Vue Router, PrimeVue 4.5 + Bootstrap-grid + SCSS, PrimeIcons, ECharts, vue-i18n, axios, Sentry.
+- **Тесты:** PHPUnit на SQLite `:memory:` (тройная изоляция, в живую БД не ходят).
+- **Сознательно НЕ используем:** Tailwind, Inertia, Livewire, Filament, Chart.js, Horizon, VeeValidate/Zod, spatie/laravel-data, Fortify, Pest.
+
+## Структура репозитория
+
+```
+MGCRM/                       ← корень = сам проект
+├── src/                     ← Laravel API — app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies}
+├── front/                   ← Vue SPA (TS) — pages/components/stores/api/composables/entities/router/theme/locales
+├── docker/                  ← Dockerfile'ы php/nginx/frontend + конфиги (имена macro-crm-*)
+├── docker-compose.yml       ← прод-профиль
+├── docker-compose.dev.yml   ← dev-профиль (postgres, redis, app, nginx, frontend, queue, scheduler, bot, gotenberg, reverb)
+├── .github/workflows/       ← CI + deploy.yml (push-to-main → авто-деплой)
+├── docs/                    ← backend-standard.md, DEPLOY.md, designer-charter.md, realtime-contract.md, audit/
+├── design-handoff/redesign/ ← апрувнутые мокапы + ТЗ (HANDOFF.md — живой индекс)
+├── brand/                   ← бренд-ассеты MACRO Global
+├── .claude/                 ← agents/ (19), hooks/, AGENTS.md, skills/
+└── examples/                ← contracts/ (ТЗ бизнес-логики, FastAPI/Next) + vizion/ (архив; сносится на cutover)
+```
+
+Домены `src/app/Domain/`: Activity · Automation · Catalog · Contracts · Crm · Iam · Inbox · Log · Migration · Notification · Org · Onboarding · Sales · SalesPulse. (`CustomerSuccess`/`Finance` — greenfield; `Analytics`/`Integration` пока вшиты в Sales/Inbox/Notification.)
+
+## Локальный запуск (dev)
+
+Требования: **Docker + docker compose**, **git**. PHP/Node/Composer на хост ставить не нужно — всё в контейнерах.
 
 ```bash
 git clone https://github.com/Bogdan-cool-coder/MGCRM.git
 cd MGCRM
-claude            # открыть Claude Code в корне репо
-```
-Затем в сессии Claude Code напиши:
-> **поехали M0** (или: «запусти M0 Bootstrap по PLAN.md»)
-
-Claude (main-сессия) — оркестратор: он сам делегирует шаги агентам (`backend-specialist`, `deploy-engineer`, `designer`, `frontend-specialist`) и проведёт каркас по чек-листу M0. Дальше — milestone за milestone (M1…M12).
-
----
-
-## 1. Что лежит в репозитории
-
-```
-MGCRM/                       ← корень = сам проект (Laravel src/ + Vue front/ создаются на M0)
-├── README.md               ← этот файл
-├── CLAUDE.md               ← мозг: правила, рабочий цикл, делегирование (грузится в Claude автоматически)
-├── ARCHITECTURE.md         ← ЖЁСТКИЕ паттерны кода (закон проекта, «ни шагу в сторону»)
-├── PLAN.md                ← план миграции, milestone-темп M0…M12 (M0 расписан по шагам)
-├── brand/                  ← бренд-ассеты MACRO Global (логотип SVG, брендбук PDF)
-├── .claude/
-│   ├── agents/             ← 17 агентов (роли, зоны, правила)
-│   ├── hooks/guard-destructive.sh   ← блок критичного деструктива (down -v, DROP, rm -rf данных)
-│   └── settings.json
-└── examples/               ← эталоны (read-only, сносятся на финальном M12)
-    ├── vizion/             ← полная копия Vizion = ЭТАЛОН СТЕКА (как делать)
-    └── contracts/          ← полная копия macro-contracts (FastAPI/Next) = источник БИЗНЕС-ЛОГИКИ (что делать)
+docker compose -f docker-compose.dev.yml up -d       # поднять dev-стек
+docker compose -f docker-compose.dev.yml exec app php artisan migrate --seed
 ```
 
-> **Планы, прогресс, решения и детализация спринтов** ведутся в Obsidian-vault **`MG CRM 2026`** (`~/Documents/Obsidian Vault/MG CRM 2026`), не в репо-доках. В репо хранится только «жёсткая» архитектура и конвенции.
+Фронт (Vite dev-server) и API поднимаются в контейнерах `frontend`/`app`+`nginx`. Dev-креды и URL-адреса — во внутренней memory/docs проекта (не хранятся в README). Опционально для QA-прогонов глазами: Chrome + расширение Claude_in_Chrome, либо Playwright MCP (`.mcp.json`, harness в `e2e/`).
 
-## 2. Требования на машине
+## Как ведётся работа
 
-- **Docker + docker compose** (PHP/Node/Postgres крутятся в контейнерах — **на хост ставить PHP/composer/node НЕ нужно**; для bootstrap используется `composer:latest` через `docker run`).
-- **Claude Code CLI** (`claude`).
-- **git** + **gh** (GitHub CLI), авторизованный на аккаунте с доступом к `Bogdan-cool-coder/MGCRM` (для push).
-- Опционально для QA глазами: **Chrome + расширение Claude_in_Chrome** (дефолтный браузерный MCP у `qa-tester`; альтернатива — Playwright MCP, если попросишь).
+Проект пишется через **Claude Code**: main-сессия — оркестратор, она делегирует профильным агентам (`backend-architect`, `<module>-backender`/`<module>-frontender`, `frontend-specialist`, `qa-tester`, `reviewer`, `deploy-engineer` и др.). Формулируешь задачу — main выбирает агента и порядок; цепочка фичи: рабочий агент → (если UI) `qa-tester` → `reviewer` (ревью + verify + sync доков) → твой апрув → (по явной просьбе) `deploy-engineer` пушит. Полный список ролей и governance-модель флота — в **`.claude/AGENTS.md`** и **`.claude/agents/<name>.md`**.
 
-## 3. Как устроена работа (важно понять до старта)
+## Деплой
 
-- **Ты общаешься с main-сессией Claude как с тимлидом.** Он не пишет код сам — **делегирует** профильным агентам. Просто формулируй задачи («сделай авторизацию», «добавь воронку сделок»), он выберет агента и порядок.
-- **Рабочий цикл каждого агента:** смотрит ЧТО делать в `examples/contracts/` → смотрит КАК делать в `examples/vizion/` → пишет в корне (`src/`/`front/`) **как Vizion**, с делением по DDD `app/Domain/<Context>`. Не изобретаем — копируем Vizion.
-- **Цепочка фичи:** агент → (если был UI) `qa-tester` → `product-manager` (ревью + сверка с PLAN/ARCHITECTURE + апдейт доков) → твой апрув → (только по явной просьбе) `deploy-engineer` пушит/деплоит.
-- **Агенты на `bypassPermissions`** — рутина (docker/artisan/npm/git/правки) идёт молча, без подтверждений. Единственный жёсткий стоп — `guard-destructive.sh` на опасные команды.
-- **Library-first:** весь функционал на готовых библиотеках; если задачу закрывает то, что уже есть (в проекте или у Vizion) — новое не ставим.
+Push в `main` (делает `deploy-engineer` **только по явной просьбе**) автоматически катит прод через GHA `deploy.yml` (SSH → `git reset --hard origin/main` → rolling-restart: force-recreate app + health-wait + `migrate --force` + health-check). Пуши только по `**.md` / `docs/**` / `.claude/**` прод не деплоят. Детали — **`docs/DEPLOY.md`**.
 
-## 4. Запуск M0 Bootstrap (первый milestone)
-
-M0 = пустой рабочий каркас: docker-монорепо → Laravel 13 → Sanctum (Bearer) + 2FA → роли (spatie/permission) → фронт PrimeVue+Bootstrap-grid → layout+логин → CI. Полный пошаговый чек-лист (M0.1–M0.7) с Definition of Done — в **`PLAN.md` §5, milestone M0**.
-
-Запускать НЕ руками по шагам, а через Claude:
-> «Веди M0 по PLAN.md. Начни с M0.1 (docker-монорепо) и M0.2 (Laravel 13 bootstrap), делегируй `deploy-engineer` и `backend-specialist`.»
-
-⚠️ M0 честно помечен по «граблям» (читай примечания в PLAN §5/M0):
-- LV13/PHP8.5 — **новее** Vizion (12/8.3): `composer.json` Vizion **не копируется 1-в-1**, скелет ставится `composer create-project`, пакеты добавляются сверху.
-- **Redis** — net-new (у Vizion его нет), настраивается с нуля (драйверы очереди/кэша).
-- **Auth = Sanctum Bearer-token** (как у Vizion реально), 2FA — по образцу `examples/contracts/.../auth_2fa.py` (у Vizion 2FA нет).
-- **spatie/permission** — новый пакет (у Vizion простые строковые роли — не наш паттерн).
-
-## 5. Правила (железные — см. CLAUDE.md / ARCHITECTURE.md)
-
-- **`ARCHITECTURE.md` — закон.** Слои backend (FormRequest → тонкий Controller → Service → Model → API Resource), DDD-границы, деньги в копейках, Policy-авторизация, фронт (api → composables → page-composable → Pinia). Отклонение = баг.
-- **Стек закрытый** (PLAN §3). Новый пакет — только по явной просьбе. Без Tailwind/Inertia/Horizon/Pest/VeeValidate.
-- **Тесты — PHPUnit + SQLite :memory:** (тройная изоляция, тесты не ходят в живую БД).
-- **Commit — только English, без AI-трейлеров.** Push/деплой — **только по твоей явной просьбе** (через `deploy-engineer`).
-- **`examples/`** — read-only справка; сносится на M12 (cutover), проект остаётся в корне.
-
-## 6. Куда смотреть
+## Куда смотреть
 
 | Нужно | Файл |
 |---|---|
-| Как работаем, делегирование, правила | `CLAUDE.md` |
-| Паттерны кода (обязательны) | `ARCHITECTURE.md` |
-| План, milestones, чек-листы, Acceptance | `PLAN.md` |
-| Роли и зоны агентов | `.claude/agents/<name>.md` |
-| Эталон реализации | `examples/vizion/` |
-| Что должно делать приложение (ТЗ) | `examples/contracts/` |
+| Как работаем, делегирование, правила, рабочий цикл | `CLAUDE.md` |
+| Жёсткие паттерны кода (закон проекта) | `ARCHITECTURE.md` |
+| Backend house-style (доменные границы, reuse, library-registry) | `docs/backend-standard.md` |
+| План миграции, milestones, Acceptance | `PLAN.md` |
+| Роли, зоны и governance агентов | `.claude/AGENTS.md`, `.claude/agents/<name>.md` |
+| Деплой-пайплайн | `docs/DEPLOY.md` |
+| Дизайн-система, мокапы, статус экранов | `design-handoff/redesign/HANDOFF.md`, skill `.claude/skills/macroglobal-design/` |
+| Что приложение должно делать (ТЗ бизнес-логики) | `examples/contracts/` |

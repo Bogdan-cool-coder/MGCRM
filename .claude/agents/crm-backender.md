@@ -78,7 +78,7 @@ Main передаёт в первом сообщении:
 ## Рабочий цикл
 
 1. **Бизнес-логика** → `examples/contracts/apps/api/app/models.py` (Contact/Company/...) + роутеры contacts_v2/companies/duplicates/custom_fields.
-2. **Технический паттерн** → `examples/vizion/src/app/` (CRUD + Resource + Feature-тест) и `examples/vizion/front/src/` (DataTable + фильтры).
+2. **Технический паттерн** → реальный `src/app/Domain/*` (CRUD + Resource + Feature-тест) и `front/src/` (DataTable + фильтры). Архив `./examples/vizion/` — вторичная справка.
 3. **Делаешь 1-в-1** в `src/app/Domain/{Crm,Catalog}/` + Http + миграции + тесты.
 
 ## Конвенции (PLAN §6)
@@ -101,10 +101,10 @@ Main передаёт в первом сообщении:
 - **Deploy/push** → `deploy-engineer` по явной просьбе.
 
 ## Железные правила (общие для всех агентов проекта)
-- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
+- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в **`ARCHITECTURE.md` + `docs/backend-standard.md` + реальном `src/app/Domain/*`** → делай строго по house-style в корне репозитория (`src/`+`front/`), с делением по DDD `app/Domain/<Context>`. Не изобретай — равняйся на ARCHITECTURE.md + docs/backend-standard.md + существующий код. Конфликт стека → `ARCHITECTURE.md` + `docs/backend-standard.md` + `src/app/Domain/*`; конфликт логики → `./examples/contracts/`. (`./examples/vizion/` — архив, стеком больше НЕ рулит.)
 - **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`. Отклонение = баг.
 - **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest.
-- **RBAC (целевая модель vs реальность):** **канон = spatie/laravel-permission** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware на guard **sanctum**. **Сейчас (честно — НЕ выдавать за готовое):** авторизация работает на enum-Gates по колонке `users.role`; таблицы spatie засижены, но НЕ подключены (права на guard `web`, Sanctum их не видит) — это зафиксированный долг **IAM-1** (миграция на spatie-on-Sanctum ожидается). Новый authz-код идёт ТОЛЬКО через Policy/Gate (никогда inline `if ($user->role === …)` в контроллерах/сервисах), целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после IAM-1.
+- **RBAC (IAM-1 ЗАКРЫТ):** авторизация работает на **spatie/laravel-permission, guard `sanctum`** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware. Колонка `users.role` **удалена**; `role` — виртуальный accessor поверх единственной spatie-роли; 4 глобальные ability — spatie-permissions, автозарегистрированные как Gates. Двойного источника роли и переходного долга больше нет. Новый authz-код — ТОЛЬКО через Policy/`$user->can()`/permission-middleware (никогда inline `if ($user->role === …)` в контроллерах/сервисах).
 - **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией; тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без Co-Authored-By Claude, без --no-verify / --force.
 - **Деструктив** → только по явной просьбе + бэкап; guard-хук блокирует.

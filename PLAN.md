@@ -1,7 +1,7 @@
 # PLAN.md — Миграция MACRO Global CRM → Laravel 13 + PrimeVue
 
-> **SSOT плана.** Переписываем CRM с FastAPI+Next.js (`./examples/contracts/`) на жёсткий стек Laravel+PrimeVue по эталону **Vizion** (`./examples/vizion/`), домен за доменом (strangler), milestone-темпом.
-> `./examples/contracts/` = источник ТОЛЬКО бизнес-логики. `./examples/vizion/` (копия Vizion) = единственный эталон стека/конвенций. Пишем в корне репо (`src/` + `front/`).
+> **SSOT плана.** Переписываем CRM с FastAPI+Next.js (`./examples/contracts/`) на жёсткий стек Laravel+PrimeVue, домен за доменом (strangler), milestone-темпом.
+> `./examples/contracts/` = источник ТОЛЬКО бизнес-логики. **Эталон стека/конвенций — `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`.** Пишем в корне репо (`src/` + `front/`). `./examples/vizion/` — архив, стеком больше НЕ рулит (лежит в репо до cutover).
 >
 > **Скелет + статусы.** Этот файл — скелет вех (M0…M12), Acceptance и **компактная таблица статусов** (§5.1). Хронологический changelog слайсов (Навигация, M2+/++/+++, DS-4..7, Bug Pack, M-batch, MSP) вынесен **2026-06-24** в vault `MG CRM 2026/3. Журнал/PLAN — архив changelog слайсов (до 2026-06-24).md`. Текущая правда о состоянии доменов — в `docs/audit/00-MASTER.md`.
 
@@ -11,7 +11,7 @@
 
 **Источник (`./examples/contracts/`, macro-contracts):** монолит-замена AmoCRM. 140+ таблиц, 60+ роутеров / 300+ эндпоинтов, 60+ сервисов, 150+ страниц, 427 компонентов, 8 бизнес-доменов + Telegram-бот. Стек FastAPI + SQLAlchemy + Next.js + Tailwind. **Считаем нерабочим — переиспользуем только бизнес-логику.**
 
-**Цель:** функциональный паритет на стеке Laravel 13 + PrimeVue, организованном по DDD, с дисциплиной пакетов и фронта строго по Vizion.
+**Цель:** функциональный паритет на стеке Laravel 13 + PrimeVue, организованном по DDD, с дисциплиной пакетов и фронта строго по house-style (`ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`).
 
 **Оценка объёма:** ~25–35 недель полного паритета. Поэтому — strangler-миграция, домен за доменом; `./examples/contracts/` остаётся точкой истины по фичам до полного переноса. Темп — **milestone-стиль**: каждый milestone имеет day/week-оценку, вертикальный срез (миграции→модели→сервисы→API→UI→тесты) и Acceptance-чеклист.
 
@@ -22,11 +22,12 @@
 | Источник | Роль | Что берём |
 |---|---|---|
 | **`./examples/contracts/`** (macro-contracts) | ТЗ по бизнес-логике | модели, поля, связи, эндпоинты, статус-машины, фичи, YAML-шаблоны договоров, поведение фронта |
-| **`./examples/vizion/`** (копия Vizion) | **ЕДИНСТВЕННЫЙ ЭТАЛОН СТЕКА** | конвенции backend/frontend, структуру, конфиги, AI-каскады, PHPWord+Gotenberg, ECharts, vite/eslint/pint-конфиги — 1-в-1 |
+| **`ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`** | **ЭТАЛОН СТЕКА/КОНВЕНЦИЙ** | слои, DDD-границы, именование, конфиги, AI-каскады, PHPWord+Gotenberg, ECharts, тесты — house-style, зрелые домены = живой референс |
+| **`./examples/vizion/`** (копия Vizion) | 🗄️ **АРХИВ** — стеком больше НЕ рулит | вторичная историческая справка до cutover; лежит в репо до сноса |
 
-**Конфликт стека → решает `./examples/vizion/` (Vizion) — единственный источник.** Конфликт бизнес-логики → решает `./examples/contracts/`.
+**Конфликт стека → решает `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`.** Конфликт бизнес-логики → решает `./examples/contracts/`.
 
-> 🔁 **Рабочий цикл агента** (см. CLAUDE.md): бизнес-логику смотрим в `./examples/contracts/` (FastAPI/Next — код не копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (Vizion) → делаем 1-в-1 в корне репо (`src/`/`front/`) с единственной поправкой на DDD `app/Domain/<Context>`.
+> 🔁 **Рабочий цикл агента** (см. CLAUDE.md): бизнес-логику смотрим в `./examples/contracts/` (FastAPI/Next — код не копируем, копируем смысл) → технический паттерн в `ARCHITECTURE.md` + `docs/backend-standard.md` + реальном `src/app/Domain/*` → делаем строго по house-style в корне репо (`src/`/`front/`) с делением по DDD `app/Domain/<Context>`.
 
 ---
 
@@ -35,7 +36,7 @@
 1. **Strangler, вертикальными срезами.** Каждый milestone = миграции → модели → сервисы → API → UI → тесты, до рабочего состояния. Не «сначала весь backend».
 2. **Паритет по поведению, не по коду.** Сверяем, что фича делает то же, что в `./examples/contracts/`. Код пишем заново по-вижновски.
 3. **Жёсткий стек.** Любой пакет вне §3 — только по явной просьбе.
-4. **Эталон прежде изобретения.** Перед новым паттерном — `grep` по `./examples/vizion/`.
+4. **Эталон прежде изобретения.** Перед новым паттерном — `grep` по реальному `src/app/Domain/*` (+ `docs/backend-standard.md`).
 5. **Перенос данных не нужен** (тестовые данные). `migration-specialist` — cutover + per-domain parity-чеклисты.
 6. **DoD milestone'а — два уровня (см. §9):** «done-merged» (CI зелёный) ≠ «verified-live» (работает в проде). Milestone закрывается только после **verified-live**. Счётчики SQLite-тестов — НЕ метрика готовности (зелёный SQLite сосуществует с боевыми блокерами — см. аудит).
 
@@ -44,36 +45,36 @@
 ## §3. Стек (жёсткий, ограниченный)
 
 ### 3.0 Принцип выбора библиотек (library-first)
-**Весь функционал — на готовых решениях, максимум библиотек, минимум своего кода** (см. ARCHITECTURE.md §0.1). Порядок: (а) уже подключённая в проекте библиотека → (б) библиотека, использованная у Vizion (`./examples/vizion/`) → (в) широко используемый maintained-пакет под наш стек (с аппрувом) → (г) свой код только если (а)–(в) не подошли. Если задачу закрывает уже доступная либа — **новую не ставим**. Список ниже — закрытый.
+**Весь функционал — на готовых решениях, максимум библиотек, минимум своего кода** (см. ARCHITECTURE.md §0.1). Порядок: (а) уже подключённая в проекте библиотека → (б) широко используемый maintained-пакет под наш стек (с аппрувом) → (в) свой код только если (а)–(б) не подошли. Если задачу закрывает уже доступная либа — **новую не ставим**. Список ниже — закрытый.
 
 ### 3.1 Backend
 | Компонент | Версия | Примечание |
 |---|---|---|
-| Laravel | **13** | конвенции — Vizion |
+| Laravel | **13** | конвенции — house-style (`docs/backend-standard.md`) |
 | PHP | **8.5-fpm** | strict_types, enums, readonly, match |
 | PostgreSQL | **16** | как `./examples/contracts/` (упрощает импорт данных + FTS) |
-| Laravel Sanctum | 4.x | **Bearer personal access token (как Vizion)**; SPA хранит токен. 2FA-флоу: login → temp-токен → verify TOTP → полный токен |
+| Laravel Sanctum | 4.x | **Bearer personal access token**; SPA хранит токен. 2FA-флоу: login → temp-токен → verify TOTP → полный токен |
 | **TOTP 2FA** | — | `pragmarx/google2fa` + QR. **Точечное исключение** |
 | **spatie/laravel-permission** | ^6.0 (v6.25.0) | **ЦЕЛЕВАЯ модель авторизации** (6 ролей admin/director/lawyer/manager/accountant/cfo + гранулярные права). ⚠️ **СЕЙЧАС НЕ ПОДКЛЮЧЕНА** — авторизация на role-enum Gates по `users.role`; таблицы spatie засеяны, но на guard `web` (Sanctum их не видит) = долг **IAM-1**. См. §4.4. |
 | spatie/laravel-translatable | 6.x | jsonb-поля (на будущее EN; old RU-only) |
 | spatie/laravel-backup | ^10.0 (v10.3.0) | ежедневный дамп БД (^10 поддерживает LV13) |
-| **Prism** (prism-php) | ^0.100 | AI-каскады — конфиг `config/ai.php` 1-в-1 с Vizion (Anthropic-only) |
-| **PHPWord** + **Gotenberg** | 1.x / 8 | генерация договоров docx→PDF — паттерн Vizion |
-| Symfony ExpressionLanguage | 7.x | вычисляемые правила (как Vizion) |
-| Redis | 7 | очереди/кэш/rate-limit. **NET-NEW** (у Vizion нет — он на database queue/cache). **БЕЗ Horizon** (`queue:work`) |
-| **PhpSpreadsheet** | 1.x / 5.x | Excel-экспорт. Эталона у Vizion нет — паттерн из `./examples/contracts/` (`openpyxl`) + офиц. доки |
+| **Prism** (prism-php) | ^0.100 | AI-каскады — конфиг `config/ai.php` (Anthropic-only) |
+| **PHPWord** + **Gotenberg** | 1.x / 8 | генерация договоров docx→PDF (паттерн — реальный `Domain/Contracts`) |
+| Symfony ExpressionLanguage | 7.x | вычисляемые правила |
+| Redis | 7 | очереди/кэш/rate-limit. **NET-NEW** (в архиве Vizion не было — там database queue/cache). **БЕЗ Horizon** (`queue:work`) |
+| **PhpSpreadsheet** | 1.x / 5.x | Excel-экспорт. Эталон — реальный `src/` + `./examples/contracts/` (`openpyxl`) + офиц. доки |
 | **nutgram/nutgram** | — | Telegram-бот (замена aiogram). Бизнес-референс `./examples/contracts/` (`aiogram`) + офиц. доки nutgram |
 | **wapmorgan/morphos** | — | склонение RU. ⚠️ для «суммы прописью» — отдельный маленький helper |
 | **sentry/sentry-laravel** | ^4.26 | error+performance мониторинг; DSN из env; `send_default_pii=false`; `sql_bindings=false`; release = git-SHA из `rolling-restart.sh` |
 
 ### 3.2 Frontend
 
-> **Бренд-ассеты** — `brand/`. **Визуал/токены — skill `macroglobal-design`** (перебивает vault-спеку и «визуальный» Vizion). Тема: styled Aura, `definePreset`, primary `#172747`, prefix `p`, darkModeSelector `.app-dark`, cssLayer true; токены в SCSS через `var(--p-*)`.
+> **Бренд-ассеты** — `brand/`. **Визуал/токены — skill `macroglobal-design`** (перебивает vault-спеку и архивный визуал). Тема: styled Aura, `definePreset`, primary `#172747`, prefix `p`, darkModeSelector `.app-dark`, cssLayer true; токены в SCSS через `var(--p-*)`.
 
-Vue **3.5** (Composition API, `<script setup>`) · TypeScript **~5.9** (strict, `noUncheckedIndexedAccess`) · Vite **7** (dev-proxy `/api`) · Pinia **3** · Vue Router **5** (guard в `policy.ts`) · **PrimeVue 4.5** · **Bootstrap 5.3 — ТОЛЬКО grid** (без utility-классов) · PrimeIcons **7** (`pi pi-*`) · **ECharts + vue-echarts** (6/8) · vue-i18n **10** (RU + EN-задел) · **vuedraggable** (Kanban, есть у Vizion) · **grid-layout-plus** (кастом-дашборды, есть у Vizion) · **@vue-flow/core** (node-полотно автоматизаций, аппрувнут) · axios (+ Sanctum Bearer) · **@sentry/vue + @sentry/vite-plugin** (error+tracing; Session Replay выключен — PII; sourcemaps через BuildKit secret-mount).
+Vue **3.5** (Composition API, `<script setup>`) · TypeScript **~5.9** (strict, `noUncheckedIndexedAccess`) · Vite **7** (dev-proxy `/api`) · Pinia **3** · Vue Router **5** (guard в `policy.ts`) · **PrimeVue 4.5** · **Bootstrap 5.3 — ТОЛЬКО grid** (без utility-классов) · PrimeIcons **7** (`pi pi-*`) · **ECharts + vue-echarts** (6/8) · vue-i18n **10** (RU + EN-задел) · **vuedraggable** (Kanban) · **grid-layout-plus** (кастом-дашборды) · **@vue-flow/core** (node-полотно автоматизаций, аппрувнут) · axios (+ Sanctum Bearer) · **@sentry/vue + @sentry/vite-plugin** (error+tracing; Session Replay выключен — PII; sourcemaps через BuildKit secret-mount).
 
 ### 3.3 Сознательно НЕ используем
-Tailwind · Inertia · Livewire · Filament · Chart.js · Horizon · VeeValidate/Zod · spatie/laravel-data (ручные API Resources как Vizion) · Fortify · Pest (тесты на **PHPUnit**).
+Tailwind · Inertia · Livewire · Filament · Chart.js · Horizon · VeeValidate/Zod · spatie/laravel-data (ручные API Resources — house-style) · Fortify · Pest (тесты на **PHPUnit**).
 
 ### 3.4 Тулинг
 PHPUnit + **SQLite :memory:** (force-override в `phpunit.xml` + guard в `TestCase`; финмодуль/FTS — отдельный PG-профиль при необходимости) · Laravel Pint · ESLint 10 + Prettier 3 · vue-tsc · GitHub Actions · `npm run lint:ds` (stylelint, design-system gate).
@@ -84,13 +85,13 @@ PHPUnit + **SQLite :memory:** (force-override в `phpunit.xml` + guard в `TestC
 
 ## §4. Архитектура
 
-### 4.1 Монорепо (как Vizion: `src/` + `front/`; пишем в КОРНЕ репо)
+### 4.1 Монорепо (`src/` + `front/`; пишем в КОРНЕ репо)
 ```
 macroglobalcrm/              ← корень репо (сам проект здесь)
 ├── src/                     ← Laravel API (PHP) — app/Domain/<Context>/{Models,Data,Enums,Services,Jobs,Policies}
 ├── front/                   ← Vue SPA (TS) — application/pages/components/stores/api/composables/entities/router/theme/locales/plugins
 ├── docker/  docker-compose.yml / docker-compose.dev.yml
-├── examples/                ← {vizion/, contracts/} — эталоны (сносятся на M12/cutover)
+├── examples/                ← {vizion/ (архив), contracts/ (ТЗ бизнес-логики)} — сносятся на M12/cutover
 └── .github/workflows/
 ```
 
@@ -117,7 +118,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 **Greenfield-контексты (папок ещё нет — создать при старте спринта):** `CustomerSuccess` (спринт CS), `Finance` (спринт Финансы).
 **Folded (отдельных папок нет, работа вшита):** аналитика — внутри `Sales`/`Notification`; интеграции (TG/Google) — внутри `Inbox`/`Notification`. Отдельные `Domain/Analytics`/`Domain/Integration` появятся при старте соответствующих работ.
 
-### 4.3 Frontend-структура (1-в-1 с Vizion)
+### 4.3 Frontend-структура (house-style — реальный `front/src/`)
 `application/` (bootstrap, session, locale) · `pages/<Page>/{index.vue, composables/}` · `components/{base,cards,filters,forms,modals,tables,states,Orbita}` · `stores/` (Pinia) · `entities/` (DTO+типы) · `api/{client.ts, types/}` · `composables/async/{useAsyncResource,useMutation}` · `router/{index,policy,access}` · `theme/` (PrimeVue preset + SCSS-токены) · `locales/{ru,en}.json`.
 
 ### 4.4 RBAC: цель vs текущее состояние (долг IAM-1)
@@ -202,7 +203,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
-> **Метод каждого milestone (железно):** бизнес-логику смотрим в `./examples/contracts/` → технический паттерн копируем из `./examples/vizion/` 1-в-1 → делим по `app/Domain/<Context>`. Вертикальный срез (миграции→модели→сервисы→API→UI→тесты) + day/week-оценка + Acceptance. Каждый milestone завершается зелёным CI (done-merged) и закрывается только при **verified-live** (§9).
+> **Метод каждого milestone (железно):** бизнес-логику смотрим в `./examples/contracts/` → технический паттерн берём из `ARCHITECTURE.md` + `docs/backend-standard.md` + реального `src/app/Domain/*` → делим по `app/Domain/<Context>`. Вертикальный срез (миграции→модели→сервисы→API→UI→тесты) + day/week-оценка + Acceptance. Каждый milestone завершается зелёным CI (done-merged) и закрывается только при **verified-live** (§9).
 
 **🔵 M0. Bootstrap (Фундамент)** — каркас LV13+Vue/PrimeVue: docker, логин+2FA, роли, навигация, CI. M0.1–M0.3 (скелет/Docker, LV13, Sanctum+2FA) done-merged, login+2FA verified-live; **M0.4 `ResolveVisibility` — заглушка (QA-fail, P0)**; M0.5–M0.6 (frontend/layout/логин) done-merged; M0.7 CI/CD+smoke planned.
 *Acceptance:* каркас одной командой; логин с 2FA; 6 ролей; навигация; **visibility-scope реально применяется** (не заглушка); CI+smoke PASS. verified-live.
@@ -265,7 +266,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ---
 
-## §7. Конвенции (кратко; эталон — Vizion, `./examples/vizion/`)
+## §7. Конвенции (кратко; эталон — `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`)
 
 ### Backend
 - PHP 8.5: `declare(strict_types=1)`, constructor promotion, readonly, enums, match.
@@ -289,7 +290,7 @@ macroglobalcrm/              ← корень репо (сам проект зд
 
 ## §8. CI/CD и Docker
 - GitHub Actions: backend (sqlite-тесты `force` + pgsql migrate-smoke на `postgres:16-alpine` + **Pint блокирующий**) + frontend (vue-tsc + **eslint блокирующий** + **lint:ds** + build), раздельные jobs, PHP **8.5**.
-- Docker Compose: postgres(PG16)+app(php-fpm)+nginx+frontend+gotenberg+queue-worker+scheduler (Vizion-база) + **redis (NET-NEW)**. Без Horizon.
+- Docker Compose: postgres(PG16)+app(php-fpm)+nginx+frontend+gotenberg+queue-worker+scheduler + **redis (NET-NEW)**. Без Horizon.
 - Деплой — rolling-restart, активируется `deploy-engineer` по явной просьбе. Прод-цель — `mgcrm.macroglobal.tech` (см. `docs/DEPLOY.md`).
 
 ---

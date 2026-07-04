@@ -24,7 +24,7 @@ Main передаёт в первом сообщении:
 
 **Без payload — попроси.**
 
-- **Эталон стека — Vizion** (`./examples/vizion/`). Cron/scheduler (`routes/console.php` + queue), ECharts-дашборды, агрегаты/группировки (`examples/vizion/src/app/Services/MacroData/ReportDataService`) — смотри Vizion, копируй паттерн.
+- **Эталон стека — `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`.** Cron/scheduler (`routes/console.php` + queue), ECharts-дашборды, агрегаты/группировки — паттерн бери в зрелых доменах `src/app/Domain/*` (напр. Sales-агрегаторы). Архив `./examples/vizion/` (`ReportDataService` и пр.) — вторичная справка до cutover, стеком НЕ рулит.
 - **`./examples/contracts/` (FastAPI) — ТОЛЬКО бизнес-логика.** Читаешь `examples/contracts/apps/api/app/models.py` (ClientSubscription/SubscriptionModule/ImplementationItemStatus/ActivitySnapshot/RegistryKpiSnapshot/Platform/Region/Module/ChecklistTemplate/ChecklistTemplateItem/SubscriptionStageHistory), `services/customer_success.py`, роутеры `routers/{registry,cs_config}.py`, импорт реестра (`jobs/import_registry`), страницы `/registry`, `/admin/cs-config`. Стек old (asyncpg/Next.js/Tailwind/openpyxl) НЕ переносишь.
 
 ## Зона / сущности (DDD `app/Domain/CustomerSuccess/`)
@@ -54,7 +54,7 @@ Main передаёт в первом сообщении:
 ## Рабочий цикл (old → reference → new)
 
 1. **Бизнес-логика** → `examples/contracts/apps/api/app/models.py` (ClientSubscription/health) + `services/customer_success.py` + роутеры registry/cs_config + импорт реестра.
-2. **Технический паттерн** → `examples/vizion/src/app/` (scheduler в `routes/console.php`, jobs, агрегаты в ReportDataService, Excel) + `examples/vizion/front/src/` (ECharts-виджеты/дашборд).
+2. **Технический паттерн** → `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*` (scheduler в `routes/console.php`, jobs, агрегаты в доменных сервисах, Excel) + `front/src/` (ECharts-виджеты/дашборд). Архив `./examples/vizion/` — вторичная справка.
 3. **Делаешь 1-в-1** в `src/app/Domain/CustomerSuccess/{Models,Enums,Services,Jobs,Policies}` + Console commands + Http + миграции + тесты.
 
 ## Конвенции (PLAN §6)
@@ -77,11 +77,11 @@ Main передаёт в первом сообщении:
 - **Deploy/push** → `deploy-engineer` по явной просьбе. **`.env`** пишет только main.
 
 ## Железные правила (общие для всех агентов проекта)
-- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
+- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в **`ARCHITECTURE.md` + `docs/backend-standard.md` + реальном `src/app/Domain/*`** → делай строго по house-style в корне репозитория (`src/`+`front/`), с делением по DDD `app/Domain/<Context>`. Не изобретай — равняйся на ARCHITECTURE.md + docs/backend-standard.md + существующий код. Конфликт стека → `ARCHITECTURE.md` + `docs/backend-standard.md` + `src/app/Domain/*`; конфликт логики → `./examples/contracts/`. (`./examples/vizion/` — архив, стеком больше НЕ рулит.)
 - **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `reviewer`).
-- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
-- **RBAC (целевая модель vs реальность):** **канон = spatie/laravel-permission** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware на guard **sanctum**. **Сейчас (честно — НЕ выдавать за готовое):** авторизация работает на enum-Gates по колонке `users.role`; таблицы spatie засижены, но НЕ подключены (права на guard `web`, Sanctum их не видит) — это зафиксированный долг **IAM-1** (миграция на spatie-on-Sanctum ожидается). Новый authz-код идёт ТОЛЬКО через Policy/Gate (никогда inline `if ($user->role === …)` в контроллерах/сервисах), целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после IAM-1.
-- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
+- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Точечные исключения к минимализму базового стека: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
+- **RBAC (IAM-1 ЗАКРЫТ):** авторизация работает на **spatie/laravel-permission, guard `sanctum`** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware. Колонка `users.role` **удалена**; `role` — виртуальный accessor поверх единственной spatie-роли; 4 глобальные ability — spatie-permissions, автозарегистрированные как Gates. Двойного источника роли и переходного долга больше нет. Новый authz-код — ТОЛЬКО через Policy/`$user->can()`/permission-middleware (никогда inline `if ($user->role === …)` в контроллерах/сервисах).
+- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без `Co-Authored-By: Claude` и упоминаний Claude/Anthropic/AI/🤖; без `--no-verify` / `--force`.
 - **Деструктив** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных) — только по явной просьбе + бэкап; guard-хук блокирует.
 - **PHP/composer на хосте нет** — всё через docker (`docker compose exec app …`; bootstrap — `docker run --rm -v "$(pwd):/app" -w /app composer:latest …`).

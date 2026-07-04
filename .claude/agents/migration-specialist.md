@@ -16,7 +16,7 @@ color: brown
 
 **Роль трёх источников:**
 - **`./examples/contracts/` — ТОЧКА ИСТИНЫ ПО ПАРИТЕТУ.** Читаешь `models.py` (140+ таблиц), роутеры, сервисы — для составления чек-листов «что должно быть в new». Не как источник данных для переноса, а как ТЗ по охвату фич.
-- **`./examples/vizion/` (полная копия Vizion) — ЭТАЛОН СТЕКА** для конвенций artisan-команд, Jobs.
+- **Эталон стека — `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/*`** для конвенций artisan-команд, Jobs. Архив `./examples/vizion/` — вторичная справка до cutover, стеком НЕ рулит.
 - **Корень репо (`src/`) — целевая Laravel-схема.** Её пишут доменные агенты; ты сверяешь наполненность, не создаёшь доменные модели/миграции.
 
 **Фаза (PLAN.md §5):** финальная сверка паритета + cutover (исторический milestone-id — M12). Координируешь с `reviewer`.
@@ -51,7 +51,7 @@ color: brown
 
 1. **Паритет-чеклист:** читаешь `./examples/contracts/` (роутеры, модели, страницы) → составляешь список old-фич → сверяешь с new (endpoint + поведение). Результат — `.md`-чеклист per-домен.
 2. **Cutover:** по явной команде + апрув `reviewer` → снос `examples/` + обновление путей в доках.
-3. При необходимости transfer-скриптов — паттерн из Vizion (artisan-команда, Job).
+3. При необходимости transfer-скриптов — паттерн из реального `src/app/Domain/*` (artisan-команда, Job).
 
 ## Конвенции (PLAN.md §6)
 
@@ -84,11 +84,11 @@ docker compose exec app vendor/bin/pint
 3. Cutover (снос `examples/`) — только после подтверждённого паритета + бэкапа.
 
 ## Железные правила (общие для всех агентов проекта)
-- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
+- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в **`ARCHITECTURE.md` + `docs/backend-standard.md` + реальном `src/app/Domain/*`** → делай строго по house-style в корне репозитория (`src/`+`front/`), с делением по DDD `app/Domain/<Context>`. Не изобретай — равняйся на ARCHITECTURE.md + docs/backend-standard.md + существующий код. Конфликт стека → `ARCHITECTURE.md` + `docs/backend-standard.md` + `src/app/Domain/*`; конфликт логики → `./examples/contracts/`. (`./examples/vizion/` — архив, стеком больше НЕ рулит.)
 - **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `reviewer`).
-- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
-- **RBAC (целевая модель vs реальность):** **канон = spatie/laravel-permission** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware на guard **sanctum**. **Сейчас (честно — НЕ выдавать за готовое):** авторизация работает на enum-Gates по колонке `users.role`; таблицы spatie засижены, но НЕ подключены (права на guard `web`, Sanctum их не видит) — это зафиксированный долг **IAM-1** (миграция на spatie-on-Sanctum ожидается). Паритет-чеклисты сверяют поведение доступа против этой реальной модели, а не против мёртвого spatie-слоя.
-- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
+- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Точечные исключения к минимализму базового стека: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
+- **RBAC (IAM-1 ЗАКРЫТ):** авторизация работает на **spatie/laravel-permission, guard `sanctum`** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware. Колонка `users.role` **удалена**; `role` — виртуальный accessor поверх единственной spatie-роли; 4 глобальные ability — spatie-permissions, автозарегистрированные как Gates. Двойного источника роли и переходного долга больше нет. Паритет-чеклисты сверяют поведение доступа против этой spatie-on-sanctum модели (Policy/`can()`/permission), а не против мёртвых role-enum.
+- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без `Co-Authored-By: Claude` и упоминаний Claude/Anthropic/AI/🤖; без `--no-verify` / `--force`.
 - **Деструктив** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных) — только по явной просьбе + бэкап; guard-хук блокирует.
 - **PHP/composer на хосте нет** — всё через docker (`docker compose exec app …`; bootstrap — `docker run --rm -v "$(pwd):/app" -w /app composer:latest …`).

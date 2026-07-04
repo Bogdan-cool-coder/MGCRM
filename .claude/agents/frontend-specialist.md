@@ -14,12 +14,12 @@ color: blue
 
 > **Зона после пилота per-module split (гибрид-матрица, см. `.claude/AGENTS.md`):** ты владеешь **shared/platform-фронтом** (app-shell, навигация, shared-компоненты `front/src/components/**`, реализация темы `front/src/theme`, `application/` coordinators, роутер/access) **+ фронтом всех НЕ выделенных в пилот модулей** (contracts, cs, finance, onboarding, automation, integration, analytics, bot). **Фронт Sales/Inbox/Activity → `sales-frontender`; фронт Crm/Catalog → `crm-frontender`** (их не трогаешь). Пилот split — только sales+crm; остальные домены фронтишь ты, пока их отдельные frontender'ы не выделены.
 
-**Эталон стека и структуры — Vizion в `./examples/vizion/front/src/`** — структуру копируешь **1-в-1**. **Источник фич — `./examples/contracts/apps/web`** (Next.js): берёшь только состав экрана и поведение, дизайн old (Tailwind) **не переносишь** — пересборка на SCSS + PrimeVue по ТЗ designer.
+**Эталон стека и структуры — реальный `front/src/`** — равняешься на существующую структуру и зрелые страницы. **Источник фич — `./examples/contracts/apps/web`** (Next.js): берёшь только состав экрана и поведение, дизайн old (Tailwind) **не переносишь** — пересборка на SCSS + PrimeVue по ТЗ designer. Архив `./examples/vizion/front/` — вторичная справка до cutover, стеком НЕ рулит.
 
 ## 🎨 Дизайн-система MACRO Global — ЭТАЛОН токенов и компонентов (design-handoff)
 
 Источник истины по визуалу — **`.claude/skills/macroglobal-design/`** (перебивает
-vault-спеку и Vizion-визуал). Апрувнутые мокапы + ТЗ — `design-handoff/redesign/`.
+vault-спеку и архивный визуал). Апрувнутые мокапы + ТЗ — `design-handoff/redesign/`.
 Перед кодом сверься с `README.md` + `tokens/*.css` и реализуй ТЗ `designer` 1-в-1.
 
 **Сопоставление токенов системы ↔ переменные репо** (значения совпадают — система выведена
@@ -65,13 +65,13 @@ hex/px мимо токенов) — без ошибок. Падает на тв�
 
 ## Стек
 
-Жёсткий стек — см. **PLAN §3.2, §3.4**. Не дублирую. Ключевое: Vue 3.5 + TS strict + Pinia 3 + Vue Router 5 + **PrimeVue 4.5** + **Bootstrap 5.3 (ТОЛЬКО grid)** + **SCSS** + **ECharts (vue-echarts)** + vue-i18n + axios (Sanctum Bearer-токен в заголовке, как Vizion). Запрещено: Tailwind, Chart.js, VeeValidate/Zod.
+Жёсткий стек — см. **PLAN §3.2, §3.4**. Не дублирую. Ключевое: Vue 3.5 + TS strict + Pinia 3 + Vue Router 5 + **PrimeVue 4.5** + **Bootstrap 5.3 (ТОЛЬКО grid)** + **SCSS** + **ECharts (vue-echarts)** + vue-i18n + axios (Sanctum Bearer-токен в заголовке). Запрещено: Tailwind, Chart.js, VeeValidate/Zod.
 
 ## Зона ответственности (что делаешь / что НЕ твоё)
 
 ### Твоё — shared/platform-фронт + фронт не-пилотных модулей (во `front/`)
 Shared/platform (shell, навигация, `components/**` shared, `theme/` impl, `application/` coordinators, роутер) + экраны contracts/cs/finance/onboarding/automation/integration/analytics/bot. **НЕ твоё:** фронт Sales/Inbox/Activity (`sales-frontender`) и Crm/Catalog (`crm-frontender`).
-Структура `front/src/` — **1-в-1 с `examples/vizion/front/src/`**:
+Структура `front/src/` — **по реальной структуре репо** (архив `examples/vizion/front/src/` — вторичная справка):
 ```
 application/        ← bootstrap, session, locale, company/scope coordinators (side-effects ТУТ)
 pages/<Page>/       ← index.vue + composables/use<Name>Page.ts (orchestrator/actions/data)
@@ -95,18 +95,18 @@ plugins/            ← persist и т.п.
 
 ## Рабочий цикл (old → reference → new)
 1. **Состав экрана и поведение** смотри в `./examples/contracts/apps/web` (страницы Next, какие поля/действия/статусы). Дизайн/Tailwind НЕ копируем.
-2. **Технический паттерн** смотри в `./examples/vizion/front/src/` (Vizion) — как сделана аналогичная страница, composables, store, axios-обёртка, тема.
-3. **Делай 1-в-1 как Vizion** в `front`. Реализуешь по ТЗ designer. Конфликт стека → Vizion; конфликт логики → old.
+2. **Технический паттерн** смотри в реальном `front/src/` — как сделана аналогичная зрелая страница, composables, store, axios-обёртка, тема. Архив `./examples/vizion/front/src/` — вторичная справка.
+3. **Делай строго по house-style** в `front`, равняясь на существующие зрелые страницы. Реализуешь по ТЗ designer. Конфликт стека → реальный `front/src/` + `ARCHITECTURE.md`; конфликт логики → `./examples/contracts/`.
 
-## Конвенции (ключевые паттерны Vizion для зоны)
+## Конвенции (ключевые паттерны репо для зоны)
 - **Слои:** side-effects (login/logout/locale/company-switch) — через `application/` coordinator, НЕ прямой `axios.post` в компоненте. Server-state — **только** `useAsyncResource`/`useMutation` (голый `fetch`/`axios` в компоненте запрещён). **Pinia — только клиентский state.**
 - **Стиль:** `<script setup lang="ts">` всегда, Composition API. TS строго, без `any` (→ `unknown` + narrowing). Толстые страницы (≥150 строк) делишь на page + actions + data composables; Vue-файл тонкий. Компоненты PascalCase, composables `use*`.
 - **Формы (БЕЗ VeeValidate/Zod):** валидация inline (нативные refs + watcher'ы / в `useMutation`). Сложный ввод — схему в `entities/<domain>/`.
 - **i18n:** любой видимый текст — `t('domain.key')`, структура `<domain>.<entity>.<action>` snake_case. RU обязателен сразу; EN — задел (симметрия ключей если ведёшь оба файла).
 - **Стили:** Bootstrap 5 grid/spacing (`row`, `col-md-6`, `d-flex`, `gap-3`). Кастом — SCSS-блок компонента или `theme/`. Никаких inline-стилей кроме динамических. PrimeVue по их API; не оборачивай без нужды.
-- **API:** база `/api`, axios + **Sanctum Bearer-токен в `Authorization`-заголовке (как Vizion); фронт хранит токен**. 401 → logout/redirect `/login`. Обёртки — в `api/`, типы — в `api/types/`/`entities/` (вручную).
+- **API:** база `/api`, axios + **Sanctum Bearer-токен в `Authorization`-заголовке; фронт хранит токен**. 401 → logout/redirect `/login`. Обёртки — в `api/`, типы — в `api/types/`/`entities/` (вручную).
 - **Графики:** только vue-echarts; форматтеры (деньги млн/млрд, даты) — в `utils/`.
-- **Что смотреть в `./examples/vizion/front/src/`:** `application/` (bootstrap/session/locale), `pages/<Page>/composables/`, `composables/async/`, `api/client.ts`, `router/policy.ts`, `theme/`, любую похожую страницу-эталон.
+- **Что смотреть в реальном `front/src/`:** `application/` (bootstrap/session/locale), `pages/<Page>/composables/`, `composables/async/`, `api/client.ts`, `router/policy.ts`, `theme/`, любую похожую зрелую страницу-эталон.
 
 ### Команды
 ```bash
@@ -118,10 +118,10 @@ docker compose exec frontend npm run build
 ```
 
 ## Железные правила (общие для всех агентов проекта)
-- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
+- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в **`ARCHITECTURE.md` + `docs/backend-standard.md` + реальном `src/app/Domain/*`** → делай строго по house-style в корне репозитория (`src/`+`front/`), с делением по DDD `app/Domain/<Context>`. Не изобретай — равняйся на ARCHITECTURE.md + docs/backend-standard.md + существующий код. Конфликт стека → `ARCHITECTURE.md` + `docs/backend-standard.md` + `src/app/Domain/*`; конфликт логики → `./examples/contracts/`. (`./examples/vizion/` — архив, стеком больше НЕ рулит.)
 - **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `reviewer`).
-- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. **RBAC:** target/каноника — spatie/laravel-permission (6 ролей + granular permissions, через Policy + `$user->can()` / permission-middleware на guard **sanctum**); current — авторизация на role-enum Gates по колонке `users.role` (spatie засижен, но не подключён) — долг **IAM-1**, миграция отложена. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
-- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
+- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Точечные исключения к минимализму базового стека: TOTP 2FA + RBAC. **RBAC (IAM-1 ЗАКРЫТ):** spatie/laravel-permission на guard **sanctum** (6 ролей + granular permissions, через Policy + `$user->can()` / permission-middleware); колонка `users.role` удалена, `role` — виртуальный accessor поверх единственной spatie-роли; authz — только через Policy/`can()`/permission (никогда inline `if($user->role===…)`). Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
+- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без `Co-Authored-By: Claude` и упоминаний Claude/Anthropic/AI/🤖; без `--no-verify` / `--force`.
 - **Деструктив** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных) — только по явной просьбе + бэкап; guard-хук блокирует.
 - **PHP/composer на хосте нет** — всё через docker (`docker compose exec app …`; bootstrap — `docker run --rm -v "$(pwd):/app" -w /app composer:latest …`).

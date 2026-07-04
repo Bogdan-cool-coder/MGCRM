@@ -14,7 +14,7 @@ color: teal
 
 > **WYSIWYG-редактор (договоров) не делаем** (решение владельца 2026-06-11). Генерация: PHPWord `TemplateProcessor` → Gotenberg → PDF. На будущее — возможна онлайн-правка через Google Docs — прорабатываем ближе к делу.
 
-- **Эталон стека — Vizion** (`./examples/vizion/`). У Vizion уже есть **раздел «Документы»** — эталонная связка для тебя: PHPWord `TemplateProcessor` (docx-шаблоны) + **Gotenberg** (docx→PDF через LibreOffice), `DocumentTool`, `DocxTextExtractor`, disk `documents`, контейнер `gotenberg`. Смотри `examples/vizion/DOCUMENTS.md` + `examples/vizion/src/app/...` (Document*/Gotenberg-сервисы) и копируй паттерн 1-в-1.
+- **Эталон стека — `ARCHITECTURE.md` + `docs/backend-standard.md` + реальный `src/app/Domain/Contracts/*`.** Связка PHPWord `TemplateProcessor` (docx-шаблоны) + **Gotenberg** (docx→PDF через LibreOffice), disk `documents`, контейнер `gotenberg` — паттерн бери в реальном `src/app/Domain/Contracts`. Архив `./examples/vizion/` (`DOCUMENTS.md`, Document*/Gotenberg-сервисы) — вторичная справка до cutover, стеком НЕ рулит.
 - **`./examples/contracts/` (FastAPI) — ТОЛЬКО источник бизнес-логики.** Читаешь `examples/contracts/apps/api/app/models.py` (Contract/ContractItem/Template/TemplateVariable/Approval/ApprovalRoute/ContractRevision/ContractRemark/ContractAttachment/ContractNumberSequence/LicensorEntity, enums `ContractStatus`/`ApprovalDecision`/`TemplateVariableType`), роутеры `routers/{contracts,templates,template_variables,approval_routes,licensors}.py`, сервисы рендера, `examples/contracts/templates/contracts_master/`. Стек old (docxtpl + LibreOffice + Next.js) НЕ переносишь — он заменён на PHPWord+Gotenberg+Vue.
 
 ## Зона / сущности (DDD `app/Domain/Contracts/`)
@@ -36,7 +36,7 @@ color: teal
 ## Стек-указатели (PLAN §3)
 
 - **Генерация docx**: PHPWord `TemplateProcessor` (`phpoffice/phpword`) рендерит master_skeleton + продуктовые/страновые секции по позициям. Ключи переменных шаблона ↔ `TemplateVariable.key`. **Сумма прописью (RU)** — num2words-аналог (PLAN §3.1) перед сборкой контекста, переменная `total_in_words`.
-- **docx→PDF**: **Gotenberg** (HTTP-сервис, `GOTENBERG_URL`, контейнер как в Vizion) — заменяет LibreOffice headless. Тяжёлая операция → для bulk в очередь (`queue:work`, БЕЗ Horizon).
+- **docx→PDF**: **Gotenberg** (HTTP-сервис, `GOTENBERG_URL`, контейнер `gotenberg` из docker-compose репо) — заменяет LibreOffice headless. Тяжёлая операция → для bulk в очередь (`queue:work`, БЕЗ Horizon).
 - **WYSIWYG-редактор (договоров) не делаем.** Весь цикл: PHPWord `TemplateProcessor` → Gotenberg → PDF (без редактора). На будущее — возможна онлайн-правка через Google Docs — отдельная задача.
 - **YAML configs** из `examples/contracts/templates/contracts_master/` — спека для сидов Template/TemplateVariable/LicensorEntity (реквизиты по странам).
 - Money — целые (копейки). Manual API Resources (НЕ spatie/data). FormRequest-валидация. Генерацию docx/Gotenberg в тестах — мокать (`Http::fake`).
@@ -44,7 +44,7 @@ color: teal
 ## Рабочий цикл (old → reference → new)
 
 1. **Бизнес-логика** → `examples/contracts/apps/api/app/models.py` (Contract*/Template*/Approval*), роутеры, `examples/contracts/templates/contracts_master/`.
-2. **Технический паттерн** → раздел «Документы» Vizion: `examples/vizion/DOCUMENTS.md`, `examples/vizion/src/app/` (Document*/DocumentTool/Gotenberg-сервис, PHPWord TemplateProcessor, disk `documents`), `examples/vizion/docker-compose.yml` (сервис gotenberg).
+2. **Технический паттерн** → реальный `src/app/Domain/Contracts/*` (Document*/Gotenberg-сервис, PHPWord TemplateProcessor, disk `documents`) + `docker-compose.yml` репо (сервис gotenberg). Архив `./examples/vizion/` (`DOCUMENTS.md` и пр.) — вторичная справка.
 3. **Делаешь 1-в-1** в `src/app/Domain/Contracts/{Models,Enums,Services,Jobs,Policies}` + Http + миграции + тесты.
 
 ## Конвенции (PLAN §6)
@@ -65,11 +65,11 @@ color: teal
 - **Deploy/push** → `deploy-engineer` по явной просьбе. **`.env`** пишет только main.
 
 ## Железные правила (общие для всех агентов проекта)
-- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в `./examples/vizion/` (полная копия Vizion) → делай 1-в-1 как Vizion в корне репозитория (`src/`+`front/`), с поправкой на DDD `app/Domain/<Context>`. Не изобретай — копируй Vizion. Конфликт стека → `./examples/vizion/`; конфликт логики → `./examples/contracts/`.
+- **Рабочий цикл:** бизнес-логику/поведение смотри в `./examples/contracts/` (FastAPI/Next — код НЕ копируем, копируем смысл) → технический паттерн в **`ARCHITECTURE.md` + `docs/backend-standard.md` + реальном `src/app/Domain/*`** → делай строго по house-style в корне репозитория (`src/`+`front/`), с делением по DDD `app/Domain/<Context>`. Не изобретай — равняйся на ARCHITECTURE.md + docs/backend-standard.md + существующий код. Конфликт стека → `ARCHITECTURE.md` + `docs/backend-standard.md` + `src/app/Domain/*`; конфликт логики → `./examples/contracts/`. (`./examples/vizion/` — архив, стеком больше НЕ рулит.)
 - **ARCHITECTURE.md — закон.** Весь код строго по `ARCHITECTURE.md`: слои (FormRequest → тонкий Controller → Domain Service → Model → API Resource), DDD-границы (cross-domain только через Service), деньги-копейки, Policy-авторизация, фронт (api → composables/async → page-composable → Pinia), именование, тесты, чёрный список. Отклонение = баг (режет `reviewer`).
-- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Исключения к минимализму Vizion: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
-- **RBAC (целевая модель vs реальность):** **канон = spatie/laravel-permission** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware на guard **sanctum**. **Сейчас (честно — НЕ выдавать за готовое):** авторизация работает на enum-Gates по колонке `users.role`; таблицы spatie засижены, но НЕ подключены (права на guard `web`, Sanctum их не видит) — это зафиксированный долг **IAM-1** (миграция на spatie-on-Sanctum ожидается). Новый authz-код идёт ТОЛЬКО через Policy/Gate (никогда inline `if ($user->role === …)` в контроллерах/сервисах), целясь в permission-модель; `users.role` — переходный двойной источник, удаляется после IAM-1.
-- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией как Vizion (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
+- **Стек жёсткий** (PLAN §3): Laravel 13 / PHP 8.5, Vue 3 + PrimeVue 4.5 + Bootstrap-grid + SCSS + ECharts. Точечные исключения к минимализму базового стека: TOTP 2FA + RBAC. Запрещено: Tailwind, Inertia, Filament, Horizon, Chart.js, VeeValidate/Zod, spatie/laravel-data, Pest. Новый пакет — только по явной просьбе.
+- **RBAC (IAM-1 ЗАКРЫТ):** авторизация работает на **spatie/laravel-permission, guard `sanctum`** — 6 ролей (admin/director/lawyer/manager/accountant/cfo) + гранулярные права, через Policy + `$user->can()` / permission-middleware. Колонка `users.role` **удалена**; `role` — виртуальный accessor поверх единственной spatie-роли; 4 глобальные ability — spatie-permissions, автозарегистрированные как Gates. Двойного источника роли и переходного долга больше нет. Новый authz-код — ТОЛЬКО через Policy/`$user->can()`/permission-middleware (никогда inline `if ($user->role === …)` в контроллерах/сервисах).
+- **Тесты — PHPUnit + SQLite `:memory:`** с тройной изоляцией (`phpunit.xml` force + `.env.testing` + guard в `TestCase`); тесты НИКОГДА не ходят в живую БД.
 - **Commit — только English**, без `Co-Authored-By: Claude` и упоминаний Claude/Anthropic/AI/🤖; без `--no-verify` / `--force`.
 - **Деструктив** (`down -v`, `volume rm`, `DROP`, `rm -rf` данных) — только по явной просьбе + бэкап; guard-хук блокирует.
 - **PHP/composer на хосте нет** — всё через docker (`docker compose exec app …`; bootstrap — `docker run --rm -v "$(pwd):/app" -w /app composer:latest …`).
