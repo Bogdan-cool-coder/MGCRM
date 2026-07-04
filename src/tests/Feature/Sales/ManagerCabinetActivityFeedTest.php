@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Sales;
 
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
+use App\Domain\Sales\Models\Deal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -309,5 +313,144 @@ class ManagerCabinetActivityFeedTest extends TestCase
         $this->getJson('/api/me/activity-feed?user_id='.$manager->id.'&period=current_month')
             ->assertOk()
             ->assertJsonPath('meta.total', 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // target_name (ГЭП-1, ManagerCabinet-v2-spec §7)
+    // -------------------------------------------------------------------------
+
+    public function test_feed_item_has_target_name_key(): void
+    {
+        $manager = $this->makeManager();
+        Activity::factory()->meeting()->responsibleOf($manager)->create(['created_at' => now()]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+        $item = $response->json('data.0');
+
+        $this->assertArrayHasKey('target_name', $item);
+    }
+
+    public function test_feed_target_name_resolves_deal_title(): void
+    {
+        $manager = $this->makeManager();
+        $deal = Deal::factory()->create(['title' => 'ERP']);
+
+        Activity::factory()->meeting()->responsibleOf($manager)->forDeal($deal)->create([
+            'created_at' => now(),
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+
+        $this->assertSame('ERP', $response->json('data.0.target_name'));
+    }
+
+    public function test_feed_target_name_resolves_contact_full_name(): void
+    {
+        $manager = $this->makeManager();
+        $contact = Contact::factory()->create(['full_name' => 'Иван Иванов']);
+
+        Activity::factory()->call()->responsibleOf($manager)->forContact($contact)->create([
+            'created_at' => now(),
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+
+        $this->assertSame('Иван Иванов', $response->json('data.0.target_name'));
+    }
+
+    public function test_feed_target_name_resolves_company_name(): void
+    {
+        $manager = $this->makeManager();
+        $company = Company::factory()->create(['name' => 'ЭнергоПром']);
+
+        Activity::factory()->task()->responsibleOf($manager)->forCompany($company)->create([
+            'created_at' => now(),
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+
+        $this->assertSame('ЭнергоПром', $response->json('data.0.target_name'));
+    }
+
+    public function test_feed_target_name_null_for_standalone_activity(): void
+    {
+        $manager = $this->makeManager();
+        Activity::factory()->task()->responsibleOf($manager)->standalone()->create([
+            'created_at' => now(),
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+
+        $this->assertNull($response->json('data.0.target_name'));
+    }
+
+    public function test_feed_target_name_null_for_deleted_deal(): void
+    {
+        $manager = $this->makeManager();
+        $deal = Deal::factory()->create(['title' => 'Soon deleted']);
+
+        Activity::factory()->meeting()->responsibleOf($manager)->forDeal($deal)->create([
+            'created_at' => now(),
+        ]);
+
+        // Hard-delete the deal row directly (soft degradation must survive a
+        // target that no longer exists at all, not just a soft-deleted one).
+        DB::table('deals')->where('id', $deal->id)->delete();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+
+        $this->assertNull($response->json('data.0.target_name'));
+    }
+
+    public function test_feed_target_name_query_count_does_not_regress(): void
+    {
+        $manager = $this->makeManager();
+
+        // Baseline: standalone activities only (no polymorphic target to resolve).
+        Activity::factory()->note()->responsibleOf($manager)->standalone()->count(4)->create([
+            'created_at' => now(),
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        DB::enableQueryLog();
+        $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+        $baselineCount = count(DB::getQueryLog());
+        DB::flushQueryLog();
+        DB::disableQueryLog();
+
+        // Same request shape, but now every row targets a DIFFERENT entity type
+        // (deal + contact + company) — this must add at most 3 whereIn queries
+        // (one per target type), never one lookup per row.
+        $manager2 = $this->makeManager();
+        $deal = Deal::factory()->create(['title' => 'ERP']);
+        $contact = Contact::factory()->create(['full_name' => 'Иван Иванов']);
+        $company = Company::factory()->create(['name' => 'ЭнергоПром']);
+
+        Activity::factory()->meeting()->responsibleOf($manager2)->forDeal($deal)->create(['created_at' => now()]);
+        Activity::factory()->call()->responsibleOf($manager2)->forContact($contact)->create(['created_at' => now()]);
+        Activity::factory()->task()->responsibleOf($manager2)->forCompany($company)->create(['created_at' => now()]);
+        Activity::factory()->note()->responsibleOf($manager2)->standalone()->create(['created_at' => now()]);
+
+        Sanctum::actingAs($manager2, ['*']);
+
+        DB::enableQueryLog();
+        $this->getJson('/api/me/activity-feed?period=current_month')->assertOk();
+        $withTargetsCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertLessThanOrEqual($baselineCount + 3, $withTargetsCount);
     }
 }

@@ -911,6 +911,12 @@ class ActivityService
      * The five-condition FTM predicate is single-sourced so the ftm_only filter
      * and the per-item ftm_counted flag stay in lockstep with the KPI count.
      *
+     * Every row also gets a batched `target_name` attribute stamped on it (ГЭП-1,
+     * ManagerCabinet-v2-spec §7) — the linked deal/contact/company's display name,
+     * resolved via {@see stampTargetNames} in at most 3 whereIn queries for the
+     * whole page (never per-row). An unknown target type or a deleted target
+     * degrades to null — the frontend falls back to "{label} #{id}".
+     *
      * @param  array<string, mixed>  $filters  kind, from, to, ftm_only
      * @return LengthAwarePaginator<int, Activity>
      */
@@ -918,7 +924,7 @@ class ActivityService
     {
         $kind = $filters['kind'] ?? null;
 
-        return Activity::query()
+        $page = Activity::query()
             ->with(['responsible:id,full_name', 'createdBy:id,full_name'])
             ->where('responsible_id', $userId)
             ->when($kind !== null && $kind !== 'all', fn (Builder $q) => $q->where('kind', $kind))
@@ -930,6 +936,64 @@ class ActivityService
             )
             ->orderByDesc('created_at')
             ->paginate($perPage);
+
+        $this->stampTargetNames($page->getCollection());
+
+        return $page;
+    }
+
+    /**
+     * Batch-resolve the display name of every activity's polymorphic target
+     * (ГЭП-1, ManagerCabinet-v2-spec §7) and stamp it as `target_name` on each
+     * row — the manager-cabinet feed shows "ERP — «ЭнергоПром»" instead of the
+     * bare "Сделка #4812". Resolved in at most THREE whereIn queries total (one
+     * per target type: deal/contact/company), never per-row, regardless of page
+     * size.
+     *
+     * Unscoped by design: feedForUser() already restricts activities to the
+     * requesting/target user's OWN rows, so there is nothing to IDOR here — the
+     * name lookup only needs to survive a target that no longer exists (soft
+     * degradation to null, never an error) or an unrecognised target_type
+     * (defensive future-proofing if the whitelist grows).
+     *
+     * Name field per type: Deal::title, Contact::full_name, Company::name.
+     *
+     * @param  Collection<int, Activity>  $activities
+     */
+    private function stampTargetNames(Collection $activities): void
+    {
+        $dealIds = $this->targetIdsOfType($activities, ActivityTargetType::Deal);
+        $contactIds = $this->targetIdsOfType($activities, ActivityTargetType::Contact);
+        $companyIds = $this->targetIdsOfType($activities, ActivityTargetType::Company);
+
+        /** @var Collection<int, string> $dealNames */
+        $dealNames = $dealIds === []
+            ? collect()
+            : Deal::query()->whereIn('id', $dealIds)->pluck('title', 'id');
+
+        /** @var Collection<int, string> $contactNames */
+        $contactNames = $contactIds === []
+            ? collect()
+            : Contact::query()->whereIn('id', $contactIds)->pluck('full_name', 'id');
+
+        /** @var Collection<int, string> $companyNames */
+        $companyNames = $companyIds === []
+            ? collect()
+            : Company::query()->whereIn('id', $companyIds)->pluck('name', 'id');
+
+        foreach ($activities as $activity) {
+            $targetId = $activity->target_id !== null ? (int) $activity->target_id : null;
+
+            $name = match (true) {
+                $targetId === null => null,
+                $activity->target_type === ActivityTargetType::Deal->value => $dealNames->get($targetId),
+                $activity->target_type === ActivityTargetType::Contact->value => $contactNames->get($targetId),
+                $activity->target_type === ActivityTargetType::Company->value => $companyNames->get($targetId),
+                default => null,
+            };
+
+            $activity->setAttribute('target_name', $name);
+        }
     }
 
     /**

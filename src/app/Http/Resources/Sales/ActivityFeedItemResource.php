@@ -26,6 +26,13 @@ class ActivityFeedItemResource extends JsonResource
             'title' => $this->title,
             'target_type' => $this->target_type,
             'target_id' => $this->target_id,
+            // The linked deal/contact/company's display name (ГЭП-1,
+            // ManagerCabinet-v2-spec §7), batched onto the Activity model by
+            // ActivityService::feedForUser()/stampTargetNames() — never a
+            // per-item lookup. null for a standalone activity, an unrecognised
+            // target type, or a target that no longer exists (soft
+            // degradation); the frontend falls back to "{label} #{id}".
+            'target_name' => $this->getAttribute('target_name'),
             'due_at' => $this->due_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'is_first_time_meeting' => (bool) $this->is_first_time_meeting,
