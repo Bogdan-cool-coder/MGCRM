@@ -46,13 +46,27 @@
         <template #footer><span class="plan-matrix__footer-na">—</span></template>
       </Column>
 
-      <!-- Total (read-only, base) -->
+      <!-- Total plan (read-only, base) -->
       <Column :header="t('dashboard.plans.col_total')" class="plan-matrix__col-total">
         <template #body="{ data }">
-          <span class="plan-matrix__total">{{ formatTotal(data as PlanMatrixRow) }}</span>
+          <span
+            v-tooltip.top="
+              rowHasPlan(data as PlanMatrixRow) ? undefined : t('dashboard.plans.no_plan_hint')
+            "
+            class="plan-matrix__total"
+            :class="{ 'plan-matrix__total--empty': !rowHasPlan(data as PlanMatrixRow) }"
+          >
+            {{ formatTotal(data as PlanMatrixRow) }}
+          </span>
         </template>
         <template #footer>
-          <span class="plan-matrix__footer-cell">{{ grandTotalLabel }}</span>
+          <span
+            v-tooltip.top="grandTotalHasPlan ? undefined : t('dashboard.plans.no_plan_hint')"
+            class="plan-matrix__footer-cell"
+            :class="{ 'plan-matrix__footer-cell--empty': !grandTotalHasPlan }"
+          >
+            {{ grandTotalLabel }}
+          </span>
         </template>
       </Column>
 
@@ -182,7 +196,17 @@ const factTooltip = (row: PlanMatrixRow, columnKey: string): string => {
 }
 
 // ─── Total column (row-level, base) ────────────────────────────────────────────
+/**
+ * Whether the row carries any authored plan (dirty-aware, matching `rowTotal`
+ * semantics). Drives the honest «—» placeholder: when a row has no plan we show
+ * a dash rather than «0 ₽», so it can never be misread against the fact figure
+ * that the «Год» column surfaces as its sub-line (the UX trap QA hit twice —
+ * empty plan «0 ₽» sitting next to a real fact reads as a bug).
+ */
+const rowHasPlan = (row: PlanMatrixRow): boolean => props.rowTotal(row) !== 0
+
 const formatTotal = (row: PlanMatrixRow): string => {
+  if (!rowHasPlan(row)) return t('dashboard.plans.no_plan_dash')
   const total = props.rowTotal(row)
   if (props.isMoney) return formatMkMoney(rowCurrencyToBase(row, total), props.matrix.meta.base_currency)
   return String(Math.round(total))
@@ -254,19 +278,28 @@ const totalLabel = (columnKey: string): string => {
  * footer consistent with the «Год» column (fixes BUG-PLAN-TOTALS-ZERO where the
  * footer read 0 ₽ across all 12 months for annual-authored plans).
  */
-const grandTotalLabel = computed<string>(() => {
+// Grand total (plan) across all rows for the year, in raw units. Zero here means
+// no plans authored anywhere — surfaced as «—» rather than «0 ₽».
+const grandTotalRaw = computed<number>(() => {
   const monthCols = props.matrix.columns.filter((c) => c.period_month != null)
   if (props.isMoney) {
     const monthlySum = monthCols.reduce((acc, c) => acc + (footerKopecks(c.key) ?? 0), 0)
-    const sum = monthlySum !== 0 ? monthlySum : (footerKopecks('annual') ?? 0)
-    return formatMkMoney(sum, props.matrix.meta.base_currency)
+    return monthlySum !== 0 ? monthlySum : (footerKopecks('annual') ?? 0)
   }
   const monthlySum = monthCols.reduce(
     (acc, c) => acc + (props.matrix.totals[c.key]?.plan_count ?? 0),
     0,
   )
-  const sum = monthlySum !== 0 ? monthlySum : (props.matrix.totals['annual']?.plan_count ?? 0)
-  return String(sum)
+  return monthlySum !== 0 ? monthlySum : (props.matrix.totals['annual']?.plan_count ?? 0)
+})
+
+const grandTotalHasPlan = computed<boolean>(() => grandTotalRaw.value !== 0)
+
+const grandTotalLabel = computed<string>(() => {
+  if (!grandTotalHasPlan.value) return t('dashboard.plans.no_plan_dash')
+  const raw = grandTotalRaw.value
+  if (props.isMoney) return formatMkMoney(raw, props.matrix.meta.base_currency)
+  return String(raw)
 })
 </script>
 
@@ -297,6 +330,17 @@ const grandTotalLabel = computed<string>(() => {
   font-variant-numeric: tabular-nums;
   font-weight: $font-weight-semibold;
   white-space: nowrap;
+}
+
+// Empty-plan placeholder «—»: muted so it reads as "no plan", never as a value
+// that could be confused with the fact figure in the «Год» column.
+.plan-matrix__total--empty {
+  color: $surface-400;
+  font-weight: $font-weight-normal;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
 }
 
 .plan-matrix__cell {
@@ -348,11 +392,20 @@ const grandTotalLabel = computed<string>(() => {
   white-space: nowrap;
 }
 
+.plan-matrix__footer-cell--empty {
+  color: $surface-400;
+  font-weight: $font-weight-normal;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+}
+
 .plan-matrix__footer-na {
   color: $surface-400;
 
   .app-dark & {
-    color: var(--p-surface-400);
+    color: var(--p-surface-600);
   }
 }
 
