@@ -4606,7 +4606,7 @@
   },
   "inbox": {
     "page": {
-      "title": "Inbox",
+      "title": "Mail",
       "refresh": "Refresh"
     },
     "filters": {
@@ -4619,8 +4619,10 @@
       "allStatuses": "All statuses",
       "dateRange": "Received date",
       "search": "Search",
-      "searchPlaceholder": "name, email, phone, subject, text…",
-      "reset": "Clear filters"
+      "searchPlaceholder": "Search mail",
+      "reset": "Reset filters",
+      "openFilters": "Filters",
+      "done": "Done"
     },
     "columns": {
       "when": "When",
@@ -4644,7 +4646,8 @@
     "dealChip": {
       "created": "Created by this message",
       "linked": "Linked",
-      "none": "not linked"
+      "none": "not linked",
+      "reprocess": "Route"
     },
     "empty": {
       "title": "No messages",
@@ -4674,10 +4677,12 @@
       "markRead": "Mark as read",
       "markUnread": "Mark as unread",
       "close": "Close",
-      "loadError": "Could not load message. Try closing and reopening."
+      "loadError": "Could not load message. Try closing and reopening.",
+      "failedBannerTitle": "Message was not routed automatically",
+      "failedBannerHint": "Click “Create deal” — the system will try to create a deal from this message."
     },
     "reprocess": {
-      "button": "Reprocess",
+      "button": "Create deal",
       "confirmTitle": "Reprocess message?",
       "confirmBody": "The system will attempt to re-route this message and create a deal. Continue?",
       "confirmAccept": "Yes, reprocess",
@@ -4704,6 +4709,24 @@
       "thankYouBody": "Your application has been received. We will contact you shortly.",
       "notFoundTitle": "Form unavailable",
       "notFoundBody": "This form does not exist or is no longer accepting applications."
+    },
+    "folders": {
+      "label": "Folders",
+      "all": "Inbox",
+      "failed": "Unrouted",
+      "deals": "In deals"
+    },
+    "channels": {
+      "label": "Channels"
+    },
+    "reading": {
+      "emptyTitle": "Select a message",
+      "emptyHint": "Click a message on the left to read it and route it into a deal",
+      "backToList": "Back to list",
+      "channelAndId": "{channel} · #{id}"
+    },
+    "list": {
+      "shownOf": "Showing {shown} of {total}"
     }
   },
   "accessControl": {

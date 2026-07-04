@@ -3,6 +3,7 @@
     :class="[
       'inbox-row',
       isUnread ? 'inbox-row--unread' : 'inbox-row--read',
+      { 'inbox-row--selected': selected, 'inbox-row--cozy': cozy },
     ]"
     role="button"
     tabindex="0"
@@ -10,97 +11,59 @@
     @keydown.enter="emit('open', msg)"
     @keydown.space.prevent="emit('open', msg)"
   >
-    <!-- Unread dot indicator -->
-    <span v-if="isUnread" class="inbox-row__dot" aria-hidden="true" />
+    <!-- Unread dot column (always reserved, dot only when unread) -->
+    <span class="inbox-row__dot-col" aria-hidden="true">
+      <span v-if="isUnread" class="inbox-row__dot" />
+    </span>
 
-    <!-- Channel badge -->
-    <div class="inbox-row__channel">
-      <ChannelKindTag :kind="msg.channel.kind" size="small" :show-label="true" />
-    </div>
+    <!-- Channel dot -->
+    <InboxChannelDot :kind="msg.channel.kind" :size="cozy ? 38 : 34" />
 
-    <!-- From sender -->
-    <div class="inbox-row__from">
-      <div class="inbox-row__from-name">
-        {{ msg.from_name || msg.from_identifier || '—' }}
+    <!-- Body: name/ident/time + subject·preview + deal chip -->
+    <div class="inbox-row__main">
+      <div class="inbox-row__top">
+        <span class="inbox-row__name">
+          {{ msg.from_name || msg.from_identifier || '—' }}
+        </span>
+        <span v-if="msg.from_name && msg.from_identifier" class="inbox-row__ident">
+          {{ msg.from_identifier }}
+        </span>
+        <span v-else class="inbox-row__ident" />
+        <span
+          v-tooltip.top="fullDatetime"
+          :class="['inbox-row__when', { 'inbox-row__when--unread': isUnread }]"
+        >
+          {{ relativeTime }}
+        </span>
       </div>
-      <div v-if="msg.from_name && msg.from_identifier" class="inbox-row__from-ident">
-        {{ msg.from_identifier }}
+
+      <div class="inbox-row__bottom">
+        <span class="inbox-row__preview">
+          <span v-if="msg.subject" class="inbox-row__subject">{{ msg.subject }} · </span>
+          <span v-if="msg.body">{{ msg.body }}</span>
+          <span v-else-if="!msg.subject" class="inbox-row__preview--empty">
+            {{ t('inbox.detail.bodyEmpty') }}
+          </span>
+        </span>
+        <InboxDealChip :msg="msg" :pending="reprocessPending" @reprocess="emit('reprocess', $event)" />
       </div>
     </div>
-
-    <!-- Subject + body preview -->
-    <div class="inbox-row__content">
-      <div v-if="msg.subject" class="inbox-row__subject">{{ msg.subject }}</div>
-      <div v-if="msg.body" class="inbox-row__preview">{{ msg.body }}</div>
-      <div v-else-if="!msg.subject" class="inbox-row__preview inbox-row__preview--empty">
-        {{ t('inbox.detail.bodyEmpty') }}
-      </div>
-    </div>
-
-    <!-- Received at -->
-    <div
-      v-tooltip.top="fullDatetime"
-      :class="['inbox-row__received', isUnread ? 'inbox-row__received--unread' : '']"
-    >
-      {{ relativeTime }}
-    </div>
-
-    <!-- Deal chip / routing status -->
-    <div class="inbox-row__deal">
-      <template v-if="msg.routing_status === 'routed' && msg.target_deal_id">
-        <RouterLink :to="`/deals/${msg.target_deal_id}`" class="inbox-row__deal-link" @click.stop>
-          <Tag icon="pi pi-briefcase" :value="`#${msg.target_deal_id}`" severity="success" size="small" />
-          <i
-            v-if="msg.target_deal_created"
-            v-tooltip.top="t('inbox.dealChip.created')"
-            class="pi pi-check-circle inbox-row__deal-created"
-          />
-        </RouterLink>
-      </template>
-      <template v-else-if="msg.routing_status === 'dedup' && msg.target_deal_id">
-        <RouterLink :to="`/deals/${msg.target_deal_id}`" class="inbox-row__deal-link" @click.stop>
-          <Tag icon="pi pi-link" :value="`#${msg.target_deal_id}`" severity="info" size="small" />
-        </RouterLink>
-      </template>
-      <template v-else-if="msg.routing_status === 'failed'">
-        <div class="inbox-row__failed-group">
-          <Tag
-            icon="pi pi-exclamation-triangle"
-            :value="t('inbox.routingStatus.failed')"
-            severity="danger"
-            size="small"
-          />
-          <Button
-            v-tooltip.top="t('inbox.reprocess.rowTooltip')"
-            icon="pi pi-refresh"
-            severity="danger"
-            text
-            size="small"
-            class="inbox-row__reprocess-btn"
-            :loading="reprocessPending"
-            @click.stop="onReprocess"
-          />
-        </div>
-      </template>
-    </div>
-
-    <!-- Chevron hint on hover -->
-    <i class="pi pi-chevron-right inbox-row__chevron" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
-import Tag from 'primevue/tag'
-import Button from 'primevue/button'
-import ChannelKindTag from '@/components/inbox/ChannelKindTag.vue'
+import InboxChannelDot from './InboxChannelDot.vue'
+import InboxDealChip from './InboxDealChip.vue'
 import { OPERATIONAL_TZ } from '@/utils/activity'
 import type { InboundMessage } from '@/api/inbox'
 
 const props = defineProps<{
   msg: InboundMessage
+  selected?: boolean
+  /** Cozy density → roomier padding + larger channel dot. */
+  cozy?: boolean
   reprocessPending?: boolean
 }>()
 
@@ -126,7 +89,6 @@ const relativeTime = computed(() => {
   if (diffH < 24) return `${diffH} ч`
   if (diffD === 1) return 'вчера'
 
-  // Older: show DD.MM
   const parts = new Intl.DateTimeFormat('ru-RU', {
     timeZone: OPERATIONAL_TZ,
     day: '2-digit',
@@ -149,30 +111,33 @@ const fullDatetime = computed(() => {
     minute: '2-digit',
   }).format(d)
 })
-
-function onReprocess() {
-  emit('reprocess', props.msg.id)
-}
 </script>
 
 <style lang="scss" scoped>
 .inbox-row {
-  position: relative;
   display: flex;
   align-items: center;
   gap: $space-3;
-  padding: $space-3 $space-4 $space-3 $space-6;
+  padding: $space-3 $space-4;
   border-bottom: 1px solid $surface-200;
+  border-left: 3px solid transparent;
   cursor: pointer;
-  transition: background-color $transition-fast,
-              color $transition-fast;
+  transition: background-color $transition-fast;
 
   .app-dark & {
     border-bottom-color: var(--p-surface-200);
   }
 
+  &--cozy {
+    padding: $space-4;
+  }
+
   &:last-child {
     border-bottom: none;
+  }
+
+  &:hover {
+    background-color: var(--mg-surface-hover);
   }
 
   &:focus-visible {
@@ -180,171 +145,96 @@ function onReprocess() {
     outline-offset: -2px;
   }
 
-  // ── Unread state ────────────────────────────────────────────────────────────
-  &--unread {
-    background-color: $surface-card;
+  // ── Selected ────────────────────────────────────────────────────────────────
+  &--selected {
+    border-left-color: $primary-color;
+    background-color: $primary-50;
 
-    // Dark scale is INVERTED: surface-100 ≈ #444547 (dark card surface)
     .app-dark & {
-      background-color: var(--p-surface-100);
+      background-color: var(--p-surface-200);
     }
 
     &:hover {
-      background-color: $surface-50;
+      background-color: $primary-50;
 
       .app-dark & {
         background-color: var(--p-surface-200);
       }
     }
   }
-
-  // ── Read state ──────────────────────────────────────────────────────────────
-  &--read {
-    background-color: $surface-50;
-
-    // Slightly darker than unread to preserve Gmail-style read/unread contrast
-    .app-dark & {
-      background-color: var(--p-surface-200);
-    }
-
-    &:hover {
-      background-color: $surface-100;
-
-      .app-dark & {
-        background-color: var(--p-surface-300);
-      }
-    }
-  }
-
-  // Chevron hint
-  &:hover .inbox-row__chevron {
-    opacity: 1;
-  }
 }
 
-// ── Unread dot ────────────────────────────────────────────────────────────────
+// ── Unread dot ──────────────────────────────────────────────────────────────
+.inbox-row__dot-col {
+  width: 8px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
 .inbox-row__dot {
-  position: absolute;
-  left: $space-2;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: $radius-circle;
   background-color: $primary-color;
-  flex-shrink: 0;
 }
 
-// ── Channel badge ─────────────────────────────────────────────────────────────
-.inbox-row__channel {
-  width: 80px;
-  flex-shrink: 0;
-}
-
-// ── From sender ───────────────────────────────────────────────────────────────
-.inbox-row__from {
-  width: 160px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.inbox-row__from-name {
-  font-size: $font-size-sm;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  .inbox-row--unread & {
-    font-weight: $font-weight-semibold;
-    color: $surface-900;
-
-    .app-dark & {
-      color: var(--p-surface-900); // light navy text in dark (was surface-0 = black = invisible)
-    }
-  }
-
-  .inbox-row--read & {
-    font-weight: $font-weight-normal;
-    color: $surface-600;
-
-    .app-dark & {
-      color: var(--p-surface-600); // muted navy text in dark (was surface-400 = dark-on-dark)
-    }
-  }
-}
-
-.inbox-row__from-ident {
-  font-size: $font-size-xs;
-  font-family: $font-family-mono;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--p-text-muted-color);
-}
-
-// ── Content (subject + preview) ───────────────────────────────────────────────
-.inbox-row__content {
+// ── Main body ───────────────────────────────────────────────────────────────
+.inbox-row__main {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
 }
 
-.inbox-row__subject {
+.inbox-row__top {
+  display: flex;
+  align-items: baseline;
+  gap: $space-2;
+}
+
+.inbox-row__name {
   font-size: $font-size-sm;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 55%;
 
   .inbox-row--unread & {
     font-weight: $font-weight-semibold;
     color: $surface-900;
 
     .app-dark & {
-      color: var(--p-surface-900); // light navy text in dark (was surface-0 = black = invisible)
+      color: var(--p-surface-900); // light text in dark (inverted scale)
     }
   }
 
   .inbox-row--read & {
     font-weight: $font-weight-normal;
-    color: $surface-600;
+    // Light: surface-700 (#616263) → 6.11:1 on white (surface-600 was 4.00:1, WCAG-fail).
+    // Dark override kept at surface-600 (#8593B0) → 5.37:1 on navy card — passes AA and
+    // preserves the read/unread muting (surface-700 in dark = #B4C2DA is too light, ~9:1,
+    // collapses the contrast against the unread name).
+    color: $surface-700;
 
     .app-dark & {
-      color: var(--p-surface-600); // muted navy text in dark (was surface-400 = dark-on-dark)
+      color: var(--p-surface-600);
     }
   }
 }
 
-.inbox-row__preview {
+.inbox-row__ident {
+  flex: 1;
+  min-width: 0;
   font-size: $font-size-xs;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
+  font-family: $font-family-mono;
+  color: var(--p-text-muted-color);
   overflow: hidden;
-  color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
-
-  .inbox-row--read & {
-    color: $surface-400;
-
-    .app-dark & {
-      color: var(--p-surface-500);
-    }
-  }
-
-  &--empty {
-    font-style: italic;
-  }
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-// ── Received at ───────────────────────────────────────────────────────────────
-.inbox-row__received {
-  width: 80px;
-  text-align: right;
-  font-size: $font-size-xs;
+.inbox-row__when {
   flex-shrink: 0;
+  font-size: $font-size-xs;
   color: $surface-400;
   font-weight: $font-weight-normal;
 
@@ -353,62 +243,61 @@ function onReprocess() {
   }
 
   &--unread {
-    color: $surface-700;
+    color: $primary-color;
     font-weight: $font-weight-medium;
+  }
+}
+
+.inbox-row__bottom {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin-top: $space-1;
+}
+
+.inbox-row__preview {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-sm;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: $surface-600;
+
+  .app-dark & {
+    color: var(--p-surface-600);
+  }
+
+  .inbox-row--read & {
+    color: $surface-500;
 
     .app-dark & {
-      color: var(--p-surface-200);
+      color: var(--p-surface-500);
     }
   }
 }
 
-// ── Deal chip ─────────────────────────────────────────────────────────────────
-.inbox-row__deal {
-  width: 140px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
+.inbox-row__subject {
+  .inbox-row--unread & {
+    font-weight: $font-weight-semibold;
+    color: $surface-900;
 
-.inbox-row__deal-link {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-1;
-  text-decoration: none;
-}
+    .app-dark & {
+      color: var(--p-surface-900);
+    }
+  }
 
-.inbox-row__deal-created {
-  font-size: $font-size-xs;
-  color: $green-500;
+  .inbox-row--read & {
+    font-weight: $font-weight-medium;
+    color: $surface-600;
 
-  .app-dark & {
-    color: var(--p-green-400);
+    .app-dark & {
+      color: var(--p-surface-600);
+    }
   }
 }
 
-.inbox-row__failed-group {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-}
-
-.inbox-row__reprocess-btn {
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  padding: 0;
-  width: 24px;
-  height: 24px;
-}
-
-// ── Chevron hint ──────────────────────────────────────────────────────────────
-.inbox-row__chevron {
-  font-size: $font-size-xs;
-  color: $surface-300;
-  opacity: 0;
-  transition: opacity $transition-fast;
-  flex-shrink: 0;
-
-  .app-dark & {
-    color: var(--p-surface-500);
-  }
+.inbox-row__preview--empty {
+  font-style: italic;
 }
 </style>

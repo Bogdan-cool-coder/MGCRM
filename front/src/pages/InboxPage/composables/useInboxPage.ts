@@ -1,6 +1,7 @@
 /**
- * useInboxPage — orchestrates filters, list fetch, detail, mark-read/unread,
- * reprocess, and unread-count management for the Inbox triage screen.
+ * useInboxPage — orchestrates filters, list fetch, reading-pane detail,
+ * mark-read/unread, reprocess, and unread-count management for the two-pane
+ * "Mail" triage screen (Inbox v2, СРЕЗ A).
  */
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,19 +12,27 @@ import { useMutation } from '@/composables/async/useMutation'
 import { inboxApi } from '@/api/inbox'
 import { useInboxStore } from '@/stores/inboxStore'
 import { useUserStore } from '@/stores/user'
-import { localDateString } from '@/utils/activity'
-import type { InboundMessage, RoutingStatus, ChannelKind } from '@/api/inbox'
+import type { InboundMessage, ChannelKind } from '@/api/inbox'
 
 // ─── Filter state ─────────────────────────────────────────────────────────────
 
+/**
+ * Folder selection (mutually exclusive, radio-like):
+ * - `all`    → no status/has_deal filter (Inbox)
+ * - `failed` → routing_status='failed' (Unrouted)
+ * - `deals`  → has_deal=true (In deals)
+ */
+export type InboxFolder = 'all' | 'failed' | 'deals'
+
 export interface InboxFilters {
   unreadOnly: boolean
-  failedQuick: boolean
+  folder: InboxFolder
   channel: ChannelKind | null
-  routingStatus: RoutingStatus | null
-  dateRange: [Date, Date] | null
   q: string
 }
+
+/** Two-pane view mode on narrow screens (< lg): only one pane is visible. */
+export type InboxMobileView = 'list' | 'detail'
 
 // ─── Per-page default ─────────────────────────────────────────────────────────
 const DEFAULT_PER_PAGE = 30
@@ -43,10 +52,8 @@ export const useInboxPage = () => {
   // ─── Filter state ─────────────────────────────────────────────────────────────
   const filters = ref<InboxFilters>({
     unreadOnly: true,
-    failedQuick: false,
+    folder: 'all',
     channel: null,
-    routingStatus: null,
-    dateRange: null,
     q: '',
   })
 
@@ -55,6 +62,7 @@ export const useInboxPage = () => {
   const debouncedQ = ref('')
 
   function onSearchInput(value: string) {
+    filters.value.q = value
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
     searchDebounceTimer = setTimeout(() => {
       debouncedQ.value = value
@@ -64,10 +72,8 @@ export const useInboxPage = () => {
   const hasActiveFilters = computed(() => {
     return (
       !filters.value.unreadOnly ||
-      filters.value.failedQuick ||
+      filters.value.folder !== 'all' ||
       filters.value.channel !== null ||
-      filters.value.routingStatus !== null ||
-      filters.value.dateRange !== null ||
       filters.value.q.trim() !== ''
     )
   })
@@ -76,22 +82,26 @@ export const useInboxPage = () => {
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
     filters.value = {
       unreadOnly: true,
-      failedQuick: false,
+      folder: 'all',
       channel: null,
-      routingStatus: null,
-      dateRange: null,
       q: '',
     }
     debouncedQ.value = ''
     currentPage.value = 1
   }
 
-  function toggleFailedQuick() {
-    filters.value.failedQuick = !filters.value.failedQuick
-    // When enabling the failed quick-filter, hide the status dropdown filter
-    if (filters.value.failedQuick) {
-      filters.value.routingStatus = null
-    }
+  function setFolder(folder: InboxFolder) {
+    filters.value.folder = folder
+    currentPage.value = 1
+  }
+
+  function setChannel(channel: ChannelKind | null) {
+    filters.value.channel = channel
+    currentPage.value = 1
+  }
+
+  function setUnreadOnly(value: boolean) {
+    filters.value.unreadOnly = value
     currentPage.value = 1
   }
 
@@ -110,18 +120,12 @@ export const useInboxPage = () => {
     }
 
     if (filters.value.unreadOnly) params.unread = true
-    if (filters.value.failedQuick) {
+    if (filters.value.folder === 'failed') {
       params.routing_status = 'failed'
-    } else if (filters.value.routingStatus) {
-      params.routing_status = filters.value.routingStatus
+    } else if (filters.value.folder === 'deals') {
+      params.has_deal = true
     }
     if (filters.value.channel) params.channel = filters.value.channel
-    if (filters.value.dateRange?.[0]) {
-      params.date_from = localDateString(filters.value.dateRange[0])
-    }
-    if (filters.value.dateRange?.[1]) {
-      params.date_to = localDateString(filters.value.dateRange[1])
-    }
     if (debouncedQ.value.trim()) params.q = debouncedQ.value.trim()
 
     await listResource.run(async () => {
@@ -138,10 +142,8 @@ export const useInboxPage = () => {
   watch(
     [
       () => filters.value.unreadOnly,
-      () => filters.value.failedQuick,
+      () => filters.value.folder,
       () => filters.value.channel,
-      () => filters.value.routingStatus,
-      () => filters.value.dateRange,
       currentPage,
       perPage,
     ],
@@ -158,29 +160,33 @@ export const useInboxPage = () => {
   // Initial load
   void fetchMessages()
 
-  // ─── Detail dialog ─────────────────────────────────────────────────────────────
+  // ─── Reading pane (selection + detail) ─────────────────────────────────────────
+  const selectedId = ref<number | null>(null)
   const selectedMessage = ref<InboundMessage | null>(null)
-  const detailVisible = ref(false)
+  const mobileView = ref<InboxMobileView>('list')
   const detailResource = useAsyncResource<InboundMessage | null>(null)
 
-  async function openDetail(msg: InboundMessage) {
+  /**
+   * Select a message → load its fresh detail into the reading pane.
+   * Does NOT auto-mark read (spec: read status changes only via explicit toggle).
+   * On narrow screens, switches the visible pane to 'detail'.
+   */
+  async function openMessage(msg: InboundMessage) {
+    selectedId.value = msg.id
     selectedMessage.value = msg
-    detailVisible.value = true
+    mobileView.value = 'detail'
 
-    // Fetch fresh detail (spec: GET /api/inbox/{id} does NOT auto-mark read)
     await detailResource.run(async () => {
       const fresh = await inboxApi.detail(msg.id)
-      selectedMessage.value = fresh
+      // Guard against a race if the user clicked another row meanwhile.
+      if (selectedId.value === fresh.id) selectedMessage.value = fresh
       return fresh
     })
-    // Read status is changed ONLY by explicit user action (mark-read / mark-unread buttons).
-    // Spec: opening the detail view must NOT auto-mark as read.
   }
 
-  function closeDetail() {
-    detailVisible.value = false
-    selectedMessage.value = null
-    detailResource.reset(null)
+  /** Back to the list pane (mobile single-pane mode). */
+  function backToList() {
+    mobileView.value = 'list'
   }
 
   // ─── Mark read / unread ────────────────────────────────────────────────────────
@@ -189,6 +195,9 @@ export const useInboxPage = () => {
   async function markRead(id: number) {
     // Optimistic: update the row in the list immediately
     _updateRowInList(id, { read_at: new Date().toISOString() })
+    if (selectedMessage.value?.id === id) {
+      selectedMessage.value = { ...selectedMessage.value, read_at: new Date().toISOString() }
+    }
     inboxStore.decrement()
 
     try {
@@ -198,6 +207,9 @@ export const useInboxPage = () => {
     } catch {
       // Revert optimistic update on failure
       _updateRowInList(id, { read_at: null })
+      if (selectedMessage.value?.id === id) {
+        selectedMessage.value = { ...selectedMessage.value, read_at: null }
+      }
       inboxStore.increment()
     }
   }
@@ -205,6 +217,9 @@ export const useInboxPage = () => {
   async function markUnread(id: number) {
     // Optimistic
     _updateRowInList(id, { read_at: null })
+    if (selectedMessage.value?.id === id) {
+      selectedMessage.value = { ...selectedMessage.value, read_at: null }
+    }
     inboxStore.increment()
 
     try {
@@ -213,8 +228,23 @@ export const useInboxPage = () => {
       if (selectedMessage.value?.id === id) selectedMessage.value = updated
     } catch {
       // Revert
-      _updateRowInList(id, { read_at: new Date().toISOString() })
+      const revertedAt = new Date().toISOString()
+      _updateRowInList(id, { read_at: revertedAt })
+      if (selectedMessage.value?.id === id) {
+        selectedMessage.value = { ...selectedMessage.value, read_at: revertedAt }
+      }
       inboxStore.decrement()
+    }
+  }
+
+  /** Toggle read state of the currently selected message (reading-pane toolbar). */
+  function toggleSelectedRead() {
+    const msg = selectedMessage.value
+    if (!msg) return
+    if (msg.read_at) {
+      void markUnread(msg.id)
+    } else {
+      void markRead(msg.id)
     }
   }
 
@@ -230,14 +260,16 @@ export const useInboxPage = () => {
   // Tracks which row's spinner is active — cleared when the mutation settles.
   const currentReprocessId = ref<number | null>(null)
 
-  function confirmReprocess(id: number, onConfirm: () => void) {
+  function confirmReprocess(id: number) {
     confirm.require({
       header: t('inbox.reprocess.confirmTitle'),
       message: t('inbox.reprocess.confirmBody'),
       icon: 'pi pi-refresh',
       acceptLabel: t('inbox.reprocess.confirmAccept'),
       rejectLabel: t('inbox.reprocess.confirmReject'),
-      accept: onConfirm,
+      accept: () => {
+        void reprocess(id)
+      },
     })
   }
 
@@ -250,10 +282,9 @@ export const useInboxPage = () => {
 
       if (updated.routing_status !== 'failed') {
         // Success: routed or dedup
-        const action =
-          updated.target_deal_created
-            ? t('inbox.reprocess.successCreated')
-            : t('inbox.reprocess.successLinked')
+        const action = updated.target_deal_created
+          ? t('inbox.reprocess.successCreated')
+          : t('inbox.reprocess.successLinked')
         const dealId = updated.target_deal_id ?? 0
         toast.add({
           severity: 'success',
@@ -297,29 +328,31 @@ export const useInboxPage = () => {
     // Filters
     filters,
     hasActiveFilters,
-    debouncedQ,
     onSearchInput,
     resetFilters,
-    toggleFailedQuick,
+    setFolder,
+    setChannel,
+    setUnreadOnly,
 
-    // Detail dialog
+    // Reading pane
+    selectedId,
     selectedMessage,
-    detailVisible,
+    mobileView,
     detailLoading: detailResource.loading,
     detailError: detailResource.error,
-    openDetail,
-    closeDetail,
+    openMessage,
+    backToList,
 
     // Mark read/unread
     markRead,
     markUnread,
+    toggleSelectedRead,
     markReadPending: markReadMutation.isPending,
 
     // Reprocess
-    reprocessMutation,
+    reprocessPending: reprocessMutation.isPending,
     currentReprocessId,
     confirmReprocess,
-    reprocess,
 
     // Pagination
     onPageChange,

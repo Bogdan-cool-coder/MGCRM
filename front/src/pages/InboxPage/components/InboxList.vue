@@ -1,66 +1,53 @@
 <template>
-  <Card class="inbox-list" :pt="{ body: { style: 'padding: 0' }, content: { style: 'padding: 0' } }">
-    <!-- Column header row (sticky) -->
-    <template #header>
-      <div class="inbox-list__header-row">
-        <div class="inbox-list__col-dot" />
-        <div class="inbox-list__col-channel">{{ t('inbox.columns.channel') }}</div>
-        <div class="inbox-list__col-from">{{ t('inbox.columns.from') }}</div>
-        <div class="inbox-list__col-subject">{{ t('inbox.columns.subject') }}</div>
-        <div class="inbox-list__col-when">{{ t('inbox.columns.when') }}</div>
-        <div class="inbox-list__col-deal">{{ t('inbox.columns.deal') }}</div>
-        <div class="inbox-list__col-chevron" />
-      </div>
-    </template>
-
-    <template #content>
+  <div class="inbox-list">
+    <!-- Scrollable rows -->
+    <div class="inbox-list__scroll">
       <!-- Loading skeleton -->
       <template v-if="loading">
-        <div
-          v-for="n in 8"
-          :key="n"
-          class="inbox-list__skeleton-row"
-        >
-          <Skeleton shape="circle" size="6px" />
-          <Skeleton width="80px" height="22px" border-radius="4px" />
-          <Skeleton width="120px" height="16px" />
-          <Skeleton width="100%" height="16px" />
-          <Skeleton width="50px" height="16px" />
-          <Skeleton width="80px" height="22px" border-radius="4px" />
+        <div v-for="n in 8" :key="n" class="inbox-list__skeleton-row">
+          <Skeleton shape="circle" size="34px" />
+          <div class="inbox-list__skeleton-lines">
+            <Skeleton height="16px" width="55%" class="mb-1" />
+            <Skeleton height="14px" width="85%" />
+          </div>
         </div>
       </template>
 
       <!-- Error state -->
-      <template v-else-if="error">
-        <div class="inbox-list__state">
-          <Message severity="error" :closable="false">
-            {{ t('inbox.error.loadFailed') }}
-            <Button
-              :label="t('inbox.error.retry')"
-              text
-              size="small"
-              class="ms-2"
-              @click="emit('refresh')"
-            />
-          </Message>
-        </div>
-      </template>
+      <div v-else-if="error" class="inbox-list__state">
+        <Message severity="error" :closable="false">
+          {{ t('inbox.error.loadFailed') }}
+          <Button
+            :label="t('inbox.error.retry')"
+            text
+            size="small"
+            class="ms-2"
+            @click="emit('refresh')"
+          />
+        </Message>
+      </div>
 
       <!-- Empty state -->
-      <template v-else-if="messages.length === 0">
-        <div class="inbox-list__state inbox-list__state--empty">
-          <template v-if="isFailedFilter">
-            <i class="pi pi-check-circle inbox-list__empty-icon inbox-list__empty-icon--success" />
-            <p class="inbox-list__empty-title">{{ t('inbox.empty.failedTitle') }}</p>
-            <p class="inbox-list__empty-body">{{ t('inbox.empty.failedBody') }}</p>
-          </template>
-          <template v-else>
-            <i class="pi pi-inbox inbox-list__empty-icon" />
-            <p class="inbox-list__empty-title">{{ t('inbox.empty.title') }}</p>
-            <p class="inbox-list__empty-body">{{ t('inbox.empty.body') }}</p>
-          </template>
-        </div>
-      </template>
+      <div v-else-if="messages.length === 0" class="inbox-list__state inbox-list__state--empty">
+        <template v-if="isFailedFilter">
+          <i class="pi pi-check-circle inbox-list__empty-icon inbox-list__empty-icon--success" />
+          <p class="inbox-list__empty-title">{{ t('inbox.empty.failedTitle') }}</p>
+          <p class="inbox-list__empty-body">{{ t('inbox.empty.failedBody') }}</p>
+        </template>
+        <template v-else>
+          <i class="pi pi-inbox inbox-list__empty-icon" />
+          <p class="inbox-list__empty-title">{{ t('inbox.empty.title') }}</p>
+          <p class="inbox-list__empty-body">{{ t('inbox.empty.body') }}</p>
+          <Button
+            v-if="hasActiveFilters"
+            :label="t('inbox.filters.reset')"
+            text
+            size="small"
+            class="inbox-list__empty-reset"
+            @click="emit('reset')"
+          />
+        </template>
+      </div>
 
       <!-- Message rows -->
       <template v-else>
@@ -68,29 +55,34 @@
           v-for="msg in messages"
           :key="msg.id"
           :msg="msg"
+          :selected="msg.id === selectedId"
+          :cozy="cozy"
           :reprocess-pending="activeReprocessId === msg.id"
           @open="emit('open', $event)"
-          @reprocess="onReprocessRow"
+          @reprocess="emit('reprocess', $event)"
         />
       </template>
+    </div>
 
-      <!-- Paginator -->
+    <!-- Footer: count + paginator -->
+    <div v-if="!loading && !error && messages.length > 0" class="inbox-list__footer">
+      <span class="inbox-list__count">
+        {{ t('inbox.list.shownOf', { shown: messages.length, total: totalRecords }) }}
+      </span>
       <Paginator
-        v-if="!loading && !error && totalRecords > perPage"
+        v-if="totalRecords > perPage"
         :rows="perPage"
         :total-records="totalRecords"
-        :rows-per-page-options="[15, 30, 50]"
-        template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
+        template="PrevPageLink PageLinks NextPageLink"
         class="inbox-list__paginator"
         @page="emit('page', $event)"
       />
-    </template>
-  </Card>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import Card from 'primevue/card'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -104,9 +96,11 @@ defineProps<{
   error: unknown
   totalRecords: number
   perPage: number
+  selectedId: number | null
+  cozy: boolean
   isFailedFilter: boolean
-  /** ID of the row currently being reprocessed; spinner shows on that row only.
-   *  Managed by the parent and cleared when the mutation settles (not via a timer). */
+  hasActiveFilters: boolean
+  /** ID of the row currently being reprocessed; spinner shows on that row only. */
   activeReprocessId?: number | null
 }>()
 
@@ -115,88 +109,29 @@ const emit = defineEmits<{
   reprocess: [id: number]
   page: [event: { page: number; rows: number }]
   refresh: []
+  reset: []
 }>()
 
 const { t } = useI18n()
-
-function onReprocessRow(id: number) {
-  emit('reprocess', id)
-}
 </script>
 
 <style lang="scss" scoped>
 .inbox-list {
-  overflow: hidden;
-
-  :deep(.p-card-header) {
-    padding: 0;
-  }
-
-  :deep(.p-card-body) {
-    padding: 0;
-  }
-
-  :deep(.p-card-content) {
-    padding: 0;
-  }
-}
-
-// ── Column header row ─────────────────────────────────────────────────────────
-.inbox-list__header-row {
   display: flex;
-  align-items: center;
-  gap: $space-3;
-  padding: $space-2 $space-4 $space-2 $space-6;
-  background-color: $surface-50;
-  border-bottom: 1px solid $surface-200;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--p-text-muted-color);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-
-  .app-dark & {
-    background-color: var(--p-surface-50);
-    border-bottom-color: var(--p-surface-200);
-  }
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
-.inbox-list__col-dot {
-  width: 6px;
-  flex-shrink: 0;
-}
-
-.inbox-list__col-channel {
-  width: 80px;
-  flex-shrink: 0;
-}
-
-.inbox-list__col-from {
-  width: 160px;
-  flex-shrink: 0;
-}
-
-.inbox-list__col-subject {
+.inbox-list__scroll {
   flex: 1;
-}
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: none;
 
-.inbox-list__col-when {
-  width: 80px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.inbox-list__col-deal {
-  width: 140px;
-  flex-shrink: 0;
-}
-
-.inbox-list__col-chevron {
-  width: 16px;
-  flex-shrink: 0;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 // ── Skeleton rows ─────────────────────────────────────────────────────────────
@@ -204,8 +139,7 @@ function onReprocessRow(id: number) {
   display: flex;
   align-items: center;
   gap: $space-3;
-  padding: $space-3 $space-4 $space-3 $space-6;
-  min-height: 52px;
+  padding: $space-3 $space-4;
   border-bottom: 1px solid $surface-200;
 
   .app-dark & {
@@ -217,10 +151,14 @@ function onReprocessRow(id: number) {
   }
 }
 
+.inbox-list__skeleton-lines {
+  flex: 1;
+  min-width: 0;
+}
+
 // ── State (empty, error) ──────────────────────────────────────────────────────
 .inbox-list__state {
-  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
-  padding: 3rem $space-4;
+  padding: $space-8 $space-4;
 
   &--empty {
     display: flex;
@@ -231,7 +169,7 @@ function onReprocessRow(id: number) {
 }
 
 .inbox-list__empty-icon {
-  font-size: $font-size-3xl;
+  font-size: $font-size-icon-lg;
   color: var(--p-text-muted-color);
   opacity: 0.4;
 }
@@ -259,12 +197,33 @@ function onReprocessRow(id: number) {
   margin: 0;
 }
 
-// ── Paginator ─────────────────────────────────────────────────────────────────
-.inbox-list__paginator {
+.inbox-list__empty-reset {
+  margin-top: $space-2;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+.inbox-list__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+  padding: $space-2 $space-4;
   border-top: 1px solid $surface-200;
+  flex-shrink: 0;
 
   .app-dark & {
     border-top-color: var(--p-surface-200);
   }
+}
+
+.inbox-list__count {
+  font-size: $font-size-xs;
+  color: var(--p-text-muted-color);
+}
+
+.inbox-list__paginator {
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  padding: 0;
+  background: transparent;
 }
 </style>

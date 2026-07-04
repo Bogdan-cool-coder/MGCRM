@@ -1,140 +1,154 @@
 <template>
   <div class="inbox-page">
-    <!-- Page header -->
-    <PageHeader :title="t('inbox.page.title')">
-      <template #actions>
+    <!-- Header (custom toolbar: icon + title + unread badge + segmented + search + refresh) -->
+    <header class="inbox-page__header">
+      <span class="inbox-page__icon">
+        <i class="pi pi-envelope" />
+      </span>
+      <div class="inbox-page__title-group">
+        <h1 class="inbox-page__title">{{ t('inbox.page.title') }}</h1>
         <Badge
           v-if="inboxUnreadCount > 0"
           :value="inboxUnreadCount > 99 ? '99+' : String(inboxUnreadCount)"
           severity="danger"
-          class="inbox-page__unread-badge"
         />
-        <Button
-          icon="pi pi-refresh"
-          :label="t('inbox.page.refresh')"
-          severity="secondary"
-          text
-          @click="onRefresh"
-        />
-      </template>
-    </PageHeader>
+      </div>
 
-    <div class="inbox-page__body">
-      <!-- Filter bar -->
-      <InboxFilterBar
-        :filters="filters"
+      <SelectButton
+        :model-value="filters.unreadOnly ? unreadOption : allOption"
+        :options="unreadOptions"
+        option-label="label"
+        :allow-empty="false"
+        class="inbox-page__segmented"
+        @update:model-value="(v: UnreadOption) => v && setUnreadOnly(v.value)"
+      />
+
+      <InboxSearchFilters
+        :q="filters.q"
+        :folder="filters.folder"
+        :channel="filters.channel"
         :has-active-filters="hasActiveFilters"
-        @update:unread-only="filters.unreadOnly = $event; currentPage = 1"
-        @update:channel="filters.channel = $event; currentPage = 1"
-        @update:routing-status="filters.routingStatus = $event; currentPage = 1"
-        @update:date-range="filters.dateRange = $event; currentPage = 1"
         @search="onSearchInput"
-        @toggle-failed="toggleFailedQuick"
+        @update:folder="setFolder"
+        @update:channel="setChannel"
         @reset="resetFilters"
       />
 
-      <!-- Inbox list -->
-      <InboxList
-        :messages="messages"
-        :loading="listLoading"
-        :error="listError"
-        :total-records="totalRecords"
-        :per-page="perPage"
-        :is-failed-filter="filters.failedQuick"
-        :active-reprocess-id="currentReprocessId"
-        @open="openDetail"
-        @reprocess="onRowReprocess"
-        @page="onPageChange"
-        @refresh="fetchMessages"
+      <Button
+        icon="pi pi-refresh"
+        :label="t('inbox.page.refresh')"
+        severity="secondary"
+        text
+        class="inbox-page__refresh"
+        @click="onRefresh"
       />
+    </header>
+
+    <!-- Two-pane body -->
+    <div :class="['inbox-page__body', `inbox-page__body--${mobileView}`]">
+      <!-- List pane -->
+      <section class="inbox-page__pane inbox-page__pane--list">
+        <InboxList
+          :messages="messages"
+          :loading="listLoading"
+          :error="listError"
+          :total-records="totalRecords"
+          :per-page="perPage"
+          :selected-id="selectedId"
+          :cozy="cozy"
+          :is-failed-filter="filters.folder === 'failed'"
+          :has-active-filters="hasActiveFilters"
+          :active-reprocess-id="currentReprocessId"
+          @open="openMessage"
+          @reprocess="confirmReprocess"
+          @page="onPageChange"
+          @refresh="fetchMessages"
+          @reset="resetFilters"
+        />
+      </section>
+
+      <!-- Reading pane -->
+      <section class="inbox-page__pane inbox-page__pane--reading">
+        <InboxReadingPane
+          :selected-id="selectedId"
+          :msg="selectedMessage"
+          :loading="detailLoading"
+          :load-error="detailError"
+          :reprocess-pending="reprocessPending"
+          :mark-read-pending="markReadPending"
+          :can-view-raw-payload="canViewRawPayload"
+          :show-back="true"
+          @toggle-read="toggleSelectedRead"
+          @reprocess="confirmReprocess"
+          @back="backToList"
+        />
+      </section>
     </div>
-
-    <!-- Detail dialog -->
-    <InboxDetailDialog
-      v-model="detailVisible"
-      :msg="selectedMessage"
-      :loading="detailLoading"
-      :load-error="detailError"
-      :reprocess-pending="reprocessMutation.isPending.value"
-      :mark-read-pending="markReadPending"
-      :can-view-raw-payload="canViewRawPayload"
-      @close="closeDetail"
-      @toggle-read="onToggleRead"
-      @reprocess="onDialogReprocess"
-    />
-
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import PageHeader from '@/components/AppShell/PageHeader.vue'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
+import SelectButton from 'primevue/selectbutton'
 // ConfirmDialog is NOT mounted here — DefaultLayout/index.vue mounts a global
-// instance that handles all useConfirm() calls app-wide. A second local instance
-// causes confirm.require() to render TWO dialogs simultaneously.
-import InboxFilterBar from './components/InboxFilterBar.vue'
+// instance that handles all useConfirm() calls app-wide.
+import InboxSearchFilters from './components/InboxSearchFilters.vue'
 import InboxList from './components/InboxList.vue'
-import InboxDetailDialog from './components/InboxDetailDialog.vue'
+import InboxReadingPane from './components/InboxReadingPane.vue'
 import { useInboxPage } from './composables/useInboxPage'
+import { useDensityStore } from '@/stores/density'
 
 const { t } = useI18n()
+const densityStore = useDensityStore()
+
+/** Global density → cozy rows + larger channel dots. */
+const cozy = computed(() => densityStore.density === 'cozy')
 
 const {
   messages,
   listLoading,
   listError,
   totalRecords,
-  currentPage,
   perPage,
   filters,
   hasActiveFilters,
   onSearchInput,
   resetFilters,
-  toggleFailedQuick,
+  setFolder,
+  setChannel,
+  setUnreadOnly,
+  selectedId,
   selectedMessage,
-  detailVisible,
+  mobileView,
   detailLoading,
   detailError,
-  openDetail,
-  closeDetail,
-  markRead,
-  markUnread,
+  openMessage,
+  backToList,
+  toggleSelectedRead,
   markReadPending,
-  reprocessMutation,
+  reprocessPending,
   currentReprocessId,
   confirmReprocess,
-  reprocess,
   onPageChange,
   fetchMessages,
   canViewRawPayload,
   inboxUnreadCount,
 } = useInboxPage()
 
+// ─── Segmented Unread / All ─────────────────────────────────────────────────
+interface UnreadOption {
+  label: string
+  value: boolean
+}
+const unreadOption = computed<UnreadOption>(() => ({ label: t('inbox.filters.unreadOnly'), value: true }))
+const allOption = computed<UnreadOption>(() => ({ label: t('inbox.filters.all'), value: false }))
+const unreadOptions = computed<UnreadOption[]>(() => [unreadOption.value, allOption.value])
+
 function onRefresh() {
   void fetchMessages()
-}
-
-function onToggleRead() {
-  if (!selectedMessage.value) return
-  if (selectedMessage.value.read_at) {
-    void markUnread(selectedMessage.value.id)
-  } else {
-    void markRead(selectedMessage.value.id)
-  }
-}
-
-function onRowReprocess(id: number) {
-  confirmReprocess(id, () => {
-    void reprocess(id)
-  })
-}
-
-function onDialogReprocess(id: number) {
-  confirmReprocess(id, () => {
-    void reprocess(id)
-  })
 }
 </script>
 
@@ -146,15 +160,114 @@ function onDialogReprocess(id: number) {
   overflow: hidden;
 }
 
-.inbox-page__body {
-  flex: 1;
-  overflow-y: auto;
-  padding: $space-4;
+// ── Header ────────────────────────────────────────────────────────────────────
+.inbox-page__header {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-5;
+  background: $surface-card;
+  border-bottom: 1px solid $surface-200;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+
+  .app-dark & {
+    border-bottom-color: var(--p-surface-200);
+  }
 }
 
-.inbox-page__unread-badge {
-  // Inline next to the title — positioned by PageHeader subtitle slot
-  vertical-align: middle;
-  margin-left: $space-2;
+.inbox-page__icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: $radius-md;
+  background: $primary-50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  .pi {
+    font-size: $font-size-md;
+    color: $primary-color;
+  }
+
+  .app-dark & {
+    background: var(--p-surface-100);
+
+    .pi {
+      color: var(--p-primary-color);
+    }
+  }
+}
+
+.inbox-page__title-group {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-shrink: 0;
+}
+
+.inbox-page__title {
+  margin: 0;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: var(--p-text-color);
+  line-height: 1.1;
+}
+
+.inbox-page__segmented {
+  flex-shrink: 0;
+}
+
+.inbox-page__refresh {
+  flex-shrink: 0;
+}
+
+// ── Two-pane body ─────────────────────────────────────────────────────────────
+.inbox-page__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(360px, 2fr) 3fr;
+  gap: $space-4;
+  padding: $space-4 $space-5;
+}
+
+.inbox-page__pane {
+  background: $surface-card;
+  border: 1px solid $surface-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  .app-dark & {
+    border-color: var(--p-surface-200);
+  }
+}
+
+// ── Responsive: fold to a single pane below lg (992px) ─────────────────────────
+@media (max-width: 991.98px) {
+  .inbox-page__body {
+    grid-template-columns: 1fr;
+  }
+
+  // Show only the active pane on narrow screens.
+  .inbox-page__body--list .inbox-page__pane--reading {
+    display: none;
+  }
+
+  .inbox-page__body--detail .inbox-page__pane--list {
+    display: none;
+  }
+}
+
+// On wide screens both panes are always visible (back button in pane is inert there).
+@media (min-width: 992px) {
+  .inbox-page__pane--reading :deep(.inbox-reading__back) {
+    display: none;
+  }
 }
 </style>
