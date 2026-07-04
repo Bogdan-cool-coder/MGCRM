@@ -2,7 +2,7 @@
 
 **Версия:** 2.0 · **Дата:** 2026-07-04
 **Автор:** designer
-**Статус:** Draft — ожидает ревью
+**Статус:** **РЕАЛИЗОВАНО 2026-07-04, коммит `9f8c4ee`** (Э10, reviewer PASS). As-built отклонения: акцент результатов — `orange-400` вместо amber (repo-токен ближе к бренду); `ccy-Message` (валютная плашка) убран в мотив-табе — валютная разбивка остаётся в самой строке компонента. Токены — repo-переменные (не литералы мокапа); MoodHead-фразы = новый i18n RU+EN.
 **Где в коде:** `front/src/pages/ManagerCabinetPage/`
 **Эталон-мокап:** `MACRO-Design-System 2/redesign/manager-cabinet.html` (DS2; агент копирует в репо параллельно)
 **Смежная спека (не ломать семантику):** `design-handoff/redesign/motivation-card/SPEC.md` (as-built v1.1)

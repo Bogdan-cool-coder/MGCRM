@@ -229,7 +229,18 @@
   новая директория `templates/` (5 шаблонов: crm-shell, crm-page, data-table-page, kanban-board,
   settings). UI-kit `ui_kits/crm/` сведён к `index.html` + `Sidebar.jsx` (iframe-ссылки ведут на
   мокапы `design-handoff/redesign/` — без дублирования); retired Shell/DealsView/ContactsView/TasksView удалены.
-- **Статус:** мокапы приняты; кабинет — в реализации (Э10), dashboard (Э11) и mail (Э12) — в очереди.
+- **Статус (обновлено 2026-07-04, HEAD `b1bbb34`):** все три экрана DS2 **РЕАЛИЗОВАНЫ**:
+  - **Кабинет менеджера v2** — Э10, коммит `9f8c4ee` (`ManagerCabinet-v2-spec.md`): `ResultsHero`
+    (МК%-кольцо), `MoodHead`, `TeamList` градиент-бары, лента v2 (pill-фильтры), полиш Motivation-таба.
+    Backend не тронут (данные в существующем API кабинета).
+  - **Dashboard v2 Фаза 1** — Э11, коммит `68788cf` (`Dashboard-v2-spec.md`, **вариант Б**: порядок +
+    видимость виджетов без drag-resize): 12-колоночная сетка с сохранением раскладки, честная сквозная
+    конверсия, обновлённые Funnel/Forecast, `NoTaskWidget`-превью. Без изменений backend. **Фаза 2**
+    (валютный `CcyPopover`) — в очереди за расширением `DashboardResponse` (см. `docs/audit/…` §7).
+  - **Mail v2 срез A** — Э12, коммит `b1bbb34` (`Mail-v2-spec.md`): двухпанельный триаж (список+читалка),
+    unread-тогл, ChannelDot, фильтр-панель Входящие/Не разобрано/В сделках + канал-чипы + failed-баннер.
+    Без новых полей БД (текущий `/api/inbox`). **Срезы B/C** (звёзды/snooze/Отправленные/Черновики) — в
+    очереди за новыми полями/доменом исходящей почты (см. §7 аудита).
 - **ВАЖНО:** литералы navy в мокапах DS2 (`#12213E`/`#243358`/`#E8EDF6`) — **reference-only**;
   runtime-значения темы (`#111E38`/`#27395C`/`#EAF0FA` из `front/src/theme`) — **закон**.
 

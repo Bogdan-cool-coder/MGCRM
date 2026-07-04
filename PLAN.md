@@ -199,6 +199,8 @@ macroglobalcrm/              ← корень репо (сам проект зд
 | **AMO ETL** (`Domain/Migration`) | M12 | planned (dormant) | каркас засеян; ETL не прогонялся; mappings не читаются |
 | **M12** Cutover | Cutover | planned | снос `examples/` + per-domain parity |
 
+> **Пост-аудитный трек оптимизации (2026-07-04, HEAD `b1bbb34`, uncommitted):** сплошной read-only аудит (11 агентов + прод-QA) + 12 этапов Э1–Э12 — закрыты **все 13 high** и 33/42 medium (9 отложено), вычищен мёртвый код (BE+FE+Tailwind-скелет), DS2 в репо, реализованы кабинет менеджера v2 / Dashboard v2 (Фаза 1) / Mail v2 (срез A). Сьют 3944 → **4044 / 0**. Полный отчёт и отложенное — **`docs/audit/Full-System-Audit-2026-07-04.md`**.
+
 > **Главные блокеры к проду (P0–P1, см. `docs/audit/00-MASTER.md`):** дыра видимости (ResolveVisibility-заглушка → PII), мёртвая генерация договоров, сломанная петля онбординга, discount-в-amount, throttle на /login, IDOR документов, IAM-1 RBAC. До их закрытия ни один домен не «verified-live».
 
 ---
