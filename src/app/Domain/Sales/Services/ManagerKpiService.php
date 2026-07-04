@@ -71,7 +71,7 @@ class ManagerKpiService
         $ftmPlan = $salaryPlan?->personal_ftm_plan;
 
         // Team comparison
-        $teamData = $this->buildTeamData($target, $filters, $scorePct, $viewer, $multiCurrencyWarning);
+        $teamData = $this->buildTeamData($target, $filters, $scorePct, $incomeFact, $incomePlan, $viewer, $multiCurrencyWarning);
 
         return [
             'meta' => [
@@ -204,36 +204,48 @@ class ManagerKpiService
     }
 
     /**
-     * Robust "average" score_pct across team members (plan §Б3).
+     * "Department average" achievement across team members (plan §Б3):
+     * weighted average = round(Σincome_fact / Σincome_plan * 100), summed only
+     * over members who actually HAVE a plan for the period.
      *
-     * The MEDIAN is used instead of the arithmetic mean so a single outlier
-     * (e.g. one member with a 4.5B-kop won deal against a 30M plan → 15072%)
-     * cannot drag the whole-team figure to a meaningless 1500%+. With a typical
-     * spread the median tracks the mean closely; under an outlier it stays on
-     * the representative member. Rounded to an integer percentage.
+     * Members without a plan (income_plan_kopecks === 0) are excluded from
+     * both sums rather than folded in as a literal 0%. `scorePct()` already
+     * treats a no-plan member's OWN score as undefined (null, not a fake 0%)
+     * so it can never read as "underperforming" — the department average must
+     * honour the same rule, or a majority of unmeasured colleagues silently
+     * drags a genuinely over-performing team down to a meaningless 0%
+     * (observed live: 7 of 10 department members with no salary_plan row
+     * swamping 3 members scoring ~3900%). A plain SUM/SUM ratio (rather than
+     * an unweighted mean of per-member percentages) also keeps a single
+     * outlier's WEIGHT proportional to their plan size, so one huge relative
+     * overshoot on a small plan cannot dominate the figure the way an
+     * unweighted mean of percentages would.
      *
-     * A null score (no plan set) is treated as 0 so a no-plan member does not
-     * inflate the team figure.
+     * Returns 0 when no member in the cohort has a plan (nothing to average —
+     * same "no data" fallback the empty-cohort / all-null case already used).
      *
-     * @param  list<int|null>  $memberPcts
+     * @param  list<int>  $memberFacts  income_fact_kopecks, one per member
+     * @param  list<int>  $memberPlans  income_plan_kopecks, one per member (0 = no plan), same order/length as $memberFacts
      */
-    public function teamAvgPct(array $memberPcts): int
+    public function teamAvgPct(array $memberFacts, array $memberPlans): int
     {
-        if ($memberPcts === []) {
+        $totalFact = 0;
+        $totalPlan = 0;
+
+        foreach ($memberPlans as $index => $plan) {
+            if ($plan <= 0) {
+                continue;
+            }
+
+            $totalPlan += $plan;
+            $totalFact += $memberFacts[$index] ?? 0;
+        }
+
+        if ($totalPlan <= 0) {
             return 0;
         }
 
-        $sorted = array_map(static fn (?int $p): int => $p ?? 0, $memberPcts);
-        sort($sorted);
-
-        $count = count($sorted);
-        $mid = intdiv($count, 2);
-
-        if ($count % 2 === 1) {
-            return $sorted[$mid];
-        }
-
-        return (int) round(($sorted[$mid - 1] + $sorted[$mid]) / 2);
+        return max(0, (int) round($totalFact / $totalPlan * 100));
     }
 
     /**
@@ -313,9 +325,14 @@ class ManagerKpiService
      * EVERY pipeline's won deals into the pool fact regardless of which
      * pipeline the МК card was configured for.
      *
+     * `income_plan` (audit fix, 2026-07-04): exposed alongside `income_fact` so
+     * callers can compute a plan-weighted team aggregate (teamAvgPct) without
+     * re-querying/re-normalising SalaryPlan themselves — 0 means "no plan for
+     * this period", matching normalisedPlanKopecks()'s own no-plan sentinel.
+     *
      * @param  list<int>  $userIds
      * @param  bool  $multiCurrencyWarning  pass-by-reference, OR'd with any conversion miss
-     * @return array<int, array{income_fact: int, score_pct: int|null, user_id: int}>
+     * @return array<int, array{income_fact: int, income_plan: int, score_pct: int|null, user_id: int}>
      */
     public function teamKpiBatch(array $userIds, KpiFilters $filters, bool &$multiCurrencyWarning = false, ?int $pipelineId = null): array
     {
@@ -376,6 +393,7 @@ class ManagerKpiService
             $result[$uid] = [
                 'user_id' => $uid,
                 'income_fact' => $fact,
+                'income_plan' => $plan,
                 'score_pct' => $this->scorePct($fact, $plan),
             ];
         }
@@ -537,6 +555,10 @@ class ManagerKpiService
      * Анонимизация (M decision Q1): income_fact_kopecks of colleagues is
      * excluded for role=manager; director/admin see full data.
      *
+     * `$targetIncomeFact`/`$targetIncomePlan` (audit fix, 2026-07-04): the caller
+     * (getKpiData) already computed these for the personal KPI block — reused
+     * here for the solo-team avg_pct instead of re-querying SalaryPlan.
+     *
      * @param  bool  $multiCurrencyWarning  OR'd in-place
      * @return array<string, mixed>
      */
@@ -544,6 +566,8 @@ class ManagerKpiService
         User $target,
         KpiFilters $filters,
         ?int $targetScorePct,
+        int $targetIncomeFact,
+        int $targetIncomePlan,
         User $viewer,
         bool &$multiCurrencyWarning,
     ): array {
@@ -553,10 +577,11 @@ class ManagerKpiService
         // resolves to the target alone). Returns size 1 with just the viewer.
         if (count($memberIds) <= 1) {
             return [
-                // avg_pct is a team-level aggregate: a null (no-plan) score counts
-                // as 0, matching teamAvgPct/teamRank. The per-member score_pct
-                // below preserves null so the UI can render «—».
-                'avg_pct' => $targetScorePct ?? 0,
+                // avg_pct with a single member: the plan-weighted average
+                // (teamAvgPct) collapses to the target's own pct when they have
+                // a plan, or 0 when they don't (no data to average — same as
+                // the "no member has a plan" cohort case below).
+                'avg_pct' => $this->teamAvgPct([$targetIncomeFact], [$targetIncomePlan]),
                 'rank' => 1,
                 'size' => 1,
                 'members' => [
@@ -587,6 +612,18 @@ class ManagerKpiService
             $kpiData,
         );
 
+        /** @var list<int> $memberFacts */
+        $memberFacts = array_map(
+            static fn (array $row): int => $row['income_fact'],
+            $kpiData,
+        );
+
+        /** @var list<int> $memberPlans */
+        $memberPlans = array_map(
+            static fn (array $row): int => $row['income_plan'],
+            $kpiData,
+        );
+
         $members = [];
 
         foreach ($kpiData as $uid => $row) {
@@ -613,7 +650,7 @@ class ManagerKpiService
         );
 
         return [
-            'avg_pct' => $this->teamAvgPct(array_values($memberPcts)),
+            'avg_pct' => $this->teamAvgPct(array_values($memberFacts), array_values($memberPlans)),
             'rank' => $this->teamRank($targetScorePct, array_values($memberPcts)),
             'size' => count($memberIds),
             'members' => $members,

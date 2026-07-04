@@ -471,8 +471,10 @@ class ManagerCabinetKpiTest extends TestCase
         $response->assertJsonPath('team.size', 2);
         // Manager (100%) outranks the null (treated as 0) colleague → rank 1.
         $response->assertJsonPath('team.rank', 1);
-        // Median of [0, 100] = 50 (null treated as 0, does not inflate).
-        $response->assertJsonPath('team.avg_pct', 50);
+        // avg_pct is plan-weighted and EXCLUDES the no-plan colleague entirely
+        // (not folded in as a literal 0%, which would deflate the department
+        // figure) → only the manager's 10M/10M counts → 100.
+        $response->assertJsonPath('team.avg_pct', 100);
 
         $members = $response->json('team.members');
         $this->assertCount(2, $members);
@@ -561,7 +563,33 @@ class ManagerCabinetKpiTest extends TestCase
 
         $response->assertJsonPath('team.size', 1);
         $response->assertJsonPath('team.rank', 1);
+        // No plan for the solo manager → nothing to average → 0 (not a fake score).
+        $response->assertJsonPath('team.avg_pct', 0);
         $response->assertJsonCount(1, 'team.members');
+    }
+
+    public function test_solo_team_avg_pct_equals_own_score_when_measured(): void
+    {
+        // A solo manager (no dept, no shared line-manager) WITH a plan: avg_pct
+        // must collapse to their own achievement, not silently stay 0.
+        $manager = $this->makeManager(null);
+        $wonStage = $this->wonStage();
+
+        $this->wonDeal($manager, $wonStage, 8_000_000);
+        SalaryPlan::factory()->create([
+            'user_id' => $manager->id,
+            'period_year' => now()->year,
+            'period_month' => now()->month,
+            'personal_income_plan_kopecks' => 10_000_000,
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        $response->assertJsonPath('team.size', 1);
+        $response->assertJsonPath('personal.score_pct', 80);
+        $response->assertJsonPath('team.avg_pct', 80);
     }
 
     // -------------------------------------------------------------------------

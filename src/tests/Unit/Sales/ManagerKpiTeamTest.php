@@ -79,54 +79,73 @@ class ManagerKpiTeamTest extends TestCase
     // teamAvgPct
     // -------------------------------------------------------------------------
 
-    // teamAvgPct uses the MEDIAN (robust to outliers), not the arithmetic mean.
+    // teamAvgPct is a PLAN-WEIGHTED average: round(Σfact / Σplan * 100), summed
+    // only over members who actually have a plan (plan > 0) for the period —
+    // see the docblock for why a no-plan majority must not fold in as 0%.
 
-    public function test_team_avg_pct_odd_count_is_middle_value(): void
+    public function test_team_avg_pct_weighted_by_plan_size(): void
     {
-        // sorted [71, 82, 91] → median = 82 (middle element)
-        $this->assertSame(82, $this->service->teamAvgPct([91, 82, 71]));
-    }
-
-    public function test_team_avg_pct_even_count_averages_two_middles(): void
-    {
-        // sorted [90, 91] → (90 + 91) / 2 = 90.5 → round → 91
-        $this->assertSame(91, $this->service->teamAvgPct([90, 91]));
+        // member A: fact=91, plan=100 (91%); member B: fact=82, plan=100 (82%).
+        // Equal-sized plans → weighted average matches the simple mean: 86.5 → 87.
+        $this->assertSame(87, $this->service->teamAvgPct([91, 82], [100, 100]));
     }
 
     public function test_team_avg_pct_single_member(): void
     {
-        $this->assertSame(75, $this->service->teamAvgPct([75]));
+        $this->assertSame(75, $this->service->teamAvgPct([75], [100]));
     }
 
     public function test_team_avg_pct_empty_returns_zero(): void
     {
-        $this->assertSame(0, $this->service->teamAvgPct([]));
+        $this->assertSame(0, $this->service->teamAvgPct([], []));
     }
 
-    public function test_team_avg_pct_all_zero(): void
+    public function test_team_avg_pct_all_zero_fact_with_plans_is_zero(): void
     {
-        $this->assertSame(0, $this->service->teamAvgPct([0, 0, 0]));
+        $this->assertSame(0, $this->service->teamAvgPct([0, 0, 0], [100, 100, 100]));
     }
 
-    public function test_team_avg_pct_null_member_treated_as_zero(): void
+    public function test_team_avg_pct_no_plan_member_excluded_not_zeroed(): void
     {
-        // A no-plan member (null) counts as 0 and does not inflate the figure.
-        // sorted [0, 80, 100] → median = 80.
-        $this->assertSame(80, $this->service->teamAvgPct([100, 80, null]));
+        // A no-plan member (plan=0) is EXCLUDED from both sums — not folded in
+        // as a literal 0% (that would deflate the average, contradicting
+        // scorePct()'s own "no plan = undefined, not 0%" rule for that member).
+        // Only members 1/2 count: (100+80) / (100+100) * 100 = 90.
+        $this->assertSame(90, $this->service->teamAvgPct([100, 80, 999_999], [100, 100, 0]));
     }
 
-    public function test_team_avg_pct_all_null_returns_zero(): void
+    public function test_team_avg_pct_all_no_plan_returns_zero(): void
     {
-        // Every member without a plan → all treated as 0 → median 0.
-        $this->assertSame(0, $this->service->teamAvgPct([null, null, null]));
+        // Nobody in the cohort has a plan → nothing to average → 0 (same "no
+        // data" fallback as the empty-cohort case).
+        $this->assertSame(0, $this->service->teamAvgPct([500, 900, 1200], [0, 0, 0]));
     }
 
-    public function test_team_avg_pct_is_outlier_resistant(): void
+    public function test_team_avg_pct_regression_no_plan_majority_does_not_zero_out_overachievers(): void
     {
-        // The whole point of the median: a single 15072% outlier (giant won deal
-        // vs a small plan) must NOT drag the team figure. Mean would be ~3826%;
-        // median stays on the representative middle member.
-        // sorted [80, 90, 100, 165, 15072] → median = 100.
-        $this->assertSame(100, $this->service->teamAvgPct([90, 80, 15072, 165, 100]));
+        // Live-observed anomaly (2026-07-04): a department of 10 where 7 members
+        // have no salary_plan row for the period and 3 members are massively
+        // over plan (~3900%). The old median-of-zeros design collapsed avg_pct
+        // to 0 despite the team visibly crushing its targets. The plan-weighted
+        // average must reflect the 3 measured members honestly instead.
+        $facts = [591_200_00, 593_800_00, 585_700_00, 0, 0, 0, 0, 0, 0, 0];
+        $plans = [30_000_00, 30_000_00, 30_000_00, 0, 0, 0, 0, 0, 0, 0];
+
+        // Σfact = 1_770_700_00, Σplan = 90_000_00 → 1967.44...% → round → 1967.
+        $this->assertSame(1967, $this->service->teamAvgPct($facts, $plans));
+    }
+
+    public function test_team_avg_pct_outlier_weight_is_proportional_to_plan_size(): void
+    {
+        // A huge relative overshoot on a TINY plan should not dominate a team
+        // that otherwise tracks close to 100% — the weighting is by kopeck
+        // size, not by counting each member's percentage equally.
+        // member A: fact=15_072, plan=100 (15072%); members B/C/D/E: ~90-165%
+        // on much larger plans (10_000 each).
+        $facts = [15_072, 9_000, 8_000, 16_500, 10_000];
+        $plans = [100, 10_000, 10_000, 10_000, 10_000];
+
+        // Σfact = 58_572, Σplan = 40_100 → 146.06...% → round → 146.
+        $this->assertSame(146, $this->service->teamAvgPct($facts, $plans));
     }
 }
