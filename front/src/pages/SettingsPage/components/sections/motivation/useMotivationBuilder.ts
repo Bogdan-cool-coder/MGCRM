@@ -137,6 +137,16 @@ export const useMotivationBuilder = () => {
   const existingCardId = ref<number | null>(null)
   const status = ref<MotivationStatus>('draft')
 
+  // Identity gate — the (employee × period) the loaded card belongs to. Any
+  // persist (save / finalize / mark-paid) is refused unless this key still
+  // equals the current selection, so a plan can never be written to the wrong
+  // employee after the dropdown changes mid-flight. `null` = nothing loaded yet.
+  const buildKey = (userId: number, y: number, m: number): string => `${userId}|${y}|${m}`
+  const selectedKey = computed<string | null>(() =>
+    selectedEmployee.value ? buildKey(selectedEmployee.value.id, year.value, month.value) : null,
+  )
+  const loadedKey = ref<string | null>(null)
+
   const rows = reactive<PlanRowForm[]>(
     MK_POSITION_ORDER.map((k) => makeEmptyRow(k, baseCurrency.value)),
   )
@@ -270,10 +280,13 @@ export const useMotivationBuilder = () => {
   watch([() => JSON.stringify(rows), () => JSON.stringify(teamRule), baseCurrency], touch)
 
   // ─── Load / hydrate ──────────────────────────────────────────────────────
-  const applyPlan = (plan: MotivationPlan | null): void => {
+  // `forKey` is the (employee × period) identity this plan belongs to; recording
+  // it lets the persist gate refuse writes once the selection moves on.
+  const applyPlan = (plan: MotivationPlan | null, forKey: string | null): void => {
     // Mark hydration in progress so the deep dirty-watch (which flushes next tick)
     // doesn't treat this programmatic mutation as a user edit.
     hydrating.value = true
+    loadedKey.value = forKey
 
     // Reset rows to defaults first (in place — rows are index-aligned to kinds).
     rows.forEach((row) => {
@@ -336,10 +349,19 @@ export const useMotivationBuilder = () => {
 
   const loadCard = async (): Promise<void> => {
     if (!selectedEmployee.value) return
+    // Snapshot the requested identity BEFORE the await. When the response comes
+    // back we only hydrate the form if the user hasn't switched employee/period
+    // in the meantime — otherwise a late response for an un-requested card would
+    // populate the form under the newly-selected employee.
+    const requestedKey = buildKey(selectedEmployee.value.id, year.value, month.value)
     await loadState.run(
       async () => {
         const plan = await getMotivationPlan(selectedEmployee.value!.id, year.value, month.value)
-        applyPlan(plan)
+        if (requestedKey !== selectedKey.value) {
+          // Selection moved on while this request was in flight — discard it.
+          return
+        }
+        applyPlan(plan, requestedKey)
         await loadRates()
       },
       {
@@ -350,6 +372,20 @@ export const useMotivationBuilder = () => {
       },
     )
   }
+
+  // Hard reset — whenever the selected employee OR period changes, invalidate the
+  // loaded card so the form (steps 2–5) collapses and the user must press
+  // «Загрузить карту» again for the new selection. This is what prevents the
+  // previous employee's plan from being visible/editable/persistable under a
+  // freshly-picked employee.
+  watch([selectedEmployee, year, month], () => {
+    loaded.value = false
+    loadedKey.value = null
+    existingCardId.value = null
+    status.value = 'draft'
+    rows.forEach((row) => Object.assign(row, makeEmptyRow(row.kind, baseCurrency.value)))
+    markClean()
+  })
 
   // ─── Build payload ───────────────────────────────────────────────────────
   const buildItems = (): UpsertPlanItemPayload[] =>
@@ -438,6 +474,13 @@ export const useMotivationBuilder = () => {
   const saveState = useMutation<MotivationPlan>()
 
   const save = async (): Promise<void> => {
+    // Identity gate: never persist unless the loaded card still matches the
+    // selected employee×period. `canPersist` is false while a card is loading or
+    // when the selection has moved past the hydrated card.
+    if (!canPersist.value) {
+      toast.add({ severity: 'warn', summary: t('motivation.builder.reload_required'), life: 4000 })
+      return
+    }
     if (!validate()) {
       toast.add({ severity: 'error', summary: t('motivation.builder.err_form'), life: 4000 })
       return
@@ -468,7 +511,9 @@ export const useMotivationBuilder = () => {
           toast.add({ severity: 'info', summary: t('motivation.builder.no_prev_month'), life: 4000 })
           return
         }
-        applyPlan(plan)
+        // Copy hydrates the CURRENT period (that's what «copy previous month»
+        // means), so the loaded key is the current selection.
+        applyPlan(plan, selectedKey.value)
         markDirty() // copied data is unsaved for this month
       },
       {
@@ -485,6 +530,13 @@ export const useMotivationBuilder = () => {
 
   const runTransition = async (action: 'finalize' | 'mark-paid'): Promise<void> => {
     if (existingCardId.value == null) return
+    // Same identity gate as save() — finalize/mark-paid target existingCardId,
+    // which belongs to the loaded card; refuse if the selection has moved on so
+    // we never finalize/mark-paid the previous employee's card.
+    if (!canPersist.value) {
+      toast.add({ severity: 'warn', summary: t('motivation.builder.reload_required'), life: 4000 })
+      return
+    }
     await transitionState.run(
       async () => {
         const plan =
@@ -516,6 +568,20 @@ export const useMotivationBuilder = () => {
   /** True once a persisted card exists for this employee×period. */
   const cardExists = computed<boolean>(() => existingCardId.value != null)
 
+  /**
+   * Persist gate: the form may be saved/finalized/mark-paid only when a card is
+   * loaded, not currently (re)loading, and the loaded identity still equals the
+   * selected employee×period. Consumed by MkSaveBar to disable its buttons, and
+   * re-checked inside save()/runTransition() as a hard backstop.
+   */
+  const canPersist = computed<boolean>(
+    () =>
+      loaded.value &&
+      !loadState.isPending.value &&
+      loadedKey.value != null &&
+      loadedKey.value === selectedKey.value,
+  )
+
   return {
     // step 1
     selectedEmployee,
@@ -534,6 +600,7 @@ export const useMotivationBuilder = () => {
     status,
     isReadOnly,
     cardExists,
+    canPersist,
     errors,
     // rates
     autoRates,

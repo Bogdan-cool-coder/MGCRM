@@ -30,8 +30,13 @@ export const ALL_BOARD_BUCKETS: MyBoardBucket[] = [
 
 export const useMyTasksStore = defineStore('myTasks', () => {
   // ── Board state (kanban) ─────────────────────────────────────────────────────
+  // serverBuckets is the render source; boardResource only tracks loading/error
+  // and gates the commit (its own `data` is unused — rendering reads
+  // serverBuckets, which is written via the resource's token-guarded commit).
   const serverBuckets = ref<Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>>({})
-  const boardResource = useAsyncResource<MyBoardActivityDto[]>(() => [])
+  const boardResource = useAsyncResource<Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>>(
+    () => ({}),
+  )
 
   const boardLoading = computed(() => boardResource.loading.value)
   const boardError = computed(() => boardResource.error.value)
@@ -162,20 +167,30 @@ export const useMyTasksStore = defineStore('myTasks', () => {
   // ── Board load ────────────────────────────────────────────────────────────────
 
   async function loadBoard() {
-    await boardResource.run(async () => {
-      const r = await activityApi.getMyBoard()
-      const normalised = Object.fromEntries(
-        ALL_BOARD_BUCKETS.map((k) => [
-          k,
-          (r.data[k] ?? []).map((t) => ({
-            ...t,
-            assigned_to: t.responsible ?? t.assigned_to ?? null,
-          })),
-        ]),
-      ) as Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>
-      serverBuckets.value = normalised
-      return ALL_BOARD_BUCKETS.flatMap((k) => normalised[k] ?? [])
-    })
+    await boardResource.run(
+      async () => {
+        const r = await activityApi.getMyBoard()
+        return Object.fromEntries(
+          ALL_BOARD_BUCKETS.map((k) => [
+            k,
+            (r.data[k] ?? []).map((t) => ({
+              ...t,
+              assigned_to: t.responsible ?? t.assigned_to ?? null,
+            })),
+          ]),
+        ) as Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>
+      },
+      {
+        // Commit through the resource's commit phase so serverBuckets — the real
+        // render source for the board — is only written for the current request
+        // token. Committing inside the loader (as before) let a late stale
+        // loadBoard (mount + realtime concurrency) restore old buckets and
+        // "resurrect" an optimistically-completed task.
+        commit: (normalised) => {
+          serverBuckets.value = normalised
+        },
+      },
+    )
   }
 
   return {

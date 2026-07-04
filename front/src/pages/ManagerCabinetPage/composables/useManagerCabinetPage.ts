@@ -18,6 +18,7 @@ import type {
   KpiPeriod,
   ActivityFeedItem,
   ActivityFeedMeta,
+  ActivityFeedResponse,
 } from '@/entities/managerCabinet'
 
 const MONTH_LABEL_KEYS = [
@@ -103,9 +104,14 @@ export const useManagerCabinetPage = () => {
   // ─── Async resources ──────────────────────────────────────────────────────
   const profileResource = useAsyncResource<MeProfile | null>(() => null)
   const kpiResource = useAsyncResource<KpiResponse | null>(() => null)
-  const feedItemsRef = ref<ActivityFeedItem[]>([])
-  const feedMetaRef = ref<ActivityFeedMeta | null>(null)
-  const feedLoadingRef = ref<boolean>(false)
+  // Feed goes through useAsyncResource too so the last-wins request gate drops
+  // out-of-order responses — otherwise a slow fetch for a previously viewed
+  // member/filter could resolve after a newer one and show foreign activities
+  // under the current name.
+  const feedResource = useAsyncResource<ActivityFeedResponse | null>(() => null)
+  const feedItemsRef = computed<ActivityFeedItem[]>(() => feedResource.data.value?.data ?? [])
+  const feedMetaRef = computed<ActivityFeedMeta | null>(() => feedResource.data.value?.meta ?? null)
+  const feedLoadingRef = feedResource.loading
 
   // ─── Loaders ──────────────────────────────────────────────────────────────
   const loadProfile = async (): Promise<void> => {
@@ -142,16 +148,15 @@ export const useManagerCabinetPage = () => {
   }
 
   const loadFeed = async (): Promise<void> => {
-    feedLoadingRef.value = true
     try {
-      const res = await getActivityFeed({
-        period: period.value,
-        kind: feedKind.value,
-        user_id: viewedUserId.value ?? undefined,
-        page: feedPage.value,
-      })
-      feedItemsRef.value = res.data
-      feedMetaRef.value = res.meta
+      await feedResource.run(() =>
+        getActivityFeed({
+          period: period.value,
+          kind: feedKind.value,
+          user_id: viewedUserId.value ?? undefined,
+          page: feedPage.value,
+        }),
+      )
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       toast.add({
@@ -160,8 +165,6 @@ export const useManagerCabinetPage = () => {
         detail: msg,
         life: 5000,
       })
-    } finally {
-      feedLoadingRef.value = false
     }
   }
 
@@ -187,21 +190,27 @@ export const useManagerCabinetPage = () => {
   }
 
   // ─── Watchers ─────────────────────────────────────────────────────────────
+  // The feed depends on period + kind + page + viewedUser. Watch a single
+  // composite key so exactly ONE loadFeed fires per change — previously both the
+  // `period` and `[feedKind, feedPage]` watchers fired loadFeed when setPeriod
+  // reset the page from >1, doubling the request.
+  watch(
+    () => [period.value, feedKind.value, feedPage.value, viewedUserId.value].join('|'),
+    () => {
+      void loadFeed()
+    },
+  )
+
   watch(period, () => {
     void loadKpi()
-    void loadFeed()
   })
 
-  watch([feedKind, feedPage], () => {
-    void loadFeed()
-  })
-
-  // Re-load everything when a privileged viewer switches the inspected member.
+  // Re-load profile + KPI when a privileged viewer switches the inspected member
+  // (the feed is handled by the composite watcher above).
   watch(viewedUserId, () => {
     feedPage.value = 1
     void loadProfile()
     void loadKpi()
-    void loadFeed()
   })
 
   // ─── Mount ────────────────────────────────────────────────────────────────

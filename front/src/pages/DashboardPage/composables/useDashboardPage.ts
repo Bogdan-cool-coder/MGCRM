@@ -51,9 +51,19 @@ export const useDashboardPage = (options: DashboardPageOptions) => {
   // dataReady flips to true after the first successful (or failed) fetch.
   const dataReady = ref(false)
 
+  // Stable string identity of the filters a request was issued for — used to
+  // detect changes that happened while the first load was in flight.
+  const filtersKey = (): string => {
+    const f = currentFilters()
+    return `${(f.months ?? []).join(',')}|${f.pipeline_id ?? ''}|${f.manager_id ?? ''}`
+  }
+  let loadedKey = ''
+
   const reload = async (): Promise<void> => {
+    const requestedKey = filtersKey()
     try {
       await dashboardResource.run(() => getDashboardData(currentFilters()))
+      loadedKey = requestedKey
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       toast.add({
@@ -94,6 +104,12 @@ export const useDashboardPage = (options: DashboardPageOptions) => {
   const start = async (): Promise<void> => {
     await reload()
     initialized.value = true
+    // If the user changed a filter WHILE the first load was in flight (the watch
+    // was still gated by initialized=false), the loaded data is now stale for the
+    // current selection — reload once to catch up instead of silently ignoring it.
+    if (loadedKey !== filtersKey()) {
+      void reload()
+    }
   }
 
   // ─── Export ─────────────────────────────────────────────────────────────────

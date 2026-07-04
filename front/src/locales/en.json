@@ -3852,6 +3852,7 @@
       "card": {
         "complete": "Done",
         "completed": "Task completed",
+        "completeError": "Failed to complete the task",
         "overdueSince": "overdue {when}",
         "today": "today {time}",
         "tomorrow": "tomorrow {time}"
@@ -4550,7 +4551,28 @@
         "owner_user_id": "Owner",
         "owner_id": "Owner",
         "department_id": "Department",
-        "acquisition_channel_id": "Acquisition channel"
+        "acquisition_channel_id": "Acquisition channel",
+        "legal_form": "Legal form",
+        "title": "Title",
+        "amount": "Amount",
+        "discount_percent": "Discount",
+        "currency": "Currency",
+        "company_id": "Company",
+        "stage_id": "Stage",
+        "pipeline_id": "Pipeline",
+        "expected_close_date": "Expected close date",
+        "expected_sign_date": "Expected sign date",
+        "expected_payment_date": "Expected payment date",
+        "signed_at": "Sign date",
+        "paid_at": "Payment date",
+        "paid_amount": "Paid amount",
+        "payment_currency": "Payment currency",
+        "tags": "Tags",
+        "perpetual_license": "Perpetual license",
+        "amount_locked": "Amount locked",
+        "lost_reason": "Lost reason",
+        "lost_reason_id": "Lost reason",
+        "contract_id": "Contract"
       }
     },
     "termination": {
@@ -4829,7 +4851,10 @@
       "toastSaved": "Draft saved",
       "toastDeleted": "Draft deleted",
       "toastSaveFailed": "Failed to save the draft",
-      "toastDeleteFailed": "Failed to delete the draft"
+      "toastDeleteFailed": "Failed to delete the draft",
+      "discardTitle": "Unsaved draft",
+      "discardBody": "This draft has unsaved changes. Leave without saving?",
+      "discardAccept": "Leave"
     }
   },
   "accessControl": {
@@ -5115,7 +5140,8 @@
       "err_pool": "Enter the pool amount",
       "err_threshold": "The threshold must be between 1 and 100",
       "err_split": "Enter a value from 1 to 99",
-      "err_form": "Fix the errors in the form"
+      "err_form": "Fix the errors in the form",
+      "reload_required": "The employee or period changed — reload the card before saving"
     }
   }
 }

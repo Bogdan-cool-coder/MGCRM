@@ -38,7 +38,14 @@
     </div>
 
     <!-- Card content -->
-    <template v-else-if="card">
+    <div v-else-if="card" class="mk-tab__body">
+      <!-- Refetch overlay: while a NEW period/user card is loading over an
+           already-visible card, dim it + spinner so the previous month's
+           numbers are not mistaken for the current selection. -->
+      <div v-if="loading" class="mk-tab__overlay">
+        <ProgressSpinner style="width: 40px; height: 40px" stroke-width="4" />
+      </div>
+
       <!-- Compact header row: avatar + name · pipeline + status pill -->
       <MkHeader :meta="card.meta" class="mk-tab__section" />
 
@@ -61,7 +68,7 @@
       <MkSalaryTable :items="card.items" :total="card.total" class="mk-tab__section" />
 
       <MkRatesFooter v-if="card.rates" :rates="card.rates" />
-    </template>
+    </div>
   </div>
 </template>
 
@@ -70,6 +77,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
+import ProgressSpinner from 'primevue/progressspinner'
 import MkHeader from './MkHeader.vue'
 import MkPayHero from './MkPayHero.vue'
 import MkDeptPlan from './MkDeptPlan.vue'
@@ -98,6 +106,22 @@ const goToBuilder = (): void => {
 .mk-tab {
   display: flex;
   flex-direction: column;
+}
+
+.mk-tab__body {
+  position: relative;
+}
+
+.mk-tab__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: $space-8;
+  border-radius: $radius-lg;
+  background: color-mix(in srgb, $surface-card 55%, transparent);
 }
 
 .mk-tab__section {

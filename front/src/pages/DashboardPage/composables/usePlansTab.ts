@@ -68,8 +68,14 @@ export const usePlansTab = (deps: PlansTabDeps) => {
 
   const loadMatrix = async (): Promise<void> => {
     endpointMissing.value = false
+    // Snapshot the dirty-set size before the request. We only clear dirty if the
+    // load actually committed (run !== undefined — not gate-dropped) AND the user
+    // hasn't started typing new values while it was in flight (dirty didn't grow).
+    // Previously clearDirty() ran after EVERY resolve, wiping input a user made
+    // during a slow load.
+    const dirtyBefore = core.dirtyCount.value
     try {
-      await matrixResource.run(() =>
+      const committed = await matrixResource.run(() =>
         getPlanMatrix({
           metric,
           scope_type: 'user',
@@ -78,7 +84,9 @@ export const usePlansTab = (deps: PlansTabDeps) => {
           pipeline_id: deps.pipelineId(),
         }),
       )
-      core.clearDirty()
+      if (committed !== undefined && core.dirtyCount.value <= dirtyBefore) {
+        core.clearDirty()
+      }
     } catch (err) {
       if (getApiErrorStatus(err) === 404) {
         // Endpoint not yet shipped — degrade to an empty grid + hint (no error toast).

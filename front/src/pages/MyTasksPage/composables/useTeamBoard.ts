@@ -52,7 +52,11 @@ export interface TeamBoardParams {
 
 export function useTeamBoard() {
   const serverBuckets = ref<Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>>({})
-  const boardResource = useAsyncResource<MyBoardActivityDto[]>(() => [])
+  // boardResource tracks loading/error and gates the commit; serverBuckets is the
+  // render source, written only via the token-guarded commit below.
+  const boardResource = useAsyncResource<Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>>(
+    () => ({}),
+  )
   const rescheduleMutation = useMutation()
 
   // Current filter params — stored so reload() re-uses the last params
@@ -75,31 +79,39 @@ export function useTeamBoard() {
 
   async function load(params: TeamBoardParams = {}) {
     lastParams.value = params
-    await boardResource.run(async () => {
-      const clean: Parameters<typeof activityApi.getTeamBoard>[0] = {}
-      if (params.responsible_id) clean.responsible_id = params.responsible_id
-      if (params.q) clean.q = params.q
-      if (params.kind) clean.kind = params.kind
-      if (params.status) clean.status = params.status
-      if (params.priority) clean.priority = params.priority
-      if (params.due_from) clean.due_from = params.due_from
-      if (params.due_to) clean.due_to = params.due_to
+    await boardResource.run(
+      async () => {
+        const clean: Parameters<typeof activityApi.getTeamBoard>[0] = {}
+        if (params.responsible_id) clean.responsible_id = params.responsible_id
+        if (params.q) clean.q = params.q
+        if (params.kind) clean.kind = params.kind
+        if (params.status) clean.status = params.status
+        if (params.priority) clean.priority = params.priority
+        if (params.due_from) clean.due_from = params.due_from
+        if (params.due_to) clean.due_to = params.due_to
 
-      const r = await activityApi.getTeamBoard(clean)
+        const r = await activityApi.getTeamBoard(clean)
 
-      const normalised = Object.fromEntries(
-        ALL_TEAM_BOARD_BUCKETS.map((k) => [
-          k,
-          (r.data[k] ?? []).map((t) => ({
-            ...t,
-            assigned_to: t.responsible ?? t.assigned_to ?? null,
-          })),
-        ]),
-      ) as Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>
-
-      serverBuckets.value = normalised
-      return ALL_TEAM_BOARD_BUCKETS.flatMap((k) => normalised[k] ?? [])
-    })
+        return Object.fromEntries(
+          ALL_TEAM_BOARD_BUCKETS.map((k) => [
+            k,
+            (r.data[k] ?? []).map((t) => ({
+              ...t,
+              assigned_to: t.responsible ?? t.assigned_to ?? null,
+            })),
+          ]),
+        ) as Partial<Record<MyBoardBucket, MyBoardActivityDto[]>>
+      },
+      {
+        // Commit through the token-guarded phase — a late stale team-board
+        // response (e.g. rapid search typing) can no longer overwrite a fresher
+        // one. The search watcher is now debounced too, but this closes the race
+        // for concurrent load/reload paths.
+        commit: (normalised) => {
+          serverBuckets.value = normalised
+        },
+      },
+    )
   }
 
   async function reload() {

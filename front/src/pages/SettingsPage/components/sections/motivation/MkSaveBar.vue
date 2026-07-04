@@ -31,6 +31,7 @@
           icon="pi pi-lock"
           :label="t('motivation.builder.finalize')"
           :loading="transitioning"
+          :disabled="!canPersist"
           @click="emit('finalize')"
         />
         <Button
@@ -40,6 +41,7 @@
           icon="pi pi-check-circle"
           :label="t('motivation.builder.mark_paid')"
           :loading="transitioning"
+          :disabled="!canPersist"
           @click="emit('mark-paid')"
         />
         <Tag
@@ -61,7 +63,7 @@
         icon="pi pi-save"
         :label="cardExists ? t('motivation.builder.update') : t('motivation.builder.save')"
         :loading="saving"
-        :disabled="readOnly"
+        :disabled="readOnly || !canPersist"
         @click="emit('save')"
       />
     </div>
@@ -82,6 +84,9 @@ defineProps<{
   cardExists: boolean
   readOnly: boolean
   canTransition: boolean
+  /** Persist gate — false while (re)loading or when the selection has moved past
+   *  the loaded card; disables Save/Finalize/Mark-paid as a UI backstop. */
+  canPersist: boolean
   saving: boolean
   copyingPrev: boolean
   transitioning: boolean

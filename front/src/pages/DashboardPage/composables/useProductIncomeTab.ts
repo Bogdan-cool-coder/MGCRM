@@ -59,13 +59,18 @@ export const useProductIncomeTab = (deps: ProductIncomeTabDeps) => {
 
   const load = async (): Promise<void> => {
     endpointMissing.value = false
+    // Only clear dirty when the load actually commits and no new edits arrived
+    // while it was in flight — otherwise a slow reload wipes user input.
+    const dirtyBefore = core.dirtyCount.value
     try {
-      await resource.run(() =>
+      const committed = await resource.run(() =>
         getProductIncomeReport({ year: deps.year(), layer: deps.layer() }).then(
           productIncomeToMatrix,
         ),
       )
-      core.clearDirty()
+      if (committed !== undefined && core.dirtyCount.value <= dirtyBefore) {
+        core.clearDirty()
+      }
     } catch (err) {
       if (getApiErrorStatus(err) === 404) {
         endpointMissing.value = true

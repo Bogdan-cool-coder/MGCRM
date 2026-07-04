@@ -2,8 +2,16 @@
   <div class="inbox-list">
     <!-- Scrollable rows -->
     <div class="inbox-list__scroll">
-      <!-- Loading skeleton -->
-      <template v-if="loading">
+      <!-- Refetch overlay: skeleton only on the FIRST load (empty list); on any
+           later refetch (filter/page/toggle) keep the rows visible and dim them
+           with a spinner instead of wiping to skeleton — preserves scroll +
+           visual context. -->
+      <div v-if="loading && messages.length > 0" class="inbox-list__overlay">
+        <ProgressSpinner style="width: 32px; height: 32px" stroke-width="4" />
+      </div>
+
+      <!-- Loading skeleton (first load only) -->
+      <template v-if="loading && messages.length === 0">
         <div v-for="n in 8" :key="n" class="inbox-list__skeleton-row">
           <Skeleton shape="circle" size="34px" />
           <div class="inbox-list__skeleton-lines">
@@ -78,8 +86,9 @@
       </template>
     </div>
 
-    <!-- Footer: count + paginator -->
-    <div v-if="!loading && !error && messages.length > 0" class="inbox-list__footer">
+    <!-- Footer: count + paginator (kept visible during refetch to avoid layout
+         jump; only hidden on error / first-load skeleton). -->
+    <div v-if="!error && messages.length > 0" class="inbox-list__footer">
       <span class="inbox-list__count">
         {{ t('inbox.list.shownOf', { shown: messages.length, total: totalRecords }) }}
       </span>
@@ -101,6 +110,7 @@ import { useI18n } from 'vue-i18n'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
+import ProgressSpinner from 'primevue/progressspinner'
 import Paginator from 'primevue/paginator'
 import InboxMessageRow from './InboxMessageRow.vue'
 import type { InboundMessage } from '@/api/inbox'
@@ -156,6 +166,7 @@ const folderEmptyIcon = computed(() => {
 }
 
 .inbox-list__scroll {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -176,6 +187,21 @@ const folderEmptyIcon = computed(() => {
       background: var(--p-surface-300);
     }
   }
+}
+
+// Refetch spinner — sticky so it stays pinned near the top of the visible list
+// while the underlying rows are dimmed during a background reload. Height 0 so it
+// doesn't push rows down; the spinner overflows visibly below the sticky anchor.
+.inbox-list__overlay {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  height: 0;
+  overflow: visible;
+  padding-top: $space-6;
+  pointer-events: none;
 }
 
 // ── Skeleton rows ─────────────────────────────────────────────────────────────

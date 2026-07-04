@@ -48,8 +48,15 @@
 
     <!-- Rows -->
     <template v-else>
-      <div class="activity-feed__rows">
-        <div v-for="row in feed" :key="row.id" class="activity-feed__row">
+      <div class="activity-feed__body">
+        <!-- Refetch overlay: while a new filter/page/member is loading over
+             existing rows, dim + spinner so stale activities aren't read as the
+             new selection (kind switch / member switch feedback). -->
+        <div v-if="feedLoading" class="activity-feed__overlay">
+          <ProgressSpinner style="width: 32px; height: 32px" stroke-width="4" />
+        </div>
+        <div class="activity-feed__rows">
+          <div v-for="row in feed" :key="row.id" class="activity-feed__row">
           <i
             :class="['pi', kindIcon(row.kind), 'activity-feed__row-icon']"
             :style="{ color: kindColor(row.kind) }"
@@ -73,6 +80,7 @@
           >{{ targetLabel(row) }}</span>
           <span v-else class="activity-feed__target activity-feed__target--none">&mdash;</span>
           <span class="activity-feed__date">{{ formatDate(row.due_at ?? row.created_at) }}</span>
+          </div>
         </div>
       </div>
 
@@ -119,6 +127,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
 import Skeleton from 'primevue/skeleton'
+import ProgressSpinner from 'primevue/progressspinner'
 import type { ActivityFeedItem, ActivityFeedMeta } from '@/entities/managerCabinet'
 
 type FeedKind = 'all' | 'call' | 'meeting' | 'task' | 'note'
@@ -305,6 +314,21 @@ const goto = (page: number): void => {
 }
 
 // ── Rows ─────────────────────────────────────────────────────────────────────
+.activity-feed__body {
+  position: relative;
+}
+
+.activity-feed__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: $space-5;
+  background: color-mix(in srgb, $surface-card 55%, transparent);
+}
+
 .activity-feed__rows {
   display: flex;
   flex-direction: column;

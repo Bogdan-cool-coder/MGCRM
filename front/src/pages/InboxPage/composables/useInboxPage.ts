@@ -114,12 +114,23 @@ export const useInboxPage = () => {
   }
 
   function setFolder(folder: InboxFolder) {
-    filters.value.folder = folder
-    currentPage.value = 1
-    // Leaving a message-list folder for drafts (or back) resets selection focus.
-    if (folder === 'drafts') {
-      selectedId.value = null
-      selectedMessage.value = null
+    // Guard against silently discarding a half-typed draft when navigating away
+    // from the Drafts folder. Entering Drafts (or staying) needs no guard.
+    const leavingDraftsDirty =
+      filters.value.folder === 'drafts' && folder !== 'drafts' && draftDirty.value
+    const apply = () => {
+      filters.value.folder = folder
+      currentPage.value = 1
+      // Leaving a message-list folder for drafts (or back) resets selection focus.
+      if (folder === 'drafts') {
+        selectedId.value = null
+        selectedMessage.value = null
+      }
+    }
+    if (leavingDraftsDirty) {
+      guardDraftDirty(apply)
+    } else {
+      apply()
     }
   }
 
@@ -197,16 +208,35 @@ export const useInboxPage = () => {
       if (range[1]) params.date_to = localDateString(range[1])
     }
 
-    await listResource.run(async () => {
-      const result = await inboxApi.list(params)
-      totalRecords.value = result.meta.total
-      return result.data
-    })
+    // The loader returns the rows (the resource's T = InboundMessage[]); the
+    // page total is carried out-of-band and applied in the commit phase, which
+    // only runs for the current request token. Writing totalRecords inside the
+    // loader (as before) let a late stale response desync the paginator
+    // ("3 rows, of 200, 7 pages") even though the gate protected the rows.
+    let pendingTotal = 0
+    await listResource.run(
+      async () => {
+        const result = await inboxApi.list(params)
+        pendingTotal = result.meta.total
+        return result.data
+      },
+      {
+        commit: (rows) => {
+          listResource.data.value = rows
+          totalRecords.value = pendingTotal
+        },
+      },
+    )
 
     // Refresh the sidebar badge + folder/channel counts after each list load.
     void inboxStore.fetchUnreadCount()
     void fetchCounts()
   }
+
+  // When a search commits we reset to page 1. If the page actually changes, the
+  // main watcher below already refetches — so we suppress the search watcher's
+  // own fetch to avoid two identical requests (each of which also pulls counts).
+  let suppressSearchFetch = false
 
   // Refetch on filter changes (watch debounced q separately)
   watch(
@@ -225,7 +255,15 @@ export const useInboxPage = () => {
   )
 
   watch(debouncedQ, () => {
-    currentPage.value = 1
+    if (currentPage.value !== 1) {
+      // The page change triggers the main watcher's fetch; don't double-fetch.
+      suppressSearchFetch = true
+      currentPage.value = 1
+    }
+    if (suppressSearchFetch) {
+      suppressSearchFetch = false
+      return
+    }
     void fetchMessages()
   })
 
@@ -506,32 +544,72 @@ export const useInboxPage = () => {
   const draftDeleteMutation = useMutation<void>()
 
   async function fetchDrafts() {
-    await draftsResource.run(async () => {
-      const result = await inboxApi.listDrafts(1, DEFAULT_PER_PAGE)
-      totalRecords.value = result.meta.total
-      return result.data
-    })
+    // Honour the current page/perPage (was hard-coded to page 1, so the paginator
+    // could never reach drafts beyond the first page). Total is applied in the
+    // commit phase so a stale response can't desync the paginator.
+    let pendingTotal = 0
+    await draftsResource.run(
+      async () => {
+        const result = await inboxApi.listDrafts(currentPage.value, perPage.value)
+        pendingTotal = result.meta.total
+        return result.data
+      },
+      {
+        commit: (rows) => {
+          draftsResource.data.value = rows
+          totalRecords.value = pendingTotal
+        },
+      },
+    )
     void fetchCounts()
   }
 
-  /** Open an existing draft into the editor. */
-  function openDraft(draft: InboxDraft) {
-    selectedDraftId.value = draft.id
-    draftForm.value = {
-      subject: draft.subject ?? '',
-      body: draft.body ?? '',
-      related_message_id: draft.related_message_id,
+  /**
+   * Run `action` immediately, unless the current draft has unsaved edits — then
+   * ask for confirmation first so switching drafts / starting a new one / leaving
+   * the folder can't silently discard a half-typed reply.
+   */
+  function guardDraftDirty(action: () => void) {
+    if (!draftDirty.value) {
+      action()
+      return
     }
-    draftDirty.value = false
-    mobileView.value = 'detail'
+    confirm.require({
+      header: t('inbox.drafts.discardTitle'),
+      message: t('inbox.drafts.discardBody'),
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: t('inbox.drafts.discardAccept'),
+      rejectLabel: t('common.cancel'),
+      acceptProps: { severity: 'danger' },
+      accept: () => {
+        draftDirty.value = false
+        action()
+      },
+    })
   }
 
-  /** Start a fresh blank draft (from the "Черновики" pane). */
+  /** Open an existing draft into the editor (guards unsaved edits). */
+  function openDraft(draft: InboxDraft) {
+    guardDraftDirty(() => {
+      selectedDraftId.value = draft.id
+      draftForm.value = {
+        subject: draft.subject ?? '',
+        body: draft.body ?? '',
+        related_message_id: draft.related_message_id,
+      }
+      draftDirty.value = false
+      mobileView.value = 'detail'
+    })
+  }
+
+  /** Start a fresh blank draft (from the "Черновики" pane) — guards unsaved edits. */
   function startNewDraft() {
-    selectedDraftId.value = null
-    draftForm.value = { subject: '', body: '', related_message_id: null }
-    draftDirty.value = true // new blank is "dirty" so Save is offered
-    mobileView.value = 'detail'
+    guardDraftDirty(() => {
+      selectedDraftId.value = null
+      draftForm.value = { subject: '', body: '', related_message_id: null }
+      draftDirty.value = true // new blank is "dirty" so Save is offered
+      mobileView.value = 'detail'
+    })
   }
 
   function markDraftDirty() {

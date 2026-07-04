@@ -3,8 +3,10 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { useMutation } from '@/composables/async/useMutation'
-import { adminUsersApi } from '@/api/adminUsers'
+import { useAsyncResource } from '@/composables/async/useAsyncResource'
+import { adminUsersApi, type PaginatedAdminUsers } from '@/api/adminUsers'
 import { usersApi, type UserOptionDto } from '@/api/users'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useUserStore } from '@/stores/user'
 import type {
   AdminUserDto,
@@ -20,6 +22,16 @@ export const useUsersPage = () => {
   const toast = useToast()
   const confirm = useConfirm()
   const userStore = useUserStore()
+  const usersCache = useUsersCache()
+
+  // Invalidate the app-wide owner/assignee cache after any user CRUD so selects
+  // elsewhere (deal owner, task responsible, custom user_ref fields) reflect
+  // new / renamed / deactivated users without a full page reload.
+  function invalidateUserCaches(): void {
+    usersCache.invalidate()
+    // The local manager-candidate list is length-cached — clear it so it refetches.
+    managerCandidates.value = []
+  }
 
   // ─── Gate ────────────────────────────────────────────────────────────────────
   const canManage = computed(() => {
@@ -36,10 +48,14 @@ export const useUsersPage = () => {
   const perPage = 25
 
   // ─── Data ─────────────────────────────────────────────────────────────────────
-  const users = ref<AdminUserDto[]>([])
-  const total = ref(0)
-  const lastPage = ref(1)
-  const loading = ref(false)
+  // Backed by useAsyncResource so its last-wins request gate drops out-of-order
+  // responses: rapid typing / filter switches could otherwise let a slow stale
+  // request resolve after a newer one and repaint the table with old rows.
+  const usersResource = useAsyncResource<PaginatedAdminUsers | null>(() => null)
+  const users = computed<AdminUserDto[]>(() => usersResource.data.value?.data ?? [])
+  const total = computed<number>(() => usersResource.data.value?.meta.total ?? 0)
+  const lastPage = computed<number>(() => usersResource.data.value?.meta.last_page ?? 1)
+  const loading = usersResource.loading
 
   // ─── Departments (for Select dropdown) ───────────────────────────────────────
   const departments = ref<DepartmentOption[]>([])
@@ -79,33 +95,61 @@ export const useUsersPage = () => {
 
   // ─── Fetch users ──────────────────────────────────────────────────────────────
   async function fetchUsers() {
-    loading.value = true
-    try {
-      const params: GetAdminUsersParams = {
-        page: currentPage.value,
-        per_page: perPage,
-      }
-      if (searchFilter.value.trim()) params.search = searchFilter.value.trim()
-      if (roleFilter.value) params.role = roleFilter.value
-      if (departmentFilter.value !== null) params.department_id = departmentFilter.value
-      if (isActiveFilter.value !== null) params.is_active = isActiveFilter.value
+    const params: GetAdminUsersParams = {
+      page: currentPage.value,
+      per_page: perPage,
+    }
+    if (searchFilter.value.trim()) params.search = searchFilter.value.trim()
+    if (roleFilter.value) params.role = roleFilter.value
+    if (departmentFilter.value !== null) params.department_id = departmentFilter.value
+    if (isActiveFilter.value !== null) params.is_active = isActiveFilter.value
 
-      const result = await adminUsersApi.getUsers(params)
-      users.value = result.data
-      total.value = result.meta.total
-      lastPage.value = result.meta.last_page
+    try {
+      await usersResource.run(() => adminUsersApi.getUsers(params))
     } catch {
       toast.add({ severity: 'error', summary: t('common.loadError'), life: 3000 })
-    } finally {
-      loading.value = false
     }
   }
 
-  watch([searchFilter, roleFilter, departmentFilter, isActiveFilter], () => {
-    currentPage.value = 1
+  // Filter changes reset the page to 1 AND refetch. To avoid a double request
+  // (the page reset would otherwise trigger the currentPage watcher on top of
+  // this one), we suppress the page watcher for the programmatic reset.
+  let suppressPageWatch = false
+
+  // Reset to page 1 without triggering the currentPage watcher's own fetch.
+  // Only arm the suppression when the value actually changes (otherwise the flag
+  // would linger and swallow the next genuine page navigation).
+  function resetPage() {
+    if (currentPage.value !== 1) {
+      suppressPageWatch = true
+      currentPage.value = 1
+    }
+  }
+
+  // Debounce search input (300ms) so typing doesn't fire a request per keystroke;
+  // other filter changes apply immediately.
+  let searchDebounce: ReturnType<typeof setTimeout> | null = null
+  watch(searchFilter, () => {
+    if (searchDebounce) clearTimeout(searchDebounce)
+    searchDebounce = setTimeout(() => {
+      searchDebounce = null
+      resetPage()
+      void fetchUsers()
+    }, 300)
+  })
+
+  watch([roleFilter, departmentFilter, isActiveFilter], () => {
+    resetPage()
     void fetchUsers()
   })
-  watch(currentPage, () => void fetchUsers())
+
+  watch(currentPage, () => {
+    if (suppressPageWatch) {
+      suppressPageWatch = false
+      return
+    }
+    void fetchUsers()
+  })
 
   void fetchUsers()
 
@@ -131,6 +175,7 @@ export const useUsersPage = () => {
       {
         onSuccess: () => {
           dialogVisible.value = false
+          invalidateUserCaches()
           void fetchUsers()
           toast.add({ severity: 'success', summary: t('admin.users.created'), life: 2500 })
         },
@@ -154,6 +199,7 @@ export const useUsersPage = () => {
         onSuccess: () => {
           dialogVisible.value = false
           editingUser.value = null
+          invalidateUserCaches()
           void fetchUsers()
           toast.add({ severity: 'success', summary: t('admin.users.updated'), life: 2500 })
         },
@@ -212,6 +258,7 @@ export const useUsersPage = () => {
       accept: async () => {
         try {
           await adminUsersApi.deactivateUser(user.id)
+          invalidateUserCaches()
           void fetchUsers()
           toast.add({ severity: 'success', summary: t('admin.users.deactivated'), life: 2500 })
         } catch (err) {
@@ -226,6 +273,7 @@ export const useUsersPage = () => {
   async function reactivate(user: AdminUserDto) {
     try {
       await adminUsersApi.updateUser(user.id, { is_active: true })
+      invalidateUserCaches()
       void fetchUsers()
       toast.add({ severity: 'success', summary: t('admin.users.activated'), life: 2500 })
     } catch {

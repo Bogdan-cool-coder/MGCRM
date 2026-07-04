@@ -21,6 +21,7 @@ import { useNotificationsStore } from '@/stores/notificationsStore'
 import { useOnboardingStore } from '@/stores/onboardingStore'
 import { useSalesStore } from '@/stores/salesStore'
 import { useLayoutStore } from '@/stores/layout'
+import { useUsersCache } from '@/composables/crm/useUsersCache'
 
 /**
  * Reset user-scoped stores + clear persisted recent-routes history.
@@ -49,4 +50,9 @@ export function resetAllStores(pinia: Pinia): void {
   // must NOT leak into the next session. Clear only that slice; persist plugin
   // writes the cleared value back to localStorage automatically.
   useLayoutStore(pinia).recentRoutes = []
+
+  // The users cache is a module-level singleton (not a Pinia store), so $reset
+  // above doesn't touch it — invalidate explicitly so the previous session's
+  // user list can't bleed into the next login's owner/assignee selects.
+  useUsersCache().invalidate()
 }

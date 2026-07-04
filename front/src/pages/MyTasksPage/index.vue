@@ -89,6 +89,7 @@
           :total="total"
           :loading="loading"
           :per-page="perPage"
+          :page="page"
           :preset="activePreset"
           :completing-id="completingId"
           :reopening-id="reopeningId"
@@ -290,12 +291,14 @@ function bucketsForScope(scope: TaskScope): MyBoardBucket[] {
 const {
   activePreset,
   filters,
+  page,
   perPage,
   items,
   total,
   loading,
   counts,
   load,
+  fetchPage,
   onPage,
   resetFilters,
   refreshCounts,
@@ -328,12 +331,21 @@ function buildTeamBoardParams() {
   }
 }
 
-// Reload team board when any filter changes (uses unified filters ref)
+// Reload team board when any filter changes (uses unified filters ref).
+// Debounced (400ms) to match the list-view search: without it, typing in the
+// team search fired one team-board request per character, and the last-wins
+// gate inside useTeamBoard.load kept them safe but not free (request storm +
+// board flicker).
+let teamBoardDebounce: ReturnType<typeof setTimeout> | null = null
 watch(
   () => ({ ...filters.value }),
   () => {
     if (taskMode.value !== 'team' || activeView.value !== 'kanban') return
-    void teamBoard.load(buildTeamBoardParams())
+    if (teamBoardDebounce) clearTimeout(teamBoardDebounce)
+    teamBoardDebounce = setTimeout(() => {
+      teamBoardDebounce = null
+      void teamBoard.load(buildTeamBoardParams())
+    }, 400)
   },
   { deep: true },
 )
@@ -732,7 +744,7 @@ async function onKanbanComplete(id: number) {
     } catch {
       // Rollback: reload team board
       void teamBoard.reload()
-      onKanbanError(t('tasks.board.card.completed'))
+      onKanbanError(t('tasks.board.card.completeError'))
     }
     return
   }
@@ -796,6 +808,40 @@ async function onKanbanReschedule(taskId: number, targetBucket: MyBoardBucket) {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
+// ── Realtime: subscribe to personal + team task events ───────────────────────
+// MUST run synchronously in setup — useTasksRealtime registers its own
+// onUnmounted(cleanup) internally, and that registration only binds to the
+// active component instance during synchronous setup. Calling it after an
+// `await` inside async onMounted (as before) meant the instance was already
+// gone: the teardown never registered, Echo subscriptions leaked, and every
+// revisit stacked another set of subscriptions → N-fold background refetches.
+// userId/deptId are lazy getters and the callbacks read reactive state on
+// demand, so nothing here needs the data to be loaded first.
+useTasksRealtime(
+  () => userStore.getUser?.id ?? null,
+  () => userStore.getUser?.department_id ?? null,
+  {
+    onPersonalRefresh: () => {
+      void refreshCounts()
+      void activityStore.fetchMyOpenCount()
+      if (taskMode.value === 'my') {
+        if (activeView.value === 'list') {
+          // Realtime refresh must NOT reset pagination — fetchPage keeps the
+          // current page; load() would snap the user back to page 1.
+          void fetchPage()
+        } else {
+          void taskBoard.load()
+        }
+      }
+    },
+    onTeamRefresh: () => {
+      if (taskMode.value === 'team' && activeView.value === 'kanban') {
+        void teamBoard.reload()
+      }
+    },
+  },
+)
+
 onMounted(async () => {
   if (activeView.value === 'list') {
     await Promise.all([load(), refreshCounts()])
@@ -804,32 +850,6 @@ onMounted(async () => {
     await Promise.all([taskBoard.load(), refreshCounts()])
   }
   await activityStore.fetchMyOpenCount()
-
-  // ── Realtime: subscribe to personal + team task events ───────────────────────
-  // Personal refresh reloads whichever view is active (kanban / list).
-  // Team refresh reloads the team board (only called when deptId is set).
-  useTasksRealtime(
-    () => userStore.getUser?.id ?? null,
-    () => userStore.getUser?.department_id ?? null,
-    {
-      onPersonalRefresh: () => {
-        void refreshCounts()
-        void activityStore.fetchMyOpenCount()
-        if (taskMode.value === 'my') {
-          if (activeView.value === 'list') {
-            void load()
-          } else {
-            void taskBoard.load()
-          }
-        }
-      },
-      onTeamRefresh: () => {
-        if (taskMode.value === 'team' && activeView.value === 'kanban') {
-          void teamBoard.reload()
-        }
-      },
-    },
-  )
 })
 </script>
 

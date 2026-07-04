@@ -12,7 +12,7 @@ import { activityApi } from '@/api/activity'
 import { useActivityStore } from '@/stores/activityStore'
 import { useMyTasksStore } from '@/stores/myTasksStore'
 import { localDateString, todayInOperationalTz, thisWeekRangeInOperationalTz, dateInOperationalTz } from '@/utils/activity'
-import type { ActivityDto, ActivityKind, ActivityStatus, ActivityPriority } from '@/entities/activity'
+import type { ActivityDto, ActivityKind, ActivityStatus, ActivityPriority, ActivityPaginatedResponse } from '@/entities/activity'
 import type { ActivityPreset } from '@/api/activity'
 
 export type TaskPreset = ActivityPreset | 'all'
@@ -49,8 +49,10 @@ export function useMyTasks() {
   const page = ref(1)
   const perPage = ref(25)
 
-  // Internal resource for loading + error state tracking
-  const resource = useAsyncResource<ActivityDto[]>(() => [])
+  // Internal resource for loading + error state tracking. Holds the raw
+  // paginated response so the last-wins commit can write both items and total
+  // atomically for the current request token only.
+  const resource = useAsyncResource<ActivityPaginatedResponse | null>(() => null)
 
   // Expose list state from the store (single source of truth)
   const items = computed(() => tasksStore.listItems)
@@ -67,30 +69,44 @@ export function useMyTasks() {
   async function fetchPage() {
     const params = buildParams()
 
+    // Commit to the store only through the resource's commit phase — it runs
+    // exclusively for the current (last-wins) request token, so a late stale
+    // response can never overwrite a fresher list. Committing inside the loader
+    // would bypass the gate and reintroduce the race.
     if (activePreset.value === 'all') {
-      await resource.run(async () => {
-        const res = await activityApi.getActivities({
-          ...params,
-          page: page.value,
-          per_page: perPage.value,
-        })
-        tasksStore.listItems = res.data
-        tasksStore.listTotal = res.meta.total
-        return res.data
-      })
+      await resource.run(
+        () =>
+          activityApi.getActivities({
+            ...params,
+            page: page.value,
+            per_page: perPage.value,
+          }),
+        {
+          commit: (res) => {
+            if (!res) return
+            tasksStore.listItems = res.data
+            tasksStore.listTotal = res.meta.total
+          },
+        },
+      )
     } else {
       // 'completed' uses its own dedicated endpoint (GET /api/activities/presets/completed)
       const presetKey = activePreset.value as ActivityPreset
-      await resource.run(async () => {
-        const res = await activityApi.getPresetActivities(presetKey, {
-          ...params,
-          page: page.value,
-          per_page: perPage.value,
-        })
-        tasksStore.listItems = res.data
-        tasksStore.listTotal = res.meta.total
-        return res.data
-      })
+      await resource.run(
+        () =>
+          activityApi.getPresetActivities(presetKey, {
+            ...params,
+            page: page.value,
+            per_page: perPage.value,
+          }),
+        {
+          commit: (res) => {
+            if (!res) return
+            tasksStore.listItems = res.data
+            tasksStore.listTotal = res.meta.total
+          },
+        },
+      )
     }
   }
 
@@ -211,6 +227,7 @@ export function useMyTasks() {
     loading,
     counts,
     load,
+    fetchPage,
     onPage,
     resetFilters,
     refreshCounts,

@@ -3852,6 +3852,7 @@
       "card": {
         "complete": "Готово",
         "completed": "Задача выполнена",
+        "completeError": "Не удалось выполнить задачу",
         "overdueSince": "просрочено {when}",
         "today": "сегодня {time}",
         "tomorrow": "завтра {time}"
@@ -4550,7 +4551,28 @@
         "owner_user_id": "Владелец",
         "owner_id": "Владелец",
         "department_id": "Отдел",
-        "acquisition_channel_id": "Канал привлечения"
+        "acquisition_channel_id": "Канал привлечения",
+        "legal_form": "Организационно-правовая форма",
+        "title": "Название",
+        "amount": "Сумма",
+        "discount_percent": "Скидка",
+        "currency": "Валюта",
+        "company_id": "Компания",
+        "stage_id": "Стадия",
+        "pipeline_id": "Воронка",
+        "expected_close_date": "Планируемая дата закрытия",
+        "expected_sign_date": "Планируемая дата подписания",
+        "expected_payment_date": "Планируемая дата оплаты",
+        "signed_at": "Дата подписания",
+        "paid_at": "Дата оплаты",
+        "paid_amount": "Сумма оплаты",
+        "payment_currency": "Валюта оплаты",
+        "tags": "Теги",
+        "perpetual_license": "Бессрочная лицензия",
+        "amount_locked": "Сумма зафиксирована",
+        "lost_reason": "Причина отказа",
+        "lost_reason_id": "Причина отказа",
+        "contract_id": "Договор"
       }
     },
     "termination": {
@@ -4829,7 +4851,10 @@
       "toastSaved": "Черновик сохранён",
       "toastDeleted": "Черновик удалён",
       "toastSaveFailed": "Не удалось сохранить черновик",
-      "toastDeleteFailed": "Не удалось удалить черновик"
+      "toastDeleteFailed": "Не удалось удалить черновик",
+      "discardTitle": "Несохранённый черновик",
+      "discardBody": "В черновике есть несохранённые изменения. Покинуть без сохранения?",
+      "discardAccept": "Покинуть"
     }
   },
   "accessControl": {
@@ -5115,7 +5140,8 @@
       "err_pool": "Введите размер пула",
       "err_threshold": "Порог должен быть от 1 до 100",
       "err_split": "Укажите от 1 до 99",
-      "err_form": "Исправьте ошибки в форме"
+      "err_form": "Исправьте ошибки в форме",
+      "reload_required": "Сотрудник или период изменились — загрузите карту заново перед сохранением"
     }
   }
 }

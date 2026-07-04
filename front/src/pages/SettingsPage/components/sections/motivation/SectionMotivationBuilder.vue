@@ -80,6 +80,7 @@
           :card-exists="builder.cardExists.value"
           :read-only="builder.isReadOnly.value"
           :can-transition="canTransition"
+          :can-persist="builder.canPersist.value"
           :saving="builder.saving.value"
           :copying-prev="builder.copyingPrev.value"
           :transitioning="builder.transitioning.value"

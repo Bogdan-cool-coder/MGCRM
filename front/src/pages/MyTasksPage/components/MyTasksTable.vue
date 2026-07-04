@@ -37,6 +37,7 @@
       paginator
       scrollable
       :rows="perPage"
+      :first="(page - 1) * perPage"
       :total-records="total"
       :rows-per-page-options="[25, 50, 100]"
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
@@ -396,6 +397,9 @@ const props = defineProps<{
   total: number
   loading: boolean
   perPage: number
+  /** 1-based current page — binds the paginator's `:first` so programmatic
+   *  page resets (filter/preset change) keep the paginator indicator in sync. */
+  page: number
   preset: TaskPreset
   completingId?: number | null
   reopeningId?: number | null

@@ -76,16 +76,63 @@ export const useDocumentsPage = () => {
     })
   }
 
-  // Re-fetch when filter/page changes
+  // Reset to page 1 without double-triggering the page watcher below. Only arm
+  // suppression when the page actually changes, otherwise the flag would linger
+  // and swallow the next genuine page navigation.
+  let suppressPageWatch = false
+  function resetPage() {
+    if (page.value !== 1) {
+      suppressPageWatch = true
+      page.value = 1
+    }
+  }
+
+  // Filter changes MUST reset the page to 1 — otherwise switching to a filter
+  // with fewer results while on e.g. page 3 requests an out-of-range page and
+  // returns an empty table ("nothing found") even though matches exist.
+  // The search field is debounced so typing doesn't fire a request per keystroke.
+  let searchDebounce: ReturnType<typeof setTimeout> | null = null
   watch(
-    [filter, page],
+    () => filter.value.search,
     () => {
-      void fetchDocuments()
+      if (searchDebounce) clearTimeout(searchDebounce)
+      searchDebounce = setTimeout(() => {
+        searchDebounce = null
+        resetPage()
+        void fetchDocuments()
+      }, 300)
     },
-    { deep: true, immediate: true },
   )
 
+  watch(
+    [
+      () => filter.value.status,
+      () => filter.value.kind,
+      () => filter.value.product_code,
+      () => filter.value.country_code,
+      () => filter.value.author_user_id,
+      () => filter.value.archived,
+    ],
+    () => {
+      resetPage()
+      void fetchDocuments()
+    },
+  )
+
+  watch(page, () => {
+    if (suppressPageWatch) {
+      suppressPageWatch = false
+      return
+    }
+    void fetchDocuments()
+  })
+
+  // Initial load
+  void fetchDocuments()
+
   function resetFilters() {
+    // Only the filter changes here — the filter watchers reset the page to 1 and
+    // refetch, so we don't touch `page` directly (that would double-fetch).
     filter.value = {
       status: null,
       kind: null,
@@ -95,7 +142,6 @@ export const useDocumentsPage = () => {
       search: '',
       archived: false,
     }
-    page.value = 1
   }
 
   const hasActiveFilters = computed(() => {

@@ -85,8 +85,11 @@ export const useTasksTab = (deps: TasksTabDeps) => {
 
   const load = async (): Promise<void> => {
     endpointMissing.value = false
+    // Only clear dirty when the load actually commits and no new edits arrived
+    // while it was in flight — otherwise a slow reload wipes user input.
+    const dirtyBefore = core.dirtyCount.value
     try {
-      await resource.run(() =>
+      const committed = await resource.run(() =>
         getTaskMatrix({
           year: deps.year(),
           layer: deps.layer(),
@@ -100,7 +103,9 @@ export const useTasksTab = (deps: TasksTabDeps) => {
         const firstReal = groups.find((g) => g.kind !== ALL_KIND) ?? groups[0]
         selectedKind.value = firstReal?.kind ?? null
       }
-      core.clearDirty()
+      if (committed !== undefined && core.dirtyCount.value <= dirtyBefore) {
+        core.clearDirty()
+      }
     } catch (err) {
       if (getApiErrorStatus(err) === 404) {
         endpointMissing.value = true
