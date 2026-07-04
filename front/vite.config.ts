@@ -60,6 +60,15 @@ export default defineConfig(() => ({
         target: 'http://nginx:80',
         changeOrigin: true,
       },
+      // Public storage (user avatars, S3-less local disk). Avatars are stored
+      // with a root-relative URL (/storage/avatars/...); in dev the SPA runs on
+      // the Vite origin (:5173), so we proxy /storage to the backend nginx —
+      // otherwise the relative URL would hit Vite and return index.html, and an
+      // absolute cross-origin URL would be blocked by the browser (ORB).
+      '/storage': {
+        target: 'http://nginx:80',
+        changeOrigin: true,
+      },
     },
   },
   build: {

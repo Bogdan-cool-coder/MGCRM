@@ -39,7 +39,16 @@ class AvatarUploadTest extends TestCase
         $path = $user->fresh()->avatar_path;
         $this->assertNotNull($path);
         $this->assertStringContainsString('/storage/avatars/', $path);
-        $this->assertNotNull($response->json('data.avatar_path'));
+
+        // Root-relative URL, never absolute: an APP_URL-based absolute URL is
+        // cross-origin for the Vite dev server (:5173) and gets blocked by the
+        // browser (ERR_BLOCKED_BY_ORB). A relative /storage/... resolves against
+        // whichever origin serves the page.
+        $this->assertStringStartsWith('/storage/avatars/', $path);
+        $this->assertStringNotContainsString('://', $path);
+
+        // The API response carries the same relative path (SPA renders it in <img>).
+        $this->assertSame($path, $response->json('data.avatar_path'));
 
         // The file actually exists on the fake public disk.
         $this->assertSame(1, count(Storage::disk('public')->files('avatars')));
