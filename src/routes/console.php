@@ -25,6 +25,12 @@ Artisan::command('inspire', function () {
 |--------------------------------------------------------------------------
 */
 
+// Sanctum token pruning — daily at 04:00 UTC. Deletes personal-access tokens
+// whose expires_at passed more than 24h ago (grace window). Every login mints a
+// token and the 2FA flow mints a short-lived temp token, so personal_access_tokens
+// grows unbounded without this; keeping it lean also speeds token lookups on auth.
+Schedule::command('sanctum:prune-expired --hours=24')->daily()->at('04:00');
+
 // Daily exchange-rate refresh — runs at 03:00 UTC.
 // The job uses ExchangeRateService::upsertRate() with updateOrCreate()
 // → ON CONFLICT DO UPDATE, no duplicate rows in catalog_exchange_rates.

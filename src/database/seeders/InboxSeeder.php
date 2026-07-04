@@ -32,8 +32,7 @@ class InboxSeeder extends Seeder
 
     public function run(): void
     {
-        $owner = User::query()
-            ->where('role', Role::Admin)
+        $owner = User::role(Role::Admin->value)
             ->orderBy('id')
             ->first()
                 ?? User::query()->orderBy('id')->first();

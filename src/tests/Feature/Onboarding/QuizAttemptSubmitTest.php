@@ -241,6 +241,12 @@ class QuizAttemptSubmitTest extends TestCase
 
     public function test_submit_assigns_assignment_id_to_attempt(): void
     {
+        // The setUp attempt is still OPEN (finished_at null). Only one open attempt
+        // per (quiz, user) may exist (partial-unique uq_quiz_attempts_open, enforced
+        // on both drivers), so finish it before opening the next — mirroring the real
+        // flow where a student cannot have two attempts in progress at once.
+        $this->attempt->update(['finished_at' => now(), 'score_pct' => 0, 'passed' => false]);
+
         // Attempt created without assignment_id
         $bareAttempt = QuizAttempt::factory()->create([
             'quiz_id' => $this->quiz->id,

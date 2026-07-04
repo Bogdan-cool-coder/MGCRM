@@ -32,7 +32,7 @@ class OnboardingAssignmentSeeder extends Seeder
             return;
         }
 
-        $admin = User::where('role', Role::Admin->value)->first();
+        $admin = User::role(Role::Admin->value)->first();
 
         if ($admin === null) {
             $this->command->warn('No admin user found. Skipping assignment seeder.');
@@ -40,7 +40,7 @@ class OnboardingAssignmentSeeder extends Seeder
             return;
         }
 
-        $managers = User::where('role', Role::Manager->value)->limit(3)->get();
+        $managers = User::role(Role::Manager->value)->limit(3)->get();
 
         if ($managers->isEmpty()) {
             $this->command->warn('No manager users found. Skipping assignment seeder.');

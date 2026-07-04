@@ -1142,6 +1142,22 @@ class DealService
             $this->resolveCompanyDerivedData($data, $deal);
         }
 
+        // Owner change WITHOUT a company change: re-stamp department_id from the new
+        // owner so the visibility scope (owner_user_id OR department_id) stays correct.
+        // create()/createInbound()/resolveCompanyDerivedData() all stamp department
+        // from the owner; without this branch a lone reassignment (owner A → owner B
+        // in different departments) would leave the deal pinned to the OLD department,
+        // re-opening the M9 dept-visibility hole one deal at a time. Skipped when the
+        // caller sets department_id explicitly (respect an explicit override) or when
+        // resolveCompanyDerivedData already ran above (it stamps from the new owner too).
+        if (! array_key_exists('department_id', $data)
+            && array_key_exists('owner_user_id', $data)
+            && $data['owner_user_id'] !== null
+            && (int) $data['owner_user_id'] !== (int) $deal->owner_user_id
+        ) {
+            $data['department_id'] = User::find($data['owner_user_id'])?->department_id;
+        }
+
         // Snapshot of the pre-merge extra_fields for the audit diff. writeFields
         // mutates the model in place (and persists), so capture before calling it.
         $extraBefore = $deal->extra_fields ?? [];

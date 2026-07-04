@@ -8,6 +8,7 @@ use App\Domain\Catalog\Models\Product;
 use App\Domain\Contracts\Enums\ContractStatus;
 use App\Domain\Contracts\Models\Document;
 use App\Domain\Contracts\Models\DocumentItem;
+use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -33,7 +34,7 @@ class DemoDocumentsSeeder extends Seeder
             return;
         }
 
-        $manager = User::query()->where('role', 'manager')->first() ?? $admin;
+        $manager = User::role(Role::Manager->value)->first() ?? $admin;
 
         $this->seedDraft($admin);
         $this->seedSubmitted($manager);

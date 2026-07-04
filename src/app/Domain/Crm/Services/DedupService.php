@@ -849,31 +849,35 @@ class DedupService
             ->where('source_company_id', $dupId)
             ->update(['source_company_id' => $masterId]);
 
-        // 4. Requisites: re-parent company_requisites.company_id.
+        // 4. Requisites: re-parent company_requisites.company_id, keeping exactly
+        // one is_current=true on the master.
+        //
+        // Ordering matters: the "one current per company" partial-unique index
+        // (uq_company_requisites_one_current, enforced on BOTH pgsql and sqlite) is
+        // checked per row-write, so re-parenting a still-current dup requisite into a
+        // master that ALREADY has a current one would collide mid-statement — before
+        // any later demote could run. So we demote FIRST, then re-parent:
+        //
+        //   - If the master already has a current requisite, demote every current
+        //     requisite still on the dup BEFORE re-parenting, so at most one current
+        //     row ever carries company_id = master at any point.
+        //   - If the master has none, the dup's current requisite (if any) may carry
+        //     over as the master's current — no demotion needed.
+        $masterHasCurrent = DB::table('company_requisites')
+            ->where('company_id', $masterId)
+            ->where('is_current', true)
+            ->exists();
+
+        if ($masterHasCurrent) {
+            DB::table('company_requisites')
+                ->where('company_id', $dupId)
+                ->where('is_current', true)
+                ->update(['is_current' => false]);
+        }
+
         DB::table('company_requisites')
             ->where('company_id', $dupId)
             ->update(['company_id' => $masterId]);
-
-        // Ensure exactly one is_current=true for the master after merge.
-        // If the master already had a current requisite before the merge, the
-        // merged-in ones must be set to false. If the master had none, keep the
-        // first merged-in current as-is (no change needed) but clear all others.
-        $currentIds = DB::table('company_requisites')
-            ->where('company_id', $masterId)
-            ->where('is_current', true)
-            ->orderBy('id') // lowest id = the original master's current, if present
-            ->pluck('id')
-            ->all();
-
-        if (count($currentIds) > 1) {
-            // Keep only the first (lowest id = original master's requisite when it existed).
-            $keepId = $currentIds[0];
-            DB::table('company_requisites')
-                ->where('company_id', $masterId)
-                ->where('is_current', true)
-                ->where('id', '!=', $keepId)
-                ->update(['is_current' => false]);
-        }
 
         // 5. Company channels: append without collisions.
         //    The table has UNIQUE(company_id, channel_type, value).

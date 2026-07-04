@@ -69,23 +69,23 @@ return new class extends Migration
             $table->index(['company_id', 'is_current']);
         });
 
-        // Partial unique for PostgreSQL: at most one current per company.
-        // SQLite does not support partial indexes — the service enforces the
-        // invariant manually via a DB transaction.
-        if (DB::connection()->getDriverName() === 'pgsql') {
-            DB::statement(
-                'CREATE UNIQUE INDEX uq_company_requisites_one_current '
-                .'ON company_requisites (company_id) WHERE is_current = TRUE'
-            );
-        }
+        // Partial unique: at most one current requisite set per company. SQLite
+        // supports partial indexes too, so the same DB-level guard runs in the test
+        // suite as in prod (the service's transaction is still the write-path guard,
+        // but the DB now backs it on both drivers). Booleans are stored as integers
+        // on SQLite, so the predicate is `is_current = 1` there vs `TRUE` on pgsql.
+        $boolTrue = DB::connection()->getDriverName() === 'sqlite' ? '1' : 'TRUE';
+
+        DB::statement(
+            'CREATE UNIQUE INDEX uq_company_requisites_one_current '
+            ."ON company_requisites (company_id) WHERE is_current = {$boolTrue}"
+        );
     }
 
     public function down(): void
     {
-        if (DB::connection()->getDriverName() === 'pgsql') {
-            DB::statement('DROP INDEX IF EXISTS uq_company_requisites_one_current');
-        }
-
+        // Dropping the table removes its partial index on every driver — no
+        // separate DROP INDEX needed.
         Schema::dropIfExists('company_requisites');
     }
 };

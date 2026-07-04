@@ -29,18 +29,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Partial indexes and DROP CONSTRAINT are PostgreSQL-specific; SQLite
-        // (used by in-memory test DB) does not support them. The original
-        // unconditional unique from the create migration provides equivalent
-        // behaviour for tests because Eloquent updateOrCreate resolves NULL
-        // via WHERE plan_id IS NULL, preventing logical duplicates.
+        // The partial-index PREDICATES (plan_id IS NULL / IS NOT NULL,
+        // valid_from/valid_to IS NULL) are portable — SQLite supports partial
+        // indexes too — so the same two CREATE UNIQUE INDEX statements run on both
+        // drivers, giving the test suite the same DB-level guard as prod. Only the
+        // way the OLD unconditional unique is dropped differs: on pgsql $table->unique()
+        // created a CONSTRAINT-backed index (needs DROP CONSTRAINT); on SQLite it is a
+        // plain unique index (needs DROP INDEX).
         if (DB::getDriverName() === 'sqlite') {
-            return;
+            DB::statement('DROP INDEX IF EXISTS uq_catalog_product_prices');
+        } else {
+            DB::statement('ALTER TABLE catalog_product_prices DROP CONSTRAINT IF EXISTS uq_catalog_product_prices');
         }
-
-        // Drop the old unconditional unique. In PostgreSQL, $table->unique()
-        // creates a constraint-backed index; must use DROP CONSTRAINT, not DROP INDEX.
-        DB::statement('ALTER TABLE catalog_product_prices DROP CONSTRAINT IF EXISTS uq_catalog_product_prices');
 
         // Partial unique for base prices (plan_id IS NULL, no time window).
         // Prevents two "current" base prices for the same product+currency.
@@ -65,20 +65,24 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
-            return;
-        }
-
         DB::statement('DROP INDEX IF EXISTS uq_cpp_base_price');
         DB::statement('DROP INDEX IF EXISTS uq_cpp_plan_price');
 
-        // Restore the original unconditional unique as a constraint
-        // (matches the original migration's $table->unique() call).
-        // Only safe when no NULL-plan duplicates exist in the data.
-        DB::statement(
-            'ALTER TABLE catalog_product_prices
-             ADD CONSTRAINT uq_catalog_product_prices
-             UNIQUE (product_id, plan_id, currency_code)'
-        );
+        // Restore the original unconditional unique (matches the create migration's
+        // $table->unique() call). Only safe when no NULL-plan duplicates exist.
+        // pgsql: re-add as a constraint (what $table->unique() produced there);
+        // SQLite: recreate the plain unique index ($table->unique() maps to that).
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement(
+                'CREATE UNIQUE INDEX uq_catalog_product_prices
+                 ON catalog_product_prices (product_id, plan_id, currency_code)'
+            );
+        } else {
+            DB::statement(
+                'ALTER TABLE catalog_product_prices
+                 ADD CONSTRAINT uq_catalog_product_prices
+                 UNIQUE (product_id, plan_id, currency_code)'
+            );
+        }
     }
 };

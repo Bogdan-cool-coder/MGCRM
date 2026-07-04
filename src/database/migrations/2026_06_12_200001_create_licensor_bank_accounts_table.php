@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -31,29 +32,25 @@ return new class extends Migration
             $table->index('licensor_id', 'ix_licensor_bank_accounts_licensor');
             $table->index(['licensor_id', 'currency'], 'ix_licensor_bank_accounts_currency');
 
-            // Partial unique index for (licensor_id, currency) WHERE is_primary = true.
-            // PG: create unique partial; SQLite: enforced by LicensorService::createAccount().
-            // We do not add a standard unique here to stay portable; the service
-            // guards this constraint on SQLite and PG gets the DB-level partial index
-            // via a raw statement that is safe to ignore on SQLite.
+            // Partial unique index for (licensor_id, currency) WHERE is_primary is set
+            // is created below (both drivers). The service still guards the invariant
+            // on the write path; the DB index backs it defensively on pgsql AND sqlite.
         });
 
-        // PostgreSQL-only partial unique index.
-        // Ignored on SQLite (used in tests) — uniqueness enforced by service layer.
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement(
-                'CREATE UNIQUE INDEX IF NOT EXISTS uq_licensor_bank_accounts_primary_per_currency '
-                .'ON licensor_bank_accounts (licensor_id, currency) WHERE is_primary = true'
-            );
-        }
+        // Partial unique index: at most one primary account per (licensor, currency).
+        // SQLite supports partial indexes, so the same DB-level guard runs in the test
+        // suite as in prod. Booleans are integers on SQLite (`= 1`) vs `true` on pgsql.
+        $boolTrue = DB::getDriverName() === 'sqlite' ? '1' : 'true';
+
+        DB::statement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS uq_licensor_bank_accounts_primary_per_currency '
+            ."ON licensor_bank_accounts (licensor_id, currency) WHERE is_primary = {$boolTrue}"
+        );
     }
 
     public function down(): void
     {
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement('DROP INDEX IF EXISTS uq_licensor_bank_accounts_primary_per_currency');
-        }
-
+        // Dropping the table removes its partial index on every driver.
         Schema::dropIfExists('licensor_bank_accounts');
     }
 };

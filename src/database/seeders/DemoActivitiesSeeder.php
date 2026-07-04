@@ -36,7 +36,7 @@ class DemoActivitiesSeeder extends Seeder
 
     public function run(): void
     {
-        $owner = User::where('role', Role::Admin->value)->orderBy('id')->first();
+        $owner = User::role(Role::Admin->value)->orderBy('id')->first();
         if ($owner === null) {
             return;
         }

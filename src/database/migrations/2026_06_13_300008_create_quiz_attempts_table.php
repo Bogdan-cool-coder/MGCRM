@@ -41,14 +41,14 @@ return new class extends Migration
             $table->index('assignment_id', 'ix_quiz_attempts_assignment');
         });
 
-        // Partial UNIQUE on PG: only one open attempt per (quiz, user) at a time.
-        // On SQLite :memory: (tests) this is not supported; service enforces it via
-        // an idempotency check before insert.
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement(
-                'CREATE UNIQUE INDEX uq_quiz_attempts_open ON quiz_attempts (quiz_id, user_id) WHERE finished_at IS NULL'
-            );
-        }
+        // Partial UNIQUE: only one open attempt per (quiz, user) at a time.
+        // SQLite supports partial indexes (CREATE UNIQUE INDEX ... WHERE), and the
+        // `finished_at IS NULL` predicate is identical on both drivers, so the same
+        // raw DDL runs everywhere — giving the test suite the same DB-level guard as
+        // prod (no longer relying only on the service-layer idempotency check).
+        DB::statement(
+            'CREATE UNIQUE INDEX uq_quiz_attempts_open ON quiz_attempts (quiz_id, user_id) WHERE finished_at IS NULL'
+        );
     }
 
     public function down(): void
