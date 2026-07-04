@@ -671,7 +671,7 @@ function onActivityUpdated(activity: ActivityDto) {
 
 .feed-item__time {
   font-size: $font-size-xs;
-  color: $surface-400;
+  color: var(--p-text-muted-color); // muted role — light #737373 (4.74:1), dark #8593B0 (5.37:1); was surface-400 = 2.52/2.03:1 FAIL
   white-space: nowrap;
 }
 

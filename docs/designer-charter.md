@@ -413,6 +413,8 @@ $font-size-xl   // ~18px — заголовок PageHeader
 ```
 
 > **Инвертированная navy-шкала dark-темы (MSales 2.0):** в `.app-dark` шкала surface инвертирована, значения — navy. `surface-100` в dark = `#111E38` (тёмный card), `surface-200` = `#172847` (raised / soft-border), `surface-900` = `#EAF0FA` (светлый текст). Для текста в dark бери `surface-800`/`surface-900` (светлые), для raised-hover — `surface-200`. НЕ `surface-700`/`surface-800` для фона и НЕ `surface-200`/`surface-300` для текста (это dark-on-dark). Акцент в dark светлеет `#172747 → #4C7DF0` (читай через `--p-primary-color`).
+>
+> **Muted-текст в dark = `surface-600`, НЕ `surface-400`.** Токен `--p-text-muted-color` в dark мапится на `{surface.600}` (`#8593B0`, контраст 5.37:1 на card `#111E38`); `surface-400` (`#3A4F78`) давал 2.03:1 (FAIL). Uppercase-лейблы секций, подписи форм, вторичный текст — **только через `--p-text-muted-color`** (не хардкодь `surface-400`/`surface-500` ради «приглушить»). Единственное исключение — muted-текст на **светлой** подложке внутри dark (intentional light-pair: элемент с фоном `surface-700`/`surface-800`); там muted пиши явным dark-ink `surface-400` в `.app-dark &`-блоке этого элемента, т.к. глобальный muted-токен рассчитан на dark-on-dark.
 
 **⛔ Мёртвые dark-селекторы (закон — эти 4 варианта НИКОГДА не пиши):**
 

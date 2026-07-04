@@ -343,6 +343,13 @@ defineExpose({ validate })
 
     .app-dark & {
       background-color: var(--p-surface-700);
+
+      // light-pair (hover only): hovered option bg flips to surface-700 (#B4C2DA,
+      // LIGHT) in dark → keep desc as dark ink (surface-400, 6.3:1). Base/selected
+      // states sit on dark bg and keep the (improved) global muted token.
+      .trigger-option__desc {
+        color: var(--p-surface-400);
+      }
     }
   }
 

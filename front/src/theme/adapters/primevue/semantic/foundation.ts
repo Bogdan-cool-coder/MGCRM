@@ -148,8 +148,12 @@ export const primeVueFoundationSemantic = {
       // Фикс: явно переопределяем text.color через {surface.900} = navyDarkSurfacePalette[900] = #EAF0FA.
       text: {
         color: '{surface.900}',        // #EAF0FA — читабельный светлый текст в dark
-        mutedColor: '{surface.400}',   // #3A4F78 — muted
-        hoverMutedColor: '{surface.300}', // #27395C
+        // ЗАКОН ИНВЕРТИРОВАННОЙ ШКАЛЫ (dark): muted-текст = surface-600, НЕ surface-400.
+        // surface.400 (#3A4F78) на карточке #111E38 даёт контраст 2.03:1 (FAIL, <4.5).
+        // surface.600 (#8593B0) → 5.37:1 (PASS для мелкого текста); uppercase-лейблы
+        // секций/подписи форм читаются на navy-подложках. hover поднимаем до surface.700.
+        mutedColor: '{surface.600}',      // #8593B0 — secondary-muted text (5.37:1 на card)
+        hoverMutedColor: '{surface.700}', // #B4C2DA — читабельный hover (9.21:1)
       },
       // DARK FORM FIELDS (BUG-3: инпуты белые в dark-режиме).
       //

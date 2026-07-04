@@ -399,6 +399,13 @@ async function doExecute(): Promise<void> {
     .app-dark & {
       background-color: var(--p-surface-800);
       border-color: var(--p-surface-700);
+
+      // light-pair: row bg is surface-800 (#C6D0E2, LIGHT) in dark → keep the muted
+      // "skip" icon as dark ink (surface-400, 5.26:1). Global muted token lightened
+      // to surface-600 for dark-on-dark surfaces; pin explicitly on this light row.
+      .pi-times-circle {
+        color: var(--p-surface-400);
+      }
     }
 
     .pi-check-circle {

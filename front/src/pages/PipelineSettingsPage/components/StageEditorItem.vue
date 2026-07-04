@@ -380,6 +380,13 @@ function extractErrorMessage(e: unknown): string {
     padding: 0;
     color: var(--p-text-muted-color);
 
+    // light-pair: accordion header bg is surface-800 (#C6D0E2, LIGHT) in dark →
+    // keep toggle text as dark ink (surface-400, 5.26:1). Global muted token
+    // lightened to surface-600 for dark-on-dark; pin explicitly here.
+    .app-dark & {
+      color: var(--p-surface-400);
+    }
+
     &:hover {
       color: var(--p-text-color);
     }
@@ -426,6 +433,13 @@ function extractErrorMessage(e: unknown): string {
 .automation-accordion__empty-text {
   font-size: $font-size-xs;
   color: var(--p-text-muted-color);
+
+  // light-pair: accordion body bg is surface-800 (#C6D0E2, LIGHT) in dark → keep
+  // empty text as dark ink (surface-400, 5.26:1). Global muted token lightened to
+  // surface-600 for dark-on-dark; pin explicitly here.
+  .app-dark & {
+    color: var(--p-surface-400);
+  }
 }
 
 // Ghost / dragging states

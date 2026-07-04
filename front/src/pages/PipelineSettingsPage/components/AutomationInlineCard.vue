@@ -168,6 +168,13 @@ function onDelete() {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // light-pair: card bg is surface-800 (#C6D0E2, LIGHT) in dark → keep meta as dark
+    // ink (surface-400, 5.26:1). Global muted token lightened to surface-600 for
+    // dark-on-dark; pin explicitly on this light card.
+    .app-dark & {
+      color: var(--p-surface-400);
+    }
   }
 
   &__controls {

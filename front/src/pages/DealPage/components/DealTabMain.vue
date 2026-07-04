@@ -618,11 +618,8 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
 
 .deal-tab-main__quick-label {
   font-size: $font-size-xs;
-  color: $surface-500;
-
-  .app-dark & {
-    color: var(--p-surface-400);
-  }
+  // muted role — light #737373 (4.74:1), dark #8593B0 (5.37:1); was dark surface-400 = 2.03:1 FAIL
+  color: var(--p-text-muted-color);
 }
 
 .deal-tab-main__quick-value {

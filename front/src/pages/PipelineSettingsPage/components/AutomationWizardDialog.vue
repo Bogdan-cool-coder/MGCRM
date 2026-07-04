@@ -326,6 +326,10 @@ function extractMessage(e: unknown): string {
     .app-dark & {
       border-color: var(--p-surface-600);
       background: var(--p-surface-800);
+      // light-pair: circle bg is surface-800 (#C6D0E2, LIGHT) in dark → muted text
+      // must stay dark ink here (surface-400 = #3A4F78, 5.26:1). Global muted token
+      // lightened to surface-600 for dark-on-dark; pin explicitly on this light bg.
+      color: var(--p-surface-400);
     }
   }
 

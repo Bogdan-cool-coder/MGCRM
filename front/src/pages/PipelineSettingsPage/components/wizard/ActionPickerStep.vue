@@ -209,6 +209,13 @@ function select(kind: ActionKind) {
     .app-dark & {
       background-color: var(--p-primary-900);
       border-color: var(--p-primary-400);
+
+      // selected card bg flips to primary-900 (#172747, DARK) → desc muted must be
+      // the LIGHT muted token (surface-600, 4.80:1), not the dark-ink pin used on
+      // the default light card below.
+      .action-card__desc {
+        color: var(--p-surface-600);
+      }
     }
   }
 
@@ -260,6 +267,14 @@ function select(kind: ActionKind) {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+
+    // light-pair: default action-card bg is surface-800 (#C6D0E2, LIGHT) in dark →
+    // keep desc as dark ink (surface-400, 5.26:1). Global muted token lightened to
+    // surface-600 for dark-on-dark; the &--selected override above restores the
+    // light token for the primary-900 (dark) selected card.
+    .app-dark & {
+      color: var(--p-surface-400);
+    }
   }
 
   &__badge {
