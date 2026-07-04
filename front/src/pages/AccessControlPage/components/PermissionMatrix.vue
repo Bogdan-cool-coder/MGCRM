@@ -83,6 +83,13 @@ const ALL_ROLES = USER_ROLES
   // each group has its own Panel
 }
 
+// 7 role columns (220px + 7×100px ≈ 920px) can exceed the card width. Keep the
+// horizontal overflow INSIDE the Panel body so the table scrolls in-card rather
+// than pushing the whole section wide.
+:deep(.perm-matrix__panel .p-panel-content) {
+  overflow-x: auto;
+}
+
 .perm-matrix__perm-cell {
   display: flex;
   flex-direction: column;

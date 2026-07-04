@@ -43,11 +43,6 @@
             <template #body="{ data }">{{ data.name }}</template>
           </Column>
 
-          <!-- Sort order -->
-          <Column :header="t('admin.acquisitionChannels.columns.sortOrder')" style="width: 110px">
-            <template #body="{ data }">{{ data.sort_order }}</template>
-          </Column>
-
           <!-- Is active -->
           <Column :header="t('admin.acquisitionChannels.columns.isActive')" style="width: 100px">
             <template #body="{ data }">

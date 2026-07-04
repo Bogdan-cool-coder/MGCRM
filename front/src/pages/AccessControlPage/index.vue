@@ -17,7 +17,7 @@
     </Message>
 
     <div v-else class="access-control-page__body">
-      <Tabs :value="activeTab" @update:value="onTabChange">
+      <Tabs class="access-control-page__tabs" :value="activeTab" @update:value="onTabChange">
         <TabList>
           <Tab value="departments">{{ t('accessControl.tabs.departments') }}</Tab>
           <Tab value="roles">{{ t('accessControl.tabs.roles') }}</Tab>
@@ -100,9 +100,23 @@ function onTabChange(value: string | number) {
   overflow: hidden;
 }
 
+// The PrimeVue <Tabs> root must itself be a bounded flex column so its
+// <TabPanels> child can flex-fill and scroll. Without this the .p-tabs block
+// height collapses to auto and grows past the parent — .p-tabpanels never gets
+// a bounded context, so the long permission matrix overflows and gets clipped
+// by the ancestor overflow:hidden (no scrollbar). Mirrors DealInfoTabs.
+.access-control-page__tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 // Make TabPanels scrollable
 :deep(.p-tabpanels) {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: $space-4 $space-6;
 }

@@ -55,11 +55,6 @@
             <template #body="{ data }">{{ data.phone_prefix || '—' }}</template>
           </Column>
 
-          <!-- Sort order -->
-          <Column :header="t('admin.countries.columns.sortOrder')" style="width: 100px">
-            <template #body="{ data }">{{ data.sort_order }}</template>
-          </Column>
-
           <!-- Is active -->
           <Column :header="t('admin.countries.columns.isActive')" style="width: 100px">
             <template #body="{ data }">

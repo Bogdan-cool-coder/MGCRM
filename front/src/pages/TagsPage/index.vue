@@ -62,11 +62,6 @@
             </template>
           </Column>
 
-          <!-- Sort order -->
-          <Column :header="t('admin.tags.columns.sortOrder')" style="width: 100px">
-            <template #body="{ data }">{{ data.sort_order }}</template>
-          </Column>
-
           <!-- Is active -->
           <Column :header="t('admin.tags.columns.isActive')" style="width: 100px">
             <template #body="{ data }">
