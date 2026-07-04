@@ -7,16 +7,19 @@ namespace Tests\Unit\Sales;
 use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\CustomFieldDef;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Models\EntityLog;
+use App\Domain\Org\Models\Department;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealAudit;
 use App\Domain\Sales\Models\DealStageHistory;
 use App\Domain\Sales\Services\DealFeedService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DealFeedServiceTest extends TestCase
@@ -708,5 +711,121 @@ class DealFeedServiceTest extends TestCase
         $this->audit($deal, null, 'some_new_column', 'a', 'b');
 
         $this->assertSame('Some new column', $this->soleFieldChangePayload($deal)['field_label']);
+    }
+
+    // ---- QA-2026-07-04: FK fields resolve to display names, not raw ids ----
+
+    public function test_owner_change_resolves_to_user_full_names(): void
+    {
+        $deal = Deal::factory()->create();
+        $oldOwner = User::factory()->create(['full_name' => 'Ivan Petrov']);
+        $newOwner = User::factory()->create(['full_name' => 'Anna Sidorova']);
+
+        $this->audit($deal, null, 'owner_user_id', (string) $oldOwner->id, (string) $newOwner->id);
+
+        $payload = $this->soleFieldChangePayload($deal);
+
+        // Raw ids are kept for compatibility.
+        $this->assertSame((string) $oldOwner->id, $payload['old_value']);
+        $this->assertSame((string) $newOwner->id, $payload['new_value']);
+        // Resolved human-readable names — the actual bug fix.
+        $this->assertSame('Ivan Petrov', $payload['old_display']);
+        $this->assertSame('Anna Sidorova', $payload['new_display']);
+    }
+
+    public function test_company_change_resolves_to_company_names(): void
+    {
+        $deal = Deal::factory()->create();
+        $oldCompany = Company::factory()->create(['name' => 'ООО Ромашка']);
+        $newCompany = Company::factory()->create(['name' => 'ЗАО Лютик']);
+
+        $this->audit($deal, null, 'company_id', (string) $oldCompany->id, (string) $newCompany->id);
+
+        $payload = $this->soleFieldChangePayload($deal);
+
+        $this->assertSame('ООО Ромашка', $payload['old_display']);
+        $this->assertSame('ЗАО Лютик', $payload['new_display']);
+    }
+
+    public function test_department_change_resolves_to_department_names(): void
+    {
+        $deal = Deal::factory()->create();
+        $oldDept = Department::factory()->create(['name' => 'Продажи']);
+        $newDept = Department::factory()->create(['name' => 'Маркетинг']);
+
+        $this->audit($deal, null, 'department_id', (string) $oldDept->id, (string) $newDept->id);
+
+        $payload = $this->soleFieldChangePayload($deal);
+
+        $this->assertSame('Продажи', $payload['old_display']);
+        $this->assertSame('Маркетинг', $payload['new_display']);
+    }
+
+    public function test_deleted_fk_target_degrades_to_hash_id(): void
+    {
+        $deal = Deal::factory()->create();
+        $company = Company::factory()->create();
+        $deletedId = $company->id + 999_999; // never persisted
+
+        $this->audit($deal, null, 'company_id', null, (string) $deletedId);
+
+        $payload = $this->soleFieldChangePayload($deal);
+
+        $this->assertNull($payload['old_display']);
+        $this->assertSame("#{$deletedId}", $payload['new_display']);
+    }
+
+    public function test_null_owner_old_value_stays_null_display(): void
+    {
+        $deal = Deal::factory()->create();
+        $newOwner = User::factory()->create(['full_name' => 'Fresh Owner']);
+
+        $this->audit($deal, null, 'owner_user_id', null, (string) $newOwner->id);
+
+        $payload = $this->soleFieldChangePayload($deal);
+
+        $this->assertNull($payload['old_display']);
+        $this->assertSame('Fresh Owner', $payload['new_display']);
+    }
+
+    public function test_non_fk_field_change_carries_no_display_keys(): void
+    {
+        $deal = Deal::factory()->create();
+
+        $this->audit($deal, null, 'title', 'Old title', 'New title');
+
+        $payload = $this->soleFieldChangePayload($deal);
+
+        $this->assertArrayNotHasKey('old_display', $payload);
+        $this->assertArrayNotHasKey('new_display', $payload);
+    }
+
+    public function test_fk_resolution_uses_bounded_query_count_regardless_of_row_count(): void
+    {
+        $deal = Deal::factory()->create();
+        $owners = User::factory()->count(5)->create();
+
+        // 20 owner_user_id audit rows referencing only 5 distinct users — the
+        // resolution must issue ONE whereIn query for the User model, not one
+        // per row (mirrors ActivityService::stampTargetNames()).
+        foreach (range(1, 20) as $i) {
+            $owner = $owners[$i % 5];
+            $this->audit($deal, (string) now()->subMinutes($i), 'owner_user_id', null, (string) $owner->id);
+        }
+
+        DB::enableQueryLog();
+        $result = $this->service()->feed($deal);
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertCount(20, $result['data']);
+
+        $userSelects = collect($queries)->filter(
+            fn (array $q): bool => str_contains((string) $q['query'], 'select') && str_contains((string) $q['query'], '"users"'),
+        );
+
+        // At most one query resolves ALL owner ids for the whole page (whereIn),
+        // never one per audit row.
+        $this->assertLessThanOrEqual(1, $userSelects->count());
     }
 }

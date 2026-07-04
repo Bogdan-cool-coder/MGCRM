@@ -60,9 +60,9 @@
             >
               <template v-if="i > 0">&nbsp;·&nbsp;</template>
               {{ change.field_label || change.field }}:
-              <s v-if="change.old_value" class="feed-item__sys-old">{{ change.old_value }}</s>
+              <s v-if="changeOld(change)" class="feed-item__sys-old">{{ changeOld(change) }}</s>
               <i class="pi pi-arrow-right feed-item__sys-arrow" />
-              <span class="feed-item__sys-new">{{ change.new_value ?? '—' }}</span>
+              <span class="feed-item__sys-new">{{ changeNew(change) ?? '—' }}</span>
             </span>
           </template>
           <!-- payment fixed -->
@@ -201,7 +201,7 @@ import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import MeetingReportDialog from '@/components/MeetingReportDialog.vue'
 import { statusSeverity, formatDueDate, OPERATIONAL_TZ } from '@/utils/activity'
 import { formatCurrency } from '@/utils/currency'
-import type { FeedItem } from '../composables/useDealFeed'
+import type { FeedItem, FieldChange } from '../composables/useDealFeed'
 import type { ActivityDto } from '@/entities/activity'
 
 // ─── Kind accent colours — spec §11 ──────────────────────────────────────────
@@ -387,6 +387,21 @@ const menuItems = computed(() => {
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve the old value to render for a field change. Prefers the backend's
+ * human-readable `old_display` (present for FK fields: owner/company/department)
+ * over the raw `old_value` (an opaque id for those fields). The display key is
+ * only present for FK fields, so `undefined` falls back to old_value.
+ */
+function changeOld(change: FieldChange): string | null {
+  return change.old_display !== undefined ? change.old_display : change.old_value
+}
+
+/** Same preference for the new value — see changeOld(). */
+function changeNew(change: FieldChange): string | null {
+  return change.new_display !== undefined ? change.new_display : change.new_value
+}
 
 /**
  * Format the time-of-day part for a feed item timestamp in the operational

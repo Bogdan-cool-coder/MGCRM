@@ -7,11 +7,13 @@ namespace App\Domain\Sales\Services;
 use App\Domain\Activity\Enums\ActivityStatus;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
+use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Services\FieldLabelResolver;
 use App\Domain\Iam\Models\User;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Models\EntityLog;
+use App\Domain\Org\Models\Department;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealAudit;
 use App\Domain\Sales\Models\DealStageHistory;
@@ -57,6 +59,23 @@ class DealFeedService
      * pages of the timeline are always complete.
      */
     private const MAX_SOURCE_ROWS = 500;
+
+    /**
+     * DealAudit.field values that hold a raw FK id rather than a display-ready
+     * scalar, mapped to [model class, display-name column]. QA-2026-07-04: the
+     * feed rendered these as bare ids («изменил Ответственный: 1 → 4»); resolved
+     * here in resolveFkDisplays() with one batched whereIn per field (never
+     * per-row), mirroring ActivityService::stampTargetNames(). Keep this list in
+     * lockstep with DealService::AUDITED_FIELDS — only owner_user_id/company_id/
+     * department_id are FK-shaped among the audited fields today.
+     *
+     * @var array<string, array{0: class-string, 1: string}>
+     */
+    private const FK_FIELDS = [
+        'owner_user_id' => [User::class, 'full_name'],
+        'company_id' => [Company::class, 'name'],
+        'department_id' => [Department::class, 'name'],
+    ];
 
     private readonly FieldLabelResolver $fieldLabels;
 
@@ -335,25 +354,105 @@ class DealFeedService
      */
     private function fieldChangeEvents(Deal $deal, int $limit): Collection
     {
-        return $this->fieldChangeQuery($deal)
+        $rows = $this->fieldChangeQuery($deal)
             ->with('user:id,full_name')
             ->limit($limit)
-            ->get()
-            ->map(fn (DealAudit $row): array => [
-                'id' => "audit_{$row->id}",
-                'type' => self::TYPE_FIELD_CHANGE,
-                'occurred_at' => $row->created_at?->toIso8601String(),
-                'actor' => $this->actor($row->user),
-                'payload' => [
-                    'field' => $row->field,
-                    // Human-readable RU label for the field (e.g. discount_percent
-                    // → «Скидка»). `field` is kept for compatibility; the frontend
-                    // renders field_label || field.
-                    'field_label' => $this->fieldLabels->forDeal($row->field),
-                    'old_value' => $row->old_value,
-                    'new_value' => $row->new_value,
-                ],
-            ]);
+            ->get();
+
+        $fkDisplays = $this->resolveFkDisplays($rows);
+
+        return $rows->map(fn (DealAudit $row): array => [
+            'id' => "audit_{$row->id}",
+            'type' => self::TYPE_FIELD_CHANGE,
+            'occurred_at' => $row->created_at?->toIso8601String(),
+            'actor' => $this->actor($row->user),
+            'payload' => [
+                'field' => $row->field,
+                // Human-readable RU label for the field (e.g. discount_percent
+                // → «Скидка»). `field` is kept for compatibility; the frontend
+                // renders field_label || field.
+                'field_label' => $this->fieldLabels->forDeal($row->field),
+                'old_value' => $row->old_value,
+                'new_value' => $row->new_value,
+                // QA-2026-07-04: for FK fields (owner_user_id/company_id/
+                // department_id) old_value/new_value are raw ids («1», «4») — the
+                // feed used to render them verbatim («изменил Ответственный: 1 →
+                // 4»). old_display/new_display carry the resolved human-readable
+                // name instead, batched via resolveFkDisplays() (never per-row).
+                // Additive keys: old_value/new_value are UNCHANGED for backward
+                // compatibility; non-FK fields simply don't get these keys.
+                // A deleted/unknown target degrades to "#{id}" rather than null,
+                // so the feed always has something readable to show.
+                ...$this->fkDisplayPair($row, $fkDisplays),
+            ],
+        ]);
+    }
+
+    /**
+     * Batch-resolve every FK-shaped audit value (see FK_FIELDS) across the given
+     * rows into id → display-name maps, keyed by field. At most one whereIn query
+     * PER FK FIELD present in the row set (e.g. owner_user_id + company_id present
+     * → 2 queries total), regardless of how many rows reference that field —
+     * mirrors ActivityService::stampTargetNames().
+     *
+     * @param  Collection<int, DealAudit>  $rows
+     * @return array<string, Collection<int, string>> field => [id => display name]
+     */
+    private function resolveFkDisplays(Collection $rows): array
+    {
+        $displays = [];
+
+        foreach (self::FK_FIELDS as $field => [$modelClass, $column]) {
+            $ids = $rows
+                ->where('field', $field)
+                ->flatMap(fn (DealAudit $row): array => [$row->old_value, $row->new_value])
+                ->filter(fn (mixed $value): bool => $value !== null && $value !== '')
+                ->map(static fn (mixed $value): int => (int) $value)
+                ->unique()
+                ->values();
+
+            $displays[$field] = $ids->isEmpty()
+                ? collect()
+                : $modelClass::query()->whereIn('id', $ids)->pluck($column, 'id');
+        }
+
+        return $displays;
+    }
+
+    /**
+     * Resolve one audit row's old_display/new_display pair from the pre-batched
+     * FK display maps. Returns an empty array for non-FK fields (no extra keys
+     * added to the payload). A referenced id that no longer resolves (deleted
+     * user/company/department) degrades to "#{id}" — soft degradation, never a
+     * null/blank cell in the feed.
+     *
+     * @param  array<string, Collection<int, string>>  $fkDisplays
+     * @return array<string, string|null>
+     */
+    private function fkDisplayPair(DealAudit $row, array $fkDisplays): array
+    {
+        if (! array_key_exists($row->field, self::FK_FIELDS)) {
+            return [];
+        }
+
+        $map = $fkDisplays[$row->field] ?? collect();
+
+        return [
+            'old_display' => $this->displayFor($map, $row->old_value),
+            'new_display' => $this->displayFor($map, $row->new_value),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, string>  $map
+     */
+    private function displayFor(Collection $map, ?string $rawId): ?string
+    {
+        if ($rawId === null || $rawId === '') {
+            return null;
+        }
+
+        return $map->get((int) $rawId) ?? "#{$rawId}";
     }
 
     /**

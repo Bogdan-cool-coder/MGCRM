@@ -45,6 +45,15 @@ export interface FieldChange {
   field_label?: string
   old_value: string | null
   new_value: string | null
+  /**
+   * Human-readable rendering of a FK field's old/new value (owner/company/
+   * department). Present ONLY for FK fields; carries the resolved name instead
+   * of the raw id that old_value/new_value hold. `undefined` = non-FK field
+   * (use old_value/new_value); `null` = FK field with no prior/next value.
+   * Preferred over old_value/new_value when the key is present.
+   */
+  old_display?: string | null
+  new_display?: string | null
 }
 
 export interface PaymentFixedPayload {
@@ -115,6 +124,9 @@ interface RawFeedPayloadFieldChange {
   field_label?: string | null
   old_value: string | null
   new_value: string | null
+  /** Resolved FK display names (owner/company/department); FK fields only. */
+  old_display?: string | null
+  new_display?: string | null
 }
 
 interface RawFeedPayloadPaymentFixed {
@@ -230,6 +242,10 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
           field_label: p.field_label ?? undefined,
           old_value: p.old_value,
           new_value: p.new_value,
+          // Additive FK display names — preserve absence (undefined) vs a real
+          // null so the renderer can tell a non-FK field from an FK with no value.
+          old_display: 'old_display' in p ? p.old_display : undefined,
+          new_display: 'new_display' in p ? p.new_display : undefined,
         },
       ],
     }

@@ -190,9 +190,9 @@
                       {{ fc.field_label || fc.field }}
                       <template v-if="fc.old_value !== undefined && fc.new_value !== undefined">
                         <!-- old value struck-through, spec DealCard §11 -->
-                        <s class="entity-activities__fc-old">{{ fc.old_value }}</s>
+                        <s class="entity-activities__fc-old">{{ fcOld(fc) }}</s>
                         <span class="entity-activities__fc-arrow"> → </span>
-                        <span class="entity-activities__fc-new">{{ fc.new_value }}</span>
+                        <span class="entity-activities__fc-new">{{ fcNew(fc) }}</span>
                       </template>
                     </span>
                   </span>
@@ -241,6 +241,7 @@ import Tag from 'primevue/tag'
 import EntityComposer from './EntityComposer.vue'
 import OpenTasksList from './OpenTasksList.vue'
 import { useEntityFeed } from './composables/useEntityFeed'
+import type { FeedItem } from './composables/useEntityFeed'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { kindIcon, kindColor, statusSeverity } from '@/utils/activity'
 import type { ActivityDto, ActivityKind } from '@/entities/activity'
@@ -331,6 +332,24 @@ function activityCardStyle(kind: ActivityKind): Record<string, string> {
   return {
     borderColor: `color-mix(in srgb, ${color} 45%, var(--p-surface-200))`,
   }
+}
+
+// ─── Field-change value resolution ────────────────────────────────────────────
+
+type FeedFieldChange = NonNullable<FeedItem['fieldChanges']>[number]
+
+/**
+ * Old value to render for a field change. Prefers the backend's human-readable
+ * `old_display` (FK fields: owner/company/department) over the raw `old_value`
+ * (an opaque id for those fields). Absent display key falls back to old_value.
+ */
+function fcOld(fc: FeedFieldChange): string | null {
+  return fc.old_display !== undefined ? fc.old_display : fc.old_value
+}
+
+/** Same preference for the new value — see fcOld(). */
+function fcNew(fc: FeedFieldChange): string | null {
+  return fc.new_display !== undefined ? fc.new_display : fc.new_value
 }
 
 // ─── Date/time formatters ─────────────────────────────────────────────────────

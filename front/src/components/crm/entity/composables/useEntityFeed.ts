@@ -36,7 +36,19 @@ export interface FeedItem {
   date: string
   actor: FeedActor | null
   activity?: ActivityDto
-  fieldChanges?: Array<{ field: string; field_label?: string; old_value: string | null; new_value: string | null }>
+  fieldChanges?: Array<{
+    field: string
+    field_label?: string
+    old_value: string | null
+    new_value: string | null
+    /**
+     * Human-readable rendering of a FK field's old/new value (owner/company/
+     * department). Present ONLY for FK fields — `undefined` means non-FK (use
+     * old_value/new_value); `null` means FK with no value. Preferred when present.
+     */
+    old_display?: string | null
+    new_display?: string | null
+  }>
   isEntityCreated?: boolean
   /**
    * A3/A4: set when the item originated from a linked deal's activity feed.
@@ -148,6 +160,10 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
             field_label: (ch['field_label'] as string | null | undefined) ?? undefined,
             old_value: toStringOrNull(ch['old']),
             new_value: toStringOrNull(ch['new']),
+            // Additive FK display names; absence (undefined) is preserved so the
+            // renderer can distinguish a non-FK field from an FK with no value.
+            old_display: 'old_display' in ch ? toStringOrNull(ch['old_display']) : undefined,
+            new_display: 'new_display' in ch ? toStringOrNull(ch['new_display']) : undefined,
           }
         })
       : [
@@ -156,6 +172,8 @@ function normaliseItem(raw: RawFeedItem): FeedItem | null {
             field_label: (p['field_label'] as string | null | undefined) ?? undefined,
             old_value: (p['old_value'] as string | null) ?? null,
             new_value: (p['new_value'] as string | null) ?? null,
+            old_display: 'old_display' in p ? toStringOrNull(p['old_display']) : undefined,
+            new_display: 'new_display' in p ? toStringOrNull(p['new_display']) : undefined,
           },
         ]
 

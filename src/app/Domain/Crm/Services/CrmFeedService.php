@@ -7,6 +7,7 @@ namespace App\Domain\Crm\Services;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyType;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
@@ -63,6 +64,30 @@ class CrmFeedService
      * Also the ceiling for cappedCount() so meta.total mirrors the old behaviour.
      */
     private const MAX_SOURCE_ROWS = 500;
+
+    /**
+     * entity_logs.meta.changes[].field values that hold a raw FK id rather than a
+     * display-ready scalar, mapped to [model class, display-name column]. Same bug
+     * as the deal feed (QA-2026-07-04): these rendered as bare ids («изменил
+     * Владелец: 1 → 4»). Resolved here in resolveFkDisplays() with one batched
+     * whereIn per field (never per-row), mirroring
+     * DealFeedService::resolveFkDisplays() / ActivityService::stampTargetNames().
+     * Keyed by entity scope so Contact and Company each only resolve the FK
+     * fields they actually log — kept in lockstep with
+     * ContactService::LOGGED_FIELDS / CompanyService::LOGGED_FIELDS.
+     *
+     * @var array<string, array<string, array{0: class-string, 1: string}>>
+     */
+    private const FK_FIELDS = [
+        'contact' => [
+            'owner_id' => [User::class, 'full_name'],
+        ],
+        'company' => [
+            'company_type_id' => [CompanyType::class, 'name'],
+            'responsible_user_id' => [User::class, 'full_name'],
+            'owner_user_id' => [User::class, 'full_name'],
+        ],
+    ];
 
     public function __construct(
         private readonly VisibilityResolver $visibility,
@@ -313,34 +338,45 @@ class CrmFeedService
      */
     private function fieldChangeEvents(Company|Contact $entity, int $fetchLimit): Collection
     {
-        return $this->fieldChangeBaseQuery($entity)
+        $rows = $this->fieldChangeBaseQuery($entity)
             ->with('actor:id,full_name')
             ->limit($fetchLimit)
-            ->get()
-            ->map(fn (EntityLog $row): array => [
-                'id' => "log_{$row->id}",
-                'type' => self::TYPE_FIELD_CHANGE,
-                'occurred_at' => $row->created_at?->toIso8601String(),
-                'actor' => $this->actor($row->actor),
-                'payload' => [
-                    // meta.changes = [{field, field_label, old, new}] — normalised
-                    // on the FE. field_label is the human-readable RU label; the
-                    // raw `field` is kept for compatibility (FE renders label || field).
-                    'changes' => $this->labelChanges($entity, $row->meta['changes'] ?? null),
-                ],
-            ]);
+            ->get();
+
+        // Batched FK-display resolution across every change on every row of this
+        // page — one whereIn per FK field present (see resolveFkDisplays()),
+        // never per-row/per-change.
+        $fkDisplays = $this->resolveFkDisplays($entity, $rows);
+
+        return $rows->map(fn (EntityLog $row): array => [
+            'id' => "log_{$row->id}",
+            'type' => self::TYPE_FIELD_CHANGE,
+            'occurred_at' => $row->created_at?->toIso8601String(),
+            'actor' => $this->actor($row->actor),
+            'payload' => [
+                // meta.changes = [{field, field_label, old, new}] — normalised
+                // on the FE. field_label is the human-readable RU label; the
+                // raw `field` is kept for compatibility (FE renders label || field).
+                // FK-shaped fields (see FK_FIELDS) additionally carry
+                // old_display/new_display — the resolved human-readable name
+                // instead of the raw id.
+                'changes' => $this->labelChanges($entity, $row->meta['changes'] ?? null, $fkDisplays),
+            ],
+        ]);
     }
 
     /**
      * Enrich each raw {field, old, new} change with a human-readable field_label,
      * resolved for the entity's scope (company/contact). Non-array/malformed input
      * yields an empty list; unknown fields fall back to a humanized label without
-     * crashing.
+     * crashing. FK-shaped fields (see FK_FIELDS) additionally get old_display/
+     * new_display from the pre-batched $fkDisplays map.
      *
      * @param  mixed  $changes  the raw meta.changes payload
+     * @param  array<string, Collection<int, string>>  $fkDisplays  field => [id => display name]
      * @return list<array<string, mixed>>
      */
-    private function labelChanges(Company|Contact $entity, mixed $changes): array
+    private function labelChanges(Company|Contact $entity, mixed $changes, array $fkDisplays): array
     {
         if (! is_array($changes)) {
             return [];
@@ -355,12 +391,94 @@ class CrmFeedService
 
             $field = is_string($change['field'] ?? null) ? $change['field'] : null;
 
-            $result[] = $field === null
-                ? $change
-                : $change + ['field_label' => $this->labelFor($entity, $field)];
+            if ($field === null) {
+                $result[] = $change;
+
+                continue;
+            }
+
+            $result[] = $change
+                + ['field_label' => $this->labelFor($entity, $field)]
+                + $this->fkDisplayPair($field, $change, $fkDisplays);
         }
 
         return $result;
+    }
+
+    /**
+     * Batch-resolve every FK-shaped change value (see FK_FIELDS) across the given
+     * rows into id → display-name maps, keyed by field. At most one whereIn query
+     * PER FK FIELD present across the row set's changes, regardless of how many
+     * changes reference that field — mirrors
+     * DealFeedService::resolveFkDisplays() / ActivityService::stampTargetNames().
+     *
+     * @param  Collection<int, EntityLog>  $rows
+     * @return array<string, Collection<int, string>> field => [id => display name]
+     */
+    private function resolveFkDisplays(Company|Contact $entity, Collection $rows): array
+    {
+        $fkFields = self::FK_FIELDS[$entity instanceof Company ? 'company' : 'contact'];
+
+        $displays = [];
+
+        foreach ($fkFields as $field => [$modelClass, $column]) {
+            $ids = $rows
+                ->flatMap(function (EntityLog $row) use ($field): array {
+                    $changes = is_array($row->meta['changes'] ?? null) ? $row->meta['changes'] : [];
+
+                    return collect($changes)
+                        ->filter(fn (mixed $change): bool => is_array($change) && ($change['field'] ?? null) === $field)
+                        ->flatMap(fn (array $change): array => [$change['old'] ?? null, $change['new'] ?? null])
+                        ->all();
+                })
+                ->filter(fn (mixed $value): bool => $value !== null && $value !== '')
+                ->map(static fn (mixed $value): int => (int) $value)
+                ->unique()
+                ->values();
+
+            $displays[$field] = $ids->isEmpty()
+                ? collect()
+                : $modelClass::query()->whereIn('id', $ids)->pluck($column, 'id');
+        }
+
+        return $displays;
+    }
+
+    /**
+     * Resolve one change's old_display/new_display pair from the pre-batched FK
+     * display maps. Returns an empty array for non-FK fields (no extra keys added
+     * to the change). A referenced id that no longer resolves (deleted user/
+     * company type) degrades to "#{id}" — soft degradation, never a null/blank
+     * cell in the feed.
+     *
+     * @param  array<string, mixed>  $change
+     * @param  array<string, Collection<int, string>>  $fkDisplays
+     * @return array<string, string|null>
+     */
+    private function fkDisplayPair(string $field, array $change, array $fkDisplays): array
+    {
+        if (! array_key_exists($field, $fkDisplays)) {
+            return [];
+        }
+
+        $map = $fkDisplays[$field];
+
+        return [
+            'old_display' => $this->displayFor($map, $change['old'] ?? null),
+            'new_display' => $this->displayFor($map, $change['new'] ?? null),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, string>  $map
+     */
+    private function displayFor(Collection $map, mixed $rawId): ?string
+    {
+        if ($rawId === null || $rawId === '') {
+            return null;
+        }
+
+        return $map->get((int) $rawId) ?? "#{$rawId}";
     }
 
     /**

@@ -158,6 +158,75 @@ class DealFeedTest extends TestCase
         );
     }
 
+    // ---- QA-2026-07-04: FK field changes surface human-readable names ----
+
+    public function test_owner_and_company_change_surface_names_not_raw_ids_in_feed(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $oldOwner = User::factory()->create(['role' => Role::Manager, 'full_name' => 'Ivan Petrov']);
+        $newOwner = User::factory()->create(['role' => Role::Manager, 'full_name' => 'Anna Sidorova']);
+        $oldCompany = Company::factory()->create(['name' => 'ООО Ромашка']);
+        $newCompany = Company::factory()->create(['name' => 'ЗАО Лютик']);
+
+        $deal = Deal::factory()->forOwner($oldOwner)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'company_id' => $oldCompany->id,
+        ]);
+
+        Sanctum::actingAs($oldOwner, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", [
+            'owner_user_id' => $newOwner->id,
+            'company_id' => $newCompany->id,
+        ])->assertOk();
+
+        // The new owner must be able to view their own deal's feed.
+        Sanctum::actingAs($newOwner, ['*']);
+
+        $feed = $this->getJson("/api/deals/{$deal->id}/feed?types[]=field_change")->assertOk();
+        $rows = collect($feed->json('data'))->keyBy('payload.field');
+
+        $ownerRow = $rows->get('owner_user_id');
+        $this->assertNotNull($ownerRow, 'owner_user_id field_change must be present');
+        $this->assertSame((string) $oldOwner->id, $ownerRow['payload']['old_value']);
+        $this->assertSame((string) $newOwner->id, $ownerRow['payload']['new_value']);
+        $this->assertSame('Ivan Petrov', $ownerRow['payload']['old_display']);
+        $this->assertSame('Anna Sidorova', $ownerRow['payload']['new_display']);
+
+        $companyRow = $rows->get('company_id');
+        $this->assertNotNull($companyRow, 'company_id field_change must be present');
+        $this->assertSame('ООО Ромашка', $companyRow['payload']['old_display']);
+        $this->assertSame('ЗАО Лютик', $companyRow['payload']['new_display']);
+    }
+
+    public function test_deleted_company_falls_back_to_hash_id_in_feed(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $oldCompany = Company::factory()->create();
+        $newCompany = Company::factory()->create();
+
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'company_id' => $oldCompany->id,
+        ]);
+
+        Sanctum::actingAs($user, ['*']);
+
+        $this->patchJson("/api/deals/{$deal->id}", ['company_id' => $newCompany->id])->assertOk();
+
+        $oldCompanyId = $oldCompany->id;
+        $oldCompany->delete();
+
+        $feed = $this->getJson("/api/deals/{$deal->id}/feed?types[]=field_change")->assertOk();
+        $companyRow = collect($feed->json('data'))->firstWhere('payload.field', 'company_id');
+
+        $this->assertNotNull($companyRow);
+        $this->assertSame("#{$oldCompanyId}", $companyRow['payload']['old_display']);
+    }
+
     // ---- C9: the feed exposes the activity's REAL status ----
 
     public function test_feed_activity_item_exposes_real_status(): void
