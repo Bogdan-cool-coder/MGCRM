@@ -35,7 +35,7 @@
           <Column :header="'№'" style="width: 130px">
             <template #body="{ data }">
               <span
-                :class="data.number ? 'fw-medium' : 'text-secondary'"
+                :class="data.number ? 'documents-page__number--set' : 'documents-page__number--draft'"
               >
                 {{ data.number ?? `#draft-${data.id}` }}
               </span>
@@ -231,6 +231,16 @@ function formatDate(dateStr: string): string {
 
   &__table {
     cursor: pointer;
+  }
+
+  &__number {
+    &--set {
+      font-weight: $font-weight-medium;
+    }
+
+    &--draft {
+      color: var(--p-text-muted-color);
+    }
   }
 
   &__empty {

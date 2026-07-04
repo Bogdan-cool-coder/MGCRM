@@ -26,7 +26,7 @@
       <InputText
         v-model="localFilters.search"
         :placeholder="t('onboarding.courses.filter.search')"
-        class="w-100"
+        class="w-full"
         @keyup.enter="emit('change')"
       />
     </div>
@@ -78,6 +78,11 @@ const policyOptions = computed(() => [
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .courses-filter-panel {
   &__select {
     min-width: 160px;

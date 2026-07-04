@@ -16,13 +16,13 @@
         </div>
         <div v-if="doc.total != null" class="doc-meta-card__item">
           <dt>{{ t('documents.card.meta.amount') }}</dt>
-          <dd class="fw-medium">
+          <dd class="doc-meta-card__amount">
             {{ formatMoney(doc.total, 'ru', doc.currency ?? 'KZT') }}
           </dd>
         </div>
         <div v-if="doc.discount_pct != null && Number(doc.discount_pct) > 0" class="doc-meta-card__item">
           <dt>{{ t('documents.card.meta.discount') }}</dt>
-          <dd class="text-danger">
+          <dd class="doc-meta-card__discount">
             {{ doc.discount_pct }}% = -{{ formatMoney(doc.discount_amount ?? 0) }}
           </dd>
         </div>
@@ -88,6 +88,14 @@ function formatDate(dateStr: string): string {
       text-align: right;
       color: var(--p-text-color);
     }
+  }
+
+  &__amount {
+    font-weight: $font-weight-medium;
+  }
+
+  &__discount {
+    color: $color-danger;
   }
 }
 </style>

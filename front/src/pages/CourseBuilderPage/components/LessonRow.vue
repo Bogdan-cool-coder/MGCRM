@@ -1,5 +1,5 @@
 <template>
-  <div class="lesson-row d-flex align-items-center gap-2 py-2">
+  <div class="lesson-row d-flex align-items-center py-2">
     <!-- Kind icon -->
     <i :class="['lesson-row__kind-icon', kindIcon]" />
 
@@ -80,6 +80,8 @@ const kindIcon = computed(() => KIND_ICONS[props.lesson.kind] ?? 'pi pi-file')
 
 <style lang="scss" scoped>
 .lesson-row {
+  // .gap-2 is a dead full-Bootstrap class → gap via token here.
+  gap: $space-2;
   border-radius: $radius-md;
   padding-left: $space-2;
   padding-right: $space-2;

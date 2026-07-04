@@ -131,7 +131,7 @@ function commitRename() {
   transition: background-color var(--app-transition-fast);
 
   &:hover {
-    background-color: var(--p-surface-hover);
+    background-color: $surface-50;
 
     .substage-item__actions {
       opacity: 1;

@@ -11,7 +11,7 @@
             option-value="value"
             show-clear
             :placeholder="t('documents.list.filters.status')"
-            class="w-100"
+            class="documents-filter-panel__control"
             @update:model-value="(v) => $emit('update:modelValue', { ...modelValue, status: v })"
           />
         </div>
@@ -25,7 +25,7 @@
             option-value="value"
             show-clear
             :placeholder="t('documents.list.filters.kind')"
-            class="w-100"
+            class="documents-filter-panel__control"
             @update:model-value="(v) => $emit('update:modelValue', { ...modelValue, kind: v })"
           />
         </div>
@@ -37,14 +37,14 @@
             <InputText
               :model-value="modelValue.search"
               :placeholder="t('documents.list.filters.search')"
-              class="w-100"
+              class="documents-filter-panel__control"
               @update:model-value="(v) => $emit('update:modelValue', { ...modelValue, search: v as string })"
             />
           </IconField>
         </div>
 
         <!-- Show archived -->
-        <div class="col-md-2 d-flex align-items-center gap-2">
+        <div class="col-md-2 d-flex align-items-center documents-filter-panel__check">
           <Checkbox
             :model-value="modelValue.archived"
             :binary="true"
@@ -133,6 +133,14 @@ const kindOptions = computed(() => [
     color: var(--p-text-color);
     cursor: pointer;
     user-select: none;
+  }
+
+  &__control {
+    width: 100%;
+  }
+
+  &__check {
+    gap: $space-2;
   }
 }
 </style>

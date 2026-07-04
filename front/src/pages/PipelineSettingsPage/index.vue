@@ -640,10 +640,10 @@ onMounted(async () => {
     // extra vertical space automatically via flex:1; the floor only kicks in
     // when the flex chain is broken by an intermediate non-flex ancestor.
     min-height: 480px;
-    border: 1px solid var(--p-surface-border);
-    border-radius: var(--p-border-radius);
+    border: 1px solid var(--p-surface-200);
+    border-radius: $radius-md;
     overflow: hidden;
-    background: var(--p-surface-ground);
+    background: var(--p-surface-100);
   }
 }
 </style>

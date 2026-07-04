@@ -135,7 +135,7 @@
     </div>
 
     <!-- is_active -->
-    <div class="d-flex align-items-center gap-3 mt-4">
+    <div class="trigger-config-step__active-row d-flex align-items-center mt-4">
       <ToggleSwitch v-model="localIsActive" />
       <label class="field-label mb-0">{{ t('automation.fields.isActive') }}</label>
     </div>
@@ -304,6 +304,11 @@ defineExpose({ validate })
   .required {
     color: var(--p-red-500);
     margin-left: 2px;
+  }
+
+  // gap-* not provided by bootstrap-grid.min.css → token gap.
+  &__active-row {
+    gap: $space-3;
   }
 }
 

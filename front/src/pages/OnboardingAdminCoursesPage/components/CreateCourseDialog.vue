@@ -13,10 +13,10 @@
         <InputText
           v-model="form.title"
           :placeholder="t('onboarding.courses.createDialog.namePlaceholder')"
-          class="w-100"
+          class="w-full"
           :invalid="!!errors.title"
         />
-        <small v-if="errors.title" class="text-danger">{{ errors.title }}</small>
+        <small v-if="errors.title" class="p-error">{{ errors.title }}</small>
       </div>
 
       <div class="mb-3">
@@ -25,7 +25,7 @@
           v-model="form.description"
           :auto-resize="true"
           rows="3"
-          class="w-100"
+          class="w-full"
         />
       </div>
 
@@ -37,7 +37,7 @@
             :options="policyOptions"
             option-label="label"
             option-value="value"
-            class="w-100"
+            class="w-full"
           />
         </div>
       </div>
@@ -50,17 +50,17 @@
             :min="0"
             :max="100"
             suffix="%"
-            class="w-100"
+            class="w-full"
             :invalid="!!errors.passing_score_pct"
           />
-          <small v-if="errors.passing_score_pct" class="text-danger">{{ errors.passing_score_pct }}</small>
+          <small v-if="errors.passing_score_pct" class="p-error">{{ errors.passing_score_pct }}</small>
         </div>
         <div class="col-6">
           <label class="form-label">{{ t('onboarding.courses.createDialog.deadlineDays') }}</label>
           <InputNumber
             v-model="form.deadline_days"
             :min="1"
-            class="w-100"
+            class="w-full"
           />
         </div>
       </div>
@@ -69,7 +69,7 @@
         <label class="form-label">{{ t('onboarding.courses.createDialog.coverUrl') }}</label>
         <InputText
           v-model="form.cover_image_url"
-          class="w-100"
+          class="w-full"
         />
       </div>
 
@@ -188,6 +188,11 @@ function reset(): void {
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .create-course-form {
   padding-top: $space-2;
 }

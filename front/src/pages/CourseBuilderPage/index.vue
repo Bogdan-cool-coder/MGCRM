@@ -1,7 +1,7 @@
 <template>
   <div class="course-builder-page">
     <!-- Header -->
-    <div class="course-builder-page__header d-flex align-items-center gap-3 px-4 py-3 border-bottom">
+    <div class="course-builder-page__header d-flex align-items-center px-4 py-3">
       <Button
         :label="t('onboarding.builder.back')"
         icon="pi pi-arrow-left"
@@ -273,6 +273,9 @@ onMounted(async () => {
   min-height: 100%;
 
   &__header {
+    // .gap-3 / .border-bottom are dead full-Bootstrap classes → tokens here.
+    gap: $space-3;
+    border-bottom: 1px solid var(--p-surface-200);
     background: var(--p-card-background);
     position: sticky;
     top: 0;

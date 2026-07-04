@@ -102,7 +102,7 @@ const allActions = computed<ActionDef[]>(() => [
   },
   {
     kind: 'set_field',
-    icon: 'pi-pencil-square',
+    icon: 'pi-pen-to-square',
     label: t('automation.action.set_field'),
     description: t('automation.actionDesc.set_field'),
   },
@@ -120,7 +120,7 @@ const allActions = computed<ActionDef[]>(() => [
   },
   {
     kind: 'change_stage',
-    icon: 'pi-arrow-right-circle',
+    icon: 'pi-arrow-circle-right',
     label: t('automation.action.change_stage'),
     description: t('automation.actionDesc.change_stage'),
   },

@@ -127,11 +127,11 @@ const labelFor = (id: WidgetId): string => t(LABEL_KEY[id])
   gap: $space-2;
   padding: $space-1 $space-2;
   margin-bottom: $space-2;
-  background: $primary-50;
-  border: 1px solid $primary-200;
+  // Reactive primary tint over the card surface (color-mix on --p-primary-color):
+  // the static $primary-50/$primary-200 stayed a pale light plaque on navy.
+  background: color-mix(in srgb, var(--p-primary-color) 8%, var(--p-surface-card));
+  border: 1px solid color-mix(in srgb, var(--p-primary-color) 24%, var(--p-surface-card));
   border-radius: $radius-md;
-
-  // Primary tint reads on both themes via theme-reactive $primary-50/$primary-200.
 }
 
 .widget-grid__chrome-label {
@@ -139,15 +139,11 @@ const labelFor = (id: WidgetId): string => t(LABEL_KEY[id])
   min-width: 0;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $primary-color;
+  // Brand accent reads on both themes from the reactive PrimeVue token.
+  color: var(--p-primary-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  .app-dark & {
-    // Navy dark: brand accent lightens; read via PrimeVue token.
-    color: var(--p-primary-color);
-  }
 }
 
 .widget-grid__chrome-actions {
@@ -172,8 +168,8 @@ const labelFor = (id: WidgetId): string => t(LABEL_KEY[id])
   transition: all var(--app-transition-fast);
 
   &:hover:not(:disabled) {
-    border-color: $primary-color;
-    color: $primary-color;
+    border-color: var(--p-primary-color);
+    color: var(--p-primary-color);
   }
 
   &:disabled {

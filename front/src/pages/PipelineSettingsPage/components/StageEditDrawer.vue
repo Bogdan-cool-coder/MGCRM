@@ -411,4 +411,10 @@ function submit() {
 :deep(.p-drawer-close-button) {
   display: none !important;
 }
+
+// Local full-width utility — the app imports bootstrap-grid.min.css, which ships
+// no sizing utilities (etalon: DealsPage/MoveDealDialog.vue, CreateContactInlineDialog.vue).
+.w-full {
+  width: 100%;
+}
 </style>

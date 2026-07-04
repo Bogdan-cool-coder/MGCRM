@@ -1,43 +1,46 @@
 /**
- * Dashboard page composable — filters, loading, reload, export.
+ * Dashboard (Обзор tab) data composable — widget data, loading, reload, export.
  *
  * Pattern: watch(filters, debounce 350ms) → reload via useAsyncResource.
- * Pipelines loaded on mount; managers loaded for admin/director only.
+ *
+ * Filters are OWNED BY THE HUB now (audit §3в: the legacy DashboardToolbar with
+ * its own duplicate pipeline/manager pickers was removed). The hub's
+ * AnalyticsFilterBar is the single source of pipeline + manager, and the Обзор
+ * period Select lives in that same bar. This composable receives those three as
+ * reactive getters and refetches when any of them change — so the ONE filter row
+ * genuinely drives the Обзор widgets (previously the top bar did not refetch it).
  */
-import { reactive, ref, watch, computed, onMounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
-import { useUserStore } from '@/stores/user'
 import { getDashboardData, exportDashboardXlsx } from '@/api/salesDashboard'
 import { triggerBlobDownload } from '@/utils/download'
-import { salesApi } from '@/api/sales'
-import { usersApi } from '@/api/users'
-import type { DashboardFilters, DashboardResponse } from '@/entities/salesDashboard'
-import type { PipelineDto } from '@/entities/sales'
-import type { UserOptionDto } from '@/api/users'
+import type {
+  DashboardFilters,
+  DashboardPeriod,
+  DashboardResponse,
+} from '@/entities/salesDashboard'
 
-export const useDashboardPage = () => {
+export interface DashboardPageOptions {
+  /** Named period enum (Месяц/Прошлый месяц/Квартал/Год) from the hub filter bar. */
+  period: () => DashboardPeriod
+  /** Selected funnel from the hub filter bar (shared across all tabs). */
+  pipelineId: () => number | null
+  /** Cross-user manager filter from the hub filter bar (admin/director only). */
+  managerId: () => number | null
+}
+
+export const useDashboardPage = (options: DashboardPageOptions) => {
   const { t } = useI18n()
   const toast = useToast()
-  const userStore = useUserStore()
 
-  // ─── Filters ────────────────────────────────────────────────────────────────
-  const filters = reactive<DashboardFilters>({
-    period: 'current_month',
-    pipeline_id: null,
-    manager_id: null,
+  // Snapshot the hub-driven filters into the API request shape.
+  const currentFilters = (): DashboardFilters => ({
+    period: options.period(),
+    pipeline_id: options.pipelineId(),
+    manager_id: options.managerId(),
   })
-
-  // ─── Supplementary data ─────────────────────────────────────────────────────
-  const pipelines = ref<PipelineDto[]>([])
-  const managers = ref<UserOptionDto[]>([])
-  const pipelinesLoading = ref(false)
-
-  const canSeeAllManagers = computed<boolean>(() =>
-    userStore.getUserRole !== null &&
-    ['admin', 'director'].includes(userStore.getUserRole),
-  )
 
   // ─── Main data resource ─────────────────────────────────────────────────────
   const dashboardResource = useAsyncResource<DashboardResponse | null>(() => null)
@@ -48,7 +51,7 @@ export const useDashboardPage = () => {
 
   const reload = async (): Promise<void> => {
     try {
-      await dashboardResource.run(() => getDashboardData(filters))
+      await dashboardResource.run(() => getDashboardData(currentFilters()))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       toast.add({
@@ -62,67 +65,14 @@ export const useDashboardPage = () => {
     }
   }
 
-  // ─── Filter helpers ──────────────────────────────────────────────────────────
-  const setFilter = <K extends keyof DashboardFilters>(
-    key: K,
-    value: DashboardFilters[K],
-  ): void => {
-    if (key === 'pipeline_id') {
-      filters.manager_id = null
-    }
-    filters[key] = value
-  }
-
-  // ─── Load supplementary data ─────────────────────────────────────────────────
-  const loadPipelines = async (): Promise<void> => {
-    pipelinesLoading.value = true
-    try {
-      const data = await salesApi.getPipelines()
-      pipelines.value = data
-      // Pre-select the same funnel the backend default resolves to: the first
-      // ACTIVE pipeline (by list order). /api/pipelines is not guaranteed
-      // is_active-first, so data[0] can be an inactive/archived copy with no
-      // data — picking the active one keeps the FE and BE defaults in lockstep
-      // (BUG: dashboard used to open on an empty inactive funnel).
-      const preselect = data.find((p) => p.is_active) ?? data[0]
-      if (preselect != null && filters.pipeline_id == null) {
-        filters.pipeline_id = preselect.id
-      }
-    } catch {
-      // The pipeline Select would be empty with no pre-select, leaving the
-      // dashboard on the backend default with no explanation — surface a warning.
-      toast.add({
-        severity: 'warn',
-        summary: t('dashboard.pipelinesLoadError'),
-        life: 4000,
-      })
-    } finally {
-      pipelinesLoading.value = false
-    }
-  }
-
-  const loadManagers = async (): Promise<void> => {
-    if (!canSeeAllManagers.value) return
-    try {
-      const data = await usersApi.getUsers()
-      managers.value = data.filter((u) => ['admin', 'director', 'manager'].includes(u.role))
-    } catch {
-      toast.add({
-        severity: 'warn',
-        summary: t('dashboard.managersLoadError'),
-        life: 4000,
-      })
-    }
-  }
-
   // ─── Debounced reload on filter changes ────────────────────────────────────
-  // `initialized` is false until the first onMounted reload completes, so
-  // the watch does not fire a second reload for the pipeline_id pre-selection
-  // that happens synchronously inside loadPipelines().
+  // `initialized` stays false until the caller fires the first reload (after the
+  // hub's async pipeline pre-selection resolves), so the null→id pipeline change
+  // does not trigger a duplicate fetch 350 ms after the explicit initial load.
   const initialized = ref(false)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   watch(
-    () => ({ ...filters }),
+    () => [options.period(), options.pipelineId(), options.managerId()],
     () => {
       if (!initialized.value) return
       if (debounceTimer) clearTimeout(debounceTimer)
@@ -131,8 +81,16 @@ export const useDashboardPage = () => {
         void reload()
       }, 350)
     },
-    { deep: true },
   )
+
+  /**
+   * Fire the first load and arm the watch. Called by the overview tab once the
+   * hub has resolved a pipeline (or immediately if one is already selected).
+   */
+  const start = async (): Promise<void> => {
+    await reload()
+    initialized.value = true
+  }
 
   // ─── Export ─────────────────────────────────────────────────────────────────
   // Download via the authenticated axios client as a Blob, then trigger a
@@ -140,7 +98,7 @@ export const useDashboardPage = () => {
   // would 500). Uses the shared download helper (same path as the report exports).
   const exportXlsx = async (): Promise<void> => {
     try {
-      const blob = await exportDashboardXlsx({ ...filters })
+      const blob = await exportDashboardXlsx(currentFilters())
       triggerBlobDownload(blob, `dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -153,31 +111,15 @@ export const useDashboardPage = () => {
     }
   }
 
-  // ─── Mount ──────────────────────────────────────────────────────────────────
-  onMounted(async () => {
-    await loadPipelines()
-    await loadManagers()
-    await reload()
-    // Enable watch-driven reloads only after the initial load so that the
-    // pipeline_id pre-selection in loadPipelines() does not trigger a
-    // duplicate API call + Toast 350 ms later.
-    initialized.value = true
-  })
-
   // loading = true until the first fetch completes OR while re-fetching.
   // Widgets show skeleton in both cases — no empty-state flash on initial mount.
   const loading = computed(() => !dataReady.value || dashboardResource.loading.value)
 
   return {
-    filters,
-    pipelines,
-    managers,
-    pipelinesLoading,
-    canSeeAllManagers,
     data: dashboardResource.data,
     loading,
-    setFilter,
     reload,
+    start,
     exportXlsx,
   }
 }

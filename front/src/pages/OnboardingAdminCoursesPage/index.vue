@@ -74,8 +74,7 @@
 
       <Column
         :header="t('onboarding.courses.columns.modules')"
-        style="width: 90px"
-        class="text-center"
+        style="width: 90px; text-align: center"
       >
         <template #body="{ data: course }">
           {{ course.modules_count }}
@@ -93,8 +92,7 @@
 
       <Column
         :header="t('onboarding.courses.columns.passingScore')"
-        style="width: 90px"
-        class="text-center"
+        style="width: 90px; text-align: center"
       >
         <template #body="{ data: course }">
           {{ course.passing_score_pct }}%
@@ -103,12 +101,11 @@
 
       <Column
         :header="t('onboarding.courses.columns.deadline')"
-        style="width: 80px"
-        class="text-center"
+        style="width: 80px; text-align: center"
       >
         <template #body="{ data: course }">
           <span v-if="course.deadline_days">{{ course.deadline_days }}</span>
-          <span v-else class="text-muted">—</span>
+          <span v-else class="admin-courses-page__muted">—</span>
         </template>
       </Column>
 
@@ -123,7 +120,7 @@
 
       <Column style="width: 120px">
         <template #body="{ data: course }">
-          <div class="d-flex gap-1">
+          <div class="admin-courses-page__actions d-flex">
             <Button
               icon="pi pi-pencil"
               size="small"
@@ -223,6 +220,15 @@ onMounted(() => {
     &:hover {
       text-decoration: underline;
     }
+  }
+
+  // Theme-reactive muted placeholder — replaces dead full-Bootstrap .text-muted.
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
+
+  &__actions {
+    gap: $space-1;
   }
 
   &__empty {

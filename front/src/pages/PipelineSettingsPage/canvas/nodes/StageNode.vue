@@ -72,8 +72,8 @@ const accentColor = computed<string>(() => {
   position: relative;
   width: 260px;
   min-height: 120px;
-  background: var(--p-surface-card);
-  border: 1px solid var(--p-surface-border);
+  background: $surface-card;
+  border: 1px solid var(--p-surface-200);
   border-radius: $radius-lg;
   overflow: hidden;
   display: flex;

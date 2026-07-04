@@ -1,5 +1,5 @@
 <template>
-  <Card class="hr-chart-card h-100">
+  <Card class="hr-chart-card">
     <template #title>{{ t('onboarding.hrProgress.charts.byStatus') }}</template>
     <template #content>
       <template v-if="loading">
@@ -88,6 +88,9 @@ const pieOption = computed<EChartsOption>(() => {
 
 <style lang="scss" scoped>
 .hr-chart-card {
+  // .h-100 is a dead full-Bootstrap class → equal-height chart cards via 100% here.
+  height: 100%;
+
   :deep(.p-card-title) {
     font-size: $font-size-md;
     font-weight: $font-weight-semibold;

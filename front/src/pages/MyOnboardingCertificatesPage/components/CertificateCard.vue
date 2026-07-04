@@ -1,7 +1,7 @@
 <template>
-  <Card class="certificate-card text-center">
+  <Card class="certificate-card">
     <template #content>
-      <i class="pi pi-award certificate-card__icon" />
+      <i class="pi pi-verified certificate-card__icon" />
       <h3 class="certificate-card__title">{{ cert.course_title }}</h3>
       <p class="certificate-card__number">{{ t('onboarding.certificates.number') }}: {{ cert.certificate_number }}</p>
       <p class="certificate-card__date">
@@ -13,7 +13,7 @@
         :label="t('onboarding.certificates.download')"
         icon="pi pi-download"
         :loading="downloading"
-        class="w-100"
+        class="w-full"
         @click="$emit('download', cert)"
       />
     </template>
@@ -48,7 +48,15 @@ const formattedDate = computed(() =>
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .certificate-card {
+  // .text-center is a dead full-Bootstrap class → centering here.
+  text-align: center;
+
   &__icon {
     font-size: $font-size-icon-2xl;
     color: var(--p-green-500);
@@ -58,7 +66,7 @@ const formattedDate = computed(() =>
 
   &__title {
     font-size: $font-size-md;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     margin: 0 0 0.5rem;
   }
 

@@ -1,9 +1,9 @@
 <template>
   <div class="course-page">
     <!-- Loading skeleton -->
-    <div v-if="loading" class="course-page__skeleton d-flex gap-3 p-4">
+    <div v-if="loading" class="course-page__skeleton d-flex p-4">
       <Skeleton width="280px" height="100vh" />
-      <div class="flex-1">
+      <div class="course-page__skeleton-main">
         <Skeleton height="40px" class="mb-3" />
         <Skeleton height="300px" />
       </div>
@@ -44,7 +44,7 @@
         <div class="course-page__content">
           <!-- Course header -->
           <div class="course-page__header">
-            <div class="d-flex align-items-center gap-2 mb-2">
+            <div class="course-page__header-top d-flex align-items-center mb-2">
               <Button
                 :label="t('onboarding.coursePage.back')"
                 icon="pi pi-arrow-left"
@@ -60,8 +60,8 @@
 
           <!-- Lesson header -->
           <div v-if="currentLesson" class="course-page__lesson-header">
-            <div class="d-flex align-items-center gap-2">
-              <i :class="kindIcon(currentLesson.kind)" class="text-primary" />
+            <div class="course-page__lesson-head d-flex align-items-center">
+              <i :class="kindIcon(currentLesson.kind)" class="course-page__lesson-kind-icon" />
               <h2 class="course-page__lesson-title">{{ currentLesson.title }}</h2>
             </div>
           </div>
@@ -78,8 +78,8 @@
             />
           </div>
 
-          <div v-else class="p-4 text-muted text-center">
-            <i class="pi pi-book-open course-page__empty-icon" />
+          <div v-else class="course-page__empty p-4">
+            <i class="pi pi-book course-page__empty-icon" />
             <p class="mt-2">{{ t('onboarding.coursePage.selectLesson') }}</p>
           </div>
 
@@ -265,6 +265,10 @@ onUnmounted(() => {
     margin-bottom: $space-6;
   }
 
+  &__header-top {
+    gap: $space-2;
+  }
+
   &__course-title {
     font-size: $font-size-icon-md;
     font-weight: $font-weight-bold;
@@ -275,6 +279,15 @@ onUnmounted(() => {
     margin-bottom: $space-4;
     padding-bottom: $space-3;
     border-bottom: 1px solid var(--p-surface-200);
+  }
+
+  &__lesson-head {
+    gap: $space-2;
+  }
+
+  // Was `text-primary` (dead full-Bootstrap class) → theme-reactive accent token.
+  &__lesson-kind-icon {
+    color: var(--p-primary-color);
   }
 
   &__lesson-title {
@@ -301,15 +314,25 @@ onUnmounted(() => {
     margin-top: auto;
   }
 
+  // .text-muted / .text-center are dead full-Bootstrap classes → token + centering here.
+  &__empty {
+    color: var(--p-text-muted-color);
+    text-align: center;
+  }
+
   &__empty-icon {
     font-size: $font-size-icon-lg;
     opacity: 0.4;
   }
 
   &__skeleton {
-    .flex-1 {
-      flex: 1;
-    }
+    // .gap-3 is a dead full-Bootstrap class → gap via token here.
+    gap: $space-3;
+  }
+
+  // Was `.flex-1` (dead full-Bootstrap class) → flex-grow via named element.
+  &__skeleton-main {
+    flex: 1;
   }
 }
 </style>

@@ -93,7 +93,7 @@
         <Column :header="t('automation.runs.col.action')" style="width: 160px">
           <template #body="{ data }">
             <span v-if="data.action_kind">{{ t(`automation.action.${data.action_kind}`) }}</span>
-            <span v-else class="text-muted">—</span>
+            <span v-else class="automation-runs-page__muted">—</span>
           </template>
         </Column>
 
@@ -134,7 +134,7 @@
             >
               {{ truncate(data.error_message, 60) }}
             </span>
-            <span v-else class="text-muted">—</span>
+            <span v-else class="automation-runs-page__muted">—</span>
           </template>
         </Column>
       </DataTable>
@@ -311,6 +311,11 @@ function truncate(s: string, len: number): string {
   &__empty-icon {
     font-size: $font-size-icon-xl; // 2.5rem
     color: var(--p-surface-400);
+  }
+
+  // Muted em-dash placeholder — bootstrap-grid.min.css ships no .text-muted utility.
+  &__muted {
+    color: var(--p-text-muted-color);
   }
 
   &__target {

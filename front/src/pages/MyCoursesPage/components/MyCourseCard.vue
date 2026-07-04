@@ -1,5 +1,5 @@
 <template>
-  <Card class="my-course-card h-100">
+  <Card class="my-course-card">
     <!-- Cover -->
     <template #header>
       <div class="my-course-card__cover">
@@ -10,7 +10,7 @@
           class="my-course-card__cover-img"
         />
         <div v-else class="my-course-card__cover-placeholder">
-          <i class="pi pi-book-open my-course-card__cover-icon" />
+          <i class="pi pi-book my-course-card__cover-icon" />
           <div v-if="assignment.status === 'completed'" class="my-course-card__cover-check">
             <i class="pi pi-check-circle" />
           </div>
@@ -21,9 +21,9 @@
     <template #content>
       <h3 class="my-course-card__title">{{ assignment.course.title }}</h3>
 
-      <div class="d-flex align-items-center gap-2 mb-2">
+      <div class="my-course-card__meta d-flex align-items-center mb-2">
         <AssignmentStatusTag :status="assignment.status" />
-        <span v-if="deadlineText" :class="['my-course-card__deadline', { 'text-danger': isOverdue }]">
+        <span v-if="deadlineText" :class="['my-course-card__deadline', { 'my-course-card__deadline--overdue': isOverdue }]">
           · {{ deadlineText }}
         </span>
       </div>
@@ -45,14 +45,14 @@
         v-if="assignment.status === 'completed'"
         :label="t('onboarding.myCourses.viewCertificate')"
         severity="secondary"
-        class="w-100"
-        icon="pi pi-award"
+        class="w-full"
+        icon="pi pi-verified"
         @click="$router.push({ name: 'MyOnboardingCertificates' })"
       />
       <Button
         v-else
         :label="t('onboarding.myCourses.continue')"
-        class="w-100"
+        class="w-full"
         icon="pi pi-play"
         icon-pos="right"
         @click="$router.push({ name: 'CoursePlayer', params: { id: assignment.id } })"
@@ -89,7 +89,19 @@ const deadlineText = computed<string | null>(() => {
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .my-course-card {
+  // .h-100 is a dead full-Bootstrap class → equal-height cards via 100% here.
+  height: 100%;
+
+  &__meta {
+    gap: $space-2;
+  }
+
   &__cover {
     position: relative;
     width: 100%;
@@ -146,6 +158,11 @@ const deadlineText = computed<string | null>(() => {
   &__deadline {
     font-size: $font-size-xs; // snap from 13px
     color: var(--p-surface-500);
+
+    // .text-danger is a dead full-Bootstrap class → overdue tint via token here.
+    &--overdue {
+      color: var(--p-red-500);
+    }
   }
 
   &__progress-label {

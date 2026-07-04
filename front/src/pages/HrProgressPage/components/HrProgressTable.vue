@@ -13,7 +13,7 @@
     <template #empty>
       <div class="hr-progress-table__empty">
         <i class="pi pi-graduation-cap hr-progress-table__empty-icon" />
-        <p class="text-muted mt-2">{{ t('onboarding.hrProgress.empty') }}</p>
+        <p class="hr-progress-table__muted mt-2">{{ t('onboarding.hrProgress.empty') }}</p>
       </div>
     </template>
 
@@ -36,7 +36,7 @@
 
     <Column :header="t('onboarding.hrProgress.columns.progress')" style="width: 160px">
       <template #body="{ data: r }">
-        <div class="d-flex align-items-center gap-2">
+        <div class="hr-progress-table__progress d-flex align-items-center">
           <ProgressBar :value="r.progress_pct" style="height: 8px; flex: 1;" />
           <span class="hr-progress-table__pct">{{ r.progress_pct }}%</span>
         </div>
@@ -53,18 +53,18 @@
       <template #body="{ data: r }">
         <span
           v-if="r.due_date"
-          :class="{ 'text-danger': r.status === 'overdue' }"
+          :class="{ 'hr-progress-table__deadline--overdue': r.status === 'overdue' }"
         >
           {{ formatDate(r.due_date) }}
         </span>
-        <span v-else class="text-muted">—</span>
+        <span v-else class="hr-progress-table__muted">—</span>
       </template>
     </Column>
 
-    <Column :header="t('onboarding.hrProgress.columns.avgScore')" style="width: 110px" class="text-center">
+    <Column :header="t('onboarding.hrProgress.columns.avgScore')" style="width: 110px; text-align: center">
       <template #body="{ data: r }">
         <span v-if="r.avg_quiz_score != null">{{ r.avg_quiz_score }}%</span>
-        <span v-else class="text-muted">—</span>
+        <span v-else class="hr-progress-table__muted">—</span>
       </template>
     </Column>
   </DataTable>
@@ -125,6 +125,20 @@ function formatDate(dateStr: string): string {
     &:hover {
       text-decoration: underline;
     }
+  }
+
+  &__progress {
+    gap: $space-2;
+  }
+
+  // Theme-reactive muted placeholder — replaces dead full-Bootstrap .text-muted.
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
+
+  // .text-danger is a dead full-Bootstrap class → overdue tint via token here.
+  &__deadline--overdue {
+    color: var(--p-red-500);
   }
 }
 </style>

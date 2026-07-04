@@ -6,8 +6,8 @@
     :show-close-icon="false"
   >
     <template #header>
-      <div class="d-flex align-items-center gap-3 w-100">
-        <span class="flex-grow-1 fw-semibold">{{ t('onboarding.assignments.drawer.title') }}</span>
+      <div class="assign-drawer-header d-flex align-items-center w-full">
+        <span class="flex-grow-1 assign-drawer-header__title">{{ t('onboarding.assignments.drawer.title') }}</span>
         <Button
           :label="t('onboarding.assignments.drawer.cancel')"
           severity="secondary"
@@ -45,15 +45,15 @@
           option-value="id"
           :placeholder="t('onboarding.assignments.drawer.coursePlaceholder')"
           filter
-          class="w-100"
+          class="w-full"
           :loading="loadingCourses"
           @change="onCourseChange"
         />
       </div>
 
       <!-- Course info — fixed mode (courseId prop passed) -->
-      <div v-else class="mb-4 d-flex align-items-center gap-2">
-        <span class="text-muted">{{ t('onboarding.assignments.columns.course') }}:</span>
+      <div v-else class="mb-4 d-flex align-items-center assign-drawer-body__course-info">
+        <span class="assign-drawer-body__muted">{{ t('onboarding.assignments.columns.course') }}:</span>
         <Tag severity="info" :value="courseName" />
       </div>
 
@@ -67,12 +67,12 @@
           option-value="id"
           :placeholder="t('onboarding.assignments.drawer.employeesPlaceholder')"
           filter
-          class="w-100"
+          class="w-full"
           :loading="loadingUsers"
         />
         <div v-if="selectedUsers.length > 0" class="mt-2">
           <Badge :value="selectedUsers.length" severity="info" />
-          <span class="ms-2 text-muted assign-drawer-body__count-label">
+          <span class="ms-2 assign-drawer-body__muted assign-drawer-body__count-label">
             {{ t('onboarding.assignments.drawer.employees') }}
           </span>
         </div>
@@ -86,9 +86,9 @@
           date-format="dd.mm.yy"
           show-icon
           :min-date="today"
-          class="w-100"
+          class="w-full"
         />
-        <small class="text-muted">{{ t('onboarding.assignments.drawer.deadlineHint', { n: effectiveDeadlineDays ?? '—' }) }}</small>
+        <small class="assign-drawer-body__muted">{{ t('onboarding.assignments.drawer.deadlineHint', { n: effectiveDeadlineDays ?? '—' }) }}</small>
       </div>
     </div>
   </Drawer>
@@ -265,13 +265,40 @@ async function submit(): Promise<void> {
 </script>
 
 <style lang="scss" scoped>
+.w-full {
+  width: 100%;
+}
+
+.assign-drawer-header {
+  gap: $space-3;
+
+  &__title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: var(--p-text-color);
+  }
+}
+
 .assign-drawer-body {
   padding: $space-2;
+
+  &__course-info {
+    gap: $space-2;
+  }
+
+  // Muted supporting text — theme-reactive muted token reads both themes
+  // (dark → surface-600), replacing the dead full-Bootstrap .text-muted class.
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
 }
 
 .form-label {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
+  // $surface-700 is theme-reactive (dark → light ink), so NO .app-dark override:
+  // the previous `.app-dark & { color: $surface-300 }` painted labels in a
+  // border-grade navy tone → near-invisible in dark (audit H18).
   color: $surface-700;
   margin-bottom: $space-1;
   display: block;
@@ -279,10 +306,6 @@ async function submit(): Promise<void> {
   &.required::after {
     content: ' *';
     color: var(--p-red-500);
-  }
-
-  .app-dark & {
-    color: $surface-300;
   }
 }
 

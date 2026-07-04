@@ -16,7 +16,7 @@
       {{ t('onboarding.coursePage.pdfUnavailable') }}
     </Message>
 
-    <div v-if="resolvedUrl" class="d-flex gap-2 flex-wrap mb-4">
+    <div v-if="resolvedUrl" class="lesson-view-pdf__actions d-flex flex-wrap mb-4">
       <Button
         :label="t('onboarding.coursePage.openPdf')"
         icon="pi pi-external-link"
@@ -115,6 +115,11 @@ onBeforeUnmount(revokeBlob)
 
 <style lang="scss" scoped>
 .lesson-view-pdf {
+  // .gap-2 is a dead full-Bootstrap class → gap via token here.
+  &__actions {
+    gap: $space-2;
+  }
+
   &__iframe {
     width: 100%;
     height: 600px;

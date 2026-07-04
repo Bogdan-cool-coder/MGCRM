@@ -262,4 +262,10 @@ function cancel() {
     color: var(--p-text-muted-color);
   }
 }
+
+// Local full-width utility — the app imports bootstrap-grid.min.css, which ships
+// no sizing utilities (etalon: DealsPage/MoveDealDialog.vue, CreateContactInlineDialog.vue).
+.w-full {
+  width: 100%;
+}
 </style>

@@ -12,7 +12,7 @@
       {{ t('templates.create.hint') }}
     </div>
 
-    <div class="d-flex flex-column gap-3">
+    <div class="create-template-dialog__form">
       <!-- Code -->
       <div>
         <label class="create-template-dialog__label">
@@ -21,13 +21,13 @@
         </label>
         <InputText
           v-model="form.code"
-          class="w-100 mt-1"
+          class="mt-1 create-template-dialog__control"
           :class="{ 'p-invalid': !!fieldErrors.code }"
           :placeholder="t('templates.create.fields.codePlaceholder')"
           @input="clearFieldError('code')"
         />
         <small v-if="fieldErrors.code" class="p-error">{{ fieldErrors.code }}</small>
-        <small v-else class="text-secondary">{{ t('templates.create.fields.codeHint') }}</small>
+        <small v-else class="create-template-dialog__hint-text">{{ t('templates.create.fields.codeHint') }}</small>
       </div>
 
       <!-- Kind -->
@@ -41,7 +41,7 @@
           :options="kindOptions"
           option-label="label"
           option-value="value"
-          class="w-100 mt-1"
+          class="mt-1 create-template-dialog__control"
           :class="{ 'p-invalid': !!fieldErrors.kind }"
           :placeholder="t('templates.create.fields.kindPlaceholder')"
           @change="clearFieldError('kind')"
@@ -57,7 +57,7 @@
         </label>
         <InputText
           v-model="form.title"
-          class="w-100 mt-1"
+          class="mt-1 create-template-dialog__control"
           :class="{ 'p-invalid': !!fieldErrors.title }"
           @input="clearFieldError('title')"
         />
@@ -69,25 +69,25 @@
         <label class="create-template-dialog__label">{{ t('templates.card.meta.products') }}</label>
         <InputText
           v-model="productCodesRaw"
-          class="w-100 mt-1"
+          class="mt-1 create-template-dialog__control"
           :placeholder="t('templates.card.edit.placeholderCodes', 'macrocrm, macrosales (через запятую)')"
         />
-        <small class="text-secondary">{{ t('templates.card.edit.codesHint') }}</small>
+        <small class="create-template-dialog__hint-text">{{ t('templates.card.edit.codesHint') }}</small>
       </div>
 
       <div>
         <label class="create-template-dialog__label">{{ t('templates.card.meta.countries') }}</label>
         <InputText
           v-model="countryCodesRaw"
-          class="w-100 mt-1"
+          class="mt-1 create-template-dialog__control"
           :placeholder="t('templates.card.edit.placeholderCodes', 'kz, uz')"
         />
-        <small class="text-secondary">{{ t('templates.card.edit.codesHint') }}</small>
+        <small class="create-template-dialog__hint-text">{{ t('templates.card.edit.codesHint') }}</small>
       </div>
     </div>
 
     <template #footer>
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="d-flex justify-content-end create-template-dialog__footer">
         <Button
           :label="t('common.cancel')"
           severity="secondary"
@@ -265,6 +265,24 @@ async function submit() {
       flex-shrink: 0;
       margin-top: 2px;
     }
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+  }
+
+  &__footer {
+    gap: $space-2;
+  }
+
+  &__control {
+    width: 100%;
+  }
+
+  &__hint-text {
+    color: var(--p-text-muted-color);
   }
 
   &__label {

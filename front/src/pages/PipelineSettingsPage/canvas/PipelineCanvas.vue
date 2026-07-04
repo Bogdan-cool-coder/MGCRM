@@ -48,7 +48,7 @@
           :variant="BackgroundVariant.Dots"
           :gap="20"
           :size="1.5"
-          pattern-color="var(--p-surface-border)"
+          pattern-color="var(--p-surface-200)"
         />
       </VueFlow>
       <!-- Empty overlay -->
@@ -122,12 +122,12 @@
             :variant="BackgroundVariant.Dots"
             :gap="20"
             :size="1.5"
-            pattern-color="var(--p-surface-border)"
+            pattern-color="var(--p-surface-200)"
           />
           <template v-if="nodesReady">
             <Controls :show-interactive="false" />
             <MiniMap
-              :mask-color="isDark ? 'var(--p-surface-800)' : 'var(--p-surface-200)'"
+              :mask-color="isDark ? 'var(--p-surface-0)' : 'var(--p-surface-200)'"
               :node-color="isDark ? 'var(--p-surface-400)' : 'var(--p-surface-300)'"
             />
           </template>
@@ -595,8 +595,8 @@ function onDrop(event: DragEvent): void {
     align-items: center;
     gap: $space-2;
     padding: $space-2 $space-3;
-    border-bottom: 1px solid var(--p-surface-border);
-    background: var(--p-surface-card);
+    border-bottom: 1px solid var(--p-surface-200);
+    background: $surface-card;
     flex-shrink: 0;
     z-index: 10;
   }
@@ -638,15 +638,16 @@ function onDrop(event: DragEvent): void {
     height: 100%;
     min-height: 0;
 
-    // Vue Flow theme bridge — use PrimeVue surface tokens
-    --vf-node-bg: var(--p-surface-card);
+    // Vue Flow theme bridge — live PrimeVue 4 surface tokens (reactive to dark).
+    // card bg → --p-card-background; borders → surface-200; recessed pane → surface-100.
+    --vf-node-bg: var(--p-card-background);
     --vf-node-text: var(--p-text-color);
     --vf-connection-stroke: var(--p-primary-color);
     --vf-handle: var(--p-primary-color);
-    --vf-edge-stroke: var(--p-surface-border);
+    --vf-edge-stroke: var(--p-surface-200);
     --vf-edge-stroke-selected: var(--p-primary-color);
-    --vf-minimap-mask-bg: var(--p-surface-overlay);
-    --vf-bg-color: var(--p-surface-ground);
+    --vf-minimap-mask-bg: var(--p-card-background);
+    --vf-bg-color: var(--p-surface-100);
   }
 
   // ── MiniMap theming ──────────────────────────────────────────────────────
@@ -657,7 +658,7 @@ function onDrop(event: DragEvent): void {
 
   :deep(.vue-flow__minimap) {
     background: var(--p-card-background);
-    border: 1px solid var(--p-surface-border);
+    border: 1px solid var(--p-surface-200);
     border-radius: $radius-md;
   }
 
@@ -750,8 +751,8 @@ function onDrop(event: DragEvent): void {
     bottom: $space-6;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--p-surface-card);
-    border: 1px solid var(--p-surface-border);
+    background: $surface-card;
+    border: 1px solid var(--p-surface-200);
     border-radius: $radius-md;
     padding: $space-2 $space-4;
     font-size: $font-size-xs; // snap from 13px

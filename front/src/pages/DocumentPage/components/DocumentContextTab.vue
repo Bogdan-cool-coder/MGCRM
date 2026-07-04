@@ -24,7 +24,7 @@
     <!-- Dynamic form -->
     <template v-else>
       <template v-for="(group, groupName) in groupedVariables" :key="groupName">
-        <p v-if="groupName" class="context-tab__group-label fw-semibold mb-2">
+        <p v-if="groupName" class="context-tab__group-label mb-2">
           {{ groupName }}
         </p>
 
@@ -36,8 +36,8 @@
           >
             <label class="context-tab__field-label">
               {{ variable.label }}
-              <span v-if="variable.required" class="text-danger ms-1">*</span>
-              <small v-if="variable.help_text" class="text-secondary ms-1">
+              <span v-if="variable.required" class="context-tab__req ms-1">*</span>
+              <small v-if="variable.help_text" class="context-tab__hint ms-1">
                 ({{ variable.help_text }})
               </small>
             </label>
@@ -47,7 +47,7 @@
               v-if="variable.var_type === 'text'"
               v-model="(contextModel as Record<string, string>)[variable.key]"
               :disabled="!canEdit"
-              class="w-100 mt-1"
+              class="mt-1 context-tab__control"
               @update:model-value="onFieldChange"
             />
 
@@ -58,7 +58,7 @@
               :disabled="!canEdit"
               :rows="3"
               auto-resize
-              class="w-100 mt-1"
+              class="mt-1 context-tab__control"
               @update:model-value="onFieldChange"
             />
 
@@ -69,7 +69,7 @@
               :disabled="!canEdit"
               :min-fraction-digits="0"
               :max-fraction-digits="2"
-              class="w-100 mt-1"
+              class="mt-1 context-tab__control"
               @update:model-value="onFieldChange"
             />
 
@@ -80,7 +80,7 @@
               :disabled="!canEdit"
               date-format="dd.mm.yy"
               show-icon
-              class="w-100 mt-1"
+              class="mt-1 context-tab__control"
               @update:model-value="onFieldChange"
             />
 
@@ -92,12 +92,12 @@
               option-label="name"
               option-value="value"
               :disabled="!canEdit"
-              class="w-100 mt-1"
+              class="mt-1 context-tab__control"
               @update:model-value="onFieldChange"
             />
 
             <!-- checkbox -->
-            <div v-else-if="variable.var_type === 'checkbox'" class="d-flex align-items-center gap-2 mt-1">
+            <div v-else-if="variable.var_type === 'checkbox'" class="d-flex align-items-center mt-1 context-tab__checkbox-row">
               <Checkbox
                 v-model="(contextModel as Record<string, unknown>)[variable.key] as boolean"
                 :disabled="!canEdit"
@@ -229,6 +229,7 @@ const groupedVariables = computed(() => {
   &__group-label {
     color: var(--p-text-color);
     font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--p-surface-200);
@@ -240,6 +241,22 @@ const groupedVariables = computed(() => {
     font-weight: $font-weight-medium;
     color: var(--p-text-color);
     display: block;
+  }
+
+  &__req {
+    color: $color-danger;
+  }
+
+  &__hint {
+    color: var(--p-text-muted-color);
+  }
+
+  &__control {
+    width: 100%;
+  }
+
+  &__checkbox-row {
+    gap: $space-2;
   }
 
   &__empty {

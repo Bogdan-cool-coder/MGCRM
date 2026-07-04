@@ -47,7 +47,7 @@ const { t } = useI18n()
   position: relative;
   width: 200px;
   min-height: 72px;
-  background: var(--p-surface-card);
+  background: $surface-card;
   border: 2px solid var(--p-primary-color);
   border-radius: $radius-lg;
   padding: $space-3 $space-4;
@@ -75,7 +75,7 @@ const { t } = useI18n()
 
   &__title {
     font-size: $font-size-sm;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     color: var(--p-text-color);
     white-space: nowrap;
     overflow: hidden;

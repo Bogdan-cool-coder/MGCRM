@@ -28,7 +28,7 @@
           option-value="value"
           :loading="loadingTemplates"
           :placeholder="t('documents.create.template')"
-          class="w-100 mt-1"
+          class="mt-1 gen-dialog__control"
           :invalid="!!errors.template_id"
         />
         <Message
@@ -178,6 +178,10 @@ async function submit() {
     color: var(--p-text-color);
     display: block;
     margin-bottom: 0.25rem;
+  }
+
+  &__control {
+    width: 100%;
   }
 }
 </style>

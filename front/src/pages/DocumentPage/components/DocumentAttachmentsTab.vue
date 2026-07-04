@@ -38,12 +38,12 @@
       <Column :header="t('documents.attachments.columns.uploader')" style="width: 160px">
         <template #body="{ data }">
           {{ data.uploaded_by_name ?? '—' }}
-          <span class="text-secondary ms-1">{{ formatDate(data.created_at) }}</span>
+          <span class="attachments-tab__meta ms-1">{{ formatDate(data.created_at) }}</span>
         </template>
       </Column>
       <Column style="width: 80px">
         <template #body="{ data }">
-          <span class="d-flex gap-1">
+          <span class="d-flex attachments-tab__row-actions">
             <Button
               icon="pi pi-download"
               text
@@ -99,7 +99,7 @@
           option-label="label"
           option-value="value"
           :allow-empty="false"
-          class="mt-1 w-100"
+          class="mt-1 attachments-tab__control"
         />
       </div>
       <div class="mb-3">
@@ -252,6 +252,18 @@ function formatDate(dateStr: string): string {
     font-weight: $font-weight-medium;
     color: var(--p-text-color);
     display: block;
+  }
+
+  &__meta {
+    color: var(--p-text-muted-color);
+  }
+
+  &__row-actions {
+    gap: $space-1;
+  }
+
+  &__control {
+    width: 100%;
   }
 
   &__empty {

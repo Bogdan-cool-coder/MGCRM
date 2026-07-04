@@ -12,7 +12,7 @@
         :empty-message="t('automation.fields.noStages')"
       >
         <template #option="{ option }">
-          <div class="d-flex align-items-center gap-2">
+          <div class="change-stage-config__option d-flex align-items-center">
             <span>{{ option.name }}</span>
             <Tag
               v-if="option.is_won"
@@ -119,6 +119,11 @@ defineExpose({ validate })
   .required {
     color: var(--p-red-500);
     margin-left: 2px;
+  }
+
+  // gap-* not provided by bootstrap-grid.min.css → token gap.
+  &__option {
+    gap: $space-2;
   }
 }
 </style>

@@ -1,21 +1,9 @@
 <template>
   <div class="tab-overview">
-    <!-- Overview keeps its OWN toolbar + filter behaviour (TZ §1.1: «прежнее
-         поведение фильтров сохранить»). The hub's AnalyticsFilterBar governs the
-         report tabs; the overview widgets stay on the period-select they shipped
-         with so nothing regresses. The Edit/Done toggle drives the widget-grid. -->
-    <DashboardToolbar
-      :filters="filters"
-      :pipelines="pipelines"
-      :managers="managers"
-      :pipelines-loading="pipelinesLoading"
-      :can-see-all-managers="canSeeAllManagers"
-      :edit="editMode"
-      @update:period="(v) => setFilter('period', v)"
-      @update:pipeline-id="(v) => setFilter('pipeline_id', v)"
-      @update:manager-id="(v) => setFilter('manager_id', v)"
-      @toggle-edit="editMode = !editMode"
-    />
+    <!-- The overview filters (named period · pipeline · manager · Edit toggle)
+         all live in the shared hub AnalyticsFilterBar now (audit §3в: the legacy
+         DashboardToolbar with its duplicate pickers was removed). This tab is a
+         pure consumer — it receives those filters via props and refetches. -->
 
     <!-- No active/selected pipeline: every widget is empty because no funnel
          resolved. Surface a single explanatory message. -->
@@ -49,7 +37,7 @@
     </Message>
 
     <!-- Edit-mode hint + reset -->
-    <div v-if="editMode" class="tab-overview__edit-banner">
+    <div v-if="props.editMode" class="tab-overview__edit-banner">
       <i class="pi pi-arrows-alt tab-overview__edit-icon" />
       <span class="tab-overview__edit-text">{{ t('dashboard.layout.editHint') }}</span>
       <Button
@@ -65,7 +53,7 @@
     <!-- 12-column widget grid (variant Б: order + visibility) -->
     <WidgetGrid
       :ordered="ordered"
-      :edit="editMode"
+      :edit="props.editMode"
       :is-first="isFirst"
       :is-last="isLast"
       @move-up="moveUp"
@@ -141,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import Message from 'primevue/message'
@@ -149,30 +137,68 @@ import Button from 'primevue/button'
 import { useDashboardPage } from '../../composables/useDashboardPage'
 import { useDashboardLayout } from '../../composables/useDashboardLayout'
 import { useNoTaskPreview } from '../../composables/useNoTaskPreview'
-import DashboardToolbar from '../DashboardToolbar.vue'
 import WidgetGrid from '../WidgetGrid.vue'
 import WidgetKpiCard from '../WidgetKpiCard.vue'
 import WidgetFunnelTable from '../WidgetFunnelTable.vue'
 import WidgetTopBar from '../WidgetTopBar.vue'
 import WidgetForecast from '../WidgetForecast.vue'
 import WidgetDealsWithoutTasks from '../WidgetDealsWithoutTasks.vue'
-import type { StatusGroup } from '@/entities/salesDashboard'
+import type { DashboardPeriod, StatusGroup } from '@/entities/salesDashboard'
+
+const props = defineProps<{
+  /** Named period enum from the shared hub filter bar. */
+  period: DashboardPeriod
+  /** Selected funnel from the shared hub filter bar. */
+  pipelineId: number | null
+  /** Cross-user manager filter from the shared hub filter bar. */
+  managerId: number | null
+  /** Widget-grid edit mode toggled from the shared hub filter bar. */
+  editMode: boolean
+  /** Hub's pipeline pre-selection in flight — gates the initial fetch. */
+  pipelinesLoading: boolean
+}>()
 
 const { t } = useI18n()
 const router = useRouter()
 
 // ECharts dark-theme is registered app-wide in App.vue (useMacroCrmEchartsTheme).
 
-const {
-  filters,
-  pipelines,
-  managers,
-  pipelinesLoading,
-  canSeeAllManagers,
-  data,
-  loading,
-  setFilter,
-} = useDashboardPage()
+// Filters are hub-owned; this tab feeds them in as getters and refetches on change.
+const { data, loading, start } = useDashboardPage({
+  period: () => props.period,
+  pipelineId: () => props.pipelineId,
+  managerId: () => props.managerId,
+})
+
+// The hub pre-selects a pipeline asynchronously. Fire the first load once the
+// pipeline pre-selection settles: immediately if one is already selected at
+// mount, on the first null→id transition, or — if the hub finishes loading with
+// no pipeline at all — once loading ends (the backend resolves a default and
+// returns `meta.no_pipeline`, so the empty-state renders instead of a perpetual
+// skeleton). `start()` arms the composable's debounced watch; this single guarded
+// call prevents a duplicate initial fetch.
+let started = false
+const kickoff = (): void => {
+  if (started) return
+  started = true
+  void start()
+}
+onMounted(() => {
+  if (props.pipelineId != null || !props.pipelinesLoading) kickoff()
+})
+watch(
+  () => props.pipelineId,
+  (id) => {
+    if (id != null) kickoff()
+  },
+)
+watch(
+  () => props.pipelinesLoading,
+  (loading) => {
+    // Pre-selection finished with no pipeline → still fetch (backend default).
+    if (!loading) kickoff()
+  },
+)
 
 const baseCurrency = computed(() => data.value?.meta?.base_currency ?? 'RUB')
 
@@ -188,8 +214,8 @@ const groupByKey = computed<Record<StatusGroup['key'], StatusGroup | null>>(() =
   return map
 })
 
-// ─── Layout (edit mode + order/visibility, persisted) ─────────────────────────
-const editMode = ref(false)
+// ─── Layout (order/visibility, persisted) ─────────────────────────────────────
+// Edit mode is hub-owned (`props.editMode`, toggled from the shared filter bar).
 const {
   ordered,
   moveUp,
@@ -209,7 +235,7 @@ const {
   loading: noTaskLoading,
   failed: noTaskFailed,
   removeDeal,
-} = useNoTaskPreview(() => filters.pipeline_id ?? null)
+} = useNoTaskPreview(() => props.pipelineId ?? null)
 
 /**
  * Badge freshness (BUG-NOTASK-BADGE-STALE): the «N требуют внимания» count comes
@@ -254,52 +280,45 @@ const onNoTaskTaskCreated = (dealId: number): void => {
 // from route.query today); we keep to the supported params, no invented filters.
 const openDealsList = (): void => {
   const query: Record<string, string> = {}
-  if (filters.pipeline_id != null) query.pipeline_id = String(filters.pipeline_id)
+  if (props.pipelineId != null) query.pipeline_id = String(props.pipelineId)
   void router.push({ path: '/deals', query })
 }
 </script>
 
 <style lang="scss" scoped>
+// Brand accent reads on both themes from the reactive PrimeVue token
+// (navy #172747 in light → #4C7DF0 in dark) — no static $primary-color.
 .tab-overview__banner-link {
-  color: $primary-color;
+  color: var(--p-primary-color);
   font-weight: $font-weight-semibold;
   text-decoration: underline;
   text-underline-offset: 2px;
-
-  .app-dark & {
-    color: var(--p-primary-color);
-  }
 }
 
+// Edit-mode hint plaque: a reactive primary tint over the card surface (color-mix
+// on --p-primary-color) so the fill + border track the theme instead of pinning
+// the static light $primary-50/$primary-200 that stayed a pale plaque on navy.
 .tab-overview__edit-banner {
   display: flex;
   align-items: center;
   gap: $space-2;
   padding: $space-2 $space-3;
   margin-bottom: $space-4;
-  background: $primary-50;
-  border: 1px solid $primary-200;
+  background: color-mix(in srgb, var(--p-primary-color) 8%, var(--p-surface-card));
+  border: 1px solid color-mix(in srgb, var(--p-primary-color) 24%, var(--p-surface-card));
   border-radius: $radius-md;
 }
 
 .tab-overview__edit-icon {
   flex-shrink: 0;
   font-size: $font-size-sm;
-  color: $primary-color;
-
-  .app-dark & {
-    color: var(--p-primary-color);
-  }
+  color: var(--p-primary-color);
 }
 
 .tab-overview__edit-text {
   flex: 1;
   min-width: 0;
   font-size: $font-size-sm;
-  color: $primary-color;
-
-  .app-dark & {
-    color: var(--p-primary-color);
-  }
+  color: var(--p-primary-color);
 }
 </style>

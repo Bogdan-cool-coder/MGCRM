@@ -59,7 +59,7 @@
 
       <Column :header="t('onboarding.assignments.columns.progress')" style="width: 160px">
         <template #body="{ data: a }">
-          <div class="d-flex align-items-center gap-2">
+          <div class="assignments-page__progress d-flex align-items-center">
             <ProgressBar :value="a.progress_pct" style="height: 8px; flex: 1;" />
             <span class="assignments-page__progress-pct">{{ a.progress_pct }}%</span>
           </div>
@@ -70,17 +70,17 @@
         <template #body="{ data: a }">
           <span
             v-if="a.due_date"
-            :class="{ 'text-danger': a.status === 'overdue' }"
+            :class="{ 'assignments-page__deadline--overdue': a.status === 'overdue' }"
           >
             {{ formatDate(a.due_date) }}
           </span>
-          <span v-else class="text-muted">—</span>
+          <span v-else class="assignments-page__muted">—</span>
         </template>
       </Column>
 
       <Column style="width: 80px">
         <template #body="{ data: a }">
-          <div class="d-flex gap-1">
+          <div class="assignments-page__actions d-flex">
             <Button
               icon="pi pi-calendar"
               size="small"
@@ -190,6 +190,24 @@ onMounted(() => {
     &:hover {
       text-decoration: underline;
     }
+  }
+
+  &__progress {
+    gap: $space-2;
+  }
+
+  &__actions {
+    gap: $space-1;
+  }
+
+  // Theme-reactive muted placeholder — replaces dead full-Bootstrap .text-muted.
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
+
+  // .text-danger is a dead full-Bootstrap class → overdue tint via token here.
+  &__deadline--overdue {
+    color: var(--p-red-500);
   }
 
   &__empty {

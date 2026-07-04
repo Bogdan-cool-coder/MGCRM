@@ -9,12 +9,12 @@
     class="ai-tutor-drawer"
   >
     <template #header>
-      <div class="d-flex align-items-center justify-content-between w-100">
-        <div class="d-flex align-items-center gap-2">
-          <i class="pi pi-sparkles text-primary" />
-          <span class="fw-bold">{{ t('onboarding.coursePage.aiTutor.title') }}</span>
+      <div class="ai-tutor-drawer__header d-flex align-items-center justify-content-between w-full">
+        <div class="ai-tutor-drawer__header-brand d-flex align-items-center">
+          <i class="pi pi-sparkles ai-tutor-drawer__brand-icon" />
+          <span class="ai-tutor-drawer__brand-title">{{ t('onboarding.coursePage.aiTutor.title') }}</span>
         </div>
-        <div class="d-flex align-items-center gap-1">
+        <div class="ai-tutor-drawer__header-actions d-flex align-items-center">
           <Button
             :label="t('onboarding.coursePage.aiTutor.clearHistory')"
             icon="pi pi-trash"
@@ -36,14 +36,14 @@
     </template>
 
     <!-- Lesson subtitle -->
-    <p class="ai-tutor-drawer__lesson-title text-muted mb-3">
+    <p class="ai-tutor-drawer__lesson-title ai-tutor-drawer__muted mb-3">
       {{ lessonTitle }}
     </p>
 
     <!-- Messages history -->
     <div ref="messagesEl" class="ai-tutor-drawer__messages">
       <!-- Loading history -->
-      <div v-if="isLoadingHistory" class="d-flex flex-column gap-2">
+      <div v-if="isLoadingHistory" class="ai-tutor-drawer__skeletons d-flex flex-column">
         <Skeleton height="60px" class="mb-1" />
         <Skeleton height="80px" class="mb-1" />
       </div>
@@ -51,7 +51,7 @@
       <!-- Empty history -->
       <div
         v-else-if="messages.length === 0 && !isSending"
-        class="text-center text-muted py-4"
+        class="ai-tutor-drawer__empty ai-tutor-drawer__muted"
       >
         <i class="pi pi-comments ai-tutor-drawer__empty-icon" style="opacity: 0.3" />
         <p class="mt-2 mb-0">{{ t('onboarding.coursePage.aiTutor.emptyHistory') }}</p>
@@ -74,9 +74,9 @@
         </div>
 
         <!-- Sending indicator -->
-        <div v-if="isSending" class="d-flex align-items-center gap-2 mt-2">
+        <div v-if="isSending" class="ai-tutor-drawer__sending d-flex align-items-center mt-2">
           <ProgressSpinner style="width: 24px; height: 24px" strokeWidth="4" />
-          <span class="text-muted ai-tutor-drawer__thinking-text">{{ t('onboarding.coursePage.aiTutor.thinking') }}</span>
+          <span class="ai-tutor-drawer__muted ai-tutor-drawer__thinking-text">{{ t('onboarding.coursePage.aiTutor.thinking') }}</span>
         </div>
       </template>
     </div>
@@ -88,7 +88,7 @@
         rows="2"
         auto-resize
         :placeholder="t('onboarding.coursePage.aiTutor.placeholder')"
-        class="w-100 mb-2"
+        class="w-full mb-2"
         @keydown.enter.ctrl="handleSend"
       />
       <Button
@@ -96,7 +96,7 @@
         icon="pi pi-send"
         :loading="isSending"
         :disabled="!question?.trim()"
-        class="w-100"
+        class="w-full"
         @click="handleSend"
       />
     </div>
@@ -159,7 +159,50 @@ function formatTime(iso: string): string {
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .ai-tutor-drawer {
+  // Theme-reactive muted text — replaces dead full-Bootstrap .text-muted.
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
+
+  &__header {
+    gap: $space-2;
+  }
+
+  &__header-brand {
+    gap: $space-2;
+  }
+
+  &__header-actions {
+    gap: $space-1;
+  }
+
+  &__brand-icon {
+    color: var(--p-primary-color);
+  }
+
+  &__brand-title {
+    font-weight: $font-weight-bold;
+  }
+
+  &__skeletons {
+    gap: $space-2;
+  }
+
+  &__empty {
+    text-align: center;
+    padding-block: $space-4;
+  }
+
+  &__sending {
+    gap: $space-2;
+  }
+
   &__lesson-title {
     font-size: $font-size-sm; // snap from 0.8125rem (15px→14px)
   }
@@ -191,7 +234,9 @@ function formatTime(iso: string): string {
       flex-direction: row-reverse;
 
       .ai-tutor-drawer__bubble {
-        background: var(--p-primary-50);
+        // --p-primary-50 is a STATIC near-white palette step → light-on-light user
+        // bubble in dark. A color-mix accent tint over the surface reads both themes.
+        background: color-mix(in srgb, var(--p-primary-color) 14%, var(--p-card-background));
         border-radius: $radius-xl $radius-xl $radius-2xs $radius-xl;
         text-align: right;
       }

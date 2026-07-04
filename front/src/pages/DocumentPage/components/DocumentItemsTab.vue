@@ -77,10 +77,10 @@
       <div class="items-tab__summary mt-3">
         <div class="row justify-content-end">
           <div class="col-md-5">
-            <table class="items-tab__summary-table w-100">
+            <table class="items-tab__summary-table">
               <tr>
-                <td class="text-secondary">{{ t('documents.items.currency') }}:</td>
-                <td class="text-end">
+                <td class="items-tab__summary-label">{{ t('documents.items.currency') }}:</td>
+                <td class="items-tab__summary-value">
                   <Select
                     v-if="canEdit"
                     v-model="currency"
@@ -92,16 +92,16 @@
                 </td>
               </tr>
               <tr>
-                <td class="text-secondary">{{ t('documents.items.subtotal') }}:</td>
-                <td class="text-end">{{ formatMoney(subtotal) }}</td>
+                <td class="items-tab__summary-label">{{ t('documents.items.subtotal') }}:</td>
+                <td class="items-tab__summary-value">{{ formatMoney(subtotal) }}</td>
               </tr>
               <tr v-if="discountPct && discountPct > 0">
-                <td class="text-secondary">{{ t('documents.items.discount') }} {{ discountPct }}%:</td>
-                <td class="text-end text-danger">-{{ formatMoney(discountAmount) }}</td>
+                <td class="items-tab__summary-label">{{ t('documents.items.discount') }} {{ discountPct }}%:</td>
+                <td class="items-tab__summary-value items-tab__summary-value--discount">-{{ formatMoney(discountAmount) }}</td>
               </tr>
               <tr class="items-tab__total-row">
-                <td class="fw-bold">{{ t('documents.items.toPay') }}:</td>
-                <td class="text-end fw-bold">{{ formatMoney(totalAmount) }}</td>
+                <td class="items-tab__summary-label items-tab__summary-label--total">{{ t('documents.items.toPay') }}:</td>
+                <td class="items-tab__summary-value items-tab__summary-value--total">{{ formatMoney(totalAmount) }}</td>
               </tr>
             </table>
           </div>
@@ -123,13 +123,13 @@
           :options="productOptions"
           option-label="name"
           option-value="id"
-          class="w-100 mt-1"
+          class="mt-1 items-tab__control"
           :placeholder="t('documents.items.product')"
         />
       </div>
       <div class="mb-3">
         <label class="items-tab__label">{{ t('documents.items.qty') }} *</label>
-        <InputNumber v-model="newItem.qty" :min="1" class="w-100 mt-1" />
+        <InputNumber v-model="newItem.qty" :min="1" class="mt-1 items-tab__control" />
       </div>
       <template #footer>
         <Button
@@ -294,17 +294,43 @@ async function submitAddItem() {
   }
 
   &__summary-table {
+    width: 100%;
     border-collapse: collapse;
 
     td {
-      padding: 0.25rem 0.5rem;
+      padding: $space-1 $space-2;
       font-size: $font-size-sm;
     }
   }
 
+  &__summary-label {
+    color: var(--p-text-muted-color);
+
+    &--total {
+      color: var(--p-text-color);
+      font-weight: $font-weight-bold;
+    }
+  }
+
+  &__summary-value {
+    text-align: right;
+
+    &--discount {
+      color: $color-danger;
+    }
+
+    &--total {
+      font-weight: $font-weight-bold;
+    }
+  }
+
+  &__control {
+    width: 100%;
+  }
+
   &__total-row td {
     border-top: 1px solid var(--p-surface-200);
-    padding-top: 0.5rem;
+    padding-top: $space-2;
     font-size: $font-size-md;
   }
 

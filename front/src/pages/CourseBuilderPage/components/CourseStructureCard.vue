@@ -26,7 +26,7 @@
 
         <div v-if="modules.length === 0" class="course-structure-card__empty">
           <i class="pi pi-list course-structure-card__empty-icon" />
-          <p class="text-muted">{{ t('onboarding.builder.noModules') }}</p>
+          <p class="course-structure-card__muted">{{ t('onboarding.builder.noModules') }}</p>
         </div>
 
         <Button
@@ -89,6 +89,11 @@ const { t } = useI18n()
   &__empty-icon {
     font-size: $font-size-icon-lg;
     color: var(--p-surface-400);
+  }
+
+  // Theme-reactive muted text — replaces dead full-Bootstrap .text-muted.
+  &__muted {
+    color: var(--p-text-muted-color);
   }
 }
 </style>

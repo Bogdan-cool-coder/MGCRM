@@ -25,7 +25,7 @@
     </h4>
 
     <div v-for="answer in result.answers" :key="answer.question_id" class="quiz-result__answer mb-3">
-      <div class="d-flex align-items-start gap-2 mb-1">
+      <div class="quiz-result__answer-head d-flex align-items-start mb-1">
         <Tag
           :severity="answer.is_correct ? 'success' : 'danger'"
           :icon="answer.is_correct ? 'pi pi-check' : 'pi pi-times'"
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="d-flex gap-2 mt-4 flex-wrap">
+    <div class="quiz-result__actions d-flex mt-4 flex-wrap">
       <Button
         v-if="!result.passed"
         :label="t('onboarding.coursePage.quiz.result.retry')"
@@ -103,6 +103,15 @@ function correctAnswerText(answer: QuizAnswerResult): string {
     font-weight: $font-weight-bold;
   }
 
+  // .gap-2 is a dead full-Bootstrap class → gap via token here.
+  &__answer-head {
+    gap: $space-2;
+  }
+
+  &__actions {
+    gap: $space-2;
+  }
+
   &__answer {
     padding: $space-3;
     background: var(--p-surface-50);
@@ -124,7 +133,7 @@ function correctAnswerText(answer: QuizAnswerResult): string {
 
   &__correct-label,
   &__explanation-label {
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
   }
 }
 </style>

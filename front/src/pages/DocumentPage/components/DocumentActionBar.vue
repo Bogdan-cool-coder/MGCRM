@@ -1,5 +1,5 @@
 <template>
-  <div class="document-action-bar d-flex align-items-center flex-wrap gap-2">
+  <div class="document-action-bar d-flex align-items-center flex-wrap">
     <!-- Back -->
     <Button
       icon="pi pi-arrow-left"
@@ -9,7 +9,7 @@
       @click="$emit('back')"
     />
 
-    <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+    <div class="document-action-bar__group d-flex align-items-center ms-auto flex-wrap">
       <!-- Generate -->
       <Button
         v-if="showGenerate"
@@ -167,6 +167,11 @@ const showUnarchive = computed(() => !!props.doc.archived_at)
 
 <style lang="scss" scoped>
 .document-action-bar {
-  padding: 0.5rem 0;
+  padding: $space-2 0;
+  gap: $space-2;
+
+  &__group {
+    gap: $space-2;
+  }
 }
 </style>

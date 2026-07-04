@@ -1,7 +1,7 @@
 <template>
   <div class="remarks-tab">
     <!-- Attempt filter -->
-    <div class="d-flex align-items-center gap-3 mb-3">
+    <div class="d-flex align-items-center mb-3 remarks-tab__filter">
       <label class="remarks-tab__label mb-0">{{ t('documents.remarks.filterAttempt') }}:</label>
       <Select
         v-model="selectedAttempt"
@@ -20,7 +20,7 @@
     </div>
 
     <!-- Remarks list -->
-    <div v-else-if="remarks.length > 0" class="d-flex flex-column gap-2">
+    <div v-else-if="remarks.length > 0" class="remarks-tab__list">
       <Card
         v-for="remark in remarks"
         :key="remark.id"
@@ -28,11 +28,11 @@
         :class="{ 'remarks-tab__card--resolved': remark.is_resolved }"
       >
         <template #content>
-          <div class="d-flex align-items-start justify-content-between gap-3">
-            <div class="flex-1">
-              <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="fw-medium">{{ remark.author?.full_name ?? '—' }}</span>
-                <span class="text-secondary remarks-tab__meta">
+          <div class="d-flex align-items-start justify-content-between remarks-tab__row">
+            <div class="remarks-tab__grow">
+              <div class="d-flex align-items-center mb-1 remarks-tab__author-line">
+                <span class="remarks-tab__author">{{ remark.author?.full_name ?? '—' }}</span>
+                <span class="remarks-tab__meta remarks-tab__meta--muted">
                   {{ t('documents.approval.stage') }} {{ remark.stage_order }}
                   · {{ formatDate(remark.created_at) }}
                 </span>
@@ -52,7 +52,7 @@
                 />
               </div>
               <p class="mb-1 remarks-tab__body">{{ remark.text }}</p>
-              <p v-if="remark.is_resolved && remark.resolved_by?.full_name" class="text-secondary mb-0 remarks-tab__meta">
+              <p v-if="remark.is_resolved && remark.resolved_by?.full_name" class="mb-0 remarks-tab__meta remarks-tab__meta--muted">
                 {{ t('documents.remarks.resolved') }}: {{ remark.resolved_by?.full_name }}
                 · {{ remark.resolved_at ? formatDate(remark.resolved_at) : '' }}
               </p>
@@ -164,6 +164,32 @@ function formatDate(dateStr: string): string {
     width: 100px;
   }
 
+  &__filter {
+    gap: $space-3;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+  }
+
+  &__row {
+    gap: $space-3;
+  }
+
+  &__grow {
+    flex: 1;
+  }
+
+  &__author-line {
+    gap: $space-2;
+  }
+
+  &__author {
+    font-weight: $font-weight-medium;
+  }
+
   &__label {
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
@@ -184,6 +210,10 @@ function formatDate(dateStr: string): string {
 
   &__meta {
     font-size: $font-size-xs;
+
+    &--muted {
+      color: var(--p-text-muted-color);
+    }
   }
 
   &__body {

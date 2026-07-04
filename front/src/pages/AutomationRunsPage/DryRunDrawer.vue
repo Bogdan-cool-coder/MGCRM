@@ -7,8 +7,8 @@
     @update:visible="$emit('update:visible', $event)"
   >
     <template #header>
-      <div class="d-flex align-items-center justify-content-between w-100">
-        <span class="fw-semibold">{{ t('automation.dryrun.drawerTitle') }}</span>
+      <div class="dry-run-drawer__header d-flex align-items-center justify-content-between">
+        <span class="dry-run-drawer__header-title">{{ t('automation.dryrun.drawerTitle') }}</span>
         <Button
           icon="pi pi-times"
           text
@@ -102,19 +102,19 @@
 
       <!-- Empty hint -->
       <template v-else>
-        <p class="text-muted">{{ t('automation.dryrun.emptyHint') }}</p>
+        <p class="dry-run-drawer__empty-hint">{{ t('automation.dryrun.emptyHint') }}</p>
       </template>
     </div>
 
     <template #footer>
-      <div class="d-flex justify-content-between align-items-center w-100">
+      <div class="dry-run-drawer__footer d-flex justify-content-between align-items-center">
         <Button
           :label="t('common.cancel')"
           severity="secondary"
           text
           @click="$emit('update:visible', false)"
         />
-        <div class="d-flex gap-2">
+        <div class="dry-run-drawer__footer-actions d-flex">
           <Button
             :label="t('automation.dryrun.button')"
             icon="pi pi-search"
@@ -302,6 +302,34 @@ async function doExecute(): Promise<void> {
 </script>
 
 <style lang="scss" scoped>
+// Drawer header (custom #header slot) — bootstrap-grid ships no fw-* utilities.
+.dry-run-drawer__header {
+  width: 100%;
+}
+
+.dry-run-drawer__header-title {
+  font-weight: $font-weight-semibold;
+}
+
+// Drawer footer layout + action group gap (bootstrap-grid ships no gap-* utility).
+.dry-run-drawer__footer {
+  width: 100%;
+}
+
+.dry-run-drawer__footer-actions {
+  gap: $space-2;
+}
+
+.dry-run-drawer__empty-hint {
+  color: var(--p-text-muted-color);
+}
+
+// Local full-width utility — the app imports bootstrap-grid.min.css, which ships
+// no sizing utilities (etalon: DealsPage/MoveDealDialog.vue defines .w-full locally).
+.w-100 {
+  width: 100%;
+}
+
 .dry-run-drawer {
   display: flex;
   flex-direction: column;
@@ -357,14 +385,11 @@ async function doExecute(): Promise<void> {
     li {
       font-size: $font-size-sm;
       padding: $space-1 $space-2;
+      // surface-50 bg + surface-200 border are theme-reactive → both themes correct
+      // without a dark branch (was surface-800/700 = LIGHT blocks in navy dark).
       background-color: var(--p-surface-50);
       border-radius: $radius-sm;
       border: 1px solid var(--p-surface-200);
-
-      .app-dark & {
-        background-color: var(--p-surface-800);
-        border-color: var(--p-surface-700);
-      }
     }
   }
 
@@ -393,20 +418,11 @@ async function doExecute(): Promise<void> {
     color: var(--p-text-color);
     padding: $space-1 $space-2;
     border-radius: $radius-sm;
+    // surface-50 bg + surface-200 border are theme-reactive → both themes correct
+    // without a dark branch (was surface-800/700 = LIGHT blocks in navy dark, which
+    // forced a light-pair icon override; that override is now unnecessary).
     background-color: var(--p-surface-50);
     border: 1px solid var(--p-surface-200);
-
-    .app-dark & {
-      background-color: var(--p-surface-800);
-      border-color: var(--p-surface-700);
-
-      // light-pair: row bg is surface-800 (#C6D0E2, LIGHT) in dark → keep the muted
-      // "skip" icon as dark ink (surface-400, 5.26:1). Global muted token lightened
-      // to surface-600 for dark-on-dark surfaces; pin explicitly on this light row.
-      .pi-times-circle {
-        color: var(--p-surface-400);
-      }
-    }
 
     .pi-check-circle {
       color: var(--p-green-500);

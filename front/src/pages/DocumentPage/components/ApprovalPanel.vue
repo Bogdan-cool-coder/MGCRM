@@ -8,22 +8,22 @@
       <!-- No approval yet -->
       <div v-else-if="!approval" class="approval-panel__empty">
         <i class="pi pi-send approval-panel__empty-icon" />
-        <p class="text-secondary mb-0">{{ t('documents.approval.noApproval') }}</p>
+        <p class="approval-panel__muted mb-0">{{ t('documents.approval.noApproval') }}</p>
       </div>
 
       <template v-else>
         <!-- Header -->
         <div class="approval-panel__header mb-3">
-          <span class="fw-medium">
+          <span class="approval-panel__strong">
             {{ t('documents.approval.stage', { current: approval.current_stage_order ?? '—', total: approval.total_stages }) }}
           </span>
-          <span class="text-secondary ms-2">
+          <span class="approval-panel__muted ms-2">
             {{ t('documents.approval.attempt', { n: approval.attempt }) }}
           </span>
         </div>
 
         <!-- Stages -->
-        <div class="d-flex flex-column gap-3 mb-3">
+        <div class="approval-panel__stages mb-3">
           <div
             v-for="stage in approval.stages"
             :key="stage.id"
@@ -34,7 +34,7 @@
             }"
           >
             <div class="approval-panel__stage-header">
-              <span class="fw-medium">{{ stage.order }}. {{ stage.name }}</span>
+              <span class="approval-panel__strong">{{ stage.order }}. {{ stage.name }}</span>
               <span v-if="stage.is_active" class="approval-panel__stage-badge approval-panel__stage-badge--active">
                 {{ t('documents.approval.pending') }}
               </span>
@@ -55,7 +55,7 @@
               >
                 <i :class="voteIcon(vote.decision)" :style="{ color: voteColor(vote.decision) }" />
                 <span class="approval-panel__vote-name">{{ vote.user_name }}</span>
-                <span class="text-secondary approval-panel__vote-status">
+                <span class="approval-panel__muted approval-panel__vote-status">
                   {{ voteLabel(vote.decision) }}
                   <span v-if="vote.decided_at" class="ms-1">
                     {{ formatDate(vote.decided_at) }}
@@ -65,7 +65,7 @@
             </div>
 
             <div v-if="stage.approvals.length > 0" class="approval-panel__progress mt-1">
-              <small class="text-secondary">
+              <small class="approval-panel__muted">
                 {{ approvedCount(stage) }}/{{ stage.total }} {{ t('documents.approval.approved') }}
               </small>
             </div>
@@ -89,7 +89,7 @@
         </div>
 
         <!-- Decision buttons (if current user is approver of active stage) -->
-        <div v-if="approval.is_current_user_approver" class="d-flex gap-2 mt-3 flex-wrap">
+        <div v-if="approval.is_current_user_approver" class="approval-panel__actions mt-3">
           <Button
             icon="pi pi-check"
             :label="t('documents.approval.decide.approve')"
@@ -185,6 +185,26 @@ function formatDate(dateStr: string): string {
 .approval-panel {
   &__header {
     font-size: $font-size-sm;
+  }
+
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
+
+  &__strong {
+    font-weight: $font-weight-medium;
+  }
+
+  &__stages {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
   }
 
   &__empty {

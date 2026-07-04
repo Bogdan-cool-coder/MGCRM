@@ -2,7 +2,7 @@
   <Card class="mb-3">
     <template #title>{{ t('onboarding.builder.publishCard.title') }}</template>
     <template #content>
-      <div class="d-flex align-items-center gap-2 mb-3">
+      <div class="publish-card__status d-flex align-items-center mb-3">
         <span>{{ t('onboarding.builder.publishCard.status') }}:</span>
         <CourseStatusTag :is-published="course.is_published" />
       </div>
@@ -11,7 +11,7 @@
         :label="t('onboarding.courses.publish')"
         icon="pi pi-send"
         severity="success"
-        class="w-100"
+        class="w-full"
         :loading="saving"
         @click="emit('publish')"
       />
@@ -21,7 +21,7 @@
         icon="pi pi-eye-slash"
         severity="warn"
         outlined
-        class="w-100"
+        class="w-full"
         :loading="saving"
         @click="emit('unpublish')"
       />
@@ -48,3 +48,15 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 </script>
+
+<style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
+// .gap-2 is a dead full-Bootstrap class → gap via token here.
+.publish-card__status {
+  gap: $space-2;
+}
+</style>

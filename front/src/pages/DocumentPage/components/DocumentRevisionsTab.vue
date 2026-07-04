@@ -29,7 +29,7 @@
       </Column>
       <Column header="Скачать" style="width: 120px">
         <template #body="{ data }">
-          <span class="d-flex gap-1">
+          <span class="d-flex revisions-tab__row-actions">
             <Button
               v-if="data.docx_path"
               icon="pi pi-file-word"
@@ -115,6 +115,10 @@ async function downloadPdf(documentId: number | undefined) {
 
 <style lang="scss" scoped>
 .revisions-tab {
+  &__row-actions {
+    gap: $space-1;
+  }
+
   &__empty {
     display: flex;
     align-items: center;

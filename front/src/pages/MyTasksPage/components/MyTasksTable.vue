@@ -300,8 +300,12 @@
             @click="startEditResponsible(data)"
           >
             <span v-if="data.responsible" class="tasks-cell__responsible">
-              <span class="tasks-cell__avatar">{{ (data.responsible.full_name?.charAt(0) ?? '?').toUpperCase() }}</span>
-              {{ data.responsible.full_name ?? '—' }}
+              <EntityAvatar
+                :name="data.responsible.full_name"
+                :entity-id="data.responsible.id"
+                :pixel-size="22"
+              />
+              {{ data.responsible.full_name }}
             </span>
             <span v-else class="tasks-cell__placeholder">{{ t('tasks.list.placeholder.responsible') }}</span>
             <i class="pi pi-pencil tasks-cell__edit-icon" />
@@ -370,6 +374,7 @@ import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import DatePicker from 'primevue/datepicker'
 import { kindIcon, formatDueDate, localDateString } from '@/utils/activity'
+import EntityAvatar from '@/components/crm/entity/EntityAvatar.vue'
 import { activityApi, type ReschedulePreset } from '@/api/activity'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { getApiErrorMessage } from '@/utils/errors'
@@ -1082,20 +1087,6 @@ onMounted(() => {
     align-items: center;
     gap: $space-1;
     font-size: $font-size-sm;
-  }
-
-  &__avatar {
-    width: 22px;
-    height: 22px;
-    border-radius: $radius-circle;
-    background: $primary-900;
-    color: $surface-0;
-    font-size: $font-size-3xs;
-    font-weight: $font-weight-bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
   }
 }
 

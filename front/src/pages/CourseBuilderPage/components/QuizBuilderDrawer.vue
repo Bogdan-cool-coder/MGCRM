@@ -7,8 +7,8 @@
     @hide="onHide"
   >
     <template #header>
-      <div class="quiz-drawer-header d-flex align-items-center gap-3 w-100">
-        <span class="flex-grow-1 fw-semibold">{{ t('onboarding.builder.quiz.editTitle') }}</span>
+      <div class="quiz-drawer-header d-flex align-items-center w-full">
+        <span class="flex-grow-1 quiz-drawer-header__title">{{ t('onboarding.builder.quiz.editTitle') }}</span>
         <Button
           :label="t('common.cancel')"
           severity="secondary"
@@ -39,24 +39,24 @@
       <div class="row g-3 mb-4">
         <div class="col-12">
           <label class="form-label required">{{ t('onboarding.builder.quiz.name') }}</label>
-          <InputText v-model="localQuiz.title" class="w-100" />
+          <InputText v-model="localQuiz.title" class="w-full" />
         </div>
         <div class="col-12">
           <label class="form-label">{{ t('onboarding.builder.quiz.description') }}</label>
-          <Textarea v-model="localQuiz.description" :auto-resize="true" rows="2" class="w-100" />
+          <Textarea v-model="localQuiz.description" :auto-resize="true" rows="2" class="w-full" />
         </div>
         <div class="col-6">
           <label class="form-label required">{{ t('onboarding.builder.quiz.passingScore') }}</label>
-          <InputNumber v-model="localQuiz.pass_score_pct" :min="0" :max="100" suffix="%" class="w-100" />
+          <InputNumber v-model="localQuiz.pass_score_pct" :min="0" :max="100" suffix="%" class="w-full" />
         </div>
         <div class="col-6">
           <label class="form-label">{{ t('onboarding.builder.quiz.timeLimit') }}</label>
-          <InputNumber v-model="localQuiz.time_limit_minutes" :min="0" class="w-100" />
+          <InputNumber v-model="localQuiz.time_limit_minutes" :min="0" class="w-full" />
         </div>
       </div>
 
       <!-- Actions: add question + AI generate -->
-      <div class="d-flex gap-2 mb-3 flex-wrap">
+      <div class="quiz-builder-body__actions d-flex mb-3 flex-wrap">
         <Button
           :label="t('onboarding.builder.quiz.addQuestion')"
           icon="pi pi-plus"
@@ -89,8 +89,8 @@
         :key="q.id ?? qIdx"
         class="quiz-question-block mb-3"
       >
-        <div class="quiz-question-block__header d-flex align-items-center gap-2 mb-2">
-          <span class="fw-medium">Q{{ qIdx + 1 }}</span>
+        <div class="quiz-question-block__header d-flex align-items-center mb-2">
+          <span class="quiz-question-block__num">Q{{ qIdx + 1 }}</span>
           <Select
             v-model="q.kind"
             :options="kindOptions"
@@ -99,18 +99,18 @@
             size="small"
             class="ms-2"
           />
-          <div class="ms-auto d-flex gap-1">
+          <div class="quiz-question-block__tools ms-auto d-flex">
             <Button icon="pi pi-chevron-up" size="small" text severity="secondary" :disabled="qIdx === 0" @click="moveQuestion(qIdx, 'up')" />
             <Button icon="pi pi-chevron-down" size="small" text severity="secondary" :disabled="qIdx === localQuiz.questions.length - 1" @click="moveQuestion(qIdx, 'down')" />
             <Button icon="pi pi-trash" size="small" text severity="danger" @click="removeQuestion(qIdx)" />
           </div>
         </div>
 
-        <Textarea v-model="q.text" :auto-resize="true" rows="2" class="w-100 mb-2" :placeholder="t('onboarding.builder.quiz.question.text')" />
+        <Textarea v-model="q.text" :auto-resize="true" rows="2" class="w-full mb-2" :placeholder="t('onboarding.builder.quiz.question.text')" />
 
-        <Textarea v-model="q.explanation" :auto-resize="true" rows="1" class="w-100 mb-2" :placeholder="t('onboarding.builder.quiz.question.explanation')" />
+        <Textarea v-model="q.explanation" :auto-resize="true" rows="1" class="w-full mb-2" :placeholder="t('onboarding.builder.quiz.question.explanation')" />
 
-        <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="quiz-question-block__points d-flex align-items-center mb-2">
           <label class="form-label mb-0">{{ t('onboarding.builder.quiz.question.points') }}</label>
           <InputNumber v-model="q.points" :min="1" :style="{ width: '80px' }" size="small" />
         </div>
@@ -120,7 +120,7 @@
           <div
             v-for="(opt, oIdx) in q.options"
             :key="oIdx"
-            class="quiz-option-row d-flex align-items-center gap-2 mb-1"
+            class="quiz-option-row d-flex align-items-center mb-1"
           >
             <Checkbox
               v-if="q.kind === 'multiple_choice'"
@@ -135,7 +135,7 @@
               :input-id="`opt-${qIdx}-${oIdx}-sc`"
               @update:model-value="setSingleCorrect(qIdx, oIdx)"
             />
-            <label class="form-label mb-0 me-1 text-nowrap" :for="`opt-${qIdx}-${oIdx}-mc`">
+            <label class="form-label mb-0 me-1 quiz-option-row__correct-label" :for="`opt-${qIdx}-${oIdx}-mc`">
               {{ t('onboarding.builder.quiz.question.optionCorrect') }}
             </label>
             <InputText v-model="opt.text" size="small" class="flex-grow-1" />
@@ -158,9 +158,9 @@
       <!-- AI Draft questions -->
       <div v-if="draftQuestions.length" class="draft-questions mt-4">
         <Divider />
-        <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="draft-questions__head d-flex align-items-center mb-3">
           <Tag severity="info" :value="t('onboarding.builder.quiz.draftQuestions')" />
-          <span class="text-muted quiz-draft-hint">{{ t('onboarding.builder.quiz.draftHint') }}</span>
+          <span class="quiz-draft-hint">{{ t('onboarding.builder.quiz.draftHint') }}</span>
         </div>
 
         <div
@@ -170,11 +170,11 @@
         >
           <p class="draft-question-block__text">{{ dq.text }}</p>
           <ul class="draft-question-block__options">
-            <li v-for="(opt, oIdx) in dq.options" :key="oIdx" :class="{ 'text-success fw-medium': opt.is_correct }">
+            <li v-for="(opt, oIdx) in dq.options" :key="oIdx" :class="{ 'draft-question-block__option--correct': opt.is_correct }">
               {{ opt.text }}
             </li>
           </ul>
-          <div class="d-flex gap-2">
+          <div class="draft-question-block__actions d-flex">
             <Button
               :label="t('onboarding.builder.quiz.draftAdd')"
               icon="pi pi-check"
@@ -500,8 +500,28 @@ function onHide(): void {
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
+.quiz-drawer-header {
+  // .gap-3 is a dead full-Bootstrap class → gap via token here.
+  gap: $space-3;
+
+  // .fw-semibold is a dead full-Bootstrap class → weight token here.
+  &__title {
+    font-weight: $font-weight-semibold;
+  }
+}
+
 .quiz-builder-body {
   padding: $space-1;
+
+  // .gap-2 is a dead full-Bootstrap class → gap via token here.
+  &__actions {
+    gap: $space-2;
+  }
 }
 
 .form-label {
@@ -524,9 +544,25 @@ function onHide(): void {
   background: var(--p-surface-50);
 
   &__header {
+    // .gap-2 is a dead full-Bootstrap class → gap via token here.
+    gap: $space-2;
     padding-bottom: $space-2;
     border-bottom: 1px solid var(--p-surface-200);
     margin-bottom: $space-2;
+  }
+
+  // .fw-medium is a dead full-Bootstrap class → weight token here.
+  &__num {
+    font-weight: $font-weight-medium;
+  }
+
+  // .gap-1 is a dead full-Bootstrap class → gap via token here.
+  &__tools {
+    gap: $space-1;
+  }
+
+  &__points {
+    gap: $space-2;
   }
 }
 
@@ -535,7 +571,19 @@ function onHide(): void {
 }
 
 .quiz-option-row {
+  // .gap-2 is a dead full-Bootstrap class → gap via token here.
+  gap: $space-2;
   padding: $space-1 0;
+
+  // .text-nowrap is a dead full-Bootstrap class → nowrap here.
+  &__correct-label {
+    white-space: nowrap;
+  }
+}
+
+.draft-questions__head {
+  // .gap-2 is a dead full-Bootstrap class → gap via token here.
+  gap: $space-2;
 }
 
 .draft-question-block {
@@ -553,10 +601,23 @@ function onHide(): void {
     margin-bottom: $space-2;
     font-size: $font-size-sm;
   }
+
+  // .text-success / .fw-medium are dead full-Bootstrap classes → tokens here.
+  &__option--correct {
+    color: var(--p-green-500);
+    font-weight: $font-weight-medium;
+  }
+
+  &__actions {
+    // .gap-2 is a dead full-Bootstrap class → gap via token here.
+    gap: $space-2;
+  }
 }
 
 .quiz-draft-hint {
   font-size: $font-size-2xs; // snap from 0.8rem (≈12.8px → 11px)
+  // Theme-reactive muted text — replaces dead full-Bootstrap .text-muted.
+  color: var(--p-text-muted-color);
 }
 
 /* close button rendered in custom #header slot */

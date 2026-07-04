@@ -72,9 +72,14 @@
 
       <!-- Assignee -->
       <div class="task-card__assignee">
-        <span class="task-card__avatar" :title="assigneeFullName">
-          {{ assigneeInitial }}
-        </span>
+        <EntityAvatar
+          v-if="task.assigned_to"
+          :name="assigneeFullName"
+          :entity-id="task.assigned_to.id"
+          :pixel-size="20"
+          :title="assigneeFullName"
+        />
+        <EntityAvatar v-else :pixel-size="20" />
         <span class="task-card__assignee-name">{{ assigneeShortName }}</span>
       </div>
     </div>
@@ -101,6 +106,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { kindIcon as kindIconFn, formatDueDateOperational } from '@/utils/activity'
+import EntityAvatar from '@/components/crm/entity/EntityAvatar.vue'
 import type { MyBoardActivityDto, ActivityKind, MyBoardBucket } from '@/entities/activity'
 
 const props = defineProps<{
@@ -145,13 +151,9 @@ const priorityLabel = computed(() => {
 })
 
 // ── Assignee ───────────────────────────────────────────────────────────────────
+// Avatar is rendered via the canonical EntityAvatar (white initials on navy /
+// palette bg — theme-safe, with its own neutral «?» fallback for a null name).
 const assigneeFullName = computed(() => props.task.assigned_to?.full_name ?? '')
-
-const assigneeInitial = computed(() => {
-  const name = assigneeFullName.value
-  if (!name) return '?'
-  return name.charAt(0).toUpperCase()
-})
 
 const assigneeShortName = computed(() => {
   const name = assigneeFullName.value
@@ -509,20 +511,6 @@ function onCompleteBtn() {
   display: flex;
   align-items: center;
   gap: $space-1;
-}
-
-.task-card__avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: $radius-circle;
-  background: $primary-900;
-  color: $surface-0;
-  font-size: $font-size-3xs;
-  font-weight: $font-weight-bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .task-card__assignee-name {

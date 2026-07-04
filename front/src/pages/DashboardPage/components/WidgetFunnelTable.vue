@@ -268,7 +268,9 @@ const progressClass = (row: FunnelStage): string => {
   border-radius: $radius-xs;
   transition: width 0.4s ease;
 
-  &--won { background-color: $primary-color; }
+  // Brand accent bar reads on both themes from the reactive PrimeVue token
+  // (navy #172747 light → #4C7DF0 dark); static $primary-color dissolved on navy.
+  &--won { background-color: var(--p-primary-color); }
   &--lost { background-color: $status-danger-text; }
   &--good { background-color: $status-success-text; }
   &--low { background-color: $status-warning-text; }

@@ -14,9 +14,15 @@
       @export="onExport"
     />
 
-    <!-- Cross-cutting filter bar (period/layer · funnel · manager) -->
+    <!-- Cross-cutting filter bar (period/layer · funnel · manager). Tab-aware:
+         on Обзор it shows the named-period Select + Edit toggle, on report tabs
+         the granularity/stepper/layer. Pipeline + manager are the single source
+         of those filters for every tab (audit §3в: legacy DashboardToolbar gone). -->
     <div class="dashboard-page__filters">
       <AnalyticsFilterBar
+        :overview-mode="activeTab === 'overview'"
+        :overview-period="overviewPeriod"
+        :edit-mode="overviewEditMode"
         :granularity="granularity"
         :year="year"
         :month="month"
@@ -28,6 +34,8 @@
         :managers="managers"
         :pipelines-loading="pipelinesLoading"
         :can-see-all-managers="canSeeAllManagers"
+        @update:overview-period="setOverviewPeriod"
+        @toggle-edit="toggleOverviewEdit"
         @update:granularity="setGranularity"
         @step="stepPeriod"
         @update:layer="setLayer"
@@ -83,6 +91,10 @@ const {
   stepPeriod,
   setGranularity,
   setYear,
+  overviewPeriod,
+  setOverviewPeriod,
+  overviewEditMode,
+  toggleOverviewEdit,
   layer,
   setLayer,
   pipelineId,
@@ -169,8 +181,9 @@ const TAB_COMPONENTS: Record<HubTab, Component> = {
 
 const activeComponent = computed<Component>(() => TAB_COMPONENTS[activeTab.value])
 
-// Each report/plan tab reads the cross-cutting hub filters through props (single
-// source of truth, TZ §1.1). Обзор owns its own filters, so it receives nothing.
+// Every tab reads the cross-cutting hub filters through props (single source of
+// truth, TZ §1.1). Обзор now does too — pipeline/manager come from the shared
+// bar, plus its own named period + edit mode (audit §3в).
 const activeProps = computed<Record<string, unknown>>(() => {
   switch (activeTab.value) {
     case 'plans':
@@ -193,7 +206,13 @@ const activeProps = computed<Record<string, unknown>>(() => {
         'onUpdate:year': setYear,
       }
     default:
-      return {}
+      return {
+        period: overviewPeriod.value,
+        pipelineId: pipelineId.value,
+        managerId: managerId.value,
+        editMode: overviewEditMode.value,
+        pipelinesLoading: pipelinesLoading.value,
+      }
   }
 })
 </script>

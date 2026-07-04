@@ -5,12 +5,12 @@
       <div class="row g-3">
         <div class="col-12">
           <label class="form-label required">{{ t('onboarding.courses.columns.title') }}</label>
-          <InputText v-model="localForm.title" class="w-100" />
+          <InputText v-model="localForm.title" class="w-full" />
         </div>
 
         <div class="col-12">
           <label class="form-label">{{ t('onboarding.courses.createDialog.description') }}</label>
-          <Textarea v-model="localForm.description" :auto-resize="true" rows="3" class="w-100" />
+          <Textarea v-model="localForm.description" :auto-resize="true" rows="3" class="w-full" />
         </div>
 
         <div class="col-12">
@@ -32,18 +32,18 @@
             :min="0"
             :max="100"
             suffix="%"
-            class="w-100"
+            class="w-full"
           />
         </div>
 
         <div class="col-md-4">
           <label class="form-label">{{ t('onboarding.courses.createDialog.deadlineDays') }}</label>
-          <InputNumber v-model="localForm.deadline_days" :min="1" class="w-100" />
+          <InputNumber v-model="localForm.deadline_days" :min="1" class="w-full" />
         </div>
 
         <div class="col-12">
           <label class="form-label">{{ t('onboarding.courses.createDialog.coverUrl') }}</label>
-          <InputText v-model="localForm.cover_image_url" class="w-100" />
+          <InputText v-model="localForm.cover_image_url" class="w-full" />
         </div>
       </div>
     </template>
@@ -110,6 +110,11 @@ const policyOptions = computed(() => [
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .course-settings-card {
   :deep(.p-card-title) {
     font-size: $font-size-md;

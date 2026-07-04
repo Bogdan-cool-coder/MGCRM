@@ -11,7 +11,7 @@
       <!-- Kind -->
       <div class="mb-3">
         <label class="create-document-dialog__label">
-          {{ t('documents.create.kind') }} <span class="text-danger">*</span>
+          {{ t('documents.create.kind') }} <span class="create-document-dialog__req">*</span>
         </label>
         <SelectButton
           v-model="form.kind"
@@ -19,14 +19,14 @@
           option-label="label"
           option-value="value"
           :allow-empty="false"
-          class="mt-1 w-100"
+          class="mt-1 create-document-dialog__control"
         />
       </div>
 
       <!-- Company -->
       <div class="mb-3">
         <label class="create-document-dialog__label">
-          {{ t('documents.create.company') }} <span class="text-danger">*</span>
+          {{ t('documents.create.company') }} <span class="create-document-dialog__req">*</span>
         </label>
         <AutoComplete
           v-model="companySuggestion"
@@ -34,7 +34,7 @@
           option-label="name"
           :placeholder="t('documents.create.company')"
           force-selection
-          class="w-100 mt-1"
+          class="mt-1 create-document-dialog__control"
           :class="{ 'p-invalid': errors.company }"
           @complete="searchCompanies"
           @option-select="onCompanySelect"
@@ -45,7 +45,7 @@
       <!-- Product -->
       <div class="mb-3">
         <label class="create-document-dialog__label">
-          {{ t('documents.create.product') }} <span class="text-danger">*</span>
+          {{ t('documents.create.product') }} <span class="create-document-dialog__req">*</span>
         </label>
         <Select
           v-model="form.product_code"
@@ -53,7 +53,7 @@
           option-label="label"
           option-value="value"
           :placeholder="t('documents.create.product')"
-          class="w-100 mt-1"
+          class="mt-1 create-document-dialog__control"
           :class="{ 'p-invalid': errors.product }"
         />
         <small v-if="errors.product" class="p-error">{{ errors.product }}</small>
@@ -62,7 +62,7 @@
       <!-- Country -->
       <div class="mb-3">
         <label class="create-document-dialog__label">
-          {{ t('documents.create.country') }} <span class="text-danger">*</span>
+          {{ t('documents.create.country') }} <span class="create-document-dialog__req">*</span>
         </label>
         <Select
           v-model="form.country_code"
@@ -70,7 +70,7 @@
           option-label="label"
           option-value="value"
           :placeholder="t('documents.create.country')"
-          class="w-100 mt-1"
+          class="mt-1 create-document-dialog__control"
           :class="{ 'p-invalid': errors.country }"
         />
         <small v-if="errors.country" class="p-error">{{ errors.country }}</small>
@@ -79,7 +79,7 @@
       <!-- Template -->
       <div class="mb-3">
         <label class="create-document-dialog__label">
-          {{ t('documents.create.template') }} <span class="text-danger">*</span>
+          {{ t('documents.create.template') }} <span class="create-document-dialog__req">*</span>
         </label>
         <Select
           v-model="form.template_id"
@@ -89,7 +89,7 @@
           :placeholder="t('documents.create.template')"
           :disabled="!form.product_code || !form.country_code || loadingTemplates"
           :loading="loadingTemplates"
-          class="w-100 mt-1"
+          class="mt-1 create-document-dialog__control"
           :class="{ 'p-invalid': errors.template }"
         />
         <Message
@@ -111,7 +111,7 @@
         <InputText
           v-model="form.title"
           :placeholder="t('documents.create.title_field')"
-          class="w-100 mt-1"
+          class="mt-1 create-document-dialog__control"
         />
       </div>
     </div>
@@ -343,6 +343,14 @@ watch(
     font-weight: $font-weight-medium;
     color: var(--p-text-color);
     display: block;
+  }
+
+  &__req {
+    color: $color-danger;
+  }
+
+  &__control {
+    width: 100%;
   }
 }
 </style>

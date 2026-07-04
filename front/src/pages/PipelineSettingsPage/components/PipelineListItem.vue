@@ -150,7 +150,7 @@ async function commitRename() {
   color: var(--p-text-muted-color);
 
   &:hover {
-    background-color: var(--p-surface-hover);
+    background-color: $surface-50;
   }
 
   // Active pipeline (rail): navy-inverted tint + navy text + inset marker.

@@ -13,7 +13,7 @@
       class="course-sidebar__module mb-3"
     >
       <div class="course-sidebar__module-title">{{ mod.title }}</div>
-      <ul class="course-sidebar__lessons list-unstyled mb-0">
+      <ul class="course-sidebar__lessons mb-0">
         <li
           v-for="lesson in mod.lessons"
           :key="lesson.id"
@@ -52,8 +52,11 @@ defineEmits<{
 const { t } = useI18n()
 
 function lessonStatusIcon(lesson: Lesson): string {
-  if (props.completedIds.has(lesson.id)) return 'pi pi-check-circle text-success'
-  if (lesson.id === props.currentLessonId) return 'pi pi-play text-primary'
+  // BEM status modifiers colour the icon via scoped tokens — the previous
+  // full-Bootstrap `text-success`/`text-primary` classes are absent from the
+  // grid-only bundle, so completed/current icons rendered in the default colour.
+  if (props.completedIds.has(lesson.id)) return 'pi pi-check-circle course-sidebar__lesson-status--done'
+  if (lesson.id === props.currentLessonId) return 'pi pi-play course-sidebar__lesson-status--current'
   return 'pi pi-circle course-sidebar__lesson-status--pending'
 }
 
@@ -97,6 +100,12 @@ function kindIcon(kind: LessonKind): string {
     padding: 0.5rem 0.25rem 0.25rem;
   }
 
+  // .list-unstyled is a dead full-Bootstrap class → reset list chrome here.
+  &__lessons {
+    list-style: none;
+    padding-left: 0;
+  }
+
   &__lesson {
     display: flex;
     align-items: center;
@@ -111,7 +120,10 @@ function kindIcon(kind: LessonKind): string {
     }
 
     &--active {
-      background: var(--p-primary-50);
+      // --p-primary-50 is a STATIC near-white palette step (does not invert per
+      // colorScheme) → light-on-light in dark (audit H20). A color-mix tint on the
+      // theme-reactive accent over the card surface reads correctly in both themes.
+      background: color-mix(in srgb, var(--p-primary-color) 12%, var(--p-card-background));
       border-left: 3px solid var(--p-primary-color);
     }
 
@@ -123,6 +135,15 @@ function kindIcon(kind: LessonKind): string {
   &__lesson-status {
     font-size: $font-size-sm;
     flex-shrink: 0;
+
+    // Status colours — replace dead full-Bootstrap .text-success / .text-primary.
+    &--done {
+      color: var(--p-green-500);
+    }
+
+    &--current {
+      color: var(--p-primary-color);
+    }
 
     &--pending {
       color: var(--p-surface-400);

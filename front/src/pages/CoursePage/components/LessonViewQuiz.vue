@@ -1,7 +1,7 @@
 <template>
   <div class="lesson-view-quiz">
     <!-- Loading quiz structure -->
-    <div v-if="quizAttempt.isLoading.value" class="text-center py-5">
+    <div v-if="quizAttempt.isLoading.value" class="lesson-view-quiz__center py-5">
       <ProgressSpinner />
     </div>
 
@@ -23,7 +23,7 @@
       </div>
 
       <!-- PHASE: Before start -->
-      <div v-if="quizAttempt.phase.value === 'before'" class="text-center py-4">
+      <div v-if="quizAttempt.phase.value === 'before'" class="lesson-view-quiz__center py-4">
         <Button
           :label="t('onboarding.coursePage.quiz.start')"
           icon="pi pi-play"
@@ -121,10 +121,15 @@ async function handleRetry() {
 </script>
 
 <style lang="scss" scoped>
+// .text-center is a dead full-Bootstrap class → centering here.
+.lesson-view-quiz__center {
+  text-align: center;
+}
+
 .quiz-header {
   &__title {
     font-size: $font-size-lg;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
     margin: 0 0 0.25rem;
   }
 

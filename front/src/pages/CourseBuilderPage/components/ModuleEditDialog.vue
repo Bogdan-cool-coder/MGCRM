@@ -12,7 +12,7 @@
       <InputText
         ref="inputRef"
         v-model="title"
-        class="w-100"
+        class="w-full"
         :invalid="!title.trim() && submitted"
         @keyup.enter="submit"
       />
@@ -83,6 +83,11 @@ function submit(): void {
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .form-label {
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;

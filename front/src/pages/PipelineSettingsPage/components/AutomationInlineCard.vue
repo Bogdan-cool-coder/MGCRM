@@ -64,10 +64,10 @@ const confirm = useConfirm()
 const ACTION_ICONS: Record<ActionKind, string> = {
   tg_notify: 'pi-telegram',
   create_task: 'pi-clipboard',
-  set_field: 'pi-pencil-square',
+  set_field: 'pi-pen-to-square',
   generate_document: 'pi-file',
   change_owner: 'pi-user-edit',
-  change_stage: 'pi-arrow-right-circle',
+  change_stage: 'pi-arrow-circle-right',
   webhook: 'pi-wifi',
   email: 'pi-envelope',
 }

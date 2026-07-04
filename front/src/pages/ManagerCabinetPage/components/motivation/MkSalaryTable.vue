@@ -105,7 +105,7 @@
 
     <!-- Total -->
     <div class="mk-salary__total">
-      <i class="pi pi-sigma mk-salary__total-icon" aria-hidden="true" />
+      <i class="pi pi-calculator mk-salary__total-icon" aria-hidden="true" />
       <span class="mk-salary__total-label">{{ t('motivation.card.total_label') }}</span>
       <span class="mk-salary__spacer" />
       <span class="mk-salary__total-plan">

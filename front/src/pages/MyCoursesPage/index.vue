@@ -23,7 +23,7 @@
       <!-- Loading skeletons -->
       <div v-if="loading" class="row g-3">
         <div v-for="n in 6" :key="n" class="col-md-6 col-lg-4">
-          <div class="card p-0 overflow-hidden">
+          <div class="my-courses-page__skeleton-card">
             <Skeleton height="160px" class="d-block" />
             <div class="p-3">
               <Skeleton width="80%" height="20px" class="mb-2" />
@@ -41,13 +41,13 @@
       </Message>
 
       <!-- Empty — no assignments at all -->
-      <div v-else-if="allCount === 0" class="my-courses-page__empty text-center py-6">
+      <div v-else-if="allCount === 0" class="my-courses-page__empty">
         <i class="pi pi-book my-courses-page__empty-icon" />
         <p class="mt-3">{{ t('onboarding.myCourses.empty') }}</p>
       </div>
 
       <!-- Empty by tab -->
-      <div v-else-if="filteredAssignments.length === 0" class="my-courses-page__empty text-center py-5">
+      <div v-else-if="filteredAssignments.length === 0" class="my-courses-page__empty">
         <i class="pi pi-inbox my-courses-page__empty-icon" />
         <p class="mt-2">{{ t('onboarding.myCourses.emptyTab') }}</p>
       </div>
@@ -100,7 +100,21 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .my-courses-page {
+  // Card scaffold — full-Bootstrap .card/.overflow-hidden are absent from the
+  // grid-only bundle, so the loading tile rendered with no surface.
+  &__skeleton-card {
+    background: $surface-card;
+    border: 1px solid var(--p-surface-200);
+    border-radius: $radius-lg;
+    box-shadow: var(--app-shadow-card);
+    overflow: hidden;
+  }
+
   &__empty {
+    // .text-center / py-6 are dead full-Bootstrap classes → center + spacing here.
+    text-align: center;
+    padding-block: $space-8;
+
     &-icon {
       font-size: $font-size-icon-2xl;
       color: var(--p-surface-400);

@@ -9,8 +9,8 @@
     @hide="onHide"
   >
     <template #header>
-      <div class="lesson-drawer-header d-flex align-items-center gap-3 w-100">
-        <span class="flex-grow-1 fw-semibold">{{ t('onboarding.builder.lesson.editTitle') }}</span>
+      <div class="lesson-drawer-header d-flex align-items-center w-full">
+        <span class="flex-grow-1 lesson-drawer-header__title">{{ t('onboarding.builder.lesson.editTitle') }}</span>
         <Button
           :label="t('common.cancel')"
           severity="secondary"
@@ -40,7 +40,7 @@
       <!-- Title -->
       <div class="mb-3">
         <label class="form-label required">{{ t('onboarding.builder.lesson.name') }}</label>
-        <InputText v-model="form.title" class="w-100" />
+        <InputText v-model="form.title" class="w-full" />
       </div>
 
       <!-- Kind (readonly if edit) -->
@@ -60,19 +60,19 @@
       <!-- Duration -->
       <div class="mb-3">
         <label class="form-label">{{ t('onboarding.builder.lesson.duration') }}</label>
-        <InputNumber v-model="form.duration_minutes" :min="1" class="w-100" />
+        <InputNumber v-model="form.duration_minutes" :min="1" class="w-full" />
       </div>
 
       <!-- TEXT content -->
       <template v-if="form.kind === 'text'">
         <div class="mb-2">
           <label class="form-label required">{{ t('onboarding.builder.lesson.content') }}</label>
-          <small class="d-block text-muted mb-1">{{ t('onboarding.builder.lesson.contentHint') }}</small>
+          <small class="d-block lesson-drawer-body__hint mb-1">{{ t('onboarding.builder.lesson.contentHint') }}</small>
           <Textarea
             v-model="form.text_markdown"
             :auto-resize="false"
             rows="12"
-            class="w-100 lesson-md-textarea"
+            class="w-full lesson-md-textarea"
           />
         </div>
         <!-- Preview -->
@@ -87,7 +87,7 @@
           />
           <div
             v-if="previewVisible"
-            class="lesson-text-content mt-2 p-3 border rounded"
+            class="lesson-text-content mt-2 p-3"
             v-html="renderedMarkdown"
           />
         </div>
@@ -97,11 +97,11 @@
       <template v-else-if="form.kind === 'video'">
         <div class="mb-3">
           <label class="form-label required">{{ t('onboarding.builder.lesson.videoUrl') }}</label>
-          <small class="d-block text-muted mb-1">{{ t('onboarding.builder.lesson.videoHint') }}</small>
-          <InputText v-model="form.video_url" class="w-100" placeholder="https://youtube.com/..." />
+          <small class="d-block lesson-drawer-body__hint mb-1">{{ t('onboarding.builder.lesson.videoHint') }}</small>
+          <InputText v-model="form.video_url" class="w-full" placeholder="https://youtube.com/..." />
         </div>
         <div v-if="videoEmbedSrc" class="video-preview mb-3">
-          <div class="ratio ratio-16x9">
+          <div class="video-preview__ratio">
             <iframe
               :src="videoEmbedSrc"
               allowfullscreen
@@ -114,12 +114,12 @@
       <!-- PDF content -->
       <template v-else-if="form.kind === 'pdf'">
         <div class="mb-3">
-          <div class="d-flex gap-4 mb-3">
-            <div class="d-flex align-items-center gap-2">
+          <div class="lesson-drawer-body__pdf-modes d-flex mb-3">
+            <div class="lesson-drawer-body__pdf-mode d-flex align-items-center">
               <RadioButton v-model="pdfMode" value="upload" input-id="pdf-upload" />
               <label for="pdf-upload">{{ t('onboarding.builder.lesson.pdfUpload') }}</label>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="lesson-drawer-body__pdf-mode d-flex align-items-center">
               <RadioButton v-model="pdfMode" value="link" input-id="pdf-link" />
               <label for="pdf-link">{{ t('onboarding.builder.lesson.pdfLink') }}</label>
             </div>
@@ -135,10 +135,10 @@
               :disabled="!isEdit || uploading"
               @select="onPdfSelect"
             />
-            <small v-if="!isEdit" class="text-muted">{{ t('common.saveFirst') }}</small>
+            <small v-if="!isEdit" class="lesson-drawer-body__hint">{{ t('common.saveFirst') }}</small>
           </div>
           <div v-else>
-            <InputText v-model="form.pdf_path" class="w-100" placeholder="https://..." />
+            <InputText v-model="form.pdf_path" class="w-full" placeholder="https://..." />
           </div>
         </div>
       </template>
@@ -153,7 +153,7 @@
             option-label="title"
             option-value="id"
             :placeholder="t('onboarding.builder.lesson.quizSelect')"
-            class="w-100 mb-2"
+            class="w-full mb-2"
           />
           <Button
             :label="t('onboarding.builder.lesson.quizCreate')"
@@ -166,7 +166,7 @@
       </template>
 
       <!-- Publish actions (edit only) -->
-      <div v-if="isEdit && lesson" class="mt-4 pt-3 border-top d-flex gap-2">
+      <div v-if="isEdit && lesson" class="lesson-drawer-body__publish mt-4 pt-3 d-flex">
         <Button
           v-if="!lesson.is_published"
           :label="t('onboarding.builder.lesson.publish')"
@@ -404,8 +404,44 @@ function onHide(): void {
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
+.lesson-drawer-header {
+  // .gap-3 is a dead full-Bootstrap class → gap via token here.
+  gap: $space-3;
+
+  // .fw-semibold is a dead full-Bootstrap class → weight token here.
+  &__title {
+    font-weight: $font-weight-semibold;
+  }
+}
+
 .lesson-drawer-body {
   padding: $space-2;
+
+  // Theme-reactive muted hint — replaces dead full-Bootstrap .text-muted.
+  &__hint {
+    color: var(--p-text-muted-color);
+  }
+
+  &__pdf-modes {
+    // .gap-4 is a dead full-Bootstrap class → gap via token here.
+    gap: $space-6;
+  }
+
+  &__pdf-mode {
+    // .gap-2 is a dead full-Bootstrap class → gap via token here.
+    gap: $space-2;
+  }
+
+  &__publish {
+    // .border-top / .gap-2 are dead full-Bootstrap classes → tokens here.
+    gap: $space-2;
+    border-top: 1px solid var(--p-surface-200);
+  }
 }
 
 .form-label {
@@ -430,6 +466,9 @@ function onHide(): void {
   font-size: $font-size-sm;
   line-height: 1.7;
   background: var(--p-surface-50);
+  // .border / .rounded are dead full-Bootstrap classes → surface frame via tokens.
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-md;
 
   :deep(blockquote) {
     border-left: 4px solid var(--p-primary-color);
@@ -443,6 +482,21 @@ function onHide(): void {
 .video-preview {
   border-radius: $radius-md;
   overflow: hidden;
+
+  // .ratio.ratio-16x9 are dead full-Bootstrap classes → aspect-ratio box here.
+  &__ratio {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+
+    :deep(iframe) {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  }
 }
 
 /* close button is rendered in custom #header slot — native one not shown with custom slot */

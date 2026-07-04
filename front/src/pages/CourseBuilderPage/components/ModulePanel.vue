@@ -1,7 +1,7 @@
 <template>
   <div class="module-panel mb-3">
     <!-- Module header -->
-    <div class="module-panel__header d-flex align-items-center gap-2">
+    <div class="module-panel__header d-flex align-items-center">
       <Button
         :icon="collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"
         size="small"
@@ -9,7 +9,7 @@
         severity="secondary"
         @click="collapsed = !collapsed"
       />
-      <span class="module-panel__title flex-grow-1 fw-medium" @click="collapsed = !collapsed">
+      <span class="module-panel__title flex-grow-1" @click="collapsed = !collapsed">
         {{ module.sort_order }}. {{ module.title }}
       </span>
       <Button
@@ -63,7 +63,7 @@
 
       <!-- Empty lessons -->
       <div v-if="(module.lessons?.length ?? 0) === 0" class="module-panel__empty-lessons">
-        <span class="text-muted">{{ t('onboarding.builder.noLessons') }}</span>
+        <span class="module-panel__muted">{{ t('onboarding.builder.noLessons') }}</span>
       </div>
 
       <!-- Add lesson dropdown -->
@@ -123,6 +123,8 @@ const addLessonMenuItems = computed(() => [
   border-radius: $radius-md;
 
   &__header {
+    // .gap-2 is a dead full-Bootstrap class → gap via token here.
+    gap: $space-2;
     background: var(--p-surface-50);
     padding: $space-2 $space-3;
     cursor: pointer;
@@ -132,7 +134,14 @@ const addLessonMenuItems = computed(() => [
 
   &__title {
     font-size: $font-size-sm;
+    // .fw-medium is a dead full-Bootstrap class → weight token here.
+    font-weight: $font-weight-medium;
     color: var(--p-surface-700);
+  }
+
+  // Theme-reactive muted text — replaces dead full-Bootstrap .text-muted.
+  &__muted {
+    color: var(--p-text-muted-color);
   }
 
   &__body {

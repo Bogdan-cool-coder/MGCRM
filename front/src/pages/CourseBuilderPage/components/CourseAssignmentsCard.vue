@@ -13,7 +13,7 @@
         </p>
 
         <div v-if="assignments.length === 0" class="assignments-card__empty">
-          <span class="text-muted">{{ t('onboarding.builder.assignmentsCard.empty') }}</span>
+          <span class="assignments-card__muted">{{ t('onboarding.builder.assignmentsCard.empty') }}</span>
         </div>
 
         <div v-else class="assignments-card__list">
@@ -28,7 +28,7 @@
             <span class="assignment-row__pct">{{ a.progress_pct }}%</span>
           </div>
           <div v-if="assignments.length > 3" class="assignments-card__more">
-            <span class="text-muted">{{ t('onboarding.builder.assignmentsCard.more', { n: assignments.length - 3 }) }}</span>
+            <span class="assignments-card__muted">{{ t('onboarding.builder.assignmentsCard.more', { n: assignments.length - 3 }) }}</span>
           </div>
         </div>
 
@@ -38,7 +38,7 @@
           icon="pi pi-plus"
           text
           severity="secondary"
-          class="w-100"
+          class="w-full"
           @click="emit('assign')"
         />
       </template>
@@ -72,7 +72,17 @@ const displayedAssignments = computed(() => props.assignments.slice(0, 3))
 </script>
 
 <style lang="scss" scoped>
+// Local width util (full-Bootstrap .w-100 is absent from the grid-only bundle).
+.w-full {
+  width: 100%;
+}
+
 .assignments-card {
+  // Theme-reactive muted text — replaces dead full-Bootstrap .text-muted.
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
+
   &__count {
     font-size: $font-size-sm;
     color: var(--p-surface-600);

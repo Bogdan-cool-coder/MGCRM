@@ -68,10 +68,10 @@ interface ToolDef {
 const TOOLS: ToolDef[] = [
   { icon: 'pi-telegram',           label: t('automation.canvas.toolTelegram'), actionKind: 'tg_notify' },
   { icon: 'pi-clipboard',          label: t('automation.canvas.toolTask'),      actionKind: 'create_task' },
-  { icon: 'pi-pencil-square',      label: t('automation.canvas.toolField'),     actionKind: 'set_field' },
+  { icon: 'pi-pen-to-square',      label: t('automation.canvas.toolField'),     actionKind: 'set_field' },
   { icon: 'pi-file',               label: t('automation.canvas.toolDocument'),  actionKind: 'generate_document' },
   { icon: 'pi-user-edit',          label: t('automation.canvas.toolOwner'),     actionKind: 'change_owner' },
-  { icon: 'pi-arrow-right-circle', label: t('automation.canvas.toolStage'),     actionKind: 'change_stage' },
+  { icon: 'pi-arrow-circle-right', label: t('automation.canvas.toolStage'),     actionKind: 'change_stage' },
   { icon: 'pi-wifi',               label: t('automation.canvas.toolWebhook'),   actionKind: 'webhook' },
   { icon: 'pi-envelope',           label: t('automation.canvas.toolEmail'),     actionKind: 'email' },
 ]
@@ -97,8 +97,8 @@ function onDragEnd(): void {
   display: flex;
   flex-direction: column;
   width: 56px;
-  background: var(--p-surface-card);
-  border-right: 1px solid var(--p-surface-border);
+  background: $surface-card;
+  border-right: 1px solid var(--p-surface-200);
   transition: width 0.2s ease;
   flex-shrink: 0;
   z-index: 10;
@@ -117,7 +117,7 @@ function onDragEnd(): void {
     width: 100%;
     height: 36px;
     border: none;
-    border-bottom: 1px solid var(--p-surface-border);
+    border-bottom: 1px solid var(--p-surface-200);
     background: transparent;
     color: var(--p-text-muted-color);
     cursor: pointer;
@@ -125,7 +125,7 @@ function onDragEnd(): void {
     transition: background 0.15s, color 0.15s;
 
     &:hover {
-      background: var(--p-surface-hover);
+      background: $surface-50;
       color: var(--p-text-color);
     }
 
@@ -171,7 +171,7 @@ function onDragEnd(): void {
     white-space: nowrap;
 
     &:hover {
-      background: var(--p-surface-hover);
+      background: $surface-50;
       color: var(--p-primary-color);
     }
 
@@ -199,7 +199,7 @@ function onDragEnd(): void {
     padding: $space-2 $space-3;
     font-size: $font-size-2xs;
     color: var(--p-text-muted-color);
-    border-top: 1px solid var(--p-surface-border);
+    border-top: 1px solid var(--p-surface-200);
     white-space: nowrap;
     overflow: hidden;
   }

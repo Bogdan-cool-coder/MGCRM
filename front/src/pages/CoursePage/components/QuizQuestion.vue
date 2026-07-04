@@ -1,13 +1,13 @@
 <template>
-  <div class="quiz-question card p-3 mb-3">
+  <div class="quiz-question p-3 mb-3">
     <p class="quiz-question__text">{{ question.text }}</p>
 
     <!-- Single choice -->
-    <div v-if="question.kind === 'single_choice'" class="d-flex flex-column gap-2">
+    <div v-if="question.kind === 'single_choice'" class="quiz-question__options d-flex flex-column">
       <div
         v-for="option in question.options"
         :key="option.id"
-        class="d-flex align-items-center gap-2"
+        class="quiz-question__option d-flex align-items-center"
       >
         <RadioButton
           :modelValue="selectedIds[0] ?? null"
@@ -22,11 +22,11 @@
     </div>
 
     <!-- Multiple choice -->
-    <div v-else class="d-flex flex-column gap-2">
+    <div v-else class="quiz-question__options d-flex flex-column">
       <div
         v-for="option in question.options"
         :key="option.id"
-        class="d-flex align-items-center gap-2"
+        class="quiz-question__option d-flex align-items-center"
       >
         <Checkbox
           :modelValue="selectedIds.includes(option.id)"
@@ -59,6 +59,19 @@ defineEmits<{
 
 <style lang="scss" scoped>
 .quiz-question {
+  // .card is a dead full-Bootstrap class → card surface scaffold via tokens.
+  background: $surface-card;
+  border: 1px solid var(--p-surface-200);
+  border-radius: $radius-lg;
+
+  &__options {
+    gap: $space-2;
+  }
+
+  &__option {
+    gap: $space-2;
+  }
+
   &__text {
     font-weight: $font-weight-semibold;
     margin-bottom: 0.75rem;

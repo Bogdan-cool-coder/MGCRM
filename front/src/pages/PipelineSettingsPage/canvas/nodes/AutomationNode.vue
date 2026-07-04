@@ -75,10 +75,10 @@ const { t } = useI18n()
 const ACTION_ICONS: Record<string, string> = {
   tg_notify: 'pi-telegram',
   create_task: 'pi-clipboard',
-  set_field: 'pi-pencil-square',
+  set_field: 'pi-pen-to-square',
   generate_document: 'pi-file',
   change_owner: 'pi-user-edit',
-  change_stage: 'pi-arrow-right-circle',
+  change_stage: 'pi-arrow-circle-right',
   webhook: 'pi-wifi',
   email: 'pi-envelope',
 }
@@ -115,8 +115,8 @@ const triggerSummary = computed<string>(() => {
 .auto-node {
   position: relative;
   width: 220px;
-  background: var(--p-surface-card);
-  border: 1px solid var(--p-surface-border);
+  background: $surface-card;
+  border: 1px solid var(--p-surface-200);
   border-radius: $radius-lg;
   cursor: pointer;
   transition: border-color 0.15s;
@@ -145,7 +145,7 @@ const triggerSummary = computed<string>(() => {
 
   &__name {
     font-size: $font-size-sm; // snap from 0.8125rem (13px→14px)
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     color: var(--p-text-color);
     line-height: 1.3;
     white-space: nowrap;
@@ -166,7 +166,7 @@ const triggerSummary = computed<string>(() => {
 
   &__divider {
     height: 1px;
-    background: var(--p-surface-border);
+    background: var(--p-surface-200);
     margin: 0 $space-3;
   }
 

@@ -51,7 +51,7 @@
     <!-- Placeholder chips -->
     <div class="mb-2">
       <span class="field-hint mb-2">{{ t('automation.fields.placeholders') }}:</span>
-      <div class="d-flex flex-wrap gap-1 mt-1">
+      <div class="tg-notify-config__placeholders d-flex flex-wrap mt-1">
         <Chip
           v-for="p in PLACEHOLDERS"
           :key="p"
@@ -210,6 +210,11 @@ defineExpose({ validate })
   .required {
     color: var(--p-red-500);
     margin-left: 2px;
+  }
+
+  // gap-* not provided by bootstrap-grid.min.css → token gap.
+  &__placeholders {
+    gap: $space-1;
   }
 
   .placeholder-chip {

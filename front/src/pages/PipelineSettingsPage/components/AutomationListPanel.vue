@@ -6,7 +6,7 @@
         {{ t('automation.list.panelTitle') }}
       </span>
 
-      <div class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="automation-list-panel__filters d-flex align-items-center flex-wrap">
         <Select
           v-model="filterTrigger"
           :options="triggerFilterOptions"
@@ -75,7 +75,7 @@
       <Column :header="t('automation.list.col.stage')">
         <template #body="{ data }">
           <span v-if="data.stage_name">{{ data.stage_name }}</span>
-          <span v-else class="text-muted">—</span>
+          <span v-else class="automation-list-panel__muted">—</span>
         </template>
       </Column>
 
@@ -89,7 +89,7 @@
       <!-- Action -->
       <Column :header="t('automation.list.col.action')">
         <template #body="{ data }">
-          <div class="d-flex align-items-center gap-1">
+          <div class="automation-list-panel__action-cell d-flex align-items-center">
             <i :class="['pi', ACTION_ICONS[data.action_kind as ActionKind] ?? 'pi-bolt', 'automation-list-panel__action-icon']" />
             {{ t(`automation.action.${data.action_kind}`) }}
           </div>
@@ -110,7 +110,7 @@
       <!-- Row actions -->
       <Column style="width: 80px">
         <template #body="{ data }">
-          <div class="d-flex gap-1">
+          <div class="automation-list-panel__row-actions d-flex">
             <Button
               icon="pi pi-pencil"
               severity="secondary"
@@ -161,10 +161,10 @@ const { t } = useI18n()
 const ACTION_ICONS: Record<ActionKind, string> = {
   tg_notify: 'pi-telegram',
   create_task: 'pi-clipboard',
-  set_field: 'pi-pencil-square',
+  set_field: 'pi-pen-to-square',
   generate_document: 'pi-file',
   change_owner: 'pi-user-edit',
-  change_stage: 'pi-arrow-right-circle',
+  change_stage: 'pi-arrow-circle-right',
   webhook: 'pi-wifi',
   email: 'pi-envelope',
 }
@@ -222,6 +222,23 @@ const filteredAutomations = computed(() => {
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: var(--p-text-color);
+  }
+
+  // gap-* utilities are not provided by bootstrap-grid.min.css → token gaps here.
+  &__filters {
+    gap: $space-2;
+  }
+
+  &__action-cell {
+    gap: $space-1;
+  }
+
+  &__row-actions {
+    gap: $space-1;
+  }
+
+  &__muted {
+    color: var(--p-text-muted-color);
   }
 
   &__filter {

@@ -12,7 +12,7 @@
     </PageHeader>
 
     <!-- Filters -->
-    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <div class="d-flex align-items-center mb-3 flex-wrap templates-page__filters">
       <Select
         v-model="kindFilter"
         :options="kindOptions"
@@ -22,12 +22,12 @@
         :placeholder="t('documents.list.filters.kind')"
         class="templates-page__filter"
       />
-      <IconField class="flex-1">
+      <IconField class="templates-page__search">
         <InputIcon class="pi pi-search" />
         <InputText
           v-model="searchFilter"
           :placeholder="t('common.search')"
-          class="w-100"
+          class="templates-page__search-input"
         />
       </IconField>
     </div>
@@ -62,7 +62,7 @@
                 :severity="aiStatusSeverity(data.current_version.ai_check_status)"
                 :value="t(`templates.card.aiCheck.statuses.${data.current_version.ai_check_status}`, data.current_version.ai_check_status)"
               />
-              <span v-else class="text-secondary">—</span>
+              <span v-else class="templates-page__muted">—</span>
             </template>
           </Column>
           <Column :header="t('templates.list.columns.version')" style="width: 80px">
@@ -163,8 +163,24 @@ function aiStatusSeverity(status: AiCheckStatus): TagSeverity {
     padding: 0;
   }
 
+  &__filters {
+    gap: $space-3;
+  }
+
   &__filter {
     width: 160px;
+  }
+
+  &__search {
+    flex: 1;
+  }
+
+  &__search-input {
+    width: 100%;
+  }
+
+  &__muted {
+    color: var(--p-text-muted-color);
   }
 
   &__empty {

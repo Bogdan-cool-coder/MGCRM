@@ -28,6 +28,7 @@ import { usersApi } from '@/api/users'
 import type { PipelineDto } from '@/entities/sales'
 import type { UserOptionDto } from '@/api/users'
 import type { PlanLayer } from '@/entities/planTargets'
+import type { DashboardPeriod } from '@/entities/salesDashboard'
 
 export type HubTab = 'overview' | 'plans' | 'registry' | 'schedule' | 'rating'
 
@@ -180,6 +181,26 @@ export const useAnalyticsHub = () => {
     granularity.value = g
   }
 
+  // ─── Обзор named period (unique to the overview widgets) ────────────────────
+  // The overview widget endpoint speaks a named-period enum the month-stepper
+  // model above cannot express (last_month / current_quarter). It lives here so
+  // the single AnalyticsFilterBar can render it, and so it survives tab switches
+  // (the hub filter bar is not remounted between tabs).
+  const overviewPeriod = ref<DashboardPeriod>('current_month')
+
+  const setOverviewPeriod = (value: DashboardPeriod): void => {
+    overviewPeriod.value = value
+  }
+
+  // ─── Обзор widget-grid edit mode (Редактировать/Готово) ─────────────────────
+  // Lifted to the shell so the toggle can live in the shared filter bar; the
+  // overview tab consumes it to switch the widget grid into edit chrome.
+  const overviewEditMode = ref<boolean>(false)
+
+  const toggleOverviewEdit = (): void => {
+    overviewEditMode.value = !overviewEditMode.value
+  }
+
   /**
    * Set the shared period year directly (used by the Рейтинг year-selector, which
    * is annual-granularity). Reuses the same `year` ref every tab reads, so the
@@ -207,7 +228,14 @@ export const useAnalyticsHub = () => {
 
   const pipelines = ref<PipelineDto[]>([])
   const managers = ref<UserOptionDto[]>([])
-  const pipelinesLoading = ref(false)
+  // Начинаем с `true`, не `false`: дочерний TabOverview монтируется РАНЬШЕ
+  // хабового onMounted (Vue монтирует детей до родителя), а его гейт от дубля
+  // читает этот флаг на mount. Инициализируй он `false` — гейт видел бы «загрузки
+  // нет» до того, как loadPipelines её реально начнёт, и слал первый фетч с
+  // pipeline_id=null, а второй — после резолва пресела (гонка → двойной GET).
+  // `loadPipelines().finally` сбрасывает флаг в `false` (в т.ч. на ветке «воронок
+  // нет» — там id так и не выставляется, и kickoff уходит с null, как задумано).
+  const pipelinesLoading = ref(true)
 
   const canSeeAllManagers = computed<boolean>(
     () =>
@@ -307,6 +335,11 @@ export const useAnalyticsHub = () => {
     stepPeriod,
     setGranularity,
     setYear,
+    // overview-specific (named period + widget-grid edit)
+    overviewPeriod,
+    setOverviewPeriod,
+    overviewEditMode,
+    toggleOverviewEdit,
     // layer
     layer,
     setLayer,
