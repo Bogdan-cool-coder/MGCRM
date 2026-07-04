@@ -6,84 +6,24 @@
  * for the team-bonus forecast (SPEC ОВ-2). No raw axios in components —
  * everything routes through `useAsyncResource` + `api/motivation`.
  */
-import { computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
 import { getMotivationCard } from '@/api/motivation'
 import type { MotivationCard } from '@/entities/motivation'
+import { useMotivationMonths } from './useMotivationMonths'
 
 const POLL_INTERVAL_MS = 30_000
-
-const MONTH_LABEL_KEYS = [
-  'january', 'february', 'march', 'april', 'may', 'june',
-  'july', 'august', 'september', 'october', 'november', 'december',
-] as const
-
-export interface MonthOption {
-  label: string
-  value: string // "YYYY-M"
-  year: number
-  month: number
-}
 
 export const useMotivationTab = (viewedUserId: () => number | null) => {
   const { t } = useI18n()
   const toast = useToast()
-  const route = useRoute()
-  const router = useRouter()
 
-  // ─── Period (from URL, defaults to current month) ──────────────────────────
-  const now = new Date()
-
-  const period = computed<{ year: number; month: number }>(() => {
-    const qy = Number(route.query.year)
-    const qm = Number(route.query.month)
-    const year = Number.isFinite(qy) && qy > 2000 ? qy : now.getFullYear()
-    const month = Number.isFinite(qm) && qm >= 1 && qm <= 12 ? qm : now.getMonth() + 1
-    return { year, month }
-  })
-
-  const isCurrentMonth = computed<boolean>(
-    () => period.value.year === now.getFullYear() && period.value.month === now.getMonth() + 1,
-  )
-
-  /** Last 12 months as Select options (label localised). */
-  const monthOptions = computed<MonthOption[]>(() =>
-    Array.from({ length: 12 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const year = d.getFullYear()
-      const month = d.getMonth() + 1
-      const monthName = t(`motivation.card.months.${MONTH_LABEL_KEYS[month - 1]}`)
-      return {
-        label: `${monthName} ${year}`,
-        value: `${year}-${month}`,
-        year,
-        month,
-      }
-    }),
-  )
-
-  const selectedMonthValue = computed<string>(
-    () => `${period.value.year}-${period.value.month}`,
-  )
-
-  const setPeriod = (year: number, month: number): void => {
-    void router.replace({
-      query: { ...route.query, year: String(year), month: String(month) },
-    })
-  }
-
-  const stepMonth = (delta: number): void => {
-    const d = new Date(period.value.year, period.value.month - 1 + delta, 1)
-    setPeriod(d.getFullYear(), d.getMonth() + 1)
-  }
-
-  const selectMonthByValue = (value: string): void => {
-    const opt = monthOptions.value.find((o) => o.value === value)
-    if (opt) setPeriod(opt.year, opt.month)
-  }
+  // ─── Period (shared with the toolbar via URL ?year=&month=) ────────────────
+  // Month nav/options live in the toolbar (useMotivationMonths); here we only
+  // need the resolved period to drive the card fetch + poll.
+  const { period } = useMotivationMonths()
 
   // ─── Card resource ─────────────────────────────────────────────────────────
   const cardResource = useAsyncResource<MotivationCard | null>(() => null)
@@ -159,12 +99,6 @@ export const useMotivationTab = (viewedUserId: () => number | null) => {
     card: cardResource.data,
     loading: cardResource.loading,
     error: cardResource.error,
-    period,
-    isCurrentMonth,
-    monthOptions,
-    selectedMonthValue,
-    stepMonth,
-    selectMonthByValue,
     reload: () => loadCard(),
   }
 }

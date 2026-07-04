@@ -2634,7 +2634,7 @@
     "kpi": {
       "scorePct": "KPI%",
       "personalSales": "Personal sales",
-      "ftm": "FTM meetings",
+      "ftm": "First-time meetings",
       "rank": "Team rank",
       "plan": "plan",
       "noPlan": "No plan set",
@@ -2643,7 +2643,10 @@
       "needsWork": "Needs work",
       "ftmLabel": "counted meetings",
       "unavailable": "KPI data unavailable",
-      "incomeSrcNote": "Revenue from closed deals"
+      "incomeSrcNote": "Revenue from closed deals",
+      "ccyNote": "Amounts converted to base currency; deals without an FX rate are excluded. FX rates are in Catalog.",
+      "ftmHint": "First-Time Meeting with a new client. Counted automatically when meeting a company with no prior meetings.",
+      "rankHint": "Rank by motivation-card completion (Score) among department members for the month. #1 is best."
     },
     "team": {
       "title": "Team comparison",
@@ -2653,7 +2656,8 @@
       "average": "Team average",
       "of": "of",
       "avgLabel": "Average",
-      "alone": "You are the only member in this department"
+      "alone": "You are the only member in this department",
+      "eyebrow": "Team"
     },
     "feed": {
       "title": "Activity feed",
@@ -2669,7 +2673,11 @@
       "resetFilters": "Reset filters",
       "targetDeal": "Deal",
       "targetContact": "Contact",
-      "targetCompany": "Company"
+      "targetCompany": "Company",
+      "showing": "Showing {shown} of {total}",
+      "firstTime": "First-time",
+      "prevPage": "Previous page",
+      "nextPage": "Next page"
     },
     "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog.",
     "viewing": {
@@ -2677,6 +2685,34 @@
       "placeholder": "Select a member",
       "self": "My cabinet",
       "hint": "Viewing member KPI"
+    },
+    "results": {
+      "eyebrow": "Results",
+      "scorePctLabel": "Score"
+    },
+    "mood": {
+      "word_happy": "above plan",
+      "word_ok": "on track",
+      "word_low": "below plan",
+      "happy": [
+        "You're above plan — keep it up!",
+        "Great pace, keep going!",
+        "Plan beaten — you're on fire!",
+        "Keep leading the team!"
+      ],
+      "ok": [
+        "Almost there — push a bit!",
+        "Just a little to the plan!",
+        "Good move, close the gap!",
+        "You're close — finish the month!"
+      ],
+      "low": [
+        "Room to grow — go for it!",
+        "Get it together, you've got this!",
+        "A small push and you'll catch up!",
+        "Start with one deal today!"
+      ],
+      "nextPhrase": "Next phrase"
     }
   },
   "documents": {
@@ -4858,7 +4894,15 @@
         "october": "October",
         "november": "November",
         "december": "December"
-      }
+      },
+      "salary_for": "Salary for {period}",
+      "fact_basis_won_deals_hint": "Fact is based on the total of deals won this month, not on payments actually received. Switching to payment-based calc comes in the next phase.",
+      "gate_locked_short": "Target not met: {pct} of ≥ {threshold}%",
+      "expand_hint": "click a row to expand details",
+      "dept_plan_hint": "Sum of every department manager's new-income plans for the month on the selected pipeline. Built up from individual employee plans.",
+      "plan_short": "plan",
+      "fact_basis_short": "based on won deals",
+      "gate_reached": "Target reached"
     },
     "builder": {
       "title": "Motivation card constructor",

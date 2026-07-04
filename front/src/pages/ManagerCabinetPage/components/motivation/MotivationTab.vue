@@ -1,17 +1,5 @@
 <template>
   <div class="mk-tab">
-    <!-- Header row: title + month nav -->
-    <div class="mk-tab__toolbar">
-      <h2 class="mk-tab__title">{{ t('motivation.card.title') }}</h2>
-      <MkMonthNav
-        :options="monthOptions"
-        :selected-value="selectedMonthValue"
-        :is-current-month="isCurrentMonth"
-        @step="stepMonth"
-        @select="selectMonthByValue"
-      />
-    </div>
-
     <!-- Loading -->
     <MkSkeleton v-if="loading && !card" />
 
@@ -51,17 +39,17 @@
 
     <!-- Card content -->
     <template v-else-if="card">
-      <Message
-        v-if="card.meta.multi_currency_warning"
-        severity="warn"
-        :closable="false"
-        icon="pi pi-info-circle"
-        class="mk-tab__message"
-      >
-        {{ t('managerCabinet.multiCurrencyWarning') }}
-      </Message>
-
+      <!-- Compact header row: avatar + name · pipeline + status pill -->
       <MkHeader :meta="card.meta" class="mk-tab__section" />
+
+      <!-- Pay hero (salary + team-bonus forecast) -->
+      <MkPayHero
+        :total="card.total"
+        :forecast="card.team_bonus_forecast"
+        :fact-source="card.meta.fact_source"
+        :period-label="card.meta.period.label"
+        class="mk-tab__section"
+      />
 
       <MkDeptPlan
         :dept-plan="card.dept_plan"
@@ -70,20 +58,7 @@
         class="mk-tab__section"
       />
 
-      <div class="row g-4 mk-tab__section">
-        <div class="col-12 col-lg-8 order-2 order-lg-1">
-          <MkSalaryTable :items="card.items" :total="card.total" />
-        </div>
-        <div class="col-12 col-lg-4 order-1 order-lg-2">
-          <MkTotalCard
-            :total="card.total"
-            :forecast="card.team_bonus_forecast"
-            :fact-source="card.meta.fact_source"
-          />
-        </div>
-      </div>
-
-      <MkKpiStrip :items="card.items" class="mk-tab__section" />
+      <MkSalaryTable :items="card.items" :total="card.total" class="mk-tab__section" />
 
       <MkRatesFooter v-if="card.rates" :rates="card.rates" />
     </template>
@@ -95,12 +70,10 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
-import MkMonthNav from './MkMonthNav.vue'
 import MkHeader from './MkHeader.vue'
+import MkPayHero from './MkPayHero.vue'
 import MkDeptPlan from './MkDeptPlan.vue'
 import MkSalaryTable from './MkSalaryTable.vue'
-import MkTotalCard from './MkTotalCard.vue'
-import MkKpiStrip from './MkKpiStrip.vue'
 import MkRatesFooter from './MkRatesFooter.vue'
 import MkSkeleton from './MkSkeleton.vue'
 import { useMotivationTab } from '../../composables/useMotivationTab'
@@ -114,17 +87,7 @@ const { t } = useI18n()
 const router = useRouter()
 const { canManage } = useMotivationPermissions()
 
-const {
-  card,
-  loading,
-  error,
-  isCurrentMonth,
-  monthOptions,
-  selectedMonthValue,
-  stepMonth,
-  selectMonthByValue,
-  reload,
-} = useMotivationTab(() => props.viewedUserId)
+const { card, loading, error, reload } = useMotivationTab(() => props.viewedUserId)
 
 const goToBuilder = (): void => {
   void router.push('/settings?section=motivation-builder')
@@ -135,22 +98,6 @@ const goToBuilder = (): void => {
 .mk-tab {
   display: flex;
   flex-direction: column;
-}
-
-.mk-tab__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-4;
-  margin-bottom: $space-4;
-  flex-wrap: wrap;
-}
-
-.mk-tab__title {
-  font-size: var(--app-font-size-lg, 1.125rem);
-  font-weight: $font-weight-semibold;
-  color: $surface-900;
-  margin: 0;
 }
 
 .mk-tab__section {

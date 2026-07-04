@@ -40,20 +40,17 @@ const pairsText = computed<string>(() =>
 </script>
 
 <style lang="scss" scoped>
+// Quiet row (ManagerCabinet-v2 §3.5) — no card chrome, muted meta text.
 .mk-rates {
   display: flex;
   align-items: center;
   gap: $space-2;
   flex-wrap: wrap;
-  background: $surface-card;
-  border: 1px solid $surface-200;
-  border-radius: $radius-lg;
-  padding: $space-2 $space-5;
+  padding: $space-1;
   font-size: $font-size-xs;
   color: $surface-600;
 
   .app-dark & {
-    border-color: var(--p-surface-200);
     color: var(--p-surface-600);
   }
 
@@ -68,5 +65,10 @@ const pairsText = computed<string>(() =>
 
 .mk-rates__pairs {
   font-variant-numeric: tabular-nums;
+  color: $surface-700;
+
+  .app-dark & {
+    color: var(--p-surface-700);
+  }
 }
 </style>

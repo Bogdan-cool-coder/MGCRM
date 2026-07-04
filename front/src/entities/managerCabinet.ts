@@ -80,6 +80,13 @@ export interface ActivityFeedItem {
   title: string
   target_type: string | null
   target_id: number | null
+  /**
+   * Resolved object title (deal title / company name / contact full name),
+   * batch-stamped by the backend (ГЭП-1, ManagerCabinet-v2-spec §7).
+   * `null` for standalone activities or deleted targets → caller falls back to
+   * «{label} #{id}».
+   */
+  target_name: string | null
   due_at: string | null
   completed_at: string | null
   is_first_time_meeting: boolean

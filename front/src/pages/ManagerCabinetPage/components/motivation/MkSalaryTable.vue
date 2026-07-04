@@ -2,6 +2,7 @@
   <section class="mk-card mk-salary">
     <header class="mk-card__head">
       <span class="mk-eyebrow">{{ t('motivation.card.salary_components') }}</span>
+      <span class="mk-card__head-meta">{{ t('motivation.card.expand_hint') }}</span>
     </header>
 
     <ul class="mk-salary__rows">
@@ -10,7 +11,7 @@
         :key="`${item.kind}-${idx}`"
         class="mk-salary__row"
       >
-        <!-- Row head -->
+        <!-- Row head (collapsed: pct + salary-fact inline) -->
         <button
           type="button"
           class="mk-salary__row-head"
@@ -28,6 +29,21 @@
             class="mk-salary__row-tag"
           />
           <span class="mk-salary__spacer" />
+          <span
+            v-if="isManualKpi(item)"
+            class="mk-salary__manual"
+            :class="item.params?.manual_done
+              ? 'mk-salary__manual--done'
+              : 'mk-salary__manual--not-done'"
+          >
+            {{ item.params?.manual_done
+              ? t('motivation.card.manual_done')
+              : t('motivation.card.manual_not_done') }}
+          </span>
+          <PctTag v-else :value="item.pct" :badge="item.badge" size="sm" quiet />
+          <span class="mk-salary__row-fact">
+            {{ formatMkMoney(item.salary_fact_kopecks, item.currency) }}
+          </span>
           <i
             class="pi pi-chevron-down mk-salary__chevron"
             :class="{ 'mk-salary__chevron--open': expanded[idx] }"
@@ -69,19 +85,6 @@
             </div>
           </div>
 
-          <!-- % / manual badge row -->
-          <div class="mk-salary__pct-row">
-            <span class="mk-salary__k">{{ t('motivation.card.col_pct') }}</span>
-            <Tag
-              v-if="isManualKpi(item)"
-              :severity="item.params?.manual_done ? 'success' : 'danger'"
-              :value="item.params?.manual_done
-                ? t('motivation.card.manual_done')
-                : t('motivation.card.manual_not_done')"
-            />
-            <PctTag v-else :value="item.pct" :badge="item.badge" size="md" />
-          </div>
-
           <!-- Payment note -->
           <p v-if="paymentNote(item)" class="mk-salary__note">{{ paymentNote(item) }}</p>
 
@@ -106,7 +109,7 @@
       <span class="mk-salary__total-label">{{ t('motivation.card.total_label') }}</span>
       <span class="mk-salary__spacer" />
       <span class="mk-salary__total-plan">
-        {{ formatMkMoney(total.salary_plan_kopecks, total.currency) }}
+        {{ t('motivation.card.plan_short') }} {{ formatMkMoney(total.salary_plan_kopecks, total.currency) }}
       </span>
       <i class="pi pi-arrow-right mk-salary__total-sep" aria-hidden="true" />
       <span class="mk-salary__total-fact">
@@ -156,12 +159,12 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-// All rows expanded by default (SPEC: «default: развёрнуто»).
+// Rows collapsed by default (ManagerCabinet-v2 §3.4 — details on demand).
 const expanded = ref<boolean[]>([])
 watch(
   () => props.items.length,
   (len) => {
-    expanded.value = Array.from({ length: len }, () => true)
+    expanded.value = Array.from({ length: len }, () => false)
   },
   { immediate: true },
 )
@@ -261,31 +264,55 @@ const openBreakdown = (event: Event, item: MkCardItem): void => {
 }
 
 .mk-salary__icon-tile {
+  // Neutral tile (ManagerCabinet-v2 §3.4 / ОВ-2) — surface, not primary-100.
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: $radius-sm;
-  background: var(--p-primary-100);
-  color: $primary-900;
+  background: var(--p-surface-100);
+  color: $surface-700;
   flex-shrink: 0;
   font-size: $font-size-sm;
 
   .app-dark & {
-    background: var(--p-primary-900);
-    color: var(--p-primary-100);
+    color: var(--p-surface-700);
   }
 }
 
 .mk-salary__row-title {
-  font-size: $font-size-base;
+  font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   color: $surface-900;
 }
 
 .mk-salary__spacer {
   flex: 1;
+}
+
+// Collapsed-row inline manual status (mirrors quiet PctTag position).
+.mk-salary__manual {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+
+  &--done {
+    color: $status-success-text;
+  }
+
+  &--not-done {
+    color: $status-danger-text;
+  }
+}
+
+// Collapsed-row salary fact.
+.mk-salary__row-fact {
+  width: 96px;
+  text-align: right;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $surface-900;
+  font-variant-numeric: tabular-nums;
 }
 
 .mk-salary__chevron {
@@ -298,7 +325,7 @@ const openBreakdown = (event: Event, item: MkCardItem): void => {
 }
 
 .mk-salary__detail {
-  padding: 0 0 $space-3 calc(28px + $space-3);
+  padding: 0 0 $space-3 calc(26px + $space-3);
 }
 
 .mk-salary__grid {
@@ -340,13 +367,6 @@ const openBreakdown = (event: Event, item: MkCardItem): void => {
   text-align: right;
 }
 
-.mk-salary__pct-row {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  margin-top: $space-2;
-}
-
 .mk-salary__note {
   margin: $space-2 0 0;
   font-size: $font-size-xs;
@@ -371,13 +391,12 @@ const openBreakdown = (event: Event, item: MkCardItem): void => {
   margin: 0 calc(-1 * $space-5);
   padding: $space-3 $space-5;
   border-top: 2px solid $surface-200;
-  background: var(--p-primary-50);
+  background: var(--p-surface-100);
   border-bottom-left-radius: $radius-lg;
   border-bottom-right-radius: $radius-lg;
 
   .app-dark & {
     border-top-color: var(--p-surface-200);
-    background: var(--p-surface-200);
   }
 }
 

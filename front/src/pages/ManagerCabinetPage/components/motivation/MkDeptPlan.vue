@@ -1,7 +1,14 @@
 <template>
   <section class="mk-card mk-dept-plan">
     <header class="mk-card__head">
-      <span class="mk-eyebrow">{{ t('motivation.card.dept_plan') }}</span>
+      <span class="mk-dept-plan__eyebrow">
+        <span class="mk-eyebrow">{{ t('motivation.card.dept_plan') }}</span>
+        <i
+          v-tooltip.top="t('motivation.card.dept_plan_hint')"
+          class="pi pi-info-circle mk-dept-plan__hint"
+          aria-hidden="true"
+        />
+      </span>
       <span v-if="pipelineName" class="mk-card__head-meta">
         {{ pipelineName }} · {{ periodLabel }}
       </span>
@@ -23,12 +30,10 @@
       </div>
 
       <div class="mk-dept-plan__bar">
-        <ProgressBar
-          :value="barValue"
-          :show-value="false"
-          class="mk-dept-plan__progress"
-          :class="`mk-dept-plan__progress--${deptPlan.badge}`"
-        />
+        <span class="mk-dept-plan__track">
+          <span class="mk-dept-plan__fill" />
+          <span class="mk-dept-plan__mask" :style="{ left: `${barValue}%` }" />
+        </span>
       </div>
 
       <div class="mk-dept-plan__fact">
@@ -36,7 +41,7 @@
           <span class="mk-dept-plan__num-value mk-dept-plan__num-value--fact">
             {{ formatMkMoney(deptPlan.fact_kopecks, deptPlan.target_currency) }}
           </span>
-          <PctTag :value="deptPlan.pct" :badge="deptPlan.badge" size="md" />
+          <PctTag :value="deptPlan.pct" :badge="deptPlan.badge" size="md" quiet />
         </div>
         <span class="mk-label">{{ t('motivation.card.col_fact') }}</span>
       </div>
@@ -47,7 +52,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ProgressBar from 'primevue/progressbar'
 import PctTag from '@/components/shared/PctTag.vue'
 import { formatMkMoney } from '@/utils/motivation'
 import type { MkDeptPlan } from '@/entities/motivation'
@@ -88,26 +92,49 @@ const barValue = computed<number>(() => {
   min-width: 120px;
 }
 
-.mk-dept-plan__progress {
-  height: 8px;
-  border-radius: $radius-sm;
+// Gradient «health-scale» bar (consistent with TeamBars §2.10): red→amber→green
+// revealed up to the fact pct via a surface mask on the right.
+.mk-dept-plan__track {
+  position: relative;
+  display: block;
+  height: 9px;
+  border-radius: $radius-pill;
+  background: var(--p-surface-100);
+  overflow: hidden;
+}
 
-  // Fill colour driven by badge severity (SPEC §План отдела).
-  :deep(.p-progressbar-value) {
-    border-radius: $radius-sm;
-  }
+.mk-dept-plan__fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--p-red-500) 0%,
+    var(--p-orange-400) 52%,
+    var(--p-green-500) 100%
+  );
+}
 
-  &--success :deep(.p-progressbar-value) {
-    background: var(--p-green-500);
-  }
-  &--warning :deep(.p-progressbar-value) {
-    background: var(--p-orange-500);
-  }
-  &--danger :deep(.p-progressbar-value) {
-    background: var(--p-red-500);
-  }
-  &--none :deep(.p-progressbar-value) {
-    background: $surface-300;
+.mk-dept-plan__mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--p-surface-100);
+}
+
+.mk-dept-plan__eyebrow {
+  display: inline-flex;
+  align-items: center;
+}
+
+.mk-dept-plan__hint {
+  margin-left: $space-1;
+  font-size: $font-size-2xs;
+  color: $surface-600;
+  cursor: help;
+
+  .app-dark & {
+    color: var(--p-surface-600);
   }
 }
 

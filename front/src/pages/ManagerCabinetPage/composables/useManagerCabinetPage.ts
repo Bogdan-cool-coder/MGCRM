@@ -20,6 +20,17 @@ import type {
   ActivityFeedMeta,
 } from '@/entities/managerCabinet'
 
+const MONTH_LABEL_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+] as const
+
+export interface OverviewMonthOption {
+  label: string
+  /** `current_month` for the current month, else `YYYY-MM`. */
+  value: string
+}
+
 export const useManagerCabinetPage = () => {
   const { t } = useI18n()
   const toast = useToast()
@@ -69,9 +80,24 @@ export const useManagerCabinetPage = () => {
   // ─── Period ───────────────────────────────────────────────────────────────
   const period = ref<KpiPeriod>('current_month')
 
+  // Last 7 months (current + 6) as dropdown options. The current month keeps the
+  // `current_month` sentinel (matches the KPI API); older months are `YYYY-MM`.
+  const overviewMonthOptions = computed<OverviewMonthOption[]>(() => {
+    const now = new Date()
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthName = t(`motivation.card.months.${MONTH_LABEL_KEYS[d.getMonth()]}`)
+      const label = `${monthName} ${d.getFullYear()}`
+      const value =
+        i === 0 ? 'current_month' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      return { label, value }
+    })
+  })
+
   // ─── Feed filters ─────────────────────────────────────────────────────────
+  // FTM filtering is no longer a separate toggle (ManagerCabinet-v2 ОВ-3) —
+  // «первичность» is surfaced as a per-row badge instead. Only kind + page remain.
   const feedKind = ref<'all' | 'call' | 'meeting' | 'task' | 'note'>('all')
-  const feedFtmOnly = ref<boolean>(false)
   const feedPage = ref<number>(1)
 
   // ─── Async resources ──────────────────────────────────────────────────────
@@ -121,7 +147,6 @@ export const useManagerCabinetPage = () => {
       const res = await getActivityFeed({
         period: period.value,
         kind: feedKind.value,
-        ftm_only: feedFtmOnly.value || undefined,
         user_id: viewedUserId.value ?? undefined,
         page: feedPage.value,
       })
@@ -152,18 +177,12 @@ export const useManagerCabinetPage = () => {
     feedPage.value = 1
   }
 
-  const setFeedFtmOnly = (v: boolean): void => {
-    feedFtmOnly.value = v
-    feedPage.value = 1
-  }
-
   const setFeedPage = (n: number): void => {
     feedPage.value = n
   }
 
   const resetFeedFilters = (): void => {
     feedKind.value = 'all'
-    feedFtmOnly.value = false
     feedPage.value = 1
   }
 
@@ -173,7 +192,7 @@ export const useManagerCabinetPage = () => {
     void loadFeed()
   })
 
-  watch([feedKind, feedFtmOnly, feedPage], () => {
+  watch([feedKind, feedPage], () => {
     void loadFeed()
   })
 
@@ -201,8 +220,8 @@ export const useManagerCabinetPage = () => {
     feedMeta: feedMetaRef,
     // Filter state
     period,
+    overviewMonthOptions,
     feedKind,
-    feedFtmOnly,
     feedPage,
     viewedUserId,
     canViewOthers,
@@ -210,7 +229,6 @@ export const useManagerCabinetPage = () => {
     // Actions
     setPeriod,
     setFeedKind,
-    setFeedFtmOnly,
     setFeedPage,
     resetFeedFilters,
     setViewedUser,
