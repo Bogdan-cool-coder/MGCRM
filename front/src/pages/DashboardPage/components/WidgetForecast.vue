@@ -2,12 +2,13 @@
   <Card class="widget-card h-100">
     <template #title>{{ t('dashboard.forecast.title') }}</template>
     <template #content>
-      <!-- Loading skeleton -->
+      <!-- Loading skeleton: hero + bar + 3 rows -->
       <template v-if="loading">
-        <div class="row g-3">
-          <div v-for="n in 4" :key="n" class="col-6">
-            <Skeleton height="72px" border-radius="8px" />
-          </div>
+        <div class="forecast-skeleton">
+          <Skeleton height="18px" width="60%" border-radius="6px" class="mb-3" />
+          <Skeleton height="32px" width="55%" border-radius="6px" class="mb-3" />
+          <Skeleton height="12px" border-radius="999px" class="mb-3" />
+          <Skeleton v-for="n in 3" :key="n" height="40px" border-radius="8px" class="mb-2" />
         </div>
       </template>
 
@@ -19,26 +20,47 @@
         </div>
       </template>
 
-      <!-- KPI cards 2×2 -->
+      <!-- Content: hero + composition bar + legend -->
       <template v-else>
-        <div class="row g-3">
+        <p class="forecast__caption">{{ t('dashboard.forecast.weightedOnPeriod') }}</p>
+        <p class="forecast__hero">
+          {{ formatMoney(forecast.total_weighted_kopecks, locale, baseCurrency) }}
+        </p>
+
+        <!-- Stacked composition bar (HOT / Warm / Trial) -->
+        <div
+          class="forecast__bar"
+          :class="{ 'forecast__bar--empty': totalParts === 0 }"
+          role="img"
+          :aria-label="t('dashboard.forecast.title')"
+        >
+          <template v-if="totalParts > 0">
+            <span
+              v-for="p in parts"
+              :key="p.key"
+              class="forecast__bar-seg"
+              :class="`forecast__bar-seg--${p.key}`"
+              :style="{ width: `${p.pct}%` }"
+              :title="`${p.label} · ${p.pct}%`"
+            />
+          </template>
+        </div>
+
+        <!-- Legend rows (NOT clickable — ГЭП-4, hover-highlight only) -->
+        <div class="forecast__legend">
           <div
-            v-for="item in forecastItems"
-            :key="item.key"
-            class="col-6"
+            v-for="p in parts"
+            :key="p.key"
+            class="forecast__row"
           >
-            <div class="forecast-kpi">
-              <div class="forecast-kpi__header">
-                <i :class="['pi', item.icon, 'forecast-kpi__icon']" />
-                <span class="forecast-kpi__label">{{ item.label }}</span>
-              </div>
-              <div
-                class="forecast-kpi__amount"
-                :class="item.amountClass"
-              >
-                {{ formatMoney(item.kopecks, locale, props.baseCurrency) }}
-              </div>
-            </div>
+            <span class="forecast__row-tile" :class="`forecast__row-tile--${p.key}`">
+              <i :class="['pi', p.icon]" />
+            </span>
+            <span class="forecast__row-label">{{ p.label }}</span>
+            <span class="forecast__row-pct">{{ totalParts > 0 ? `${p.pct}%` : '—' }}</span>
+            <span class="forecast__row-amount">
+              {{ formatMoney(p.kopecks, locale, baseCurrency) }}
+            </span>
           </div>
         </div>
       </template>
@@ -62,37 +84,31 @@ const props = defineProps<{
   loading: boolean
 }>()
 
-const forecastItems = computed(() => {
-  if (!props.forecast) return []
+type PartKey = 'hot' | 'warm' | 'trial'
+
+interface ForecastPart {
+  key: PartKey
+  icon: string
+  label: string
+  kopecks: number
+  pct: number
+}
+
+const totalParts = computed<number>(() => {
+  const f = props.forecast
+  if (!f) return 0
+  return f.hot_kopecks + f.warm_kopecks + f.trial_kopecks
+})
+
+const parts = computed<ForecastPart[]>(() => {
+  const f = props.forecast
+  if (!f) return []
+  const total = totalParts.value
+  const pct = (k: number): number => (total > 0 ? Math.round((k / total) * 100) : 0)
   return [
-    {
-      key: 'weighted',
-      icon: 'pi-calculator',
-      label: t('dashboard.forecast.totalWeighted'),
-      kopecks: props.forecast.total_weighted_kopecks,
-      amountClass: 'forecast-kpi__amount--weighted',
-    },
-    {
-      key: 'hot',
-      icon: 'pi-fire',
-      label: t('dashboard.forecast.hot'),
-      kopecks: props.forecast.hot_kopecks,
-      amountClass: 'forecast-kpi__amount--hot',
-    },
-    {
-      key: 'warm',
-      icon: 'pi-sun',
-      label: t('dashboard.forecast.warm'),
-      kopecks: props.forecast.warm_kopecks,
-      amountClass: '',
-    },
-    {
-      key: 'trial',
-      icon: 'pi-clock',
-      label: t('dashboard.forecast.trial'),
-      kopecks: props.forecast.trial_kopecks,
-      amountClass: '',
-    },
+    { key: 'hot', icon: 'pi-fire', label: t('dashboard.forecast.hot'), kopecks: f.hot_kopecks, pct: pct(f.hot_kopecks) },
+    { key: 'warm', icon: 'pi-sun', label: t('dashboard.forecast.warm'), kopecks: f.warm_kopecks, pct: pct(f.warm_kopecks) },
+    { key: 'trial', icon: 'pi-clock', label: t('dashboard.forecast.trial'), kopecks: f.trial_kopecks, pct: pct(f.trial_kopecks) },
   ]
 })
 </script>
@@ -127,46 +143,123 @@ const forecastItems = computed(() => {
   margin: 0;
 }
 
-.forecast-kpi {
-  border: 1px solid $surface-200;
-  // theme-reactive: $surface-50 = #F9FAFB (light) / #0F1F3D (navy dark). Dead
-  // `:global(.app-dark) &` override removed — $surface-50 is already dark in navy dark.
-  background-color: $surface-50;
-  border-radius: $radius-md;
-  padding: $space-3;
-  display: flex;
-  flex-direction: column;
-  gap: $space-2;
-}
-
-.forecast-kpi__header {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-}
-
-.forecast-kpi__icon {
-  font-size: $font-size-sm;
+// ─── Hero ────────────────────────────────────────────────────────────────────
+.forecast__caption {
+  margin: 0 0 $space-1;
+  font-size: $font-size-xs;
   color: $surface-500;
 }
 
-.forecast-kpi__label {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  color: $surface-600;
-}
-
-.forecast-kpi__amount {
-  font-size: $font-size-md;
+.forecast__hero {
+  margin: 0 0 $space-4;
+  font-size: $font-size-icon-lg; // 32px hero number
   font-weight: $font-weight-bold;
   color: $surface-900;
+  line-height: 1;
+}
 
-  &--weighted {
-    font-size: $font-size-lg;
+// ─── Stacked composition bar ─────────────────────────────────────────────────
+.forecast__bar {
+  display: flex;
+  height: 12px;
+  border-radius: $radius-pill;
+  overflow: hidden;
+  gap: 2px;
+  margin-bottom: $space-4;
+  background: $surface-100;
+}
+
+.forecast__bar--empty {
+  background: $surface-200;
+}
+
+.forecast__bar-seg {
+  height: 100%;
+
+  // Composition colours read on both themes via PrimeVue palette tokens.
+  &--hot {
+    background: var(--p-orange-500);
   }
 
+  &--warm {
+    background: $status-warning-text;
+  }
+
+  &--trial {
+    background: var(--p-blue-500);
+  }
+}
+
+// ─── Legend rows ─────────────────────────────────────────────────────────────
+.forecast__legend {
+  display: flex;
+  flex-direction: column;
+}
+
+.forecast__row {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-2 $space-1;
+  border-top: 1px solid $surface-200;
+  transition: background var(--app-transition-fast);
+
+  &:hover {
+    background: var(--mg-surface-hover);
+  }
+}
+
+.forecast__row-tile {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+
+  // Tinted plate = 15% of the segment colour over the card surface.
   &--hot {
     color: var(--p-orange-500);
+    background: color-mix(in srgb, var(--p-orange-500) 15%, $surface-card);
   }
+
+  &--warm {
+    color: $status-warning-text;
+    background: color-mix(in srgb, $status-warning-text 15%, $surface-card);
+  }
+
+  &--trial {
+    color: var(--p-blue-500);
+    background: color-mix(in srgb, var(--p-blue-500) 15%, $surface-card);
+  }
+}
+
+.forecast__row-label {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-sm;
+  color: $surface-800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forecast__row-pct {
+  width: 40px;
+  text-align: right;
+  font-size: $font-size-xs;
+  color: $surface-500;
+  flex-shrink: 0;
+}
+
+.forecast__row-amount {
+  width: 96px;
+  text-align: right;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $surface-900;
+  flex-shrink: 0;
 }
 </style>

@@ -1,6 +1,18 @@
 <template>
   <Card class="widget-card h-100">
-    <template #title>{{ t('dashboard.funnel.title') }}</template>
+    <template #title>
+      <div class="funnel-header">
+        <span class="funnel-header__title">{{ t('dashboard.funnel.title') }}</span>
+        <span
+          v-if="!loading && overallConversion !== null"
+          class="funnel-header__conversion"
+          :title="t('dashboard.funnel.overallConversionHint')"
+        >
+          {{ t('dashboard.funnel.overallConversion') }}
+          <strong class="funnel-header__conversion-value">{{ overallConversion }}%</strong>
+        </span>
+      </div>
+    </template>
     <template #content>
       <!-- Loading skeleton -->
       <template v-if="loading">
@@ -89,6 +101,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Skeleton from 'primevue/skeleton'
@@ -99,10 +112,38 @@ import type { FunnelData, FunnelStage } from '@/entities/salesDashboard'
 
 const { t } = useI18n()
 
-defineProps<{
+const props = defineProps<{
   funnel: FunnelData | null
   loading: boolean
 }>()
+
+/**
+ * Overall conversion = honest win-rate = won ÷ ALL deals in the funnel for the
+ * period. Using the first-stage-by-sort_order count as the denominator is wrong
+ * for funnels with multiple parallel entry stages (e.g. «Неразобранное» +
+ * «партнёрский канал»), which produced >100% (BUG-FUNNEL-CONVERSION-OVER-100).
+ *
+ * Denominator preference (ТЗ):
+ *   (a) a funnel-level total field if the response carries one;
+ *   (b) otherwise the sum of every stage row's count (won/lost rows included).
+ * Result is clamped to 0–100 so a data anomaly can never render an impossible %.
+ * Returns null when there are no deals at all (shows «—»).
+ */
+const overallConversion = computed<number | null>(() => {
+  const f = props.funnel
+  if (!f || f.stages.length === 0) return null
+
+  // (a) prefer an explicit funnel-wide total if the backend ever adds one.
+  const explicitTotal = (f as { total?: number; total_deals?: number }).total
+    ?? (f as { total?: number; total_deals?: number }).total_deals
+  // (b) fall back to the sum of all row counts (every stage, incl. won/lost rows).
+  const summedTotal = f.stages.reduce((acc, s) => acc + (s.count ?? 0), 0)
+  const total = explicitTotal != null && explicitTotal > 0 ? explicitTotal : summedTotal
+
+  if (total <= 0) return null
+  const pct = (f.total_won / total) * 100
+  return Math.round(Math.min(100, Math.max(0, pct)))
+})
 
 const progressClass = (row: FunnelStage): string => {
   if (row.is_won) return 'funnel-progress__bar--won'
@@ -119,6 +160,35 @@ const progressClass = (row: FunnelStage): string => {
     font-weight: $font-weight-semibold;
     color: $surface-800;
   }
+}
+
+.funnel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  flex-wrap: wrap;
+}
+
+.funnel-header__title {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $surface-800;
+}
+
+.funnel-header__conversion {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  color: $surface-600;
+}
+
+.funnel-header__conversion-value {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $status-success-text;
 }
 
 .widget-empty {

@@ -33,6 +33,18 @@
           class="dashboard-toolbar__select"
           @update:model-value="(v: number | null) => emit('update:managerId', v)"
         />
+
+        <div class="dashboard-toolbar__spacer" />
+
+        <!-- Layout edit-mode toggle (Э11) -->
+        <Button
+          :label="edit ? t('dashboard.layout.done') : t('dashboard.layout.edit')"
+          :icon="edit ? 'pi pi-check' : 'pi pi-pencil'"
+          :severity="edit ? 'primary' : 'secondary'"
+          :outlined="!edit"
+          size="small"
+          @click="emit('toggle-edit')"
+        />
       </div>
     </template>
   </Card>
@@ -42,6 +54,7 @@
 import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Select from 'primevue/select'
+import Button from 'primevue/button'
 import type { DashboardFilters, DashboardPeriod } from '@/entities/salesDashboard'
 import type { PipelineDto } from '@/entities/sales'
 import type { UserOptionDto } from '@/api/users'
@@ -54,12 +67,14 @@ defineProps<{
   managers: UserOptionDto[]
   pipelinesLoading: boolean
   canSeeAllManagers: boolean
+  edit: boolean
 }>()
 
 const emit = defineEmits<{
   'update:period': [value: DashboardPeriod]
   'update:pipelineId': [value: number | null]
   'update:managerId': [value: number | null]
+  'toggle-edit': []
 }>()
 
 const periodOptions = [
@@ -79,5 +94,9 @@ const periodOptions = [
 
 .dashboard-toolbar__select {
   min-width: 160px;
+}
+
+.dashboard-toolbar__spacer {
+  flex: 1 1 auto;
 }
 </style>

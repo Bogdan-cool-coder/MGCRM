@@ -197,7 +197,23 @@
       "lost": "Lost",
       "total": "Total",
       "deals": "deals",
-      "noTrend": "—"
+      "noTrend": "—",
+      "trendVsPrev": "{pct}% vs previous period",
+      "noCompare": "no comparison",
+      "openDeals": "Open deals: {label}"
+    },
+    "layout": {
+      "edit": "Edit",
+      "done": "Done",
+      "reset": "Reset layout",
+      "editHint": "Edit mode: reorder and toggle widget visibility.",
+      "show": "Show",
+      "hide": "Hide",
+      "moveUp": "Move up",
+      "moveDown": "Move down"
+    },
+    "currencyBanner": {
+      "link": "Catalog → Exchange rates"
     },
     "funnel": {
       "title": "Funnel conversion",
@@ -206,7 +222,9 @@
       "avgDays": "Days avg.",
       "transition": "Conversion to next",
       "won": "Won",
-      "lost": "Lost"
+      "lost": "Lost",
+      "overallConversion": "Overall conversion",
+      "overallConversionHint": "Won deals divided by all funnel deals in the period"
     },
     "topBar": {
       "title": "Top 10",
@@ -216,6 +234,7 @@
     "forecast": {
       "title": "Revenue forecast",
       "totalWeighted": "Weighted forecast",
+      "weightedOnPeriod": "Weighted forecast for period",
       "hot": "HOT deals",
       "warm": "Warm",
       "trial": "Trial / Negotiation"
@@ -225,7 +244,12 @@
       "subtitle": "deals without scheduled tasks",
       "openList": "Open list",
       "allHaveTasks": "All active deals have scheduled tasks",
-      "noData": "No data"
+      "noData": "No data",
+      "needAttention": "{count} need attention",
+      "daysInStage": "{days} d in stage",
+      "addTask": "Task",
+      "showAll": "Show all",
+      "taskCreated": "Task created"
     },
     "multiCurrencyWarning": "Some deals in other currencies are not included in totals. Add exchange rates in Catalog.",
     "noPipeline": "No active sales pipeline selected. Pick a pipeline in the filter above.",
@@ -3841,6 +3865,8 @@
       "nextWeek": "Next week",
       "nextMonth": "Next month",
       "pickDate": "Pick a date",
+      "dueDateLabel": "Due date (required)",
+      "dueDateRequired": "Set a due date for the task",
       "create": "Create",
       "complete": "Complete",
       "delete": "Delete"

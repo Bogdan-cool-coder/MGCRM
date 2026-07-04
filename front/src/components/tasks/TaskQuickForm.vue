@@ -69,6 +69,30 @@
       <small v-if="titleError" class="tqf__error">{{ titleError }}</small>
     </div>
 
+    <!-- ── Required visible due-date field (create + requireDueDate) ─
+         In NoTask-widget context the server "deal has a task" criterion is
+         Deal::nextTask() with whereNotNull('due_at'); a task without due_at
+         leaves the deal in the "without tasks" list. So here the date is
+         explicit, required, prefilled to tomorrow — no silent default. -->
+    <div v-if="mode === 'create' && requireDueDate" class="tqf__due-field">
+      <label for="tqf-required-due" class="tqf__due-field-label">
+        {{ t('tasks.quick.dueDateLabel') }}
+      </label>
+      <DatePicker
+        input-id="tqf-required-due"
+        v-model="form.due_at"
+        show-time
+        hour-format="24"
+        date-format="dd.mm.yy"
+        show-icon
+        icon-display="input"
+        class="tqf__due-field-input"
+        :class="{ 'p-invalid': dueError }"
+        :placeholder="t('tasks.quick.pickDate')"
+      />
+      <small v-if="dueError" class="tqf__error">{{ dueError }}</small>
+    </div>
+
     <!-- ── Result text (complete mode only) ──────────────────────── -->
     <div v-if="mode === 'complete'" class="tqf__result">
       <Textarea
@@ -228,6 +252,14 @@ const props = withDefaults(
 
     /** Auto-focus title field on mount (useful in inline-creation contexts) */
     autoFocus?: boolean
+
+    /**
+     * Make due_at a visible, required field prefilled with "tomorrow".
+     * Used by the NoTask widget where the server counts a deal as "has a task"
+     * only when the activity has a due_at (Deal::nextTask → whereNotNull('due_at')).
+     * Default false → existing forms elsewhere keep due optional.
+     */
+    requireDueDate?: boolean
   }>(),
   {
     mode: 'create',
@@ -239,6 +271,7 @@ const props = withDefaults(
     defaultResponsibleName: null,
     closable: false,
     autoFocus: false,
+    requireDueDate: false,
   },
 )
 
@@ -275,17 +308,28 @@ interface QuickForm {
   result_text: string
 }
 
+/** Tomorrow at 09:00 (local) — prefill for the required-due-date context. */
+function tomorrowAt9(): Date {
+  const d = new Date()
+  d.setHours(9, 0, 0, 0)
+  d.setDate(d.getDate() + 1)
+  return d
+}
+
 function buildDefaultForm(): QuickForm {
   return {
     kind: props.defaultKind ?? 'task',
     title: '',
-    due_at: null,
+    // In require-due-date mode, prefill "tomorrow" so the deal leaves the
+    // "without tasks" list on the server (whereNotNull('due_at')). Editable.
+    due_at: props.requireDueDate ? tomorrowAt9() : null,
     result_text: '',
   }
 }
 
 const form = ref<QuickForm>(buildDefaultForm())
 const titleError = ref<string | null>(null)
+const dueError = ref<string | null>(null)
 const doneChecked = ref(false)
 const activeDateShortcut = ref<DateShortcut>(null)
 
@@ -358,6 +402,8 @@ watch(
   () => {
     // if programmatically cleared, reset highlight
     if (!form.value.due_at) activeDateShortcut.value = null
+    // clear the required-due error as soon as the user provides a date
+    if (form.value.due_at) dueError.value = null
   },
 )
 
@@ -385,6 +431,7 @@ async function onSubmit() {
 
 async function doCreate() {
   titleError.value = null
+  dueError.value = null
   if (!form.value.title.trim()) {
     titleError.value = t('errors.validation')
     await nextTick()
@@ -392,6 +439,13 @@ async function doCreate() {
       const el = (titleInputRef.value as unknown as { $el?: HTMLElement }).$el
       if (el instanceof HTMLElement) el.focus()
     }
+    return
+  }
+
+  // In require-due-date context, block creation without a date: a task without
+  // due_at would not count on the server → deal bounces back to the list.
+  if (props.requireDueDate && !form.value.due_at) {
+    dueError.value = t('tasks.quick.dueDateRequired')
     return
   }
 
@@ -437,6 +491,7 @@ function onDelete() {
 function resetForm() {
   form.value = buildDefaultForm()
   titleError.value = null
+  dueError.value = null
   activeDateShortcut.value = null
   doneChecked.value = false
 }
@@ -619,6 +674,30 @@ onMounted(async () => {
 .tqf__error {
   color: var(--p-red-500);
   font-size: $font-size-xs;
+}
+
+// ── Required due-date field (require-due-date context) ──────────────────────────
+
+.tqf__due-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tqf__due-field-label {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  // theme-reactive: dark = soft navy label; light = mid-grey.
+  color: $surface-600;
+}
+
+.tqf__due-field-input {
+  width: 100%;
+
+  :deep(.p-inputtext) {
+    width: 100%;
+    font-size: $font-size-sm;
+  }
 }
 
 // ── Result (complete mode) ────────────────────────────────────────────────────
