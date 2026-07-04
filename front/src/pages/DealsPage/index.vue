@@ -377,11 +377,16 @@ const totalDealsCount = computed(() => {
  *     by " + " (no fabricated single-currency sum).
  */
 const totalSumFormatted = computed(() => {
+  // The funnel money sum is a BOARD-only figure. In list view it is not
+  // applicable at all, so drop the money segment regardless of whether stale
+  // board columns are still cached from a prior kanban view. Gating on the view
+  // (not on cols.length) is what actually hides it: after kanban→list the
+  // localColumns retain their last board data, so a cols.length check would
+  // still format a "0 <currency>" figure. See QA E1.
+  if (salesStore.activeView === 'list') return ''
+
   // Exclude won/lost columns — only active pipeline stages contribute.
   const cols = visibleColumns.value.filter((col) => !col.stage.is_won && !col.stage.is_lost)
-  // The funnel money sum only exists in the board response. In list view the
-  // board is not loaded, so return an empty string and let the toolbar drop the
-  // money segment (rather than printing a fabricated "0 ₽").
   if (cols.length === 0) return ''
 
   // Native per-currency totals across all visible columns.

@@ -1,18 +1,14 @@
 <template>
   <div class="metric-product">
-    <!-- Breakdown toggle: per manager (P-1 new_income) | per product line (R6) -->
-    <div class="metric-product__breakdown">
-      <label class="metric-product__breakdown-label">{{ t('dashboard.plans.breakdown') }}</label>
-      <SelectButton
-        :model-value="breakdown"
-        :options="breakdownOptions"
-        option-label="label"
-        option-value="value"
-        :allow-empty="false"
-        class="metric-product__breakdown-select"
-        @update:model-value="(v: IncomeBreakdown | null) => v && onBreakdown(v)"
-      />
-    </div>
+    <!--
+      Breakdown is fixed to «По линейкам» (product line). A «По сотрудникам» cut is
+      intentionally NOT offered here: the plan-targets contract (§3.3) has no valid
+      `product_income × scope_type=user` combination and no per-employee product-line
+      endpoint, so that cut could only re-issue the plain `new_income/user` request —
+      i.e. it would show numbers indistinguishable from the «Поступления» metric (which
+      already provides that per-manager grid). Removed to avoid the misleading duplicate.
+      See CONTRACT GAP (QA E1).
+    -->
 
     <!-- Endpoint not yet deployed (parallel backend) -->
     <Message
@@ -41,12 +37,12 @@
       <Skeleton v-for="n in 6" :key="n" height="2.5rem" class="mb-2" />
     </div>
 
-    <!-- Empty (no product lines / employees in scope) -->
+    <!-- Empty (no product lines in scope) -->
     <PlansEmpty
       v-else-if="!matrix || matrix.rows.length === 0"
-      :icon="breakdown === 'product' ? 'pi-box' : 'pi-users'"
-      :title="t(breakdown === 'product' ? 'dashboard.plans.product_empty_title' : 'dashboard.plans.empty_title')"
-      :hint="t(breakdown === 'product' ? 'dashboard.plans.product_empty_hint' : 'dashboard.plans.empty_hint')"
+      icon="pi-box"
+      :title="t('dashboard.plans.product_empty_title')"
+      :hint="t('dashboard.plans.product_empty_hint')"
     />
 
     <!-- Matrix + save bar -->
@@ -58,7 +54,7 @@
         :cell-value="cellValue"
         :is-cell-dirty="isCellDirty"
         :row-total="rowTotal"
-        :entity-label="breakdown === 'product' ? t('dashboard.plans.col_product_line') : t('dashboard.plans.col_employee')"
+        :entity-label="t('dashboard.plans.col_product_line')"
         @cell-input="onCellInput"
         @update:row-currency="onRowCurrency"
       />
@@ -77,15 +73,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, watch, onMounted, onActivated, onDeactivated, onBeforeUnmount } from 'vue'
+import { inject, onMounted, onActivated, onDeactivated, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
-import SelectButton from 'primevue/selectbutton'
 import PlanMatrix from './PlanMatrix.vue'
 import PlanSaveBar from './PlanSaveBar.vue'
 import PlansEmpty from './PlansEmpty.vue'
-import { useProductIncomeTab, type IncomeBreakdown } from '../../composables/useProductIncomeTab'
+import { useProductIncomeTab } from '../../composables/useProductIncomeTab'
 import { PLANS_REGISTER_METRIC_GUARD, PLANS_REGISTER_EXPORT } from '../../composables/useAnalyticsHub'
 import type { PlanLayer, PlanMatrixRow } from '@/entities/planTargets'
 
@@ -101,8 +96,6 @@ const {
   matrix,
   loading,
   endpointMissing,
-  breakdown,
-  setBreakdown,
   canEdit,
   isMoney,
   cellValue,
@@ -121,16 +114,6 @@ const {
   pipelineId: () => props.pipelineId,
 })
 
-interface BreakdownOption {
-  value: IncomeBreakdown
-  label: string
-}
-
-const breakdownOptions = computed<BreakdownOption[]>(() => [
-  { value: 'product', label: t('dashboard.plans.breakdown_by_product') },
-  { value: 'user', label: t('dashboard.plans.breakdown_by_user') },
-])
-
 // Register the dirty-guard with TabPlans (identical pattern to MetricIncome).
 const registerMetricGuard = inject(PLANS_REGISTER_METRIC_GUARD, null)
 const attachGuard = (): void => registerMetricGuard?.(confirmLeave)
@@ -140,24 +123,14 @@ onActivated(attachGuard)
 onDeactivated(detachGuard)
 onBeforeUnmount(detachGuard)
 
-// Refine the plans-export descriptor for the active breakdown: «По линейкам» exports
-// the product_income/company matrix; «По сотрудникам» exports the new_income/user
-// grid — matching what this panel currently shows (same query as GET /api/plans/matrix).
+// Export descriptor: this panel only shows the «По линейкам» cut, so it always
+// exports the product_income/company matrix (GET /api/plans/matrix/export).
 const registerExport = inject(PLANS_REGISTER_EXPORT, null)
 const publishExport = (): void => {
-  registerExport?.(
-    breakdown.value === 'product'
-      ? { metric: 'product_income', scope_type: 'company' }
-      : { metric: 'new_income', scope_type: 'user' },
-  )
+  registerExport?.({ metric: 'product_income', scope_type: 'company' })
 }
 onMounted(publishExport)
 onActivated(publishExport)
-watch(breakdown, publishExport)
-
-const onBreakdown = (value: IncomeBreakdown): void => {
-  void setBreakdown(value)
-}
 
 const onCellInput = (row: PlanMatrixRow, columnKey: string, value: number | null): void => {
   setCellValue(row, columnKey, value)
@@ -176,24 +149,6 @@ const onRowCurrency = (row: PlanMatrixRow, currency: string): void => {
 .metric-product {
   display: flex;
   flex-direction: column;
-}
-
-.metric-product__breakdown {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: $space-3;
-  margin-bottom: $space-4;
-}
-
-.metric-product__breakdown-label {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: $surface-600;
-
-  .app-dark & {
-    color: var(--p-surface-600);
-  }
 }
 
 .metric-product__skeleton {
