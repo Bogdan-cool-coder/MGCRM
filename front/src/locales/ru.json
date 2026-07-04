@@ -1006,7 +1006,10 @@
     "email": "Email",
     "locale": "ru-RU",
     "stay": "Остаться",
-    "leave": "Покинуть"
+    "leave": "Покинуть",
+    "paginator": {
+      "showing": "Показано {from}–{to} из {total}"
+    }
   },
   "contacts": {
     "page": {
@@ -1451,7 +1454,9 @@
           "statusAll": "Все",
           "statusActive": "Активные",
           "statusArchived": "Архивные",
-          "reset": "Сбросить"
+          "reset": "Сбросить",
+          "groupPlaceholder": "Все группы",
+          "pricingTypePlaceholder": "Любой тип"
         },
         "empty": {
           "title": "Каталог пуст",
@@ -1470,6 +1475,11 @@
           "deleteSuccess": "Продукт удалён",
           "deleteUsed": "Продукт используется в сделках и не может быть удалён",
           "toggleSuccess": "Статус обновлён"
+        },
+        "toolbar": {
+          "filters": "Фильтры",
+          "moreMenu": "Ещё",
+          "done": "Готово"
         }
       },
       "pricingType": {
@@ -1535,7 +1545,9 @@
         },
         "errors": {
           "notFound": "Продукт не найден",
-          "load": "Ошибка загрузки продукта"
+          "load": "Ошибка загрузки продукта",
+          "notFoundHint": "Возможно, продукт был удалён или у вас нет к нему доступа.",
+          "backToCatalog": "Назад к каталогу"
         }
       },
       "form": {
@@ -2748,7 +2760,9 @@
   "documents": {
     "list": {
       "title": "Документы",
+      "subtitle": "Всего: {count}",
       "create": "Создать документ",
+      "filtersBtn": "Фильтры",
       "filters": {
         "status": "Статус",
         "kind": "Тип",
@@ -2911,8 +2925,12 @@
   "templates": {
     "list": {
       "title": "Шаблоны документов",
+      "subtitle": "Всего: {count}",
       "create": "Создать шаблон",
       "empty": "Нет шаблонов",
+      "emptyFiltered": "Ничего не найдено",
+      "resetFilters": "Сбросить",
+      "search": "Поиск...",
       "columns": {
         "name": "Название",
         "products": "Продукты",
@@ -3112,7 +3130,15 @@
   "onboarding": {
     "courses": {
       "title": "Курсы онбординга",
+      "subtitle": "{count} курсов",
       "create": "Создать курс",
+      "openFilters": "Фильтры",
+      "menu": {
+        "edit": "Редактировать",
+        "publish": "Опубликовать",
+        "unpublish": "Снять с публикации",
+        "delete": "Удалить"
+      },
       "statuses": {
         "draft": "Черновик",
         "published": "Опубликован"
@@ -3249,7 +3275,9 @@
     },
     "assignments": {
       "title": "Назначения",
+      "subtitle": "{count} назначений",
       "assign": "Назначить курс",
+      "emptyHint": "Назначьте курс сотрудникам, чтобы начать обучение",
       "columns": {
         "employee": "Сотрудник",
         "course": "Курс",
@@ -3325,6 +3353,8 @@
     },
     "myCourses": {
       "title": "Моё обучение",
+      "subtitle": "{count} курсов",
+      "tabsAria": "Фильтр по статусу",
       "tabs": {
         "active": "Активные",
         "completed": "Завершённые",
@@ -3396,6 +3426,7 @@
     },
     "certificates": {
       "title": "Мои сертификаты",
+      "subtitle": "{count} сертификатов",
       "number": "Сертификат",
       "issuedAt": "Выдан",
       "download": "Скачать PDF",
@@ -3561,6 +3592,8 @@
     "runs": {
       "pageTitle": "Журнал автоматизаций",
       "empty": "Ещё не было срабатываний",
+      "emptyFiltered": "По заданным фильтрам ничего не найдено",
+      "showing": "Показано {n}",
       "count": "Строк: {n}",
       "loadMore": "Загрузить ещё",
       "applyFilter": "Применить",

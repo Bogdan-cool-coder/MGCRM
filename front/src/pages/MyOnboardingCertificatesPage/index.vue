@@ -1,8 +1,12 @@
 <template>
   <div class="certificates-page">
-    <PageHeader :title="t('onboarding.certificates.title')" icon="pi pi-verified" />
+    <ListToolbar
+      icon="pi-verified"
+      :title="t('onboarding.certificates.title')"
+      :subtitle="t('onboarding.certificates.subtitle', { count: certificates.length })"
+    />
 
-    <div class="p-4">
+    <div class="certificates-page__body">
       <!-- Loading -->
       <div v-if="loading" class="row g-3">
         <div v-for="n in 3" :key="n" class="col-md-6 col-lg-4">
@@ -54,7 +58,7 @@ import { useI18n } from 'vue-i18n'
 import Skeleton from 'primevue/skeleton'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
-import PageHeader from '@/components/AppShell/PageHeader.vue'
+import ListToolbar from '@/components/shared/ListToolbar.vue'
 import CertificateCard from './components/CertificateCard.vue'
 import { useMyCertificatesPage } from './composables/useMyCertificatesPage'
 
@@ -68,6 +72,11 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .certificates-page {
+  // .p-4 is a full-Bootstrap padding util absent from the grid-only bundle → scoped.
+  &__body {
+    padding: $space-4;
+  }
+
   // Card scaffold — full-Bootstrap .card is absent from the grid-only bundle,
   // so the loading tile rendered with no surface.
   &__skeleton-card {

@@ -1006,7 +1006,10 @@
     "email": "Email",
     "locale": "en-US",
     "stay": "Stay",
-    "leave": "Leave"
+    "leave": "Leave",
+    "paginator": {
+      "showing": "Showing {from}–{to} of {total}"
+    }
   },
   "contacts": {
     "page": {
@@ -1451,7 +1454,9 @@
           "statusAll": "All",
           "statusActive": "Active",
           "statusArchived": "Archived",
-          "reset": "Reset"
+          "reset": "Reset",
+          "groupPlaceholder": "All groups",
+          "pricingTypePlaceholder": "Any type"
         },
         "empty": {
           "title": "Catalog is empty",
@@ -1470,6 +1475,11 @@
           "deleteSuccess": "Product deleted",
           "deleteUsed": "Product is used in deals and cannot be deleted",
           "toggleSuccess": "Status updated"
+        },
+        "toolbar": {
+          "filters": "Filters",
+          "moreMenu": "More",
+          "done": "Done"
         }
       },
       "pricingType": {
@@ -1535,7 +1545,9 @@
         },
         "errors": {
           "notFound": "Product not found",
-          "load": "Failed to load product"
+          "load": "Failed to load product",
+          "notFoundHint": "The product may have been deleted or you have no access to it.",
+          "backToCatalog": "Back to catalog"
         }
       },
       "form": {
@@ -2748,7 +2760,9 @@
   "documents": {
     "list": {
       "title": "Documents",
+      "subtitle": "Total: {count}",
       "create": "Create document",
+      "filtersBtn": "Filters",
       "filters": {
         "status": "Status",
         "kind": "Type",
@@ -2911,8 +2925,12 @@
   "templates": {
     "list": {
       "title": "Document templates",
+      "subtitle": "Total: {count}",
       "create": "Create template",
       "empty": "No templates",
+      "emptyFiltered": "Nothing found",
+      "resetFilters": "Reset",
+      "search": "Search...",
       "columns": {
         "name": "Name",
         "products": "Products",
@@ -3112,7 +3130,15 @@
   "onboarding": {
     "courses": {
       "title": "Onboarding courses",
+      "subtitle": "{count} courses",
       "create": "Create course",
+      "openFilters": "Filters",
+      "menu": {
+        "edit": "Edit",
+        "publish": "Publish",
+        "unpublish": "Unpublish",
+        "delete": "Delete"
+      },
       "statuses": {
         "draft": "Draft",
         "published": "Published"
@@ -3249,7 +3275,9 @@
     },
     "assignments": {
       "title": "Assignments",
+      "subtitle": "{count} assignments",
       "assign": "Assign course",
+      "emptyHint": "Assign a course to employees to start onboarding",
       "columns": {
         "employee": "Employee",
         "course": "Course",
@@ -3325,6 +3353,8 @@
     },
     "myCourses": {
       "title": "My learning",
+      "subtitle": "{count} courses",
+      "tabsAria": "Filter by status",
       "tabs": {
         "active": "Active",
         "completed": "Completed",
@@ -3396,6 +3426,7 @@
     },
     "certificates": {
       "title": "My certificates",
+      "subtitle": "{count} certificates",
       "number": "Certificate",
       "issuedAt": "Issued",
       "download": "Download PDF",
@@ -3561,6 +3592,8 @@
     "runs": {
       "pageTitle": "Automation log",
       "empty": "No runs yet",
+      "emptyFiltered": "No runs match the current filters",
+      "showing": "Showing {n}",
       "count": "Rows: {n}",
       "loadMore": "Load more",
       "applyFilter": "Apply",

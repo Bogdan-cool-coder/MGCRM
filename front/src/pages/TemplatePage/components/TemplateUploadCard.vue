@@ -2,7 +2,7 @@
   <Card class="template-upload-card">
     <template #title>{{ t('templates.card.upload.title') }}</template>
     <template #content>
-      <p v-if="currentVersion != null" class="text-secondary mb-3">
+      <p v-if="currentVersion != null" class="template-upload-card__current">
         {{ t('templates.card.upload.current', { v: `v${currentVersion.version_number}` }) }}
       </p>
       <!-- Upload button hidden for read-only roles (TemplatePolicy::uploadVersion = contracts.approve) -->
@@ -17,10 +17,10 @@
         :disabled="uploading"
         @select="onSelect"
       />
-      <p v-if="!readonly" class="text-secondary mt-2 mb-0 template-upload-card__hint">
+      <p v-if="!readonly" class="template-upload-card__hint template-upload-card__hint--after">
         {{ t('templates.card.upload.limit') }}
       </p>
-      <p v-if="readonly && currentVersion == null" class="text-secondary mb-0 template-upload-card__hint">
+      <p v-if="readonly && currentVersion == null" class="template-upload-card__hint">
         {{ t('templates.card.upload.noVersion', '—') }}
       </p>
     </template>
@@ -52,7 +52,18 @@ function onSelect(event: { files: File[] }) {
 </script>
 
 <style lang="scss" scoped>
+.template-upload-card__current {
+  color: var(--p-text-muted-color);
+  margin: 0 0 $space-3;
+}
+
 .template-upload-card__hint {
   font-size: $font-size-2xs; // snap from 0.8rem (12.8px)
+  color: var(--p-text-muted-color);
+  margin: 0;
+
+  &--after {
+    margin-top: $space-2;
+  }
 }
 </style>

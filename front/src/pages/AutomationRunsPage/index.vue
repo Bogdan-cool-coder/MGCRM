@@ -1,62 +1,31 @@
 <template>
   <div class="automation-runs-page" :class="{ 'automation-runs-page--embedded': embedded }">
-    <PageHeader v-if="!embedded" :title="t('automation.runs.pageTitle')" icon="pi pi-clock" />
+    <!-- Toolbar canon (hidden inside /settings — same contract as the old PageHeader) -->
+    <AutomationRunsToolbar
+      v-if="!embedded"
+      :loaded-count="page.runs.value.length"
+      :filter-open="filterOpen"
+      :filter-count="activeFilterCount"
+      :dry-run-disabled="!page.filterAutomationId.value"
+      @toggle-filter="filterOpen = !filterOpen"
+      @dry-run="openDryRun"
+    />
+
+    <!-- Filter panel (embedded: always shown; standalone: toggled by trigger) -->
+    <AutomationRunsFilterPanel
+      v-if="embedded || filterOpen"
+      v-model:automation-id="page.filterAutomationId.value"
+      v-model:status="page.filterStatus.value"
+      v-model:action-kind="page.filterActionKind.value"
+      v-model:date-range="page.filterDateRange.value"
+      :automations="page.automations.value"
+      :status-options="statusOptions"
+      :action-options="actionOptions"
+      @apply="() => page.fetchRuns()"
+      @reset="onResetFilters"
+    />
 
     <div class="automation-runs-page__content">
-      <!-- Filters row -->
-      <div class="automation-runs-page__filters">
-        <Select
-          v-model="page.filterAutomationId.value"
-          :options="page.automations.value"
-          option-label="name"
-          option-value="id"
-          :placeholder="t('automation.runs.filter.automation')"
-          show-clear
-          class="automation-runs-page__filter"
-        />
-        <Select
-          v-model="page.filterStatus.value"
-          :options="statusOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="t('automation.runs.filter.status')"
-          show-clear
-          class="automation-runs-page__filter"
-        />
-        <Select
-          v-model="page.filterActionKind.value"
-          :options="actionOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="t('automation.runs.filter.action')"
-          show-clear
-          class="automation-runs-page__filter"
-        />
-        <DatePicker
-          v-model="page.filterDateRange.value"
-          selection-mode="range"
-          :placeholder="t('automation.runs.filter.period')"
-          date-format="dd.mm.yy"
-          show-clear
-          class="automation-runs-page__filter"
-        />
-        <Button
-          :label="t('automation.runs.applyFilter')"
-          icon="pi pi-search"
-          size="small"
-          @click="() => page.fetchRuns()"
-        />
-        <Button
-          :label="t('automation.dryrun.button')"
-          icon="pi pi-play"
-          severity="secondary"
-          outlined
-          size="small"
-          :disabled="!page.filterAutomationId.value"
-          @click="openDryRun"
-        />
-      </div>
-
       <!-- Error banner -->
       <Message
         v-if="page.loadError.value"
@@ -67,20 +36,36 @@
         {{ page.loadError.value }}
       </Message>
 
-      <!-- DataTable -->
-      <DataTable
-        :value="page.runs.value"
-        :loading="page.loading.value"
-        striped-rows
-        class="automation-runs-page__table"
-        :empty-message="' '"
-      >
-        <template #empty>
-          <div class="automation-runs-page__empty">
-            <i class="pi pi-clock automation-runs-page__empty-icon" />
-            <p>{{ t('automation.runs.empty') }}</p>
-          </div>
-        </template>
+      <!-- DataTable (card-backed) -->
+      <div class="automation-runs-page__card">
+        <DataTable
+          :value="page.runs.value"
+          :loading="page.loading.value"
+          striped-rows
+          class="automation-runs-page__table"
+          :empty-message="' '"
+        >
+          <template #empty>
+            <div class="automation-runs-page__empty">
+              <i
+                :class="[
+                  'automation-runs-page__empty-icon',
+                  activeFilterCount > 0 ? 'pi pi-filter-slash' : 'pi pi-clock',
+                ]"
+              />
+              <p class="automation-runs-page__empty-title">
+                {{ activeFilterCount > 0 ? t('automation.runs.emptyFiltered') : t('automation.runs.empty') }}
+              </p>
+              <Button
+                v-if="activeFilterCount > 0"
+                :label="t('common.reset')"
+                severity="secondary"
+                outlined
+                size="small"
+                @click="onResetFilters"
+              />
+            </div>
+          </template>
 
         <!-- Automation name -->
         <Column :header="t('automation.runs.col.automation')">
@@ -137,11 +122,13 @@
             <span v-else class="automation-runs-page__muted">—</span>
           </template>
         </Column>
-      </DataTable>
+        </DataTable>
+      </div>
 
-      <!-- Load more -->
-      <div v-if="page.runs.value.length > 0 && page.hasMore.value" class="automation-runs-page__load-more">
+      <!-- Load more + showing counter (canon: growing cursor log, no total → «Показано N») -->
+      <div v-if="page.runs.value.length > 0" class="automation-runs-page__footer">
         <Button
+          v-if="page.hasMore.value"
           :label="t('automation.runs.loadMore')"
           severity="secondary"
           outlined
@@ -149,7 +136,7 @@
           @click="page.loadMore()"
         />
         <span class="automation-runs-page__count">
-          {{ t('automation.runs.count', { n: page.runs.value.length }) }}
+          {{ t('automation.runs.showing', { n: page.runs.value.length }) }}
         </span>
       </div>
     </div>
@@ -169,13 +156,12 @@ import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
-import Select from 'primevue/select'
 import Tag from 'primevue/tag'
-import DatePicker from 'primevue/datepicker'
 import Message from 'primevue/message'
-import { PageHeader } from '@/components/AppShell'
 import type { AutomationRunDto, RunStatus, ActionKind } from '@/entities/automation'
 import { useAutomationRuns } from './composables/useAutomationRuns'
+import AutomationRunsToolbar from './components/AutomationRunsToolbar.vue'
+import AutomationRunsFilterPanel from './components/AutomationRunsFilterPanel.vue'
 import DryRunDrawer from './DryRunDrawer.vue'
 
 const { t } = useI18n()
@@ -184,6 +170,26 @@ withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 // ─── Page composable (orchestrator) ──────────────────────────────────────────
 const page = useAutomationRuns()
+
+// ─── Filter panel toggle (pattern Б: trigger opens the inline panel) ─────────
+const filterOpen = ref(false)
+
+const activeFilterCount = computed(() => {
+  let n = 0
+  if (page.filterAutomationId.value) n++
+  if (page.filterStatus.value) n++
+  if (page.filterActionKind.value) n++
+  if (page.filterDateRange.value?.[0]) n++
+  return n
+})
+
+function onResetFilters(): void {
+  page.filterAutomationId.value = null
+  page.filterStatus.value = null
+  page.filterActionKind.value = null
+  page.filterDateRange.value = null
+  void page.fetchRuns()
+}
 
 // ─── Dry-run drawer state ─────────────────────────────────────────────────────
 const dryRunVisible = ref(false)
@@ -274,19 +280,21 @@ function truncate(s: string, len: number): string {
     min-height: 0;
   }
 
-  &__filters {
-    display: flex;
-    align-items: center;
-    gap: $space-2;
-    flex-wrap: wrap;
-  }
-
-  &__filter {
-    min-width: 160px;
-  }
-
   &__error {
     margin: 0;
+  }
+
+  // Card-backed table (canon: ProductsPage __card recipe)
+  &__card {
+    background: $surface-card;
+    border: 1px solid var(--p-surface-200);
+    border-radius: $radius-lg;
+    box-shadow: $shadow-card;
+    overflow: hidden;
+
+    .app-dark & {
+      border-color: var(--p-surface-600);
+    }
   }
 
   &__table {
@@ -295,6 +303,10 @@ function truncate(s: string, len: number): string {
     // removed (interpolated `&__table` inside :global() is dropped by the compiler).
     :deep(th) {
       background-color: var(--p-surface-50);
+      text-transform: uppercase;
+      font-size: $font-size-xs;
+      letter-spacing: 0.03em;
+      color: var(--p-text-muted-color);
     }
   }
 
@@ -313,6 +325,17 @@ function truncate(s: string, len: number): string {
     color: var(--p-surface-400);
   }
 
+  &__empty-title {
+    margin: 0;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $surface-700;
+
+    .app-dark & {
+      color: var(--p-surface-300);
+    }
+  }
+
   // Muted em-dash placeholder — bootstrap-grid.min.css ships no .text-muted utility.
   &__muted {
     color: var(--p-text-muted-color);
@@ -328,7 +351,7 @@ function truncate(s: string, len: number): string {
     cursor: help;
   }
 
-  &__load-more {
+  &__footer {
     display: flex;
     align-items: center;
     gap: $space-3;

@@ -259,7 +259,7 @@ const docMenuItems = computed(() => [])
 
 <style lang="scss" scoped>
 .document-page {
-  padding: 0.75rem;
+  padding: $space-3;
 
   &__action-bar {
     // spacer
@@ -267,7 +267,7 @@ const docMenuItems = computed(() => [])
 
   &__tabs-card {
     :deep(.p-card-body) {
-      padding: 0.75rem;
+      padding: $space-3;
     }
   }
 
@@ -275,8 +275,8 @@ const docMenuItems = computed(() => [])
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    padding: 4rem 1rem;
+    gap: $space-3;
+    padding: $space-8;
     color: var(--p-text-muted-color);
     text-align: center;
 

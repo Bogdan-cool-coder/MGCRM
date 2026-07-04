@@ -1,7 +1,12 @@
 <template>
   <div class="pipeline-settings-page">
-    <!-- Page header — hidden in canvas mode to reclaim vertical space -->
-    <PageHeader v-if="viewMode !== 'canvas'" :title="t('sales.pipelineEditor.pageTitle')" icon="pi pi-sliders-h" />
+    <!-- Form-mode toolbar canon (icon tile + title + segmented Форма/Полотно). -->
+    <!-- Hidden in canvas mode, which keeps its own compact bar for vertical space. -->
+    <PipelineSettingsToolbar
+      v-if="viewMode !== 'canvas'"
+      v-model="viewMode"
+      :view-mode-options="viewModeOptions"
+    />
 
     <div
       class="pipeline-settings-page__content"
@@ -53,17 +58,6 @@
 
         <!-- Right content column -->
         <div class="pipeline-settings-page__form-content">
-          <!-- View mode toggle — shown when a pipeline is selected -->
-          <div v-if="selectedPipelineId !== null" class="pipeline-settings-page__mode-bar">
-            <SelectButton
-              v-model="viewMode"
-              :options="viewModeOptions"
-              option-label="label"
-              option-value="value"
-              :allow-empty="false"
-            />
-          </div>
-
           <!-- Stages editor section -->
           <StageEditorList
             v-if="selectedPipelineId !== null"
@@ -177,7 +171,7 @@ import { useToast } from 'primevue/usetoast'
 import SelectButton from 'primevue/selectbutton'
 import Select from 'primevue/select'
 import type { SelectChangeEvent } from 'primevue/select'
-import { PageHeader } from '@/components/AppShell'
+import PipelineSettingsToolbar from './components/PipelineSettingsToolbar.vue'
 import PipelineList from './components/PipelineList.vue'
 import StageEditorList from './components/StageEditorList.vue'
 import CreatePipelineDialog from './components/CreatePipelineDialog.vue'
@@ -210,7 +204,7 @@ watch(viewMode, (v) => {
   if (v === 'canvas') canvasMountSeq.value++
 })
 
-const viewModeOptions = computed(() => [
+const viewModeOptions = computed<{ label: string; value: ViewMode }[]>(() => [
   { label: t('automation.canvas.modeForm'), value: 'form' },
   { label: t('automation.canvas.modeCanvas'), value: 'canvas' },
 ])
@@ -601,11 +595,6 @@ onMounted(async () => {
   &__form-empty-icon {
     font-size: $font-size-icon-2xl;
     color: var(--p-surface-400);
-  }
-
-  &__mode-bar {
-    display: flex;
-    align-items: center;
   }
 
   // ── Compact chrome shown only in canvas mode ────────────────────────────────

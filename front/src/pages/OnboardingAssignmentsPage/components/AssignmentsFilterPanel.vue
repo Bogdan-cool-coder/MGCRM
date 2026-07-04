@@ -1,25 +1,23 @@
 <template>
-  <div class="assignments-filter-panel row g-3 align-items-end mb-4">
-    <div class="col-auto">
-      <Select
-        v-model="localFilters.status"
-        :options="statusOptions"
-        option-label="label"
-        option-value="value"
-        :placeholder="t('onboarding.assignments.filter.status')"
-        class="assignments-filter-panel__select"
-        @change="emit('change')"
-      />
-    </div>
-    <div class="col-auto">
-      <Button
-        :label="t('onboarding.assignments.filter.reset')"
-        severity="secondary"
-        outlined
-        icon="pi pi-filter-slash"
-        @click="emit('reset')"
-      />
-    </div>
+  <div class="assignments-filter-panel">
+    <Select
+      v-model="localFilters.status"
+      :options="statusOptions"
+      option-label="label"
+      option-value="value"
+      :placeholder="t('onboarding.assignments.filter.status')"
+      class="assignments-filter-panel__select"
+      @change="emit('change')"
+    />
+    <Button
+      v-if="localFilters.status"
+      :label="t('onboarding.assignments.filter.reset')"
+      severity="secondary"
+      outlined
+      icon="pi pi-filter-slash"
+      class="assignments-filter-panel__reset"
+      @click="emit('reset')"
+    />
   </div>
 </template>
 
@@ -55,8 +53,17 @@ const statusOptions = computed(() => [
 
 <style lang="scss" scoped>
 .assignments-filter-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+
   &__select {
     min-width: 180px;
+    height: 38px;
+  }
+
+  &__reset {
+    height: 38px;
   }
 }
 </style>

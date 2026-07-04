@@ -16,8 +16,15 @@
 
     <template v-else-if="loadError || !template">
       <div class="template-page__error">
-        <p>{{ t('templates.card.notFound') }}</p>
-        <Button :label="t('templates.card.back')" icon="pi pi-arrow-left" text @click="router.back()" />
+        <i class="pi pi-file-edit template-page__error-icon" />
+        <p class="template-page__error-title">{{ t('templates.card.notFound') }}</p>
+        <Button
+          icon="pi pi-arrow-left"
+          :label="t('templates.card.back')"
+          severity="secondary"
+          outlined
+          @click="router.back()"
+        />
       </div>
     </template>
 
@@ -131,15 +138,32 @@ const {
 
 <style lang="scss" scoped>
 .template-page {
-  padding: 0.75rem;
+  padding: $space-3;
 
   &__error {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    padding: 4rem;
+    gap: $space-3;
+    padding: $space-8;
     color: var(--p-text-muted-color);
+    text-align: center;
+  }
+
+  &__error-icon {
+    font-size: $font-size-icon-2xl;
+    opacity: 0.4;
+  }
+
+  &__error-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $surface-700;
+    margin: 0;
+
+    .app-dark & {
+      color: var(--p-surface-300);
+    }
   }
 }
 </style>

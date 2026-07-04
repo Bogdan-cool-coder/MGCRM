@@ -1,82 +1,58 @@
 <template>
   <div class="products-page" :class="{ 'products-page--embedded': embedded }">
-    <PageHeader
+    <!-- Toolbar canon (non-embedded) -->
+    <ProductsToolbar
       v-if="!embedded"
-      :title="t('catalog.products.page.title')"
-      :subtitle="t('catalog.products.page.subtitle')"
-      icon="pi pi-box"
-    >
-      <template #actions>
-        <template v-if="canWrite">
-          <Button
-            icon="pi pi-upload"
-            :label="t('catalog.products.page.import')"
-            severity="secondary"
-            outlined
-            @click="toggleImportMenu"
-          />
-          <Menu
-            ref="importMenuRef"
-            :model="importMenuItems"
-            popup
-          />
-          <Button
-            icon="pi pi-plus"
-            :label="t('catalog.products.page.create')"
-            @click="openCreateDrawer"
-          />
-        </template>
-      </template>
-    </PageHeader>
+      :total="total"
+      :search="filter.q"
+      :active-filter-count="activeFilterCount"
+      :can-write="canWrite"
+      @search="onSearchQuery"
+      @open-filter="onOpenFilter"
+      @create="openCreateDrawer"
+      @import="openImportDialog"
+      @download-template="downloadTemplate"
+    />
+
+    <!-- Filter panel (Popover, pattern Б) — shared by both branches -->
+    <ProductsFilterPanel
+      ref="filterPanelRef"
+      :filter="filter"
+      :groups="groups"
+      :active-filter-count="activeFilterCount"
+      @update:filter="onFilterPatch"
+      @apply="applyFilter"
+      @reset="resetFilter"
+    />
 
     <div class="products-page__content">
-      <!-- Filter toolbar -->
-      <div class="products-page__toolbar">
-        <IconField class="products-page__search">
-          <InputIcon class="pi pi-search" />
+      <!-- Compact canon filter strip — embedded (inside /settings) only.
+           Section heading/icon/counter come from the Settings section chrome;
+           right-side actions (edit/import/create) stay in the DirTabCatalog parent. -->
+      <div v-if="embedded" class="products-page__toolbar">
+        <div class="products-page__search-pill">
+          <i class="pi pi-search products-page__search-pill-icon" />
           <InputText
             v-model="filter.q"
             :placeholder="t('catalog.products.page.filters.search')"
+            class="products-page__search-pill-input"
             @input="onSearchInput"
           />
-        </IconField>
-        <Select
-          v-model="filter.group_id"
-          :options="groups"
-          option-label="name"
-          option-value="id"
-          :placeholder="t('catalog.products.page.filters.group')"
-          show-clear
-          class="products-page__filter-select"
-          @change="applyFilter"
-        />
-        <Select
-          v-model="filter.pricing_type"
-          :options="pricingTypeOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="t('catalog.products.page.filters.pricingType')"
-          show-clear
-          class="products-page__filter-select"
-          @change="applyFilter"
-        />
-        <Select
-          v-model="filter.active_only"
-          :options="statusOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="t('catalog.products.page.filters.status')"
-          class="products-page__filter-select"
-          @change="applyFilter"
-        />
-        <Button
-          icon="pi pi-refresh"
-          :label="t('catalog.products.page.filters.reset')"
-          severity="secondary"
-          text
-          @click="resetFilter"
+        </div>
+        <FilterTriggerButton
+          :label="t('catalog.products.page.toolbar.filters')"
+          :count="activeFilterCount"
+          @click="onOpenFilter"
         />
       </div>
+
+      <!-- Import menu (embedded — toolbar lives in the /settings parent) -->
+      <Menu
+        v-if="embedded"
+        ref="importMenuRef"
+        :model="importMenuItems"
+        popup
+      />
 
       <!-- Table card -->
       <div class="products-page__card">
@@ -301,21 +277,20 @@ import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
-import IconField from 'primevue/iconfield'
-import InputIcon from 'primevue/inputicon'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Menu from 'primevue/menu'
 import Paginator from 'primevue/paginator'
-import PageHeader from '@/components/AppShell/PageHeader.vue'
 import { useUserStore } from '@/stores/user'
-import { useProductsPageData } from './composables/useProductsPageData'
+import { useProductsPageData, type ProductsFilter } from './composables/useProductsPageData'
 import { useProductsPageActions } from './composables/useProductsPageActions'
 import { formatCurrency } from '@/utils/currency'
+import FilterTriggerButton from '@/components/shared/FilterTriggerButton.vue'
 import ProductPricingTypeTag from './components/ProductPricingTypeTag.vue'
 import ProductPlansPriceTable from './components/ProductPlansPriceTable.vue'
 import ProductCreateDrawer from './components/ProductCreateDrawer.vue'
+import ProductsToolbar from './components/ProductsToolbar.vue'
+import ProductsFilterPanel from './components/ProductsFilterPanel.vue'
 import PriceImportDialog from './components/PriceImportDialog.vue'
 import type { ProductDto } from '@/entities/catalog'
 
@@ -363,6 +338,32 @@ const {
 
 // Expanded rows
 const expandedRows = ref<Record<number, boolean>>({})
+
+// ── Toolbar canon wiring (non-embedded) ────────────────────────────────────────
+
+const filterPanelRef = ref<InstanceType<typeof ProductsFilterPanel> | null>(null)
+
+// Badge = active panel filters only (search stays visible in the toolbar, not counted).
+const activeFilterCount = computed(() => {
+  let n = 0
+  if (filter.value.group_id !== null) n++
+  if (filter.value.pricing_type !== null) n++
+  if (filter.value.active_only !== true) n++
+  return n
+})
+
+function onSearchQuery(query: string) {
+  filter.value.q = query
+  onSearchInput()
+}
+
+function onOpenFilter(event: Event) {
+  filterPanelRef.value?.toggle(event)
+}
+
+function onFilterPatch(patch: Partial<ProductsFilter>) {
+  Object.assign(filter.value, patch)
+}
 
 // Import menu
 const importMenuRef = ref<InstanceType<typeof Menu> | null>(null)
@@ -416,20 +417,8 @@ function getBasePrice(product: ProductDto, currency: string): number | null {
   return p ? p.amount : null
 }
 
-// Filter options
-const pricingTypeOptions = computed(() => [
-  { value: 'fixed', label: t('catalog.products.pricingType.fixed') },
-  { value: 'tiered', label: t('catalog.products.pricingType.tiered') },
-  { value: 'per_minute', label: t('catalog.products.pricingType.per_minute') },
-  { value: 'package', label: t('catalog.products.pricingType.package') },
-  { value: 'custom', label: t('catalog.products.pricingType.custom') },
-])
-
-const statusOptions = computed(() => [
-  { label: t('catalog.products.page.filters.statusAll'), value: null },
-  { label: t('catalog.products.page.filters.statusActive'), value: true },
-  { label: t('catalog.products.page.filters.statusArchived'), value: false },
-])
+// Filter options for the pricing-type / status Selects live inside ProductsFilterPanel;
+// they are no longer needed here since the embedded strip uses the shared filter Popover.
 
 // Debounced search
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -484,12 +473,29 @@ defineExpose({ canWrite, openCreateDrawer, toggleImportMenu, importMenuRef, impo
   flex-wrap: wrap;
 }
 
-.products-page__search {
-  min-width: 240px;
+// Search pill — canon (mirrors ProductsToolbar__search-wrap)
+.products-page__search-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-.products-page__filter-select {
-  min-width: 150px;
+.products-page__search-pill-icon {
+  position: absolute;
+  left: 11px;
+  font-size: $font-size-xs;
+  color: $surface-400;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.products-page__search-pill-input {
+  width: 240px;
+  height: 38px;
+  padding: $space-2 $space-3 $space-2 32px;
+  font-size: $font-size-base;
+  box-sizing: border-box;
 }
 
 .products-page__card {
@@ -506,6 +512,19 @@ defineExpose({ canWrite, openCreateDrawer, toggleImportMenu, importMenuRef, impo
 .products-page__table {
   flex: 1;
   cursor: pointer;
+
+  // Canon uppercase column headers (matches core-2.0 list tables)
+  :deep(.p-datatable-column-title) {
+    text-transform: uppercase;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 0.03em;
+    color: $surface-500;
+
+    .app-dark & {
+      color: var(--p-surface-400);
+    }
+  }
 }
 
 .products-page__code {
@@ -514,8 +533,9 @@ defineExpose({ canWrite, openCreateDrawer, toggleImportMenu, importMenuRef, impo
   color: $surface-600;
 }
 
+// In-cell link — theme-reactive primary (dark navy accent), NOT static $primary-color
 .products-page__name-link {
-  color: $primary-color;
+  color: var(--p-primary-color);
   text-decoration: none;
   font-weight: $font-weight-medium;
 

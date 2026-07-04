@@ -1,81 +1,94 @@
 <template>
-  <Card class="documents-filter-panel mb-3">
-    <template #content>
-      <div class="row g-2 align-items-end">
-        <!-- Status -->
-        <div class="col-md-2">
-          <Select
-            :model-value="modelValue.status"
-            :options="statusOptions"
-            option-label="label"
-            option-value="value"
-            show-clear
-            :placeholder="t('documents.list.filters.status')"
+  <Popover ref="panelRef" class="documents-filter-panel">
+    <div class="documents-filter-panel__body">
+      <!-- Search -->
+      <div class="documents-filter-panel__field">
+        <label class="documents-filter-panel__field-label">
+          {{ t('common.search') }}
+        </label>
+        <IconField>
+          <InputIcon class="pi pi-search" />
+          <InputText
+            :model-value="modelValue.search"
+            :placeholder="t('documents.list.filters.search')"
             class="documents-filter-panel__control"
-            @update:model-value="(v) => $emit('update:modelValue', { ...modelValue, status: v })"
+            @update:model-value="(v) => emit('update:modelValue', { ...modelValue, search: v as string })"
           />
-        </div>
-
-        <!-- Kind -->
-        <div class="col-md-2">
-          <Select
-            :model-value="modelValue.kind"
-            :options="kindOptions"
-            option-label="label"
-            option-value="value"
-            show-clear
-            :placeholder="t('documents.list.filters.kind')"
-            class="documents-filter-panel__control"
-            @update:model-value="(v) => $emit('update:modelValue', { ...modelValue, kind: v })"
-          />
-        </div>
-
-        <!-- Search -->
-        <div class="col-md-3">
-          <IconField>
-            <InputIcon class="pi pi-search" />
-            <InputText
-              :model-value="modelValue.search"
-              :placeholder="t('documents.list.filters.search')"
-              class="documents-filter-panel__control"
-              @update:model-value="(v) => $emit('update:modelValue', { ...modelValue, search: v as string })"
-            />
-          </IconField>
-        </div>
-
-        <!-- Show archived -->
-        <div class="col-md-2 d-flex align-items-center documents-filter-panel__check">
-          <Checkbox
-            :model-value="modelValue.archived"
-            :binary="true"
-            input-id="show-archived"
-            @update:model-value="(v) => $emit('update:modelValue', { ...modelValue, archived: !!v })"
-          />
-          <label for="show-archived" class="documents-filter-panel__label mb-0">
-            {{ t('documents.list.filters.archived') }}
-          </label>
-        </div>
-
-        <!-- Reset -->
-        <div class="col-md-1 d-flex justify-content-end">
-          <Button
-            :label="t('common.reset')"
-            severity="secondary"
-            text
-            icon="pi pi-filter-slash"
-            :disabled="!hasActiveFilters"
-            @click="$emit('reset')"
-          />
-        </div>
+        </IconField>
       </div>
-    </template>
-  </Card>
+
+      <!-- Status -->
+      <div class="documents-filter-panel__field">
+        <label class="documents-filter-panel__field-label">
+          {{ t('documents.list.filters.status') }}
+        </label>
+        <Select
+          :model-value="modelValue.status"
+          :options="statusOptions"
+          option-label="label"
+          option-value="value"
+          show-clear
+          :placeholder="t('documents.list.filters.status')"
+          class="documents-filter-panel__control"
+          @update:model-value="(v) => emit('update:modelValue', { ...modelValue, status: v })"
+        />
+      </div>
+
+      <!-- Kind -->
+      <div class="documents-filter-panel__field">
+        <label class="documents-filter-panel__field-label">
+          {{ t('documents.list.filters.kind') }}
+        </label>
+        <Select
+          :model-value="modelValue.kind"
+          :options="kindOptions"
+          option-label="label"
+          option-value="value"
+          show-clear
+          :placeholder="t('documents.list.filters.kind')"
+          class="documents-filter-panel__control"
+          @update:model-value="(v) => emit('update:modelValue', { ...modelValue, kind: v })"
+        />
+      </div>
+
+      <!-- Show archived -->
+      <div class="documents-filter-panel__check">
+        <Checkbox
+          :model-value="modelValue.archived"
+          :binary="true"
+          input-id="show-archived"
+          @update:model-value="(v) => emit('update:modelValue', { ...modelValue, archived: !!v })"
+        />
+        <label for="show-archived" class="documents-filter-panel__label">
+          {{ t('documents.list.filters.archived') }}
+        </label>
+      </div>
+
+      <!-- Footer -->
+      <div class="documents-filter-panel__footer">
+        <Button
+          :label="t('common.reset')"
+          severity="secondary"
+          text
+          size="small"
+          icon="pi pi-filter-slash"
+          :disabled="!hasActiveFilters"
+          @click="emit('reset')"
+        />
+        <Button
+          :label="t('common.apply')"
+          size="small"
+          @click="hide"
+        />
+      </div>
+    </div>
+  </Popover>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Card from 'primevue/card'
+import Popover from 'primevue/popover'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
@@ -99,12 +112,24 @@ defineProps<{
   hasActiveFilters: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:modelValue': [value: FilterModel]
   reset: []
 }>()
 
 const { t } = useI18n()
+
+const panelRef = ref<InstanceType<typeof Popover> | null>(null)
+
+function toggle(event: Event) {
+  panelRef.value?.toggle(event)
+}
+
+function hide() {
+  panelRef.value?.hide()
+}
+
+defineExpose({ toggle, hide })
 
 const statusOptions = computed(() => [
   { label: t('documents.statuses.draft'), value: 'draft' as ContractStatus },
@@ -127,20 +152,56 @@ const kindOptions = computed(() => [
 </script>
 
 <style lang="scss" scoped>
-.documents-filter-panel {
-  &__label {
-    font-size: $font-size-sm;
-    color: var(--p-text-color);
-    cursor: pointer;
-    user-select: none;
-  }
+.documents-filter-panel__body {
+  width: 300px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
 
-  &__control {
-    width: 100%;
-  }
+.documents-filter-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
 
-  &__check {
-    gap: $space-2;
+.documents-filter-panel__field-label {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.documents-filter-panel__control {
+  width: 100%;
+}
+
+.documents-filter-panel__check {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.documents-filter-panel__label {
+  font-size: $font-size-sm;
+  color: var(--p-text-color);
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
+}
+
+.documents-filter-panel__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-2;
+  padding-top: $space-3;
+  border-top: 1px solid $surface-200;
+
+  .app-dark & {
+    border-top-color: var(--p-surface-300);
   }
 }
 </style>

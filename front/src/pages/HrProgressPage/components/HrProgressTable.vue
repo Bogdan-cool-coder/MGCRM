@@ -3,17 +3,19 @@
     :value="rows"
     :loading="loading"
     row-hover
+    striped-rows
     :rows="25"
     :total-records="totalRows"
     lazy
     paginator
     :rows-per-page-options="[25, 50, 100]"
+    class="hr-progress-table"
     @page="emit('page', $event)"
   >
     <template #empty>
       <div class="hr-progress-table__empty">
         <i class="pi pi-graduation-cap hr-progress-table__empty-icon" />
-        <p class="hr-progress-table__muted mt-2">{{ t('onboarding.hrProgress.empty') }}</p>
+        <p class="hr-progress-table__empty-text">{{ t('onboarding.hrProgress.empty') }}</p>
       </div>
     </template>
 
@@ -101,16 +103,31 @@ function formatDate(dateStr: string): string {
 
 <style lang="scss" scoped>
 .hr-progress-table {
+  :deep(.p-datatable-thead > tr > th) {
+    text-transform: uppercase;
+    font-size: $font-size-2xs;
+    letter-spacing: 0.03em;
+    color: var(--p-text-muted-color);
+  }
+
   &__empty {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: $space-2;
     padding: $space-8; // 2.5rem = 40px, closest token $space-8 = 32px; snap 8px — padding not guarded by lint:ds
   }
 
   &__empty-icon {
-    font-size: $font-size-icon-lg; // 2rem
+    font-size: $font-size-icon-xl;
     color: var(--p-surface-400);
+  }
+
+  &__empty-text {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: var(--p-surface-700);
+    margin: 0;
   }
 
   &__pct {

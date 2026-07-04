@@ -91,6 +91,18 @@ const pieOption = computed<EChartsOption>(() => {
   // .h-100 is a dead full-Bootstrap class → equal-height chart cards via 100% here.
   height: 100%;
 
+  // Unify the PrimeVue Card surface with the core widget-card recipe
+  // ($surface-card + $radius-lg + $shadow-card) so charts match the KPI plates.
+  // Border uses the theme-reactive var so it reads in both themes without a
+  // dark override (a `.app-dark &` inside :deep() would be a dead selector).
+  :deep(.p-card) {
+    height: 100%;
+    background: $surface-card;
+    border: 1px solid var(--p-surface-200);
+    border-radius: $radius-lg;
+    box-shadow: $shadow-card;
+  }
+
   :deep(.p-card-title) {
     font-size: $font-size-md;
     font-weight: $font-weight-semibold;

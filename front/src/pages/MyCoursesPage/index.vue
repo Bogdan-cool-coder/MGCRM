@@ -1,25 +1,20 @@
 <template>
   <div class="my-courses-page">
-    <PageHeader :title="t('onboarding.myCourses.title')" icon="pi pi-book" />
+    <ListToolbar
+      icon="pi-book"
+      :title="t('onboarding.myCourses.title')"
+      :subtitle="t('onboarding.myCourses.subtitle', { count: allCount })"
+    >
+      <template #segmented>
+        <SegmentedControl
+          v-model="activeTab"
+          :options="tabOptions"
+          :aria-label="t('onboarding.myCourses.tabsAria')"
+        />
+      </template>
+    </ListToolbar>
 
-    <div class="p-4">
-      <Tabs v-model:value="activeTab" class="mb-4">
-        <TabList>
-          <Tab value="active">
-            {{ t('onboarding.myCourses.tabs.active') }}
-            <Badge v-if="activeCount > 0" :value="activeCount" class="ms-2" />
-          </Tab>
-          <Tab value="completed">
-            {{ t('onboarding.myCourses.tabs.completed') }}
-            <Badge v-if="completedCount > 0" :value="completedCount" class="ms-2" />
-          </Tab>
-          <Tab value="overdue">
-            {{ t('onboarding.myCourses.tabs.overdue') }}
-            <Badge v-if="overdueCount > 0" :value="overdueCount" severity="danger" class="ms-2" />
-          </Tab>
-        </TabList>
-      </Tabs>
-
+    <div class="my-courses-page__body">
       <!-- Loading skeletons -->
       <div v-if="loading" class="row g-3">
         <div v-for="n in 6" :key="n" class="col-md-6 col-lg-4">
@@ -67,17 +62,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Tabs from 'primevue/tabs'
-import TabList from 'primevue/tablist'
-import Tab from 'primevue/tab'
-import Badge from 'primevue/badge'
 import Skeleton from 'primevue/skeleton'
 import Message from 'primevue/message'
-import PageHeader from '@/components/AppShell/PageHeader.vue'
+import ListToolbar from '@/components/shared/ListToolbar.vue'
+import SegmentedControl, { type SegmentedOption } from '@/components/shared/SegmentedControl.vue'
 import MyCourseCard from './components/MyCourseCard.vue'
-import { useMyCoursesPage } from './composables/useMyCoursesPage'
+import { useMyCoursesPage, type TabKey } from './composables/useMyCoursesPage'
 
 const { t } = useI18n()
 
@@ -93,6 +85,12 @@ const {
   load,
 } = useMyCoursesPage()
 
+const tabOptions = computed<SegmentedOption<TabKey>[]>(() => [
+  { value: 'active', label: t('onboarding.myCourses.tabs.active'), count: activeCount.value },
+  { value: 'completed', label: t('onboarding.myCourses.tabs.completed'), count: completedCount.value },
+  { value: 'overdue', label: t('onboarding.myCourses.tabs.overdue'), count: overdueCount.value, severity: 'danger' },
+])
+
 onMounted(async () => {
   await load()
 })
@@ -100,6 +98,11 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .my-courses-page {
+  // .p-4 is a full-Bootstrap padding util absent from the grid-only bundle → scoped.
+  &__body {
+    padding: $space-4;
+  }
+
   // Card scaffold — full-Bootstrap .card/.overflow-hidden are absent from the
   // grid-only bundle, so the loading tile rendered with no surface.
   &__skeleton-card {

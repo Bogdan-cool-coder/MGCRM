@@ -14,14 +14,16 @@
       </div>
     </div>
 
-    <!-- Error / not found -->
+    <!-- Error / not found — canon column (icon + title + hint + CTA) -->
     <div v-else-if="error && !loading" class="product-page__error">
-      <Message severity="error">{{ t('catalog.product.page.errors.notFound') }}</Message>
+      <i class="pi pi-box product-page__error-icon" />
+      <p class="product-page__error-title">{{ t('catalog.product.page.errors.notFound') }}</p>
+      <p class="product-page__error-hint">{{ t('catalog.product.page.errors.notFoundHint') }}</p>
       <Button
         icon="pi pi-arrow-left"
-        :label="t('catalog.product.page.back')"
+        :label="t('catalog.product.page.errors.backToCatalog')"
         severity="secondary"
-        class="mt-3"
+        outlined
         @click="router.push('/admin/products')"
       />
     </div>
@@ -126,7 +128,6 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
-import Message from 'primevue/message'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -224,11 +225,33 @@ onMounted(async () => {
 }
 
 .product-page__error {
-  padding: $space-6;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: $space-3;
+  padding: $space-8;
+  text-align: center;
+}
+
+.product-page__error-icon {
+  font-size: $font-size-icon-2xl;
+  color: $surface-400;
+  opacity: 0.4;
+}
+
+.product-page__error-title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $surface-800;
+  margin: 0;
+}
+
+.product-page__error-hint {
+  font-size: $font-size-sm;
+  color: $surface-500;
+  margin: 0;
 }
 
 .product-page__content {
@@ -259,10 +282,6 @@ onMounted(async () => {
   border: 1px solid $surface-200;
   box-shadow: $shadow-card;
   overflow: hidden;
-}
-
-.mt-3 {
-  margin-top: $space-3;
 }
 
 .mb-3 {

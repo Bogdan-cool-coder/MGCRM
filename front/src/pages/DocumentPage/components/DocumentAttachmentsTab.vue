@@ -91,7 +91,7 @@
     >
       <div class="mb-3">
         <label class="attachments-tab__label">
-          {{ t('documents.card.tabs.attachments') }} Тип *
+          {{ t('documents.attachments.columns.type') }} *
         </label>
         <SelectButton
           v-model="uploadKind"
