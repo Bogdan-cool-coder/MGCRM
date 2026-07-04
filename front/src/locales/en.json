@@ -332,6 +332,8 @@
     "registry": {
       "expected_title": "Expected income",
       "slippage_title": "Slippage",
+      "stat_expected": "Expected",
+      "stat_squeeze": "Overdue",
       "col_pay_date": "Payment date",
       "col_deal": "Deal",
       "col_company": "Company",
@@ -359,6 +361,7 @@
       "legend_slippage": "Slippage",
       "legend_fact": "Fact",
       "legend_weekend": "Weekend",
+      "legend_squeeze_dot": "Overdue",
       "cumulative": "Cumulative",
       "kpi_plan": "Monthly plan",
       "kpi_fact": "Fact",
@@ -1791,6 +1794,8 @@
       "deleteConfirmBody": "This activity will be permanently deleted.",
       "deleteConfirmAccept": "Delete",
       "deleteConfirmReject": "Cancel",
+      "deleteConfirmStep2": "Click again to confirm",
+      "deleteConfirmStep3": "Last click — the task will be deleted",
       "deleteSuccess": "Activity deleted",
       "pinSuccess": "Pinned",
       "unpinSuccess": "Unpinned",
@@ -3829,7 +3834,8 @@
       },
       "reschedule": {
         "success": "Task rescheduled",
-        "error": "Failed to reschedule task"
+        "error": "Failed to reschedule task",
+        "forbidden": "You can't reschedule this task"
       }
     },
     "page": {
@@ -4624,7 +4630,8 @@
       "searchPlaceholder": "Search mail",
       "reset": "Reset filters",
       "openFilters": "Filters",
-      "done": "Done"
+      "done": "Done",
+      "dateRangePlaceholder": "Received date"
     },
     "columns": {
       "when": "When",
@@ -4655,7 +4662,9 @@
       "title": "No messages",
       "body": "Messages will appear here once they arrive via connected channels",
       "failedTitle": "All messages routed",
-      "failedBody": "No unrouted messages found"
+      "failedBody": "No unrouted messages found",
+      "folderTitle": "Nothing here",
+      "folderBody": "This folder has no messages yet"
     },
     "error": {
       "loadFailed": "Could not load messages.",
@@ -4716,7 +4725,11 @@
       "label": "Folders",
       "all": "Inbox",
       "failed": "Unrouted",
-      "deals": "In deals"
+      "deals": "In deals",
+      "starred": "Starred",
+      "important": "Important",
+      "snoozed": "Snoozed",
+      "drafts": "Drafts"
     },
     "channels": {
       "label": "Channels"
@@ -4729,6 +4742,54 @@
     },
     "list": {
       "shownOf": "Showing {shown} of {total}"
+    },
+    "star": {
+      "set": "Star",
+      "unset": "Unstar"
+    },
+    "important": {
+      "set": "Mark important",
+      "unset": "Unmark important",
+      "badge": "Important"
+    },
+    "snooze": {
+      "button": "Snooze",
+      "title": "Snooze until",
+      "tomorrow": "Tomorrow",
+      "nextWeek": "Next week",
+      "custom": "Pick date & time",
+      "customPlaceholder": "Date & time",
+      "apply": "Snooze",
+      "unsnooze": "Unsnooze",
+      "untilTooltip": "Snoozed until {when}",
+      "toastSnoozed": "Message snoozed",
+      "toastFailed": "Failed to snooze the message"
+    },
+    "drafts": {
+      "new": "New draft",
+      "newTitle": "New draft",
+      "editTitle": "Draft",
+      "replyButton": "Draft",
+      "subjectLabel": "Subject",
+      "subjectPlaceholder": "Draft subject",
+      "bodyLabel": "Body",
+      "bodyPlaceholder": "Draft body…",
+      "save": "Save",
+      "delete": "Delete",
+      "noSubject": "No subject",
+      "emptyBody": "Create a draft from a message or with the “New draft” button",
+      "relatedTo": "Reply to message #{id}",
+      "noSendHint": "Sending arrives in a future release. For now, the draft is only saved.",
+      "justNow": "just now",
+      "emptyTitle": "No drafts",
+      "pickTitle": "Pick a draft",
+      "pickHint": "Click a draft on the left or create a new one",
+      "loadError": "Failed to load drafts.",
+      "toastCreated": "Draft created",
+      "toastSaved": "Draft saved",
+      "toastDeleted": "Draft deleted",
+      "toastSaveFailed": "Failed to save the draft",
+      "toastDeleteFailed": "Failed to delete the draft"
     }
   },
   "accessControl": {

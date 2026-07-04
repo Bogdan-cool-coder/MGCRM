@@ -332,6 +332,8 @@
     "registry": {
       "expected_title": "Ожидаемые поступления",
       "slippage_title": "Дожим",
+      "stat_expected": "К поступлению",
+      "stat_squeeze": "Дожим",
       "col_pay_date": "Дата оплаты",
       "col_deal": "Сделка",
       "col_company": "Компания",
@@ -359,6 +361,7 @@
       "legend_slippage": "Дожим",
       "legend_fact": "Факт",
       "legend_weekend": "Выходной",
+      "legend_squeeze_dot": "Дожим",
       "cumulative": "Накопительно",
       "kpi_plan": "План месяца",
       "kpi_fact": "Факт",
@@ -1791,6 +1794,8 @@
       "deleteConfirmBody": "Активность будет удалена без возможности восстановления.",
       "deleteConfirmAccept": "Удалить",
       "deleteConfirmReject": "Отмена",
+      "deleteConfirmStep2": "Нажмите ещё раз для подтверждения",
+      "deleteConfirmStep3": "Последнее нажатие — задача будет удалена",
       "deleteSuccess": "Активность удалена",
       "pinSuccess": "Закреплено",
       "unpinSuccess": "Откреплено",
@@ -3829,7 +3834,8 @@
       },
       "reschedule": {
         "success": "Срок перенесён",
-        "error": "Не удалось перенести задачу"
+        "error": "Не удалось перенести задачу",
+        "forbidden": "Вы не можете перенести срок этой задачи"
       }
     },
     "page": {
@@ -4624,7 +4630,8 @@
       "searchPlaceholder": "Поиск в почте",
       "reset": "Сбросить фильтры",
       "openFilters": "Фильтры",
-      "done": "Готово"
+      "done": "Готово",
+      "dateRangePlaceholder": "Дата получения"
     },
     "columns": {
       "when": "Когда",
@@ -4655,7 +4662,9 @@
       "title": "Входящих нет",
       "body": "Сообщения появятся здесь, как только поступят через подключённые каналы",
       "failedTitle": "Все входящие разобраны",
-      "failedBody": "Сообщений без сделки не найдено"
+      "failedBody": "Сообщений без сделки не найдено",
+      "folderTitle": "Здесь пусто",
+      "folderBody": "В этой папке пока нет сообщений"
     },
     "error": {
       "loadFailed": "Не удалось загрузить входящие.",
@@ -4716,7 +4725,11 @@
       "label": "Папки",
       "all": "Входящие",
       "failed": "Не разобрано",
-      "deals": "В сделках"
+      "deals": "В сделках",
+      "starred": "Помеченные",
+      "important": "Важные",
+      "snoozed": "Отложенные",
+      "drafts": "Черновики"
     },
     "channels": {
       "label": "Каналы"
@@ -4729,6 +4742,54 @@
     },
     "list": {
       "shownOf": "Показано {shown} из {total}"
+    },
+    "star": {
+      "set": "Пометить",
+      "unset": "Снять отметку"
+    },
+    "important": {
+      "set": "Отметить важным",
+      "unset": "Снять важность",
+      "badge": "Важное"
+    },
+    "snooze": {
+      "button": "Отложить",
+      "title": "Отложить до",
+      "tomorrow": "Завтра",
+      "nextWeek": "На следующей неделе",
+      "custom": "Выбрать дату и время",
+      "customPlaceholder": "Дата и время",
+      "apply": "Отложить",
+      "unsnooze": "Вернуть",
+      "untilTooltip": "Отложено до {when}",
+      "toastSnoozed": "Сообщение отложено",
+      "toastFailed": "Не удалось отложить сообщение"
+    },
+    "drafts": {
+      "new": "Новый черновик",
+      "newTitle": "Новый черновик",
+      "editTitle": "Черновик",
+      "replyButton": "Черновик",
+      "subjectLabel": "Тема",
+      "subjectPlaceholder": "Тема черновика",
+      "bodyLabel": "Текст",
+      "bodyPlaceholder": "Текст черновика…",
+      "save": "Сохранить",
+      "delete": "Удалить",
+      "noSubject": "Без темы",
+      "emptyBody": "Создайте черновик из письма или кнопкой «Новый черновик»",
+      "relatedTo": "Ответ на сообщение #{id}",
+      "noSendHint": "Отправка появится в следующем релизе. Сейчас черновик только сохраняется.",
+      "justNow": "только что",
+      "emptyTitle": "Нет черновиков",
+      "pickTitle": "Выберите черновик",
+      "pickHint": "Кликните черновик слева или создайте новый",
+      "loadError": "Не удалось загрузить черновики.",
+      "toastCreated": "Черновик создан",
+      "toastSaved": "Черновик сохранён",
+      "toastDeleted": "Черновик удалён",
+      "toastSaveFailed": "Не удалось сохранить черновик",
+      "toastDeleteFailed": "Не удалось удалить черновик"
     }
   },
   "accessControl": {
