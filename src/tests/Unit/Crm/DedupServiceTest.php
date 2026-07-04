@@ -11,6 +11,7 @@ use App\Domain\Crm\Services\DedupService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Tests\TestCase;
 
@@ -358,6 +359,128 @@ class DedupServiceTest extends TestCase
         }
 
         $this->assertFalse($aAndBInSameGroup, 'Dismissed company pair must not appear in the same group');
+    }
+
+    // =========================================================================
+    // BLOCKER crm-contacts#1: contact-relation re-parenting must not produce a
+    // row that violates PostgreSQL's UNIQUE(contact_id, related_contact_id) or
+    // CHECK(contact_id <> related_contact_id) — neither is enforced by SQLite
+    // in this suite (the CHECK is wrapped in try/catch at migration time), so
+    // these tests assert the DEDUP LOGIC directly: after merge, no self-link
+    // and no duplicate pair exists in crm_contact_relations.
+    // =========================================================================
+
+    /**
+     * dup and master are directly related to each other. Re-parenting dup's
+     * side of that relation onto master would produce a (master, master)
+     * self-link. The row must be dropped, not rewritten.
+     */
+    public function test_merge_contact_relation_self_link_is_dropped_not_rewritten(): void
+    {
+        $master = Contact::factory()->create();
+        $dup = Contact::factory()->create();
+
+        [$minId, $maxId] = $master->id < $dup->id ? [$master->id, $dup->id] : [$dup->id, $master->id];
+
+        $relId = DB::table('crm_contact_relations')->insertGetId([
+            'contact_id' => $minId,
+            'related_contact_id' => $maxId,
+            'relation_type' => 'colleague',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->service->merge('contact', $master->id, [$dup->id], $this->actor);
+
+        $this->assertSoftDeleted('crm_contacts', ['id' => $dup->id]);
+
+        // The self-link row must be gone entirely — not rewritten to (master, master).
+        $this->assertDatabaseMissing('crm_contact_relations', ['id' => $relId]);
+        $this->assertDatabaseMissing('crm_contact_relations', [
+            'contact_id' => $master->id,
+            'related_contact_id' => $master->id,
+        ]);
+    }
+
+    /**
+     * Both master and dup are independently related to the same third contact.
+     * Re-parenting dup's relation onto master would produce a duplicate
+     * (master, third) pair. The dup's row must be dropped; master's own
+     * relation to the third contact survives untouched.
+     */
+    public function test_merge_contact_relation_duplicate_pair_is_dropped_master_wins(): void
+    {
+        $master = Contact::factory()->create();
+        $dup = Contact::factory()->create();
+        $third = Contact::factory()->create();
+
+        [$masterMin, $masterMax] = $master->id < $third->id ? [$master->id, $third->id] : [$third->id, $master->id];
+        $masterRelId = DB::table('crm_contact_relations')->insertGetId([
+            'contact_id' => $masterMin,
+            'related_contact_id' => $masterMax,
+            'relation_type' => 'colleague',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        [$dupMin, $dupMax] = $dup->id < $third->id ? [$dup->id, $third->id] : [$third->id, $dup->id];
+        $dupRelId = DB::table('crm_contact_relations')->insertGetId([
+            'contact_id' => $dupMin,
+            'related_contact_id' => $dupMax,
+            'relation_type' => 'friend',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->service->merge('contact', $master->id, [$dup->id], $this->actor);
+
+        $this->assertSoftDeleted('crm_contacts', ['id' => $dup->id]);
+
+        // Master's original relation to third survives, untouched.
+        $this->assertDatabaseHas('crm_contact_relations', ['id' => $masterRelId]);
+
+        // Dup's relation to third must be dropped — not duplicated onto master.
+        $this->assertDatabaseMissing('crm_contact_relations', ['id' => $dupRelId]);
+
+        // Exactly one relation remains between {master, third} — no UNIQUE violation.
+        $count = DB::table('crm_contact_relations')
+            ->where(function ($q) use ($master, $third): void {
+                $q->where(['contact_id' => $master->id, 'related_contact_id' => $third->id])
+                    ->orWhere(['contact_id' => $third->id, 'related_contact_id' => $master->id]);
+            })
+            ->count();
+        $this->assertSame(1, $count, 'Exactly one relation must remain between master and third after merge');
+    }
+
+    /**
+     * Sanity: an unrelated relation involving only the dup (no collision, no
+     * self-link) is rewritten to reference master, in normalized (min, max) order.
+     */
+    public function test_merge_contact_relation_unique_relation_is_reparented_normally(): void
+    {
+        $master = Contact::factory()->create();
+        $dup = Contact::factory()->create();
+        $third = Contact::factory()->create();
+
+        [$dupMin, $dupMax] = $dup->id < $third->id ? [$dup->id, $third->id] : [$third->id, $dup->id];
+        $relId = DB::table('crm_contact_relations')->insertGetId([
+            'contact_id' => $dupMin,
+            'related_contact_id' => $dupMax,
+            'relation_type' => 'colleague',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->service->merge('contact', $master->id, [$dup->id], $this->actor);
+
+        $this->assertSoftDeleted('crm_contacts', ['id' => $dup->id]);
+
+        [$expectedMin, $expectedMax] = $master->id < $third->id ? [$master->id, $third->id] : [$third->id, $master->id];
+        $this->assertDatabaseHas('crm_contact_relations', [
+            'id' => $relId,
+            'contact_id' => $expectedMin,
+            'related_contact_id' => $expectedMax,
+        ]);
     }
 
     /** Helper: checks whether any group in $allGroupIds contains exactly the $ids. */

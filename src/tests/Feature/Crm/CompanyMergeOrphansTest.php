@@ -254,6 +254,106 @@ class CompanyMergeOrphansTest extends TestCase
     }
 
     // -----------------------------------------------------------------------
+    // Activities (polymorphic target) — BLOCKER crm-companies#2
+    // -----------------------------------------------------------------------
+
+    public function test_merge_re_parents_activities(): void
+    {
+        $master = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $dup = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+
+        $activityId = DB::table('activities')->insertGetId([
+            'kind' => 'task',
+            'target_type' => 'company',
+            'target_id' => $dup->id,
+            'title' => 'Follow up',
+            'body' => null,
+            'due_at' => null,
+            'completed_at' => null,
+            'completed_by_id' => null,
+            'responsible_id' => $this->admin->id,
+            'created_by_id' => $this->admin->id,
+            'priority' => 'normal',
+            'status' => 'new',
+            'is_closed' => false,
+            'progress_pct' => 0,
+            'result_text' => null,
+            'is_pinned' => false,
+            'is_first_time_meeting' => false,
+            'ftm_decision_maker_attended' => false,
+            'ftm_presentation_shown' => false,
+            'ftm_report_url' => null,
+            'meeting_report_json' => null,
+            'department_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'company',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        $this->assertSoftDeleted('crm_companies', ['id' => $dup->id]);
+        $this->assertDatabaseHas('activities', [
+            'id' => $activityId,
+            'target_type' => 'company',
+            'target_id' => $master->id,
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // CRM folders and files (polymorphic owner) — BLOCKER crm-companies#2
+    // -----------------------------------------------------------------------
+
+    public function test_merge_re_parents_crm_folders_and_files(): void
+    {
+        $master = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+        $dup = Company::factory()->create(['owner_user_id' => $this->admin->id]);
+
+        $folderId = DB::table('crm_folders')->insertGetId([
+            'owner_entity_type' => 'company',
+            'owner_entity_id' => $dup->id,
+            'name' => 'Documents',
+            'is_system' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $fileId = DB::table('crm_files')->insertGetId([
+            'folder_id' => $folderId,
+            'owner_entity_type' => 'company',
+            'owner_entity_id' => $dup->id,
+            'file_path' => 'companies/dup/doc.pdf',
+            'original_name' => 'doc.pdf',
+            'file_size' => 1024,
+            'mime_type' => 'application/pdf',
+            'uploaded_by_user_id' => $this->admin->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/crm/dedup/merge', [
+            'scope' => 'company',
+            'master_id' => $master->id,
+            'duplicate_ids' => [$dup->id],
+        ])->assertOk();
+
+        $this->assertSoftDeleted('crm_companies', ['id' => $dup->id]);
+        $this->assertDatabaseHas('crm_folders', [
+            'id' => $folderId,
+            'owner_entity_type' => 'company',
+            'owner_entity_id' => $master->id,
+        ]);
+        $this->assertDatabaseHas('crm_files', [
+            'id' => $fileId,
+            'owner_entity_type' => 'company',
+            'owner_entity_id' => $master->id,
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
     // Client status log
     // -----------------------------------------------------------------------
 

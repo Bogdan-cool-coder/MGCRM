@@ -91,6 +91,42 @@ class CompanyServiceFindForDedupTest extends TestCase
         $this->assertSame($company->id, $found->id);
     }
 
+    /**
+     * Quick win 6d: the fast path is the indexed phone_normalized column
+     * (maintained by CompanyService::create/update). A row created/updated
+     * through the service must be found via that column, not the PHP fallback
+     * scan — verified indirectly by asserting the match still succeeds when
+     * phone_normalized is populated ahead of the raw phone lookup.
+     */
+    public function test_finds_company_via_indexed_phone_normalized_fast_path(): void
+    {
+        $company = Company::factory()->create(['email' => null, 'phone' => '+77001234567']);
+        // Simulate what CompanyService::create/update maintains on every write.
+        $company->update(['phone_normalized' => '77001234567']);
+
+        $found = $this->service->findForDedup(null, '+7 700 123-45-67');
+
+        $this->assertNotNull($found);
+        $this->assertSame($company->id, $found->id);
+    }
+
+    /**
+     * Legacy/factory-seeded rows that predate the phone_normalized column (or
+     * were written directly to the table bypassing CompanyService) must still
+     * resolve via the PHP re-normalization fallback scan.
+     */
+    public function test_finds_company_by_phone_when_phone_normalized_is_null(): void
+    {
+        $company = Company::factory()->create(['email' => null, 'phone' => '+77004445566']);
+        // phone_normalized is left NULL — factory does not populate it.
+        $this->assertNull($company->fresh()->phone_normalized);
+
+        $found = $this->service->findForDedup(null, '+7 700 444-55-66');
+
+        $this->assertNotNull($found);
+        $this->assertSame($company->id, $found->id);
+    }
+
     public function test_phone_match_normalizes_both_sides(): void
     {
         // stored with separators

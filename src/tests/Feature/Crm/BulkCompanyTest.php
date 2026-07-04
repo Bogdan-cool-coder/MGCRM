@@ -88,4 +88,31 @@ class BulkCompanyTest extends TestCase
 
         $this->assertSoftDeleted('crm_companies', ['id' => $company->id]);
     }
+
+    /**
+     * Quick win 6a: bulk operations must attribute the entity-log data_changed
+     * event to the acting user, not "Система" (actor_id was previously never
+     * passed from BulkCompanyService to CompanyService::update).
+     */
+    public function test_bulk_assign_responsible_attributes_entity_log_to_actor(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $responsible = User::factory()->create(['role' => Role::Manager]);
+        $company = Company::factory()->create(['owner_user_id' => $director->id]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->patchJson('/api/companies/bulk', [
+            'company_ids' => [$company->id],
+            'operation' => 'assign_responsible',
+            'responsible_user_id' => $responsible->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('entity_logs', [
+            'subject_type' => 'company',
+            'subject_id' => $company->id,
+            'action' => 'data_changed',
+            'actor_id' => $director->id,
+        ]);
+    }
 }

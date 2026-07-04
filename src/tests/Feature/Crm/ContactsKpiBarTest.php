@@ -10,6 +10,7 @@ use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
+use App\Domain\Org\Models\Department;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
@@ -621,5 +622,46 @@ class ContactsKpiBarTest extends TestCase
 
         $this->assertSame($listCount, $kpiTotal, 'KPI total must match list endpoint total for same user+scope');
         $this->assertSame(4, $kpiTotal);
+    }
+
+    // =========================================================================
+    // KPI-vs-list drift (Э4 audit follow-up, 2026-07-04)
+    // =========================================================================
+
+    /**
+     * Since M9, Manager resolves to VisibilityScope::Department (not Own). The
+     * company KPI counter previously passed departmentColumn: 'department_id'
+     * to VisibilityResolver::applyScope(), activating that live Department
+     * branch ONLY for the KPI chip bar — CompanyService::list() and
+     * CompanyExportService never pass a departmentColumn for Company, so they
+     * degrade Department scope to Own. A manager's KPI "total" therefore
+     * silently counted department colleagues' companies that GET /api/companies
+     * never returns. This test locks in the fix: KPI total must equal the list
+     * endpoint total even when a department colleague owns extra companies.
+     */
+    public function test_kpi_company_total_excludes_department_colleagues_companies_matching_list(): void
+    {
+        $dept = Department::factory()->create();
+
+        $manager = User::factory()->create(['role' => Role::Manager, 'department_id' => $dept->id]);
+        $colleague = User::factory()->create(['role' => Role::Manager, 'department_id' => $dept->id]);
+
+        Company::factory()->count(2)->create(['owner_user_id' => $manager->id]);
+        // Same department, but owned by a colleague — must NOT count toward the manager's KPI.
+        Company::factory()->count(5)->create(['owner_user_id' => $colleague->id]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $listTotal = $this->getJson('/api/companies')
+            ->assertOk()
+            ->json('meta.total');
+
+        $kpiTotal = $this->getJson('/api/contacts/kpi?entity=company')
+            ->assertOk()
+            ->json('data.total');
+
+        $this->assertSame(2, $listTotal, 'Sanity: list must not show the colleague companies either');
+        $this->assertSame($listTotal, $kpiTotal, 'KPI total must match list endpoint total — no department-scope drift');
+        $this->assertSame(2, $kpiTotal);
     }
 }

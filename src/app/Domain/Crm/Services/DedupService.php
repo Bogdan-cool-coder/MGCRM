@@ -689,23 +689,21 @@ class DedupService
             ->where('target_id', $dupId)
             ->update(['target_id' => $masterId]);
 
-        // 5. Contact relations: the table stores both sides (contact_id and related_contact_id).
-        //    Re-parent dup as the initiating side.
-        DB::table('crm_contact_relations')
-            ->where('contact_id', $dupId)
-            ->update(['contact_id' => $masterId]);
-
-        //    Re-parent dup as the receiving side.
-        DB::table('crm_contact_relations')
-            ->where('related_contact_id', $dupId)
-            ->update(['related_contact_id' => $masterId]);
-
-        //    After re-parenting, self-referential rows (master↔master) and duplicate
-        //    pairs may have been created. Remove them.
-        DB::table('crm_contact_relations')
-            ->where('contact_id', $masterId)
-            ->where('related_contact_id', $masterId)
-            ->delete();
+        // 5. Contact relations: the table stores both sides (contact_id and
+        //    related_contact_id), plus (on PostgreSQL) a UNIQUE(contact_id,
+        //    related_contact_id) and a CHECK(contact_id <> related_contact_id).
+        //    A blind two-step UPDATE (re-parent contact_id side, then
+        //    related_contact_id side) can produce a transient row that violates
+        //    either constraint mid-UPDATE — e.g. dup↔master directly produces a
+        //    self-link (master, master), or dup↔X + master↔X produces a
+        //    duplicate (master, X) pair. Neither constraint is enforced by
+        //    SQLite in tests (the CHECK is wrapped in try/catch at migration
+        //    time), so this only surfaces on PostgreSQL (BLOCKER crm-contacts#1).
+        //
+        //    Fix: resolve self-links and duplicate pairs in PHP BEFORE issuing
+        //    any UPDATE, so the two-step SQL rewrite never produces a row that
+        //    violates a constraint.
+        $this->reparentContactRelations($masterId, $dupId);
 
         // 6. CRM folders and files (polymorphic owner): re-parent all.
         DB::table('crm_folders')
@@ -723,6 +721,91 @@ class DedupService
     }
 
     /**
+     * Re-parent crm_contact_relations rows from dup → master, one row at a
+     * time, resolving self-links and duplicate pairs BEFORE any UPDATE is
+     * issued — so PostgreSQL's UNIQUE(contact_id, related_contact_id) and
+     * CHECK(contact_id <> related_contact_id) are never hit mid-rewrite.
+     *
+     * For every row touching dup:
+     *   - Compute what its (contact_id, related_contact_id) pair WOULD become
+     *     after dup → master substitution.
+     *   - If that pair is a self-link (master, master) — dup and master were
+     *     directly related — drop the row instead of rewriting it.
+     *   - If master already owns a relation with the resulting counterpart
+     *     (in either direction) — drop the row instead of rewriting it
+     *     (master's existing relation wins, matching the pivot/channel merge
+     *     "master wins on collision" convention used elsewhere in this class).
+     *   - Otherwise rewrite the row to the normalized (min, max) order and
+     *     record the new pair as "owned by master" so a later row in the same
+     *     batch can also detect it as a collision.
+     */
+    private function reparentContactRelations(int $masterId, int $dupId): void
+    {
+        // Snapshot every row touching dup or master up front — the loop below
+        // reasons entirely in PHP and issues one UPDATE/DELETE per row.
+        $rows = DB::table('crm_contact_relations')
+            ->where('contact_id', $dupId)
+            ->orWhere('related_contact_id', $dupId)
+            ->orWhere('contact_id', $masterId)
+            ->orWhere('related_contact_id', $masterId)
+            ->get(['id', 'contact_id', 'related_contact_id']);
+
+        // Pairs already owned by master (post-merge), keyed "min|max", seeded
+        // with master's own pre-existing relations so a dup-row that collides
+        // with one of them is dropped rather than duplicated.
+        $ownedPairs = [];
+        foreach ($rows as $row) {
+            if ((int) $row->contact_id === $masterId || (int) $row->related_contact_id === $masterId) {
+                $a = (int) $row->contact_id;
+                $b = (int) $row->related_contact_id;
+                $ownedPairs[min($a, $b).'|'.max($a, $b)] = true;
+            }
+        }
+
+        foreach ($rows as $row) {
+            $a = (int) $row->contact_id;
+            $b = (int) $row->related_contact_id;
+
+            // Only rows touching dup need rewriting; master's own rows are
+            // left untouched (already reflected in $ownedPairs above).
+            if ($a !== $dupId && $b !== $dupId) {
+                continue;
+            }
+
+            // Substitute dup → master on whichever side it appears.
+            $newA = $a === $dupId ? $masterId : $a;
+            $newB = $b === $dupId ? $masterId : $b;
+
+            // Self-link: dup and master were directly related to each other.
+            if ($newA === $newB) {
+                DB::table('crm_contact_relations')->where('id', $row->id)->delete();
+
+                continue;
+            }
+
+            $pairKey = min($newA, $newB).'|'.max($newA, $newB);
+
+            // Master already owns (or a prior row in this batch already claimed)
+            // a relation with this counterpart — drop the dup's row instead of
+            // producing a UNIQUE-violating duplicate.
+            if (isset($ownedPairs[$pairKey])) {
+                DB::table('crm_contact_relations')->where('id', $row->id)->delete();
+
+                continue;
+            }
+
+            $ownedPairs[$pairKey] = true;
+
+            // Normalize storage order: min → contact_id, max → related_contact_id
+            // (matches the invariant documented on the migration).
+            DB::table('crm_contact_relations')->where('id', $row->id)->update([
+                'contact_id' => min($newA, $newB),
+                'related_contact_id' => max($newA, $newB),
+            ]);
+        }
+    }
+
+    /**
      * Transfer ALL of the duplicate company's child FK rows to master, then
      * soft-delete the duplicate. Must be called inside an existing DB::transaction.
      *
@@ -735,6 +818,8 @@ class DedupService
      *   6. company_client_status_log  — company_client_status_log.company_id
      *   7. crm_companies (holding)    — crm_companies.holding_id (subsidiaries of dup → master)
      *   8. acquisition_channel_history — polymorphic entity_id where entity_type='company'
+     *   9. activities                 — polymorphic (target_type='company', target_id=dup)
+     *   10. crm_folders / crm_files    — polymorphic (owner_entity_type='company', owner_entity_id=dup)
      *
      * After re-parenting, the duplicate is soft-deleted (SoftDeletes sets deleted_at).
      * DB-level FK CASCADE/RESTRICT actions do NOT fire on soft-delete, so we must
@@ -831,6 +916,27 @@ class DedupService
             ->where('entity_type', 'company')
             ->where('entity_id', $dupId)
             ->update(['entity_id' => $masterId]);
+
+        // 9. Activities (polymorphic target): re-parent all. Mirrors mergeContact
+        // step 4 — previously missing here, orphaning the dup's timeline entries
+        // (BLOCKER crm-companies#2).
+        DB::table('activities')
+            ->where('target_type', 'company')
+            ->where('target_id', $dupId)
+            ->update(['target_id' => $masterId]);
+
+        // 10. CRM folders and files (polymorphic owner): re-parent all. Mirrors
+        // mergeContact step 6 — previously missing here, orphaning the dup's
+        // uploaded documents/folders (BLOCKER crm-companies#2).
+        DB::table('crm_folders')
+            ->where('owner_entity_type', 'company')
+            ->where('owner_entity_id', $dupId)
+            ->update(['owner_entity_id' => $masterId]);
+
+        DB::table('crm_files')
+            ->where('owner_entity_type', 'company')
+            ->where('owner_entity_id', $dupId)
+            ->update(['owner_entity_id' => $masterId]);
 
         // Finally: soft-delete the now-orphan-free duplicate.
         Company::where('id', $dupId)->delete();

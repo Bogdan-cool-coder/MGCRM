@@ -318,6 +318,45 @@ class CompanyRequisiteTest extends TestCase
         $this->assertDatabaseMissing('company_requisites', ['id' => $old->id]);
     }
 
+    /**
+     * BLOCKER: deleting the CURRENT requisite while a sibling exists must not
+     * leave the company with zero current requisites (breaking the "exactly
+     * one current" invariant) or a stale crm_companies denorm mirror. The
+     * oldest remaining sibling (lowest id) must be promoted to current.
+     */
+    public function test_delete_current_requisite_with_sibling_promotes_oldest_sibling(): void
+    {
+        $owner = $this->makeOwner();
+        $company = $this->makeCompany($owner, ['legal_name' => 'Старое', 'tax_id' => 'OLD']);
+        $current = $this->makeRequisite($company, ['legal_name' => 'Старое', 'tax_id' => 'OLD', 'is_current' => true]);
+        $sibling1 = $this->makeRequisite($company, ['legal_name' => 'Новое-1', 'tax_id' => 'NEW1', 'is_current' => false]);
+        $sibling2 = $this->makeRequisite($company, ['legal_name' => 'Новое-2', 'tax_id' => 'NEW2', 'is_current' => false]);
+
+        Sanctum::actingAs($owner, ['*']);
+
+        $this->deleteJson("/api/companies/{$company->id}/requisites/{$current->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('company_requisites', ['id' => $current->id]);
+
+        // Exactly one current requisite remains — the oldest surviving sibling.
+        $this->assertDatabaseHas('company_requisites', ['id' => $sibling1->id, 'is_current' => true]);
+        $this->assertDatabaseHas('company_requisites', ['id' => $sibling2->id, 'is_current' => false]);
+
+        $currentCount = CompanyRequisite::query()
+            ->where('company_id', $company->id)
+            ->where('is_current', true)
+            ->count();
+        $this->assertSame(1, $currentCount);
+
+        // The denorm mirror on crm_companies reflects the newly-promoted requisite.
+        $this->assertDatabaseHas('crm_companies', [
+            'id' => $company->id,
+            'legal_name' => 'Новое-1',
+            'tax_id' => 'NEW1',
+        ]);
+    }
+
     public function test_cannot_delete_requisite_with_pinned_documents(): void
     {
         $owner = $this->makeOwner();

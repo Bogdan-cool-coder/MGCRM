@@ -156,20 +156,26 @@ class CompanyRequisiteService
      *  - Cannot delete the current set if it is the ONLY set for the company.
      *  - Cannot delete if any documents are pinned to this requisite.
      *
+     * Invariant: deleting the CURRENT requisite while siblings exist must not
+     * leave the company with zero current requisites (breaking "exactly one
+     * current" and stranding the crm_companies denorm mirror at its
+     * about-to-be-deleted values). When siblings exist, the oldest remaining
+     * sibling (lowest id) is promoted to current — via the same setCurrent()
+     * path used everywhere else, so the mirror is refreshed atomically.
+     *
      * @throws ValidationException
      */
     public function delete(CompanyRequisite $requisite): void
     {
-        if ($requisite->is_current) {
-            $count = CompanyRequisite::query()
-                ->where('company_id', $requisite->company_id)
-                ->count();
+        $siblingCount = CompanyRequisite::query()
+            ->where('company_id', $requisite->company_id)
+            ->where('id', '!=', $requisite->id)
+            ->count();
 
-            if ($count <= 1) {
-                throw ValidationException::withMessages([
-                    'requisite' => 'Нельзя удалить единственный набор реквизитов компании.',
-                ]);
-            }
+        if ($requisite->is_current && $siblingCount === 0) {
+            throw ValidationException::withMessages([
+                'requisite' => 'Нельзя удалить единственный набор реквизитов компании.',
+            ]);
         }
 
         $hasDocs = DB::table('documents')
@@ -180,6 +186,26 @@ class CompanyRequisiteService
             throw ValidationException::withMessages([
                 'requisite' => 'Нельзя удалить реквизиты: к ним привязаны документы.',
             ]);
+        }
+
+        if ($requisite->is_current && $siblingCount > 0) {
+            // Deleting the current requisite while siblings exist: promote a
+            // deterministic sibling (oldest = lowest id) to current BEFORE
+            // deleting, so the company never has zero current requisites and
+            // the crm_companies denorm mirror is refreshed atomically.
+            DB::transaction(function () use ($requisite): void {
+                $successor = CompanyRequisite::query()
+                    ->where('company_id', $requisite->company_id)
+                    ->where('id', '!=', $requisite->id)
+                    ->orderBy('id')
+                    ->firstOrFail();
+
+                $this->setCurrent($successor);
+
+                $requisite->delete();
+            });
+
+            return;
         }
 
         $requisite->delete();

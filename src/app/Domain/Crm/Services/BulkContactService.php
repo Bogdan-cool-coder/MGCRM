@@ -92,24 +92,24 @@ class BulkContactService
 
     private function assignOwner(Contact $contact, int $ownerId, User $actor): void
     {
-        $this->contactService->update($contact, ['owner_id' => $ownerId]);
+        $this->contactService->update($contact, ['owner_id' => $ownerId], $actor);
     }
 
     private function setTags(Contact $contact, array $tags, User $actor): void
     {
-        $this->contactService->update($contact, ['tags' => array_values(array_unique($tags))]);
+        $this->contactService->update($contact, ['tags' => array_values(array_unique($tags))], $actor);
     }
 
     private function addTag(Contact $contact, string $tag, User $actor): void
     {
         $tags = $contact->tags ?? [];
         $tags[] = $tag;
-        $this->contactService->update($contact, ['tags' => array_values(array_unique($tags))]);
+        $this->contactService->update($contact, ['tags' => array_values(array_unique($tags))], $actor);
     }
 
     private function removeTag(Contact $contact, string $tag, User $actor): void
     {
         $tags = array_values(array_filter($contact->tags ?? [], static fn (string $t): bool => $t !== $tag));
-        $this->contactService->update($contact, ['tags' => $tags]);
+        $this->contactService->update($contact, ['tags' => $tags], $actor);
     }
 }

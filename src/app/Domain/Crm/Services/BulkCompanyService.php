@@ -91,24 +91,24 @@ class BulkCompanyService
 
     private function assignResponsible(Company $company, int $userId, User $actor): void
     {
-        $this->companyService->update($company, ['responsible_user_id' => $userId]);
+        $this->companyService->update($company, ['responsible_user_id' => $userId], $actor);
     }
 
     private function setTags(Company $company, array $tags, User $actor): void
     {
-        $this->companyService->update($company, ['tags' => array_values(array_unique($tags))]);
+        $this->companyService->update($company, ['tags' => array_values(array_unique($tags))], $actor);
     }
 
     private function addTag(Company $company, string $tag, User $actor): void
     {
         $tags = $company->tags ?? [];
         $tags[] = $tag;
-        $this->companyService->update($company, ['tags' => array_values(array_unique($tags))]);
+        $this->companyService->update($company, ['tags' => array_values(array_unique($tags))], $actor);
     }
 
     private function removeTag(Company $company, string $tag, User $actor): void
     {
         $tags = array_values(array_filter($company->tags ?? [], static fn (string $t): bool => $t !== $tag));
-        $this->companyService->update($company, ['tags' => $tags]);
+        $this->companyService->update($company, ['tags' => $tags], $actor);
     }
 }

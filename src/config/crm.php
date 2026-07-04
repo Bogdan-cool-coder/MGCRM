@@ -151,16 +151,21 @@ return [
     |--------------------------------------------------------------------------
     |
     | Configuration for the daily exchange rate refresh job (UpdateExchangeRatesJob).
-    | Source: exchangerate.host (or compatible API). The job upserts rates for all
-    | supported currency pairs into catalog_exchange_rates using ON CONFLICT DO UPDATE
-    | — no duplicate rows on UNIQUE (from_code, to_code, date).
+    | Source: api.fxratesapi.com (free-tier friendly, no API key required on the
+    | base plan; response shape {success, rates: {...}} — see
+    | ExchangeRateService::fetchAndUpsertFromApi). exchangerate.host remains
+    | usable as a drop-in alternative via EXCHANGE_RATE_API_URL (same 'rates'
+    | response shape); exchangerate-api.com v6 ('conversion_rates' shape) is
+    | also supported. The job upserts rates for all supported currency pairs
+    | into catalog_exchange_rates using ON CONFLICT DO UPDATE — no duplicate
+    | rows on UNIQUE (from_code, to_code, date).
     |
     | PLAN §Д: FxRate in scope S1.2. Finance (M9) reads via ExchangeRateService,
     | never directly from catalog_exchange_rates.
     |
     */
     'exchange_rate' => [
-        'api_url' => env('EXCHANGE_RATE_API_URL', 'https://api.exchangerate.host'),
+        'api_url' => env('EXCHANGE_RATE_API_URL', 'https://api.fxratesapi.com'),
         'api_key' => env('EXCHANGE_RATE_API_KEY', ''),
     ],
 

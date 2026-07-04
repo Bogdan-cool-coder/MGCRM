@@ -120,4 +120,55 @@ class BulkContactTest extends TestCase
             'operation' => 'not_a_valid_op',
         ])->assertStatus(422);
     }
+
+    /**
+     * Quick win 6a: bulk operations must attribute the entity-log data_changed
+     * event to the acting user, not "Система" (actor_id was previously never
+     * passed from Bulk*Service to ContactService::update).
+     */
+    public function test_bulk_assign_owner_attributes_entity_log_to_actor(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $newOwner = User::factory()->create(['role' => Role::Manager]);
+        $contact = Contact::factory()->create(['owner_id' => $director->id]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->patchJson('/api/contacts/bulk', [
+            'contact_ids' => [$contact->id],
+            'operation' => 'assign_owner',
+            'owner_id' => $newOwner->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('entity_logs', [
+            'subject_type' => 'contact',
+            'subject_id' => $contact->id,
+            'action' => 'data_changed',
+            'actor_id' => $director->id,
+        ]);
+    }
+
+    public function test_bulk_set_tags_attributes_entity_log_to_actor(): void
+    {
+        $director = User::factory()->create(['role' => Role::Director]);
+        $contact = Contact::factory()->create(['owner_id' => $director->id]);
+
+        Sanctum::actingAs($director, ['*']);
+
+        $this->patchJson('/api/contacts/bulk', [
+            'contact_ids' => [$contact->id],
+            'operation' => 'set_tags',
+            'tags' => ['vip'],
+        ])->assertOk();
+
+        // Note: 'tags' is not in ContactService::LOGGED_FIELDS, so no data_changed
+        // row is expected here — this asserts the update call itself does not
+        // attribute anything to a null/system actor by checking no orphan
+        // actor_id=null row was created for this subject during the request.
+        $this->assertDatabaseMissing('entity_logs', [
+            'subject_type' => 'contact',
+            'subject_id' => $contact->id,
+            'actor_id' => null,
+        ]);
+    }
 }

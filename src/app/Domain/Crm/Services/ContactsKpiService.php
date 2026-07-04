@@ -105,13 +105,16 @@ class ContactsKpiService
     // ---- Private ----
 
     /**
-     * Apply the same visibility scope as CompanyService::list().
+     * Apply the EXACT same visibility scope as CompanyService::list() /
+     * CompanyExportService — no departmentColumn. Company's list/export/policy
+     * never pass one, so they degrade Department scope to Own (M9 team-read
+     * widening is intentionally scoped to Deals/Activities only, not Company).
      *
-     * Routes through VisibilityResolver::applyScope() so the KPI counters match
-     * exactly what the list endpoint returns — including the Department branch
-     * (currently unreachable in prod but wired so enabling it later is a one-line
-     * role-map change). Department scope on Company uses department_id as the
-     * anchor; contacts have no department anchor so applyScope() degrades to Own.
+     * Passing departmentColumn: 'department_id' here (as before) activated the
+     * live Department branch for the KPI counters ONLY, since Manager resolves
+     * to VisibilityScope::Department since M9 — so a manager's KPI chips counted
+     * department colleagues' companies that the list/export never show them
+     * (KPI-vs-list drift). Keeping this null realigns the three call sites.
      *
      * @param  Builder<Company>  $query
      * @return Builder<Company>
@@ -122,7 +125,7 @@ class ContactsKpiService
             $query,
             $user,
             ownerColumns: ['owner_user_id', 'responsible_user_id'],
-            departmentColumn: 'department_id',
+            departmentColumn: null,
         );
     }
 

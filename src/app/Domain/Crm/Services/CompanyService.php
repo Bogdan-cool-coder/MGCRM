@@ -22,6 +22,7 @@ use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Log\Enums\LogAction;
 use App\Domain\Log\Enums\LogSubjectType;
 use App\Domain\Log\Services\EntityLogService;
+use App\Domain\Sales\Models\Deal;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -226,7 +227,7 @@ class CompanyService
 
         // Wrap create + custom-field validation in a transaction so that an invalid
         // extra_fields key does not leave a bare (no extra_fields) company record behind.
-        $company = DB::transaction(function () use ($data, $extraFields): Company {
+        $company = DB::transaction(function () use ($data, $extraFields, $creator): Company {
             $company = Company::create($data);
 
             // Apply validated/coerced custom-field values. If no active defs exist for the
@@ -235,6 +236,19 @@ class CompanyService
             if (is_array($extraFields) && $extraFields !== []) {
                 $this->applyExtraFields($company, $extraFields);
             }
+
+            // Polymorphic action log: company created (created_at kept in lockstep
+            // with the row so the timeline orders correctly). Mirrors
+            // ContactService::create:256-263 — previously missing here, so a
+            // company's timeline had no "created" event (quick win 6b).
+            $this->entityLog->record(
+                LogSubjectType::Company,
+                (int) $company->id,
+                $creator,
+                LogAction::Created,
+                ['title' => $company->name],
+                $company->created_at,
+            );
 
             return $company;
         });
@@ -330,8 +344,31 @@ class CompanyService
         return $company;
     }
 
+    /**
+     * Soft-delete a Company.
+     *
+     * Guard: a company with any OPEN deal cannot be deleted. `deals.company_id`
+     * is NOT NULL, so soft-deleting the company would leave those deals'
+     * company-card link pointing at a now-trashed (invisible) row, breaking
+     * the Deal-on-Company card. "Open" mirrors DealService::aggregateForCompany —
+     * stage flags are the single source of truth (is_won = false AND
+     * is_lost = false); closed_at is NOT used (can be stale on AMO-migrated deals).
+     *
+     * @throws ValidationException
+     */
     public function delete(Company $company): void
     {
+        $hasOpenDeals = Deal::query()
+            ->where('company_id', $company->id)
+            ->whereHas('stage', static fn (Builder $q) => $q->where('is_won', false)->where('is_lost', false))
+            ->exists();
+
+        if ($hasOpenDeals) {
+            throw ValidationException::withMessages([
+                'company' => 'Нельзя удалить компанию: у неё есть незакрытые сделки.',
+            ]);
+        }
+
         // Snapshot the list-routing department before the soft-delete so
         // CompanyDeleted reaches the right list channel without re-hydrating a
         // now-hidden model on the queue worker (Phase 7a).
@@ -665,8 +702,14 @@ class CompanyService
                 continue;
             }
 
-            $old = $original[$field] ?? null;
-            $new = $data[$field];
+            // Normalize enum-cast values (e.g. category_code) to scalars so an
+            // unchanged field compares equal regardless of cast representation.
+            // Mirrors ContactService::scalarize — previously missing here, so
+            // updating an unrelated field on a company whose category_code is
+            // enum-cast produced a phantom data_changed event every time
+            // (quick win 6c).
+            $old = $this->scalarize($original[$field] ?? null);
+            $new = $this->scalarize($data[$field]);
 
             if ($old === $new) {
                 continue;
@@ -676,6 +719,16 @@ class CompanyService
         }
 
         return $changes;
+    }
+
+    /**
+     * Reduce a value to its scalar form for stable diff comparison + JSON storage:
+     * a BackedEnum becomes its backing value, everything else is returned as-is.
+     * Mirrors ContactService::scalarize.
+     */
+    private function scalarize(mixed $value): mixed
+    {
+        return $value instanceof \BackedEnum ? $value->value : $value;
     }
 
     /**
@@ -880,8 +933,11 @@ class CompanyService
      *
      * Rules (mirror inbox.py company_dedup_key + find_existing_company_by_contact):
      *   1. Email takes priority — matched case-insensitively via LOWER(TRIM(email)).
-     *   2. Phone fallback — both sides normalized to digits-only in PHP to avoid
-     *      non-portable REGEXP chains across PostgreSQL and SQLite.
+     *   2. Phone fallback — indexed equality on phone_normalized first (fast path,
+     *      digits-only, kept in sync by create()/update() on every write); rows that
+     *      predate the phone_normalized column / were seeded directly via factory
+     *      still resolve via a PHP-side re-normalization fallback so no legacy row
+     *      goes unmatched.
      *   3. Both null/empty → returns null (no dedup key available).
      *   4. On a tie (multiple matches) returns the earliest record (min id) —
      *      deterministic under race conditions.
@@ -904,14 +960,28 @@ class CompanyService
                 ->first();
         }
 
-        // --- Phone fallback (digits-only normalization in PHP) ---
+        // --- Phone fallback ---
         $phoneNorm = $phone !== null ? (preg_replace('/[^0-9]/', '', $phone) ?? '') : '';
         if ($phoneNorm === '') {
             return null;
         }
 
-        // Fetch candidates that have a non-null phone, then post-filter in PHP
-        // to compare normalized values — avoids non-portable REGEXP_REPLACE chains
+        // Fast path (quick win 6d): indexed equality on phone_normalized. Covers
+        // every row created/updated through this service, which is the vast
+        // majority in production.
+        $indexed = Company::query()
+            ->whereNull('deleted_at')
+            ->where('phone_normalized', $phoneNorm)
+            ->orderBy('id')
+            ->first();
+
+        if ($indexed !== null) {
+            return $indexed;
+        }
+
+        // Fallback (legacy rows predating the phone_normalized column, or rows
+        // written directly to the table bypassing this service): scan candidates
+        // and re-normalize in PHP. Avoids non-portable REGEXP_REPLACE chains
         // (PostgreSQL uses regexp_replace, SQLite lacks it).
         $candidates = Company::query()
             ->whereNull('deleted_at')
@@ -919,19 +989,13 @@ class CompanyService
             ->orderBy('id')
             ->get(['id', 'phone']);
 
-        $matchId = null;
         foreach ($candidates as $candidate) {
             $normalized = preg_replace('/[^0-9]/', '', (string) $candidate->phone) ?? '';
             if ($normalized === $phoneNorm) {
-                $matchId = $candidate->id;
-                break; // already ordered by id asc → first match is the earliest
+                return Company::find($candidate->id);
             }
         }
 
-        if ($matchId === null) {
-            return null;
-        }
-
-        return Company::find($matchId);
+        return null;
     }
 }
