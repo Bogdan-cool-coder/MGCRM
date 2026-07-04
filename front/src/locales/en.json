@@ -2008,7 +2008,10 @@
             "country": "Country",
             "inStage": "In stage",
             "lastContact": "Last contact"
-          }
+          },
+          "dealsCount_one": "{n} deal",
+          "dealsCount_few": "{n} deals",
+          "dealsCount_many": "{n} deals"
         },
         "kpi": {
           "inWork": "Active",

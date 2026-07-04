@@ -187,4 +187,66 @@ class PlanMatrixTest extends TestCase
         $this->assertCount(1, $response->json('rows'));
         $this->assertSame(10_000_000_00, $response->json('rows.0.cells.1.plan_kopecks'));
     }
+
+    // -------------------------------------------------------------------------
+    // Fact excludes soft-deleted won deals (audit fix, 2026-07-04)
+    // -------------------------------------------------------------------------
+
+    public function test_soft_deleted_won_deal_does_not_inflate_matrix_fact_cell(): void
+    {
+        $manager = $this->makeManager();
+        $stage = PipelineStage::factory()->won()->create();
+
+        Deal::factory()->forOwner($manager)->inStage($stage)->create([
+            'amount' => 3_000_000_00,
+            'currency' => 'RUB',
+            'stage_changed_at' => '2026-02-15 10:00:00',
+        ]);
+
+        $deleted = Deal::factory()->forOwner($manager)->inStage($stage)->create([
+            'amount' => 9_000_000_00,
+            'currency' => 'RUB',
+            'stage_changed_at' => '2026-02-16 10:00:00',
+        ]);
+        $deleted->delete();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/plans/matrix?metric=new_income&scope_type=user&layer=operative&year=2026')
+            ->assertOk();
+
+        $ownRow = collect($response->json('rows'))->firstWhere('scope.id', $manager->id);
+
+        // Only the non-deleted 3M deal should count — the soft-deleted 9M deal
+        // must never leak into the fact cell (raw DB::table query bypassed
+        // SoftDeletes before Deal::wonDealsBaseQuery()).
+        $this->assertSame(3_000_000_00, $ownRow['cells']['2']['fact_kopecks']);
+    }
+
+    // -------------------------------------------------------------------------
+    // scope_type=user row population excludes service accounts (audit fix, 2026-07-04)
+    // -------------------------------------------------------------------------
+
+    public function test_service_account_does_not_appear_as_a_matrix_row(): void
+    {
+        $admin = $this->makeAdmin();
+        $serviceManager = User::factory()->create([
+            'role' => Role::Manager,
+            'is_active' => true,
+            'is_service' => true,
+        ]);
+
+        PlanTarget::factory()->forUser($serviceManager->id)->forPeriod(2026, 1)->create([
+            'value_kopecks' => 1_000_000_00,
+            'currency' => 'RUB',
+        ]);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $response = $this->getJson('/api/plans/matrix?metric=new_income&scope_type=user&layer=operative&year=2026')
+            ->assertOk();
+
+        $rows = collect($response->json('rows'));
+        $this->assertNull($rows->firstWhere('scope.id', $serviceManager->id), 'service account leaked into the plan-matrix rows');
+    }
 }

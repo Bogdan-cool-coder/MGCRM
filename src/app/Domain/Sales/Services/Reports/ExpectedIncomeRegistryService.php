@@ -79,6 +79,10 @@ class ExpectedIncomeRegistryService
         $noDateDeals = $this->scopedOpenDealsQuery($viewer)
             ->when($filters->pipelineId !== null, fn (Builder $q) => $q->where('deals.pipeline_id', $filters->pipelineId))
             ->when($filters->userId !== null, fn (Builder $q) => $q->where('deals.owner_user_id', $filters->userId))
+            ->when($filters->productGroupId !== null, fn (Builder $q) => $q->whereIn(
+                'deals.id',
+                $this->dealIdsForProductGroup($filters->productGroupId),
+            ))
             ->whereNull('deals.expected_payment_date')
             ->with(['owner', 'company', 'products.product.group'])
             ->orderByDesc('deals.created_at')

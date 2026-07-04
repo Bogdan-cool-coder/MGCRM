@@ -412,4 +412,30 @@ class BestManagerReportTest extends TestCase
 
         $this->getJson('/api/reports/best-manager?year=2026&mode=bogus')->assertStatus(422);
     }
+
+    public function test_soft_deleted_won_deal_does_not_inflate_leaderboard(): void
+    {
+        $manager = $this->makeManager();
+        $stage = $this->wonStage();
+
+        Deal::factory()->forOwner($manager)->inStage($stage)->create([
+            'amount' => 100_000_00, 'currency' => 'RUB', 'is_primary_deal' => true, 'stage_changed_at' => '2026-04-01',
+        ]);
+
+        $deleted = Deal::factory()->forOwner($manager)->inStage($stage)->create([
+            'amount' => 9_000_000_00, 'currency' => 'RUB', 'is_primary_deal' => true, 'stage_changed_at' => '2026-04-02',
+        ]);
+        $deleted->delete();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/best-manager?year=2026')->assertOk();
+
+        $row = collect($response->json('rows'))->firstWhere('user.id', $manager->id);
+
+        // Only the non-deleted 100k deal should count — a raw DB::table query
+        // bypassed SoftDeletes before Deal::wonDealsBaseQuery() (audit fix).
+        $this->assertSame(1, $row['won_deals']);
+        $this->assertSame(100_000_00, $row['new_income_base_kopecks']);
+    }
 }

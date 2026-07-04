@@ -133,11 +133,29 @@ const moreMenu = ref<InstanceType<typeof Menu> | null>(null)
 const moreBtnEl = ref<HTMLElement | null>(null)
 const mergeDialogOpen = ref(false)
 
+// Russian plural for «N сделок» (1 → сделка, 2-4 → сделки, 5+ → сделок), matching
+// the explicit _one/_few/_many key convention used elsewhere in this page.
+const dealsCountLabel = computed(() => {
+  const n = props.totalDeals
+  const mod10 = n % 10
+  const mod100 = n % 100
+  let key: string
+  if (mod100 >= 11 && mod100 <= 19) key = 'sales.deals.page.list.dealsCount_many'
+  else if (mod10 === 1) key = 'sales.deals.page.list.dealsCount_one'
+  else if (mod10 >= 2 && mod10 <= 4) key = 'sales.deals.page.list.dealsCount_few'
+  else key = 'sales.deals.page.list.dealsCount_many'
+  return t(key, { n })
+})
+
 // totalSum already contains ≈ when multiple currencies are present (from DealsPage index.vue).
-// Do NOT prepend a second ≈ here; render totalSum as-is.
-const subtitle = computed(() =>
-  `MACRO Global · ${props.totalDeals} сделок · ${props.totalSum}`,
-)
+// Do NOT prepend a second ≈ here; render totalSum as-is. In list view the funnel
+// money sum is unavailable (board not loaded) → totalSum is empty and the money
+// segment is dropped rather than showing a fabricated "0 ₽".
+const subtitle = computed(() => {
+  const parts = ['MACRO Global', dealsCountLabel.value]
+  if (props.totalSum) parts.push(props.totalSum)
+  return parts.join(' · ')
+})
 
 const menuItems = computed(() => [
   {

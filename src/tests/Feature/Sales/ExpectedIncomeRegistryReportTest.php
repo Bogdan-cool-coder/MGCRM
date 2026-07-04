@@ -7,6 +7,7 @@ namespace Tests\Feature\Sales;
 use App\Domain\Activity\Enums\ActivityTargetType;
 use App\Domain\Activity\Models\Activity;
 use App\Domain\Catalog\Models\Product;
+use App\Domain\Catalog\Models\ProductGroup;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -240,5 +241,41 @@ class ExpectedIncomeRegistryReportTest extends TestCase
         $row = collect($response->json('expected.rows'))->firstWhere('deal_id', $deal->id);
 
         $this->assertSame('MacroSales CRM', $row['products'][0]['name']);
+    }
+
+    /**
+     * Audit fix (2026-07-04): the noDateDeals query was missing the
+     * product_group_id filter that expectedDeals/squeezeDeals already had
+     * (copy-paste gap three lines above it) — a no-date deal outside the
+     * filtered product line leaked into squeeze.no_date_rows regardless of
+     * the requested product_group_id.
+     */
+    public function test_no_date_rows_respects_product_group_id_filter(): void
+    {
+        $manager = $this->makeManager();
+        $stage = $this->openStage();
+        $groupA = ProductGroup::factory()->create();
+        $groupB = ProductGroup::factory()->create();
+        $productA = Product::factory()->forGroup($groupA)->create();
+        $productB = Product::factory()->forGroup($groupB)->create();
+
+        $dealA = Deal::factory()->forOwner($manager)->inStage($stage)->create([
+            'expected_payment_date' => null,
+        ]);
+        DealProduct::factory()->create(['deal_id' => $dealA->id, 'product_id' => $productA->id]);
+
+        $dealB = Deal::factory()->forOwner($manager)->inStage($stage)->create([
+            'expected_payment_date' => null,
+        ]);
+        DealProduct::factory()->create(['deal_id' => $dealB->id, 'product_id' => $productB->id]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/registry?year=2026&month=1&product_group_id='.$groupA->id)->assertOk();
+
+        $rows = collect($response->json('squeeze.no_date_rows'));
+        $this->assertNotNull($rows->firstWhere('deal_id', $dealA->id), 'deal in the filtered product group missing from no_date_rows');
+        $this->assertNull($rows->firstWhere('deal_id', $dealB->id), 'deal outside the filtered product group leaked into no_date_rows');
+        $this->assertSame(1, $response->json('squeeze.no_date_count'));
     }
 }

@@ -348,7 +348,7 @@ class MotivationCardService
         $totalFact = 0;
 
         foreach ($card->items as $item) {
-            [$row, $planKop, $factKop] = $this->computeItemRow($item, $factSource, $filters, $baseCurrency, $ratesDate, $multiCurrencyWarning);
+            [$row, $planKop, $factKop] = $this->computeItemRow($item, $card->user_id, $factSource, $filters, $baseCurrency, $ratesDate, $multiCurrencyWarning);
             $items[] = $row;
             $totalPlan += $planKop;
             $totalFact += $factKop;
@@ -412,6 +412,7 @@ class MotivationCardService
      */
     private function computeItemRow(
         MotivationCardItem $item,
+        int $cardUserId,
         FactSource $factSource,
         KpiFilters $filters,
         string $baseCurrency,
@@ -424,8 +425,13 @@ class MotivationCardService
 
         // Phase A: commission facts are filled from won-deal income on read if
         // not manually overridden (manual entry always wins, contract §6.3).
+        // $cardUserId is passed in by the caller (audit fix, 2026-07-04):
+        // reading $item->card?->user_id here lazy-loaded a fresh `card`
+        // relation PER ITEM (N+1 — the caller already holds the card) and
+        // silently fell back to a bogus user_id=0 income-fact lookup on any
+        // cache/relation miss instead of failing loudly.
         if ($item->kind === MotivationCardItemKind::Commission && $factAmountKopecks === 0) {
-            $personalIncome = $factSource->personalIncome($item->card?->user_id ?? 0, $filters, $item->currency, $multiCurrencyWarning);
+            $personalIncome = $factSource->personalIncome($cardUserId, $filters, $item->currency, $multiCurrencyWarning);
             $factAmountKopecks = $personalIncome;
         }
 

@@ -13,6 +13,7 @@ use App\Domain\Sales\Data\ProductIncomeFilters;
 use App\Domain\Sales\Enums\PlanMetric;
 use App\Domain\Sales\Enums\PlanScopeType;
 use App\Domain\Sales\Models\PlanTarget;
+use App\Domain\Sales\Services\DealAmountCalculator;
 use App\Domain\Sales\Services\ManagerKpiService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -27,13 +28,28 @@ use Illuminate\Support\Facades\DB;
  *    §3.3), never per-manager for this sprint.
  *  - fact: interim won_deals money-fact (contract §4.2), attributed to a
  *    line via deal_products.product_id → catalog_products.group_id, summed
- *    from deal_products.amount (the NET per-line-item kopecks, already
- *    discount-adjusted — contract §8.3 read-join allowance) in the
- *    line-item's OWN currency, converted at the deal's effective-recognition
- *    month (COALESCE(closed_at, signed_at, paid_at, stage_changed_at), the
- *    same convention as SalesDashboardService::effectiveDateExpr /
+ *    from deal_products.amount (the NET per-line-item kopecks, already net of
+ *    each line's OWN per-line discount — contract §8.3 read-join allowance)
+ *    in the line-item's OWN currency, converted at the deal's
+ *    effective-recognition month (COALESCE(closed_at, signed_at, paid_at,
+ *    stage_changed_at), the same convention as
+ *    SalesDashboardService::effectiveDateExpr /
  *    PlanTargetService::monthlyMoneyFactFor — reuse-gate, never re-derive
  *    which month a won deal's revenue lands in).
+ *
+ *    The deal-LEVEL discount_percent (DealAmountCalculator, applied on top of
+ *    the per-line discount to derive `deals.amount`) is folded in here too
+ *    (audit fix, 2026-07-04): summing raw deal_products.amount ignored it,
+ *    so a 10%-discounted deal's product-income rows overstated that deal's
+ *    contribution by the discount amount even though `deals.amount` (and
+ *    every other Sales aggregate) already reflects the discount. The percent
+ *    is applied per (deal, group, month, currency) subtotal — via
+ *    DealAmountCalculator::applyPercent, the SAME calculator/rounding
+ *    DealService::recalcAmount uses — before folding into the report total,
+ *    so a single-line deal matches `deals.amount` exactly; a multi-line deal
+ *    with lines split across groups/months may round by at most a few
+ *    kopecks per bucket versus a strict per-line application (documented,
+ *    negligible — no per-line group/month attribution exists to do better).
  *  - expected: open deals (not won/lost) with expected_payment_date in the
  *    month, same line-item attribution — contract §6.9 "expected = open
  *    deals expected_payment_date in month by line".
@@ -53,6 +69,7 @@ class ProductIncomeService
         private readonly VisibilityResolver $visibility,
         private readonly ExchangeRateService $exchangeRateService,
         private readonly ManagerKpiService $kpiService,
+        private readonly DealAmountCalculator $amountCalculator,
     ) {}
 
     /**
@@ -195,6 +212,7 @@ class ProductIncomeService
             ->join('deals', 'dp.deal_id', '=', 'deals.id')
             ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
             ->whereNotNull('cp.group_id')
+            ->whereNull('deals.deleted_at')
             ->whereNull('deals.archived_at')
             ->whereRaw($dateExpr.' IS NOT NULL')
             ->whereRaw($yearExpr.' = ?', [(string) $filters->year]);
@@ -219,11 +237,15 @@ class ProductIncomeService
             VisibilityScope::Own => $query->where('deals.owner_user_id', $viewer->id),
         };
 
+        // Grouped by deal_id too (not just group/month/currency) so the
+        // deal-level discount_percent can be applied to EACH deal's own
+        // subtotal before folding into the report total — a shared group/month
+        // bucket must not apply one deal's discount to another deal's lines.
         $rows = $query
             ->selectRaw(
-                'cp.group_id as group_id, '.$monthExpr.' as month, dp.currency as currency, SUM(dp.amount) as total_amount',
+                'dp.deal_id as deal_id, deals.discount_percent as discount_percent, cp.group_id as group_id, '.$monthExpr.' as month, dp.currency as currency, SUM(dp.amount) as total_amount',
             )
-            ->groupBy('cp.group_id', DB::raw($monthExpr), 'dp.currency')
+            ->groupBy('dp.deal_id', 'deals.discount_percent', 'cp.group_id', DB::raw($monthExpr), 'dp.currency')
             ->get();
 
         /** @var array<int, array<int, int>> $totals */
@@ -232,8 +254,9 @@ class ProductIncomeService
         foreach ($rows as $row) {
             $groupId = (int) $row->group_id;
             $month = (int) $row->month;
-            $amount = (int) ($row->total_amount ?? 0);
             $currency = (string) ($row->currency ?? $baseCurrency);
+            $discountPercent = (int) ($row->discount_percent ?? 0);
+            $amount = $this->amountCalculator->applyPercent((int) ($row->total_amount ?? 0), $discountPercent);
 
             $totals[$groupId] ??= array_fill(1, 12, 0);
 

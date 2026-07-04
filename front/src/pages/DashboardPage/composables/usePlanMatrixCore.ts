@@ -119,12 +119,29 @@ export const usePlanMatrixCore = (deps: PlanMatrixCoreDeps) => {
   const isCellDirty = (scopeId: number | null, columnKey: string): boolean =>
     dirty.has(cellKey(scopeId, columnKey))
 
-  /** Row total (display units) across the 12 month columns, dirty-aware. */
+  /**
+   * Row «Всего» (display units), dirty-aware.
+   *
+   * A plan can be authored two ways (contract §O6): distributed across the 12
+   * monthly cells, OR as a single standalone annual cell (`period_month` NULL) —
+   * in which case the monthly cells are empty and the backend carries the whole
+   * year on `cells.annual`. Summing only the months (the old behaviour) therefore
+   * returned 0 for annual-authored plans even though «Год» showed the real figure
+   * (BUG-PLAN-TOTALS-ZERO). We take the monthly sum and, when it is empty while a
+   * standalone annual plan exists, fall back to the annual cell — both branches
+   * dirty-aware via `cellValue`.
+   */
   const rowTotal = (row: PlanMatrixRow): number => {
     if (!matrix.value) return 0
-    return matrix.value.columns
+    const monthlySum = matrix.value.columns
       .filter((c) => c.period_month != null)
       .reduce((sum, c) => sum + (cellValue(row, c.key) ?? 0), 0)
+    if (monthlySum !== 0) return monthlySum
+    // No monthly plan → surface a standalone annual plan if one is stored.
+    if (row.cells['annual']?.has_plan) {
+      return cellValue(row, 'annual') ?? 0
+    }
+    return monthlySum
   }
 
   // ─── Build & save dirty cells (P-2) ────────────────────────────────────────

@@ -63,7 +63,7 @@ class StageConversionService
      */
     public function build(StageConversionFilters $filters, User $viewer): array
     {
-        $pipeline = Pipeline::query()->with('stages')->findOrFail($filters->pipelineId);
+        $pipeline = Pipeline::query()->findOrFail($filters->pipelineId);
         $stages = $pipeline->stages()->get(); // already ordered: active by sort_order, won/lost tail
 
         $firstEntryByStage = $this->firstEntryPerDealPerStage($filters, $viewer);

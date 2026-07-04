@@ -747,4 +747,61 @@ class ManagerCabinetKpiTest extends TestCase
         $response->assertJsonPath('personal.income_plan_kopecks', 9_000_000);
         $response->assertJsonPath('personal.score_pct', 100);
     }
+
+    // -------------------------------------------------------------------------
+    // income_fact excludes soft-deleted / archived won deals (audit fix, 2026-07-04)
+    // -------------------------------------------------------------------------
+
+    public function test_income_fact_excludes_soft_deleted_won_deal(): void
+    {
+        $manager = $this->makeManager();
+        $wonStage = $this->wonStage();
+
+        $this->wonDeal($manager, $wonStage, 5_000_000);
+        $deleted = $this->wonDeal($manager, $wonStage, 7_000_000);
+        $deleted->delete();
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        // Only the non-deleted 5_000_000 deal counts — the soft-deleted
+        // 7_000_000 deal must not inflate income_fact.
+        $response->assertJsonPath('personal.income_fact_kopecks', 5_000_000);
+    }
+
+    public function test_income_fact_excludes_archived_won_deal(): void
+    {
+        $manager = $this->makeManager();
+        $wonStage = $this->wonStage();
+
+        $this->wonDeal($manager, $wonStage, 5_000_000);
+        $archived = $this->wonDeal($manager, $wonStage, 7_000_000);
+        $archived->update(['archived_at' => now()]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        $response->assertJsonPath('personal.income_fact_kopecks', 5_000_000);
+    }
+
+    public function test_team_income_fact_excludes_soft_deleted_won_deal(): void
+    {
+        // Same guard for the batched team-comparison query (teamKpiBatch),
+        // exercised via a director viewing themself + a colleague.
+        $dept = $this->makeDept();
+        $director = $this->makeDirector($dept->id);
+        $wonStage = $this->wonStage();
+
+        $this->wonDeal($director, $wonStage, 4_000_000);
+        $deleted = $this->wonDeal($director, $wonStage, 9_000_000);
+        $deleted->delete();
+
+        Sanctum::actingAs($director, ['*']);
+
+        $response = $this->getJson('/api/me/kpi')->assertOk();
+
+        $response->assertJsonPath('personal.income_fact_kopecks', 4_000_000);
+    }
 }

@@ -89,6 +89,16 @@ const VALID_KEYS = [
 type ValidKey = (typeof VALID_KEYS)[number]
 
 /**
+ * Мягкие алиасы deep-link'ов: короткие/устаревшие slug'и `?section=…` из старых
+ * ссылок → канонический ключ раздела. Резолвятся ДО проверки прав/валидности,
+ * поэтому наследуют штатный role-гейт целевого раздела. Без этого `?section=access`
+ * (реальный slug — `access-control`) проваливался в `profile` (пустой экран).
+ */
+const SECTION_ALIASES: Record<string, string> = {
+  access: 'access-control',
+}
+
+/**
  * Возвращает колбэки для управления диалогом «Несохранённые изменения» из шелла.
  *
  * Паттерн: Promise-based guard. При необходимости показа диалога шелл устанавливает
@@ -194,8 +204,11 @@ export function useSettings() {
     return 'profile'
   }
 
-  function resolveSection(key: string | undefined): string {
-    if (!key) return 'profile'
+  function resolveSection(rawKey: string | undefined): string {
+    if (!rawKey) return 'profile'
+    // Мягкий алиас старых/коротких slug'ов (?section=access → access-control)
+    // до любых проверок — цель наследует свой штатный role-гейт ниже.
+    const key = SECTION_ALIASES[rawKey] ?? rawKey
     const role = userStore.getUserRole ?? ''
 
     // Group alias «directories» → первый доступный таб единого экрана справочников.
@@ -237,7 +250,10 @@ export function useSettings() {
    * Переключить раздел. Если текущий раздел dirty — сначала спросить пользователя.
    * При «Остаться» навигация отменяется; при «Покинуть» — выполняется.
    */
-  async function setSection(key: string) {
+  async function setSection(rawKey: string) {
+    // Мягкий алиас (access → access-control) — на случай, если короткий slug
+    // придёт из внешней ссылки/кода, а не из сайдбара (штатно slug'и канонические).
+    const key = SECTION_ALIASES[rawKey] ?? rawKey
     // Group alias «directories» из сайдбара → резолвим в конкретный первый таб
     // единого экрана справочников (иначе detail-панель не найдёт ключ и покажет
     // SectionComingSoon). Deep-link на конкретные табы приходит уже резолвленным.

@@ -14,6 +14,7 @@ use App\Domain\Sales\Data\PlanMatrixQuery;
 use App\Domain\Sales\Data\UpsertCellData;
 use App\Domain\Sales\Enums\PlanMetric;
 use App\Domain\Sales\Enums\PlanScopeType;
+use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\Pipeline;
 use App\Domain\Sales\Models\PlanTarget;
 use App\Domain\Sales\Models\PlanTargetAudit;
@@ -362,10 +363,11 @@ class PlanTargetService
         $yearExpr = $isPg ? 'EXTRACT(YEAR FROM deals.stage_changed_at)' : "strftime('%Y', deals.stage_changed_at)";
         $monthExpr = $isPg ? 'EXTRACT(MONTH FROM deals.stage_changed_at)' : "strftime('%m', deals.stage_changed_at)";
 
-        $query = DB::table('deals')
-            ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
-            ->where('ps.is_won', true)
-            ->whereNull('deals.archived_at')
+        // Deal::wonDealsBaseQuery() (audit fix, 2026-07-04): raw DB::table
+        // queries bypass Eloquent's SoftDeletes global scope — soft-deleted
+        // won deals were being counted into every plan cell's fact before
+        // this fix. archived_at exclusion was already present; now shared.
+        $query = Deal::wonDealsBaseQuery()
             ->whereRaw($yearExpr.' = ?', [(string) $year]);
 
         match ($scopeType) {
@@ -470,13 +472,22 @@ class PlanTargetService
      * "все менеджеры" total) can sum the identical set of user-scoped cells
      * the matrix shows as its ИТОГО row — never a second, drifting definition.
      *
+     * `is_service=false` excludes bot/service accounts from the plan-matrix
+     * row population (audit fix, 2026-07-04) — mirrors
+     * BestManagerService::wonDealAggregatesByOwner's standingIds filter and
+     * SalesDashboardService's topManagers query so a service account never
+     * appears as a plan-matrix row across any Sales aggregate.
+     *
      * @return list<int>
      */
     public function scopedUserIds(User $viewer): array
     {
         $scope = $this->visibility->resolve($viewer);
 
-        $usersQuery = User::query()->where('is_active', true)->role([Role::Manager->value, Role::Director->value]);
+        $usersQuery = User::query()
+            ->where('is_active', true)
+            ->where('is_service', false)
+            ->role([Role::Manager->value, Role::Director->value]);
 
         if ($scope !== VisibilityScope::All) {
             $usersQuery->where(function ($q) use ($viewer, $scope): void {

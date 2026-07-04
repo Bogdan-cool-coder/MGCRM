@@ -351,6 +351,13 @@ async function onToggleHiddenStage(stageId: number) {
 // ── Summary (counts + sum) ─────────────────────────────────────────────────────
 
 const totalDealsCount = computed(() => {
+  // In list view the board columns are not loaded (only the paginated list is),
+  // so deriving the count from `visibleColumns` yields 0 even with real data
+  // (the toolbar "0 сделок" bug). List view = the real filtered total from the
+  // list response; kanban view = the active-stage board sum.
+  if (salesStore.activeView === 'list') {
+    return total.value
+  }
   // Exclude won/lost columns — only active pipeline stages count.
   return visibleColumns.value
     .filter((col) => !col.stage.is_won && !col.stage.is_lost)
@@ -372,7 +379,10 @@ const totalDealsCount = computed(() => {
 const totalSumFormatted = computed(() => {
   // Exclude won/lost columns — only active pipeline stages contribute.
   const cols = visibleColumns.value.filter((col) => !col.stage.is_won && !col.stage.is_lost)
-  if (cols.length === 0) return formatCurrency(0, 'RUB')
+  // The funnel money sum only exists in the board response. In list view the
+  // board is not loaded, so return an empty string and let the toolbar drop the
+  // money segment (rather than printing a fabricated "0 ₽").
+  if (cols.length === 0) return ''
 
   // Native per-currency totals across all visible columns.
   const byCurrency: Record<string, number> = {}

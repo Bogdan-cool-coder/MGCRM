@@ -10,6 +10,7 @@ use App\Domain\Iam\Enums\VisibilityScope;
 use App\Domain\Iam\Models\User;
 use App\Domain\Iam\Services\VisibilityResolver;
 use App\Domain\Sales\Data\BestManagerFilters;
+use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Services\ManagerKpiService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -210,10 +211,10 @@ class BestManagerService
         $effectiveDate = 'COALESCE(deals.closed_at, deals.signed_at, deals.paid_at, deals.stage_changed_at)';
         $yearExpr = $isPg ? 'EXTRACT(YEAR FROM '.$effectiveDate.')' : "strftime('%Y', {$effectiveDate})";
 
-        $query = DB::table('deals')
-            ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
-            ->where('ps.is_won', true)
-            ->whereNull('deals.archived_at')
+        // Deal::wonDealsBaseQuery() (audit fix, 2026-07-04): excludes
+        // soft-deleted won deals from the leaderboard's income/points math —
+        // a raw DB::table query never got Eloquent's SoftDeletes scope.
+        $query = Deal::wonDealsBaseQuery()
             ->whereRaw($yearExpr.' = ?', [(string) $filters->year]);
 
         if ($filters->pipelineId !== null) {

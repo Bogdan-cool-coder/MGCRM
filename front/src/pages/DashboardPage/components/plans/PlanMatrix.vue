@@ -245,17 +245,27 @@ const totalLabel = (columnKey: string): string => {
   return cell.plan_count != null ? String(cell.plan_count) : '—'
 }
 
-/** «Всего» column footer — sum of the 12 month totals in base. */
+/**
+ * «Всего» column footer (ИТОГО) — the total planned across all rows for the year.
+ *
+ * Mirrors `rowTotal`: sum the 12 monthly column-totals, but when a plan is
+ * authored as a standalone annual cell the monthly totals are 0 while the whole
+ * year rides on `totals.annual`. Falling back to the annual total keeps the
+ * footer consistent with the «Год» column (fixes BUG-PLAN-TOTALS-ZERO where the
+ * footer read 0 ₽ across all 12 months for annual-authored plans).
+ */
 const grandTotalLabel = computed<string>(() => {
   const monthCols = props.matrix.columns.filter((c) => c.period_month != null)
   if (props.isMoney) {
-    const sum = monthCols.reduce((acc, c) => acc + (footerKopecks(c.key) ?? 0), 0)
+    const monthlySum = monthCols.reduce((acc, c) => acc + (footerKopecks(c.key) ?? 0), 0)
+    const sum = monthlySum !== 0 ? monthlySum : (footerKopecks('annual') ?? 0)
     return formatMkMoney(sum, props.matrix.meta.base_currency)
   }
-  const sum = monthCols.reduce(
+  const monthlySum = monthCols.reduce(
     (acc, c) => acc + (props.matrix.totals[c.key]?.plan_count ?? 0),
     0,
   )
+  const sum = monthlySum !== 0 ? monthlySum : (props.matrix.totals['annual']?.plan_count ?? 0)
   return String(sum)
 })
 </script>

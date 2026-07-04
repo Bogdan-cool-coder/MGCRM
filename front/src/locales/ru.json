@@ -2008,7 +2008,10 @@
             "country": "Страна",
             "inStage": "В статусе",
             "lastContact": "Посл. контакт"
-          }
+          },
+          "dealsCount_one": "{n} сделка",
+          "dealsCount_few": "{n} сделки",
+          "dealsCount_many": "{n} сделок"
         },
         "kpi": {
           "inWork": "В работе",

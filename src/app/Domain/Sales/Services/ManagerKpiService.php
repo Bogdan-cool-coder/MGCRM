@@ -10,9 +10,9 @@ use App\Domain\Catalog\Services\ExchangeRateService;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use App\Domain\Sales\Data\KpiFilters;
+use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\SalaryPlan;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Support\Facades\DB;
 
 /**
  * ManagerKpiService — aggregator for the S1.8 manager cabinet.
@@ -254,15 +254,19 @@ class ManagerKpiService
      * SUM(deals.amount) for won deals in period — single SQL query, no PHP loop.
      * HD1: income_source = "won_deals" (Finance not ready; M10 replaces with payments).
      * HD2: deals with unavailable exchange rates are skipped, warning flag set.
+     *
+     * Base query is Deal::wonDealsBaseQuery() (audit fix, 2026-07-04): a raw
+     * `DB::table('deals')` query bypasses Eloquent's SoftDeletes global scope,
+     * so soft-deleted AND archived won deals were being counted into the
+     * cabinet's income_fact before this fix — never re-hand-roll the
+     * is_won/deleted_at/archived_at filters here.
      */
     public function personalIncomeFact(int $userId, KpiFilters $filters, bool &$multiCurrencyWarning = false): int
     {
         $baseCurrency = config('crm.currencies.default', 'RUB');
 
-        $rows = DB::table('deals')
-            ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
+        $rows = Deal::wonDealsBaseQuery()
             ->where('deals.owner_user_id', $userId)
-            ->where('ps.is_won', true)
             ->whereBetween('deals.stage_changed_at', [$filters->dateFrom, $filters->dateTo])
             ->selectRaw('SUM(deals.amount) as total_amount, deals.currency')
             ->groupBy('deals.currency')
@@ -296,13 +300,24 @@ class ManagerKpiService
 
     /**
      * Batch KPI for multiple users — single SQL GROUP BY, no N+1.
-     * Used for team comparison block (plan §Б3 + risk Н).
+     * Used for team comparison block (plan §Б3 + risk Н) AND (via
+     * WonDealsFactSource::teamContributions) the МК team-bonus pool fact.
+     *
+     * `$pipelineId` (audit fix, 2026-07-04): optional funnel filter. The
+     * manager-cabinet team-comparison block (buildTeamData) intentionally
+     * calls this WITHOUT a pipeline filter — colleagues are compared on their
+     * TOTAL won-deal income across every funnel they work, not one funnel.
+     * WonDealsFactSource::teamContributions DOES pass the МК card's
+     * `pipeline_id`, because the team-bonus pool is scoped to one sales team
+     * (one pipeline) — before this fix teamContributions silently summed
+     * EVERY pipeline's won deals into the pool fact regardless of which
+     * pipeline the МК card was configured for.
      *
      * @param  list<int>  $userIds
      * @param  bool  $multiCurrencyWarning  pass-by-reference, OR'd with any conversion miss
      * @return array<int, array{income_fact: int, score_pct: int|null, user_id: int}>
      */
-    public function teamKpiBatch(array $userIds, KpiFilters $filters, bool &$multiCurrencyWarning = false): array
+    public function teamKpiBatch(array $userIds, KpiFilters $filters, bool &$multiCurrencyWarning = false, ?int $pipelineId = null): array
     {
         if ($userIds === []) {
             return [];
@@ -310,11 +325,10 @@ class ManagerKpiService
 
         $baseCurrency = config('crm.currencies.default', 'RUB');
 
-        $rows = DB::table('deals')
-            ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
+        $rows = Deal::wonDealsBaseQuery()
             ->whereIn('deals.owner_user_id', $userIds)
-            ->where('ps.is_won', true)
             ->whereBetween('deals.stage_changed_at', [$filters->dateFrom, $filters->dateTo])
+            ->when($pipelineId !== null, fn ($q) => $q->where('deals.pipeline_id', $pipelineId))
             ->selectRaw('deals.owner_user_id, SUM(deals.amount) as total_amount, deals.currency')
             ->groupBy('deals.owner_user_id', 'deals.currency')
             ->get();

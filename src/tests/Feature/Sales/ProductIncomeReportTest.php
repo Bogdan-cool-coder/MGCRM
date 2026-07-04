@@ -295,4 +295,40 @@ class ProductIncomeReportTest extends TestCase
 
         $this->getJson('/api/reports/product-income?layer=operative')->assertStatus(422);
     }
+
+    // -------------------------------------------------------------------------
+    // Deal-level discount_percent folded into the line's fact (audit fix, 2026-07-04)
+    // -------------------------------------------------------------------------
+
+    public function test_deal_level_discount_percent_is_applied_to_the_lines_fact(): void
+    {
+        $manager = $this->makeManager();
+        $stage = $this->wonStage();
+        $group = ProductGroup::factory()->create();
+        $product = Product::factory()->forGroup($group)->create();
+
+        $deal = Deal::factory()->forOwner($manager)->inStage($stage)->create([
+            'stage_changed_at' => '2026-10-15 10:00:00',
+            'discount_percent' => 10,
+        ]);
+
+        DealProduct::factory()->create([
+            'deal_id' => $deal->id,
+            'product_id' => $product->id,
+            'currency' => 'RUB',
+            'amount' => 1_000_000_00, // gross line amount before the deal-level discount
+        ]);
+
+        Sanctum::actingAs($manager, ['*']);
+
+        $response = $this->getJson('/api/reports/product-income?year=2026&layer=operative')->assertOk();
+
+        $row = collect($response->json('rows'))->firstWhere('scope.id', $group->id);
+
+        // 1_000_000_00 * (100 - 10) / 100 = 900_000_00 — matches
+        // DealAmountCalculator's rounding, the same calculator DealService::
+        // recalcAmount uses to derive deals.amount, so this report's fact
+        // agrees with the deal card's own total.
+        $this->assertSame(900_000_00, $row['cells']['10']['fact_kopecks']);
+    }
 }

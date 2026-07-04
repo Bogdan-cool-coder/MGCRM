@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Deal — master Deal-on-Company entity. All business logic lives in
@@ -155,6 +157,36 @@ class Deal extends Model
 
         return (int) $this->stage_changed_at->copy()->startOfDay()
             ->diffInDays(now()->startOfDay());
+    }
+
+    /**
+     * The single source of truth for a raw (`DB::table`) won-deals aggregate
+     * query: joined to `pipeline_stages` and filtered to `is_won = true`,
+     * excluding soft-deleted AND archived deals.
+     *
+     * Every KPI/plan/report aggregator in this domain that bypasses Eloquent
+     * (for a batched `GROUP BY` a query-builder query is simpler/faster than
+     * hydrating models) MUST start from this helper instead of hand-rolling
+     * `DB::table('deals')->join(...)->where('ps.is_won', true)` — a raw query
+     * builder query does NOT get Eloquent's automatic `SoftDeletes` global
+     * scope, so every one of those call sites silently counted soft-deleted
+     * deals into revenue until this fix (audit finding, 2026-07-04).
+     *
+     * `archived_at` semantics: excluded here too, matching the existing
+     * convention every raw-query aggregator already followed for archived
+     * deals (PlanTargetService/BestManagerService/StageConversionService/
+     * ProductIncomeService all already carried `whereNull('deals.archived_at')`
+     * — this helper only codifies + reuses it, never changes it). If a future
+     * report needs archived deals included, add an explicit param here rather
+     * than duplicating the join/filter elsewhere.
+     */
+    public static function wonDealsBaseQuery(): QueryBuilder
+    {
+        return DB::table('deals')
+            ->join('pipeline_stages as ps', 'deals.stage_id', '=', 'ps.id')
+            ->where('ps.is_won', true)
+            ->whereNull('deals.deleted_at')
+            ->whereNull('deals.archived_at');
     }
 
     // ---- Relations ----
