@@ -114,6 +114,23 @@ return [
     'currencies' => [
         'default' => env('CRM_DEFAULT_CURRENCY', 'RUB'),
         'supported' => ['RUB', 'USD', 'EUR', 'KZT', 'UZS', 'AED'],
+
+        /*
+         | Deal Create 2.0 §1.3/§6 — country → currency map, consulted by
+         | DealService when a deal is created/updated with a known company
+         | country and no explicit currency override. Keys are the SAME
+         | lowercase ISO-2 codes stored in crm_companies.country_code
+         | (Company::country_code default 'kz'). A country with no entry (or a
+         | null country) falls back to 'default' above. Kept here (config, not
+         | hardcoded in the service) so a new market can be added without a
+         | code change.
+         */
+        'by_country' => [
+            'ru' => 'RUB',
+            'kz' => 'KZT',
+            'uz' => 'UZS',
+            'ae' => 'AED',
+        ],
     ],
 
     /*
@@ -131,6 +148,22 @@ return [
     */
     'dashboard' => [
         'cache_ttl' => (int) env('CRM_DASHBOARD_CACHE_TTL', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Deal defaults (Deal Create 2.0 — instant-create)
+    |--------------------------------------------------------------------------
+    |
+    | default_title: the server-side placeholder title an instant-created deal
+    | gets when the caller sends no title (docs/specs/deal-create-2-contract.md
+    | §1.3). A domain value, not a UI string, so it lives in config rather than
+    | an i18n key — the frontend highlights the field for completion whenever
+    | the deal's title still equals this default.
+    |
+    */
+    'deal' => [
+        'default_title' => 'Новая сделка',
     ],
 
     /*

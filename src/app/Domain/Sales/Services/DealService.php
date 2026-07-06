@@ -25,6 +25,7 @@ use App\Domain\Log\Services\EntityLogService;
 use App\Domain\Sales\Data\DealTotalsDTO;
 use App\Domain\Sales\Events\DealCreated;
 use App\Domain\Sales\Events\DealDeleted;
+use App\Domain\Sales\Events\DealOwnerChanged;
 use App\Domain\Sales\Events\DealUpdated;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\DealProduct;
@@ -103,6 +104,7 @@ class DealService
         private readonly EntityLogService $entityLog,
         private readonly CompanyRequisiteService $requisites,
         private readonly DealAmountCalculator $amountCalculator,
+        private readonly CurrencyResolver $currencyResolver,
     ) {}
 
     /**
@@ -971,63 +973,94 @@ class DealService
     }
 
     /**
-     * Create a deal on an existing company. Stage is forced to the first stage
-     * of the pipeline (by sort_order); department is stamped from the owner.
+     * Create a deal — instant-create semantics (Deal Create 2.0,
+     * docs/specs/deal-create-2-contract.md §1). pipeline_id is the only
+     * required input; every other business field gets a server-side default so
+     * "Новая сделка" buttons can POST a minimal body and redirect straight into
+     * the card:
+     *   - title           → config('crm.deal.default_title') when blank/absent.
+     *   - owner_user_id   → the creator.
+     *   - department_id   → the owner's department.
+     *   - stage_id        → pipeline.default_stage_id (when set, belongs to
+     *                       THIS pipeline, and is not won/lost/hidden) else the
+     *                       first non-won/lost/hidden stage by sort_order.
+     *   - currency        → explicit request value, else the company's country
+     *                       currency (company_id given), else the configured
+     *                       default. company_id is commonly null at
+     *                       instant-create, so this usually resolves to the
+     *                       configured default.
+     *   - company_id      → may stay null (Deal-on-Company's FK is nullable —
+     *                       §2.1). The card then highlights company + title as
+     *                       "needs completion" (frontend concern).
      *
      * @param  array<string, mixed>  $data
      */
     public function create(array $data, User $creator): Deal
     {
+        $data['title'] = trim((string) ($data['title'] ?? '')) !== ''
+            ? $data['title']
+            : config('crm.deal.default_title', 'Новая сделка');
+
         $data['owner_user_id'] ??= $creator->id;
 
-        $owner = $data['owner_user_id'] === $creator->id
+        $owner = (int) $data['owner_user_id'] === (int) $creator->id
             ? $creator
             : User::find($data['owner_user_id']);
         $data['department_id'] ??= $owner?->department_id;
 
         $pipeline = Pipeline::query()->with('stages')->findOrFail($data['pipeline_id']);
-        $firstStage = $pipeline->stages
-            ->where('hidden_by_default', false)
-            ->where('is_lost', false)
-            ->where('is_won', false)
-            ->sortBy('sort_order')
-            ->first();
+        $entryStage = $this->resolveEntryStage($pipeline);
 
-        if ($firstStage === null) {
+        if ($entryStage === null) {
             throw ValidationException::withMessages([
                 'pipeline_id' => 'Pipeline has no stages.',
             ]);
         }
 
-        $data['stage_id'] = $firstStage->id;
+        $data['stage_id'] = $entryStage->id;
         // The entry stage is the initial high-water mark for the max_stage key
         // action; DealMoveService::bumpMaxStage advances it on later moves.
-        $data['max_stage_id'] = $firstStage->id;
+        $data['max_stage_id'] = $entryStage->id;
         $data['stage_changed_at'] = now();
 
         // Auto-pin the company's current requisite set (N5/Фича 7): a deal records
         // which requisites it was opened with so a later requisite change does not
         // retroactively alter it. Only when the caller did not pin one explicitly
         // and the company actually has a current set — 0 requisites leaves it null
-        // (resolveForNewDocument-null backlog flag) without failing.
-        if (empty($data['company_requisite_id']) && ! empty($data['company_id'])) {
+        // (resolveForNewDocument-null backlog flag) without failing. company_id may
+        // be null at instant-create (§2.1) — the empty() guard already handles it.
+        $company = null;
+        if (! empty($data['company_id'])) {
             $company = Company::find($data['company_id']);
-            $data['company_requisite_id'] = $company !== null
-                ? $this->requisites->current($company)?->id
-                : null;
+
+            if (empty($data['company_requisite_id'])) {
+                $data['company_requisite_id'] = $company !== null
+                    ? $this->requisites->current($company)?->id
+                    : null;
+            }
+        }
+
+        // Currency default (§1.3 point 5): explicit request value wins; else the
+        // linked company's country currency; else the configured default. At
+        // instant-create company_id is usually null, so this normally resolves
+        // straight to the configured default — the country branch matters when a
+        // caller (e.g. "new deal" from a company card) passes company_id upfront.
+        if (trim((string) ($data['currency'] ?? '')) === '') {
+            $data['currency'] = $this->currencyResolver->forCountry($company?->country_code)
+                ?? config('crm.currencies.default', 'RUB');
         }
 
         // Atomic creation: the deal row, its creation history row and the action
         // log row commit together (mirrors createInbound). A failure between the
         // inserts no longer leaves a deal without its history/log (CONVENTION).
-        $deal = DB::transaction(function () use ($data, $firstStage, $creator): Deal {
+        $deal = DB::transaction(function () use ($data, $entryStage, $creator): Deal {
             $deal = Deal::create($data);
 
             // Record creation event in stage history (from_stage_id = null → creation).
             DealStageHistory::create([
                 'deal_id' => $deal->id,
                 'from_stage_id' => null,
-                'to_stage_id' => $firstStage->id,
+                'to_stage_id' => $entryStage->id,
                 'user_id' => $creator->id,
                 'created_at' => $deal->created_at,
             ]);
@@ -1041,7 +1074,7 @@ class DealService
                 [
                     'title' => $deal->title,
                     'pipeline_id' => (int) $deal->pipeline_id,
-                    'stage_id' => (int) $firstStage->id,
+                    'stage_id' => (int) $entryStage->id,
                     'company_id' => $deal->company_id !== null ? (int) $deal->company_id : null,
                 ],
                 $deal->created_at,
@@ -1062,7 +1095,50 @@ class DealService
         // through exactly one of the two paths — never both.
         DealCreated::dispatch($deal);
 
+        // Deal Create 2.0 §5.4: a brand-new deal also claims its company/contacts'
+        // owner (previous_owner_id is null — there is no "prior deal owner", the
+        // sync listener treats this as "set unless the target already has an
+        // owner"). Only meaningful when the deal actually has a company — a
+        // company_id = null instant-create has nothing to sync yet.
+        if ($deal->company_id !== null) {
+            DealOwnerChanged::dispatch((int) $deal->id, (int) $deal->owner_user_id, null, $creator);
+        }
+
         return $deal;
+    }
+
+    /**
+     * Resolve the entry stage for a newly created deal (Deal Create 2.0 §1.3
+     * point 4): `pipeline.default_stage_id` when it is set AND belongs to this
+     * pipeline AND is not won/lost/hidden, else the first non-won/lost/hidden
+     * stage by sort_order (the pre-existing rule, unchanged as a fallback).
+     *
+     * The won/lost/hidden guard is deliberately enforced HERE rather than at
+     * validation time (UpdatePipelineRequest only checks pipeline membership) —
+     * one place of truth for "which stage is a valid entry point", so a stage
+     * later re-flagged hidden/won/lost never leaves a stale default_stage_id
+     * silently routing new deals into a terminal/hidden column.
+     */
+    private function resolveEntryStage(Pipeline $pipeline): ?PipelineStage
+    {
+        if ($pipeline->default_stage_id !== null) {
+            $default = $pipeline->stages->firstWhere('id', $pipeline->default_stage_id);
+
+            if ($default !== null
+                && ! $default->is_won
+                && ! $default->is_lost
+                && ! $default->hidden_by_default
+            ) {
+                return $default;
+            }
+        }
+
+        return $pipeline->stages
+            ->where('hidden_by_default', false)
+            ->where('is_lost', false)
+            ->where('is_won', false)
+            ->sortBy('sort_order')
+            ->first();
     }
 
     /**
@@ -1203,7 +1279,18 @@ class DealService
             && (int) $data['company_id'] !== (int) $deal->company_id
         ) {
             $this->resolveCompanyDerivedData($data, $deal);
+            $this->autoPullCurrencyFromCompany($data, $deal);
         }
+
+        // Owner change detection (Deal Create 2.0 §5.3/§5.4): captured BEFORE the
+        // update so the post-commit DealOwnerChanged carries the true old/new
+        // pair. A no-op (owner already the requested value) never fires — the
+        // Crm-side sync listener would otherwise write a spurious no-op log row.
+        $ownerChanging = array_key_exists('owner_user_id', $data)
+            && $data['owner_user_id'] !== null
+            && (int) $data['owner_user_id'] !== (int) $deal->owner_user_id;
+        $previousOwnerId = $ownerChanging ? (int) $deal->owner_user_id : null;
+        $newOwnerId = $ownerChanging ? (int) $data['owner_user_id'] : null;
 
         // Owner change WITHOUT a company change: re-stamp department_id from the new
         // owner so the visibility scope (owner_user_id OR department_id) stays correct.
@@ -1305,7 +1392,53 @@ class DealService
         // so update() only covers field/amount/owner edits.
         DealUpdated::dispatch($deal);
 
+        // Post-commit (Deal Create 2.0 §5.4): announce the owner change so the
+        // Crm-side sync listener re-points the deal's company + linked contacts'
+        // owner at the new owner. Dispatched after the transaction commits, same
+        // reasoning as DealCreated/DealStageChanged — a listener must never
+        // observe a not-yet-committed owner_user_id.
+        if ($ownerChanging) {
+            DealOwnerChanged::dispatch((int) $deal->id, $newOwnerId, $previousOwnerId, $actor);
+        }
+
         return $deal;
+    }
+
+    /**
+     * Currency auto-pull on company link (Deal Create 2.0 §6, cheap heuristic —
+     * no `currency_manually_set` flag exists yet, contract §9 O2). Mutates $data
+     * in place: when the deal's CURRENT currency still equals the configured
+     * default (i.e. was never explicitly changed away from it) AND the deal has
+     * no line items yet, the newly-linked company's country currency overwrites
+     * the request's currency (unless the caller explicitly sent a different,
+     * non-default currency in the same request — array_key_exists guards that).
+     * A deal already customised (non-default currency or with products) is left
+     * untouched — the heuristic never second-guesses an established value.
+     *
+     * @param  array<string, mixed>  $data  the update payload (mutated)
+     */
+    private function autoPullCurrencyFromCompany(array &$data, Deal $deal): void
+    {
+        // The caller explicitly set a currency in this same request — respect it,
+        // never override an explicit choice with the country heuristic.
+        if (array_key_exists('currency', $data)) {
+            return;
+        }
+
+        if ($deal->currency !== config('crm.currencies.default', 'RUB')) {
+            return;
+        }
+
+        if ($deal->products()->exists()) {
+            return;
+        }
+
+        $company = Company::find($data['company_id']);
+        $mapped = $this->currencyResolver->forCountry($company?->country_code);
+
+        if ($mapped !== null) {
+            $data['currency'] = $mapped;
+        }
     }
 
     /**
@@ -1475,6 +1608,39 @@ class DealService
             ->with(['pipeline:id,name', 'stage:id,name,color,is_won,is_lost', 'owner:id,full_name'])
             ->orderByDesc('created_at')
             ->paginate((int) ($filters['per_page'] ?? 15));
+    }
+
+    /**
+     * Whether a Company has at least one OPEN deal (Deal Create 2.0 §5.3/§5.4
+     * rule B: a point task on a company/contact does NOT reassign owner while an
+     * active deal is holding it). "Open" mirrors aggregateForCompany/
+     * countWonForCompany — stage flags are the single source of truth
+     * (is_won = false AND is_lost = false); closed_at is never consulted (can be
+     * stale on AMO-migrated rows). Soft-deleted deals are excluded by the
+     * SoftDeletes global scope.
+     *
+     * Cross-domain read: Crm (SyncOwnerOnTaskAssigned-equivalent listener) calls
+     * THIS method rather than querying `deals` directly — "is there an open
+     * deal?" is answered only by Sales (DDD boundary, contract §5.4).
+     */
+    public function hasOpenDealForCompany(int $companyId): bool
+    {
+        return Deal::query()
+            ->where('company_id', $companyId)
+            ->whereHas('stage', static fn (Builder $q) => $q->where('is_won', false)->where('is_lost', false))
+            ->exists();
+    }
+
+    /**
+     * Whether a Contact participates in at least one OPEN deal (via deal_contacts)
+     * — the contact-side twin of hasOpenDealForCompany(), same "open" definition.
+     */
+    public function hasOpenDealForContact(int $contactId): bool
+    {
+        return Deal::query()
+            ->whereHas('dealContacts', static fn (Builder $q) => $q->where('contact_id', $contactId))
+            ->whereHas('stage', static fn (Builder $q) => $q->where('is_won', false)->where('is_lost', false))
+            ->exists();
     }
 
     /**

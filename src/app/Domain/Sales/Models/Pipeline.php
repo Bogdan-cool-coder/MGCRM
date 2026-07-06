@@ -10,6 +10,7 @@ use Database\Factories\Sales\PipelineFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -37,6 +38,12 @@ class Pipeline extends Model
         'visible_user_ids',
         'is_active',
         'sort_order',
+        // "Стадия для новых сделок" (Deal Create 2.0 §2.2/§3) — nullable; a null
+        // value falls back to the existing "first non-won/lost/hidden stage" rule
+        // (DealService::create). Validated (belongs to THIS pipeline) in
+        // UpdatePipelineRequest; a won/lost/hidden target is ignored by the
+        // service rather than rejected here (one place of truth for stage choice).
+        'default_stage_id',
     ];
 
     protected function casts(): array
@@ -77,6 +84,12 @@ class Pipeline extends Model
     public function automations(): HasMany
     {
         return $this->hasMany(PipelineAutomation::class);
+    }
+
+    /** "Стадия для новых сделок" (Deal Create 2.0 §2.2/§3) — nullable. */
+    public function defaultStage(): BelongsTo
+    {
+        return $this->belongsTo(PipelineStage::class, 'default_stage_id');
     }
 
     // ---- Scopes ----

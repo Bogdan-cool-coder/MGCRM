@@ -550,6 +550,89 @@ class CompanyService
     }
 
     // =========================================================================
+    // Owner sync (Deal Create 2.0 §5.3/§5.4, docs/specs/deal-create-2-contract.md)
+    // =========================================================================
+
+    /**
+     * Rule A: a deal's owner change (or a new deal's owner claiming its
+     * company) drives `companies.owner_user_id` — the deal is the source of
+     * truth. Called ONLY by SyncDealOwnershipListener (Sales domain event
+     * DealOwnerChanged) — CompanyService is the single writer of
+     * `owner_user_id` (DDD boundary, contract §5.4).
+     *
+     * Idempotency guards:
+     *   - already the requested owner → no-op, no log row (avoids a spurious
+     *     updated_at bump and a duplicate "X → X" feed entry).
+     *
+     * Unlike syncOwnerFromTask, this rule is NOT gated by "has an open deal" —
+     * the deal itself IS the reason the owner is changing, so it always wins
+     * (contract §5.6 edge cases: "владелец компании должен следовать владельцу
+     * сделки, даже если won").
+     */
+    public function syncOwnerFromDeal(Company $company, int $ownerId, ?User $actor = null): void
+    {
+        if ((int) $company->owner_user_id === $ownerId) {
+            return;
+        }
+
+        $oldOwnerId = $company->owner_user_id;
+
+        $company->update(['owner_user_id' => $ownerId]);
+
+        $this->entityLog->record(
+            LogSubjectType::Company,
+            (int) $company->id,
+            $actor,
+            LogAction::DataChanged,
+            [
+                'changes' => [
+                    ['field' => 'owner_user_id', 'old' => $oldOwnerId, 'new' => $ownerId],
+                ],
+                'reason' => 'deal_sync',
+            ],
+        );
+    }
+
+    /**
+     * Rule B: a point task (no linked deal) targeting this company reassigns
+     * `owner_user_id` to the task's assignee — UNLESS the company already has
+     * an open deal (the deal holds ownership; contract §5.3-B). The
+     * "has an open deal?" check is delegated to Sales (DealService, injected by
+     * the caller — a Crm service must never query `deals` directly, DDD
+     * boundary) so the caller passes the already-resolved boolean rather than
+     * this method reaching across domains itself.
+     *
+     * Idempotent (already the requested owner → no-op).
+     */
+    public function syncOwnerFromTask(Company $company, int $ownerId, bool $hasOpenDeal, ?User $actor = null): void
+    {
+        if ($hasOpenDeal) {
+            return;
+        }
+
+        if ((int) $company->owner_user_id === $ownerId) {
+            return;
+        }
+
+        $oldOwnerId = $company->owner_user_id;
+
+        $company->update(['owner_user_id' => $ownerId]);
+
+        $this->entityLog->record(
+            LogSubjectType::Company,
+            (int) $company->id,
+            $actor,
+            LogAction::DataChanged,
+            [
+                'changes' => [
+                    ['field' => 'owner_user_id', 'old' => $oldOwnerId, 'new' => $ownerId],
+                ],
+                'reason' => 'task',
+            ],
+        );
+    }
+
+    // =========================================================================
     // Client lifecycle (N5)
     // =========================================================================
 

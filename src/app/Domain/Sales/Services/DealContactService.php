@@ -75,8 +75,11 @@ class DealContactService
             ]);
 
             // Cross-domain: link contact to the deal's company via Crm service.
+            // A deal may have no company yet (instant-create flow) — skip the
+            // link rather than coercing null to 0, which would violate the
+            // crm_contact_company_links_company_id_foreign FK constraint.
             $contact = Contact::find($contactId);
-            if ($contact !== null) {
+            if ($contact !== null && $deal->company_id !== null) {
                 $this->contacts->linkCompany($contact, (int) $deal->company_id, []);
             }
 

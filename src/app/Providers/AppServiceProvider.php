@@ -95,7 +95,9 @@ use App\Domain\Onboarding\Policies\QuizOptionPolicy;
 use App\Domain\Onboarding\Policies\QuizPolicy;
 use App\Domain\Onboarding\Policies\QuizQuestionPolicy;
 use App\Domain\Sales\Events\DealCreated;
+use App\Domain\Sales\Events\DealOwnerChanged;
 use App\Domain\Sales\Events\DealStageChanged;
+use App\Domain\Sales\Listeners\SyncDealOwnershipListener;
 use App\Domain\Sales\Models\Deal;
 use App\Domain\Sales\Models\LostReason;
 use App\Domain\Sales\Models\MotivationCard;
@@ -339,6 +341,11 @@ class AppServiceProvider extends ServiceProvider
         // Telegram/webhook IO ever blocks the deal create / move web request.
         Event::listen(DealCreated::class, RunOnCreateAutomations::class);
         Event::listen(DealStageChanged::class, RunOnEnterStageAutomations::class);
+
+        // Deal Create 2.0 §5.4 — Rule A: a deal's owner change/claim drives its
+        // company + linked contacts' owner (SyncDealOwnershipListener writes
+        // ONLY through CompanyService/ContactService, never `deals` tables).
+        Event::listen(DealOwnerChanged::class, SyncDealOwnershipListener::class);
     }
 
     /**

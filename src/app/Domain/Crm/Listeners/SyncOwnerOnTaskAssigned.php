@@ -9,15 +9,43 @@ use App\Domain\Activity\Enums\ActivityType;
 use App\Domain\Activity\Events\ActivityAssigned;
 use App\Domain\Crm\Models\Company;
 use App\Domain\Crm\Models\Contact;
+use App\Domain\Crm\Services\ContactService;
+use App\Domain\Sales\Services\DealService;
 
 /**
- * SyncOwnerOnTaskAssigned (6.1) — when a task-like activity targeting a
- * Contact or Company gains (or changes) its responsible user, the target's
- * "owner" field is updated to match.
+ * SyncOwnerOnTaskAssigned (6.1, extended on the Contact side by Deal Create 2.0
+ * §5.3 Rule B — docs/specs/deal-create-2-contract.md) — when a task-like
+ * activity targeting a Contact or Company gains (or changes) its responsible
+ * user, the target's owner-like field(s) are updated to match.
  *
  * Mapping:
  *   target=contact  → contact.owner_id            = activity.responsible_id
+ *                      (task 6.1's field, NOW GATED by Rule B — skipped while
+ *                      the contact participates in an open deal, contract §5.3-B)
  *   target=company  → company.responsible_user_id = activity.responsible_id
+ *                      (task 6.1, UNGATED — the "current handler" field)
+ *
+ * Contact has only ONE owner-like column (owner_id) — task 6.1 already synced
+ * it unconditionally (pre-existing, tested behaviour: ActivityOwnerSyncTest).
+ * Rule B's "blocked by an open deal" gate is folded into THE SAME write via
+ * ContactService::syncOwnerFromTask (still writes owner_id, still idempotent) —
+ * every existing 6.1 Contact test creates no deal for its contact, so
+ * hasOpenDealForContact is false and the write proceeds exactly as before; the
+ * gate only changes behaviour for a contact genuinely in an open deal (Rule
+ * B's new scope), never regresses the old unconditional case.
+ *
+ * Company deliberately does NOT get a Rule B `owner_user_id` write here.
+ * ActivityOwnerSyncTest asserts the pre-existing, intentional 6.1 invariant
+ * that `company.owner_user_id` is NEVER touched by a task assignment (only
+ * `responsible_user_id` is — a distinct "current handler" column). The Deal
+ * Create 2.0 contract's Rule B, read literally, would also gate-sync
+ * `owner_user_id` on Company, but that directly contradicts this established,
+ * tested guarantee — Company's owner_user_id is the row-visibility-scope field
+ * and already has its own dedicated sync path (Rule A, DealOwnerChanged →
+ * CompanyService::syncOwnerFromDeal). Resolving the conflict by leaving
+ * Company's task-driven path untouched (6.1 as originally shipped) was judged
+ * safer than silently breaking a tested invariant; flag for backend-architect/
+ * product if Rule B was truly meant to also apply to Company.owner_user_id.
  *
  * Trigger: ActivityAssigned event, fired by ActivityService after:
  *   - create()  with a non-null responsible_id (previousResponsibleId = null)
@@ -34,11 +62,14 @@ use App\Domain\Crm\Models\Contact;
  *     by DealService; this listener never touches deals.
  *   - responsible_id must be non-null (no clear = ownership transfer).
  *   - Idempotent: if the target's owner already matches responsible_id, no
- *     UPDATE is issued (equality guard before touching the DB).
+ *     UPDATE is issued (equality guard, now inside ContactService for contact;
+ *     a direct scoped UPDATE guard for company's responsible_user_id).
  *
- * Anti-recursion: the listener writes directly via a scoped Eloquent ::query()
- * UPDATE — no Eloquent model events are fired, so the listener cannot trigger
- * itself in a loop (no ActivityAssigned is dispatched from this write path).
+ * DDD boundary: contact.owner_id is written ONLY through
+ * ContactService::syncOwnerFromTask (Rule B) — this listener never touches
+ * that column directly. company.responsible_user_id stays a direct scoped
+ * UPDATE (task 6.1's original shape, predates the DDD tightening and is not
+ * part of the Deal Create 2.0 contract).
  *
  * Authorization: this is a SYSTEM action. The new owner is set by the
  * ActivityService assignment logic, which has already enforced all visibility
@@ -53,6 +84,11 @@ use App\Domain\Crm\Models\Contact;
  */
 class SyncOwnerOnTaskAssigned
 {
+    public function __construct(
+        private readonly ContactService $contacts,
+        private readonly DealService $deals,
+    ) {}
+
     public function handle(ActivityAssigned $event): void
     {
         $activity = $event->activity;
@@ -96,20 +132,29 @@ class SyncOwnerOnTaskAssigned
     }
 
     /**
-     * Set contact.owner_id = $responsibleId unless it already matches
-     * (idempotency guard — avoids a spurious UPDATE and updated_at bump).
+     * Rule B on Contact: contact.owner_id ← responsible_id, UNLESS the contact
+     * participates in an open deal (contract §5.3-B). Delegates the write to
+     * ContactService::syncOwnerFromTask so `owner_id` has a single writer.
      */
     private function syncContact(int $contactId, int $responsibleId): void
     {
-        Contact::query()
-            ->whereKey($contactId)
-            ->where(fn ($q) => $q->whereNull('owner_id')->orWhere('owner_id', '!=', $responsibleId))
-            ->update(['owner_id' => $responsibleId]);
+        $contact = Contact::find($contactId);
+
+        if ($contact === null) {
+            return;
+        }
+
+        $this->contacts->syncOwnerFromTask(
+            $contact,
+            $responsibleId,
+            $this->deals->hasOpenDealForContact($contactId),
+        );
     }
 
     /**
      * Set company.responsible_user_id = $responsibleId unless it already
-     * matches (idempotency guard).
+     * matches (idempotency guard). Unchanged from task 6.1's original shape —
+     * owner_user_id is deliberately NOT touched here (see class docblock).
      */
     private function syncCompany(int $companyId, int $responsibleId): void
     {

@@ -685,6 +685,81 @@ class ContactService
             ->delete();
     }
 
+    // =========================================================================
+    // Owner sync (Deal Create 2.0 §5.3/§5.4, docs/specs/deal-create-2-contract.md)
+    // =========================================================================
+
+    /**
+     * Rule A: a deal's owner change (or a new deal's owner claiming its linked
+     * contacts) drives `crm_contacts.owner_id` — the deal is the source of
+     * truth. Called ONLY by SyncDealOwnershipListener (Sales domain event
+     * DealOwnerChanged) — ContactService is the single writer of `owner_id`
+     * (DDD boundary, contract §5.4). Mirrors CompanyService::syncOwnerFromDeal.
+     *
+     * Idempotent: already the requested owner → no-op, no log row.
+     */
+    public function syncOwnerFromDeal(Contact $contact, int $ownerId, ?User $actor = null): void
+    {
+        if ((int) $contact->owner_id === $ownerId) {
+            return;
+        }
+
+        $oldOwnerId = $contact->owner_id;
+
+        $contact->update(['owner_id' => $ownerId]);
+
+        $this->entityLog->record(
+            LogSubjectType::Contact,
+            (int) $contact->id,
+            $actor,
+            LogAction::DataChanged,
+            [
+                'changes' => [
+                    ['field' => 'owner_id', 'old' => $oldOwnerId, 'new' => $ownerId],
+                ],
+                'reason' => 'deal_sync',
+            ],
+        );
+    }
+
+    /**
+     * Rule B: a point task (no linked deal) targeting this contact reassigns
+     * `owner_id` to the task's assignee — UNLESS the contact already
+     * participates in an open deal (the deal holds ownership; contract
+     * §5.3-B). "Has an open deal?" is resolved by the caller via Sales
+     * (DealService::hasOpenDealForContact) — a Crm service never queries
+     * `deals` directly (DDD boundary). Mirrors CompanyService::syncOwnerFromTask.
+     *
+     * Idempotent (already the requested owner → no-op).
+     */
+    public function syncOwnerFromTask(Contact $contact, int $ownerId, bool $hasOpenDeal, ?User $actor = null): void
+    {
+        if ($hasOpenDeal) {
+            return;
+        }
+
+        if ((int) $contact->owner_id === $ownerId) {
+            return;
+        }
+
+        $oldOwnerId = $contact->owner_id;
+
+        $contact->update(['owner_id' => $ownerId]);
+
+        $this->entityLog->record(
+            LogSubjectType::Contact,
+            (int) $contact->id,
+            $actor,
+            LogAction::DataChanged,
+            [
+                'changes' => [
+                    ['field' => 'owner_id', 'old' => $oldOwnerId, 'new' => $ownerId],
+                ],
+                'reason' => 'task',
+            ],
+        );
+    }
+
     /**
      * Normalize a phone string to digits-only for the phone_normalized index column.
      * Returns null for empty/null input so the column remains NULL.

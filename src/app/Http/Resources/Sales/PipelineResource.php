@@ -24,6 +24,8 @@ class PipelineResource extends JsonResource
             'visible_role' => $this->visible_role,
             'is_active' => $this->is_active,
             'sort_order' => $this->sort_order,
+            // "Стадия для новых сделок" (Deal Create 2.0 §3.2) — int|null.
+            'default_stage_id' => $this->default_stage_id,
             'stages' => PipelineStageResource::collection($this->whenLoaded('stages')),
         ];
     }

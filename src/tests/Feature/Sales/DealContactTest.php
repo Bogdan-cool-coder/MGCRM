@@ -53,6 +53,34 @@ class DealContactTest extends TestCase
         ]);
     }
 
+    public function test_add_contact_to_company_less_deal_does_not_crash(): void
+    {
+        // Deal Create 2.0: instant-create deals start with company_id = null.
+        // Adding a contact must not attempt to link a company_id of 0 (which
+        // violates the crm_contact_company_links_company_id_foreign FK).
+        $pipeline = $this->seedSalesPipeline();
+        $user = User::factory()->create(['role' => Role::Manager]);
+        $deal = Deal::factory()->forOwner($user)->create([
+            'pipeline_id' => $pipeline->id,
+            'stage_id' => $this->stageCode($pipeline, 'new'),
+            'company_id' => null,
+        ]);
+        Sanctum::actingAs($user, ['*']);
+        $contact = Contact::factory()->create();
+
+        $this->postJson("/api/deals/{$deal->id}/contacts", ['contact_id' => $contact->id])
+            ->assertCreated()
+            ->assertJsonPath('data.contact.id', $contact->id);
+
+        $this->assertDatabaseHas('deal_contacts', [
+            'deal_id' => $deal->id,
+            'contact_id' => $contact->id,
+        ]);
+        $this->assertDatabaseMissing('crm_contact_company_links', [
+            'contact_id' => $contact->id,
+        ]);
+    }
+
     public function test_add_contact_unique_per_deal(): void
     {
         [$deal] = $this->setupDeal();

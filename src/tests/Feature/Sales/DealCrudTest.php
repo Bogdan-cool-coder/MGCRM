@@ -21,14 +21,37 @@ class DealCrudTest extends TestCase
     use RefreshDatabase;
     use SalesTestHelpers;
 
-    public function test_create_deal_requires_company_id(): void
+    public function test_create_deal_allows_null_company_id(): void
     {
+        // Deal Create 2.0 (docs/specs/deal-create-2-contract.md §1): company_id
+        // is no longer required — an instant-created deal may open with no
+        // company at all; the card highlights it for completion (frontend
+        // concern), the backend just accepts and persists company_id = null.
         $pipeline = $this->seedSalesPipeline();
         Sanctum::actingAs(User::factory()->create(['role' => Role::Manager]), ['*']);
 
         $this->postJson('/api/deals', [
             'pipeline_id' => $pipeline->id,
             'title' => 'No company',
+            'currency' => 'RUB',
+        ])->assertCreated()
+            ->assertJsonPath('data.company_id', null)
+            // company is eager-loaded unconditionally by the controller; the
+            // resource's whenLoaded('company', ...) resolves to null (the
+            // relation IS loaded, it just has no row) rather than omitting the
+            // key — the card must render this cleanly, not crash.
+            ->assertJsonPath('data.company', null);
+    }
+
+    public function test_create_deal_rejects_unknown_company_id(): void
+    {
+        $pipeline = $this->seedSalesPipeline();
+        Sanctum::actingAs(User::factory()->create(['role' => Role::Manager]), ['*']);
+
+        $this->postJson('/api/deals', [
+            'pipeline_id' => $pipeline->id,
+            'company_id' => 999999,
+            'title' => 'Bad company',
             'currency' => 'RUB',
         ])->assertStatus(422)->assertJsonValidationErrorFor('company_id');
     }
