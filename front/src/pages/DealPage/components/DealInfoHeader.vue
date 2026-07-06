@@ -2,7 +2,20 @@
   <div class="deal-header">
     <!-- ── Row 1: title + icon buttons ────────────────────────────────────────── -->
     <div class="deal-header__row1">
-      <h2 class="deal-header__title">{{ deal.title }}</h2>
+      <div class="deal-header__title-wrap">
+        <h2 class="deal-header__title">{{ deal.title }}</h2>
+        <!-- Needs-attention chip: shown while the title is still the auto-name. -->
+        <button
+          v-if="titleNeedsAttention"
+          type="button"
+          class="deal-header__attention-chip"
+          :aria-label="t('sales.deal.instant.needsTitle')"
+          @click="openRenameDialog"
+        >
+          <i class="pi pi-exclamation-circle deal-header__attention-chip-icon" />
+          {{ t('sales.deal.instant.needsTitle') }}
+        </button>
+      </div>
       <div class="deal-header__btns">
         <button class="deal-header__btn-icon" :aria-label="t('common.back')" @click="$emit('back')">
           <i class="pi pi-arrow-left" />
@@ -170,6 +183,14 @@ const toast = useToast()
 const confirm = useConfirm()
 const router = useRouter()
 const directoriesStore = useDirectoriesStore()
+
+// ── Needs-attention: title still the auto-name «Новая сделка» ────────────────────
+// Gone reactively once the manager renames the deal (§A.6). Amber = «дозаполни»,
+// not a validation error (deal is valid & saved).
+const titleNeedsAttention = computed((): boolean => {
+  const title = props.deal.title.trim()
+  return title === '' || title === t('sales.deal.instant.defaultTitle')
+})
 
 // ── Category badge ───────────────────────────────────────────────────────────────
 
@@ -346,8 +367,16 @@ function confirmDelete() {
   gap: $space-2;
 }
 
-.deal-header__title {
+.deal-header__title-wrap {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-1;
+}
+
+.deal-header__title {
   color: $sidebar-text-active;
   font-size: 18px; // stylelint-disable-line scale-unlimited/declaration-strict-value
   font-weight: $font-weight-semibold;
@@ -357,6 +386,37 @@ function confirmDelete() {
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.35;
+}
+
+// ── Needs-attention chip (amber-on-navy, readable in BOTH themes) ──────────────
+// Pill styled like .deal-header__tag-chip (translucent white tint on brand navy),
+// with the vivid nav-warning amber ($color-warning-badge) on the icon — the one
+// amber that reads on the #172747 brand header where surface tokens don't apply.
+.deal-header__attention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  background: rgba(255, 255, 255, 0.12); // decorative alpha tint on brand navy
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  color: rgba(255, 255, 255, 0.9); // brand nav overlay text
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  padding: 2px 8px;
+  border: none;
+  border-radius: $radius-pill;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+    background: rgba(255, 255, 255, 0.2); // brighter alpha on hover
+  }
+}
+
+.deal-header__attention-chip-icon {
+  font-size: $font-size-xs;
+  color: $color-warning-badge; // vivid nav-warning amber (#E8821E) — reads on navy
 }
 
 .deal-header__btns {

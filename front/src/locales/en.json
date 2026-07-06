@@ -1339,9 +1339,9 @@
       "title": "New Company",
       "sections": {
         "required": "Basic Information",
+        "contacts": "Contact details",
         "requisites": "Requisites",
-        "classification": "Classification",
-        "responsibility": "Responsible"
+        "classification": "Classification"
       },
       "cancelBtn": "Cancel",
       "saveBtn": "Create Company",
@@ -1349,7 +1349,14 @@
       "success": "Company created",
       "errors": {
         "nameRequired": "Company name is required",
-        "serverError": "Failed to create company"
+        "serverError": "Failed to create company",
+        "websiteRequired": "Website is required",
+        "websiteInvalid": "Invalid website format",
+        "addressRequired": "Address is required",
+        "phoneRequired": "Phone is required",
+        "companyTypeRequired": "Select company type",
+        "countryRequired": "Select a country",
+        "sourceRequired": "Select a source"
       }
     }
   },
@@ -2082,8 +2089,7 @@
           "stage": "Stage",
           "stagePlaceholder": "Initial stage",
           "currency": "Currency",
-          "owner": "Owner",
-          "expectedCloseDate": "Expected close date"
+          "owner": "Owner"
         },
         "save": "Create deal",
         "cancel": "Cancel",
@@ -2256,7 +2262,10 @@
           "plannedContract": "Planned contract",
           "plannedPayment": "Planned payment",
           "changeCompany": "Change company",
-          "companyDeleted": "Company deleted"
+          "companyDeleted": "Company deleted",
+          "searchOrCreateCompany": "Find or create a company",
+          "createCompany": "Create company",
+          "companyLinked": "Company linked"
         },
         "groups": {
           "products": "Products",
@@ -2466,41 +2475,11 @@
         "subscription": "Subscription",
         "perpetual": "Perpetual"
       },
-      "create": {
-        "title": "New Deal",
-        "sections": {
-          "required": "Basic Information",
-          "additional": "Additional"
-        },
-        "fields": {
-          "company": "Company",
-          "title": "Deal Title",
-          "pipeline": "Pipeline",
-          "currency": "Currency",
-          "stage": "Stage",
-          "owner": "Owner",
-          "expectedCloseDate": "Expected Close Date"
-        },
-        "stageAutoNote": "If not selected — will be placed in the first pipeline stage",
-        "createCompany": "+ Create company",
-        "cancelBtn": "Cancel",
-        "saveBtn": "Create Deal",
-        "saving": "Saving...",
-        "success": "Deal created",
-        "pendingHint": "Save the deal to unlock the activity feed and interaction history.",
-        "hint": {
-          "title": "Tip",
-          "tip1": "After creation you can add contacts, documents and tasks",
-          "tip2": "Stage will be automatically set to the first in the pipeline if not selected",
-          "tip3": "Currency and pipeline can be changed after creation"
-        },
-        "errors": {
-          "companyRequired": "Select a company",
-          "titleRequired": "Enter deal title (at least 2 characters)",
-          "pipelineRequired": "Select a pipeline",
-          "currencyRequired": "Select a currency",
-          "serverError": "Failed to create deal"
-        }
+      "instant": {
+        "defaultTitle": "New deal",
+        "needsTitle": "Name this deal",
+        "needsCompany": "Link a company",
+        "noPipeline": "No pipeline configured"
       }
     },
     "move": {
@@ -2579,7 +2558,16 @@
         "errorLastSales": "Cannot delete the only sales pipeline."
       },
       "activeBadge": "active",
-      "selectPlaceholder": "Select pipeline"
+      "selectPlaceholder": "Select pipeline",
+      "params": {
+        "title": "Pipeline parameters"
+      },
+      "defaultStage": {
+        "label": "Stage for new deals",
+        "autoNote": "Automatic — first stage",
+        "hint": "All new deals land in this stage. The manager doesn't pick a stage on creation.",
+        "emptyHint": "Add at least one working stage."
+      }
     },
     "stageEditor": {
       "addStage": "Add stage",
@@ -2630,7 +2618,7 @@
         "title": "Title",
         "currency": "Currency",
         "contract_id": "Contract",
-        "expected_close_date": "Exp. close date",
+        "expected_close_date": "Contract plan",
         "expected_sign_date": "Exp. sign date",
         "expected_payment_date": "Exp. payment date"
       },
@@ -3565,7 +3553,7 @@
       "by_department": "By department"
     },
     "dateField": {
-      "expected_close_date": "Close date",
+      "expected_close_date": "Contract plan",
       "expected_sign_date": "Sign date",
       "expected_payment_date": "Payment date"
     },
@@ -4560,7 +4548,7 @@
         "company_id": "Company",
         "stage_id": "Stage",
         "pipeline_id": "Pipeline",
-        "expected_close_date": "Expected close date",
+        "expected_close_date": "Contract plan",
         "expected_sign_date": "Expected sign date",
         "expected_payment_date": "Expected payment date",
         "signed_at": "Sign date",

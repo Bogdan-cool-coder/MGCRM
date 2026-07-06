@@ -82,7 +82,7 @@ function adaptBoardResponse(raw: BoardRawResponseDto): BoardResponseDto {
       next_task: d.next_task ?? null,
       primary_product: d.primary_product ?? null,
       tags: d.tags ?? [],
-      company: { id: d.company_id, name: d.company_name ?? '' },
+      company: d.company_id != null ? { id: d.company_id, name: d.company_name ?? '' } : null,
       owner: d.owner
         ? { id: d.owner.id, name: d.owner.full_name, avatar_path: null }
         : { id: 0, name: '', avatar_path: null },

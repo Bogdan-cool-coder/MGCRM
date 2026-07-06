@@ -58,6 +58,15 @@
 
         <!-- Right content column -->
         <div class="pipeline-settings-page__form-content">
+          <!-- Pipeline parameters — «Стадия для новых сделок» -->
+          <PipelineParamsPanel
+            v-if="selectedPipelineId !== null"
+            :model-value="selectedPipeline?.default_stage_id ?? null"
+            :stages="stages"
+            :loading="stagesLoading"
+            @save="handleSaveDefaultStage"
+          />
+
           <!-- Stages editor section -->
           <StageEditorList
             v-if="selectedPipelineId !== null"
@@ -173,6 +182,7 @@ import Select from 'primevue/select'
 import type { SelectChangeEvent } from 'primevue/select'
 import PipelineSettingsToolbar from './components/PipelineSettingsToolbar.vue'
 import PipelineList from './components/PipelineList.vue'
+import PipelineParamsPanel from './components/PipelineParamsPanel.vue'
 import StageEditorList from './components/StageEditorList.vue'
 import CreatePipelineDialog from './components/CreatePipelineDialog.vue'
 import CreateStageDialog from './components/CreateStageDialog.vue'
@@ -255,6 +265,7 @@ const {
   updateStage,
   deleteStage,
   reorderStages,
+  updateDefaultStage,
 } = usePipelineSettings()
 
 const pipelineAutomations = usePipelineAutomations()
@@ -442,6 +453,10 @@ async function handleToggleHidden(id: number, value: boolean) {
 
 async function handleReorder(ordered: PipelineStageDto[]) {
   await reorderStages(ordered)
+}
+
+async function handleSaveDefaultStage(stageId: number | null) {
+  await updateDefaultStage(stageId)
 }
 
 // ─── Automation handlers ──────────────────────────────────────────────────────

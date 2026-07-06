@@ -61,7 +61,7 @@
         @title-change="onCardTitleChange"
         @load-more="onLoadMore"
         @create="onCreateDeal()"
-        @create-in-stage="onCreateDeal($event)"
+        @create-in-stage="onCreateDeal()"
         @drag-start="onBoardDragStart"
         @drag-end="onBoardDragEnd"
       />
@@ -150,6 +150,7 @@ import { useDealsList } from './composables/useDealsList'
 import { useDealsKpi } from './composables/useDealsKpi'
 import { useSalesStore } from '@/stores/salesStore'
 import { useDirectoriesStore } from '@/stores/directories'
+import { useCreateDeal } from '@/composables/sales/useCreateDeal'
 import { salesApi } from '@/api/sales'
 import { useUsersCache } from '@/composables/crm/useUsersCache'
 import { useAsyncResource } from '@/composables/async/useAsyncResource'
@@ -444,13 +445,18 @@ const {
 const kpiComposable = useDealsKpi(filters, () => currentPipelineId.value)
 const { kpi, loading: kpiLoading } = kpiComposable
 
-// ── Create deal — route to full card ───────────────────────────────────────────
+// ── Create deal — instant-create → redirect to full card ─────────────────────────
+// Deal Create 2.0: no intermediate form. The «+ in stage» button intentionally
+// ignores the clicked stage (ОВ-2) — new deals always land in the pipeline's
+// default stage. The unused stageId param is kept so the kanban's
+// @create-in-stage="onCreateDeal($event)" wiring stays valid.
 
-function onCreateDeal(stageId?: number) {
-  const query: Record<string, string> = {}
-  if (currentPipelineId.value) query.pipeline_id = String(currentPipelineId.value)
-  if (stageId) query.stage_id = String(stageId)
-  void router.push({ path: '/deals/new', query })
+const { createDealInstant } = useCreateDeal()
+
+// The kanban «+ in stage» button intentionally ignores the clicked stage (ОВ-2):
+// new deals always land in the pipeline's default stage, so no stage arg is taken.
+function onCreateDeal() {
+  void createDealInstant({ pipeline_id: currentPipelineId.value })
 }
 
 // ── Move dialog ─────────────────────────────────────────────────────────────────

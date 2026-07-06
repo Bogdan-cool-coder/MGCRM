@@ -49,6 +49,8 @@ export interface PipelineDto {
   sort_order: number
   stages: PipelineStageDto[]
   graph_layout: GraphLayout | null
+  /** «Стадия для новых сделок». null → fallback to first non-won/lost/hidden stage. */
+  default_stage_id: number | null
   created_at: string | null
   updated_at: string | null
 }
@@ -75,7 +77,8 @@ export type DealStatus = 'open' | 'won' | 'lost'
 export interface DealDto {
   id: number
   title: string
-  company: CompanyRefDto
+  /** null for a freshly instant-created deal with no company linked yet (Deal Create 2.0). */
+  company: CompanyRefDto | null
   pipeline: { id: number; name: string; kind: string | null }
   stage: PipelineStageDto
   owner: UserRefDto
@@ -218,7 +221,8 @@ export interface PrimaryProductDto {
 export interface DealCardDto {
   id: number
   title: string
-  company: CompanyRefDto
+  /** null when the board card's deal has no company linked (Deal Create 2.0). */
+  company: CompanyRefDto | null
   stage_id: number
   owner: UserRefDto
   amount: number
@@ -285,7 +289,7 @@ export interface BoardRawColumnDto {
     amount: number
     currency: string
     stage_id: number
-    company_id: number
+    company_id: number | null
     company_name: string | null
     owner: { id: number; full_name: string } | null
     stage_changed_at: string | null
@@ -389,12 +393,18 @@ export interface SalesPaginatedResponse<T> {
 // ─── Payloads ─────────────────────────────────────────────────────────────────
 
 export interface CreateDealPayload {
-  company_id: number
-  title: string
+  /**
+   * Only `pipeline_id` is required (Deal Create 2.0 instant-create). The server
+   * fills defaults for the rest: title → «Новая сделка», stage → pipeline
+   * default_stage_id (fallback first stage), owner → auth user, currency → default.
+   * `company_id` may be omitted/null.
+   */
   pipeline_id: number
+  company_id?: number | null
+  title?: string
   stage_id?: number
-  currency: string
-  owner_user_id: number
+  currency?: string
+  owner_user_id?: number
   expected_close_date?: string | null
 }
 
@@ -462,6 +472,8 @@ export interface UpdatePipelinePayload {
   is_active?: boolean
   sort_order?: number
   graph_layout?: GraphLayout | null
+  /** «Стадия для новых сделок» — nullable; stage must belong to this pipeline. */
+  default_stage_id?: number | null
 }
 
 export interface CreateStagePayload {

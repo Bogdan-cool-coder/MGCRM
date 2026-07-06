@@ -6,29 +6,16 @@
       'deal-page-v2--tablet': isTablet,
     }"
   >
-    <!-- ── Create mode ──────────────────────────────────────────────────── -->
+    <!-- ── Instant-create shim (/deals/new deep-link) ────────────────────── -->
+    <!-- Deal Create 2.0: the /deals/new form is gone. Landing here (bookmark,
+         command palette, quick action) triggers an instant POST + redirect into
+         the created card. We show a centered spinner meanwhile — never a form. -->
     <template v-if="isCreateMode">
-      <!-- Left panel only — form, no feed/tabs -->
-      <div class="deal-page-v2__create-wrap">
-        <div class="deal-page-v2__create-header">
-          <Button icon="pi pi-arrow-left" text :aria-label="t('common.back')" @click="router.back()" />
-          <span class="deal-page-v2__create-title">{{ t('sales.deal.create.title') }}</span>
-        </div>
-        <div class="deal-page-v2__create-body">
-          <DealCreateForm
-            :initial-company-id="createInitialCompanyId"
-            :initial-company-name="createInitialCompanyName"
-            :initial-pipeline-id="createInitialPipelineId"
-            :initial-stage-id="createInitialStageId"
-            @saved="onDealSaved"
-            @cancel="router.back()"
-          />
-          <!-- Right: pending hint (desktop only) -->
-          <div class="deal-page-v2__create-hint">
-            <i class="pi pi-info-circle deal-page-v2__create-hint-icon" />
-            <p class="deal-page-v2__create-hint-text">{{ t('sales.deal.create.pendingHint') }}</p>
-          </div>
-        </div>
+      <div class="deal-page-v2__shim">
+        <ProgressSpinner
+          class="deal-page-v2__shim-spinner"
+          :aria-label="t('common.loading')"
+        />
       </div>
     </template>
 
@@ -292,6 +279,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Drawer from 'primevue/drawer'
 import SelectButton from 'primevue/selectbutton'
+import ProgressSpinner from 'primevue/progressspinner'
 import DealInfoPanel from './components/DealInfoPanel.vue'
 import DealFeed from './components/DealFeed.vue'
 import DealComposer from './components/DealComposer.vue'
@@ -299,7 +287,7 @@ import DealAddProductDialog from './components/DealAddProductDialog.vue'
 import DealAddContactDialog from './components/DealAddContactDialog.vue'
 import MoveDealDialog from './components/MoveDealDialog.vue'
 import OpenTasksList from '@/components/crm/entity/OpenTasksList.vue'
-import DealCreateForm from './components/DealCreateForm.vue'
+import { useCreateDeal } from '@/composables/sales/useCreateDeal'
 import { useDealPage } from './composables/useDealPage'
 import { useDealProducts } from './composables/useDealProducts'
 import { useDealContacts } from './composables/useDealContacts'
@@ -322,32 +310,26 @@ const route = useRoute()
 const toast = useToast()
 const salesStore = useSalesStore()
 
-// ── Create mode ───────────────────────────────────────────────────────────────
+// ── Instant-create shim (/deals/new deep-link) ────────────────────────────────
+// Deal Create 2.0: the create form is removed. When the route is DealCreate we
+// immediately POST a deal (server defaults) and redirect into the card. The shim
+// template shows a spinner during this hop.
 const isCreateMode = computed(() => route.name === 'DealCreate')
 
-const createInitialCompanyId = computed(() =>
-  isCreateMode.value && route.query.company_id
-    ? Number(route.query.company_id)
-    : null,
-)
-const createInitialCompanyName = computed(() =>
-  isCreateMode.value && typeof route.query.company_name === 'string'
-    ? route.query.company_name
-    : null,
-)
-const createInitialPipelineId = computed(() =>
-  isCreateMode.value && route.query.pipeline_id
-    ? Number(route.query.pipeline_id)
-    : null,
-)
-const createInitialStageId = computed(() =>
-  isCreateMode.value && route.query.stage_id
-    ? Number(route.query.stage_id)
-    : null,
-)
+const { createDealInstant } = useCreateDeal()
 
-function onDealSaved(created: import('@/entities/sales').DealDto) {
-  void router.replace(`/deals/${created.id}`)
+async function runInstantCreateShim() {
+  const rawPipeline = route.query.pipeline_id
+  const rawCompany = route.query.company_id
+  const pipelineId = typeof rawPipeline === 'string' && rawPipeline !== '' ? Number(rawPipeline) : null
+  const companyId = typeof rawCompany === 'string' && rawCompany !== '' ? Number(rawCompany) : null
+  const created = await createDealInstant({
+    pipeline_id: Number.isFinite(pipelineId) ? pipelineId : null,
+    company_id: Number.isFinite(companyId) ? companyId : null,
+  })
+  // On failure (e.g. no pipeline) createDealInstant already toasted; leave the
+  // user on /deals list so they are not stuck on a spinner.
+  if (!created) void router.replace('/deals')
 }
 
 // ── Breakpoints ────────────────────────────────────────────────────────────────
@@ -619,6 +601,52 @@ async function bootstrapDeal() {
     ])
 
     void loadUsersCache()
+
+    // Deal Create 2.0 post-redirect links (from instant-create / returnTo flow).
+    await applyPendingLinks()
+  }
+}
+
+// ── Deal Create 2.0: post-redirect auto-links ─────────────────────────────────
+// After an instant-create redirect a card may carry a pending link in the query:
+//   ?link_contact=<id>  — link the contact that triggered create (from a contact card)
+//   ?link_company=<id>  — link the company just created via «+ Создать компанию»
+// Both are applied once, then stripped from the URL so a reload/back can't re-fire.
+
+async function applyPendingLinks() {
+  const rawContact = route.query.link_contact
+  const rawCompany = route.query.link_company
+  const contactId = typeof rawContact === 'string' && rawContact !== '' ? Number(rawContact) : null
+  const companyId = typeof rawCompany === 'string' && rawCompany !== '' ? Number(rawCompany) : null
+
+  let linked = false
+
+  if (Number.isInteger(contactId) && contactId! > 0) {
+    try {
+      await dealContactsComposable.add({ contact_id: contactId!, is_primary: true })
+      linked = true
+    } catch {
+      // non-critical — leave the card usable, user can link manually
+    }
+  }
+
+  if (Number.isInteger(companyId) && companyId! > 0 && deal.value) {
+    try {
+      const updated = await salesApi.updateDeal(deal.value.id, { company_id: companyId! })
+      updateDealLocal({ company: updated.company, department_id: updated.department_id, currency: updated.currency })
+      toast.add({ severity: 'success', summary: t('sales.deal.info.fields.companyLinked'), life: 2500 })
+      linked = true
+    } catch {
+      // non-critical
+    }
+  }
+
+  if (linked) {
+    // Strip the one-shot query params so a reload can't re-link.
+    const cleaned = { ...route.query }
+    delete cleaned.link_contact
+    delete cleaned.link_company
+    void router.replace({ path: `/deals/${dealId.value}`, query: cleaned })
   }
 }
 
@@ -677,8 +705,12 @@ watch(
 )
 
 onMounted(async () => {
-  // In create mode we don't need to load an existing deal
-  if (isCreateMode.value) return
+  // Deal Create 2.0: /deals/new is an instant-create shim — POST + redirect into
+  // the created card (the route watcher then bootstraps + subscribes realtime).
+  if (isCreateMode.value) {
+    await runInstantCreateShim()
+    return
+  }
   // bootstrapDeal handles lost-reasons, deal load, stages, sub-resources.
   // The deal load rethrows on 403/404 (foreign or missing deal). bootstrapDeal
   // swallows it — error.value drives the error template, preventing false-positive
@@ -703,67 +735,19 @@ onMounted(async () => {
   }
 }
 
-// ── Create mode layout ────────────────────────────────────────────────────────
+// ── Instant-create shim (spinner while /deals/new POSTs + redirects) ──────────
 
-.deal-page-v2__create-wrap {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-}
-
-.deal-page-v2__create-header {
+.deal-page-v2__shim {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: $space-3;
-  padding: $space-4 $space-5;
-  border-bottom: 1px solid $surface-200;
-  background: $primary-900;
-  flex-shrink: 0;
-
-  .app-dark & {
-    border-bottom-color: var(--p-surface-200);
-  }
-}
-
-.deal-page-v2__create-title {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $surface-0;
-}
-
-.deal-page-v2__create-body {
-  display: flex;
-  flex: 1;
-  gap: $space-6;
-  padding: $space-4;
-}
-
-.deal-page-v2__create-hint {
-  flex: 1;
-  display: none;
-  align-items: flex-start;
   justify-content: center;
-  gap: $space-3;
-  padding: $space-8;
-  color: var(--p-text-muted-color);
-
-  @media (min-width: 1024px) {
-    display: flex;
-  }
+  min-height: 60vh;
 }
 
-.deal-page-v2__create-hint-icon {
-  font-size: $font-size-xl;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.deal-page-v2__create-hint-text {
-  font-size: $font-size-sm;
-  line-height: $line-height-relaxed;
-  max-width: 280px;
+.deal-page-v2__shim-spinner {
+  width: 48px;
+  height: 48px;
 }
 
 .deal-page-v2 {

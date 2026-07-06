@@ -101,14 +101,17 @@
         <button class="entity-header__btn-icon" :aria-label="t('common.back')" @click="emit('back')">
           <i class="pi pi-arrow-left" />
         </button>
+        <!-- Hide the ⋮ trigger entirely when there are no actions (e.g. create
+             pages pass menu-items=[]) — an empty popup button is dead UI. -->
         <button
+          v-if="menuItems.length > 0"
           class="entity-header__btn-icon"
           :aria-label="t('common.actions')"
           @click="menuRef?.toggle($event)"
         >
           <i class="pi pi-ellipsis-v" />
         </button>
-        <EntityActionMenu ref="menuRef" :items="menuItems" />
+        <EntityActionMenu v-if="menuItems.length > 0" ref="menuRef" :items="menuItems" />
       </div>
     </div>
   </div>

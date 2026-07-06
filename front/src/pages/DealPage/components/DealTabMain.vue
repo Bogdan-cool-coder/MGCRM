@@ -28,15 +28,21 @@
         </div>
       </div>
 
-      <!-- Компания — link + editable picker -->
-      <div class="deal-tab-main__quick-row">
-        <span class="deal-tab-main__quick-label">{{ t('sales.deal.info.fields.company') }}</span>
+      <!-- Компания — three states: linked · needs-attention (null) · editing -->
+      <div
+        class="deal-tab-main__quick-row"
+        :class="{ 'deal-tab-main__quick-row--needs-attention': companyNeedsAttention }"
+      >
+        <span class="deal-tab-main__quick-label">
+          <i v-if="companyNeedsAttention" class="pi pi-exclamation-circle deal-tab-main__attention-icon" />
+          {{ t('sales.deal.info.fields.company') }}
+        </span>
         <div class="deal-tab-main__quick-value deal-tab-main__quick-value--company" @click.stop>
-          <div v-if="!companyPickerOpen" class="deal-tab-main__company-row">
-            <RouterLink v-if="deal.company" :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
+          <!-- State: linked (company present, picker closed) -->
+          <div v-if="deal.company && !companyPickerOpen" class="deal-tab-main__company-row">
+            <RouterLink :to="`/companies/${deal.company.id}`" class="deal-tab-main__company-link">
               {{ deal.company.name }}
             </RouterLink>
-            <span v-else class="deal-tab-main__company-deleted">{{ t('sales.deal.info.fields.companyDeleted') }}</span>
             <button
               class="deal-tab-main__company-edit-btn"
               type="button"
@@ -47,26 +53,45 @@
             </button>
             <i v-if="companySaving" class="pi pi-spin pi-spinner deal-tab-main__company-saving" />
           </div>
-          <!-- Company remote search (PrimeVue AutoComplete) -->
+
+          <!-- State: needs-attention (company === null) OR editing → AutoComplete -->
           <div v-else ref="companyAcWrap" class="deal-tab-main__company-ac-wrap">
             <AutoComplete
               v-model="companySelection"
               :suggestions="companyOptions"
               option-label="name"
               class="deal-tab-main__company-ac"
-              dropdown
               complete-on-focus
               force-selection
               :loading="companySearching"
               :min-length="0"
               :delay="250"
               append-to="body"
-              :placeholder="t('common.search_placeholder')"
+              :placeholder="companyNeedsAttention
+                ? t('sales.deal.info.fields.searchOrCreateCompany')
+                : t('common.search_placeholder')"
               @complete="onCompanyComplete($event.query)"
               @option-select="selectCompany($event.value)"
-              @blur="companyPickerOpen = false"
-            />
+              @blur="onCompanyAcBlur"
+            >
+              <template #footer>
+                <button
+                  type="button"
+                  class="deal-tab-main__company-create-btn"
+                  @mousedown.prevent="goCreateCompany"
+                >
+                  <i class="pi pi-plus deal-tab-main__company-create-icon" />
+                  {{ t('sales.deal.info.fields.createCompany') }}
+                </button>
+              </template>
+            </AutoComplete>
+            <i v-if="companySaving" class="pi pi-spin pi-spinner deal-tab-main__company-saving" />
           </div>
+
+          <!-- Attention hint below the field -->
+          <small v-if="companyNeedsAttention" class="deal-tab-main__attention-hint">
+            {{ t('sales.deal.instant.needsCompany') }}
+          </small>
         </div>
       </div>
 
@@ -166,7 +191,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import AutoComplete from 'primevue/autocomplete'
 import DealFieldGroup from './DealFieldGroup.vue'
 import DealFieldRow from './DealFieldRow.vue'
@@ -212,6 +237,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useToast()
+const router = useRouter()
 
 // C1: plan dates must not allow past dates
 const todayIso = computed(() => {
@@ -291,6 +317,9 @@ const lastCompanyQuery = ref('')
 const companyMutation = useMutation<DealDto>()
 const companySaving = computed(() => companyMutation.isPending.value)
 
+// Required-attention highlight: gone the moment a company is linked (reactive).
+const companyNeedsAttention = computed(() => props.deal.company === null)
+
 function openCompanyPicker() {
   companyPickerOpen.value = true
   companySelection.value = null
@@ -299,6 +328,24 @@ function openCompanyPicker() {
   nextTick(() => {
     companyAcWrap.value?.querySelector('input')?.focus()
   })
+}
+
+/**
+ * Blur closes the editing picker — BUT when the company is still null the field
+ * IS the persistent needs-attention control (§B.1), so it must stay in place.
+ */
+function onCompanyAcBlur() {
+  if (props.deal.company !== null) {
+    companyPickerOpen.value = false
+  }
+}
+
+/**
+ * «+ Создать компанию» → /companies/new?returnTo=deal-{id}. CompanyPage returns
+ * to this card with ?link_company=<newId> on save (auto-link) or bare on cancel.
+ */
+function goCreateCompany() {
+  void router.push({ path: '/companies/new', query: { returnTo: `deal-${props.deal.id}` } })
 }
 
 async function onCompanyComplete(query: string) {
@@ -649,13 +696,6 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   }
 }
 
-.deal-tab-main__company-deleted {
-  font-size: $font-size-sm;
-  color: var(--p-text-muted-color);
-  font-style: italic;
-  padding: $space-1 $space-2;
-}
-
 .deal-tab-main__company-edit-btn {
   background: none;
   border: none;
@@ -686,6 +726,9 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
 .deal-tab-main__company-ac-wrap {
   width: 100%;
   max-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: $space-1;
 }
 
 .deal-tab-main__company-ac {
@@ -694,5 +737,83 @@ watch(() => props.deal.company?.id, (newId, oldId) => {
   :deep(.p-autocomplete-input) {
     width: 100%;
   }
+}
+
+// ── Needs-attention (required field not yet filled) ──────────────────────────
+// Amber = «требует внимания / дозаполни» (deal is valid & saved, not an error).
+// Red is reserved for validation errors. Tokens invert correctly in dark.
+.deal-tab-main__quick-row--needs-attention {
+  align-items: start;
+  background: var(--p-amber-50);
+  border-left: 2px solid var(--p-amber-400);
+  border-radius: $radius-sm;
+  padding-top: $space-1;
+  padding-bottom: $space-1;
+
+  .app-dark & {
+    background: var(--p-amber-950);
+  }
+
+  // Label sits at the top of the (now taller) cell alongside its icon.
+  .deal-tab-main__quick-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding-top: $space-1;
+  }
+}
+
+.deal-tab-main__attention-icon {
+  font-size: $font-size-xs;
+  color: var(--p-amber-600);
+
+  .app-dark & {
+    color: var(--p-amber-400);
+  }
+}
+
+.deal-tab-main__attention-hint {
+  width: 100%;
+  font-size: $font-size-xs;
+  color: var(--p-amber-700);
+
+  .app-dark & {
+    color: var(--p-amber-300);
+  }
+}
+
+// ── «+ Создать компанию» footer button (one plus: icon only) ─────────────────
+.deal-tab-main__company-create-btn {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  padding: $space-2 $space-3;
+  border: none;
+  background: transparent;
+  color: var(--p-primary-color);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  border-top: 1px solid var(--p-surface-200);
+  text-align: left;
+  transition: background var(--app-transition-fast);
+
+  &:hover {
+    background: var(--p-surface-50);
+  }
+
+  .app-dark & {
+    color: var(--p-primary-300);
+    border-top-color: var(--p-surface-300);
+
+    &:hover {
+      background: var(--p-surface-100);
+    }
+  }
+}
+
+.deal-tab-main__company-create-icon {
+  font-size: $font-size-xs;
 }
 </style>

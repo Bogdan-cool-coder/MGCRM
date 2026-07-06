@@ -1339,9 +1339,9 @@
       "title": "Новая компания",
       "sections": {
         "required": "Основная информация",
+        "contacts": "Контактные данные",
         "requisites": "Реквизиты",
-        "classification": "Классификация",
-        "responsibility": "Ответственный"
+        "classification": "Классификация"
       },
       "cancelBtn": "Отмена",
       "saveBtn": "Создать компанию",
@@ -1349,7 +1349,14 @@
       "success": "Компания создана",
       "errors": {
         "nameRequired": "Укажите название компании",
-        "serverError": "Не удалось создать компанию"
+        "serverError": "Не удалось создать компанию",
+        "websiteRequired": "Укажите сайт",
+        "websiteInvalid": "Неверный формат сайта",
+        "addressRequired": "Укажите адрес",
+        "phoneRequired": "Укажите телефон",
+        "companyTypeRequired": "Выберите тип компании",
+        "countryRequired": "Выберите страну",
+        "sourceRequired": "Выберите источник"
       }
     }
   },
@@ -2082,8 +2089,7 @@
           "stage": "Стадия",
           "stagePlaceholder": "Начальная стадия",
           "currency": "Валюта",
-          "owner": "Ответственный",
-          "expectedCloseDate": "Ожидаемая дата закрытия"
+          "owner": "Ответственный"
         },
         "save": "Создать сделку",
         "cancel": "Отмена",
@@ -2256,7 +2262,10 @@
           "plannedContract": "План договора",
           "plannedPayment": "План оплаты",
           "changeCompany": "Изменить компанию",
-          "companyDeleted": "Компания удалена"
+          "companyDeleted": "Компания удалена",
+          "searchOrCreateCompany": "Найдите или создайте компанию",
+          "createCompany": "Создать компанию",
+          "companyLinked": "Компания привязана"
         },
         "groups": {
           "products": "Продукты",
@@ -2466,41 +2475,11 @@
         "subscription": "Подписка",
         "perpetual": "Вечная"
       },
-      "create": {
-        "title": "Новая сделка",
-        "sections": {
-          "required": "Основная информация",
-          "additional": "Дополнительно"
-        },
-        "fields": {
-          "company": "Компания",
-          "title": "Название сделки",
-          "pipeline": "Воронка",
-          "currency": "Валюта",
-          "stage": "Стадия",
-          "owner": "Ответственный",
-          "expectedCloseDate": "Планируемая дата закрытия"
-        },
-        "stageAutoNote": "Если не выбрана — попадёт в первую стадию воронки",
-        "createCompany": "+ Создать компанию",
-        "cancelBtn": "Отмена",
-        "saveBtn": "Создать сделку",
-        "saving": "Сохранение...",
-        "success": "Сделка создана",
-        "pendingHint": "Сохраните сделку, чтобы появилась лента событий и история взаимодействий.",
-        "hint": {
-          "title": "Подсказка",
-          "tip1": "После создания вы можете добавить контакты, документы и задачи",
-          "tip2": "Стадия будет установлена автоматически на первую в воронке, если не выбрана",
-          "tip3": "Валюту и воронку можно изменить после создания"
-        },
-        "errors": {
-          "companyRequired": "Выберите компанию",
-          "titleRequired": "Укажите название сделки (минимум 2 символа)",
-          "pipelineRequired": "Выберите воронку",
-          "currencyRequired": "Выберите валюту",
-          "serverError": "Не удалось создать сделку"
-        }
+      "instant": {
+        "defaultTitle": "Новая сделка",
+        "needsTitle": "Дайте сделке название",
+        "needsCompany": "Привяжите компанию",
+        "noPipeline": "Не настроена ни одна воронка"
       }
     },
     "move": {
@@ -2579,7 +2558,16 @@
         "errorLastSales": "Нельзя удалить единственную воронку продаж."
       },
       "activeBadge": "активная",
-      "selectPlaceholder": "Выберите воронку"
+      "selectPlaceholder": "Выберите воронку",
+      "params": {
+        "title": "Параметры воронки"
+      },
+      "defaultStage": {
+        "label": "Стадия для новых сделок",
+        "autoNote": "Автоматически — первая стадия",
+        "hint": "В эту стадию попадают все новые сделки. Менеджер стадию при создании не выбирает.",
+        "emptyHint": "Добавьте хотя бы одну рабочую стадию."
+      }
     },
     "stageEditor": {
       "addStage": "Добавить этап",
@@ -2630,7 +2618,7 @@
         "title": "Название",
         "currency": "Валюта",
         "contract_id": "Договор",
-        "expected_close_date": "Ожид. дата закрытия",
+        "expected_close_date": "План договора",
         "expected_sign_date": "Ожид. дата подписания",
         "expected_payment_date": "Ожид. дата оплаты"
       },
@@ -3565,7 +3553,7 @@
       "by_department": "По отделу"
     },
     "dateField": {
-      "expected_close_date": "Дата закрытия",
+      "expected_close_date": "План договора",
       "expected_sign_date": "Дата подписания",
       "expected_payment_date": "Дата оплаты"
     },
@@ -4560,7 +4548,7 @@
         "company_id": "Компания",
         "stage_id": "Стадия",
         "pipeline_id": "Воронка",
-        "expected_close_date": "Планируемая дата закрытия",
+        "expected_close_date": "План договора",
         "expected_sign_date": "Планируемая дата подписания",
         "expected_payment_date": "Планируемая дата оплаты",
         "signed_at": "Дата подписания",

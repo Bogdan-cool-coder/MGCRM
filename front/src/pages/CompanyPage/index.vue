@@ -553,6 +553,7 @@ import HoldingTree from './components/HoldingTree.vue'
 import { useCompanyPageData } from './composables/useCompanyPageData'
 import { useCompanyPageActions } from './composables/useCompanyPageActions'
 import { useBreakpoints } from '@/composables/useBreakpoints'
+import { useCreateDeal } from '@/composables/sales/useCreateDeal'
 import { companiesApi } from '@/api/crm/companies'
 import { getApiErrorMessage } from '@/utils/errors'
 import { formatMoney } from '@/utils/chartFormatters'
@@ -566,6 +567,7 @@ const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const userStore = useUserStore()
+const { createDealInstant } = useCreateDeal()
 
 // ── Create mode ───────────────────────────────────────────────────────────────
 const isCreateMode = computed(() => route.name === 'CompanyCreate')
@@ -868,13 +870,10 @@ function goToTab(tab: string) {
 
 function onCreateDeal() {
   if (!company.value) return
-  void router.push({
-    path: '/deals/new',
-    query: {
-      company_id: String(company.value.id),
-      company_name: company.value.name,
-    },
-  })
+  // Deal Create 2.0 instant-create: POST with this company pre-linked, then
+  // redirect straight into the new card (no intermediate form). Pipeline is the
+  // default sales pipeline (resolved inside the helper).
+  void createDealInstant({ company_id: company.value.id })
 }
 
 // ── Disconnect / Reconnect ────────────────────────────────────────────────────
@@ -1075,17 +1074,37 @@ function onSubmitEmployee() {
   }
 }
 
+// ── returnTo discriminator (Deal Create 2.0) ───────────────────────────────────
+// From a deal card the «+ Создать компанию» footer navigates here with
+// ?returnTo=deal-{id}. On cancel we return to that card; on save we return with
+// ?link_company={newId} so the card auto-links the company (§B.4). The legacy
+// literal `deal-new` (the removed /deals/new form) now soft-falls back to the
+// deals list so old bookmarks don't 404.
+
+/** Returns the deal id when returnTo === `deal-{numericId}`, else null. */
+function returnToDealId(): number | null {
+  const returnTo = typeof route.query['returnTo'] === 'string' ? route.query['returnTo'] : null
+  if (!returnTo || !returnTo.startsWith('deal-')) return null
+  const tail = returnTo.slice('deal-'.length)
+  const id = Number(tail)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
 // ── Create mode cancel / back ─────────────────────────────────────────────────
 
 function onCompanyCreateCancel() {
   const returnTo = typeof route.query['returnTo'] === 'string' ? route.query['returnTo'] : null
+  const dealId = returnToDealId()
+
+  if (dealId !== null) {
+    // Return to the originating deal card without linking anything.
+    void router.replace(`/deals/${dealId}`)
+    return
+  }
 
   if (returnTo === 'deal-new') {
-    // Return to the deal form, restoring any pipeline_id that was passed
-    const query: Record<string, string> = {}
-    const pipelineId = route.query['pipeline_id']
-    if (pipelineId) query['pipeline_id'] = String(pipelineId)
-    void router.push({ path: '/deals/new', query })
+    // Legacy: the /deals/new form no longer exists → soft-fallback to the list.
+    void router.push('/deals')
     return
   }
 
@@ -1096,16 +1115,17 @@ function onCompanyCreateCancel() {
 
 function onCompanySaved(created: import('@/entities/crm').Company) {
   const returnTo = typeof route.query['returnTo'] === 'string' ? route.query['returnTo'] : null
+  const dealId = returnToDealId()
+
+  if (dealId !== null) {
+    // Return to the originating deal card and hand it the new company to link.
+    void router.replace({ path: `/deals/${dealId}`, query: { link_company: String(created.id) } })
+    return
+  }
 
   if (returnTo === 'deal-new') {
-    // Return to the deal create form with the new company preselected
-    const query: Record<string, string> = {
-      company_id: String(created.id),
-      company_name: created.name,
-    }
-    const pipelineId = route.query['pipeline_id']
-    if (pipelineId) query['pipeline_id'] = String(pipelineId)
-    void router.push({ path: '/deals/new', query })
+    // Legacy: form removed — land on the created company card instead.
+    void router.replace(`/companies/${created.id}`)
     return
   }
 

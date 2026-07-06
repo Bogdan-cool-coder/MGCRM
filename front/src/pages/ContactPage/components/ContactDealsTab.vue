@@ -88,7 +88,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Skeleton from 'primevue/skeleton'
@@ -96,6 +96,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import type { DealDto } from '@/entities/sales'
 import { formatCurrency } from '@/utils/currency'
+import { useCreateDeal } from '@/composables/sales/useCreateDeal'
 
 const props = defineProps<{
   contactId: number
@@ -110,10 +111,12 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const router = useRouter()
+const { createDealInstant } = useCreateDeal()
 
 function onCreateDeal(): void {
-  void router.push({ path: '/deals/new', query: { contact_id: String(props.contactId) } })
+  // Deal Create 2.0: instant-create carrying the contact — the card links it
+  // after bootstrap (via ?link_contact=), no intermediate form.
+  void createDealInstant({ contact_id: props.contactId })
 }
 
 function formatDate(iso: string | null | undefined): string {

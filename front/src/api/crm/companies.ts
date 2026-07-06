@@ -61,13 +61,17 @@ export interface AttachHoldingPayload {
 
 export interface CreateCompanyPayload {
   name: string
+  // Contact details — required on manual creation (StoreCompanyRequest, deal-create-2 §E).
+  website?: string
+  address?: string
+  phone?: string
   legal_form?: string
   tax_id?: string
   company_type_id?: number
   source?: string
   holding_id?: number | null
   country_code?: string
-  responsible_user_id?: number
+  // owner_user_id / responsible_user_id are NOT sent — the backend sets owner = creator (§E).
 }
 
 export interface UpdateCompanyPayload {

@@ -308,6 +308,32 @@ export function usePipelineSettings() {
     }
   }
 
+  /**
+   * Persist the pipeline's «Стадия для новых сделок» (default_stage_id).
+   * null clears it → server falls back to the first non-won/lost/hidden stage.
+   */
+  async function updateDefaultStage(stageId: number | null): Promise<boolean> {
+    if (!selectedPipelineId.value) return false
+    try {
+      const updated = await salesApi.updatePipeline(selectedPipelineId.value, {
+        default_stage_id: stageId,
+      })
+      pipelines.value = pipelines.value.map((p) =>
+        p.id === updated.id ? { ...p, default_stage_id: updated.default_stage_id } : p,
+      )
+      toast.add({ severity: 'success', summary: t('common.saved'), life: 2000 })
+      return true
+    } catch (e: unknown) {
+      toast.add({
+        severity: 'error',
+        summary: t('errors.server_error'),
+        detail: extractMessage(e),
+        life: 5000,
+      })
+      return false
+    }
+  }
+
   async function reorderStages(ordered: PipelineStageDto[]): Promise<void> {
     if (!selectedPipelineId.value) return
     // Snapshot for rollback
@@ -390,5 +416,6 @@ export function usePipelineSettings() {
     updateStage,
     deleteStage,
     reorderStages,
+    updateDefaultStage,
   }
 }
