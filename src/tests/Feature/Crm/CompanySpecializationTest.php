@@ -6,6 +6,7 @@ namespace Tests\Feature\Crm;
 
 use App\Domain\Crm\Enums\CompanySpecialization;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyType;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +20,27 @@ class CompanySpecializationTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Deal Create 2.0 (docs/specs/deal-create-2-contract.md §4.2): manual
+     * `POST /api/companies` now requires phone/website/address/company_type_id/
+     * country_code/source.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validCompanyPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Test Co',
+            'phone' => '+7 700 000 00 00',
+            'website' => 'https://example.com',
+            'address' => 'Test address 1',
+            'company_type_id' => CompanyType::factory()->create()->id,
+            'country_code' => 'kz',
+            'source' => 'own_contact',
+        ], $overrides);
+    }
+
     // ---- store ----
 
     public function test_company_can_be_created_with_specialization(): void
@@ -26,10 +48,10 @@ class CompanySpecializationTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->postJson('/api/companies', [
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Девелопер ТОО',
             'specialization' => 'developer',
-        ]);
+        ]));
 
         $response->assertCreated()
             ->assertJsonPath('data.specialization', 'developer');
@@ -45,7 +67,7 @@ class CompanySpecializationTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->postJson('/api/companies', ['name' => 'Без специализации']);
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload(['name' => 'Без специализации']));
 
         $response->assertCreated()
             ->assertJsonPath('data.specialization', null);
@@ -56,10 +78,10 @@ class CompanySpecializationTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $this->postJson('/api/companies', [
+        $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Test',
             'specialization' => 'invalid_value',
-        ])->assertUnprocessable()
+        ]))->assertUnprocessable()
             ->assertJsonValidationErrorFor('specialization');
     }
 
@@ -110,10 +132,10 @@ class CompanySpecializationTest extends TestCase
         Sanctum::actingAs($user, ['*']);
 
         foreach (CompanySpecialization::cases() as $case) {
-            $response = $this->postJson('/api/companies', [
+            $response = $this->postJson('/api/companies', $this->validCompanyPayload([
                 'name' => "Company {$case->value}",
                 'specialization' => $case->value,
-            ]);
+            ]));
             $response->assertCreated()
                 ->assertJsonPath('data.specialization', $case->value);
         }

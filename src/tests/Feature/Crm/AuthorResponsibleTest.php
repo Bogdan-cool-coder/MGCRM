@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Crm;
 
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyType;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -26,6 +27,28 @@ use Tests\TestCase;
 class AuthorResponsibleTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Deal Create 2.0 (docs/specs/deal-create-2-contract.md §4.2): manual
+     * `POST /api/companies` now requires phone/website/address/company_type_id/
+     * country_code/source. This helper supplies valid values for those fields
+     * so tests can focus on the specific field(s) they assert on.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validCompanyPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Test Co',
+            'phone' => '+7 700 000 00 00',
+            'website' => 'https://example.com',
+            'address' => 'Test address 1',
+            'company_type_id' => CompanyType::factory()->create()->id,
+            'country_code' => 'kz',
+            'source' => 'own_contact',
+        ], $overrides);
+    }
 
     // ============================================================
     // CONTACT
@@ -175,7 +198,7 @@ class AuthorResponsibleTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $this->postJson('/api/companies', ['name' => 'Author Company'])->assertCreated();
+        $this->postJson('/api/companies', $this->validCompanyPayload(['name' => 'Author Company']))->assertCreated();
 
         $this->assertDatabaseHas('crm_companies', [
             'name' => 'Author Company',
@@ -188,7 +211,7 @@ class AuthorResponsibleTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $this->postJson('/api/companies', ['name' => 'Owner Default Co'])->assertCreated();
+        $this->postJson('/api/companies', $this->validCompanyPayload(['name' => 'Owner Default Co']))->assertCreated();
 
         $this->assertDatabaseHas('crm_companies', [
             'name' => 'Owner Default Co',
@@ -197,21 +220,29 @@ class AuthorResponsibleTest extends TestCase
         ]);
     }
 
-    public function test_company_create_allows_explicit_responsible_different_from_creator(): void
+    /**
+     * Deal Create 2.0 (docs/specs/deal-create-2-contract.md §4.2): the manual
+     * create form no longer has a "Responsible" block — `responsible_user_id`
+     * is not part of StoreCompanyRequest's rule-set any more, so it is silently
+     * dropped from $request->validated() and never reaches CompanyService.
+     * Responsible is set afterwards via PATCH (still accepted on update) or via
+     * the bulk assign_responsible operation (AuthorResponsibleTest below).
+     */
+    public function test_company_create_ignores_responsible_user_id_from_form(): void
     {
         $creator = User::factory()->create(['role' => Role::Director]);
         $responsible = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($creator, ['*']);
 
-        $this->postJson('/api/companies', [
+        $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Explicit Responsible Co',
             'responsible_user_id' => $responsible->id,
-        ])->assertCreated();
+        ]))->assertCreated();
 
         $this->assertDatabaseHas('crm_companies', [
             'name' => 'Explicit Responsible Co',
-            'responsible_user_id' => $responsible->id,
-            'created_by_id' => $creator->id,  // author = creator
+            'responsible_user_id' => null,     // ignored — form has no Responsible block
+            'created_by_id' => $creator->id,   // author = creator
         ]);
     }
 

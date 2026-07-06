@@ -7,6 +7,7 @@ namespace Tests\Feature\Crm;
 use App\Domain\Crm\Models\AcquisitionChannel;
 use App\Domain\Crm\Models\AcquisitionChannelHistory;
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyType;
 use App\Domain\Crm\Models\Contact;
 use App\Domain\Crm\Services\AcquisitionChannelHistoryService;
 use App\Domain\Iam\Enums\Role;
@@ -26,6 +27,27 @@ use Tests\TestCase;
 class AcquisitionChannelTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Deal Create 2.0 (docs/specs/deal-create-2-contract.md §4.2): manual
+     * `POST /api/companies` now requires phone/website/address/company_type_id/
+     * country_code/source.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validCompanyPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Test Co',
+            'phone' => '+7 700 000 00 00',
+            'website' => 'https://example.com',
+            'address' => 'Test address 1',
+            'company_type_id' => CompanyType::factory()->create()->id,
+            'country_code' => 'kz',
+            'source' => 'own_contact',
+        ], $overrides);
+    }
 
     // =========================================================================
     // Directory CRUD (admin)
@@ -140,10 +162,10 @@ class AcquisitionChannelTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->postJson('/api/companies', [
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Test Company',
             'acquisition_channel_id' => $channel->id,
-        ]);
+        ]));
 
         $response->assertCreated()
             ->assertJsonPath('data.acquisition_channel_id', $channel->id);
@@ -159,7 +181,7 @@ class AcquisitionChannelTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->postJson('/api/companies', ['name' => 'No Channel']);
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload(['name' => 'No Channel']));
 
         $response->assertCreated()
             ->assertJsonPath('data.acquisition_channel_id', null);
@@ -170,10 +192,10 @@ class AcquisitionChannelTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $this->postJson('/api/companies', [
+        $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Test',
             'acquisition_channel_id' => 999999,
-        ])->assertUnprocessable()
+        ]))->assertUnprocessable()
             ->assertJsonValidationErrorFor('acquisition_channel_id');
     }
 

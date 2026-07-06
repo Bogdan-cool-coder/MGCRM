@@ -21,6 +21,28 @@ class CompanyCrudTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Deal Create 2.0 (docs/specs/deal-create-2-contract.md §4.2): manual
+     * `POST /api/companies` now requires phone/website/address/company_type_id/
+     * country_code/source. This helper supplies valid values for those fields
+     * so tests can focus on the specific field(s) they assert on.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validCompanyPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Test Co',
+            'phone' => '+7 700 000 00 00',
+            'website' => 'https://example.com',
+            'address' => 'Test address 1',
+            'company_type_id' => CompanyType::factory()->create()->id,
+            'country_code' => 'kz',
+            'source' => 'own_contact',
+        ], $overrides);
+    }
+
     // ---- index ----
 
     public function test_manager_can_list_companies(): void
@@ -87,10 +109,10 @@ class CompanyCrudTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->postJson('/api/companies', [
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Acme Corp',
             'email' => 'acme@example.com',
-        ]);
+        ]));
 
         $response->assertCreated()->assertJsonPath('data.name', 'Acme Corp');
         $this->assertDatabaseHas('crm_companies', ['name' => 'Acme Corp']);
@@ -106,10 +128,10 @@ class CompanyCrudTest extends TestCase
         $user = User::factory()->create(['role' => Role::Manager]);
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->postJson('/api/companies', [
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Acme Corp',
             'email' => 'acme@example.com',
-        ])->assertCreated();
+        ]))->assertCreated();
 
         $companyId = $response->json('data.id');
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Crm;
 
 use App\Domain\Crm\Models\Company;
+use App\Domain\Crm\Models\CompanyType;
 use App\Domain\Crm\Models\CustomFieldDef;
 use App\Domain\Iam\Enums\Role;
 use App\Domain\Iam\Models\User;
@@ -41,6 +42,27 @@ class CompanyCustomFieldTest extends TestCase
         return Company::factory()->create(array_merge(['owner_user_id' => $this->admin->id], $attrs));
     }
 
+    /**
+     * Deal Create 2.0 (docs/specs/deal-create-2-contract.md §4.2): manual
+     * `POST /api/companies` now requires phone/website/address/company_type_id/
+     * country_code/source.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validCompanyPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Test Co',
+            'phone' => '+7 700 000 00 00',
+            'website' => 'https://example.com',
+            'address' => 'Test address 1',
+            'company_type_id' => CompanyType::factory()->create()->id,
+            'country_code' => 'kz',
+            'source' => 'own_contact',
+        ], $overrides);
+    }
+
     private function makeTextDef(string $code = 'notes_extra'): CustomFieldDef
     {
         return CustomFieldDef::create([
@@ -71,10 +93,10 @@ class CompanyCustomFieldTest extends TestCase
     public function test_create_stores_extra_fields_free_form_when_no_defs(): void
     {
         // No CustomFieldDef rows in DB — free-form pass-through expected.
-        $response = $this->postJson('/api/companies', [
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Acme Co',
             'extra_fields' => ['arbitrary_key' => 'some value'],
-        ]);
+        ]));
 
         $response->assertCreated();
 
@@ -90,10 +112,10 @@ class CompanyCustomFieldTest extends TestCase
     {
         $this->makeTextDef('company_segment');
 
-        $response = $this->postJson('/api/companies', [
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Beta Corp',
             'extra_fields' => ['company_segment' => 'Enterprise'],
-        ]);
+        ]));
 
         $response->assertCreated();
 
@@ -108,10 +130,10 @@ class CompanyCustomFieldTest extends TestCase
     {
         $this->makeTextDef('known_field');
 
-        $this->postJson('/api/companies', [
+        $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Gamma Ltd',
             'extra_fields' => ['unknown_field' => 'value'],
-        ])->assertStatus(422);
+        ]))->assertStatus(422);
 
         $this->assertDatabaseMissing('crm_companies', ['name' => 'Gamma Ltd']);
     }
@@ -123,10 +145,10 @@ class CompanyCustomFieldTest extends TestCase
     {
         $this->makeNumberDef('revenue_m');
 
-        $response = $this->postJson('/api/companies', [
+        $response = $this->postJson('/api/companies', $this->validCompanyPayload([
             'name' => 'Delta SA',
             'extra_fields' => ['revenue_m' => '99.5'],
-        ]);
+        ]));
 
         $response->assertCreated();
 
